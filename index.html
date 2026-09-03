@@ -1098,46 +1098,11 @@
      kind of card: a line, the facts bearing on it, then one decision.
      The stale-rule block is set apart in amber, because it is a finding
      rather than a figure -- the rule has not changed, the world has. */
-  .mg-row{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 10px;
-    background:var(--panel);}
-  .mg-row.stale{border-left:3px solid var(--ow-amber);}
-  .mg-stale{margin:9px 0 0;font-size:12.5px;line-height:1.45;padding:8px 11px;border-radius:9px;
-    background:var(--ow-amber-soft);color:var(--ink);}
-  .mg-stale b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .mg-note{margin:7px 0 0;font-size:11.5px;color:var(--ow-ink-400);}
-  .mg-act{display:flex;align-items:center;justify-content:space-between;gap:12px;
-    flex-wrap:wrap;margin:11px 0 0;}
-  .mg-aim{font-size:12.5px;color:var(--ink-soft);}
-  .mg-aim b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
-  /* CLEARANCE. A row is a decision, so it reads top-down: what it is
-     and what it is worth, the facts that bear on it, the price, then
-     what that price would mean. The verdict is the last thing under the
-     tap that sets it, where a person's eye lands after typing. */
-  .cl-row{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 10px;
-    background:var(--panel);}
-  .cl-row.marked{border-left:3px solid var(--ow-verdigris);}
-  .cl-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
-  .cl-name{flex:1 1 220px;min-width:0;font-weight:700;color:var(--ink);}
-  .cl-when{font-size:11.5px;color:var(--ow-ink-400);white-space:nowrap;}
-  .cl-val{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-weight:700;color:var(--ink);white-space:nowrap;text-align:right;}
-  .cl-sub{display:block;font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:10.5px;font-weight:600;
-    color:var(--ow-ink-400);letter-spacing:0.2px;}
-  .cl-facts{display:flex;flex-wrap:wrap;gap:3px 16px;margin:7px 0 0;}
-  .cl-fact{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
-  .cl-fact b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12.5px;font-weight:700;color:var(--ink);}
-  .cl-fact i{font-style:normal;color:var(--ow-amber-ink);}
-  .cl-fact.offered{color:var(--ow-verdigris);}
-  .cl-set{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;}
-  .cl-set label{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;}
-  .cl-set input{width:130px;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .cl-verdict{margin:9px 0 0;font-size:12.5px;line-height:1.45;padding:8px 11px;border-radius:9px;}
-  .cl-verdict.ok{background:var(--ow-verdigris-soft);color:var(--ink);}
-  .cl-verdict.bad{background:var(--ow-crimson-soft);color:var(--ink);}
-  .cl-verdict.none{background:var(--ow-rule-soft);color:var(--ink-soft);}
-  .cl-tail h4{font-size:10.5px;margin:22px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
-    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
+  /* The margin and clearance row styles lived here. Both screens became
+     Pricing, which is built on the .ow-* console vocabulary, and nothing
+     in the file wears .mg-* or .cl-* any more. Removed rather than left
+     as cruft; the offer message and every derivation behind them are
+     untouched. */
   .cl-offer{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:10px 0 0;
     background:var(--panel);}
   .cl-msg{width:100%;margin:9px 0 0;font-size:12.5px;line-height:1.5;resize:vertical;}
@@ -8939,6 +8904,239 @@
     .ow-cr-dy-e{width:var(--ow-tap);}
   }
 
+  /* ==================================================================
+     THE PRICING CONSOLE
+
+     Margin and Clearance were the same question asked twice about one
+     shelf, and neither could see the other's half. A line you stock is
+     in exactly one of three states: selling and keeping enough, selling
+     but THIN, or not selling at all. The first needs nothing. The other
+     two are both price decisions -- lift it, or cut it and find
+     somebody who has bought it before -- so they are one queue.
+
+     TWO KINDS OF MONEY ON ONE LIST, which is the whole design problem.
+     A thin line's figure is income PER MONTH and it repeats; a dead
+     line's is cash locked in the shelf and comes back ONCE. Nothing
+     here ever sums them: every row's basis line says which it is, and
+     the ranking runs on one stated clock -- what a fix is worth over a
+     year -- said out loud in the rail so it can be argued with.
+
+     Almost all of this is the layer as it stands. What is new is the
+     segment control, the arithmetic strip inside an open line, and the
+     buyers who have taken a line before, drawn on that line.
+     ================================================================== */
+
+  .ow-pr-strip{margin-bottom:var(--ow-sp-16);}
+
+  /* FIVE COLUMNS, the buy side's tracks. The reason a line is on this
+     screen is the basis of the order, so it takes a fixed width and
+     never truncates; the name gives way, because a name may be cut and
+     a reason may not -- and money never is. */
+  .ow-pr .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 116px 146px;}
+  .ow-pr-h{display:grid;grid-template-columns:18px minmax(0,1fr) 176px 116px 146px;
+    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-pr-h-r{text-align:right;}
+
+  /* WHY THIS LINE IS HERE. Same two-line anatomy as the buy side's, so
+     the row keeps its rhythm, and toned only where the tone means
+     something: crimson for a line far under its target or long dead,
+     amber for one close, plain for stock nobody has ever bought. */
+  .ow-pr-rz{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-rz-h{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-rz.ow-bad .ow-pr-rz-h{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-pr-rz.ow-warn .ow-pr-rz-h{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .ow-pr-rz.ow-none .ow-pr-rz-h{color:var(--ow-ink-600);}
+  .ow-pr-bs{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-bs-h{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+
+  /* THE SEGMENTS. Two halves of one shelf, and the counts on them are
+     the same reading the list is drawn from. */
+  .ow-pr-sg{display:inline-flex;flex:none;height:30px;border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper);}
+  .ow-pr-sg-b{all:unset;box-sizing:border-box;display:inline-block;line-height:28px;
+    height:100%;padding:0 var(--ow-sp-10);cursor:pointer;
+    border-left:1px solid var(--ow-rule);font-family:'Inter',system-ui,sans-serif;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-sg-b:first-child{border-left:0;}
+  .ow-pr-sg-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
+  .ow-pr-sg-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-pr-sg-b.ow-on{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+  .ow-pr-sg-b.ow-on:hover{background:var(--ow-steel-800);color:var(--ow-paper);}
+  .ow-pr-sg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);}
+  .ow-pr-sg-b.ow-on .ow-pr-sg-n{color:var(--ow-steel-100);}
+
+  /* THE ARITHMETIC, laid out so it can be CHECKED rather than trusted.
+     Cost, what you charge, what keeps the target, and what the last
+     thirty days would have returned at it -- the division nobody was
+     doing, on one line, in the figures it is made of. */
+  .ow-pr-ar{display:flex;align-items:stretch;width:max-content;max-width:100%;
+    margin:0 0 var(--ow-sp-10);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper-2);}
+  .ow-pr-ar-c{padding:var(--ow-sp-6) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-pr-ar-c:first-child{border-left:0;}
+  .ow-pr-ar-l{margin:0 0 2px;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-ar-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+  .ow-pr-ar-c.ow-pr-now .ow-pr-ar-v{color:var(--ow-crimson);}
+  .ow-pr-ar-c.ow-pr-aim{background:var(--ow-paper);}
+  .ow-pr-ar-c.ow-pr-aim .ow-pr-ar-v{color:var(--ow-verdigris);}
+  .ow-pr-ar-a{display:flex;align-items:center;padding:0 var(--ow-sp-8);
+    color:var(--ow-ink-400);border-left:1px solid var(--ow-rule-soft);}
+
+  /* A finding with a fix attached: amber, and never the accent. */
+  .ow-pr-fx{display:flex;align-items:flex-start;gap:var(--ow-sp-8);
+    margin:0 0 var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
+    max-width:var(--ow-measure);background:var(--ow-amber-faint);
+    border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-sm);color:var(--ow-amber-ink);}
+  .ow-pr-fx-t{margin:0;font-size:var(--ow-t-12);line-height:1.45;}
+  .ow-pr-fx-n{margin:3px 0 0;font-size:var(--ow-t-11);line-height:1.45;}
+  .ow-pr-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pr-fx .ow-pr-fig{color:inherit;}
+  .ow-pr-ic{width:15px;height:15px;flex:none;margin-top:2px;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* THE PRICE YOU WOULD TAKE, on the line it belongs to. It replaced a
+     live number input on EVERY closed row -- twenty-two open fields
+     when one line is being decided, each with a placeholder an <input>
+     cannot ellipsis and so cut mid-word. */
+  .ow-pr-pf{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+    margin:0 0 var(--ow-sp-10);}
+  .ow-pr-pf-l{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-pf-f{height:32px;width:120px;padding:0 var(--ow-sp-10);box-sizing:border-box;
+    border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-sm);
+    background:var(--ow-paper);color:var(--ow-ink-900);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .ow-pr-pf-g{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
+  /* WHAT THAT PRICE WOULD MEAN, said BEFORE the tap. Below cost is
+     named in shillings across the whole holding and never blocked:
+     cash now against stock forever is the owner's decision, and the
+     app's job is to make sure it is made with the eyes open. */
+  .ow-pr-vd{margin:0 0 var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
+    max-width:var(--ow-measure);border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-12);line-height:1.5;}
+  .ow-pr-vd.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-pr-vd.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-pr-vd.ow-none{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .ow-pr-vd .ow-pr-fig{color:inherit;}
+
+  /* WHO HAS TAKEN THIS LINE BEFORE, inside the line. An offer is about
+     ONE line, so it is written on that line beside the price it names.
+     The old screen gathered every marked line into a second console
+     below the list, away from the figure that produced it. */
+  .ow-pr-of{margin-top:var(--ow-sp-10);padding-top:var(--ow-sp-10);
+    border-top:1px solid var(--ow-rule-soft);}
+  .ow-pr-of-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin:0 0 var(--ow-sp-8);}
+  .ow-pr-of-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-pr-of-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-of-l{display:flex;flex-direction:column;gap:1px;max-width:var(--ow-measure);
+    background:var(--ow-rule-soft);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-pr-of-r{all:unset;box-sizing:border-box;display:grid;
+    grid-template-columns:minmax(0,1fr) 148px 18px;align-items:center;gap:var(--ow-sp-10);
+    min-height:var(--ow-tap);padding:var(--ow-sp-8) var(--ow-sp-10);cursor:pointer;
+    background:var(--ow-paper);font-family:'Inter',system-ui,sans-serif;text-align:left;}
+  .ow-pr-of-r:hover{background:var(--ow-paper-2);}
+  .ow-pr-of-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-pr-of-r.ow-on{background:var(--ow-paper-2);}
+  .ow-pr-of-nm{min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-of-ph{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
+    letter-spacing:-.02em;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-of-ph.ow-pr-nonum{font-family:'Inter',system-ui,sans-serif;color:var(--ow-ink-600);}
+  .ow-pr-of-b{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-of-x{padding:0 var(--ow-sp-10) var(--ow-sp-10);background:var(--ow-paper-2);}
+
+  /* WHAT THIS SCREEN READ. Every line read lands in exactly one of
+     these and they sum to the total -- the only device that lets a
+     reader trust a list for what it does NOT say. Margin had it and
+     Clearance did not; it now covers both halves. */
+  .ow-pr-ac{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-12);
+    background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pr-ac-h{margin:0 0 var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-pr-ac-g{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));}
+  .ow-pr-ac-c{padding:0 var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-pr-ac-c:first-child{border-left:0;padding-left:0;}
+  .ow-pr-ac-v{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);
+    font-weight:var(--ow-fw-600);line-height:1.2;}
+  .ow-pr-ac-c.ow-bad .ow-pr-ac-v{color:var(--ow-crimson);}
+  .ow-pr-ac-c.ow-good .ow-pr-ac-v{color:var(--ow-verdigris);}
+  .ow-pr-ac-c.ow-none .ow-pr-ac-v{color:var(--ow-ink-400);}
+  .ow-pr-ac-l{display:block;margin-top:2px;font-size:var(--ow-t-11);line-height:1.4;
+    color:var(--ow-ink-600);}
+
+  /* THE TWO DEFINITIONS, each beside the sentence that says what it
+     means. They were two form panels of roughly 120px apiece above the
+     money, on every visit, to hold a setting changed twice a year. */
+  .ow-pr-set{display:flex;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pr-set-f{height:30px;width:74px;padding:0 var(--ow-sp-8);box-sizing:border-box;flex:none;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
+    background:var(--ow-paper);color:var(--ow-ink-900);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .ow-pr-set-f:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-pr-set-l{min-width:0;font-size:var(--ow-t-11);line-height:1.4;color:var(--ow-ink-600);}
+
+  @media (max-width:820px){
+    /* The column names go with the columns: every card carries its own. */
+    .ow-pr-h{display:none;}
+
+    /* Five cells across 358px is unreadable, so the account becomes two
+       columns -- the same turn the age legend makes on the phone. */
+    .ow-pr-ac-g{grid-template-columns:1fr 1fr;gap:var(--ow-sp-10) 0;}
+    .ow-pr-ac-c{padding:0 var(--ow-sp-10);}
+    .ow-pr-ac-c:nth-child(odd){border-left:0;padding-left:0;}
+
+    /* THE ARITHMETIC, TURNED. Four cells in a row clip the figures they
+       exist to show, so they stack into a two-column block and the
+       arrow between them goes -- it means nothing once they are not
+       in a row. */
+    .ow-pr-ar{display:grid;grid-template-columns:1fr 1fr;width:auto;}
+    .ow-pr-ar-c{border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ow-pr-ar-c:nth-child(odd){border-left:0;}
+    .ow-pr-ar-c:nth-child(-n+2){border-top:0;}
+    .ow-pr-ar-a{display:none;}
+
+    /* Done one-handed, so both fields and the segments are thumb-sized
+       rather than the 30px they are at a desk. The segments are a grid
+       of three equal columns: the button is inline-block (so the space
+       between a label and its count is a real character), and an
+       inline-block does not answer to flex:1. */
+    .ow-pr-pf-f,.ow-pr-set-f{height:var(--ow-tap);font-size:15px;}
+    .ow-pr-pf-f{flex:1 1 100%;width:auto;}
+    .ow-pr-sg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:auto;width:100%;}
+    /* min-width:0, or a grid item refuses to shrink below its content
+       and pushes its neighbours out of the box instead of truncating. */
+    .ow-pr-sg-b{min-width:0;min-height:var(--ow-tap);line-height:var(--ow-tap);
+      padding:0 var(--ow-sp-4);text-align:center;font-size:14px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-pr-of-r{grid-template-columns:minmax(0,1fr) 18px;row-gap:var(--ow-sp-4);}
+    .ow-pr-of-b{grid-column:1 / -1;}
+  }
+
   @media (max-width:820px){
     .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
@@ -9554,15 +9752,10 @@
           <span class="nav-label">Consignment</span>
           <b class="nav-badge" id="navBadgeConsign" hidden></b>
         </button>
-        <button data-tab="margin" title="Your margin" data-keywords="markup margin kept thin profit share pricing rule per cent percentage">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M6 19V9"/><path d="M11 19V5"/><path d="M16 19v-7"/><path d="M19 6l-3.5 3.5"/></svg>
-          <span class="nav-label">Your margin</span>
-          <b class="nav-badge" id="navBadgeMargin" hidden></b>
-        </button>
-        <button data-tab="clearance" title="Clearance" data-keywords="dead slow stock clearance discount unsold sitting shift offload sale">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 7h16l-1.5 12a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M9.5 14.5l5-5"/><path d="M9.6 10.1h.01"/><path d="M14.4 14.9h.01"/></svg>
-          <span class="nav-label">Clearance</span>
-          <b class="nav-badge" id="navBadgeClearance" hidden></b>
+        <button data-tab="pricing" title="Pricing" data-keywords="markup margin kept thin profit share pricing rule per cent percentage dead slow stock clearance discount unsold sitting shift offload sale your margin">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 20V11"/><path d="M12 20V6"/><path d="M17 20v-6"/><path d="M6.2 8.4l6-4.4 5.6 4.6"/></svg>
+          <span class="nav-label">Pricing</span>
+          <b class="nav-badge" id="navBadgePricing" hidden></b>
         </button>
         <button data-tab="chase" title="Chase debts" data-keywords="collect chasing remind overdue late payment demand follow money owed">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"/><path d="M7 8l-3 3 3 3"/><path d="M14 15h5"/><path d="M14 19h7"/></svg>
@@ -10236,45 +10429,25 @@
       <div id="consign_body"></div>
     </section>
 
-    <section id="tab-margin" style="display:none;">
-      <div class="page-head">
-        <h1>Your margin</h1>
-        <p>What every line you sold actually kept, against what the rule pricing it says it should. The two are different questions: a gap between them is a line being sold off its own rule, and a rule that yields almost nothing is a rule that has gone stale — a fixed markup of five thousand was a fair mark on a ten thousand item and is a rounding error on a hundred thousand one, and nothing here had ever divided the one by the other. Ranked by what lifting each to your target would have added over the units that really sold, so the work starts at your biggest sellers. Nothing changes until you tap it and confirm it.</p>
+    <!-- PRICING. Margin and Clearance were the same question asked twice
+         about one shelf: a line is selling and keeping enough, selling
+         but thin, or not selling at all. The last two are both a price
+         decision, so they are one queue -- ranked, and each row saying
+         which kind of money its figure is. -->
+    <section id="tab-pricing" style="display:none;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Pricing</h1>
+        <p class="ow-ph-sub">What your shelf keeps, and what it is not selling</p>
+        <p class="ow-ph-help">Every line that is losing you money, worst first. Two kinds sit on one list: a line you are selling too cheaply, where the fix is to charge more, and a line that is not selling at all, where the fix is to take less and offer it to somebody who has bought it before. Their figures are different money &mdash; a thin line&rsquo;s repeats every month, dead stock&rsquo;s comes back once &mdash; so nothing here ever adds them together, each row says which it is, and the order is worked out on one clock: what a fix would be worth over a year. Opening a line shows the arithmetic behind it, so you can check the figure rather than take it. Nothing changes until you tap it and confirm it, and no offer is ever sent by the app.</p>
+        <span class="ow-ph-sp"></span>
       </div>
-      <div class="panel">
-        <div class="form-panel">
-          <div class="form-panel-head">
-            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 15l6-6"/><path d="M9.5 9.5h.01"/><path d="M14.5 14.5h.01"/></svg></span>
-            <div class="form-panel-title">The share you mean to keep
-              <small>Out of every shilling a customer pays. The app has judged your prices against ten per cent since it was written, without ever asking you.</small></div>
-          </div>
-          <div class="form-grid">
-            <div class="field"><label for="mg_target">Target margin (%)</label>
-              <input type="number" id="mg_target" min="1" max="99" step="any"></div>
-          </div>
-        </div>
-        <div id="mg_body"></div>
-      </div>
-    </section>
 
-    <section id="tab-clearance" style="display:none;">
-      <div class="page-head">
-        <h1>Clearance</h1>
-        <p>Everything on your shelf that has not sold inside the quiet window, worst money first, with what it cost you and how long it has sat. Set a price you would take for it and the screen says plainly what that means — including when it is below what you paid, which is your call to make and not the app's. Underneath each line are the customers who have actually bought it before, most first, each with an offer already written naming only the lines they have a history with. Read it, change it, send it with your own thumb — the app never sends anything by itself.</p>
-      </div>
-      <div class="panel">
-        <div class="form-panel">
-          <div class="form-panel-head">
-            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-            <div class="form-panel-title">When a line counts as dead
-              <small>Nothing sold off it inside this many days. Sixty is where most shops draw it; a trade that turns slowly draws it wider.</small></div>
-          </div>
-          <div class="form-grid">
-            <div class="field"><label for="cl_days">Quiet for (days)</label>
-              <input type="number" id="cl_days" min="1" step="1"></div>
-          </div>
+      <div class="ow-pr">
+        <div id="pr_strip"></div>
+        <div class="ow-grid">
+          <div id="pr_body"></div>
+          <div class="ow-side" id="pr_rail"></div>
         </div>
-        <div id="cl_body"></div>
       </div>
     </section>
 
@@ -15761,7 +15934,7 @@ function fmtUGXPerUnitPack(n, row){
 // grids somebody scans.
 const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
   market: 8, marketUnder: 5, marketLift: 5, ahead: 12, invoices: 24, purchaseInvoices: 24,
-  clearance: 6, clearanceOffers: 5, margin: 6 };
+  pricing: 8 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -15798,9 +15971,7 @@ const LIST_PAGE_RERENDER = {
   marketUnder: ()=> renderMarket(),
   marketLift: ()=> renderMarket(),
   ahead: ()=> renderAhead(),
-  clearance: ()=> renderClearance(),
-  clearanceOffers: ()=> renderClearance(),
-  margin: ()=> renderMargin(),
+  pricing: ()=> renderPricing(),
   invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
   purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
@@ -18776,6 +18947,13 @@ let prLens = 'quotes';
 function resolveTab(tab){
   if(tab === 'prices-watch'){ prLens = 'paid'; return 'prices'; }
   if(tab === 'market'){ prLens = 'rivals'; return 'prices'; }
+  /* TWO OLD DOORS, ONE SCREEN. Margin and Clearance were merged into
+     Pricing, and each of them meant one half of it -- so the door that
+     said "margin" still lands on the thin lines and the one that said
+     "clearance" on the stock that is not moving. A saved last-tab, a
+     deep link and every goToTab call already written go on working. */
+  if(tab === 'margin'){ pricingSeg = 'thin'; return 'pricing'; }
+  if(tab === 'clearance'){ pricingSeg = 'dead'; return 'pricing'; }
   return tab;
 }
 function goToTab(tab){
@@ -18813,8 +18991,7 @@ function goToTab(tab){
   if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='prices') showPriceLens(prLens);
   if(tab==='media') renderMedia();
-  if(tab==='clearance') renderClearance();
-  if(tab==='margin') renderMargin();
+  if(tab==='pricing') renderPricing();
   if(tab==='whatsapp'){ renderWhatsApp(); renderWaInsights(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
@@ -38556,113 +38733,403 @@ function renderChaseScreen(){
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
 }
-/* WHERE THE MARGIN GOES, AND THE ONE TAP THAT MOVES IT.
+/* ==================== PRICING =======================================
 
-   The Manager has said margin is this shop's binding problem for weeks,
-   and said in the same breath that its own pricing advice "did not reach
-   the high-volume lines". That is a tooling failure, not a listening
-   one: there was no list ordered by what a fix is worth. */
-function renderMargin(){
-  const el = document.getElementById('mg_body');
-  if(!el) return;
-  const f = (x)=> fmtUGX(Math.round(x));
-  const box = document.getElementById('mg_target');
-  if(box && document.activeElement !== box) box.value = targetMarginPct();
+   WHERE THE MONEY GOES, AND THE ONE TAP THAT MOVES IT.
 
+   This screen is Margin and Clearance, which were the same question
+   asked twice about one shelf and could never see each other's half. A
+   line you stock is in exactly one of three states: selling and keeping
+   enough, selling but THIN, or not selling at all. The first needs
+   nothing. The other two are both a price decision -- lift it, or cut
+   it and offer it to somebody who has bought it before -- so they are
+   one queue, ranked by what a fix is worth.
+
+   TWO KINDS OF MONEY ON ONE LIST, which is the whole difficulty. A thin
+   line's figure is income PER MONTH and it repeats. A dead line's is
+   cash locked in the shelf and it comes back ONCE. They are not the
+   same money, so nothing here ever sums them: every row's basis line
+   says which it is, and the order is worked out on one stated clock --
+   what a fix is worth over a year, a thin line's month counted twelve
+   times against dead stock's cash once. The rail says so in those
+   words, so the ranking can be argued with rather than trusted.
+
+   The derivations are untouched: marginRows(), deadStockRows(),
+   marginLiftFor(), clearanceFor() and the two writes are the same
+   readings the Manager is handed, so the meeting and the screen cannot
+   disagree about the same shelf. */
+const PRICING_MONTHS_A_YEAR = 12;
+let pricingSeg = 'all';      // all | thin | dead — the two halves of the shelf
+let pricingOpenKey = null;   // the one line being decided
+let pricingOfferId = null;   // the one buyer being written to, inside it
+
+/* ONE READING, BOTH HALVES. Each row carries what it is worth NOW (the
+   honest figure the row shows) and what it is worth over a year (the
+   figure the order is worked out on). The two are deliberately separate
+   fields: the screen displays the first and sorts on the second, and
+   never prints the second as though the last thirty days had earned it. */
+function pricingRows(){
   const target = targetMarginPct();
-  const rows = marginRows();
-  const under = rows.filter(r=> r.atStake > 0);
-  const atOrOver = rows.length - under.length;
-  const stale = rows.filter(r=> r.staleFixed).length;
-  const sold = under.reduce((t, r)=> t + r.sold30, 0);
-  const kept = under.reduce((t, r)=> t + r.earned30, 0);
-  const stake = under.reduce((t, r)=> t + r.atStake, 0);
-  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
-    <div class="sum-value">${esc(String(v))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  const margins = marginRows();
+  const thin = margins.filter(r=> r.atStake > 0).map(r=> ({
+    kind: 'thin', key: 'thin:' + r.key, line: r.line, src: r,
+    worth: r.atStake, yearWorth: r.atStake * PRICING_MONTHS_A_YEAR }));
+  const dead = deadStockRows().map(r=> ({
+    kind: 'dead', key: 'dead:' + r.key, line: r.line, src: r,
+    worth: r.value, yearWorth: r.value }));
+  const all = thin.concat(dead)
+    .sort((a, b)=> (b.yearWorth - a.yearWorth) || (b.worth - a.worth));
+  all.thin = thin; all.dead = dead; all.margins = margins; all.target = target;
+  return all;
+}
 
-  let html = `<div class="sum-strip">
-    ${cell(under.length, under.length === 1 ? 'line under target' : 'lines under target', under.length ? 'warn' : 'good')}
-    ${cell(f(sold), 'they sold in 30 days')}
-    ${cell(sold > 0 ? (Math.round(kept / sold * 1000) / 10) + '%' : '—', 'kept on them', 'warn')}
-    ${stake ? cell(f(stake), 'lifting them would have added', 'good') : ''}
+function renderPricing(){
+  const body = document.getElementById('pr_body');
+  if(!body) return;
+  /* Bare, because fmtUGX() spells the unit itself: a tile carries UGX
+     once in its own .ow-u, a money column carries it in the header, and
+     a sentence uses fmtUGX where the unit belongs to the prose. Written
+     twice it reads "9,312,500 UGX UGX". */
+  const f = (x)=> Number(Math.round(x)).toLocaleString('en-UG');
+  const target = targetMarginPct();
+  const quiet = deadStockQuietDays();
+  const all = pricingRows();
+  const shelf = dashInventoryHealth();
+  const shelfLines = stockAgeRows().length;
+
+  /* What the shop kept on everything that moved, out of everything it
+     took -- both totals off the same reading the list is drawn from, so
+     the strip and the rows can never tell different stories. */
+  const sold30 = all.margins.reduce((t, r)=> t + r.sold30, 0);
+  const kept30 = all.margins.reduce((t, r)=> t + r.earned30, 0);
+  const keptPct = sold30 > 0 ? Math.round(kept30 / sold30 * 1000) / 10 : null;
+  const thinWorth = all.thin.reduce((t, r)=> t + r.worth, 0);
+  const deadValue = all.dead.reduce((t, r)=> t + r.worth, 0);
+
+  /* NOTHING READ MEANS NO STRIP, rather than four tiles of zero. A
+     screen that has read nothing and a shop with nothing wrong are
+     different states, and a row of zeros says neither -- it just fills
+     a screen with figures that mean nothing and makes an app that
+     could not read look like a shop with a clean shelf. */
+  const nothingRead = all.margins.length === 0 && shelfLines === 0;
+
+  /* ---- the strip: the whole shelf, never the filtered list ----
+     Two of the four tiles are the two halves of the queue below, so the
+     strip and the list are the same reading. "On the shelf" is ink, not
+     a state colour: stock you hold is a fact, and colouring it would
+     make an ordinary Tuesday look like an alarm. */
+  const strip = document.getElementById('pr_strip');
+  if(strip && nothingRead) strip.innerHTML = '';
+  else if(strip) strip.innerHTML = `<div class="ow-strip ow-pr-strip">
+    <div class="ow-mt">
+      <p class="ow-mt-l">On the shelf</p>
+      <span class="ow-mt-v">${f(shelf.totalValue)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s">At what it cost you, across <b>${shelfLines}</b> line${shelfLines===1?'':'s'} that can be costed</p>
+    </div>
+    <div class="ow-mt${deadValue > 0 ? ' ow-bad' : ' ow-good'}">
+      <p class="ow-mt-l">Not moving</p>
+      <span class="ow-mt-v">${f(deadValue)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s"><b>${all.dead.length}</b> line${all.dead.length===1?'':'s'} with nothing sold off ${all.dead.length===1?'it':'them'} in ${quiet} days${
+        shelf.totalValue > 0 ? ` &middot; <b>${Math.round(deadValue / shelf.totalValue * 100)}%</b> of the shelf, standing still` : ''}</p>
+    </div>
+    <div class="ow-mt${keptPct == null ? '' : keptPct < target ? ' ow-warn' : ' ow-good'}">
+      <p class="ow-mt-l">Kept on what sold</p>
+      <span class="ow-mt-v">${keptPct == null ? '&mdash;' : keptPct + '<span class="ow-u">%</span>'}</span>
+      <p class="ow-mt-s">${keptPct == null
+        ? 'Nothing that sold in 30 days can be costed, so there is no share to report'
+        : `Out of <b>${f(sold30)}</b> taken in 30 days, against the <b>${target}%</b> you set`}</p>
+    </div>
+    <div class="ow-mt${thinWorth > 0 ? ' ow-warn' : ' ow-good'}">
+      <p class="ow-mt-l">The thin lines cost you</p>
+      <span class="ow-mt-v">${f(thinWorth)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s">A month &mdash; what lifting <b>${all.thin.length}</b> line${all.thin.length===1?'':'s'} to ${target}% would have added over the units that really sold</p>
+    </div>
   </div>`;
 
-  if(!rows.length){
-    html += `<div class="pw-empty"><b>Nothing has sold in the last 30 days that can be costed.</b>
-      <span>This reads what your invoices earned against what they cost, so a month with no sales — or with no cost on file behind them — leaves it nothing to judge.</span></div>`;
-    el.innerHTML = html;
-    return;
-  }
-  if(!under.length){
-    html += `<div class="pw-empty"><b>Every line you sold is at or above ${target}%.</b>
-      <span>Nothing here needs lifting. Raise the target above if that reads as too easy a bar for this trade.</span></div>`;
-  }
+  renderPricingRail(all, { target, quiet, thinWorth, deadValue, sold30, kept30, nothingRead });
 
-  const row = (r)=>{
+  const rows = pricingSeg === 'thin' ? all.thin : pricingSeg === 'dead' ? all.dead : all;
+
+  /* ---- the segments ---- */
+  const seg = (key, label, n)=> `<button type="button" class="ow-pr-sg-b${pricingSeg===key?' ow-on':''}"
+    data-seg="${key}" aria-pressed="${pricingSeg===key}">${label} <span class="ow-pr-sg-n">${n}</span></button>`;
+  const toolbar = `<div class="ow-tb">
+    <div class="ow-pr-sg" role="group" aria-label="Which half of the shelf">
+      ${seg('all', 'All', all.length)}${seg('thin', 'Thin', all.thin.length)}${seg('dead', 'Not moving', all.dead.length)}
+    </div>
+    <span class="ow-tb-n"></span>
+  </div>`;
+
+  /* ---- why a line is where it is ----
+     The column the old screens did not have. Toned only where the tone
+     means something: a line keeping less than half its target, or dead
+     twice as long as the window, is genuinely bad; close is amber;
+     stock nobody has ever bought is a fact, not an alarm. */
+  const reason = (row)=>{
+    if(row.kind === 'thin'){
+      const r = row.src;
+      const tone = r.keptPct == null ? 'ow-none' : r.keptPct < target / 2 ? 'ow-bad' : 'ow-warn';
+      const head = r.keptPct == null ? 'Kept share not known' : `Keeping ${r.keptPct}% of ${target}%`;
+      const sub = r.staleFixed ? 'a fixed mark gone stale'
+        : !r.rule ? 'no rule set on this line'
+        : r.ruleYieldPct != null ? `rule worth ${r.ruleYieldPct}% today` : 'priced off a rule';
+      return `<span class="ow-pr-rz ${tone}"><span class="ow-pr-rz-h">${esc(head)}</span>${esc(sub)}</span>`;
+    }
+    const r = row.src;
+    const tone = r.daysQuiet == null ? 'ow-none' : r.daysQuiet >= quiet * 2 ? 'ow-bad' : 'ow-warn';
+    const head = r.daysQuiet == null ? 'Never sold' : `Quiet ${r.daysQuiet} days`;
+    const buyers = deadStockBuyers(r.key);
+    const sub = r.offeredOn ? 'offered ' + fmtShortDate(r.offeredOn)
+      : r.clearance != null ? 'marked to clear, not offered'
+      : buyers.length ? `${buyers.length} buyer${buyers.length===1?'':'s'} ${buyers.length===1?'has':'have'} taken it`
+      : 'nobody has ever bought this';
+    return `<span class="ow-pr-rz ${tone}"><span class="ow-pr-rz-h">${esc(head)}</span>${esc(sub)}</span>`;
+  };
+
+  const basis = (row)=> row.kind === 'thin'
+    ? `<span class="ow-pr-bs"><span class="ow-pr-bs-h">${row.src.units30}</span>sold in 30 days</span>`
+    : row.src.costKnown
+      ? `<span class="ow-pr-bs"><span class="ow-pr-bs-h">${f(row.src.unitCost)}</span>each, at cost</span>`
+      : '<span class="ow-pr-bs"><span class="ow-pr-bs-h">&mdash;</span>no cost on file</span>';
+
+  /* THE BASIS LINE THAT MAKES ONE QUEUE HONEST. A month, or once. It is
+     the only thing standing between a reader and adding two figures
+     that are not the same money. */
+  const value = (row)=> `<span class="ow-q-v">
+    <span class="ow-q-f">${row.kind === 'thin' ? '+' : ''}${f(row.worth)}</span>
+    <span class="ow-q-b">${row.kind === 'thin' ? 'a month, if you lift it' : 'locked up, once'}</span></span>`;
+
+  /* ---- a thin line, opened ----
+     The arithmetic laid out so it can be CHECKED rather than trusted:
+     what it costs, what you charge, what would keep the target, and
+     what the last thirty days would have returned at it. Never a
+     projection -- it says what really sold. */
+  const thinBody = (row)=>{
+    const r = row.src;
     const lift = marginLiftFor(r, target);
-    const ruleTxt = r.rule
-      ? `${r.rule.type === 'fixed' ? '+' + f(r.rule.value) : '+' + r.rule.value + '%'}${
-          r.ruleSource === 'default' ? ' <em>(shop default)</em>'
-          : (r.ruleSource === 'variant' || r.ruleSource === 'variant-stock') ? ' <em>(this variant)</em>' : ''}`
-      : '<i>no rule set</i>';
-    /* THE DIVISION NOBODY WAS DOING. A fixed rule is a shilling figure
-       and reads as a decision; what it is worth is the share of the
-       price it makes, and that moves every time the cost does. */
+    const unit = r.kind === 'wholesale' ? 'pack' : 'piece';
     const stale = r.staleFixed
-      ? `<div class="mg-stale">That <b>${f(r.rule.value)}</b> is <b>${r.ruleYieldPct}%</b> of the price it makes, on a cost of ${f(r.cost)}. A fixed mark does not grow with the cost — it was a fair mark once and has not been repriced since.</div>`
+      ? `<div class="ow-pr-fx">
+          <svg class="ow-pr-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+          <div>
+            <p class="ow-pr-fx-t">Your rule is <b class="ow-pr-fig">${fmtUGX(r.rule.value)}</b> a ${unit}${
+              r.ruleSource === 'default' ? ', the shop default' : r.ruleSource === 'variant' || r.ruleSource === 'variant-stock' ? ', set on this variant' : ''
+              } &mdash; and that is <b class="ow-pr-fig">${r.ruleYieldPct}%</b> of the price it makes on a cost of <b class="ow-pr-fig">${fmtUGX(r.cost)}</b>.</p>
+            <p class="ow-pr-fx-n">A fixed mark does not grow with the cost. It was a fair mark once, and nothing has repriced it since.</p>
+          </div>
+        </div>`
       : '';
     const est = r.estShare >= 20
-      ? `<div class="mg-note">${r.estShare}% of these units were costed by estimate, so the kept share is a good figure rather than a certain one.</div>`
+      ? `<p class="ow-q-note">${r.estShare}% of these units were costed by estimate, so the kept share is a good figure rather than a certain one.</p>`
       : '';
-    return `<div class="mg-row${r.staleFixed ? ' stale' : ''}">
-      <div class="cl-top">
-        <span class="cl-name">${esc(r.line)}</span>
-        <span class="cl-when">${r.kind === 'retail' ? 'sold by the piece' : 'sold by the pack'}</span>
-        <span class="cl-val">${r.atStake ? f(r.atStake) : '—'}<span class="cl-sub">${r.atStake ? 'lifting would add' : 'at or above target'}</span></span>
-      </div>
-      <div class="cl-facts">
-        <span class="cl-fact"><b>${r.units30}</b> sold in 30 days</span>
-        <span class="cl-fact"><b>${f(r.sold30)}</b> taken</span>
-        <span class="cl-fact"><b>${r.keptPct == null ? '—' : r.keptPct + '%'}</b> kept</span>
-        <span class="cl-fact">rule ${ruleTxt}</span>
-        ${r.ruleYieldPct != null ? `<span class="cl-fact">worth <b>${r.ruleYieldPct}%</b> at today’s cost</span>` : ''}
-      </div>
-      ${stale}${est}
-      ${lift ? `<div class="mg-act">
-        <span class="mg-aim">${f(r.price)} → <b>${f(lift.target)}</b> keeps ${lift.keptPct}%</span>
-        <button type="button" class="btn btn-accent mg-lift" data-key="${esc(r.key)}">Charge ${f(lift.target)}</button>
+    return `<div class="ow-q-x">
+      <p class="ow-q-note">You charge <b class="ow-pr-fig">${fmtUGX(r.price)}</b> a ${unit}. It costs <b class="ow-pr-fig">${fmtUGX(r.cost)}</b>, so you keep <b class="ow-pr-fig">${r.keptPct == null ? '&mdash;' : r.keptPct + '%'}</b> &mdash; on ${r.units30} that is <b class="ow-pr-fig">${fmtUGX(r.earned30)}</b> earned out of <b class="ow-pr-fig">${fmtUGX(r.sold30)}</b> taken.</p>
+      ${lift ? `<div class="ow-pr-ar">
+        <div class="ow-pr-ar-c"><p class="ow-pr-ar-l">It costs you</p><span class="ow-pr-ar-v">${f(r.cost)}</span></div>
+        <div class="ow-pr-ar-c ow-pr-now"><p class="ow-pr-ar-l">You charge</p><span class="ow-pr-ar-v">${f(r.price)}</span></div>
+        <div class="ow-pr-ar-a"><svg class="ow-pr-ic" viewBox="0 0 24 24"><path d="M5 12h13"/><path d="M13 7l5 5-5 5"/></svg></div>
+        <div class="ow-pr-ar-c ow-pr-aim"><p class="ow-pr-ar-l">To keep ${target}%</p><span class="ow-pr-ar-v">${f(lift.target)}</span></div>
+        <div class="ow-pr-ar-c"><p class="ow-pr-ar-l">Over the ${r.units30} that sold</p><span class="ow-pr-ar-v">+${f(r.atStake)}</span></div>
       </div>` : ''}
+      ${stale}${est}
+      <div class="ow-q-a">
+        ${lift ? `<button type="button" class="btn btn-accent ow-sm pr-lift" data-key="${esc(r.key)}">Charge ${f(lift.target)}</button>` : ''}
+        <button type="button" class="btn btn-ghost ow-sm pr-inv">Open the line</button>
+      </div>
+      <p class="ow-q-note">Charging it moves the ${lift ? lift.kind : r.kind} price both ways you sell it &mdash; off your own shelf and bought in to order. The other unit is not touched, and nothing changes until you confirm it.</p>
     </div>`;
   };
 
-  html += `<div class="mg-list">${listPageSlice('margin', under.length ? under : rows).map(row).join('')}</div>`;
-  html += listMoreButtonHTML('margin', (under.length ? under : rows).length, 'lines');
+  /* ---- a line that is not moving, opened ----
+     The price you would take, what that price would mean said BEFORE
+     the tap, and the people who have actually bought this line. An
+     offer is about ONE line, so it is written on that line beside the
+     figure it names -- not gathered into a second console below the
+     list, away from the price that produced it. */
+  const deadBody = (row)=>{
+    const r = row.src;
+    const cl = r.clearance == null ? null : clearanceFor(r, r.clearance);
+    const verdict = !cl ? ''
+      : !r.costKnown
+        ? `<div class="ow-pr-vd ow-none">No cost on file for this line, so nothing here can say what clearing it at <b class="ow-pr-fig">${fmtUGX(cl.target)}</b> would cost you. Price the stock on Inventory and this can speak.</div>`
+      : cl.owesConsignor > 0
+        ? `<div class="ow-pr-vd ow-bad"><b class="ow-pr-fig">${fmtUGX(cl.target)}</b> is under the <b class="ow-pr-fig">${fmtUGX(Math.round(cl.consignedCost))}</b> you will owe the consignor on these &mdash; <b class="ow-pr-fig">${fmtUGX(cl.owesConsignor)}</b> out of your own pocket across ${r.qty}. Their goods, your loss.</div>`
+      : cl.shortEach > 0
+        ? `<div class="ow-pr-vd ow-bad"><b class="ow-pr-fig">${fmtUGX(cl.shortEach)}</b> below what it cost you &mdash; <b class="ow-pr-fig">${fmtUGX(cl.shortAll)}</b> over the ${r.qty} you hold, and <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer. Cash now against stock forever is your call, and this will not stop you making it.</div>`
+        : `<div class="ow-pr-vd ow-good">You would keep <b class="ow-pr-fig">${cl.keptPct}%</b> &mdash; <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer if the lot goes. Nothing on your shelf changes: this writes the offer only.</div>`;
 
-  /* THE SCREEN ACCOUNTS FOR ITSELF. Every line read lands in exactly one
-     of these, and they sum to what was read -- the law the supplier
-     price watch already keeps, and the only thing that lets a reader
-     trust a list for what it does NOT say. */
-  const sk = rows.skipped || { noCost: 0, noSales: 0 };
-  const readTotal = rows.length + sk.noCost;
-  html += `<div class="cl-tail"><h4>What this screen read</h4>
-    <p class="pw-account-head">Read <b>${readTotal}</b> line${readTotal === 1 ? '' : 's'} that sold in the last 30 days.</p>
-    <div class="pw-account">
-      ${under.length ? `<div class="pw-account-row"><b>${under.length}</b><span>under your ${target}% target</span></div>` : ''}
-      ${stale ? `<div class="pw-account-row"><b>${stale}</b><span>of those priced by a fixed mark that has stopped keeping ${target}%</span></div>` : ''}
-      ${atOrOver ? `<div class="pw-account-row"><b>${atOrOver}</b><span>at or above it already</span></div>` : ''}
-      ${sk.noCost ? `<div class="pw-account-row"><b>${sk.noCost}</b><span>with no cost on file, so nothing here can say what they kept</span></div>` : ''}
-    </div></div>`;
-  el.innerHTML = html;
+    const buyers = deadStockBuyers(r.key);
+    const ident = shopIdentity();
+    const offers = !cl ? '' : buyers.length
+      ? `<div class="ow-pr-of">
+          <div class="ow-pr-of-h">
+            <span class="ow-pr-of-t">Who has taken this before</span>
+            <span class="ow-pr-of-n">most units first &mdash; a counter sale leaves nobody to write to</span>
+          </div>
+          <div class="ow-pr-of-l">${buyers.map((b, i)=>{
+            const id = String(b.customerId != null ? b.customerId : 'name:' + b.name.toLowerCase());
+            const open = pricingOfferId === id;
+            const wasPaid = lastClearancePricePaid(b, r.key);
+            const msg = clearanceOfferMessage(b, [{ line: r.line, clearance: r.clearance, qty: r.qty, wasPaid }], ident);
+            return `<button type="button" class="ow-pr-of-r${open?' ow-on':''}" data-offer="${esc(id)}" aria-expanded="${open}">
+                <span class="ow-pr-of-nm">${esc(b.name)}<span class="ow-pr-of-ph${b.phone?'':' ow-pr-nonum'}">${b.phone ? esc(b.phone) : 'no number on file'}</span></span>
+                <span class="ow-pr-of-b"><b>${b.units}</b> taken before${b.lastBought ? ' &middot; last ' + esc(fmtShortDate(b.lastBought)) : ''}</span>
+                <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+              ${open ? `<div class="ow-pr-of-x">
+                <textarea class="ow-msg" data-msg="${esc(id)}" rows="${Math.min(20, Math.max(9, msg.split('\\n').length + 1))}">${esc(msg)}</textarea>
+                <p class="ow-msg-n">Nothing has been sent. It names only this line, at the price you wrote above &mdash; change any of it before you send.${
+                  b.phone ? '' : ' There is no number on file for this buyer, so it can be copied but not sent.'}</p>
+                <div class="ow-q-a">
+                  ${b.phone ? `<button type="button" class="btn btn-accent ow-sm pr-send" data-who="${esc(id)}" data-phone="${esc(b.phone)}" data-key="${esc(r.key)}">Send on WhatsApp</button>` : ''}
+                  <button type="button" class="btn btn-ghost ow-sm pr-copy" data-who="${esc(id)}" data-key="${esc(r.key)}">Copy</button>
+                </div>
+              </div>` : ''}`;
+          }).join('')}</div>
+        </div>`
+      : `<p class="ow-q-note">Nobody on your books has bought this line &mdash; every sale of it was a counter sale, or the buyer was never recorded. There is nobody here to write to. A shop poster or a walk-in price is the tool for this one, not a message.</p>`;
 
-  el.querySelectorAll('.mg-lift').forEach(btn=> btn.addEventListener('click', ()=>{
-    const r = rows.find(x=> x.key === btn.dataset.key);
+    return `<div class="ow-q-x">
+      <p class="ow-q-note"><b class="ow-pr-fig">${r.qty}</b> on the shelf at <b class="ow-pr-fig">${r.costKnown ? fmtUGX(r.unitCost) : '&mdash;'}</b> each${
+        r.daysQuiet == null ? ', and nothing has ever gone' : `, standing still for ${r.daysQuiet} days`}.${
+        r.costFrom === 'registry' ? ' Costed at what it would take to replace, because no purchase behind it says otherwise.' : ''}</p>
+      <div class="ow-pr-pf">
+        <label class="ow-pr-pf-l" for="pr_price_field">A price you would take</label>
+        <input class="ow-pr-pf-f" id="pr_price_field" type="number" min="0" step="any"
+          value="${r.clearance == null ? '' : r.clearance}" data-key="${esc(r.key)}">
+        <span class="ow-pr-pf-g">each${r.costKnown ? ` &middot; costs <b class="ow-pr-fig">${fmtUGX(r.unitCost)}</b>` : ''}</span>
+        <button type="button" class="btn btn-ghost ow-sm pr-price-save" data-key="${esc(r.key)}">Write it down</button>
+        ${r.clearance != null ? `<button type="button" class="btn btn-ghost ow-sm pr-price-clear" data-key="${esc(r.key)}">Not clearing it</button>` : ''}
+      </div>
+      ${verdict}${offers}
+    </div>`;
+  };
+
+  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
+     emitted together, so neither can drift from the other. */
+  const rowHTML = (row)=>{
+    const open = row.key === pricingOpenKey;
+    const r = row.src;
+    const sub = row.kind === 'thin'
+      ? `${r.units30} sold in 30 days · ${r.kind === 'wholesale' ? 'by the pack' : 'by the piece'}`
+      : `${r.qty} on the shelf · ${r.costKnown ? f(r.unitCost) + ' each, at cost' : 'no cost on file'}`;
+    const chip = row.kind === 'thin'
+      ? (r.keptPct == null ? 'Kept share not known' : `Keeping ${r.keptPct}% of ${target}%`)
+      : (r.daysQuiet == null ? 'Never sold' : `Quiet ${r.daysQuiet} days`);
+    const chipTone = row.kind === 'thin'
+      ? (r.keptPct == null ? '' : r.keptPct < target / 2 ? ' ow-bad' : ' ow-warn')
+      : (r.daysQuiet == null ? '' : r.daysQuiet >= quiet * 2 ? ' ow-bad' : ' ow-warn');
+    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(row.key)}">
+      <button type="button" class="ow-q-r" data-open="${esc(row.key)}" aria-expanded="${open}">
+        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="ow-q-t" title="${esc(row.line)}"><span class="ow-q-who">${esc(row.line)}</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${
+          row.kind === 'thin' ? (r.kind === 'wholesale' ? 'by the pack' : 'by the piece') : `${r.qty} on the shelf`}</span></span>
+        ${reason(row)}
+        ${basis(row)}
+        ${value(row)}
+      </button>
+      <button type="button" class="ow-q-card" data-open="${esc(row.key)}" aria-expanded="${open}">
+        <div class="ow-q-cm"><span class="ow-cp${chipTone}">${esc(chip)}</span>
+          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+        <p class="ow-q-ct">${esc(row.line)}</p>
+        <span class="ow-q-cv">${row.kind === 'thin' ? '+' : ''}${f(row.worth)}<span class="ow-q-b">${
+          row.kind === 'thin' ? 'a month, if you lift it' : 'locked up, once'}</span></span>
+        <p class="ow-q-note">${esc(sub)}</p>
+      </button>
+      ${open ? (row.kind === 'thin' ? thinBody(row) : deadBody(row)) : ''}
+    </div>`;
+  };
+
+  const head = `<div class="ow-pr-h">
+    <span></span><span>Line</span><span>Why it is here</span><span>Basis</span>
+    <span class="ow-pr-h-r">What a fix is worth</span>
+  </div>`;
+
+  /* WHAT THIS SCREEN READ, and what it could not. Every line read lands
+     in exactly one of these. Margin accounted for itself and Clearance
+     did not; the account now covers both halves, because a list is only
+     trustworthy about what it does NOT say if it says what it skipped. */
+  const sk = all.margins.skipped || { noCost: 0, noSales: 0 };
+  const atOrOver = all.margins.length - all.thin.length;
+  const cell = (n, label, tone)=> `<div class="ow-pr-ac-c ${tone||''}">
+    <span class="ow-pr-ac-v">${n}</span><span class="ow-pr-ac-l">${label}</span></div>`;
+  const account = nothingRead ? '' : `<div class="ow-pr-ac">
+    <p class="ow-pr-ac-h">What this screen read</p>
+    <div class="ow-pr-ac-g">
+      ${cell(all.margins.length, 'sold in the last 30 days and could be costed')}
+      ${cell(all.thin.length, `selling under your ${target}% target`, 'ow-bad')}
+      ${cell(atOrOver, `selling, and keeping ${target}% or better`, 'ow-good')}
+      ${cell(all.dead.length, `holding stock with no sale in ${quiet} days`, 'ow-bad')}
+      ${cell(sk.noCost, 'with no cost on file, so nothing here can say what they kept', 'ow-none')}
+    </div>
+  </div>`;
+
+  /* THREE EMPTY STATES, WORDED APART. Nothing read is not the same as
+     nothing wrong, and a screen that says "everything is fine" when it
+     could not read the books is lying by omission. The third names the
+     lines it had to skip, and offers the door that fixes them. */
+  const empty = !all.length
+    ? (nothingRead
+        ? `<div class="ow-empty"><b>Nothing has sold in the last 30 days that can be costed, and there is no stock on the shelf to judge.</b>
+            <span>This reads what your invoices earned against what they cost, so a month with no sales &mdash; or with no cost on file behind them &mdash; leaves it nothing to say.</span></div>`
+        : all.margins.length === 0
+        ? `<div class="ow-empty"><b>Nothing that sold in the last 30 days can be costed.</b>
+            <span>${(all.margins.skipped||{}).noCost || 0} line${((all.margins.skipped||{}).noCost || 0) === 1 ? '' : 's'} sold with no cost on file behind ${((all.margins.skipped||{}).noCost || 0) === 1 ? 'it' : 'them'}, so nothing here can say what they kept. Price the stock on Inventory and this screen can speak.</span></div>`
+        : `<div class="ow-empty"><b>Every line you sold kept ${target}% or better, and nothing on your shelf has stood still.</b>
+            <span>There is no work on this screen today. Raise the target or narrow the quiet window in the rail if that reads as too easy a bar for this trade.</span></div>`)
+    : !rows.length
+      ? `<div class="ow-empty"><b>Nothing in this half of the shelf.</b>
+          <span>Tap <b>All</b> above to see every line that needs a price looked at.</span></div>`
+      : '';
+
+  const shown = listPageSlice('pricing', rows);
+  const listHTML = rows.length
+    ? head + shown.map(rowHTML).join('') + listMoreButtonHTML('pricing', rows.length, 'lines')
+    : empty;
+
+  body.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">What to fix first</span>
+      <span class="ow-pan-n">${all.length ? `${rows.length}${rows.length !== all.length ? ' of ' + all.length : ''} line${rows.length===1?'':'s'} &middot; worst money first` : 'nothing to fix'}</span>
+    </div>
+    ${all.length ? toolbar : ''}
+    ${all.length ? listHTML : empty}
+    ${account}
+  </div>`;
+
+  body.querySelectorAll('[data-seg]').forEach(btn=> btn.addEventListener('click', ()=>{
+    pricingSeg = btn.dataset.seg;
+    // A line opened in one half has no business surviving into another,
+    // where it cannot be seen and its price field cannot be confirmed.
+    pricingOpenKey = null; pricingOfferId = null;
+    renderPricing();
+  }));
+  body.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
+    // Clicking the row that is open closes it: the way out is the way in.
+    pricingOpenKey = (pricingOpenKey === btn.dataset.open) ? null : btn.dataset.open;
+    pricingOfferId = null;
+    renderPricing();
+  }));
+  body.querySelectorAll('[data-offer]').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    pricingOfferId = (pricingOfferId === btn.dataset.offer) ? null : btn.dataset.offer;
+    renderPricing();
+  }));
+  body.querySelectorAll('.pr-inv').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation(); goToTab('inventory');
+  }));
+
+  /* ---- lifting a thin line ----
+     Confirmed by name and by figure, and saying out loud that it moves
+     BOTH prices -- the thing the market screen's own button does not do,
+     and the reason a line bought in to order kept its old price there
+     while the toast reported success. */
+  body.querySelectorAll('.pr-lift').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const r = all.margins.find(x=> x.key === btn.dataset.key);
     if(!r) return;
     const lift = marginLiftFor(r, target);
     if(!lift) return;
-    /* Confirmed by name and by figure, and saying out loud that it moves
-       BOTH prices -- the thing the market screen's own button does not
-       do, and the reason a line bought in to order kept its old price
-       there while the toast reported success. */
     if(!confirm(`Charge ${fmtUGX(lift.target)} for ${r.line} instead of ${fmtUGX(r.price)}?\n\n`
       + `It costs ${fmtUGX(r.cost)}, so you would keep ${lift.keptPct}%.`
       + (lift.addsOverWindow ? ` Over the ${r.units30} that sold in the last 30 days that is ${fmtUGX(lift.addsOverWindow)} more.` : '')
@@ -38672,142 +39139,21 @@ function renderMargin(){
     }
     const now = ourPriceFor(r.productId, r.variantIdx, lift.kind);
     toast(`Now ${fmtUGX(now)} ${lift.kind} — keeping ${lift.keptPct}%`, 6000);
-    renderMargin(); renderMarginBadge();
+    pricingOpenKey = null;
+    renderPricing(); renderPricingBadge();
   }));
-}
 
-// Lines under the shop's own target. Same derivation as the screen, so
-// the count on the rail and the list cannot disagree.
-function renderMarginBadge(){
-  setNavBadge('navBadgeMargin', marginRows().filter(r=> r.atStake > 0).length, 'line(s) under target');
-}
-document.getElementById('mg_target').addEventListener('change', e=>{
-  const v = Number(e.target.value) || 0;
-  data.presetTargetMarginPct = (v > 0 && v < 100) ? v : 10;
-  e.target.value = data.presetTargetMarginPct;
-  saveData();
-  renderMargin();
-  renderMarginBadge();
-});
-
-/* WHAT IS SITTING THERE, AND WHO WOULD TAKE IT.
-
-   The dashboard has named this money for months and could never show a
-   thing to sell. The Manager has advised clearing it and been skipped
-   twenty-three times, because advice without a mechanism under it is
-   advice nobody can act on. This is the mechanism. */
-function renderClearance(){
-  const el = document.getElementById('cl_body');
-  if(!el) return;
-  const f = (x)=> fmtUGX(Math.round(x));
-  const daysBox = document.getElementById('cl_days');
-  if(daysBox && document.activeElement !== daysBox) daysBox.value = deadStockQuietDays();
-
-  const rows = deadStockRows();
-  const marked = rows.filter(r=> r.clearance != null);
-  const value = rows.reduce((t, r)=> t + r.value, 0);
-  const raises = marked.reduce((t, r)=> t + r.clearance * r.qty, 0);
-  const oldest = rows.reduce((m, r)=> Math.max(m, r.daysQuiet == null ? 0 : r.daysQuiet), 0);
-  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
-    <div class="sum-value">${esc(String(v))}</div><div class="sum-label">${esc(label)}</div></div>`;
-
-  let html = `<div class="sum-strip">
-    ${cell(f(value), 'sitting dead', value ? 'warn' : 'good')}
-    ${cell(rows.length, rows.length === 1 ? 'line' : 'lines')}
-    ${oldest ? cell(oldest + ' days', 'longest quiet') : ''}
-    ${marked.length ? cell(f(raises), 'if the marked lines go', 'good') : ''}
-  </div>`;
-
-  if(!rows.length){
-    html += `<div class="pw-empty"><b>Nothing is sitting still.</b>
-      <span>Every line on your shelf has sold at least once in the last ${deadStockQuietDays()} days.
-      That is the whole point of the window — widen it above if your trade turns more slowly than that.</span></div>`;
-    el.innerHTML = html;
-    return;
-  }
-
-  const row = (r)=>{
-    const cl = r.clearance == null ? null : clearanceFor(r, r.clearance);
-    /* WHAT THIS PRICE WOULD MEAN, said before the tap and not after.
-       Below cost is named in shillings across the whole holding and
-       never blocked: cash now against stock forever is the owner's
-       decision, and the app's job is to make sure they are making it
-       with their eyes open. */
-    const verdict = !cl ? ''
-      : !r.costKnown
-        ? `<div class="cl-verdict none">No cost on file for this line, so nothing here can say what clearing it at ${f(cl.target)} would cost you. Price the stock on Inventory and this can speak.</div>`
-      : cl.owesConsignor > 0
-        ? `<div class="cl-verdict bad">${f(cl.target)} is under the ${f(cl.consignedCost)} you will owe the consignor on these — ${f(cl.owesConsignor)} out of your own pocket across ${r.qty}. Their goods, your loss.</div>`
-      : cl.shortEach > 0
-        ? `<div class="cl-verdict bad">${f(cl.shortEach)} below what it cost you — ${f(cl.shortAll)} over the ${r.qty} you hold, and ${f(cl.raises)} back in the drawer. Cash now against stock forever is your call.</div>`
-        : `<div class="cl-verdict ok">You would keep ${cl.keptPct}% — ${f(cl.raises)} back in the drawer for the lot.</div>`;
-    const buyers = deadStockBuyers(r.key);
-    return `<div class="cl-row${r.clearance != null ? ' marked' : ''}">
-      <div class="cl-top">
-        <span class="cl-name">${esc(r.line)}</span>
-        <span class="cl-when">${r.daysQuiet == null ? 'never sold' : 'quiet ' + r.daysQuiet + ' days'}</span>
-        <span class="cl-val">${f(r.value)}<span class="cl-sub">${r.qty} on the shelf</span></span>
-      </div>
-      <div class="cl-facts">
-        <span class="cl-fact">${r.costKnown ? `cost <b>${f(r.unitCost)}</b> each` : '<i>no cost on file</i>'}</span>
-        ${r.costFrom === 'registry' ? '<span class="cl-fact"><i>costed at what it would take to replace</i></span>' : ''}
-        <span class="cl-fact">${buyers.length
-          ? `<b>${buyers.length}</b> ${buyers.length === 1 ? 'buyer has' : 'buyers have'} taken it before`
-          : '<i>nobody has ever bought this</i>'}</span>
-        ${r.offeredOn ? `<span class="cl-fact offered">offered ${esc(fmtShortDate(r.offeredOn))}</span>` : ''}
-      </div>
-      <div class="cl-set">
-        <label>Take <input type="number" class="cl-price" data-key="${esc(r.key)}" min="0" step="any" value="${r.clearance == null ? '' : r.clearance}" placeholder="a price you would take"> each</label>
-        ${r.clearance != null ? `<button type="button" class="btn btn-ghost cl-clear" data-key="${esc(r.key)}">Not clearing it</button>` : ''}
-      </div>
-      ${verdict}
-    </div>`;
-  };
-
-  html += `<div class="cl-list">${listPageSlice('clearance', rows).map(row).join('')}</div>`;
-  html += listMoreButtonHTML('clearance', rows.length, 'lines');
-
-  /* THE OFFERS. Only lines with a price on them, and only to people who
-     have actually bought that line -- an offer about goods somebody
-     never buys is a circular, and this shop cannot afford to be one. */
-  const offers = clearanceOffers();
-  if(marked.length && !offers.length){
-    html += `<div class="cl-tail"><h4>Nobody to offer these to</h4>
-      <p class="pp-more">None of the lines you have marked has ever been bought by a customer on your books —
-      every sale of them was a counter sale, or the buyer was never recorded. There is nobody here to write to.
-      A shop poster or a walk-in price is the tool for these, not a message.</p></div>`;
-  } else if(offers.length){
-    const ident = shopIdentity();
-    html += `<div class="cl-tail"><h4>Who has taken these before</h4>
-      <div class="cl-offers">${listPageSlice('clearanceOffers', offers).map(b=> {
-        const msg = clearanceOfferMessage(b, b.lines, ident);
-        const rowsAttr = Math.min(20, Math.max(9, msg.split('\n').length + 1));
-        return `<div class="cl-offer">
-          <div class="cl-top">
-            <span class="cl-name">${esc(b.name)}${b.phone ? `<span class="cl-sub">${esc(b.phone)}</span>` : '<span class="cl-sub">no number on file</span>'}</span>
-            <span class="cl-when">${b.lines.length} ${b.lines.length === 1 ? 'line' : 'lines'} they buy</span>
-            <span class="cl-val">${b.units}<span class="cl-sub">units taken before</span></span>
-          </div>
-          <textarea class="cl-msg" data-msg="${esc(b.name)}" rows="${rowsAttr}">${esc(msg)}</textarea>
-          <div class="cl-acts">
-            <button type="button" class="btn btn-ghost cl-copy" data-who="${esc(b.name)}">Copy</button>
-            <button type="button" class="btn btn-accent cl-send" data-who="${esc(b.name)}" data-phone="${esc(b.phone)}">Send on WhatsApp</button>
-          </div>
-        </div>`;
-      }).join('')}</div>${listMoreButtonHTML('clearanceOffers', offers.length, 'buyers')}</div>`;
-  }
-  el.innerHTML = html;
-
-  const reread = ()=>{ renderClearance(); renderClearanceBadge(); };
-  el.querySelectorAll('.cl-price').forEach(box=> box.addEventListener('change', ()=>{
-    const key = box.dataset.key;
-    const r = rows.find(x=> x.key === key);
+  /* ---- writing down a clearance price ----
+     Confirmed like every other price decision in this app, and the
+     below-cost case says the loss out loud in the question itself
+     rather than leaving it on the screen behind. */
+  body.querySelectorAll('.pr-price-save').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const box = document.getElementById('pr_price_field');
+    const r = all.dead.map(x=> x.src).find(x=> x.key === btn.dataset.key);
+    if(!r || !box) return;
     const aim = Math.round(Number(box.value) || 0);
-    if(!r) return;
-    if(!(aim > 0)){ setClearancePrice(key, 0); reread(); return; }
-    /* Confirmed by name and by figure, like every other price decision
-       in this app -- and the below-cost case says the loss out loud in
-       the question itself rather than leaving it on the screen behind. */
+    if(!(aim > 0)){ setClearancePrice(r.key, 0); renderPricing(); renderPricingBadge(); return; }
     const cl = clearanceFor(r, aim);
     const warn = cl.owesConsignor > 0
       ? `\n\nThat is under the ${fmtUGX(Math.round(cl.consignedCost))} you will owe the consignor — ${fmtUGX(cl.owesConsignor)} out of your own pocket across ${r.qty}.`
@@ -38815,60 +39161,123 @@ function renderClearance(){
         ? `\n\nThat is ${fmtUGX(cl.shortEach)} below what it cost you, ${fmtUGX(cl.shortAll)} over the ${r.qty} you hold.`
         : '';
     if(!confirm(`Offer ${r.line} at ${fmtUGX(aim)} each?${warn}\n\nIt raises ${fmtUGX(cl.raises)} if the lot goes. Nothing is sent and no price on the shelf changes — this writes the offer only.`)){
-      reread(); return;
+      renderPricing(); return;
     }
-    setClearancePrice(key, aim);
-    reread();
+    setClearancePrice(r.key, aim);
+    renderPricing(); renderPricingBadge();
   }));
-  el.querySelectorAll('.cl-clear').forEach(b=> b.addEventListener('click', ()=>{
-    setClearancePrice(b.dataset.key, 0); reread();
+  body.querySelectorAll('.pr-price-clear').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    setClearancePrice(btn.dataset.key, 0);
+    renderPricing(); renderPricingBadge();
   }));
+
+  /* ---- the offer ----
+     Taken away, not sent: the app cannot see WhatsApp, so it records
+     that the offer left the screen. What ships is what is IN THE BOX --
+     the owner's edits, never the app's draft. */
   const msgFor = (who)=>{
-    const box = el.querySelector(`[data-msg="${CSS.escape(who)}"]`);
+    const box = body.querySelector(`[data-msg="${CSS.escape(who)}"]`);
     return box ? box.value : '';
   };
-  const stampOffered = (who)=>{
-    const b = offers.find(x=> x.name === who);
-    if(b) b.lines.forEach(l=> markClearanceOffered(l.key));
-  };
-  el.querySelectorAll('.cl-send').forEach(btn=> btn.addEventListener('click', ()=>{
+  body.querySelectorAll('.pr-send').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
     window.open(waComposeUrl(btn.dataset.phone, msgFor(btn.dataset.who)), '_blank');
-    stampOffered(btn.dataset.who);
+    markClearanceOffered(btn.dataset.key);
     toast('Marked as offered today');
-    reread();
+    renderPricing(); renderPricingBadge();
   }));
-  el.querySelectorAll('.cl-copy').forEach(btn=> btn.addEventListener('click', async ()=>{
+  body.querySelectorAll('.pr-copy').forEach(btn=> btn.addEventListener('click', async (e)=>{
+    e.stopPropagation();
     try{ await navigator.clipboard.writeText(msgFor(btn.dataset.who)); toast('Offer copied'); }
     catch(err){ toast('Could not copy — select the text and copy it by hand'); return; }
-    stampOffered(btn.dataset.who);
-    reread();
+    markClearanceOffered(btn.dataset.key);
+    renderPricing(); renderPricingBadge();
   }));
 }
 
-// Lines marked to clear that have not been offered to anybody yet. Same
-// derivation as the screen, so the count and the list cannot disagree.
-/* WHAT IS DEAD, not what the owner has already dealt with.
+/* THE RAIL. What the order is worked out on, the two definitions that
+   decide who is on the list at all, and what a price change actually
+   does. The two settings were a form panel apiece above the money, on
+   every visit, to hold a figure changed twice a year. */
+function renderPricingRail(all, t){
+  const rail = document.getElementById('pr_rail');
+  if(!rail) return;
+  const f = (x)=> Number(Math.round(x)).toLocaleString('en-UG');
+  const lead = all.thin[0], deadLead = all.dead[0];
+  rail.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">How the order is worked out</span></div>
+    <p class="ow-mini">Two kinds of money sit on one list, so they are ranked on one clock: <b>what a fix is worth over a year</b>. A thin line&rsquo;s month is counted twelve times; dead stock&rsquo;s cash comes back once.</p>
+    ${lead && deadLead ? `<p class="ow-mini">That is why <b>${fmtUGX(Math.round(lead.worth))}</b> a month can outrank <b>${fmtUGX(Math.round(deadLead.worth))}</b> sitting on a shelf. Each row still shows the honest figure &mdash; a month, or once &mdash; and nothing on this screen ever adds the two together.</p>` : ''}
+    ${t.nothingRead ? '' : `<div class="ow-sr"><span class="ow-sr-k">The thin lines, a month</span><span class="ow-sr-v">${f(t.thinWorth)} UGX</span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Held in stock not moving</span><span class="ow-sr-v">${f(t.deadValue)} UGX</span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Taken in 30 days</span><span class="ow-sr-v">${f(t.sold30)} UGX</span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Kept out of it</span><span class="ow-sr-v">${f(t.kept30)} UGX</span></div>`}
+  </div>
 
-   This badge counted lines MARKED to clear and read "1" beside a shelf
-   holding 22 dead lines worth 5,310,000 -- so the one screen that could
-   have said money was sitting still said there was one small errand.
-   Every other badge on the rail counts work WAITING: debtors owing,
-   lines under target, debtors to chase. This one counted work already
-   decided, and was the odd one out.
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What counts as thin</span></div>
+    <div class="ow-pr-set">
+      <input class="ow-pr-set-f" id="pr_target" type="number" min="1" max="99" step="any" value="${t.target}" aria-label="Target margin, per cent">
+      <span class="ow-pr-set-l">per cent of every shilling a customer pays, kept</span>
+    </div>
+    <p class="ow-mini">The app judged your prices against <b>10%</b> for years without ever asking you. Raise it if that reads as too easy a bar for this trade.</p>
+  </div>
 
-   The cost is a badge that will read 22 until the stock actually
-   shifts. That is the honest cost of the honest number. */
-function renderClearanceBadge(){
-  setNavBadge('navBadgeClearance', deadStockRows().length, 'line(s) sitting dead');
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What counts as not moving</span></div>
+    <div class="ow-pr-set">
+      <input class="ow-pr-set-f" id="pr_days" type="number" min="1" step="1" value="${t.quiet}" aria-label="Quiet for, days">
+      <span class="ow-pr-set-l">days quiet &mdash; nothing sold off the line</span>
+    </div>
+    <p class="ow-mini">Sixty is where most shops draw it. A trade that turns more slowly draws it wider.</p>
+  </div>
+
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What a price change does</span></div>
+    <p class="ow-mini">Lifting a line moves that price <b>both ways you sell it</b> &mdash; off your own shelf and bought in to order. The other unit is not touched.</p>
+    <p class="ow-mini">A clearance price changes <b>nothing on the shelf</b>. It writes down what you would take, so an offer can name a figure &mdash; and sending marks the line offered today, which you can take back if it did not go.</p>
+  </div>`;
+
+  /* The two settings are bound after every render because the panels
+     they sit in are drawn by this function. They were top-level
+     addEventListener calls on ids in static markup; a field that moves
+     into rendered HTML cannot be bound once at load. */
+  const bind = (id, apply)=>{
+    const box = document.getElementById(id);
+    if(!box) return;
+    box.addEventListener('change', ()=>{
+      apply(Number(box.value) || 0);
+      saveData();
+      pricingOpenKey = null; pricingOfferId = null;
+      renderPricing();
+      renderPricingBadge();
+    });
+  };
+  bind('pr_target', v=> { data.presetTargetMarginPct = (v > 0 && v < 100) ? v : 10; });
+  bind('pr_days', v=> { const n = Math.round(v); data.presetDeadStockDays = n >= 1 ? n : 60; });
 }
-document.getElementById('cl_days').addEventListener('change', e=>{
-  const v = Math.round(Number(e.target.value) || 0);
-  data.presetDeadStockDays = v >= 1 ? v : 60;
-  e.target.value = data.presetDeadStockDays;
-  saveData();
-  renderClearance();
-  renderClearanceBadge();
-});
+
+/* WHAT IS WAITING, both halves of it.
+
+   Two badges became one, because one screen carries one number. It
+   counts lines under the target PLUS lines sitting dead -- the same two
+   readings the list is drawn from, so the rail and the screen cannot
+   disagree.
+
+   It counts what is DEAD, not what the owner has already marked to
+   clear. The clearance badge once counted MARKED lines and read "1"
+   beside a shelf holding 22 dead lines worth 5,310,000 -- the one place
+   that could have said money was sitting still instead reported one
+   small errand. Every other badge on the rail counts work WAITING, and
+   that one was the odd one out. The cost is a badge that stays high
+   until the stock actually shifts, which is the honest cost of the
+   honest number. */
+function renderPricingBadge(){
+  const thin = marginRows().filter(r=> r.atStake > 0).length;
+  const dead = deadStockRows().length;
+  setNavBadge('navBadgePricing', thin + dead, 'line(s) to reprice — under target, or sitting dead');
+}
 
 // How many are waiting to be chased, on the rail. Same derivation, so
 // the count and the list can never disagree.
@@ -67190,8 +67599,7 @@ function refreshNavBadges(){
   renderSourcingBadge();
   renderChaseBadge();
   renderConsignBadge();
-  renderClearanceBadge();
-  renderMarginBadge();
+  renderPricingBadge();
 }
 function renderAll(){
   renderPresets();

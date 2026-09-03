@@ -316,8 +316,26 @@ if (scope) {
 
 /* ---------- 9. the screen, and the Manager ---------------------------- */
 {
-  const panel = extractFunction(src, 'renderClearance', 'index.html');
-  t.check(/deadStockRows\(\)/.test(panel), 'the screen reads the one shelf walk');
+  /* THE SCREEN IS NOW CALLED renderPricing.
+     Clearance and Margin were merged: they asked the same question about
+     one shelf -- a line is selling and keeping enough, selling but thin,
+     or not selling at all -- and the last two are both a price decision.
+     Every assertion below is the one that was here before; only the name
+     of the function that has to satisfy it changed. What this file
+     guards is unchanged: the screen reads the one shelf walk, a price is
+     confirmed, both below-cost cases are named and neither is blocked,
+     a line nobody has bought says so, and what SHIPS on WhatsApp is what
+     is in the box rather than the app's draft. */
+  const panel = extractFunction(src, 'renderPricing', 'index.html');
+  /* ONE HOP, because one screen now draws two readings. renderPricing
+     builds its queue from pricingRows(), and pricingRows() is where the
+     shelf walk is read. The guarantee is unchanged and is checked across
+     both halves of it: the screen must not walk the shelf itself, and
+     the walk it is handed must be deadStockRows() rather than a second
+     reading that could disagree with the Manager's. */
+  const unified = extractFunction(src, 'pricingRows', 'index.html');
+  t.check(/pricingRows\(\)/.test(panel) && /deadStockRows\(\)/.test(unified),
+    'the screen reads the one shelf walk');
   t.check(/waComposeUrl\(btn\.dataset\.phone, msgFor\(btn\.dataset\.who\)\)/.test(panel),
     'sending opens WhatsApp with what is IN THE BOX — the owner’s edits ship, not the app’s draft');
   t.check(/confirm\(/.test(panel),
@@ -327,7 +345,7 @@ if (scope) {
   t.check(/nobody has ever bought this/.test(panel),
     'a line with no buyers says so rather than showing an empty list');
 
-  const badge = extractFunction(src, 'renderClearanceBadge', 'index.html');
+  const badge = extractFunction(src, 'renderPricingBadge', 'index.html');
   t.check(/deadStockRows\(\)/.test(badge),
     'the rail badge counts from the same reading, so the number and the list cannot disagree');
   /* WHAT IS DEAD, NOT WHAT IS DEALT WITH. It counted lines the owner had
@@ -338,8 +356,16 @@ if (scope) {
      debtors to chase. */
   t.check(!/r\.clearance != null/.test(badge),
     'and it counts what is DEAD, not what the owner has already marked — every other badge on the rail counts work waiting');
-  t.check(/'line\(s\) sitting dead'/.test(badge),
-    'and its tooltip says which of the two it is counting');
+  /* ONE SCREEN, ONE BADGE, so the tooltip now names BOTH halves rather
+     than one. The old assertion pinned the exact words 'line(s) sitting
+     dead' because there were two badges on the rail and each had to say
+     which of the two readings it was counting. There is one badge now,
+     over one screen, and it counts lines under target PLUS lines sitting
+     dead -- so what it must still do is name what it counted, which is
+     what is checked. A badge whose tooltip named only one half would be
+     the fault this assertion was written against. */
+  t.check(/sitting dead/.test(badge) && /under target/.test(badge),
+    'and its tooltip names both halves it is counting, not one of them');
 
   const at = src.indexOf('dead_stock: (()=>{');
   const pulse = src.slice(at, at + 1400);

@@ -259,8 +259,22 @@ if (scope) {
 
 /* ---------- 6. the screen, and the Manager ---------------------------- */
 {
-  const panel = extractFunction(src, 'renderMargin', 'index.html');
-  t.check(/marginRows\(\)/.test(panel), 'the screen reads the one margin reading');
+  /* THE SCREEN IS NOW CALLED renderPricing.
+     Margin and Clearance were merged into one screen: both are a price
+     decision about the same shelf, one asking for more and the other for
+     less. Every assertion below is the one that was here before, and
+     each still guards the same thing -- the screen reads the one margin
+     reading, a price change is confirmed and says it moves BOTH prices,
+     a stale fixed rule is explained rather than merely flagged, and the
+     lines it could not cost are counted and named rather than dropped. */
+  const panel = extractFunction(src, 'renderPricing', 'index.html');
+  /* ONE HOP, because one screen now draws two readings: renderPricing
+     builds its queue from pricingRows(), and that is where marginRows()
+     is read. Both halves are checked, so the screen still cannot compute
+     a margin of its own and disagree with what the Manager was handed. */
+  const unified = extractFunction(src, 'pricingRows', 'index.html');
+  t.check(/pricingRows\(\)/.test(panel) && /marginRows\(\)/.test(unified),
+    'the screen reads the one margin reading');
   t.check(/confirm\(/.test(panel), 'and a price change is confirmed, like every other one in this app');
   t.check(/BOTH ways you sell it/.test(panel),
     'the confirmation says it moves both prices — the thing the market screen does not do and this shop was caught by');
@@ -269,7 +283,7 @@ if (scope) {
   t.check(/no cost on file, so nothing here can say what they kept/.test(panel),
     'and the lines it could not judge are counted and named at the bottom rather than dropped');
 
-  const badge = extractFunction(src, 'renderMarginBadge', 'index.html');
+  const badge = extractFunction(src, 'renderPricingBadge', 'index.html');
   t.check(/marginRows\(\)/.test(badge),
     'the rail badge counts from the same reading, so the number and the list cannot disagree');
 
