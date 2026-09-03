@@ -27702,12 +27702,41 @@ function orderLoadFormHTML(q){
     : 'Not packed yet. Loading it from here counts it as picked and packed — for when nobody is on the worker app.';
   return `<p class="ow-ot-h ow-ot-h2">${out ? 'Who has it' : 'Loaded'}</p><p class="ow-ot-note">${esc(lead)}</p>${carrierFormHTML(q, OT_LOAD_CLS, otLoadDrafts.get(q.id))}<div class="ow-ot-load-go"><button type="button" class="btn btn-accent ow-sm" data-act="loadgo" data-id="${q.id}">${otIco(ICON_TRUCK, 12)}${out ? 'That is who has it' : 'Loaded, it has gone'}</button></div>`;
 }
-/* Typing in the form and a redraw landing mid-word: the timer skips a
-   redraw while a field in a row has focus, and every redraw keeps what
-   was typed. */
+/* Typing in the form and a redraw landing mid-word.
+   Keeping the TEXT was not enough. The redraw replaces the whole board,
+   so the box being typed into is a new element and the old one's focus
+   dies with it -- every keystroke after that landed on the page and was
+   lost, mid-word, with the value looking right on screen. What made it
+   constant rather than rare is that the board has some twenty callers
+   and a thirty-second background refresh among them: pause to read a
+   number plate, and the field goes dead under your hands.
+
+   So the caret is carried across the redraw with the text. Held here
+   rather than in each caller, because the fault was never one caller. */
 function otTyping(){
   const el = document.activeElement;
   return !!(el && el.closest && el.closest('#savedQuotesWrap [data-load]'));
+}
+// Which field, and where in it, so both can be given back after the wrap
+// is rewritten.
+function otFocusSnapshot(){
+  const el = document.activeElement;
+  const form = el && el.closest ? el.closest('#savedQuotesWrap [data-load]') : null;
+  if(!form || !el.dataset || !el.dataset.car) return null;
+  const text = el.tagName === 'INPUT';
+  return { id: form.dataset.load, car: el.dataset.car,
+    start: text ? el.selectionStart : null, end: text ? el.selectionEnd : null };
+}
+function otRestoreFocus(snap){
+  if(!snap) return;
+  const el = document.querySelector(`#savedQuotesWrap [data-load="${snap.id}"] [data-car="${snap.car}"]`);
+  if(!el) return;
+  el.focus();
+  // Back where the word was, not at the end of it -- a caret that jumps
+  // to the end is its own kind of broken when correcting a middle letter.
+  if(snap.start != null && el.setSelectionRange){
+    try{ el.setSelectionRange(snap.start, snap.end); }catch(e){/* a type that has no caret */}
+  }
 }
 function otLoadGo(id, el){
   const form = el && el.closest ? el.closest('.ow-tbl-x') : null;
@@ -27942,8 +27971,10 @@ function renderSavedQuotes(){
   updateOrderStatusBar();
   const wrap = document.getElementById('savedQuotesWrap');
   if(!wrap) return;
-  // What is in a row's Loaded form, kept across the redraw (carrierDraftsFrom, shared-worker.js).
+  // What is in a row's Loaded form, kept across the redraw (carrierDraftsFrom,
+  // shared-worker.js) -- and where the caret was in it, restored at the end.
   carrierDraftsFrom(wrap).forEach((v, k)=> otLoadDrafts.set(k, v));
+  const otFocus = otFocusSnapshot();
   const allQuotes = data.savedQuotes;
   // Back-fill stageEnteredAt on older orders that pre-date the field (their
   // overdue timer starts from "now", which is the only honest choice).
@@ -28024,6 +28055,8 @@ function renderSavedQuotes(){
     || `<div class="ow-empty">${tokens.length ? `No order matches “${esc(tokens.join(' '))}”.` : `Nothing in ${esc(otStageShort(otStageLens))}.`}</div>`}`;
 
   put(railEl, orderTripPanelHTML() + orderOutPanelHTML() + orderLatePanelHTML(quotes, orderIsOverdue));
+  // Last, after every element this render replaces exists again.
+  otRestoreFocus(otFocus);
 }
 
 /* Everything the screen can do, from one listener bound once at parse
@@ -65231,6 +65264,17 @@ async function pollForUpdatesNow(){
      owner reads the question. */
   if(document.querySelector('.ap-confirm-pending')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
+  /* Same idea as the line above, for the one form on the board that is
+     filled in by hand. A redraw replaces the field being used: the caret
+     is given back (otRestoreFocus), but an OPEN dropdown cannot be --
+     no page can reopen a native select -- so the list of who is carrying
+     the order shut itself while the owner was reading it.
+
+     Bounded by the same clock, so focus left parked in a field by
+     somebody who walked away cannot hold the shop's refresh off for
+     good: after a minute untouched this stops applying and the refresh
+     goes ahead. */
+  if(otTyping() && Date.now() - lastUserInputAt < 60000) return;
   pollInFlight = true;
   try{
     /* Work that has not reached the server yet must survive this.

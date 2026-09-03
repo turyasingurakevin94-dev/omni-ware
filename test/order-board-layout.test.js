@@ -359,4 +359,80 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   t.check(!/Awaiting Goods|Being Prepared|Pending Delivery/.test(section + render), 'and the old names are gone from the screen');
 }
 
+/* ---------- 13. the caret survives the redraw ------------------------- */
+/*
+ * Reported from the live shop, on the Loaded form: you type, and mid-word
+ * the box goes dead and the next letters vanish.
+ *
+ * The values were already carried across a redraw (otLoadDrafts), so the
+ * text on screen looked right -- what was lost was the FOCUS. The board
+ * replaces its whole wrap, so the box being typed into is a new element
+ * and the old one's focus dies with it; every keystroke after that landed
+ * on the page and was thrown away. What made it constant rather than rare
+ * is that this render has some twenty callers, one of them a background
+ * refresh every thirty seconds: pause to read a number plate off a lorry,
+ * and the field dies under your hands.
+ *
+ * Two halves, and both are needed. The caret is given back after the
+ * rewrite, which covers all twenty callers at once; and the background
+ * refresh holds off while the form is in use, because an OPEN dropdown
+ * cannot be given back -- no page can reopen a native select, so the list
+ * of who is carrying the order shut itself while it was being read.
+ */
+{
+  // Snapshot BEFORE the wrap is rewritten, restore AFTER -- restoring
+  // first would put the caret into elements about to be destroyed.
+  const iSnap = render.indexOf('otFocusSnapshot()');
+  const iWrite = render.indexOf('wrap.innerHTML =');
+  const iBack = render.indexOf('otRestoreFocus(');
+  t.check(iSnap > -1 && iWrite > -1 && iBack > -1 && iSnap < iWrite && iWrite < iBack,
+    'the render notes where the caret was, rewrites the board, then puts it back');
+
+  // compileScope binds each env value as a variable at compile time, so the
+  // fake document is MUTATED between cases rather than replaced.
+  const doc = { activeElement: null, querySelector: () => null };
+  const scope = compileScope(
+    ['otFocusSnapshot', 'otRestoreFocus'].map((n) => extractFunction(src, n, 'index.html')),
+    { document: doc }, ['otFocusSnapshot', 'otRestoreFocus'],
+  );
+  // A field in a row's Loaded form, with a caret parked mid-word.
+  const form = { dataset: { load: '7' } };
+  const typing = { tagName: 'INPUT', dataset: { car: 'name' }, selectionStart: 3, selectionEnd: 3,
+    closest: (s) => (s === '#savedQuotesWrap [data-load]' ? form : null) };
+  doc.activeElement = typing;
+  const snap = scope.otFocusSnapshot();
+  t.check(snap && snap.id === '7' && snap.car === 'name' && snap.start === 3,
+    'it records which order, which field, and where in it the caret was');
+
+  // The element the redraw built in its place.
+  const rebuilt = { focused: 0, range: null, focus(){ this.focused++; }, setSelectionRange(a, b){ this.range = [a, b]; } };
+  let asked = null;
+  doc.activeElement = {};
+  doc.querySelector = (s) => { asked = s; return rebuilt; };
+  scope.otRestoreFocus(snap);
+  t.check(asked === '#savedQuotesWrap [data-load="7"] [data-car="name"]',
+    'and finds the same field on the board the redraw just built');
+  t.check(rebuilt.focused === 1 && rebuilt.range && rebuilt.range[0] === 3,
+    'giving back the focus AND the caret -- a caret slammed to the end is its own kind of broken when correcting a middle letter');
+
+  // Nothing to restore is not an error, and neither is a field that is gone.
+  let threw = false;
+  try {
+    scope.otRestoreFocus(null);
+    doc.querySelector = () => null;
+    scope.otRestoreFocus(snap);
+    doc.activeElement = { tagName: 'DIV', dataset: {}, closest: () => null };
+    t.check(scope.otFocusSnapshot() === null, 'and focus outside the form is nothing to carry');
+  } catch (e) { threw = true; }
+  t.check(!threw, 'a missing snapshot or a field that no longer exists is not an error');
+
+  // The other half: the refresh keeps its hands off an entry in progress,
+  // but cannot be held off for good by focus somebody parked and left.
+  const poll = src.slice(src.indexOf('if(document.querySelector(\'.ap-confirm-pending\')) return;'));
+  t.check(/if\(otTyping\(\) && Date\.now\(\) - lastUserInputAt < 60000\) return;/.test(poll.slice(0, 1400)),
+    'the background refresh defers while the form is being used, and only while it is actually being used');
+  t.check(/closest\('#savedQuotesWrap \[data-load\]'\)/.test(extractFunction(src, 'otTyping', 'index.html')),
+    'which it asks by whether the focus is in a row\'s Loaded form');
+}
+
 process.exit(t.done() ? 1 : 0);

@@ -423,6 +423,13 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       buildLastSynced: (d) => ({ savedQuotes: Object.fromEntries((d.savedQuotes || []).map((q) => [String(q.id), q])) }),
       goToTab: () => {},
       refreshNavBadges: () => {},
+      // The refresh holds off while the order board's Loaded form is being
+      // filled in -- a redraw replaces the field under the owner's hands,
+      // and an open dropdown cannot be given back. Stubbed false here for
+      // the same reason goToTab is stubbed: this file is about the sync,
+      // and nobody is typing in it. The guard itself is pinned by
+      // test/order-board-layout.test.js.
+      otTyping: () => false,
       // The debt heal has its own test file (debtor-balance-reconciliation);
       // here it only needs to not be a ReferenceError inside the refresh.
       reconcileCustomerDebts: () => [],
