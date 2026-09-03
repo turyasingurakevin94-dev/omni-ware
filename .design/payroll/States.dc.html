@@ -1,0 +1,543 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- payroll console ---- */
+    /* the month stepper — the screen's scope, so it lives in the header */
+    .ms{display:flex;align-items:center;gap:0;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;height:30px;}
+    .ms-b{display:flex;align-items:center;justify-content:center;width:30px;height:28px;
+      color:var(--ow-ink-600);border-right:1px solid var(--ow-rule-soft);}
+    .ms-b:last-child{border-right:0;border-left:1px solid var(--ow-rule-soft);}
+    .ms-b svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ms-b.off{color:var(--ow-steel-100);}
+    .ms-m{padding:0 12px;font-size:12px;font-weight:600;letter-spacing:-.005em;white-space:nowrap;}
+    .ms-m .d{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ow-ink-600);
+      font-weight:500;margin-left:6px;}
+
+    /* group heads inside the one queue */
+    .gh{display:flex;align-items:center;gap:8px;height:26px;padding:0 12px;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .gh:first-child{border-top:0;}
+    .gh-t{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .gh-n{margin-left:auto;font-size:11px;color:var(--ow-ink-600);font-family:var(--mono);
+      font-variant-numeric:tabular-nums;}
+
+    /* the row */
+    .pq{border-bottom:1px solid var(--ow-rule-soft);}
+    .pq:last-child{border-bottom:0;}
+    .pq-r{display:grid;grid-template-columns:18px minmax(0,1fr) 146px 182px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;}
+    .pq.open .pq-r{background:var(--ow-paper-2);}
+    .pq-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;fill:none;
+      stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .pq.open .pq-cr{transform:rotate(90deg);}
+    .pq-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pq-who{font-weight:600;}
+    .pq-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .pq-rest{color:var(--ow-ink-600);}
+    .pq-m{grid-column:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* the reason column: why this row is where it is */
+    .pq-w{grid-column:3;grid-row:1 / span 2;min-width:0;text-align:right;font-size:11.5px;
+      color:var(--ow-ink-600);line-height:1.35;}
+    .pq-w b{display:block;font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+    .pq-w.bad b{color:var(--ow-crimson);}
+    .pq-w.warn b{color:var(--ow-amber-ink);}
+    .pq-w .dt{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .pq-v{grid-column:4;grid-row:1 / span 2;text-align:right;white-space:nowrap;}
+    .pq-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .pq-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .pq-v.zero .pq-f{color:var(--ow-ink-400);}
+    .pq-x{padding:2px 12px 14px 40px;}
+
+    /* the cover line — how far today's cash reaches down the list */
+    .wl{display:flex;align-items:center;gap:12px;padding:9px 12px 9px 12px;
+      background:var(--ow-amber-faint);border-top:1px dashed var(--ow-amber);
+      border-bottom:1px dashed var(--ow-amber);}
+    .wl-l{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-amber-ink);white-space:nowrap;flex:none;}
+    .wl-t{font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;max-width:88ch;}
+    .wl-t b{color:var(--ow-ink-900);font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;}
+
+    /* the costing, inside an open row */
+    .cs{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cs caption{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cs th{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cs th.l{text-align:left;padding-left:0;}
+    .cs td{padding:6px 0 6px 16px;border-bottom:1px solid var(--ow-rule-soft);text-align:right;
+      white-space:nowrap;width:1%;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cs td.nm{width:auto;padding-left:0;text-align:left;font-family:'Inter',sans-serif;font-weight:500;
+      min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cs tr:last-child td{border-bottom:0;}
+    .cs tr.sum td{font-weight:600;border-top:1px solid var(--ow-rule);}
+    .cs td.neg{color:var(--ow-amber-ink);}
+
+    /* the days field, and the day list — what replaces the cell input and the modal */
+    .dy{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 10px;margin:0 0 10px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .dy-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+    .dy-in{display:flex;align-items:center;height:30px;min-width:64px;padding:0 9px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;}
+    .dy-n{font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+    .dy-n b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .dl{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;}
+    .dl-i{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 8px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+      font-size:11.5px;color:var(--ow-ink-900);}
+    .dl-i .d{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;}
+    .dl-i .r{color:var(--ow-ink-600);}
+    .dl-i .x{color:var(--ow-ink-400);font-size:12px;}
+    .dl-i.paid{background:var(--ow-steel-050);}
+    .dl-i.add{border-style:dashed;color:var(--ow-ink-600);font-weight:600;padding:0 9px;}
+
+    .xa{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .xn{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .xn b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* the payment panel — what replaces prompt() */
+    .pp{border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);
+      padding:12px;margin:0 0 10px;}
+    .pp-h{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;}
+    .pp-t{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .pp-n{margin-left:auto;font-size:11px;color:var(--ow-ink-600);}
+    .pp-n b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ow-ink-900);font-weight:600;}
+    .pp-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
+    .pp-f{display:flex;flex-direction:column;gap:5px;}
+    .pp-fl{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .pp-am{display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-steel-950);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .pp-am .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;font-weight:600;
+      letter-spacing:-.02em;}
+    .pp-am .u{font-size:11px;color:var(--ow-ink-400);}
+    .pp-quick{display:flex;gap:6px;}
+    .pp-q{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-sm);background:var(--ow-paper);font-size:11.5px;color:var(--ow-ink-600);}
+    .pp-q .f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);margin-left:5px;}
+    .pp-q.on{border-color:var(--ow-steel-950);background:var(--ow-steel-950);color:#fff;}
+    .pp-q.on .f{color:#fff;}
+    .pp-acc{display:flex;gap:6px;}
+    .pp-a{display:flex;flex-direction:column;gap:1px;min-width:104px;padding:6px 10px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .pp-a .n{font-size:12px;font-weight:600;}
+    .pp-a .b{font-size:11px;color:var(--ow-ink-600);font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .pp-a.on{border-color:var(--ow-steel-950);box-shadow:inset 0 0 0 1px var(--ow-steel-950);}
+    .pp-a.thin .b{color:var(--ow-crimson);}
+    .pp-foot{display:flex;align-items:center;gap:12px;margin-top:12px;padding-top:10px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .pp-will{margin:0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;max-width:64ch;}
+    .pp-will b{color:var(--ow-ink-900);font-weight:600;}
+    .pp-will .m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .pp-sb{margin:10px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .pp-sb u{text-decoration:underline;text-underline-offset:2px;}
+
+    /* rail */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf:first-child{border-top:0;}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl .m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* the attention list: what used to be five stacked prose blocks */
+    .at{display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .at:first-child{border-top:0;}
+    .at-d{width:6px;height:6px;border-radius:50%;flex:none;margin-top:5px;background:var(--ow-ink-400);}
+    .at-d.warn{background:var(--ow-amber);}
+    .at-d.bad{background:var(--ow-crimson);}
+    .at-t{font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;}
+    .at-t b{color:var(--ow-ink-900);font-weight:600;}
+    .at-t .m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .at-t a{font-weight:600;}
+
+    /* ---- the states board ---- */
+    .st{margin-bottom:18px;}
+    .st-l{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);margin:0 0 7px;}
+    .es{padding:26px 24px;display:flex;flex-direction:column;gap:7px;align-items:flex-start;}
+    .es-t{font-size:15px;font-weight:600;letter-spacing:-.01em;}
+    .es-p{margin:0;font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);}
+    .es-p b{color:var(--ow-ink-900);font-weight:600;}
+    .es-p .m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .es-a{display:flex;gap:8px;margin-top:5px;}
+    .es-f{display:flex;gap:32px;margin-top:6px;padding-top:12px;border-top:1px solid var(--ow-rule-soft);width:100%;box-sizing:border-box;}
+    .es-fi{display:flex;flex-direction:column;gap:2px;}
+    .es-fl{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .es-fv{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;font-weight:600;letter-spacing:-.02em;}
+    /* the cover line when there is no cash figure to draw it from */
+    .wl.none{background:var(--ow-steel-050);border-color:var(--ow-steel-100);border-style:solid;}
+    .wl.none .wl-l{color:var(--ow-ink-600);}
+
+    /* A button's label is a sentence the shop reads; it never wraps mid-figure. */
+    .btn{white-space:nowrap;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1300px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Money</span><span>/</span><span>Payroll</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"></path><path d="M7 8l-3 3 3 3"></path><path d="M14 15h5"></path><path d="M14 19h7"></path></svg><span>Chase debts</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Debtors</span><span class="nav-badge">14</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3M14 15h2"></path></svg><span>What&#39;s coming</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 18v-4M12 18v-7M16 18v-2"></path></svg><span>Statements</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path><path d="M12 12h.01"></path></svg><span>Payroll &amp; rent</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h2l1.5-5h11L19 17h2"></path><circle cx="7.5" cy="18.5" r="1.8"></circle><circle cx="16.5" cy="18.5" r="1.8"></circle><path d="M8 12V7h8v5"></path></svg><span>Assets</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path><path d="M2 12h20"></path></svg><span>Loans</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">Payroll &amp; rent</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">The four states this screen is only designed once you have drawn &mdash; in the app, only one is ever on screen</p>
+      <span class="ow-ph-sp"></span>
+    </div>
+
+    <div class="st">
+      <span class="st-l">A &mdash; nobody is on the payroll yet</span>
+      <div class="ow-pan">
+        <div class="es">
+          <span class="es-t">Nothing is due for August 2026 &mdash; the payroll has not been started.</span>
+          <p class="es-p">A wage appears here when a person on the staff list is given a pay rate, and rent appears when
+            premises are added. Nothing is typed in twice: set them once and every month raises itself on the 1st.</p>
+          <p class="es-p"><b>3 people are on the staff list</b> and none of them has a rate, so there is no wage to raise
+            and no month to cost. That is why this screen is empty and not because nobody is owed anything.</p>
+          <div class="es-a">
+            <span class="btn btn-accent ow-sm">Set how somebody is paid</span>
+            <span class="btn btn-ghost ow-sm">Add premises</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="st">
+      <span class="st-l">B &mdash; the month is settled</span>
+      <div class="ow-pan">
+        <div class="es">
+          <span class="es-t">Everything for July 2026 is paid.</span>
+          <p class="es-p">Nine months &mdash; seven wages and two premises &mdash; settled, the last of them on
+            <b>29 July</b>. Nothing is late and nothing is waiting to be costed.</p>
+          <div class="es-f">
+            <div class="es-fi"><span class="es-fl">What July cost</span><span class="es-fv">3,138,000</span></div>
+            <div class="es-fi"><span class="es-fl">Wages</span><span class="es-fv">2,088,000</span></div>
+            <div class="es-fi"><span class="es-fl">Rent</span><span class="es-fv">1,050,000</span></div>
+            <div class="es-fi"><span class="es-fl">Days missed</span><span class="es-fv">3 &middot; 27,000 off</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="st">
+      <span class="st-l">C &mdash; a past month that was never raised</span>
+      <div class="ow-pan">
+        <div class="es">
+          <span class="es-t">May 2026 was never raised.</span>
+          <p class="es-p">Looking at a month does not raise it. Wages and rent for May would put
+            <b>nine months of liability</b> onto the books, dated four months ago &mdash; and paging back through the year
+            would quietly do that for every month you passed, for people the shop had not yet hired.</p>
+          <p class="es-p">So it waits for you to say so. Raising May now writes the wages of everybody on the payroll
+            <b>at today&#39;s rates</b> and the rent of every tenancy live that month.</p>
+          <div class="es-a">
+            <span class="btn btn-accent ow-sm">Raise May 2026</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="st">
+      <span class="st-l">D &mdash; there is no cash figure today, so no line can be drawn</span>
+      <div class="ow-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+        <div class="ow-mt ow-warn">
+          <p class="ow-mt-l">In hand today</p>
+          <span class="ow-mt-v">Not known</span>
+          <p class="ow-mt-s">The cash book has not been opened for <b>27 Aug</b> &middot; <a href="#">open the day</a></p>
+        </div>
+        <div class="ow-mt">
+          <p class="ow-mt-l">Still to pay &middot; August</p>
+          <span class="ow-mt-v">1,627,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">4 of 9 months settled &middot; one more cannot be costed yet, and is not in this figure</p>
+        </div>
+        <div class="ow-mt ow-bad">
+          <p class="ow-mt-l">Already late</p>
+          <span class="ow-mt-v">800,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">The Nakawa rent, <b>26</b> days past</p>
+        </div>
+        <div class="ow-mt ow-warn">
+          <p class="ow-mt-l">Falls due Mon 31 Aug</p>
+          <span class="ow-mt-v">827,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">3 wage months land on one day, in <b>4</b> days</p>
+        </div>
+      </div>
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">What must go out</span>
+          <span class="ow-pan-n">9 months &middot; 1,627,000 still to pay</span>
+        </div>
+        <div class="pq">
+          <div class="pq-r">
+            <svg class="pq-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="pq-t"><span class="pq-who">Main shop, Nakawa</span><span class="pq-sep">&middot;</span><span class="pq-rest">Rent</span></span>
+            <span class="pq-m">Ssemakula John &middot; 800,000 a month, due the 1st</span>
+            <span class="pq-w bad"><b>26 days late</b><span class="dt">was due 1 Aug</span></span>
+            <span class="pq-v"><span class="pq-f">800,000</span><span class="pq-b">nothing paid</span></span>
+          </div>
+        </div>
+        <div class="wl none">
+          <span class="wl-l">No line can be drawn</span>
+          <span class="wl-t">How far the cash reaches is worked out from what the cash book says you hold, and today&#39;s
+            book has not been opened. It is not <b>0</b> &mdash; it is not known, and a line drawn from a figure this screen
+            invented would be the one thing here you could not trust. <a href="#">Open today&#39;s cash book</a> and the line comes back.</span>
+        </div>
+        <div class="pq">
+          <div class="pq-r">
+            <svg class="pq-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="pq-t"><span class="pq-who">Grace Nabirye</span><span class="pq-sep">&middot;</span><span class="pq-rest">Monthly 450,000</span></span>
+            <span class="pq-m">Half the month is 225,000 &middot; no days missed</span>
+            <span class="pq-w"><b>Due Mon 31 Aug</b><span class="dt">in 4 days</span></span>
+            <span class="pq-v"><span class="pq-f">450,000</span><span class="pq-b">405,000 earned so far</span></span>
+          </div>
+        </div>
+        <p class="ow-mini">Paying still works. The screen is only refusing to measure what it cannot measure &mdash;
+          every figure above is derived from the months themselves and none of them needs the cash book.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
