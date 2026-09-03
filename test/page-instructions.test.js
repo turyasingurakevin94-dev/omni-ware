@@ -34,8 +34,15 @@ const src = read('index.html');
   // Counted from the markup, because the fold runs against whatever is
   // there: a screen whose description is added later must be folded too,
   // and a count baked into the test would not notice.
+  /* A FLOOR THAT FALLS AS SCREENS CONVERT, never one that rises. Each
+     screen rebuilt on the .ow- layer trades .page-head for .ow-ph and
+     its <p> for .ow-ph-help, which the same fold still runs against --
+     so the number here drops by one per conversion and the check keeps
+     asking the only question that matters: that whatever prose is left
+     in the markup is folded rather than deleted. Payroll & rent was the
+     twentieth. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 20, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 19, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible

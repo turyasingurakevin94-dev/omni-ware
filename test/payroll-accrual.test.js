@@ -148,9 +148,19 @@ if (fns) {
     'only the current month is raised on open — paging back through the year no longer writes a wage into every month browsed');
   t.check(!/^\s*generateDuesForPeriod\(period\);\s*$/m.test(code),
     'and the unguarded call that did is gone');
-  t.check(/id="pr_raise"/.test(code) && /Run this month's payroll/.test(code),
+  /* The button now NAMES the month it will raise, and it is drawn inside
+     the empty state of that month rather than sitting permanently in a
+     toolbar with display:none. Same act, same guard, said where it
+     applies -- so what is pinned is the id and the month in the label. */
+  t.check(/id="pr_raise"/.test(code) && /Raise \$\{esc\(periodLabel\(period\)\)\}/.test(code),
     'a past month can still be run, but by deciding to rather than by looking');
-  t.check(/const bare = !\(data\.dues\|\|\[\]\)\.some\(d=> d\.period === period\);/.test(code),
+  /* The guard moved with it. `bare` was a boolean computed in
+     renderPayroll beside a style.display; the state that draws the
+     button is reached only when the month has raised NOTHING at all
+     (`!p.dues.length`, p being payrollPosition(period)) and only when
+     the month is past -- which is the same condition, now standing
+     where the button is written rather than a line away from it. */
+  t.check(/if\(!p\.dues\.length\)\{[\s\S]{0,400}?const past = period < currentPeriod\(\);[\s\S]{0,600}?if\(past && \(onRoll \|\| agreements\)\)\{/.test(code),
     'offered only where there is nothing raised yet, so it cannot double a month');
 
   const drop = (/function dropDue[\s\S]*?\n\}/.exec(code) || [''])[0];

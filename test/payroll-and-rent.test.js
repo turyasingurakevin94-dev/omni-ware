@@ -460,10 +460,20 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   t.check(/const left = renderDuesDueModal\(\);/.test(fn) && /if\(!left\.length\) closeModal/.test(fn),
     'the list is re-read after paying, so a part payment leaves the reminder up rather than closing on one that did not cover it');
 
-  // The payroll screen asks the same question rather than defaulting.
-  const screen = (/async function openDuePayment[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/await promptCashAccount\(/.test(screen),
+  /* The payroll screen asks the same question rather than defaulting --
+     but it no longer asks it in a dialog. openDuePayment was a prompt()
+     for the amount followed by promptCashAccount() for the account: two
+     browser dialogs to write a Cash Book entry. Both are now one panel
+     inside the month's own row, and the account is offered by the same
+     cashAccountChoices() that fills the dialog -- with each account's
+     balance on the choice, and what is short marked, which the dialog
+     could only do after the amount had already been typed and accepted.
+     What is pinned is unchanged: the account is ASKED, never assumed. */
+  const screen = (/const payPanel = \(prPayId === r\.id\)[\s\S]*?\n    \}\)\(\) : '';/.exec(code) || [''])[0];
+  t.check(/cashAccountChoices\(\{amount, outgoing:true\}\)/.test(screen) && /Out of which account/.test(screen),
     'and the payroll screen asks it too rather than hard-coding the cash drawer');
+  t.check(/const account = prPayAccount \|\| \(accounts\.find\(a=> !a\.short\) \|\| accounts\[0\] \|\| \{\}\)\.key;/.test(code),
+    'and what it pays out of is what was chosen, never the drawer by default');
 }
 
 /* ---------- 14. reaching the cash book and the statements ----------- *
@@ -556,9 +566,14 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
      instead of Pay, so a shop that hit the old bug is not stuck with a
      demand no button can dismiss. A part-paid orphan keeps Pay -- the
      shop may genuinely owe a departed worker the balance. */
-  t.check(/const orphanGhost = d\.kind==='wage' && !staff && !\(Number\(d\.paid\)\|\|0\) && !\(d\.payments\|\|\[\]\)\.length;/.test(src),
+  /* The test is the same fact read off the console: `orphanGhost`, a
+     local computed per row inside the old table renderer, is now
+     `orphan` on the row object payrollRow() builds -- one place, read by
+     the row, the open body and the rail alike. The condition is
+     unchanged to the character. */
+  t.check(/orphan: d\.kind === 'wage' && !staff && !\(Number\(d\.paid\)\|\|0\) && !\(d\.payments\|\|\[\]\)\.length,/.test(src),
     'an orphan ghost is a wage for a missing worker with no money recorded');
-  t.check(/\$\{orphanGhost\s*\n?\s*\? `<button type="button" class="age-act pr-orphan-del"/.test(src),
+  t.check(/\$\{r\.orphan\s*\n?\s*\? `<button type="button" class="btn btn-ghost ow-sm pr-orphan-del"/.test(src),
     'and it is offered Remove where every real wage is offered Pay');
   const orphanHandler = (/querySelectorAll\('\.pr-orphan-del'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{([\s\S]*?)\}\)\);/.exec(src) || ['', ''])[1];
   t.check(/if\(!confirm\(/.test(orphanHandler) && /data\.dues = data\.dues\.filter\(x=> x\.id !== d\.id\);/.test(orphanHandler)
@@ -712,7 +727,13 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   const pos = scope.payrollPosition('2026-08');
   eq(pos.overpaid, 20000, 'the month reports it');
   eq(pos.overpaidCount, 1, 'and how many months it is spread across');
-  t.check(/pr-state over">Overpaid/.test(src),
+  /* The state pill is gone: it repeated what the balance column had
+     already said -- 0 owed reads "Paid", a past date reads "Late" -- on
+     every row, which is a device that marks everything and so marks
+     nothing. The one state that was genuinely extra information is the
+     one that survives, in the column that says why a month is where it
+     is, in crimson and carrying the figure the shop is owed back. */
+  t.check(/return \{tone:'ow-bad', head:`Overpaid \$\{f\(r\.over\)\}`, sub:'owed back to the shop'\};/.test(src),
     'the row is marked Overpaid rather than reading as a settled month');
 
   scope.reverseDuePayment(m.id, 0);

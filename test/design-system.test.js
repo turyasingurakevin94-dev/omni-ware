@@ -465,6 +465,45 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-cr-rz', 'ow-cr-wl', 'ow-cr-dy',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
     },
+    /* Payroll and rent. The screen answered "what did the month cost?"
+       when the question you open it with is "can I pay them?", and it
+       carried no cash figure at all. Three .panel blocks became a strip,
+       one queue and a rail: the position panel whose headline was set in
+       Archivo Black at 34px above five bordered .pr-cell tiles and up to
+       five stacked .age-verdict paragraphs; a nine-column .age-table
+       with a bare <input> in one cell and a .pr-state pill repeating
+       what the balance column had already said; and the co-equal Rent
+       agreements panel with the screen's second oxide button. Paying
+       went through prompt() and then a second dialog for the account;
+       both are one panel inside the month's own row now.
+
+       .pr-name, .pr-quiet, .age-table and .age-amt are NOT retired from
+       the FILE -- renderRentAgreements still wears them behind the
+       rail's door, and that table is unconverted on purpose -- only from
+       this screen's markup and from what the four renderers below emit,
+       which is what this list means. */
+    payroll: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'btn-row', 'btn-icon', 'field', 'empty',
+                'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-label', 'age-pos-meta',
+                'age-pos-clear', 'age-verdict', 'age-table', 'age-amt', 'age-act',
+                'pr-cells', 'pr-cell', 'pr-cell-label', 'pr-cell-note', 'pr-table', 'pr-settled',
+                'pr-state', 'pr-miss', 'pr-miss-off', 'pr-days', 'pr-name', 'pr-sub', 'pr-quiet',
+                'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py', 'ow-py-ms',
+             'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-py-rent'],
+      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
+                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n',
+                    /* the six this screen owns: why a month is where it
+                       is, how far today's cash reaches, the days box and
+                       the days themselves, paying without a dialog, and
+                       the decisions that were five stacked paragraphs */
+                    'ow-py-rz', 'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at',
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-db-go', 'ow-db-rl'],
+    },
     /* Order tracking. The lane board -- the step rail, the lanes, the
        cards with six controls, the select-all/print row -- became a
        console: a strip, a queue of what needs the owner, one table

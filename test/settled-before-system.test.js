@@ -285,7 +285,13 @@ if (fns) {
     'and its settled-before path writes no cash');
   t.check(/date: due\.dueDate \|\| todayISO\(\)/.test(payDueSrc),
     'dated with the due, which is what keeps every historic sheet clean');
-  t.check(/settledBefore: 'For months paid before you started using this system/.test(code),
+  /* The payroll screen says it in its own words now: the exit left the
+     account dialog when paying left it, and became a quiet line under
+     the pay panel -- a bookkeeping act rather than a fourth account
+     button beside cash, mobile money and bank. What it has to explain is
+     the same, and the confirm before it says it a second time. */
+  t.check(/Settling a month from before you started using this system\?/.test(code)
+    && /the month is closed and the Cash Book is left exactly as it stands/.test(code),
     'the payroll screen explains what choosing it means');
   t.check(/no Cash Book entry to remove — the month simply goes back to being owed/.test(code),
     'and reversing one does not threaten to delete a cash entry that never existed');
