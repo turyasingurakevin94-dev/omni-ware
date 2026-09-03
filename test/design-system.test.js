@@ -32,7 +32,7 @@
  *
  * Run: node test/design-system.test.js   (or: npm test)
  */
-const { read, createReporter } = require('./_extract');
+const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('design system');
 const src = read('index.html');
@@ -399,6 +399,60 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
         `${tab}: and ${label} draws the layer's table${rmiss.length ? ' — missing ' + rmiss.join(', ') : ''}`);
     }
   });
+}
+
+/* ---------- a dropdown is never inside its label ---------------------- */
+/*
+ * Reported from the shop, and it took three rounds to find because every
+ * mechanical check passed: the dropdowns could not be used with a mouse.
+ * The list opened on the click and shut again before a finger could reach
+ * an option. The keyboard worked. Other websites worked. Every browser on
+ * the owner's machine failed, which is what finally said "this is ours".
+ *
+ * The cause was `.ow-f`, the field component: it wrapped its control in a
+ * <label>. That is right for a text box — clicking the caption focuses it
+ * — and exactly wrong for a <select>, because a label forwards a click to
+ * the control it wraps. The first click opens the native list; the label's
+ * forwarded activation lands on the same select and closes it. Mouse only:
+ * keyboard selection never goes through label activation, which is why the
+ * arrow keys always worked.
+ *
+ * `.ow-f` is the field every converted screen uses, so this would have
+ * spread to each new screen as it landed. Hence a rule rather than seven
+ * edits: no select inside a label, in the markup or in anything rendered.
+ */
+{
+  const labelBlocks = (src) => {
+    const out = [];
+    const re = /<label\b[^>]*>/g;
+    let m;
+    while ((m = re.exec(src))) {
+      let i = m.index, depth = 0;
+      for (;;) {
+        const nl = src.indexOf('<label', i + 1), cl = src.indexOf('</label>', i + 1);
+        if (cl === -1) break;
+        if (nl !== -1 && nl < cl) { depth++; i = nl; } else {
+          if (depth === 0) { out.push({ at: src.slice(0, m.index).split('\n').length, html: src.slice(m.index, cl + 8) }); break; }
+          depth--; i = cl;
+        }
+      }
+    }
+    return out;
+  };
+
+  const offenders = labelBlocks(src).filter((b) => /<select\b/.test(b.html))
+    .map((b) => `index.html line ${b.at}`);
+  t.check(offenders.length === 0,
+    offenders.length
+      ? `a dropdown inside its own label cannot be opened with a mouse: ${offenders.slice(0, 6).join(', ')}`
+      : 'no dropdown in the markup sits inside its own label');
+
+  // And the shared field builder, which both apps render carrier fields
+  // through, decides the same way rather than always reaching for a label.
+  const shared = read('shared-worker.js');
+  const form = extractFunction(shared, 'carrierFormHTML', 'shared-worker.js');
+  t.check(/const tag = inner\.indexOf\('<select'\) >= 0 \? 'div' : 'label';/.test(form),
+    'and a rendered field holding a dropdown is built as a div, keeping the label for boxes that are typed into');
 }
 
 process.exit(t.done() ? 1 : 0);

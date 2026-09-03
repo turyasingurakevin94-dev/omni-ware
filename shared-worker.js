@@ -1246,7 +1246,18 @@ function carrierFormHTML(q, cls, draft){
   // The console's field puts its control in a bordered box (.ow-f-in);
   // the phone's control is its own box. `cls.wrap` is that difference.
   const box = (inner)=> cls.wrap ? `<span class="${cls.wrap}">${inner}</span>` : inner;
-  const field = (label, inner, extra, on)=> `<label class="${cls.field}${extra ? ' ' + extra : ''}"${on === false ? ' style="display:none"' : ''}><span class="${cls.label}">${label}</span>${box(inner)}</label>`;
+  /* A field holding a SELECT is a div, not a label.
+     A label forwards a click to the control it wraps -- which is what
+     makes clicking the caption focus a text box, and is exactly wrong
+     for a dropdown: the click opens the native list, the label forwards
+     a second activation to the same select, and the list shuts again
+     before a finger can reach an option. Mouse only, every browser, and
+     it reads as a dropdown that refuses to be used. The caption is
+     already a span, so nothing else about the field changes. */
+  const field = (label, inner, extra, on)=>{
+    const tag = inner.indexOf('<select') >= 0 ? 'div' : 'label';
+    return `<${tag} class="${cls.field}${extra ? ' ' + extra : ''}"${on === false ? ' style="display:none"' : ''}><span class="${cls.label}">${label}</span>${box(inner)}</${tag}>`;
+  };
   // Only what the answer still leaves open. One of ours needs nothing more
   // -- their name and number are already on their staff card.
   const asks = carrierAsks(kind);
