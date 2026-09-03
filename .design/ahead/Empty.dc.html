@@ -1,0 +1,720 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the debtors console ----
+       Built only from the shipped .ow-* vocabulary plus the few
+       screen-local classes below. No new colour, no new weight, no new
+       type size, no fourteenth button family. */
+
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the age of the money: ONE device, a bar with a legend ----
+       The bar carries the proportion (flex-grow on shillings, a 16px
+       floor so a 3% band stays clickable). The legend names each band
+       and is the same control as the segment above it -- so the picture
+       of the problem and the way into it are still one thing, but the
+       five bordered cards that used to repeat the bar are gone. */
+    .ag{padding:12px 14px 14px;}
+    .ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);overflow:hidden;
+      background:var(--ow-rule-soft);}
+    .ag-seg{flex-basis:0;min-width:16px;background:var(--age-hue);}
+    .ag-seg.on{box-shadow:inset 0 0 0 2px var(--ow-paper),inset 0 0 0 4px var(--age-hue);}
+    .ag-lg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px;}
+    .ag-b{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;
+      padding-left:9px;border-left:2px solid var(--age-hue);}
+    .ag-b.on{background:var(--ow-paper-2);}
+    .ag-b-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ag-b-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .ag-b-m{font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .ag-b.on .ag-b-l{color:var(--ow-ink-900);}
+    .age-b30{--age-hue:var(--ow-steel-400);}
+    .age-b60{--age-hue:var(--ow-amber);}
+    .age-b90{--age-hue:var(--ow-crimson);}
+    .age-b90p{--age-hue:var(--ow-crimson);}
+    .age-unknown{--age-hue:var(--ow-steel-100);}
+
+    /* ---- the list toolbar: controls that look like controls ---- */
+    .tb2{display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .sb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:236px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;color:var(--ow-ink-400);}
+    .sb svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sb.has{color:var(--ow-ink-900);}
+    .tg{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);background:var(--ow-paper);white-space:nowrap;}
+    .tg .bx{width:13px;height:13px;border-radius:3px;background:var(--ow-steel-950);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .tg .bx svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb2-sp{flex:1;}
+    /* the band filter, echoed where the rows it removed would have been */
+    .fc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-amber);border-radius:var(--ow-r);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);font-size:12px;font-weight:500;white-space:nowrap;}
+    .fc b{font-weight:600;}
+    .fc .x{width:18px;height:18px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+      justify-content:center;background:rgba(122,74,2,.11);}
+    .fc .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;}
+
+    /* ---- a debtor's row: 44px, opens in place ----
+       Age appears ONCE per row, as the basis line under the figure, and
+       it is coloured only when the money is genuinely old. The band
+       stripe and the coloured pill that used to say the same thing on
+       every row are both gone. */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 112px 122px 132px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ow-q-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    /* how far through the balance they are: a track, and the figure it
+       is measured from in the open row rather than a per-cent on every
+       line. Absent, not zero, when there is nothing to measure. */
+    .pb{display:flex;align-items:center;gap:7px;}
+    .pb-t{flex:1;height:5px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;min-width:0;}
+    .pb-f{height:100%;background:var(--ow-verdigris);}
+    .pb-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .pb-n{font-size:11px;color:var(--ow-ink-400);}
+    .lp{font-size:11px;line-height:1.35;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lp b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+    .lp.never b{color:var(--ow-crimson);font-weight:600;}
+
+    /* ---- an open debtor ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.q{color:var(--ow-ink-400);}
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- a balance that disagrees with its own history ----
+       Amber: a caution with a fix attached, not the accent. */
+    .df{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;
+      background:var(--ow-amber-faint,#FEFAF2);border-bottom:1px solid #EBD9B4;color:var(--ow-amber-ink);}
+    .df > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .df-b{min-width:0;}
+    .df-t{font-size:12px;line-height:1.45;margin:0;}
+    .df-t b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .df-w{font-size:11px;line-height:1.45;margin:3px 0 0;color:#8A6520;}
+    .df-a{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+    .df-a .btn{background:var(--ow-paper);border:1px solid #E0C994;color:var(--ow-amber-ink);}
+
+    /* ---- the rail ---- */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    .rl a{font-weight:600;}
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+
+    /* ==================================================================
+       WHAT'S COMING — the cash runway console
+
+       The screen answers one question: can I spend money today, and when
+       does that stop being true? It is ABOUT a balance falling over
+       time, and it drew no picture of one -- the shape was left for the
+       reader to build out of a column of figures.
+
+       So the line leads. Everything else on the screen is the detail
+       behind it: the ledger is the same walk in words, the rail says how
+       it is worked out, and the two acts that change it -- naming a day,
+       ringing somebody -- happen here rather than being described.
+       ================================================================== */
+
+    /* The app's own tokens, so this canvas is drawing with the same
+       ramp, weights and spacing the OW layer ships rather than
+       approximations of them. Values lifted from index.html. */
+    :root{
+      --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
+      --ow-t-16:16px; --ow-t-20:20px; --ow-t-28:28px;
+      --ow-fw-400:400; --ow-fw-500:500; --ow-fw-600:600; --ow-fw-700:700;
+      --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
+      --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
+      --ow-sp-24:24px; --ow-sp-32:32px;
+      --ow-lh-tight:1.2; --ow-lh-snug:1.35; --ow-lh-normal:1.5;
+      --ow-tap:44px;
+    }
+
+    /* The dense side row, as the layer ships it. */
+    .ow-sr{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:30px;
+      padding:var(--ow-sp-6) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-11);}
+    .ow-sr-k{min-width:0;color:var(--ow-ink-600);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ow-sr-v{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-mini{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
+      margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-mini b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+    .ah-strip{margin-bottom:var(--ow-sp-16);}
+
+    /* ---- the runway ----
+       A STEP line, never a slope. A balance does not drift down between
+       commitments: it sits flat and drops on the day. An interpolated
+       line would draw a shape the money never takes, and on a screen
+       whose whole job is "when does it get tight" that is the one lie
+       it must not tell. */
+    .ah-run{margin-bottom:var(--ow-sp-16);}
+    .ah-svg{display:block;width:100%;height:auto;}
+
+    .ah-grid{stroke:var(--ow-rule-soft);stroke-width:1;}
+    /* Nothing left is not a gridline, it is the edge of the cliff. */
+    .ah-zero{stroke:var(--ow-ink-400);stroke-width:1;}
+    .ah-neg{fill:var(--ow-crimson-soft);}
+    .ah-yl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11px;fill:var(--ow-ink-600);}
+    .ah-xl{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+
+    /* The balance is INK. It is a fact about the drawer, not a warning,
+       and a line that is coloured all the way along says nothing when it
+       finally goes somewhere bad. What is bad is the ground under zero,
+       and the marker that lands in it. */
+    .ah-line{fill:none;stroke:var(--ow-ink-900);stroke-width:2;
+      stroke-linejoin:round;stroke-linecap:round;}
+    /* A debtor's word, dashed and grey -- never verdigris, which would
+       read as money the shop has. Dash AND colour, so it survives being
+       printed or read by somebody who cannot separate the two hues. */
+    .ah-ghost{fill:none;stroke:var(--ow-ink-400);stroke-width:1.5;
+      stroke-dasharray:5 4;stroke-linejoin:round;}
+    .ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
+    .ah-dot.ah-low{fill:var(--ow-ink-900);}
+    .ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
+    .ah-lowlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
+      font-weight:600;fill:var(--ow-ink-900);}
+    .ah-lowlab.ah-bad{fill:var(--ow-crimson);}
+    .ah-lowsub{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    .ah-endlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:11px;
+      font-weight:600;fill:var(--ow-ink-900);}
+    .ah-endghost{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:11px;
+      fill:var(--ow-ink-400);}
+
+    /* Two lines, so a legend -- and each is direct-laballed at its own
+       end as well, because a legend the eye has to travel to is a legend
+       nobody reads. */
+    .ah-lg{display:flex;align-items:center;gap:var(--ow-sp-16);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);
+      border-top:1px solid var(--ow-rule-soft);}
+    .ah-lg-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
+      font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ah-lg-k{width:20px;height:0;border-top:2px solid var(--ow-ink-900);flex:none;}
+    .ah-lg-k.ah-lg-ghost{border-top:1.5px dashed var(--ow-ink-400);}
+    .ah-lg-k.ah-lg-neg{height:10px;border:0;background:var(--ow-crimson-soft);
+      border-radius:2px;}
+    .ah-lg-n{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+      max-width:62ch;line-height:1.45;}
+
+    /* ---- the ledger: the same walk, in words ----
+       Five columns. The running balance is the point of the row, so it
+       is the figure on the right; what leaves is beside it, smaller,
+       because a person reads down the balance and stops where it worries
+       them. */
+    .ah-lr{display:grid;grid-template-columns:18px 104px minmax(0,1fr) 132px 148px;
+      align-items:center;gap:var(--ow-sp-10);width:100%;min-height:44px;
+      padding:var(--ow-sp-6) var(--ow-sp-12);box-sizing:border-box;text-align:left;}
+    .ah-h{display:grid;grid-template-columns:18px 104px minmax(0,1fr) 132px 148px;
+      gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ah-h-r{text-align:right;}
+    .ah-when{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-when-d{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+    .ah-when.ah-bad .ah-when-d{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .ah-out{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .ah-out i{font-style:normal;font-family:'Inter',system-ui,sans-serif;
+      font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
+    /* THE COLUMN THE SCREEN EXISTS FOR. Right-aligned and tabular, so a
+       person can run an eye down it and see where it gets thin without
+       reading a single word. */
+    .ah-bal{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ah-bal-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);letter-spacing:0;color:var(--ow-ink-600);}
+    .ah-lr.ah-bad .ah-bal{color:var(--ow-crimson);}
+    .ah-lr.ah-low{background:var(--ow-paper-2);}
+    .ah-lr.ah-low .ah-bal-b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+    /* A debtor's word sits in the same ledger, marked as not money: a
+       dashed rule and a right-hand cell that says what it IS rather than
+       what it leaves, because nothing here moves the balance. */
+    .ah-q.ah-said{border-bottom:1px dashed var(--ow-rule-soft);}
+    .ah-said .ah-out{color:var(--ow-verdigris);}
+    .ah-said .ah-bal{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-400);font-style:italic;
+      letter-spacing:0;}
+
+    .ah-what{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-what-s{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
+      color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* A row that has OPENED is no longer a 44px line, so the truncation
+       that keeps a closed row honest has to come off -- a note clipped
+       mid-sentence says something different from what it says. */
+    .ah-lr.ah-open .ah-what{white-space:normal;overflow:visible;}
+    /* The basis under a figure belongs to the figure: on a row that has
+       gone under, it is crimson too, or the row says two things. */
+    .ah-lr.ah-bad .ah-bal-b{color:var(--ow-crimson);}
+
+    /* ---- naming a day, on the bill that has none ----
+       The one act that changes the line, done where the reader notices
+       it is missing. The old screen described a journey to another
+       screen instead. */
+    .ah-dy{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;}
+    .ah-dy-f{height:30px;padding:0 var(--ow-sp-8);box-sizing:border-box;
+      border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);color:var(--ow-ink-900);
+      font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);letter-spacing:-.02em;}
+    .ah-dy-note{margin:var(--ow-sp-8) 0 0;padding:var(--ow-sp-8) var(--ow-sp-10);
+      max-width:var(--ow-measure);font-size:var(--ow-t-11);line-height:1.45;
+      color:var(--ow-amber-ink);background:var(--ow-amber-faint);
+      border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-sm);}
+    .ah-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ah-dy-note .ah-fig{color:inherit;}
+
+    /* ---- who to ring, when the line goes under ----
+       Ranked, with a running "this much of the gap" beside each, so the
+       question the list is read to answer -- how many calls do I have to
+       make today -- is answered rather than left as arithmetic. */
+    .ah-ring{display:flex;flex-direction:column;}
+    .ah-ring-r{display:grid;grid-template-columns:minmax(0,1fr) auto;
+      column-gap:var(--ow-sp-8);row-gap:2px;align-items:baseline;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+    .ah-ring-n{min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-ring-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);white-space:nowrap;}
+    .ah-ring-m{grid-column:1 / -1;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ah-ring-r.ah-covers{background:var(--ow-verdigris-soft);}
+    .ah-ring-r.ah-covers .ah-ring-m{color:var(--ow-verdigris);font-weight:var(--ow-fw-500);}
+
+    /* ---- the window, a setting like every other screen's ---- */
+    .ah-set{display:flex;align-items:center;gap:var(--ow-sp-8);
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+    .ah-set-f{height:30px;width:74px;padding:0 var(--ow-sp-8);box-sizing:border-box;flex:none;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);color:var(--ow-ink-900);
+      font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
+      font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    .ah-set-l{min-width:0;font-size:var(--ow-t-11);line-height:1.4;color:var(--ow-ink-600);}
+
+    /* ---- what has no date, and therefore is not on the line ---- */
+    .ah-pool{display:grid;grid-template-columns:1fr 1fr;}
+    .ah-pool-c{padding:var(--ow-sp-10) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);}
+    .ah-pool-c:first-child{border-left:0;}
+    .ah-pool-l{margin:0 0 var(--ow-sp-4);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+      letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ah-pool-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:19px;
+      font-weight:var(--ow-fw-500);line-height:1.1;display:block;}
+    .ah-pool-s{margin:var(--ow-sp-4) 0 0;font-size:var(--ow-t-11);line-height:1.35;
+      color:var(--ow-ink-600);}
+
+    .ow-empty b{font-size:var(--ow-t-14);color:var(--ow-ink-900);display:block;
+      margin-bottom:var(--ow-sp-4);}
+    .ow-empty span{display:block;max-width:64ch;margin:0 auto;line-height:1.55;}
+    .ow-mt-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+
+    @media (max-width:820px){
+      .ah-h{display:none;}
+      .ah-pool{grid-template-columns:1fr;}
+      .ah-pool-c{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+      .ah-pool-c:first-child{border-top:0;}
+      .ah-set-f,.ah-dy-f{height:var(--ow-tap);font-size:15px;}
+    }
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1360px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Money</span><span>/</span><span>What's coming</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span><span class="nav-badge">5</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"></path><path d="M7 8l-3 3 3 3"></path><path d="M14 15h5"></path><path d="M14 19h7"></path></svg><span>Chase debts</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Debtors</span><span class="nav-badge">14</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3M14 15h2"></path></svg><span>What&#39;s coming</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 18v-4M12 18v-7M16 18v-2"></path></svg><span>Statements</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">What&#39;s coming</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">What you have already promised, against what you hold</p>
+      <span class="ow-ph-sp"></span>
+    </div>
+
+    <p class="ow-q-note" style="max-width:88ch;margin:0 0 14px;font-size:13px;color:var(--ow-ink-600);line-height:1.5">Three states stacked to compare the wording. In the app only one is ever on screen.</p>
+
+    <div class="ow-stack">
+
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">Nothing falls due</span>
+          <span class="ow-pan-n">a flat line is a real answer, and it is drawn</span>
+        </div>
+        <div class="ow-strip" style="grid-template-columns:repeat(3,1fr);border:0;border-radius:0;border-bottom:1px solid var(--ow-rule-soft)">
+          <div class="ow-mt ow-good">
+            <p class="ow-mt-l">Safe to spend</p>
+            <span class="ow-mt-v" style="color:var(--ow-verdigris)">4,850,000<span class="ow-u">UGX</span></span>
+            <p class="ow-mt-s">All of it. Nothing you have promised falls inside the window</p>
+          </div>
+          <div class="ow-mt">
+            <p class="ow-mt-l">In hand today</p>
+            <span class="ow-mt-v">4,850,000<span class="ow-u">UGX</span></span>
+            <p class="ow-mt-s">Across the drawer and the accounts</p>
+          </div>
+          <div class="ow-mt">
+            <p class="ow-mt-l">Owed by you, undated</p>
+            <span class="ow-mt-v">7,660,000<span class="ow-u">UGX</span></span>
+            <p class="ow-mt-s"><b>19</b> bills nobody has named a day for &mdash; not nothing, just not dated</p>
+          </div>
+        </div>
+        <div style="padding:var(--ow-sp-12) var(--ow-sp-12) 0">
+          <svg class="ah-svg" viewBox="0 0 1000 150" role="img" aria-label="A flat balance over 30 days">
+            <line class="ah-grid" x1="78" y1="34" x2="896" y2="34"></line>
+            <text class="ah-yl" x="68" y="37.5" text-anchor="end">4,850,000</text>
+            <line class="ah-grid ah-zero" x1="78" y1="114" x2="896" y2="114"></line>
+            <text class="ah-yl" x="68" y="117.5" text-anchor="end">0</text>
+            <path class="ah-line" d="M78,34 L896,34"></path>
+            <text class="ah-endlab" x="905" y="38">4,850,000</text>
+            <text class="ah-xl" x="78" y="138">Today, 3 Sep</text>
+            <text class="ah-xl" x="896" y="138" text-anchor="end">3 Oct</text>
+          </svg>
+        </div>
+        <div class="ow-empty">
+          <b>Nothing you have promised falls due in the next 30 days.</b>
+          <span>No rent, wages, loan repayment or dated supplier bill lands inside the window, so every shilling you hold is yours to commit. That is not the same as owing nothing &mdash; the 19 undated bills above are real, and each becomes part of this line the day you name one.</span>
+        </div>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">No figure to measure against</span>
+          <span class="ow-pan-n">a line drawn from a zero nobody recorded is an invention</span>
+        </div>
+        <div class="ow-empty">
+          <b>Today has not been opened in the cash book, so there is no figure to start the line from.</b>
+          <span>This screen measures what you have promised against what you actually hold, and what you hold is a thing somebody counts, not a thing the app can derive. Six payments totalling <span class="ah-fig">4,740,000</span> are waiting to be drawn against it.</span>
+          <span style="margin-top:14px">
+            <button type="button" class="btn btn-ghost ow-sm">Open today in the cash book</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The books could not be read</span>
+          <span class="ow-pan-n">a failure names itself, and never looks like good news</span>
+        </div>
+        <div class="ah-dy-note" style="margin:var(--ow-sp-12);max-width:none">
+          <b class="ah-fig">The supplier ledger did not load</b>, so this line is missing whatever bills you have dated. What is drawn below is rent, wages and loans only.
+          <br>Last good read was <b class="ah-fig">today at 06:40</b>, when 4 dated bills worth 4,740,000 were on it. Those are not current figures and are not drawn here.
+        </div>
+        <div class="ow-empty">
+          <b>A partial line, said so, rather than a confident wrong one.</b>
+          <span>Safe to spend is withheld while this stands. A figure that is missing four bills is not a cautious estimate &mdash; it is a number that would tell you to spend money you have already committed, which is the one mistake this screen exists to prevent.</span>
+          <span style="margin-top:14px">
+            <button type="button" class="btn btn-ghost ow-sm">Try again</button>
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

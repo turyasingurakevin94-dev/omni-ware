@@ -1,0 +1,234 @@
+
+    /* ==================================================================
+       WHAT'S COMING — the cash runway console
+
+       The screen answers one question: can I spend money today, and when
+       does that stop being true? It is ABOUT a balance falling over
+       time, and it drew no picture of one -- the shape was left for the
+       reader to build out of a column of figures.
+
+       So the line leads. Everything else on the screen is the detail
+       behind it: the ledger is the same walk in words, the rail says how
+       it is worked out, and the two acts that change it -- naming a day,
+       ringing somebody -- happen here rather than being described.
+       ================================================================== */
+
+    /* The app's own tokens, so this canvas is drawing with the same
+       ramp, weights and spacing the OW layer ships rather than
+       approximations of them. Values lifted from index.html. */
+    :root{
+      --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
+      --ow-t-16:16px; --ow-t-20:20px; --ow-t-28:28px;
+      --ow-fw-400:400; --ow-fw-500:500; --ow-fw-600:600; --ow-fw-700:700;
+      --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
+      --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
+      --ow-sp-24:24px; --ow-sp-32:32px;
+      --ow-lh-tight:1.2; --ow-lh-snug:1.35; --ow-lh-normal:1.5;
+      --ow-tap:44px;
+    }
+
+    /* The dense side row, as the layer ships it. */
+    .ow-sr{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:30px;
+      padding:var(--ow-sp-6) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-11);}
+    .ow-sr-k{min-width:0;color:var(--ow-ink-600);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ow-sr-v{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-mini{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
+      margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-mini b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+    .ah-strip{margin-bottom:var(--ow-sp-16);}
+
+    /* ---- the runway ----
+       A STEP line, never a slope. A balance does not drift down between
+       commitments: it sits flat and drops on the day. An interpolated
+       line would draw a shape the money never takes, and on a screen
+       whose whole job is "when does it get tight" that is the one lie
+       it must not tell. */
+    .ah-run{margin-bottom:var(--ow-sp-16);}
+    .ah-svg{display:block;width:100%;height:auto;}
+
+    .ah-grid{stroke:var(--ow-rule-soft);stroke-width:1;}
+    /* Nothing left is not a gridline, it is the edge of the cliff. */
+    .ah-zero{stroke:var(--ow-ink-400);stroke-width:1;}
+    .ah-neg{fill:var(--ow-crimson-soft);}
+    .ah-yl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11px;fill:var(--ow-ink-600);}
+    .ah-xl{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+
+    /* The balance is INK. It is a fact about the drawer, not a warning,
+       and a line that is coloured all the way along says nothing when it
+       finally goes somewhere bad. What is bad is the ground under zero,
+       and the marker that lands in it. */
+    .ah-line{fill:none;stroke:var(--ow-ink-900);stroke-width:2;
+      stroke-linejoin:round;stroke-linecap:round;}
+    /* A debtor's word, dashed and grey -- never verdigris, which would
+       read as money the shop has. Dash AND colour, so it survives being
+       printed or read by somebody who cannot separate the two hues. */
+    .ah-ghost{fill:none;stroke:var(--ow-ink-400);stroke-width:1.5;
+      stroke-dasharray:5 4;stroke-linejoin:round;}
+    .ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
+    .ah-dot.ah-low{fill:var(--ow-ink-900);}
+    .ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
+    .ah-lowlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
+      font-weight:600;fill:var(--ow-ink-900);}
+    .ah-lowlab.ah-bad{fill:var(--ow-crimson);}
+    .ah-lowsub{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    .ah-endlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:11px;
+      font-weight:600;fill:var(--ow-ink-900);}
+    .ah-endghost{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:11px;
+      fill:var(--ow-ink-400);}
+
+    /* Two lines, so a legend -- and each is direct-laballed at its own
+       end as well, because a legend the eye has to travel to is a legend
+       nobody reads. */
+    .ah-lg{display:flex;align-items:center;gap:var(--ow-sp-16);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);
+      border-top:1px solid var(--ow-rule-soft);}
+    .ah-lg-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
+      font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ah-lg-k{width:20px;height:0;border-top:2px solid var(--ow-ink-900);flex:none;}
+    .ah-lg-k.ah-lg-ghost{border-top:1.5px dashed var(--ow-ink-400);}
+    .ah-lg-k.ah-lg-neg{height:10px;border:0;background:var(--ow-crimson-soft);
+      border-radius:2px;}
+    .ah-lg-n{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+      max-width:62ch;line-height:1.45;}
+
+    /* ---- the ledger: the same walk, in words ----
+       Five columns. The running balance is the point of the row, so it
+       is the figure on the right; what leaves is beside it, smaller,
+       because a person reads down the balance and stops where it worries
+       them. */
+    .ah-lr{display:grid;grid-template-columns:18px 104px minmax(0,1fr) 132px 148px;
+      align-items:center;gap:var(--ow-sp-10);width:100%;min-height:44px;
+      padding:var(--ow-sp-6) var(--ow-sp-12);box-sizing:border-box;text-align:left;}
+    .ah-h{display:grid;grid-template-columns:18px 104px minmax(0,1fr) 132px 148px;
+      gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ah-h-r{text-align:right;}
+    .ah-when{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-when-d{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+    .ah-when.ah-bad .ah-when-d{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .ah-out{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .ah-out i{font-style:normal;font-family:'Inter',system-ui,sans-serif;
+      font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
+    /* THE COLUMN THE SCREEN EXISTS FOR. Right-aligned and tabular, so a
+       person can run an eye down it and see where it gets thin without
+       reading a single word. */
+    .ah-bal{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ah-bal-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);letter-spacing:0;color:var(--ow-ink-600);}
+    .ah-lr.ah-bad .ah-bal{color:var(--ow-crimson);}
+    .ah-lr.ah-low{background:var(--ow-paper-2);}
+    .ah-lr.ah-low .ah-bal-b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+    /* A debtor's word sits in the same ledger, marked as not money: a
+       dashed rule and a right-hand cell that says what it IS rather than
+       what it leaves, because nothing here moves the balance. */
+    .ah-q.ah-said{border-bottom:1px dashed var(--ow-rule-soft);}
+    .ah-said .ah-out{color:var(--ow-verdigris);}
+    .ah-said .ah-bal{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-400);font-style:italic;
+      letter-spacing:0;}
+
+    .ah-what{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-what-s{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
+      color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* A row that has OPENED is no longer a 44px line, so the truncation
+       that keeps a closed row honest has to come off -- a note clipped
+       mid-sentence says something different from what it says. */
+    .ah-lr.ah-open .ah-what{white-space:normal;overflow:visible;}
+    /* The basis under a figure belongs to the figure: on a row that has
+       gone under, it is crimson too, or the row says two things. */
+    .ah-lr.ah-bad .ah-bal-b{color:var(--ow-crimson);}
+
+    /* ---- naming a day, on the bill that has none ----
+       The one act that changes the line, done where the reader notices
+       it is missing. The old screen described a journey to another
+       screen instead. */
+    .ah-dy{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;}
+    .ah-dy-f{height:30px;padding:0 var(--ow-sp-8);box-sizing:border-box;
+      border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);color:var(--ow-ink-900);
+      font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);letter-spacing:-.02em;}
+    .ah-dy-note{margin:var(--ow-sp-8) 0 0;padding:var(--ow-sp-8) var(--ow-sp-10);
+      max-width:var(--ow-measure);font-size:var(--ow-t-11);line-height:1.45;
+      color:var(--ow-amber-ink);background:var(--ow-amber-faint);
+      border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-sm);}
+    .ah-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ah-dy-note .ah-fig{color:inherit;}
+
+    /* ---- who to ring, when the line goes under ----
+       Ranked, with a running "this much of the gap" beside each, so the
+       question the list is read to answer -- how many calls do I have to
+       make today -- is answered rather than left as arithmetic. */
+    .ah-ring{display:flex;flex-direction:column;}
+    .ah-ring-r{display:grid;grid-template-columns:minmax(0,1fr) auto;
+      column-gap:var(--ow-sp-8);row-gap:2px;align-items:baseline;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+    .ah-ring-n{min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-ring-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);white-space:nowrap;}
+    .ah-ring-m{grid-column:1 / -1;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ah-ring-r.ah-covers{background:var(--ow-verdigris-soft);}
+    .ah-ring-r.ah-covers .ah-ring-m{color:var(--ow-verdigris);font-weight:var(--ow-fw-500);}
+
+    /* ---- the window, a setting like every other screen's ---- */
+    .ah-set{display:flex;align-items:center;gap:var(--ow-sp-8);
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+    .ah-set-f{height:30px;width:74px;padding:0 var(--ow-sp-8);box-sizing:border-box;flex:none;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);color:var(--ow-ink-900);
+      font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
+      font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    .ah-set-l{min-width:0;font-size:var(--ow-t-11);line-height:1.4;color:var(--ow-ink-600);}
+
+    /* ---- what has no date, and therefore is not on the line ---- */
+    .ah-pool{display:grid;grid-template-columns:1fr 1fr;}
+    .ah-pool-c{padding:var(--ow-sp-10) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);}
+    .ah-pool-c:first-child{border-left:0;}
+    .ah-pool-l{margin:0 0 var(--ow-sp-4);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+      letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ah-pool-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:19px;
+      font-weight:var(--ow-fw-500);line-height:1.1;display:block;}
+    .ah-pool-s{margin:var(--ow-sp-4) 0 0;font-size:var(--ow-t-11);line-height:1.35;
+      color:var(--ow-ink-600);}
+
+    .ow-empty b{font-size:var(--ow-t-14);color:var(--ow-ink-900);display:block;
+      margin-bottom:var(--ow-sp-4);}
+    .ow-empty span{display:block;max-width:64ch;margin:0 auto;line-height:1.55;}
+    .ow-mt-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+
+    @media (max-width:820px){
+      .ah-h{display:none;}
+      .ah-pool{grid-template-columns:1fr;}
+      .ah-pool-c{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+      .ah-pool-c:first-child{border-top:0;}
+      .ah-set-f,.ah-dy-f{height:var(--ow-tap);font-size:15px;}
+    }
