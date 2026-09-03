@@ -1,0 +1,95 @@
+
+    /* ================= THE CREDITORS CONSOLE ==========================
+       The sell side ranks by age, because the only question there is who
+       has been owing longest. The buy side ranks by what to pay TODAY
+       against what is actually in the drawer -- so the constraint leads,
+       the queue is ordered by what a supplier will stop delivering over,
+       and a waterline says how far the money reaches. Same vocabulary,
+       different question. */
+
+    /* ---- the reason column: why this supplier is where it is ----
+       The one column the sell side does not have. Same two-line anatomy
+       as "last paid" so the row keeps its rhythm, and toned only where
+       the tone means something: crimson for a day you gave and broke,
+       amber for one coming, plain for a bill nobody has dated. */
+    .rz{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz.bad b{color:var(--ow-crimson);font-weight:600;}
+    .rz.warn b{color:var(--ow-amber-ink);font-weight:600;}
+    .rz.none b{color:var(--ow-ink-400);font-weight:500;}
+
+    /* ---- the waterline ----
+       Where today's cash stops reaching, drawn as a level rather than a
+       boundary between records -- hence the dashed rule. It is a MARKER,
+       not a plan: the copy says what it assumes (paying down the list in
+       full, in this order) so nobody reads it as the app having decided
+       who gets paid. Nothing below it is dimmed; a figure the shop owes
+       is not less true for being further down. */
+    .wl{display:flex;align-items:center;gap:12px;padding:9px 12px;
+      background:var(--ow-paper-2);border-top:1px solid var(--ow-rule);
+      border-bottom:1px solid var(--ow-rule);}
+    .wl-r{flex:1;height:0;border-top:1px dashed var(--ow-rule);min-width:12px;}
+    .wl-t{font-size:11px;line-height:1.45;color:var(--ow-ink-600);text-align:center;
+      max-width:64ch;}
+    .wl-t b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    /* No figure for what is in hand: the line cannot be drawn, so the
+       screen says why instead of drawing one from a zero it invented. */
+    .wl.unknown{background:var(--ow-amber-faint);border-color:#EBD9B4;}
+    .wl.unknown .wl-t{color:var(--ow-amber-ink);}
+    .wl.unknown .wl-r{border-top-color:#E0C994;}
+    .wl-go{font-size:11px;font-weight:600;color:var(--ow-oxide);white-space:nowrap;}
+    .wl.unknown .wl-go{color:var(--ow-amber-ink);text-decoration:underline;}
+
+    /* ---- naming a day, on the bill it belongs to ----
+       This replaced a prompt() box. A day is a fact about ONE bill, so
+       it is named on that bill's line, where the amount and the age of
+       it are already on screen to name it against. */
+    .dy{display:inline-flex;align-items:center;gap:6px;font-family:'Inter',sans-serif;
+      font-size:11px;font-weight:500;white-space:nowrap;}
+    .dy-d{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+    .dy.bad .dy-d{color:var(--ow-crimson);font-weight:600;}
+    .dy.warn .dy-d{color:var(--ow-amber-ink);font-weight:600;}
+    .dy-m{color:var(--ow-ink-400);}
+    .dy.bad .dy-m{color:var(--ow-crimson);}
+    .dy.warn .dy-m{color:var(--ow-amber-ink);}
+    .dy-e{width:22px;height:22px;border-radius:var(--ow-r-sm);border:1px solid var(--ow-rule);
+      background:var(--ow-paper);display:inline-flex;align-items:center;justify-content:center;flex:none;}
+    .dy-e svg{width:11px;height:11px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .dy-set{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:11px;font-weight:500;color:var(--ow-ink-600);white-space:nowrap;}
+    .dy-set svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* the field itself, open on the row */
+    .dy-in{display:inline-flex;align-items:center;gap:6px;}
+    .dy-f{height:26px;padding:0 8px;box-sizing:border-box;border:1px solid var(--ow-steel-950);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-family:var(--mono);
+      font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);letter-spacing:-.02em;}
+    .dy-ok{height:26px;padding:0 10px;box-sizing:border-box;border-radius:var(--ow-r);
+      background:var(--ow-steel-950);color:#fff;font-size:11px;font-weight:600;
+      display:inline-flex;align-items:center;}
+    .dy-x{font-size:11px;color:var(--ow-ink-400);font-weight:500;}
+    /* what naming it will do, said once, under the row being named */
+    .dy-note{font-size:11px;line-height:1.45;color:var(--ow-amber-ink);
+      background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r);
+      padding:7px 10px;margin:8px 0 0;}
+
+    /* the bill table's day column has controls in it, so it is not a
+       mono figure column like the rest */
+    .cg td.dyc{font-family:'Inter',sans-serif;text-align:left;padding-left:16px;}
+    .cg th.dyh{text-align:left;}
+
+    /* ---- the strip's leading tile ----
+       What is in hand is the constraint the whole screen hangs off, so
+       it reads first. Ink, not a state colour: money you hold is a fact,
+       and colouring it would make an ordinary Tuesday look like an
+       alarm. When the cash book has not been opened it is amber, because
+       then the figure is genuinely missing rather than low. */
+    .ow-mt.ow-lead .ow-mt-v{font-size:22px;}
+    .ow-mt.ow-quiet .ow-mt-v{color:var(--ow-ink-400);}
+    .ow-mt-go{font-size:11px;font-weight:600;color:var(--ow-oxide);}
