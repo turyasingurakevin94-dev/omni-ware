@@ -167,10 +167,24 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
 
 /* ---------- 6. all of it is REACHED ----------------------------------- */
 {
+  /* IT MOVED OFF STAFF, and the assertion moved with it.
+     The old one read "the panel exists on the Staff tab", on the
+     reasoning that who is signed in is a question about people. It is
+     not: it is a question about accounts and hardware, and it sat as a
+     full panel in the middle of the one screen whose job is deciding who
+     takes the next order. It lives under Presets now, beside the other
+     things about who and where. What the staff screen keeps is the one
+     fact that changes what can be done there -- that somebody has no
+     login and so cannot be handed an order -- on that person's own row.
+     So the check is the same check, against the tab that now opens it. */
   t.check(/id="ls_list"/.test(src) && /id="ls_refresh"/.test(src),
-    'the panel exists on the Staff tab');
-  t.check(/if\(tab==='staff'\) loadLoginSessions\(\);/.test(src),
+    'the panel exists, under Presets');
+  t.check(/id="ppane-devices"/.test(src) && /data-ptab="devices"/.test(src),
+    'as a pane with a way in');
+  t.check(/if\(tab==='presets'\) loadLoginSessions\(\);/.test(src),
     'and loads when that tab is opened');
+  t.check(!/id="ls_list"/.test(src.slice(src.indexOf('id="tab-staff"'), src.indexOf('id="tab-agents"'))),
+    'and is no longer a panel in the middle of the staff screen');
   t.check(/getElementById\('ls_refresh'\)\.addEventListener\('click', loadLoginSessions\);/.test(src),
     'with a way to ask again without leaving');
 

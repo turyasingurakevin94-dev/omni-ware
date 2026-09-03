@@ -40,15 +40,15 @@ const src = read('index.html');
      so the number here drops by one per conversion and the check keeps
      asking the only question that matters: that whatever prose is left
      in the markup is folded rather than deleted. Payroll & rent was the
-     twentieth. */
+     twentieth; Staff, rebuilt as a dispatch board, the twenty-first. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 19, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 18, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 18,
+  t.check(paras.length >= 17,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

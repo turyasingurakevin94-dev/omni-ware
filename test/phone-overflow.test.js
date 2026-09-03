@@ -68,14 +68,32 @@ const rule = (sel) => {
  * gap, inside a phone panel with 280px to give. Every row hung 48px off
  * the right and took its last action button with it.
  */
+/*
+ * THE FIX CHANGED SHAPE, so the assertions did too.
+ *
+ * Squeezing four columns into two kept the row on the screen and made it
+ * unreadable a different way: name beside status, so "Wasswa
+ * Ssekitoleko" rendered as "Wass..." under its own chip while the
+ * status sentence took the width the name needed. The house rule is that
+ * 820px is a SWITCH BETWEEN TWO DESIGNS, not a reflow of one -- so the
+ * phone gets a card, stacked in reading order, and the check now asks
+ * for that rather than for a narrower version of the desktop row.
+ *
+ * The two assertions that survive unchanged are about the controls above
+ * the list, which are the same controls on both designs.
+ */
 {
-  const phone = (/@media \(max-width:620px\)\{[\s\S]*?\n  \}/.exec(src.slice(src.indexOf('.rost-actions{'))) || [''])[0];
-  t.check(/\.rost-row\{grid-template-columns:minmax\(0,1fr\) auto;\}/.test(phone),
-    'the name column may shrink and the status chip takes only what it needs');
+  const phone = (/@media \(max-width:820px\)\{[\s\S]*?\n  \}/.exec(src.slice(src.indexOf('.rost-actions{'))) || [''])[0];
+  t.check(/grid-template-areas:"who" "state" "stats" "actions";/.test(phone),
+    'the card stacks in reading order rather than putting the name beside the status');
+  t.check(/\.rost-row\{grid-template-columns:minmax\(0,1fr\);/.test(phone),
+    'in one column, so the name has the whole width to be read in');
   t.check(/\.rost-filters, \.rost-period\{overflow-x:auto/.test(phone),
     'the filter chips scroll rather than being cut off at "Unavailable"');
-  t.check(/\.rost-actions\{flex-wrap:wrap;\}/.test(phone),
-    'and a row of icon buttons wraps rather than running past the card');
+  t.check(/\.rost-actions\{flex-wrap:wrap;/.test(phone),
+    'and a row of buttons wraps rather than running past the card');
+  t.check(/\.rost-actions \.pc-icon-btn\{width:var\(--ow-tap\);height:var\(--ow-tap\);\}/.test(phone),
+    'with every one of them a thumb-sized target, not a 26px pointer one');
   t.check(/\.rost-search\{min-width:0/.test(phone),
     'while the search box stops insisting on 190px it has not got');
 }
