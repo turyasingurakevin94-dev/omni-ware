@@ -58,10 +58,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        first time (the basket bar on What to buy). The value was declared
        with the layer; no rule had spent it until now. */
     'shadows': [63, /box-shadow:\s*([^;}]+)/g],
-    /* 111, not 115: the Price registry's dead grouped rows and its two
-       private pill families took four hexes with them when the screen
-       moved onto the layer. */
-    'distinct colours': [111, /#[0-9A-Fa-f]{6}\b/g],
+    /* 106, not 111: the order board's lane-only rules -- the purple
+       pickups pill, the invoice icon's amber, the cash banner -- went
+       when that screen became a console on the layer. */
+    'distinct colours': [106, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -334,6 +334,22 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML', 'renderPriceWatch', 'renderMarket'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-cards', 'ow-card', 'ow-fig', 'ow-sigs', 'ow-sig', 'ow-cp',
                     'ow-pan', 'ow-sr', 'ow-empty'],
+    },
+    /* Order tracking. The lane board -- the step rail, the lanes, the
+       cards with six controls, the select-all/print row -- became a
+       console: a strip, a queue of what needs the owner, one table
+       grouped by stage with rows that open in place, and a rail. The
+       sourcing funnel still wears .sq-board/.sq-col/.sq-card by design,
+       so those stay in the FILE; only this screen may not emit them. */
+    'quote-saved': {
+      retired: ['sq-board-tools', 'sq-select-all-label', 'panel', 'qp-panel', 'sq-board', 'sq-col', 'sq-stepper',
+                'sq-card', 'sq-goods-row', 'sq-cash', 'sq-assignee-row', 'sq-meta', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-f', 'ow-f-in', 'ow-strip', 'ow-grid', 'ow-sec', 'ow-seg', 'ow-pan',
+             'ow-tbl', 'ow-side'],
+      renders: ['renderSavedQuotes', 'orderRowHTML', 'orderTrackHTML', 'orderWhoHTML', 'orderActHTML', 'orderRowBodyHTML',
+                'otQueueRowHTML', 'orderTripPanelHTML', 'orderOutPanelHTML', 'orderLatePanelHTML'],
+      rendersUses: ['ow-mt', 'ow-cp', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-x', 'ow-trk', 'ow-sr',
+                    'ow-empty', 'ow-seg-b'],
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so

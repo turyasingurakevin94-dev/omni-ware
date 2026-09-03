@@ -91,8 +91,8 @@ const sectionOf = (tab) => {
       'the derived-never-invented claim, on the screen that most needs it'],
     ['quote', 'shows the cheapest supplier and a suggested price',
       'what each line of a quote is telling you'],
-    ['quote-saved', 'each prints on its own A5 page',
-      'the printing behaviour nobody would guess'],
+    ['quote-saved', 'how it got here',
+      'what opening a row shows, which nobody would guess from the table'],
   ];
   kept.forEach(([tab, needle, why]) => {
     const sec = sectionOf(tab);

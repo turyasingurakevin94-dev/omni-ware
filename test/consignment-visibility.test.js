@@ -308,8 +308,8 @@ if (scope) {
   t.check(/Bought at \$\{fmtUGX\(stockCost\)\} each/.test(picker),
     'while goods the shop bought still read as bought');
 
-  t.check(/consignTagHTML\(consign, consign\.certain\)/.test(fn('orderMetaRowHTML')),
-    'the order board card marks an order selling a consignor\'s goods');
+  t.check(/consignTagHTML\(consign, consign\.certain\)/.test(fn('orderRowHTML')),
+    'the order board row marks an order selling a consignor\'s goods');
 
   const prev = fn('orderPreviewLines');
   t.check(/consignedForLine\(it\)/.test(prev) && /From stock — \$\{consignTagLabel/.test(prev),

@@ -2188,27 +2188,24 @@ async function main() {
   const code = src.replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '');
   t.check(!/document\.querySelectorAll\('\.sq-check/.test(code),
     'no unscoped .sq-check query — "select all" must not tick the other board\'s cards');
-  t.check(/document\.querySelectorAll\('#savedQuotesWrap \.sq-check'\)/.test(code)
-    && /document\.querySelectorAll\('#savedQuotesWrap \.sq-check:checked'\)/.test(code),
-    'both of the orders board\'s own .sq-check queries name its wrap');
+  /* The orders board became a console and emits none of this vocabulary
+     now, so it has nothing to scope. What is pinned is that it stays
+     out: a .sq-* class creeping back into its render is how the scoping
+     law would start mattering again. */
+  t.check(!/sq-(check|board|card|stepper|col)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'the orders board emits none of the lane vocabulary, so there is nothing of its to scope');
   t.check(!/document\.querySelector\(`\.sq-board /.test(code),
     'and no unscoped .sq-board lane lookup — both sections are in the DOM at once, hidden rather than removed');
-  t.check(/#savedQuotesWrap \.sq-board \.sq-col\[data-status=/.test(code),
-    'announceOrderMove scrolls the ORDERS board to the lane, not whichever board answers first');
-  /* order-board-layout.test.js section 6 stubs querySelector and
-     discriminates on /sq-stepper-step/. The scoped column selector must
-     still fail that test, or that file starts asserting against the
-     wrong element without saying so. */
-  t.check(!/sq-stepper-step/.test('#savedQuotesWrap .sq-board .sq-col[data-status="x"]'),
-    'and the scoped selector still reads as the column, not the rail step');
+  t.check(/#savedQuotesWrap \.ow-ot-r\[data-id=/.test(code),
+    'announceOrderMove finds the moved row on the ORDERS board, never a lane of the funnel\'s');
 
   /* Its own state AND its own starting value: seeding either from the
      order board's would make opening Sourcing land wherever Orders was
      last left. */
   t.check(/let sourcingActiveMobileStep = 'asked';/.test(code) && /let sourcingBoardScrollLeft = 0;/.test(code),
     'the sourcing board keeps its own scroll and active-step state, starting from its own first lane');
-  t.check(/let sqActiveMobileStep = 'draft';/.test(code) && /let sqBoardScrollLeft = 0;/.test(code),
-    'and the order board keeps its own, untouched');
+  t.check(!/let sqActiveMobileStep|let sqBoardScrollLeft/.test(code) && /let otStageLens = 'all';/.test(code),
+    'and the order board keeps no lane state at all now -- its filter is a lens of its own');
 
   /* No CSS rule may name a sourcing stage. A status in a selector is what
      pins a board to one set of lanes -- order-board-layout.test.js sweeps

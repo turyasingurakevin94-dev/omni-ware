@@ -503,13 +503,14 @@ const draft = (items) => {
 
 /* ---------- 11. the confirm pill is not the assign button ------------- */
 {
-  // They share a look and deliberately not a class: the board wires every
-  // .sq-assign-btn to the assign-staff modal, so sharing it would have made
-  // the confirm pill open a staff picker.
-  t.check(/class="sq-confirm-btn"/.test(code), 'the confirm pill has its own class');
-  t.check(!/class="sq-assign-btn sq-confirm-btn"/.test(code),
-    'and does not carry the assign class, which is wired to the staff picker');
-  t.check(/querySelectorAll\('\.sq-confirm-btn'\)[\s\S]{0,120}openSupplierConfirmModal/.test(code),
+  // They are two acts, deliberately: the console dispatches 'assign' to
+  // the staff picker, so sharing it would have made the confirm act open
+  // a staff picker.
+  t.check(/if\(!orderDraftReady\(q\)\) return \{ act:'confirm', label:'Suppliers' \};/.test(code),
+    'the confirm act is its own act on the row');
+  t.check(!/act:'assign', label:'Suppliers'/.test(code),
+    'and does not share the assign act, which is wired to the staff picker');
+  t.check(/case 'confirm': openSupplierConfirmModal\(id\); break;/.test(code),
     'it opens the confirmation panel instead');
 }
 

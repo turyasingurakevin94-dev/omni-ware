@@ -29,24 +29,28 @@ const shared = read('shared-worker.js');
 
 /* ---------- 1. the card says when nobody is on it --------------------- */
 {
-  t.check(/orderNeedsWorker\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
-    'an order in Being Prepared with nobody who can pick it draws its own row');
-  t.check(/'Assigned to someone no longer on staff' : 'Nobody assigned'/.test(admin),
+  /* The console's who-cell asks orderNeedsWorker rather than only whether
+     the field is empty, says which of the two absences it is, and the
+     row's one act puts it on somebody. */
+  const who = extractFunction(admin, 'orderWho', 'index.html');
+  const act = extractFunction(admin, 'orderActSpec', 'index.html');
+  t.check(/if\(orderNeedsWorker\(q\)\) main = /.test(who),
+    'an order in Preparing with nobody who can pick it says so in its own cell');
+  t.check(/'Assigned to someone no longer on staff'/.test(who) && /'Nobody picking yet'/.test(who),
     'and says which of the two it is');
-  t.check(/class="sq-assign-btn" data-id="\$\{q\.id\}"/.test(admin),
-    'with a button to put it on somebody');
+  t.check(/if\(orderNeedsWorker\(q\)\) return \{ act:'assign', label:'Assign a picker' \};/.test(act),
+    'with an act to put it on somebody');
 
-  // The two rows are exact opposites: one assignee line, never both, never
-  // neither. Conditioned on the same predicate rather than on two
-  // expressions that have to be kept in step by hand.
-  t.check(/\(q\.status==='preparing' && !orderNeedsWorker\(q\)\)/.test(admin)
-    && /\$\{orderNeedsWorker\(q\) \?/.test(admin),
-    'the assigned and unassigned rows are conditioned on opposites');
+  // The two readings are exact opposites: the same predicate decides
+  // whether the cell names a picker or the absence of one.
+  t.check(/else if\(q\.pickingStatus === 'awaiting_accept'\) main = `Offered to \$\{name\}/.test(who)
+    && /else main = `\$\{name\} picking/.test(who),
+    'the assigned and unassigned readings are conditioned on opposites');
 }
 
 /* ---------- 2. the button opens the assignment the first one uses ----- */
 {
-  t.check(/querySelectorAll\('\.sq-assign-btn'\)\.forEach\(btn=>btn\.addEventListener\('click', \(\)=>openAssignStaffModal\(Number\(btn\.dataset\.id\), 'preparing', 'worker'\)\)\)/.test(admin),
+  t.check(/case 'assign': openAssignStaffModal\(id, 'preparing', 'worker'\); break;/.test(extractFunction(admin, 'otAct', 'index.html')),
     "it opens the worker picker for the stage it is already in");
 
   // Which matters: openAssignStaffModal ends by calling setSavedQuoteStatus,
@@ -138,11 +142,12 @@ const shared = read('shared-worker.js');
   t.check(/if\(!q \|\| q\.status!=='preparing'\) return false;/.test(needs),
     'only while it is at Being Prepared, since that is the stage a picker is needed for');
 
-  t.check(/\$\{orderNeedsWorker\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
-    'the card asks that question rather than only whether the field is empty');
-  t.check(/\$\{\(q\.status==='preparing' && !orderNeedsWorker\(q\)\) \? `<div class="sq-assignee-row"/.test(admin),
-    'and the "being prepared by" row is its exact opposite, so never both');
-  t.check(/Assigned to someone no longer on staff/.test(admin),
+  const who = extractFunction(admin, 'orderWho', 'index.html');
+  t.check(/if\(orderNeedsWorker\(q\)\) main = /.test(who),
+    'the row asks that question rather than only whether the field is empty');
+  t.check(/else main = `\$\{name\} picking · \$\{answered\} of \$\{items\.length\}`/.test(who),
+    'and the "picking" reading is its exact opposite, so never both');
+  t.check(/Assigned to someone no longer on staff/.test(who),
     'and says which of the two it is');
 }
 
@@ -171,11 +176,13 @@ const shared = read('shared-worker.js');
   t.check(/return !\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedDeliveryId\);/.test(needs),
     'and a driver no longer on staff needs replacing');
 
-  t.check(/\$\{orderNeedsDelivery\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
-    'the card offers a way to name one');
-  t.check(/\$\{\(q\.status==='pending_delivery' && !orderNeedsDelivery\(q\)\) \? `<div class="sq-assignee-row"/.test(admin),
-    'and the "being delivered by" row is its exact opposite');
-  t.check(/openAssignStaffModal\(Number\(btn\.dataset\.id\), 'pending_delivery', 'delivery'\)/.test(admin),
+  const who = extractFunction(admin, 'orderWho', 'index.html');
+  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ act:'assigndelivery', label:'Assign delivery' \};/.test(extractFunction(admin, 'orderActSpec', 'index.html')),
+    'the row offers a way to name one');
+  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ main: otStaffGone\(q\.assignedDeliveryId\) \? 'Driver no longer on staff' : 'Nobody delivering'/.test(who)
+    && /Going out with \$\{deliveryAssigneeLabel\(q\)\}/.test(who),
+    'and the "going out with" reading is its exact opposite');
+  t.check(/case 'assigndelivery': openAssignStaffModal\(id, 'pending_delivery', 'delivery'\); break;/.test(admin),
     'wired to the delivery picker for the stage it is already in');
 
   // Both halves released, but not the same way.
@@ -192,22 +199,14 @@ const shared = read('shared-worker.js');
 
 /* ---------- 5. the affordance is reachable with a finger -------------- */
 {
-  // This board has a mobile step-switcher, so it is used on phones. The pill
-  // is 19px tall; the ring is what the finger actually lands on.
-  // The selector is grouped with .sq-confirm-btn, which shares the pill's
-  // look without sharing its class (the board wires every .sq-assign-btn to
-  // the assign-staff modal). The finger target is what is pinned here, not
-  // whether anything else rides along.
-  t.check(/\.sq-assign-btn(?:,\s*\.[a-zA-Z0-9_-]+)*\{[^}]*position:relative;/.test(admin),
-    'the button is positioned so a hit area can be hung off it');
-  const ring = admin.match(/\.sq-assign-btn::after(?:,\s*\.[a-zA-Z0-9_-]+::after)*\{content:"";position:absolute;inset:(-?\d+)px (-?\d+)px;\}/);
-  t.check(!!ring, 'and it has one');
-  if (ring) {
-    const vertical = 19.3 + Math.abs(Number(ring[1])) * 2;
-    const horizontal = 55.2 + Math.abs(Number(ring[2])) * 2;
-    t.check(vertical >= 44, `which brings it to ${vertical.toFixed(0)}px tall, at or over the 44px minimum`);
-    t.check(horizontal >= 44, `and ${horizontal.toFixed(0)}px wide`);
-  }
+  // The act is one of the layer's small buttons: 28px on the console and
+  // a full thumb on the phone, where the layer's own rules for the
+  // table's act cell and the queue's acts set the 44px floor.
+  const phone = admin.slice(admin.indexOf('THE PHONE.'), admin.lastIndexOf('</style>'));
+  t.check(/\.ow-ot \.ow-tbl-a \.btn\.ow-sm\{[^}]*min-height:var\(--ow-tap\)/.test(phone),
+    "on the phone the row's act is at least 44px tall");
+  t.check(/\.ow-ot-qa \.btn\.ow-sm\{[^}]*min-height:var\(--ow-tap\)/.test(phone),
+    "and so is the queue's");
 }
 
 process.exit(t.done() ? 1 : 0);

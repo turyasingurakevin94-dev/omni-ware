@@ -55,13 +55,16 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
      stage on the wrong side of Being Prepared would be describing a
      delivery to the customer rather than one from the supplier. */
   const statuses = extractDeclaration(src, 'SQ_STATUSES', 'index.html');
-  t.check(/awaiting_goods:\s*\{ label:'Step 2\. Awaiting Goods'/.test(statuses),
-    'and is numbered as the second step');
-  t.check(/preparing:\s*\{ label:'Step 3\. Being Prepared'/.test(statuses)
-    && /completed:\s*\{ label:'Step 5\. Completed'/.test(statuses),
+  /* Named as the desk names them since the board became a console --
+     Taken, Buying, Preparing, Out for delivery, Delivered. The keys are
+     untouched, every derivation reads them; only the words moved. */
+  t.check(/awaiting_goods:\s*\{ label:'Step 2\. Buying'/.test(statuses),
+    'and is numbered as the second step, named for what happens in it');
+  t.check(/preparing:\s*\{ label:'Step 3\. Preparing'/.test(statuses)
+    && /completed:\s*\{ label:'Step 5\. Delivered'/.test(statuses),
     'with everything after it renumbered rather than left claiming the old place');
-  t.check(/awaiting_goods:'Awaiting Goods'/.test(extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html')),
-    'and a short label for the phone stepper, which reads that list rather than the long one');
+  t.check(/awaiting_goods:'Buying'/.test(extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html')),
+    'and a short label for the lens and the top bar, which read that list rather than the long one');
 }
 
 /* ---------- 2. what "still out" means -------------------------------- */
@@ -196,10 +199,10 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   t.check(/const outstanding = received \? shortfall : qty;/.test(extractFunction(src, 'orderPurchaseLines', 'index.html')),
     'without counting a collected line twice — what is left to spend is the shortfall, which is nothing when it all arrived');
 
-  t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(src),
-    'and the money to go and buy sits over the column waiting for it');
-  t.check(!/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(src),
-    'rather than over the one whose goods are in by definition');
+  t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'and the money to go and buy is on the strip, read over both working stages');
+  t.check(/buyingListRuns\(live\)/.test(extractFunction(src, 'orderBoardCashToBuy', 'index.html')),
+    "as the buying list's own runs, so the strip and the list cannot disagree");
 }
 
 /* ---------- 7. the card says how far along ---------------------------- */
@@ -215,11 +218,11 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   /* And the card actually asks. Checked next to the strip it sits under,
      because a function that is written and never called reads exactly
      like one that works. */
-  t.check(src.includes('${orderCashStripHTML(q)}')
-    && src.includes('${orderGoodsRowHTML(q)}')
-    && src.indexOf('${orderCashStripHTML(q)}') < src.indexOf('${orderGoodsRowHTML(q)}'),
-    "and the card puts it under the cash strip, where the order's other facts are");
-  t.check(/\.sq-goods-row\.in\{color:var\(--good\)/.test(src),
+  t.check(/orderGoodsRowHTML\(q\) \+ orderTripsRowHTML\(q\)/.test(extractFunction(src, 'orderWho', 'index.html')),
+    "and the row's who-cell asks it, the count first and the journeys under it");
+  t.check(/\$\{orderCashStripHTML\(q\)\}/.test(extractFunction(src, 'orderRowBodyHTML', 'index.html')),
+    "with this order's share of the buying in the open row, beside its lines");
+  t.check(/\.ow-ot-gr\.ow-good\{color:var\(--ow-verdigris\)/.test(src),
     'and it turns when the last one lands');
 }
 
@@ -281,7 +284,7 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   const ours = scope.orderTripsRowHTML(order);
   t.check(/Abudu/.test(ours) && /out collecting/.test(ours), 'a worker out is named, with what they are doing');
   t.check(!/Nobody sent/.test(ours), 'and nothing is reported as unarranged once it is on a list');
-  t.check((ours.match(/sq-goods-row trip/g) || []).length === 1,
+  t.check((ours.match(/ow-ot-gr-trip/g) || []).length === 1,
     'one journey covering two of this order\'s lines is ONE row — printing it twice would read as two people out');
   t.check(/2 items of this order/.test(ours),
     'saying how much of THIS order it covers, since a run carries other orders too');
@@ -344,11 +347,10 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
     'but the card stays silent — the goods are here, whatever the paperwork still says');
 
   // Drawn on the card, and wired.
-  t.check(src.includes('${orderTripsRowHTML(q)}')
-    && src.indexOf('${orderGoodsRowHTML(q)}') < src.indexOf('${orderTripsRowHTML(q)}'),
-    'the card draws it directly under the count it explains');
-  t.check(/querySelectorAll\('\[data-trip-gap\]'\)\.forEach\(btn=>btn\.addEventListener\('click', openBuyingList\)\)/.test(src),
-    'and the button opens the buying list, where somebody actually gets sent');
+  t.check(/orderGoodsRowHTML\(q\) \+ orderTripsRowHTML\(q\)/.test(extractFunction(src, 'orderWho', 'index.html')),
+    'the row draws it directly under the count it explains');
+  t.check(/if\(t\.closest\('\[data-trip-gap\]'\)\)\{ openBuyingList\(\); return; \}/.test(src),
+    'and the button opens the buying list, where somebody actually gets sent -- through the one listener the console has');
 }
 
 process.exit(t.done() ? 1 : 0);

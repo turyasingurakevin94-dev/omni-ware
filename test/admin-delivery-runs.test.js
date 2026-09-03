@@ -54,7 +54,9 @@ const scope = compileScope([
   extractFunction(src, 'orderNeedsDelivery', 'index.html'),
   extractFunction(src, 'deliveryRuns', 'index.html'),
   extractFunction(src, 'pendingDeliveryOrders', 'index.html'),
-  extractFunction(src, 'deliveryRunsBannerHTML', 'index.html'),
+  extractFunction(src, 'otDuration', 'index.html'),
+  extractFunction(src, 'otStageSince', 'index.html'),
+  extractFunction(src, 'orderOutPanelHTML', 'index.html'),
 ], {
   data,
   savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
@@ -64,8 +66,10 @@ const scope = compileScope([
   ICON_GO: '<svg data-i="go"></svg>',
   ICON_WARN: '<svg data-i="warn"></svg>', ICON_TRUCK: '<svg data-i="truck"></svg>',
   openModal: (id) => { modal.opened = id; },
+  quoteClientName: (q) => (q.client && q.client.name) || 'Unnamed client',
+  deliveryAssigneeLabel: (q) => (q.assignedDeliveryId ? 'Kasule' : ''),
 }, ['orderDestination', 'orderIsCollected', 'destinationKey', 'deliveryRuns',
-  'pendingDeliveryOrders', 'deliveryRunsBannerHTML']);
+  'pendingDeliveryOrders', 'orderOutPanelHTML']);
 
 const order = (over) => Object.assign({
   id: 900, client: { name: 'Moses' }, date: '2026-08-03', status: 'pending_delivery',
@@ -202,65 +206,57 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     `only live orders waiting to go out are grouped (got ${JSON.stringify(ids)})`);
 }
 
-/* ---------- 7. the banner ---------------------------------------------- */
+/* ---------- 7. the rail's out-for-delivery panel ---------------------- */
 {
   reset();
   data.customers = [
     { id: 'k1', name: 'A', location: 'Ntinda' }, { id: 'k2', name: 'B', location: 'Ntinda' },
     { id: 'k3', name: 'C', location: 'Nakawa' }];
 
-  const figure = (h) => (h.match(/([\d]+) orders?<\/span>/) || [])[1];
+  const rows = (h) => (h.match(/class="ow-sr ow-sr-2"/g) || []).length;
   const places = (h) => (h.match(/([\d]+) places? to reach/) || [])[1];
 
-  t.check(scope.deliveryRunsBannerHTML([]) === '', 'an empty column renders no banner');
-  t.check(scope.deliveryRunsBannerHTML(undefined) === '', 'and neither does a column that has not loaded');
-  t.check(scope.deliveryRunsBannerHTML([order({ id: 1, deliveryMode: 'agent_pickup' })]) === '',
-    'nor a board of self-pickups, which has no journey in it to plan');
+  t.check(/Nothing is out for delivery/.test(scope.orderOutPanelHTML([])), 'an empty board says so rather than drawing nothing');
+  t.check(/Nothing is out for delivery/.test(scope.orderOutPanelHTML(undefined)),
+    "and so does one that has not loaded, read off the board's own set");
+  const self = scope.orderOutPanelHTML([order({ id: 1, deliveryMode: 'agent_pickup' })]);
+  t.check(!places(self) && /1 collecting from the shop/.test(self),
+    'a board of self-pickups has no place to reach -- the panel says who is collecting instead');
 
   // Every destination counts, a single order included: a place with one
   // delivery today is still a place somebody has to drive to.
-  const lone = scope.deliveryRunsBannerHTML([order({ id: 1, customerId: 'k1' })]);
-  t.check(lone !== '', 'one order to one place still raises the banner');
-  t.check(places(lone) === '1' && figure(lone) === '1', `saying one place, one order (${places(lone)}/${figure(lone)})`);
-  /* Same rule as the cash banner beside it: with one destination the
-     headline count IS that destination's count, so repeating it on the
-     row said nothing twice. The name is what the headline lacks. */
-  t.check(/All to Ntinda/.test(lone) && !/<b>/.test(lone),
-    'and naming it rather than counting to one underneath a headline that already said one');
-  t.check(/data-i="go"/.test(lone), 'the banner shows it opens something');
+  const lone = scope.orderOutPanelHTML([order({ id: 1, customerId: 'k1' })]);
+  t.check(rows(lone) === 1 && places(lone) === '1', `one order to one place is one row and one place (${rows(lone)}/${places(lone)})`);
+  t.check(/Ntinda/.test(lone), 'named on the row');
+  t.check(/data-act="runs"/.test(lone) && /title="What is going the same way"/.test(lone),
+    'and the panel opens the runs, saying what they are');
 
   const mixed = [order({ id: 1, customerId: 'k1' }), order({ id: 2, customerId: 'k2' }),
     order({ id: 3, customerId: 'k3' }), order({ id: 9, client: { name: 'Wilson' } })];
-  const html = scope.deliveryRunsBannerHTML(mixed);
+  const html = scope.orderOutPanelHTML(mixed);
   t.check(places(html) === '2', `two Ntinda and one Nakawa is two places (got ${places(html)})`);
-  t.check(figure(html) === '3', `and three orders going to them (got ${figure(html)})`);
-  t.check(/Ntinda/.test(html) && /Nakawa/.test(html), 'both named on the banner');
-  t.check(/1 with no address yet/.test(html),
+  t.check(rows(html) === 4, `and four rows, the one going nowhere yet included (got ${rows(html)})`);
+  t.check(/Ntinda/.test(html) && /Nakawa/.test(html), 'both named');
+  t.check(/1 with no address/.test(html),
     'with the one nobody has an address for counted separately, since it is going nowhere yet');
 
-  // Checked on the FIGURE, not the number of chips -- a voided order
-  // joining an existing place leaves the chip count identical and only the
-  // count wrong, which is exactly how this would slip through.
+  // Checked on the rows, not the places -- a voided order joining an
+  // existing place leaves the place count identical.
   const withVoid = mixed.concat([order({ id: 10, customerId: 'k1', voided: true })]);
-  t.check(figure(scope.deliveryRunsBannerHTML(withVoid)) === '3',
-    `a cancelled order joins neither a place nor the count (got ${figure(scope.deliveryRunsBannerHTML(withVoid))})`);
-
+  t.check(rows(scope.orderOutPanelHTML(withVoid)) === 4,
+    `a cancelled order joins neither a place nor the list (got ${rows(scope.orderOutPanelHTML(withVoid))})`);
   const aged = mixed.concat([order({ id: 11, customerId: 'k1', invoiced: true, invoicedTs: Date.now() - 3 * 24 * 3600 * 1000 })]);
-  t.check(figure(scope.deliveryRunsBannerHTML(aged)) === '3',
-    'nor does one long since aged off the board');
+  t.check(rows(scope.orderOutPanelHTML(aged)) === 4, 'nor does one long since aged off the board');
 
-  // The banner is a glance; the carousel is the document. Past three
-  // chips it stops being either, so the rest are counted instead.
+  // The rail is the plan, not a glance: every place is listed.
   reset();
   data.customers = ['Ntinda', 'Nakawa', 'Bwaise', 'Gayaza', 'Kisenyi']
     .map((location, i) => ({ id: 'p' + i, name: 'C' + i, location }));
   const many = data.customers.map((c, i) => order({ id: i + 1, customerId: c.id }));
-  const manyHtml = scope.deliveryRunsBannerHTML(many);
-  const chips = (manyHtml.match(/class="sq-cash-run"/g) || []).length;
-  t.check(chips === 3, `at most three places are named on the column (got ${chips})`);
-  t.check(/\+2 more/.test(manyHtml),
-    'and the rest are counted rather than dropped, so the glance is not quietly incomplete');
-  t.check(places(manyHtml) === '5' && figure(manyHtml) === '5',
+  const manyHtml = scope.orderOutPanelHTML(many);
+  t.check(rows(manyHtml) === 5 && places(manyHtml) === '5',
+    `every place is on the rail (${rows(manyHtml)} rows, ${places(manyHtml)} places)`);
+  t.check(places(manyHtml) === '5' && rows(manyHtml) === 5,
     'while the headline still covers every one of them');
 }
 
@@ -414,18 +410,17 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   t.check(buttons.dr_next.disabled === false, 'coming back off the end re-enables it');
 }
 
-/* ---------- 10. wired onto the right column --------------------------- */
+/* ---------- 10. wired onto the right panel ---------------------------- */
 {
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-  t.check(/\$\{status==='pending_delivery' \? deliveryRunsBannerHTML\(group\) : ''\}/.test(code),
-    'the banner sits over Pending Delivery, where the question is asked');
-  /* The cash banner moved to Awaiting Goods when that stage arrived: the
-     money to go and buy belongs beside the orders waiting for it, and by
-     Being Prepared the goods are in by definition. */
-  t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(code),
-    'and the cash banner sits over Awaiting Goods, where the buying is still to do');
-  t.check(/if\(runsBanner\) runsBanner\.addEventListener\('click', openDeliveryRuns\)/.test(code),
-    'tapping it opens the runs');
+  const panel = extractFunction(src, 'orderOutPanelHTML', 'index.html');
+  t.check(/list \|\| pendingDeliveryOrders\(\)/.test(panel) && /deliveryRuns\(orders\)/.test(panel),
+    'the rail panel reads the delivery runs over the orders out for delivery, where the question is asked');
+  /* The cash to buy in sits on the strip, read over both working stages:
+     the money to go and buy belongs beside the orders waiting for it. */
+  t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'and the cash to buy in is on the strip, over the stages still buying');
+  t.check(/case 'runs': openDeliveryRuns\(\); break;/.test(code), "tapping the panel's act opens the runs");
   t.check(/id="deliveryRunsBody"/.test(code) && /id="deliveryRunsModal"/.test(code),
     'into its own modal rather than over the buying list');
 }

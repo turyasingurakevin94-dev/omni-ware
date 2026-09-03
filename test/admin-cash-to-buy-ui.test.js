@@ -79,7 +79,7 @@ const scope = compileScope([
   extractFunction(src, 'cashOnHandByAccount', 'index.html'),
   extractFunction(src, 'cashPositionForBuying', 'index.html'),
   extractFunction(src, 'cashPositionHTML', 'index.html'),
-  extractFunction(src, 'cashToBuyBannerHTML', 'index.html'),
+  extractFunction(src, 'orderBoardCashToBuy', 'index.html'),
   /* The row now says whose the goods are as well as where they are, so
      the reading behind that comes with it. */
   extractFunction(src, 'stockKey', 'index.html'),
@@ -90,7 +90,6 @@ const scope = compileScope([
   extractFunction(src, 'consignTagTitle', 'index.html'),
   extractFunction(src, 'consignTagHTML', 'index.html'),
   extractFunction(src, 'consignedForOrder', 'index.html'),
-  extractFunction(src, 'orderMetaRowHTML', 'index.html'),
   extractFunction(src, 'orderCashStripHTML', 'index.html'),
   extractFunction(src, 'openBuyingList', 'index.html'),
 ], {
@@ -140,7 +139,7 @@ const scope = compileScope([
       addEventListener(_e, fn) { modal.planWiring = fn; },
     }),
   },
-}, ['cashToBuyBannerHTML', 'orderMetaRowHTML', 'orderCashStripHTML', 'openBuyingList',
+}, ['orderBoardCashToBuy', 'orderCashStripHTML', 'openBuyingList',
   'cashOnHandFor', 'cashOnHandByAccount', 'cashPositionForBuying', 'cashPositionHTML',
   'orderPurchaseLines', 'orderCashToBuy', 'orderUnpricedLines', 'beingPreparedOrders',
   'buyingListRuns', 'orderLineIsBoughtIn', 'quoteClientName']);
@@ -173,13 +172,14 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.prices = [price()];
   const shelf = order({ items: [line({ supplierId: '__stock__' })] });
 
-  t.check(scope.cashToBuyBannerHTML([shelf]) === '',
-    'a board whose orders all come off our shelf renders no banner at all -- not one reading zero');
+  const none = scope.orderBoardCashToBuy([shelf]);
+  t.check(none.total === 0 && none.runs.length === 0,
+    'a board whose orders all come off our shelf has nothing to buy in -- no run, and a figure of nothing');
   t.check(scope.orderCashStripHTML(shelf) === '',
-    'and such an order carries no cash strip on its card');
-  t.check(scope.cashToBuyBannerHTML([]) === '', 'an empty column renders no banner');
-  t.check(scope.cashToBuyBannerHTML(undefined) === '',
-    'and neither does a column that has not loaded yet');
+    'and such an order carries no cash strip in its row');
+  t.check(scope.orderBoardCashToBuy([]).total === 0, 'an empty board adds up to nothing');
+  t.check(scope.orderBoardCashToBuy(undefined).total === 0,
+    'and neither does one that has not loaded yet');
 }
 
 /* ---------- 2. the three surfaces agree on the number ----------------- */
@@ -193,16 +193,16 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     order({ id: 3, status: 'draft', items: [line({ qty: 9999 })] })];
 
   const orders = scope.beingPreparedOrders();
-  const bannerTotal = figures(scope.cashToBuyBannerHTML(orders))[0];
+  const bannerTotal = scope.orderBoardCashToBuy(orders).total;
   scope.openBuyingList();
   const listTotal = figures(modal.html)[0];
   const stripTotal = orders
     .map((q) => figures(scope.orderCashStripHTML(q)).pop() || 0)
     .reduce((a, b) => a + b, 0);
 
-  t.check(bannerTotal === 15000 + 2000, `the banner totals the step (got ${bannerTotal})`);
+  t.check(bannerTotal === 15000 + 2000, `the strip's figure totals the step (got ${bannerTotal})`);
   t.check(listTotal === bannerTotal,
-    `the buying list opens on the same figure the banner sent them there with (${listTotal} vs ${bannerTotal})`);
+    `the buying list opens on the same figure the strip sent them there with (${listTotal} vs ${bannerTotal})`);
   t.check(stripTotal === bannerTotal,
     `and the per-order strips add up to it (${stripTotal} vs ${bannerTotal}) -- three readings of one number`);
   t.check(!/9999|9,999/.test(String(modal.html)),
@@ -240,10 +240,10 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
      The meta row must not carry it any more (two money figures on one
      card is how the buy cost gets read as the sell price), and the name
      row must. */
-  const sell = scope.orderMetaRowHTML(order({ items: [line({ qty: 10, sellPrice: 45000 })] }));
+  const sell = scope.orderCashStripHTML(order({ items: [line({ qty: 10, sellPrice: 45000 })] }));
   t.check(figures(sell).every((n) => n !== 450000),
-    'the sell total is no longer buried in the meta row');
-  t.check(/class="sq-client-total" title="What the client pays">\$\{fmtUGX\(savedQuoteTotal\(q\)\)\}/.test(read('index.html')),
+    'the cash strip is what the shop pays, never what the client pays');
+  t.check(/<div class="ow-tbl-n" data-l="Client pays" title="What the client pays">\$\{esc\(fmtUGX\(savedQuoteTotal\(q\)\)\)\}/.test(read('index.html')),
     'it sits on the name row instead, right-aligned against the name');
 
   /* A line received in full costs 0 more, and a strip reading
@@ -256,7 +256,7 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     'an order whose goods are all in shows no cash strip at all');
 }
 
-/* ---------- 4. the banner is a glance, not a report ------------------- */
+/* ---------- 4. the figure rests on the runs, biggest first ------------ */
 {
   data.products = ['0', '1', '2', '3', '4'].map((i) => ({ id: 'P' + i, name: 'Item' + i, variants: [] }));
   data.prices = ['S1', 'S2', 'S3', 'S4', 'S5'].map((s, i) =>
@@ -264,87 +264,32 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   const spread = order({ items: data.prices.map((p, i) =>
     line({ productId: 'P' + i, productName: 'Item' + i, qty: 2, supplierId: p.supplierId })) });
 
-  const html = scope.cashToBuyBannerHTML([spread]);
-  const runs = (html.match(/class="sq-cash-run"/g) || []).length;
-  t.check(runs === 3, `at most three supplier runs are shown on the column (got ${runs})`);
-  t.check(/\+2 more/.test(html),
-    'and the rest are counted rather than dropped, so the glance is not quietly incomplete');
-
-  const shown = figures(html);
-  t.check(shown[0] === 30000, 'the headline figure still covers every supplier, shown or not');
-  t.check(shown[1] >= shown[2] && shown[2] >= shown[3],
-    'the runs that made the cut are the biggest ones, since those are what a day is planned around');
+  const cash = scope.orderBoardCashToBuy([spread]);
+  t.check(cash.total === 30000, 'the headline figure covers every supplier');
+  t.check(cash.runs.length === 5 && cash.runs.every((r, i, a) => !i || a[i - 1].total >= r.total),
+    'and the runs behind it are biggest first, since those are what a day is planned around');
+  /* The glance itself is the rail's buying-trip panel, drawn by PLACE
+     from the pickup runs rather than by supplier; admin-pickup-runs owns
+     that derivation. What this file pins is that the strip's figure and
+     the runs it rests on are one call. */
+  t.check(/pickupRuns\(orders\)/.test(extractFunction(src, 'orderTripPanelHTML', 'index.html'))
+    && /Cash to carry/.test(extractFunction(src, 'orderTripPanelHTML', 'index.html')),
+    'the rail plans the trip by place and says what cash to carry');
 }
 
-/* ---------- 4b. it never says the same number twice ------------------- */
-/*
- * A real board: one order, every line from Okuosi Gypsum. The runs
- * partition exactly the lines the headline is summed from, so with a
- * single supplier that run's total IS the headline -- and the banner
- * printed it again directly underneath itself. The screenshot that
- * raised this read 2,309,000 UGX over 2,309,000 UGX.
- *
- * Equivalent mutant, named: dropping the amount when runs.length === 1
- * cannot be distinguished from dropping it when the run total happens
- * to equal the headline, because those are the same condition. The
- * assertions below are written on the count of suppliers, which is what
- * the rule is actually about.
+/* ---------- 4b. nothing on the rail wraps ------------------------------
+ * The rail is 304px. The place and its suppliers sit on one line each and
+ * the figure on the right; when a name is too long it is the NAME that
+ * yields, never the amount, and no figure is ever broken after its
+ * digits with "UGX" stranded on a line of its own. These are the layer's
+ * own rules for its side rows and its money column, held here because no
+ * assertion on the markup can see a wrap.
  */
 {
-  data.products = [{ id: 'P1', name: 'Cement', variants: [] }, { id: 'P2', name: 'Nails', variants: [] }];
-  data.prices = [
-    price({ id: 1, productId: 'P1', supplierId: 'S1', wholesale: 1000, retail: 1000 }),
-    price({ id: 2, productId: 'P2', supplierId: 'S2', wholesale: 500, retail: 500 })];
-
-  const alone = scope.cashToBuyBannerHTML([order({ items: [
-    line({ productId: 'P1', qty: 2 }), line({ productId: 'P1', qty: 3 })] })]);
-  t.check(figures(alone).length === 1 && figures(alone)[0] === 5000,
-    `one supplier prints its amount once, not twice (got ${JSON.stringify(figures(alone))})`);
-  t.check(/All from Roto/.test(alone),
-    'and names them instead -- the supplier is the fact the headline does not already carry');
-  t.check(!/<b>/.test(alone),
-    'with no second figure left on the row at all');
-
-  const both = scope.cashToBuyBannerHTML([order({ items: [
-    line({ productId: 'P1', qty: 2 }),
-    line({ productId: 'P2', productName: 'Nails', qty: 4, supplierId: 'S2' })] })]);
-  t.check(figures(both).length === 3 && figures(both)[0] === 4000,
-    `two suppliers still carry an amount each under the headline (got ${JSON.stringify(figures(both))})`);
-  t.check(!/All from/.test(both),
-    'and none of them claims to be all of it');
-
-  // It opens the buying list. Nothing on it said so.
-  t.check(/data-i="go"/.test(alone), 'the banner shows it can be pressed');
-}
-
-/* ---------- 4c. nothing on it wraps -------------------------------------
- *
- * A lane is 270px, which leaves this card about 230px inside its padding.
- * The label and the amount were laid out abreast in it -- 74px and 123px
- * measured -- so BOTH wrapped, and the amount broke after its digits and
- * stranded "UGX" on a line of its own. These are the CSS facts that stop
- * that, held here because no assertion on the markup can see a wrap.
- */
-{
-  const rule = (sel) => (new RegExp(`\\${sel}\\{[^}]*\\}`).exec(src) || [''])[0];
-
-  t.check(/display:block/.test(rule('.sq-cash-fig')) && !/margin-left:auto/.test(rule('.sq-cash-fig')),
-    'the amount is a line of its own, not the right-hand end of the label’s row');
-  t.check(/white-space:nowrap/.test(rule('.sq-cash-fig')),
-    'and cannot be broken in the middle whatever the lane is doing');
-  t.check(/white-space:nowrap/.test(rule('.sq-cash-label')),
-    'nor can the label, which is why it can sit above rather than fight for room');
-
-  /* The supplier chips were panel-white on a panel-white card: the pill
-     had a radius and padding that drew nothing at all. Rows instead --
-     and the guard is that the run must not repaint the card's own
-     background, whatever it is. */
-  const runRule = rule('.sq-cash-run');
-  const cardRule = rule('.sq-cash');
-  t.check(/background:var\(--panel\)/.test(cardRule) && !/background:/.test(runRule),
-    'a run paints no background of its own, so it cannot be an invisible pill on the card again');
-  t.check(/text-overflow:ellipsis/.test(rule('.sq-cash-run .nm')) && /white-space:nowrap/.test(rule('.sq-cash-run b')),
-    'and when a name is too long for the lane it is the NAME that yields, never the amount');
+  t.check(/\.ow-sr-k2-t,\.ow-sr-k2-s\{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/.test(src),
+    'a stop\'s place and its suppliers truncate with all three declarations, and can shrink');
+  t.check(/\.ow-tbl-n\{[^}]*white-space:nowrap/.test(src) && /\.ow-tbl-n\{[^}]*font-variant-numeric:tabular-nums/.test(src),
+    'and a figure never wraps and always lines up');
 }
 
 /* ---------- 5. what it cannot price, it says ------------------------- */
@@ -355,12 +300,12 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     line({ productId: 'P1', qty: 2 }), line({ productId: 'P2', productName: 'Nails', qty: 3 })] });
   data.savedQuotes = [mixed];
 
-  const banner = scope.cashToBuyBannerHTML([mixed]);
-  t.check(/no supplier price/.test(banner) && /1 line/.test(banner),
-    'a line nothing can price is called out on the banner');
-  t.check(figures(banner)[0] === 2000,
+  const cash = scope.orderBoardCashToBuy([mixed]);
+  t.check(cash.unpriced === 1, 'a line nothing can price is counted apart');
+  t.check(cash.total === 2000,
     'and is not counted into the figure -- a total that silently includes zero for it is worse than one that says so');
-  t.check(/data-i="warn"/.test(banner), 'the callout carries the warning icon');
+  t.check(/with no price on file/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'and the strip names it under the figure');
 
   scope.openBuyingList();
   t.check(/Nails/.test(modal.html) && /bl-gap/.test(modal.html),
@@ -384,31 +329,18 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     'an order nothing can be priced for reports that, rather than claiming to cost nothing');
 }
 
-/* ---------- 6. the card reads at a glance ----------------------------- */
+/* ---------- 6. the row reads at a glance ------------------------------ */
 {
-  data.prices = [price()];
-  const q = order({ items: [line(), line({ supplierId: '__stock__' }), line({ supplierId: '__stock__' })] });
-  const meta = scope.orderMetaRowHTML(q);
-
-  t.check(/data-i="clock"/.test(meta) && /data-i="items"/.test(meta),
-    'the meta row is icons, not sentences -- the card is scanned, not read');
-  t.check(/2 from stock/.test(meta) && /data-i="shelf"/.test(meta),
-    'and says how much of the order is already on our shelf');
-
-  // An icon with no words next to it is only usable by someone who can guess
-  // it. Every one of them has to name itself on hover.
-  const spans = meta.match(/<span[^>]*>/g) || [];
-  t.check(spans.length > 0 && spans.every((s) => /title="/.test(s)),
-    'every icon carries a title, so none of the row is available only to whoever guesses the pictogram');
-
-  t.check(!/from stock/.test(scope.orderMetaRowHTML(order({ items: [line()] }))),
-    'nothing off the shelf means no stock chip, rather than a chip reading zero');
-  // Matched on what follows the word rather than on the closing quote:
-  // the title now goes on to say the order can be opened to see the lines,
-  // and pinning the punctuation after "line" made this fail for a reason
-  // that had nothing to do with pluralisation.
-  t.check(/title="1 line[^s]/.test(scope.orderMetaRowHTML(order({ items: [line()] }))),
-    'and one line is "1 line", not "1 lines"');
+  /* The console's row says under the client's name how many lines the
+     order has and how many of them are to buy -- words at row size,
+     with the order's number and place, rather than pictograms a person
+     has to guess. */
+  const row = extractFunction(src, 'orderRowHTML', 'index.html');
+  t.check(/const bought = \(q\.items \|\| \[\]\)\.filter\(orderLineIsBoughtIn\)\.length;/.test(row),
+    'the row counts what is to buy in off the same predicate the buying does');
+  t.check(/\$\{items\} line\$\{items === 1 \? '' : 's'\}\$\{bought \? `, \$\{bought\} to buy` : ''\}/.test(row),
+    'and says "N lines, M to buy" -- one line is "1 line", nothing to buy says nothing');
+  t.check(/\[`#\$\{q\.id\}`, place, /.test(row), 'with the number and the place beside it');
 }
 
 /* ---------- 7. only while it is the question being asked -------------- */
@@ -422,8 +354,8 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     'and a cancelled order needs nothing bought');
 
   const voidedInGroup = [order({ id: 1 }), order({ id: 2, voided: true, items: [line({ qty: 9999 })] })];
-  t.check(figures(scope.cashToBuyBannerHTML(voidedInGroup))[0] === 100000,
-    'a cancelled order handed to the banner in its group is left out of the figure too');
+  t.check(scope.orderBoardCashToBuy(voidedInGroup).total === 100000,
+    'a cancelled order handed in with the group is left out of the figure too');
 }
 
 /* ---------- 8. a name it cannot read does not take the screen down ---- */

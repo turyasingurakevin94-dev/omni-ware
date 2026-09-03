@@ -184,9 +184,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 6. the eye opens it, and only the eye -------------------- */
 {
-  t.check(/class="pc-icon-btn sq-preview"/.test(src),
-    'there is an eye on the card, so the preview is a visible control rather than a hidden gesture');
-  t.check(/sq-preview'\)\.forEach\(btn=>btn\.addEventListener\('click', \(\)=>openOrderPreview\(btn\.dataset\.id\)\)\)/.test(src),
+  const body = extractFunction(src, 'orderRowBodyHTML', 'index.html');
+  t.check(/data-act="\$\{act\}"/.test(body) && /ghost\('preview', 'Preview'\)/.test(body),
+    'there is a Preview act in the open row, so the preview is a visible control rather than a hidden gesture');
+  t.check(/case 'preview': openOrderPreview\(id\); break;/.test(src),
     'and it opens the panel');
 
   /* The card body opened it too for a while. On a board that is dragged,

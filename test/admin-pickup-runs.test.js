@@ -209,35 +209,20 @@ const reset = () => {
 
 /* ---------- 7. the banner and the panel it opens --------------------- */
 {
-  /* An ICON on the Being Prepared column head, not a banner in the
-     column. The column is 244px wide, the cash figure has first claim on
-     it, and a second banner underneath cost 79px of the space the cards
-     need to answer a question the buyer asks once a morning.
-
-     What it is asked about is unchanged: the preparing group. */
-  t.check(/\$\{status==='preparing' \? pickupRunsIconHTML\(group\) : ''\}/.test(src),
-    'the icon sits on the Being Prepared column, where the buying is decided');
-  t.check(/class="sq-col-head"[\s\S]{0,400}pickupRunsIconHTML/.test(src),
-    'on the column head, so it costs no vertical space at all');
-  /* The cash banner is on the Awaiting Goods column now -- the buying is
-     what that stage is waiting on -- so this column's head is the icon's
-     alone. */
-  t.check(!/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(src)
-    && /status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(src),
-    'and the cash banner has moved to Awaiting Goods, leaving this column head to the icon');
-
-  // A bare pictogram is a guessing game. The count is on the face of it
-  // and everything the old banner said is in the title and the label.
-  const icon = (/function pickupRunsIconHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/<b>\$\{runs\.length\}<\/b>/.test(icon), 'the number of places rides on the icon');
-  t.check(/title="Where to buy from/.test(icon) && /aria-label="Where to buy from/.test(icon),
-    'and it names itself, by hover and to a screen reader');
-  t.check(/if\(noLocation\.length\) bits\.push/.test(icon) && /if\(unpriced\.length\) bits\.push/.test(icon),
-    'with the two exceptions still surfaced rather than lost with the banner');
-  t.check(/if\(!runs\.length && !noLocation\.length && !unpriced\.length\) return '';/.test(icon),
-    'and nothing to buy renders no icon at all');
-  t.check(/if\(pickupsBanner\) pickupsBanner\.addEventListener\('click', openPickupRuns\)/.test(src),
-    'and opens the panel');
+  /* On the console the buying trip is a panel on the rail rather than
+     an icon on a lane head: the same derivation, drawn by place, over
+     the same group -- what is still to be bought. */
+  const panel = extractFunction(src, 'orderTripPanelHTML', 'index.html');
+  t.check(/pickupRuns\(orders\)/.test(panel) && /list \|\| beingPreparedOrders\(\)/.test(panel),
+    'the rail panel reads the pickup runs over the working stages, where the buying is decided');
+  t.check(/\$\{stops\.length\} stop/.test(panel), 'the number of places rides on the panel head');
+  t.check(/title="Where to buy from/.test(panel) && /aria-label="Where to buy from/.test(panel),
+    'and its act names itself, by hover and to a screen reader');
+  t.check(/if\(p\.noLocation\.length\) bits\.push/.test(panel) && /if\(p\.unpriced\.length\) bits\.push/.test(panel),
+    'with the two exceptions still surfaced rather than lost');
+  t.check(/Nothing on the board has to be bought in/.test(panel) && /Everything bought in has arrived/.test(panel),
+    'and nothing to buy says which of the two silences it is');
+  t.check(/case 'pickups': openPickupRuns\(\); break;/.test(src), 'and opens the panel');
 
   // Shared with the delivery carousel rather than copied: the two fiddly
   // parts of that track -- counting the gap into the stride, and rounding
