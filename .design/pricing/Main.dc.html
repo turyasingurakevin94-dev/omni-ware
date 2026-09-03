@@ -1,0 +1,804 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the debtors console ----
+       Built only from the shipped .ow-* vocabulary plus the few
+       screen-local classes below. No new colour, no new weight, no new
+       type size, no fourteenth button family. */
+
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the age of the money: ONE device, a bar with a legend ----
+       The bar carries the proportion (flex-grow on shillings, a 16px
+       floor so a 3% band stays clickable). The legend names each band
+       and is the same control as the segment above it -- so the picture
+       of the problem and the way into it are still one thing, but the
+       five bordered cards that used to repeat the bar are gone. */
+    .ag{padding:12px 14px 14px;}
+    .ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);overflow:hidden;
+      background:var(--ow-rule-soft);}
+    .ag-seg{flex-basis:0;min-width:16px;background:var(--age-hue);}
+    .ag-seg.on{box-shadow:inset 0 0 0 2px var(--ow-paper),inset 0 0 0 4px var(--age-hue);}
+    .ag-lg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px;}
+    .ag-b{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;
+      padding-left:9px;border-left:2px solid var(--age-hue);}
+    .ag-b.on{background:var(--ow-paper-2);}
+    .ag-b-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ag-b-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .ag-b-m{font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .ag-b.on .ag-b-l{color:var(--ow-ink-900);}
+    .age-b30{--age-hue:var(--ow-steel-400);}
+    .age-b60{--age-hue:var(--ow-amber);}
+    .age-b90{--age-hue:var(--ow-crimson);}
+    .age-b90p{--age-hue:var(--ow-crimson);}
+    .age-unknown{--age-hue:var(--ow-steel-100);}
+
+    /* ---- the list toolbar: controls that look like controls ---- */
+    .tb2{display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .sb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:236px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;color:var(--ow-ink-400);}
+    .sb svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sb.has{color:var(--ow-ink-900);}
+    .tg{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);background:var(--ow-paper);white-space:nowrap;}
+    .tg .bx{width:13px;height:13px;border-radius:3px;background:var(--ow-steel-950);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .tg .bx svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb2-sp{flex:1;}
+    /* the band filter, echoed where the rows it removed would have been */
+    .fc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-amber);border-radius:var(--ow-r);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);font-size:12px;font-weight:500;white-space:nowrap;}
+    .fc b{font-weight:600;}
+    .fc .x{width:18px;height:18px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+      justify-content:center;background:rgba(122,74,2,.11);}
+    .fc .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;}
+
+    /* ---- a debtor's row: 44px, opens in place ----
+       Age appears ONCE per row, as the basis line under the figure, and
+       it is coloured only when the money is genuinely old. The band
+       stripe and the coloured pill that used to say the same thing on
+       every row are both gone. */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 112px 122px 132px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ow-q-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    /* how far through the balance they are: a track, and the figure it
+       is measured from in the open row rather than a per-cent on every
+       line. Absent, not zero, when there is nothing to measure. */
+    .pb{display:flex;align-items:center;gap:7px;}
+    .pb-t{flex:1;height:5px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;min-width:0;}
+    .pb-f{height:100%;background:var(--ow-verdigris);}
+    .pb-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .pb-n{font-size:11px;color:var(--ow-ink-400);}
+    .lp{font-size:11px;line-height:1.35;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lp b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+    .lp.never b{color:var(--ow-crimson);font-weight:600;}
+
+    /* ---- an open debtor ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.q{color:var(--ow-ink-400);}
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- a balance that disagrees with its own history ----
+       Amber: a caution with a fix attached, not the accent. */
+    .df{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;
+      background:var(--ow-amber-faint,#FEFAF2);border-bottom:1px solid #EBD9B4;color:var(--ow-amber-ink);}
+    .df > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .df-b{min-width:0;}
+    .df-t{font-size:12px;line-height:1.45;margin:0;}
+    .df-t b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .df-w{font-size:11px;line-height:1.45;margin:3px 0 0;color:#8A6520;}
+    .df-a{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+    .df-a .btn{background:var(--ow-paper);border:1px solid #E0C994;color:var(--ow-amber-ink);}
+
+    /* ---- the rail ---- */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    .rl a{font-weight:600;}
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+
+    /* ================= THE PRICING CONSOLE ============================
+       Margin and Clearance were the same question asked twice about one
+       shelf. A line you stock is in exactly one of three states: selling
+       and keeping enough, selling but THIN, or not selling at all. The
+       first needs nothing. The second two are both price decisions --
+       lift it, or cut it and find somebody who has bought it before --
+       so they are one queue, ranked by what a fix is worth.
+
+       Built only from the shipped .ow-* vocabulary plus the classes
+       below. No new colour, no new weight, no new type size, no
+       fourteenth button family. */
+
+    /* ---- the row ----
+       Five columns. The reason a line is on this screen at all is the
+       basis of the ranking, so like the buy side it takes a fixed width
+       and never truncates; the product name gives way, because a name
+       may be cut and a reason may not. */
+    .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 116px 146px;}
+    .ow-q-t .ow-q-rest{white-space:nowrap;}
+
+    /* the reason column, toned only where the tone means something */
+    .rz{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz.bad b{color:var(--ow-crimson);font-weight:600;}
+    .rz.warn b{color:var(--ow-amber-ink);font-weight:600;}
+    .rz.none b{color:var(--ow-ink-400);font-weight:500;}
+    .rz .q{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* the basis column */
+    .bs{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bs b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+
+    /* ---- WHICH KIND OF MONEY THIS IS ----
+       The one thing that makes a single ranked queue honest. A thin
+       line's figure is income PER MONTH and recurs; a dead line's is
+       cash locked in the shelf and is released ONCE. They are not the
+       same money and must never be summed. So the basis line under
+       every figure names which it is, in the one place the eye already
+       lands, and neither the strip nor the rail ever adds them. */
+    .ow-q-b.mth{color:var(--ow-ink-600);}
+    .ow-q-b.once{color:var(--ow-ink-600);}
+    .ow-q-f .pl{color:var(--ow-ink-400);font-weight:500;margin-right:1px;}
+
+    /* ---- the segments: the two halves of one shelf ---- */
+    .sg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;height:30px;background:var(--ow-paper);flex:none;}
+    .sg-b{display:inline-flex;align-items:center;gap:6px;padding:0 11px;font-size:12px;
+      font-weight:500;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);white-space:nowrap;}
+    .sg-b:first-child{border-left:0;}
+    .sg-b.on{background:var(--ow-steel-950);color:#fff;font-weight:600;}
+    .sg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;}
+    .sg-b.on .sg-n{color:rgba(255,255,255,.72);}
+
+    /* ---- an open line ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;
+      max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .ow-q-why .w{font-family:'Inter',sans-serif;letter-spacing:0;}
+
+    /* the arithmetic, laid out so it can be checked rather than trusted */
+    .ar{display:flex;align-items:stretch;gap:0;margin:0 0 11px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ar-c{padding:7px 15px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ar-c:first-child{border-left:0;}
+    .ar-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .ar-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ar-c.aim{background:var(--ow-paper);}
+    .ar-c.aim .ar-v{color:var(--ow-verdigris);}
+    .ar-c.now .ar-v{color:var(--ow-crimson);}
+    .ar-ar{display:flex;align-items:center;padding:0 9px;color:var(--ow-ink-400);
+      border-left:1px solid var(--ow-rule-soft);}
+    .ar-ar svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- a finding with a fix attached: amber, never the accent ---- */
+    .fx{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;margin:0 0 11px;
+      background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r);
+      color:var(--ow-amber-ink);max-width:var(--ow-measure);}
+    .fx > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .fx p{font-size:12px;line-height:1.45;margin:0;}
+    .fx p + p{margin-top:3px;color:#8A6520;font-size:11px;}
+    .fx b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- the price you would take, on the line it belongs to ----
+       This replaced a bare number input sitting on every closed row --
+       nine live fields on a screen where only one is being decided. */
+    .pf{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 10px;}
+    .pf-l{font-size:12px;color:var(--ow-ink-600);}
+    .pf-in{display:inline-flex;align-items:center;gap:0;border:1px solid var(--ow-steel-950);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;height:32px;}
+    .pf-f{padding:0 10px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:13px;font-weight:600;color:var(--ow-ink-900);
+      display:inline-flex;align-items:center;height:100%;min-width:86px;}
+    .pf-u{padding:0 9px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .pf-g{font-size:11px;color:var(--ow-ink-400);}
+    .pf-g b{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;color:var(--ow-ink-600);font-weight:600;}
+
+    /* ---- what that price would mean, said BEFORE the tap ----
+       Below cost is named in shillings across the whole holding and
+       never blocked: cash now against stock forever is the owner's
+       decision, and the app's job is to make sure it is made with the
+       eyes open. */
+    .vd{font-size:12px;line-height:1.5;padding:9px 11px;border-radius:var(--ow-r);
+      margin:0 0 11px;max-width:var(--ow-measure);}
+    .vd b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .vd.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .vd.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .vd.none{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+
+    /* ---- who has taken this line before, inside the line ----
+       An offer is about ONE line, so it is written on that line, beside
+       the price it is offering. The old screen gathered every marked
+       line into a second console below the list; this puts the buyers
+       where the decision is being made. */
+    .of{border-top:1px solid var(--ow-rule-soft);padding-top:11px;}
+    .of-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;}
+    .of-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .of-n{font-size:11px;color:var(--ow-ink-400);}
+    .of-l{display:flex;flex-direction:column;gap:1px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .of-r{display:grid;grid-template-columns:minmax(0,1fr) 132px 96px;align-items:center;gap:10px;
+      background:var(--ow-paper);padding:8px 11px;min-height:44px;box-sizing:border-box;}
+    .of-r.on{background:var(--ow-paper-2);}
+    .of-nm{min-width:0;font-size:12px;font-weight:600;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--ow-ink-600);
+      letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph.no{font-family:'Inter',sans-serif;color:var(--ow-ink-400);font-style:italic;}
+    .of-b{font-size:11px;color:var(--ow-ink-600);line-height:1.35;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-b b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      color:var(--ow-ink-900);font-weight:600;}
+    .of-a{display:flex;justify-content:flex-end;gap:6px;}
+    .of-x{background:var(--ow-paper-2);padding:0 11px 11px;}
+    .of-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      padding:10px 12px;font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--ow-ink-900);
+      max-width:var(--ow-measure);}
+    .of-n2{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+    .of-acts{display:flex;gap:6px;margin-top:9px;}
+
+    /* ---- the foot of an open line ---- */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- what the screen read, and what it could not ----
+       Every line read lands in exactly one of these and they sum to the
+       total. It is the only thing that lets a reader trust a list for
+       what it does NOT say. */
+    .acct{border-top:1px solid var(--ow-rule-soft);padding:11px 12px 12px;background:var(--ow-paper-2);}
+    .acct-h{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 7px;}
+    .acct-g{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;}
+    .acct-c{padding:0 12px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .acct-c:first-child{border-left:0;padding-left:0;}
+    .acct-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;display:block;line-height:1.2;}
+    .acct-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;display:block;margin-top:2px;}
+    .acct-c.dim .acct-v{color:var(--ow-ink-400);}
+
+    /* ---- the rail's two definitions, each with its own field ----
+       The two settings that DEFINE the two halves of the queue. They
+       were two form panels of roughly 120px each above the money; they
+       are now one field apiece beside the sentence that says what the
+       field means. */
+    .rset{display:flex;align-items:center;gap:9px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .rset-f{display:inline-flex;align-items:center;height:30px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;flex:none;}
+    .rset-v{padding:0 9px;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);display:inline-flex;align-items:center;height:100%;}
+    .rset-u{padding:0 8px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .rset-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;min-width:0;}
+
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+    .ow-empty span{display:block;max-width:64ch;margin:0 auto;line-height:1.55;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt-go{font-size:11px;font-weight:600;color:var(--ow-oxide);}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1240px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Money</span><span>/</span><span>Pricing</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span><span class="nav-badge">36</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"></path><path d="M7 8l-3 3 3 3"></path><path d="M14 15h5"></path><path d="M14 19h7"></path></svg><span>Chase debts</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Debtors</span><span class="nav-badge">14</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3M14 15h2"></path></svg><span>What&#39;s coming</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 18v-4M12 18v-7M16 18v-2"></path></svg><span>Statements</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">Pricing</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">What your shelf keeps, and what it is not selling</p>
+      <span class="ow-ph-sp"></span>
+    </div>
+
+    <div class="ow-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+      <div class="ow-mt">
+        <p class="ow-mt-l">On the shelf</p>
+        <span class="ow-mt-v">19,300,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">At what it cost you, across <b>340</b> lines that can be costed</p>
+      </div>
+      <div class="ow-mt ow-bad">
+        <p class="ow-mt-l">Not moving</p>
+        <span class="ow-mt-v">5,410,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s"><b>22</b> lines with nothing sold off them in 60 days &middot; <b>28%</b> of the shelf, standing still</p>
+      </div>
+      <div class="ow-mt ow-warn">
+        <p class="ow-mt-l">Kept on what sold</p>
+        <span class="ow-mt-v">22.4<span class="ow-u">%</span></span>
+        <p class="ow-mt-s">Out of <b>11,400,000</b> taken in 30 days, against the <b>30%</b> you set</p>
+      </div>
+      <div class="ow-mt ow-warn">
+        <p class="ow-mt-l">The thin lines cost you</p>
+        <span class="ow-mt-v">2,580,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">A month &mdash; what lifting <b>14</b> lines to 30% would have added over the units that really sold</p>
+      </div>
+    </div>
+
+    <div class="ow-grid">
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">What to fix first</span>
+          <span class="ow-pan-n">36 lines &middot; worst money first, thin and dead together</span>
+        </div>
+
+        <div class="tb2">
+          <div class="sg">
+            <span class="sg-b on">All<span class="sg-n">36</span></span>
+            <span class="sg-b">Thin<span class="sg-n">14</span></span>
+            <span class="sg-b">Not moving<span class="sg-n">22</span></span>
+          </div>
+          <div class="sb">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+            <span>Line or product name</span>
+          </div>
+          <span class="tb2-sp"></span>
+          <div class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"></path><rect x="4" y="9" width="16" height="7" rx="1.5"></rect><path d="M8 13h8v7H8z"></path></svg>Print list</div>
+          <div class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"></path><path d="M4 19h16"></path></svg>Export CSV</div>
+        </div>
+
+        <div class="ow-q ow-open">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Cement &mdash; Hima 50kg</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">by the bag</span></span>
+            <span class="rz bad"><b>Keeping <span class="q">6.8%</span> of 30%</b>a fixed mark gone stale</span>
+            <span class="bs"><b>145</b>sold in 30 days</span>
+            <span class="ow-q-v"><span class="ow-q-f"><span class="pl">+</span>1,421,000</span><span class="ow-q-b mth">a month, if you lift it</span></span>
+          </div>
+          <div class="ow-q-x">
+            <p class="ow-q-why">You charge <b>29,500</b> a bag. It costs <b>27,500</b>, so you keep <b>6.8%</b> <span class="w">&mdash; on 145 bags that is</span> <b>290,000</b> <span class="w">earned out of</span> <b>4,277,500</b> <span class="w">taken. It is your biggest seller and the thinnest thing on your shelf.</span></p>
+
+            <div class="ar">
+              <div class="ar-c"><p class="ar-l">It costs you</p><span class="ar-v">27,500</span></div>
+              <div class="ar-c now"><p class="ar-l">You charge</p><span class="ar-v">29,500</span></div>
+              <div class="ar-ar"><svg viewBox="0 0 24 24"><path d="M5 12h13"></path><path d="M13 7l5 5-5 5"></path></svg></div>
+              <div class="ar-c aim"><p class="ar-l">To keep 30%</p><span class="ar-v">39,300</span></div>
+              <div class="ar-c"><p class="ar-l">Over the 145 that sold</p><span class="ar-v">+1,421,000</span></div>
+            </div>
+
+            <div class="fx">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+              <div>
+                <p>Your rule is <b>+2,000</b> a bag, the shop default &mdash; and <b>+2,000</b> is <b>6.8%</b> of the price it makes on a cost of <b>27,500</b>.</p>
+                <p>A fixed mark does not grow with the cost. It was a fifth of the price when a bag cost 8,000; nothing has repriced it since.</p>
+              </div>
+            </div>
+
+            <div class="cf">
+              <p class="cf-n">Charging 39,300 moves the <b>bag</b> price both ways you sell it &mdash; off your own shelf and bought in to order. Your price by the pallet is not touched, and nothing changes until you confirm it.</p>
+              <span class="cf-a">
+                <div class="btn btn-ghost ow-sm">Open the line</div>
+                <div class="btn btn-accent ow-sm">Charge 39,300</div>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t" title="Iron sheets &mdash; G28, 3m box profile"><span class="ow-q-who">Iron sheets &mdash; G28, 3m box profile</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">by the pack</span></span>
+            <span class="rz bad"><b>Keeping <span class="q">10.9%</span> of 30%</b>a fixed mark gone stale</span>
+            <span class="bs"><b>42</b>sold in 30 days</span>
+            <span class="ow-q-v"><span class="ow-q-f"><span class="pl">+</span>529,000</span><span class="ow-q-b mth">a month, if you lift it</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Binding wire 16g &mdash; 25kg roll</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">by the piece</span></span>
+            <span class="rz warn"><b>Keeping <span class="q">18.4%</span> of 30%</b>sold above its rule, still under</span>
+            <span class="bs"><b>61</b>sold in 30 days</span>
+            <span class="ow-q-v"><span class="ow-q-f"><span class="pl">+</span>201,000</span><span class="ow-q-b mth">a month, if you lift it</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Padlocks 50mm &mdash; brass</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">82 on the shelf</span></span>
+            <span class="rz bad"><b>Quiet <span class="q">214</span> days</b>3 buyers have taken it</span>
+            <span class="bs"><b>23,800</b>each, at cost</span>
+            <span class="ow-q-v"><span class="ow-q-f">1,950,000</span><span class="ow-q-b once">locked up, once</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Nails 4in &mdash; 25kg box</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">by the pack</span></span>
+            <span class="rz warn"><b>Keeping <span class="q">21.0%</span> of 30%</b>no rule set on this line</span>
+            <span class="bs"><b>22</b>sold in 30 days</span>
+            <span class="ow-q-v"><span class="ow-q-f"><span class="pl">+</span>119,000</span><span class="ow-q-b mth">a month, if you lift it</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Wheelbarrows &mdash; heavy gauge, pneumatic</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">8 on the shelf</span></span>
+            <span class="rz warn"><b>Quiet <span class="q">88</span> days</b>2 buyers have taken it</span>
+            <span class="bs"><b>110,000</b>each, at cost</span>
+            <span class="ow-q-v"><span class="ow-q-f">880,000</span><span class="ow-q-b once">locked up, once</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Paint rollers 9in &mdash; with tray</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">40 on the shelf</span></span>
+            <span class="rz none"><b>Never sold</b>nobody has ever bought this</span>
+            <span class="bs"><b>18,500</b>each, at cost</span>
+            <span class="ow-q-v"><span class="ow-q-f">740,000</span><span class="ow-q-b once">locked up, once</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Door hinges 4in &mdash; steel, loose pin</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">122 on the shelf</span></span>
+            <span class="rz none"><b>Quiet <span class="q">143</span> days</b>marked to clear, not offered</span>
+            <span class="bs"><b>5,000</b>each, at cost</span>
+            <span class="ow-q-v"><span class="ow-q-f">610,000</span><span class="ow-q-b once">locked up, once</span></span>
+          </div>
+        </div>
+
+        <p class="ow-mini">28 more lines are on this list &mdash; 10 thin, worth <b>310,000</b> a month between them, and 18 not moving, holding <b>1,230,000</b>. Keep scrolling, or search a name.</p>
+
+        <div class="acct">
+          <p class="acct-h">What this screen read</p>
+          <div class="acct-g">
+            <div class="acct-c"><span class="acct-v">412</span><span class="acct-l">lines on the shelf or sold in 30 days</span></div>
+            <div class="acct-c"><span class="acct-v" style="color:var(--ow-crimson)">14</span><span class="acct-l">selling under your 30% target</span></div>
+            <div class="acct-c"><span class="acct-v" style="color:var(--ow-crimson)">22</span><span class="acct-l">holding stock with no sale in 60 days</span></div>
+            <div class="acct-c"><span class="acct-v" style="color:var(--ow-verdigris)">318</span><span class="acct-l">selling, and keeping 30% or better</span></div>
+            <div class="acct-c dim"><span class="acct-v">58</span><span class="acct-l">with no cost on file, so nothing here can judge them</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">How the order is worked out</span></div>
+          <p class="rl">Two kinds of money sit on one list, so they are ranked on one clock: <b>what a fix is worth over a year</b>. A thin line&#39;s month is counted twelve times; dead stock&#39;s cash comes back once.</p>
+          <p class="rl">That is why <b>+529,000</b> a month outranks <b>1,950,000</b> sitting on a shelf. Each row still shows the honest figure &mdash; a month, or once &mdash; and nothing on this screen ever adds the two together.</p>
+          <div class="rf"><span class="rf-l">The thin lines, a month</span><span class="rf-v warn">2,580,000</span></div>
+          <div class="rf"><span class="rf-l">Cash held in dead stock</span><span class="rf-v bad">5,410,000</span></div>
+          <div class="rf"><span class="rf-l">Taken in 30 days</span><span class="rf-v">11,400,000</span></div>
+          <div class="rf"><span class="rf-l">Kept out of it</span><span class="rf-v">2,554,000</span></div>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What counts as thin</span></div>
+          <div class="rset">
+            <span class="rset-f"><span class="rset-v">30</span><span class="rset-u">%</span></span>
+            <span class="rset-l">of every shilling a customer pays, kept</span>
+          </div>
+          <p class="rl">The app judged your prices against <b>10%</b> for years without ever asking you. Raise it if that reads as too easy a bar for this trade.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What counts as not moving</span></div>
+          <div class="rset">
+            <span class="rset-f"><span class="rset-v">60</span><span class="rset-u">days</span></span>
+            <span class="rset-l">quiet &mdash; nothing sold off the line</span>
+          </div>
+          <p class="rl">Sixty is where most shops draw it. A trade that turns slowly draws it wider.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What a price change does</span></div>
+          <p class="rl">Lifting a line moves that price <b>both ways you sell it</b> &mdash; off your own shelf and bought in to order. The other unit is not touched.</p>
+          <p class="rl">A clearance price changes <b>nothing on the shelf</b>. It writes down what you would take, so an offer can name it. <a href="#">Every price you have set</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

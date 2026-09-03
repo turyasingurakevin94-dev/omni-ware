@@ -1,0 +1,193 @@
+
+    /* ================= THE PRICING CONSOLE ============================
+       Margin and Clearance were the same question asked twice about one
+       shelf. A line you stock is in exactly one of three states: selling
+       and keeping enough, selling but THIN, or not selling at all. The
+       first needs nothing. The second two are both price decisions --
+       lift it, or cut it and find somebody who has bought it before --
+       so they are one queue, ranked by what a fix is worth.
+
+       Built only from the shipped .ow-* vocabulary plus the classes
+       below. No new colour, no new weight, no new type size, no
+       fourteenth button family. */
+
+    /* ---- the row ----
+       Five columns. The reason a line is on this screen at all is the
+       basis of the ranking, so like the buy side it takes a fixed width
+       and never truncates; the product name gives way, because a name
+       may be cut and a reason may not. */
+    .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 116px 146px;}
+    .ow-q-t .ow-q-rest{white-space:nowrap;}
+
+    /* the reason column, toned only where the tone means something */
+    .rz{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz.bad b{color:var(--ow-crimson);font-weight:600;}
+    .rz.warn b{color:var(--ow-amber-ink);font-weight:600;}
+    .rz.none b{color:var(--ow-ink-400);font-weight:500;}
+    .rz .q{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* the basis column */
+    .bs{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bs b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+
+    /* ---- WHICH KIND OF MONEY THIS IS ----
+       The one thing that makes a single ranked queue honest. A thin
+       line's figure is income PER MONTH and recurs; a dead line's is
+       cash locked in the shelf and is released ONCE. They are not the
+       same money and must never be summed. So the basis line under
+       every figure names which it is, in the one place the eye already
+       lands, and neither the strip nor the rail ever adds them. */
+    .ow-q-b.mth{color:var(--ow-ink-600);}
+    .ow-q-b.once{color:var(--ow-ink-600);}
+    .ow-q-f .pl{color:var(--ow-ink-400);font-weight:500;margin-right:1px;}
+
+    /* ---- the segments: the two halves of one shelf ---- */
+    .sg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;height:30px;background:var(--ow-paper);flex:none;}
+    .sg-b{display:inline-flex;align-items:center;gap:6px;padding:0 11px;font-size:12px;
+      font-weight:500;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);white-space:nowrap;}
+    .sg-b:first-child{border-left:0;}
+    .sg-b.on{background:var(--ow-steel-950);color:#fff;font-weight:600;}
+    .sg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;}
+    .sg-b.on .sg-n{color:rgba(255,255,255,.72);}
+
+    /* ---- an open line ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;
+      max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .ow-q-why .w{font-family:'Inter',sans-serif;letter-spacing:0;}
+
+    /* the arithmetic, laid out so it can be checked rather than trusted */
+    .ar{display:flex;align-items:stretch;gap:0;margin:0 0 11px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ar-c{padding:7px 15px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ar-c:first-child{border-left:0;}
+    .ar-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .ar-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ar-c.aim{background:var(--ow-paper);}
+    .ar-c.aim .ar-v{color:var(--ow-verdigris);}
+    .ar-c.now .ar-v{color:var(--ow-crimson);}
+    .ar-ar{display:flex;align-items:center;padding:0 9px;color:var(--ow-ink-400);
+      border-left:1px solid var(--ow-rule-soft);}
+    .ar-ar svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- a finding with a fix attached: amber, never the accent ---- */
+    .fx{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;margin:0 0 11px;
+      background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r);
+      color:var(--ow-amber-ink);max-width:var(--ow-measure);}
+    .fx > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .fx p{font-size:12px;line-height:1.45;margin:0;}
+    .fx p + p{margin-top:3px;color:#8A6520;font-size:11px;}
+    .fx b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- the price you would take, on the line it belongs to ----
+       This replaced a bare number input sitting on every closed row --
+       nine live fields on a screen where only one is being decided. */
+    .pf{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 10px;}
+    .pf-l{font-size:12px;color:var(--ow-ink-600);}
+    .pf-in{display:inline-flex;align-items:center;gap:0;border:1px solid var(--ow-steel-950);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;height:32px;}
+    .pf-f{padding:0 10px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:13px;font-weight:600;color:var(--ow-ink-900);
+      display:inline-flex;align-items:center;height:100%;min-width:86px;}
+    .pf-u{padding:0 9px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .pf-g{font-size:11px;color:var(--ow-ink-400);}
+    .pf-g b{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;color:var(--ow-ink-600);font-weight:600;}
+
+    /* ---- what that price would mean, said BEFORE the tap ----
+       Below cost is named in shillings across the whole holding and
+       never blocked: cash now against stock forever is the owner's
+       decision, and the app's job is to make sure it is made with the
+       eyes open. */
+    .vd{font-size:12px;line-height:1.5;padding:9px 11px;border-radius:var(--ow-r);
+      margin:0 0 11px;max-width:var(--ow-measure);}
+    .vd b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .vd.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .vd.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .vd.none{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+
+    /* ---- who has taken this line before, inside the line ----
+       An offer is about ONE line, so it is written on that line, beside
+       the price it is offering. The old screen gathered every marked
+       line into a second console below the list; this puts the buyers
+       where the decision is being made. */
+    .of{border-top:1px solid var(--ow-rule-soft);padding-top:11px;}
+    .of-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;}
+    .of-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .of-n{font-size:11px;color:var(--ow-ink-400);}
+    .of-l{display:flex;flex-direction:column;gap:1px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .of-r{display:grid;grid-template-columns:minmax(0,1fr) 132px 96px;align-items:center;gap:10px;
+      background:var(--ow-paper);padding:8px 11px;min-height:44px;box-sizing:border-box;}
+    .of-r.on{background:var(--ow-paper-2);}
+    .of-nm{min-width:0;font-size:12px;font-weight:600;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--ow-ink-600);
+      letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph.no{font-family:'Inter',sans-serif;color:var(--ow-ink-400);font-style:italic;}
+    .of-b{font-size:11px;color:var(--ow-ink-600);line-height:1.35;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-b b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      color:var(--ow-ink-900);font-weight:600;}
+    .of-a{display:flex;justify-content:flex-end;gap:6px;}
+    .of-x{background:var(--ow-paper-2);padding:0 11px 11px;}
+    .of-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      padding:10px 12px;font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--ow-ink-900);
+      max-width:var(--ow-measure);}
+    .of-n2{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+    .of-acts{display:flex;gap:6px;margin-top:9px;}
+
+    /* ---- the foot of an open line ---- */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- what the screen read, and what it could not ----
+       Every line read lands in exactly one of these and they sum to the
+       total. It is the only thing that lets a reader trust a list for
+       what it does NOT say. */
+    .acct{border-top:1px solid var(--ow-rule-soft);padding:11px 12px 12px;background:var(--ow-paper-2);}
+    .acct-h{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 7px;}
+    .acct-g{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;}
+    .acct-c{padding:0 12px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .acct-c:first-child{border-left:0;padding-left:0;}
+    .acct-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;display:block;line-height:1.2;}
+    .acct-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;display:block;margin-top:2px;}
+    .acct-c.dim .acct-v{color:var(--ow-ink-400);}
+
+    /* ---- the rail's two definitions, each with its own field ----
+       The two settings that DEFINE the two halves of the queue. They
+       were two form panels of roughly 120px each above the money; they
+       are now one field apiece beside the sentence that says what the
+       field means. */
+    .rset{display:flex;align-items:center;gap:9px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .rset-f{display:inline-flex;align-items:center;height:30px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;flex:none;}
+    .rset-v{padding:0 9px;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);display:inline-flex;align-items:center;height:100%;}
+    .rset-u{padding:0 8px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .rset-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;min-width:0;}
+
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+    .ow-empty span{display:block;max-width:64ch;margin:0 auto;line-height:1.55;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt-go{font-size:11px;font-weight:600;color:var(--ow-oxide);}

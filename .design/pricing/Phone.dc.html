@@ -1,0 +1,872 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the debtors console ----
+       Built only from the shipped .ow-* vocabulary plus the few
+       screen-local classes below. No new colour, no new weight, no new
+       type size, no fourteenth button family. */
+
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the age of the money: ONE device, a bar with a legend ----
+       The bar carries the proportion (flex-grow on shillings, a 16px
+       floor so a 3% band stays clickable). The legend names each band
+       and is the same control as the segment above it -- so the picture
+       of the problem and the way into it are still one thing, but the
+       five bordered cards that used to repeat the bar are gone. */
+    .ag{padding:12px 14px 14px;}
+    .ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);overflow:hidden;
+      background:var(--ow-rule-soft);}
+    .ag-seg{flex-basis:0;min-width:16px;background:var(--age-hue);}
+    .ag-seg.on{box-shadow:inset 0 0 0 2px var(--ow-paper),inset 0 0 0 4px var(--age-hue);}
+    .ag-lg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px;}
+    .ag-b{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;
+      padding-left:9px;border-left:2px solid var(--age-hue);}
+    .ag-b.on{background:var(--ow-paper-2);}
+    .ag-b-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ag-b-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .ag-b-m{font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .ag-b.on .ag-b-l{color:var(--ow-ink-900);}
+    .age-b30{--age-hue:var(--ow-steel-400);}
+    .age-b60{--age-hue:var(--ow-amber);}
+    .age-b90{--age-hue:var(--ow-crimson);}
+    .age-b90p{--age-hue:var(--ow-crimson);}
+    .age-unknown{--age-hue:var(--ow-steel-100);}
+
+    /* ---- the list toolbar: controls that look like controls ---- */
+    .tb2{display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .sb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:236px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;color:var(--ow-ink-400);}
+    .sb svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sb.has{color:var(--ow-ink-900);}
+    .tg{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);background:var(--ow-paper);white-space:nowrap;}
+    .tg .bx{width:13px;height:13px;border-radius:3px;background:var(--ow-steel-950);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .tg .bx svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb2-sp{flex:1;}
+    /* the band filter, echoed where the rows it removed would have been */
+    .fc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-amber);border-radius:var(--ow-r);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);font-size:12px;font-weight:500;white-space:nowrap;}
+    .fc b{font-weight:600;}
+    .fc .x{width:18px;height:18px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+      justify-content:center;background:rgba(122,74,2,.11);}
+    .fc .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;}
+
+    /* ---- a debtor's row: 44px, opens in place ----
+       Age appears ONCE per row, as the basis line under the figure, and
+       it is coloured only when the money is genuinely old. The band
+       stripe and the coloured pill that used to say the same thing on
+       every row are both gone. */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 112px 122px 132px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ow-q-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    /* how far through the balance they are: a track, and the figure it
+       is measured from in the open row rather than a per-cent on every
+       line. Absent, not zero, when there is nothing to measure. */
+    .pb{display:flex;align-items:center;gap:7px;}
+    .pb-t{flex:1;height:5px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;min-width:0;}
+    .pb-f{height:100%;background:var(--ow-verdigris);}
+    .pb-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .pb-n{font-size:11px;color:var(--ow-ink-400);}
+    .lp{font-size:11px;line-height:1.35;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lp b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+    .lp.never b{color:var(--ow-crimson);font-weight:600;}
+
+    /* ---- an open debtor ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.q{color:var(--ow-ink-400);}
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- a balance that disagrees with its own history ----
+       Amber: a caution with a fix attached, not the accent. */
+    .df{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;
+      background:var(--ow-amber-faint,#FEFAF2);border-bottom:1px solid #EBD9B4;color:var(--ow-amber-ink);}
+    .df > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .df-b{min-width:0;}
+    .df-t{font-size:12px;line-height:1.45;margin:0;}
+    .df-t b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .df-w{font-size:11px;line-height:1.45;margin:3px 0 0;color:#8A6520;}
+    .df-a{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+    .df-a .btn{background:var(--ow-paper);border:1px solid #E0C994;color:var(--ow-amber-ink);}
+
+    /* ---- the rail ---- */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    .rl a{font-weight:600;}
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+
+    /* ================= THE PRICING CONSOLE ============================
+       Margin and Clearance were the same question asked twice about one
+       shelf. A line you stock is in exactly one of three states: selling
+       and keeping enough, selling but THIN, or not selling at all. The
+       first needs nothing. The second two are both price decisions --
+       lift it, or cut it and find somebody who has bought it before --
+       so they are one queue, ranked by what a fix is worth.
+
+       Built only from the shipped .ow-* vocabulary plus the classes
+       below. No new colour, no new weight, no new type size, no
+       fourteenth button family. */
+
+    /* ---- the row ----
+       Five columns. The reason a line is on this screen at all is the
+       basis of the ranking, so like the buy side it takes a fixed width
+       and never truncates; the product name gives way, because a name
+       may be cut and a reason may not. */
+    .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 116px 146px;}
+    .ow-q-t .ow-q-rest{white-space:nowrap;}
+
+    /* the reason column, toned only where the tone means something */
+    .rz{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz b{display:block;font-size:12px;font-weight:500;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rz.bad b{color:var(--ow-crimson);font-weight:600;}
+    .rz.warn b{color:var(--ow-amber-ink);font-weight:600;}
+    .rz.none b{color:var(--ow-ink-400);font-weight:500;}
+    .rz .q{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* the basis column */
+    .bs{font-size:11px;line-height:1.35;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bs b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:12px;font-weight:500;color:var(--ow-ink-900);}
+
+    /* ---- WHICH KIND OF MONEY THIS IS ----
+       The one thing that makes a single ranked queue honest. A thin
+       line's figure is income PER MONTH and recurs; a dead line's is
+       cash locked in the shelf and is released ONCE. They are not the
+       same money and must never be summed. So the basis line under
+       every figure names which it is, in the one place the eye already
+       lands, and neither the strip nor the rail ever adds them. */
+    .ow-q-b.mth{color:var(--ow-ink-600);}
+    .ow-q-b.once{color:var(--ow-ink-600);}
+    .ow-q-f .pl{color:var(--ow-ink-400);font-weight:500;margin-right:1px;}
+
+    /* ---- the segments: the two halves of one shelf ---- */
+    .sg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;height:30px;background:var(--ow-paper);flex:none;}
+    .sg-b{display:inline-flex;align-items:center;gap:6px;padding:0 11px;font-size:12px;
+      font-weight:500;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);white-space:nowrap;}
+    .sg-b:first-child{border-left:0;}
+    .sg-b.on{background:var(--ow-steel-950);color:#fff;font-weight:600;}
+    .sg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;}
+    .sg-b.on .sg-n{color:rgba(255,255,255,.72);}
+
+    /* ---- an open line ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;
+      max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-why b{color:var(--ow-ink-900);font-weight:600;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .ow-q-why .w{font-family:'Inter',sans-serif;letter-spacing:0;}
+
+    /* the arithmetic, laid out so it can be checked rather than trusted */
+    .ar{display:flex;align-items:stretch;gap:0;margin:0 0 11px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ar-c{padding:7px 15px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ar-c:first-child{border-left:0;}
+    .ar-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .ar-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ar-c.aim{background:var(--ow-paper);}
+    .ar-c.aim .ar-v{color:var(--ow-verdigris);}
+    .ar-c.now .ar-v{color:var(--ow-crimson);}
+    .ar-ar{display:flex;align-items:center;padding:0 9px;color:var(--ow-ink-400);
+      border-left:1px solid var(--ow-rule-soft);}
+    .ar-ar svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- a finding with a fix attached: amber, never the accent ---- */
+    .fx{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;margin:0 0 11px;
+      background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r);
+      color:var(--ow-amber-ink);max-width:var(--ow-measure);}
+    .fx > svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .fx p{font-size:12px;line-height:1.45;margin:0;}
+    .fx p + p{margin-top:3px;color:#8A6520;font-size:11px;}
+    .fx b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- the price you would take, on the line it belongs to ----
+       This replaced a bare number input sitting on every closed row --
+       nine live fields on a screen where only one is being decided. */
+    .pf{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 10px;}
+    .pf-l{font-size:12px;color:var(--ow-ink-600);}
+    .pf-in{display:inline-flex;align-items:center;gap:0;border:1px solid var(--ow-steel-950);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;height:32px;}
+    .pf-f{padding:0 10px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:13px;font-weight:600;color:var(--ow-ink-900);
+      display:inline-flex;align-items:center;height:100%;min-width:86px;}
+    .pf-u{padding:0 9px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .pf-g{font-size:11px;color:var(--ow-ink-400);}
+    .pf-g b{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;color:var(--ow-ink-600);font-weight:600;}
+
+    /* ---- what that price would mean, said BEFORE the tap ----
+       Below cost is named in shillings across the whole holding and
+       never blocked: cash now against stock forever is the owner's
+       decision, and the app's job is to make sure it is made with the
+       eyes open. */
+    .vd{font-size:12px;line-height:1.5;padding:9px 11px;border-radius:var(--ow-r);
+      margin:0 0 11px;max-width:var(--ow-measure);}
+    .vd b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .vd.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .vd.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .vd.none{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+
+    /* ---- who has taken this line before, inside the line ----
+       An offer is about ONE line, so it is written on that line, beside
+       the price it is offering. The old screen gathered every marked
+       line into a second console below the list; this puts the buyers
+       where the decision is being made. */
+    .of{border-top:1px solid var(--ow-rule-soft);padding-top:11px;}
+    .of-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;}
+    .of-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .of-n{font-size:11px;color:var(--ow-ink-400);}
+    .of-l{display:flex;flex-direction:column;gap:1px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .of-r{display:grid;grid-template-columns:minmax(0,1fr) 132px 96px;align-items:center;gap:10px;
+      background:var(--ow-paper);padding:8px 11px;min-height:44px;box-sizing:border-box;}
+    .of-r.on{background:var(--ow-paper-2);}
+    .of-nm{min-width:0;font-size:12px;font-weight:600;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--ow-ink-600);
+      letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-ph.no{font-family:'Inter',sans-serif;color:var(--ow-ink-400);font-style:italic;}
+    .of-b{font-size:11px;color:var(--ow-ink-600);line-height:1.35;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .of-b b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      color:var(--ow-ink-900);font-weight:600;}
+    .of-a{display:flex;justify-content:flex-end;gap:6px;}
+    .of-x{background:var(--ow-paper-2);padding:0 11px 11px;}
+    .of-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      padding:10px 12px;font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--ow-ink-900);
+      max-width:var(--ow-measure);}
+    .of-n2{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+    .of-acts{display:flex;gap:6px;margin-top:9px;}
+
+    /* ---- the foot of an open line ---- */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* ---- what the screen read, and what it could not ----
+       Every line read lands in exactly one of these and they sum to the
+       total. It is the only thing that lets a reader trust a list for
+       what it does NOT say. */
+    .acct{border-top:1px solid var(--ow-rule-soft);padding:11px 12px 12px;background:var(--ow-paper-2);}
+    .acct-h{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 7px;}
+    .acct-g{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;}
+    .acct-c{padding:0 12px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .acct-c:first-child{border-left:0;padding-left:0;}
+    .acct-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;display:block;line-height:1.2;}
+    .acct-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;display:block;margin-top:2px;}
+    .acct-c.dim .acct-v{color:var(--ow-ink-400);}
+
+    /* ---- the rail's two definitions, each with its own field ----
+       The two settings that DEFINE the two halves of the queue. They
+       were two form panels of roughly 120px each above the money; they
+       are now one field apiece beside the sentence that says what the
+       field means. */
+    .rset{display:flex;align-items:center;gap:9px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .rset-f{display:inline-flex;align-items:center;height:30px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;flex:none;}
+    .rset-v{padding:0 9px;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);display:inline-flex;align-items:center;height:100%;}
+    .rset-u{padding:0 8px;height:100%;display:inline-flex;align-items:center;font-size:11px;
+      color:var(--ow-ink-400);background:var(--ow-paper-2);border-left:1px solid var(--ow-rule-soft);}
+    .rset-l{font-size:11px;color:var(--ow-ink-600);line-height:1.4;min-width:0;}
+
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+    .ow-empty span{display:block;max-width:64ch;margin:0 auto;line-height:1.55;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt-go{font-size:11px;font-weight:600;color:var(--ow-oxide);}
+    .ph{position:absolute;inset:0;background:var(--ow-steel-050);overflow:hidden;
+      display:flex;flex-direction:column;}
+    .ph-top{height:44px;flex:none;background:var(--ow-steel-950);color:#fff;display:flex;align-items:center;
+      gap:10px;padding:0 14px;}
+    .ph-top .mk{width:24px;height:24px;border-radius:6px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:9px;}
+    .ph-top .ttl{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-top .sp{flex:1;}
+    .ph-top svg{width:20px;height:20px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ph-body{flex:1;min-height:0;overflow:hidden;padding:16px 16px 0;display:flex;flex-direction:column;gap:14px;}
+    .ph-h1{font-family:'Archivo Black',sans-serif;font-size:26px;margin:0;letter-spacing:-.02em;line-height:1.1;}
+    .ph-sub{font-size:13px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.4;}
+    .ph-tabs{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule-soft);
+      padding:3px;border-radius:var(--ow-r-lg);}
+    .ph-tabs span{flex:1;text-align:center;padding:9px 0;border-radius:var(--ow-r);font-size:14px;
+      font-weight:600;color:var(--ow-ink-600);}
+    .ph-tabs span.on{background:var(--ow-paper);color:var(--ow-ink-900);font-weight:700;box-shadow:0 1px 3px rgba(20,30,40,.13);}
+
+    .ph-mt{display:grid;grid-template-columns:1fr 1fr;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-mt > div{padding:12px 14px;border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ph-mt > div:nth-child(odd){border-left:0;}
+    .ph-mt > div:nth-child(-n+2){border-top:0;}
+    .ph-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ph-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;}
+
+    .ph-list{display:flex;flex-direction:column;gap:10px;}
+    .ph-card{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:14px 14px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center;}
+    .ph-card-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:15px;font-weight:600;}
+    .ph-card-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-card-v{grid-column:2;grid-row:1 / span 3;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;letter-spacing:-.02em;}
+    .ph-card-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:2px;}
+    .ph-card-w{grid-column:1;margin:6px 0 0;font-size:13px;color:var(--ow-ink-600);line-height:1.45;}
+    .ph-card-m{grid-column:1;margin:4px 0 0;font-size:11px;color:var(--ow-ink-400);}
+
+    .ow-bk{display:flex;align-items:center;gap:12px;margin:0 16px 10px;
+      padding:10px 12px 10px 16px;background:var(--ow-steel-950);color:var(--ow-paper);
+      border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+    .ow-bk-say{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--ow-steel-100);}
+    .ow-bk-b{color:var(--ow-paper);font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+    .ph-tab-bar{height:60px;flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);
+      display:grid;grid-template-columns:repeat(5,1fr);align-items:center;}
+    .ph-tb{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ow-ink-400);font-size:10px;font-weight:600;}
+    .ph-tb svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ph-tb.on{color:var(--ow-ink-900);}
+    .ph-tb.on svg{fill:var(--ow-ink-900);stroke:var(--ow-ink-900);}
+
+    .ph-who{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--ow-paper);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-who .ow-av{width:40px;height:40px;font-size:13px;}
+    .ph-who-n{font-size:16px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-who-m{font-size:12px;color:var(--ow-ink-600);font-family:var(--mono);margin-top:2px;}
+    .ph-item{padding:14px 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .ph-item-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .ph-item-n{font-size:15px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+    .ph-why{margin:5px 0 0;font-size:13px;color:var(--ow-ink-600);line-height:1.45;}
+    .ph-scroll{flex:1;min-height:0;overflow:hidden;}
+    .ph-sec{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);padding:14px 16px 6px;}
+    .ph-msg{margin:0 16px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+    .ph-note{font-size:12px;color:var(--ow-ink-600);margin:8px 16px 0;line-height:1.45;}
+    .ph-foot{flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);padding:10px 16px 14px;
+      display:flex;flex-direction:column;gap:8px;}
+    .ph-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:7px;
+      font-size:15px;font-weight:700;}
+    .ph-btn.accent{background:var(--ow-oxide);color:#fff;}
+    .ph-btn.ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .ph-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ph-sec{display:flex;align-items:baseline;gap:8px;}
+    .ph-sec-n{margin-left:auto;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ow-ink-600);}
+    .ph-msg{font-size:13px;}
+    .ph-item{padding:12px 16px;}
+
+    /* ---- added for the debtors phone ----
+       The phone job is looking ONE customer up: somebody is standing in
+       the yard and you need their figure. So search is the first control
+       under the strip, at 44px, and the list below it is worst-aged
+       first for when you are working rather than looking up.
+
+       The cards carry no button. The accent lives once, in the docked
+       navy bar in the thumb zone -- the pattern Follow-ups already
+       ships -- so a screen of ten cards does not become a screen of ten
+       oxide buttons. */
+    .ph-sb{display:flex;align-items:center;gap:9px;height:44px;padding:0 14px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:15px;color:var(--ow-ink-400);}
+    .ph-sb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    /* the age bar, phone-side: the bar stays, the five bands become two
+       columns because five across 358px is 60px a band and unreadable */
+    .ph-ag{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:12px 14px 13px;}
+    .ph-ag-h{display:flex;align-items:baseline;gap:8px;margin:0 0 9px;}
+    .ph-ag-t{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ph-ag-n{margin-left:auto;font-size:11px;color:var(--ow-ink-400);}
+    .ph-ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);overflow:hidden;
+      background:var(--ow-rule-soft);}
+    .ph-ag-bar > span{flex-basis:0;min-width:18px;background:var(--age-hue);}
+    .ph-ag-lg{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:11px;}
+    .ph-ag-b{display:flex;align-items:baseline;gap:7px;min-width:0;padding-left:8px;
+      border-left:2px solid var(--age-hue);}
+    .ph-ag-b-l{font-size:12px;color:var(--ow-ink-600);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ph-ag-b-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .age-b30{--age-hue:var(--ow-steel-400);}
+    .age-b60{--age-hue:var(--ow-amber);}
+    .age-b90{--age-hue:var(--ow-crimson);}
+    .age-b90p{--age-hue:var(--ow-crimson);}
+    .age-unknown{--age-hue:var(--ow-steel-100);}
+
+    .ph-card-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ph-card-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    .ph-card-v{font-size:16px;}
+    .ph-card-m b{font-weight:500;color:var(--ow-ink-600);}
+    .ph-card-m .never{color:var(--ow-crimson);font-weight:600;}
+    .ph-mt-v{font-size:20px;}
+    .ph-mt-v .ow-u{font-size:.6em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ph-mt > div.bad .ph-mt-v{color:var(--ow-crimson);}
+    .ph-mt-s{font-size:11px;color:var(--ow-ink-400);margin:3px 0 0;line-height:1.3;}
+
+    /* ---- the waterline, on the phone ----
+       Full bleed across the card list, because on 390px a centred rule
+       with text either side has no room for either. Same fact, same
+       wording, one column. */
+    .ph-wl{padding:10px 14px;background:var(--ow-paper-2);
+      border-top:1px dashed var(--ow-rule);border-bottom:1px dashed var(--ow-rule);
+      font-size:12px;line-height:1.45;color:var(--ow-ink-600);border-radius:var(--ow-r-lg);}
+    .ph-wl b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .ph-wl-t{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-400);margin-bottom:3px;}
+    .ph-card-r{font-size:12px;font-weight:600;margin-top:1px;}
+    .ph-card-r.bad{color:var(--ow-crimson);}
+    .ph-card-r.warn{color:var(--ow-amber-ink);}
+    .ph-card-r.none{color:var(--ow-ink-400);font-weight:500;}
+
+    /* ---- added for the pricing phone ----
+       The phone job is not the desk job. At the desk you work down a
+       ranked list deciding a day's prices. On a phone you are STANDING
+       AT THE SHELF, or a buyer is in front of you asking what you will
+       take for the dusty lot in the corner. So: search first, the card
+       carries the price you charge and the price that keeps target
+       side by side, and the accent lives once in the docked bar. */
+    .ph-seg{display:flex;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-seg span{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+      height:42px;font-size:14px;font-weight:600;color:var(--ow-ink-600);
+      border-left:1px solid var(--ow-rule);}
+    .ph-seg span:first-child{border-left:0;}
+    .ph-seg span.on{background:var(--ow-steel-950);color:#fff;}
+    .ph-seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;}
+    .ph-seg span.on .n{color:rgba(255,255,255,.72);}
+
+    /* the two prices, side by side, at the size a shelf is read at */
+    .ph-pr{grid-column:1;display:flex;align-items:stretch;margin:9px 0 0;
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;
+      background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ph-pr > div{padding:6px 13px;border-left:1px solid var(--ow-rule-soft);}
+    .ph-pr > div:first-child{border-left:0;}
+    .ph-pr-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 1px;white-space:nowrap;}
+    .ph-pr-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;white-space:nowrap;}
+    .ph-pr .now .ph-pr-v{color:var(--ow-crimson);}
+    .ph-pr .aim{background:var(--ow-paper);}
+    .ph-pr .aim .ph-pr-v{color:var(--ow-verdigris);}
+    .ph-card-v .pl{color:var(--ow-ink-400);font-weight:500;}
+    .ph-card-b.mth,.ph-card-b.once{color:var(--ow-ink-600);}
+
+    /* The strip, search and segments are FIXED furniture; only the card
+       list flexes. Without this the column squashes them to slivers the
+       moment the cards are taller than the screen -- which is the normal
+       case, since a list of prices is meant to scroll. */
+    .ph-body > div:first-child,.ph-mt,.ph-sb,.ph-seg{flex:none;}
+    .ph-list{flex:1;min-height:0;overflow:hidden;}
+
+    /* Two prices, not three. At 390px a third cell clips the figure it
+       exists to show, and the cost is a supporting fact rather than a
+       decision -- so it moves to the meta line under the card. What the
+       shelf reads is: what you charge now, and what you should. */
+    .ph-card{grid-template-columns:minmax(0,1fr) auto;}
+    .ph-card-v{grid-row:1;align-self:start;}
+    .ph-card-r{grid-column:1 / -1;}
+    .ph-pr{grid-column:1 / -1;}
+    .ph-pr > div{flex:1;padding:7px 14px;}
+    .ph-card-m{grid-column:1 / -1;}
+    .ow-bk{align-items:flex-start;}
+    .ow-bk-say{padding:2px 0;}
+    .ow-bk,.ph-tab-bar,.ph-foot{flex:none;}
+  </style>
+</helmet>
+<div class="app" style="width:390px;height:844px">
+  <div class="ph">
+    <div class="ph-top">
+      <span class="mk">OW</span>
+      <span class="ttl">Pricing</span>
+      <span class="sp"></span>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </div>
+
+    <div class="ph-body">
+      <div>
+        <h1 class="ph-h1">Pricing</h1>
+        <p class="ph-sub">What the shelf keeps, and what is not selling</p>
+      </div>
+
+      <div class="ph-mt">
+        <div class="bad">
+          <p class="ph-mt-l">Not moving</p>
+          <span class="ph-mt-v">5,410,000<span class="ow-u">UGX</span></span>
+          <p class="ph-mt-s">22 lines, quiet 60+ days</p>
+        </div>
+        <div>
+          <p class="ph-mt-l">Kept</p>
+          <span class="ph-mt-v">22.4<span class="ow-u">%</span></span>
+          <p class="ph-mt-s">of 11,400,000 taken in 30 days</p>
+        </div>
+        <div>
+          <p class="ph-mt-l">Thin lines</p>
+          <span class="ph-mt-v">2,580,000<span class="ow-u">UGX</span></span>
+          <p class="ph-mt-s">a month, if you lift all 14</p>
+        </div>
+        <div>
+          <p class="ph-mt-l">On the shelf</p>
+          <span class="ph-mt-v">19,300,000<span class="ow-u">UGX</span></span>
+          <p class="ph-mt-s">340 lines, at cost</p>
+        </div>
+      </div>
+
+      <div class="ph-sb">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <span>What are you holding?</span>
+      </div>
+
+      <div class="ph-seg">
+        <span class="on">All<span class="n">36</span></span>
+        <span>Thin<span class="n">14</span></span>
+        <span>Not moving<span class="n">22</span></span>
+      </div>
+
+      <div class="ph-list">
+        <div class="ph-card">
+          <span class="ph-card-n"><span class="ph-card-nm">Cement &mdash; Hima 50kg</span></span>
+          <span class="ph-card-v"><span class="pl">+</span>1,421,000<span class="ph-card-b mth">a month, if you lift it</span></span>
+          <p class="ph-card-r bad">Keeping 6.8% of 30%</p>
+          <div class="ph-pr">
+            <div class="now"><p class="ph-pr-l">You charge</p><span class="ph-pr-v">29,500</span></div>
+            <div class="aim"><p class="ph-pr-l">To keep 30%</p><span class="ph-pr-v">39,300</span></div>
+          </div>
+          <p class="ph-card-m">Costs 27,500 &middot; 145 bags sold in 30 days &middot; your biggest seller</p>
+        </div>
+
+        <div class="ph-card">
+          <span class="ph-card-n"><span class="ph-card-nm">Iron sheets &mdash; G28, 3m</span></span>
+          <span class="ph-card-v"><span class="pl">+</span>529,000<span class="ph-card-b mth">a month, if you lift it</span></span>
+          <p class="ph-card-r bad">Keeping 10.9% of 30%</p>
+          <div class="ph-pr">
+            <div class="now"><p class="ph-pr-l">You charge</p><span class="ph-pr-v">46,000</span></div>
+            <div class="aim"><p class="ph-pr-l">To keep 30%</p><span class="ph-pr-v">58,600</span></div>
+          </div>
+          <p class="ph-card-m">Costs 41,000 &middot; 42 packs sold in 30 days &middot; rule +5,000, the shop default</p>
+        </div>
+
+        <div class="ph-card">
+          <span class="ph-card-n"><span class="ph-card-nm">Padlocks 50mm &mdash; brass</span></span>
+          <span class="ph-card-v">1,950,000<span class="ph-card-b once">locked up, once</span></span>
+          <p class="ph-card-r bad">Quiet 214 days</p>
+          <div class="ph-pr">
+            <div class="now"><p class="ph-pr-l">You ask</p><span class="ph-pr-v">34,000</span></div>
+            <div class="aim"><p class="ph-pr-l">You would take</p><span class="ph-pr-v">26,000</span></div>
+          </div>
+          <p class="ph-card-m">Costs 23,800 &middot; 82 on the shelf &middot; 3 buyers have taken it before</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ow-bk">
+      <span class="ow-bk-say">
+        <b class="ow-bk-b">Cement &mdash; Hima 50kg</b>
+        <span class="fig" style="color:#fff">+1,421,000</span> a month &mdash; the most here
+      </span>
+      <span class="ph-btn accent" style="height:44px;padding:0 16px;font-size:14px">Open it</span>
+    </div>
+
+    <div class="ph-tab-bar">
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M4 18h16"></path><path d="M7 18a5 5 0 0 1 10 0"></path><path d="M12 5v3M5.6 8.6l2 2M18.4 8.6l-2 2"></path></svg>Today</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M20.5 12.3 12.8 20a1.7 1.7 0 0 1-2.4 0l-6.9-6.9a1.7 1.7 0 0 1-.5-1.2V4.6c0-.9.7-1.6 1.6-1.6h7.3c.5 0 .9.2 1.2.5l7.4 7.4a1.3 1.3 0 0 1 0 1.4z"></path><path d="M7.6 7.6h.01"></path></svg>Sell</span>
+      <span class="ph-tb on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="12" cy="12" r="3"></circle><path d="M6.5 8h.01M17.5 16h.01"></path></svg>Money</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20.5l1.8-5.2A8.4 8.4 0 1 1 21 11.5z"></path><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"></path></svg>Manager</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h11"></path></svg>More</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
