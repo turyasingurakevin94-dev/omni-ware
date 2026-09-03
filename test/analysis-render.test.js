@@ -123,7 +123,7 @@ const env = {
   goToTab: () => {},
   OW_CARET: '<svg/>', OW_CARET_C: '<svg/>',
   deadStockQuietDays: () => 60,
-  deadStockRows: () => [{ label: 'Wheelbarrows', value: 830000, daysQuiet: 214 }],
+  deadStockRows: () => [{ line: 'Wheelbarrows (heavy)', value: 830000, daysQuiet: 214 }],
   priceReviewStaleDays: () => 60,
   priceReviewProgress: () => ({ done: 6, target: 20 }),
   priceReviewCandidates: () => [
@@ -280,13 +280,39 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   t.check(missing.length === 0,
     `every function this file stubs really exists in the app${missing.length ? ' — missing: ' + missing.join(', ') : ''}`);
 
-  /* And the field NAMES those stubs use are checked against the
-     functions that really produce them, which is the half a stub
-     cannot check by existing. */
-  t.check(/inAmt/.test(extractFunction(src, 'dashCashBridgeData', 'index.html')),
-    'the cash bridge really carries inAmt/outAmt, which is what the screen reads');
-  t.check(/sales:/.test(extractFunction(src, 'anOverallTotals', 'index.html')),
-    'and the window totals really carry sales, which is what "kept on what sold" divides by');
+  /* AND THE FIELD NAMES, which is the half a stub cannot check by
+     existing. Four of these were wrong on the first build and every one
+     of them passed this file: r.in/r.out for the cash bridge (every
+     week read zero), t.revenue for the window totals (an em dash where
+     the margin should be), r.label for dead stock (a table of six
+     figures with the item column blank). A stub is a claim about the
+     app, and a stub that is wrong in the same way as the code hides
+     exactly the bug it was written to catch.
+
+     So every field the screen reads off a helper is checked against the
+     function that really produces it. This is the whole class, not the
+     four that were found by looking. */
+  const READS = {
+    dashCashBridgeData: ['label', 'inAmt', 'outAmt'],
+    anOverallTotals: ['sales'],
+    stockAgeRows: ['line', 'value', 'daysQuiet'],
+    marginRows: ['line', 'units30', 'earned30', 'keptPct', 'target', 'cost',
+      'price', 'targetPrice', 'atStake', 'thin'],
+    dashGoingQuietCustomers: ['name', 'avgGapDays', 'sinceLastDays'],
+    dashDemandBreadth: ['name', 'qty', 'buyers', 'topBuyerName'],
+    priceReviewFacts: ['moneyAtRisk', 'unit', 'volume', 'reasons'],
+    dashboardContext: ['debtors', 'goingQuiet', 'breadth', 'invoices', 'totals',
+      'grossProfit', 'inv'],
+  };
+  const wrong = [];
+  for (const [fn, fields] of Object.entries(READS)) {
+    const body = extractFunction(src, fn, 'index.html');
+    for (const f of fields) {
+      if (!new RegExp('\\b' + f + '\\s*[:,)}]').test(body)) wrong.push(`${fn}.${f}`);
+    }
+  }
+  t.check(wrong.length === 0,
+    `every field this screen reads is really produced by the function it reads it from${wrong.length ? ' — missing: ' + wrong.join(', ') : ''}`);
 
   /* AN ID IS A NAME, AND TWO THINGS CANNOT SHARE ONE.
      Analysis first called its reading-time line dash_asof -- the id
