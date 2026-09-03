@@ -7797,6 +7797,22 @@
      layer may name only .ow-* selectors, so this one rule lives here,
      beside the legacy .icon it reaches for. */
   .ow-ot-gr .icon,.ow-ot-cash .icon{width:12px;height:12px;flex-shrink:0;}
+
+  /* The browser's own calendar button, made unreachable.
+
+     A date field's calendar is the same kind of thing a <select>'s list
+     is: an operating-system window the browser opens beside the page,
+     which this app cannot style, move, or keep open — and which, on the
+     owner's machine, shuts the moment the pointer moves toward a date.
+     The app draws its own now (.ow-cal, in the layer below), and this
+     stops the browser's button from opening the one it replaced. The
+     icon stays visible: it is the affordance that says "this is a date",
+     and the whole field opens the drawn calendar anyway.
+
+     An element selector, so it lives here beside what it couples to
+     rather than in the layer, whose every rule starts .ow-. */
+  input[type=date]::-webkit-calendar-picker-indicator{pointer-events:none;}
+
   /* ==================================================================
      THE OW LAYER — tokens and components for the console.
 
@@ -8519,6 +8535,62 @@
   .ow-pan-a{flex:none;margin-left:var(--ow-sp-8);}
 
 
+
+  /* ==================================================================
+     THE CALENDAR, DRAWN BY THE APP.
+
+     Same fault as the dropdown, same answer. A date field's picker is an
+     operating-system window, not part of this page, and on the owner's
+     machine it shuts as soon as the pointer moves toward a date. So the
+     month is drawn here instead, and the <input type="date"> stays
+     exactly what it was: still typable, still the value every screen and
+     every save reads.
+
+     A day is a figure, so the grid is mono and tabular — which is also
+     what makes seven columns of one- and two-digit days line up.
+     ================================================================== */
+  .ow-cal{position:fixed;z-index:900;width:238px;padding:var(--ow-sp-8);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);
+    box-shadow:var(--ow-lift);}
+  .ow-cal-h{display:flex;align-items:center;gap:var(--ow-sp-4);margin-bottom:var(--ow-sp-6);}
+  .ow-cal-t{flex:1 1 auto;min-width:0;text-align:center;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-cal-a{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;
+    border-radius:var(--ow-r);cursor:pointer;color:var(--ow-ink-600);}
+  .ow-cal-a:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
+  .ow-cal-i{width:14px;height:14px;}
+  .ow-cal-w,.ow-cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .ow-cal-w{margin-bottom:2px;}
+  .ow-cal-wd{text-align:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-cal-d{display:flex;align-items:center;justify-content:center;height:28px;
+    border-radius:var(--ow-r);cursor:pointer;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+  /* A day either side of this month is shown rather than left blank: the
+     week it belongs to is still a week, and the last of one month and the
+     first of the next are one working day apart. */
+  .ow-cal-d.ow-out{color:var(--ow-ink-400);}
+  .ow-cal-d.ow-here,.ow-cal-d:hover{background:var(--ow-paper-2);}
+  /* Today is a ring, the chosen day is filled. Two different questions —
+     "where am I" and "what does this field say" — so two different marks,
+     and a day can be both. */
+  .ow-cal-d.ow-now{outline:1px solid var(--ow-rule);outline-offset:-1px;}
+  .ow-cal-d.ow-on,.ow-cal-d.ow-on:hover{background:var(--ow-steel-950);color:var(--ow-paper);
+    font-weight:var(--ow-fw-600);}
+  /* Outside what the field will accept. Shown and not choosable, for the
+     same reason a disabled option is drawn: a month with days missing
+     reads as a broken calendar, not as a limit. */
+  .ow-cal-d.ow-off{color:var(--ow-ink-400);cursor:default;}
+  .ow-cal-d.ow-off:hover{background:none;}
+  .ow-cal-f{display:flex;align-items:center;gap:var(--ow-sp-6);margin-top:var(--ow-sp-8);
+    padding-top:var(--ow-sp-6);border-top:1px solid var(--ow-rule-soft);}
+  .ow-cal-b{padding:var(--ow-sp-2) var(--ow-sp-6);border-radius:var(--ow-r);cursor:pointer;
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .ow-cal-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
+  .ow-cal-b.ow-cal-b-r{margin-left:auto;}
   /* ==================================================================
      THE DROPDOWN, DRAWN BY THE APP.
 
@@ -8781,6 +8853,10 @@
     /* A mouse on a narrow window still gets the drawn list; give it
        a thumb's worth of row in case the window is a phone's. */
     .ow-selm-o{min-height:var(--ow-tap);font-size:15px;}
+    /* The month, at arm's length: a day is a target, not a label. */
+    .ow-cal{width:min(320px,92vw);}
+    .ow-cal-d{height:40px;font-size:14px;}
+    .ow-cal-a{width:var(--ow-tap);min-height:var(--ow-tap);}
   }
 </style>
 </head>
@@ -18966,23 +19042,12 @@ function owSelPaint(){
 function owSelPlace(){
   const sel = owSel.sel, menu = owSel.menu;
   if(!sel || !menu) return;
-  const r = sel.getBoundingClientRect();
-  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-  const below = vh - r.bottom - 12, above = r.top - 12;
-  const up = below < 160 && above > below;
-  menu.style.maxHeight = Math.max(120, Math.min(288, up ? above : below)) + 'px';
-  menu.style.minWidth = Math.max(132, Math.round(r.width)) + 'px';
-  menu.style.visibility = 'hidden';
-  menu.style.left = '0px'; menu.style.top = '0px';
-  const m = menu.getBoundingClientRect();
-  const left = Math.max(8, Math.min(r.left, vw - m.width - 8));
-  const top = up ? Math.max(8, r.top - m.height - 4) : Math.min(r.bottom + 4, vh - m.height - 8);
-  menu.style.left = Math.round(left) + 'px';
-  menu.style.top = Math.round(Math.max(8, top)) + 'px';
-  menu.style.visibility = '';
+  menu.style.minWidth = Math.max(132, Math.round(sel.getBoundingClientRect().width)) + 'px';
+  owPanelPlace(sel, menu, 288);
 }
 function owSelOpen(sel){
   owSelClose();
+  owCalClose();
   owSel.sel = sel;
   owSel.id = sel.id || '';
   owSel.opts = owSelOptions(sel);
@@ -19113,6 +19178,233 @@ document.addEventListener('keydown', (e)=>{
 // out from under it, it is pointing at nothing.
 window.addEventListener('resize', ()=>{ if(owSel.menu) owSelClose(); });
 window.addEventListener('scroll', ()=>{ if(owSel.menu) owSelPlace(); }, true);
+
+/* ---------------- THE CALENDAR, DRAWN BY THE APP ----------------
+
+   The same fault as the dropdown and the same answer. A date field's
+   picker is an operating-system window the browser opens beside the
+   page: this app cannot style it, move it, read it or keep it open, and
+   on the owner's machine it shuts the moment the pointer moves toward a
+   date. Confirmed the same way — a real Chromium under a real X server,
+   where clicking a date field opens a 218x281 window that is not part of
+   the document at all.
+
+   So the month is drawn here. The <input type="date"> is untouched: it
+   still holds the value, still types, still fires change, so every form,
+   every save and every test that reads a date reads the same field. The
+   browser's own calendar button is made inert in the stylesheet, and the
+   two keys that would otherwise open the native one (F4, Alt+Down) open
+   this instead. On a TOUCH screen nothing changes, for the same reason
+   the dropdown leaves a finger alone: the phone's own date wheel is
+   better than anything drawn here. */
+const owCal = { panel:null, inp:null, id:null, view:null, here:'', mo:null };
+const OW_CAL_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function owCalEligible(inp){
+  return !!inp && inp.tagName === 'INPUT' && inp.type === 'date' && !inp.disabled && !inp.readOnly;
+}
+// YYYY-MM-DD from a local date, which is what the input holds and what
+// every date on file is. Never toISOString(), which is UTC and hands
+// back yesterday for anyone east of Greenwich -- this shop is UTC+3.
+function owCalISO(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+    + '-' + String(d.getDate()).padStart(2, '0');
+}
+function owCalDate(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+// ISO dates sort as text, so min and max need no parsing to compare.
+function owCalAllowed(iso){
+  const inp = owCal.inp;
+  if(!inp) return false;
+  if(inp.min && iso < inp.min) return false;
+  if(inp.max && iso > inp.max) return false;
+  return true;
+}
+function owCalClose(){
+  if(owCal.mo){ owCal.mo.disconnect(); owCal.mo = null; }
+  if(owCal.panel && owCal.panel.parentNode) owCal.panel.parentNode.removeChild(owCal.panel);
+  if(owCal.inp) owCal.inp.setAttribute('aria-expanded', 'false');
+  owCal.panel = null; owCal.inp = null; owCal.id = null; owCal.view = null; owCal.here = '';
+}
+const OW_CAL_PREV = '<svg class="ow-cal-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"'
+  + ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+const OW_CAL_NEXT = '<svg class="ow-cal-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"'
+  + ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+function owCalPaint(){
+  const panel = owCal.panel, view = owCal.view;
+  if(!panel || !view) return;
+  const today = owCalISO(new Date());
+  const chosen = owCal.inp ? owCal.inp.value : '';
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  // Monday first, as the shop's own week is (ATT_DOW on the staff sheet).
+  const lead = (first.getDay() + 6) % 7;
+  let cells = '';
+  for(let i = 0; i < 42; i++){
+    const d = new Date(first.getFullYear(), first.getMonth(), 1 - lead + i);
+    const iso = owCalISO(d);
+    const off = !owCalAllowed(iso);
+    const cls = 'ow-cal-d'
+      + (d.getMonth() !== view.getMonth() ? ' ow-out' : '')
+      + (iso === today ? ' ow-now' : '')
+      + (iso === chosen ? ' ow-on' : '')
+      + (iso === owCal.here ? ' ow-here' : '')
+      + (off ? ' ow-off' : '');
+    cells += `<div class="${cls}" role="gridcell" data-d="${iso}"${off ? ' aria-disabled="true"' : ''}`
+      + `${iso === chosen ? ' aria-selected="true"' : ''}>${d.getDate()}</div>`;
+  }
+  const title = first.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
+  panel.innerHTML =
+    `<div class="ow-cal-h"><div class="ow-cal-a" data-mv="-1" role="button" aria-label="Previous month">${OW_CAL_PREV}</div>`
+    + `<div class="ow-cal-t">${esc(title)}</div>`
+    + `<div class="ow-cal-a" data-mv="1" role="button" aria-label="Next month">${OW_CAL_NEXT}</div></div>`
+    + `<div class="ow-cal-w">${OW_CAL_DOW.map(d=>`<div class="ow-cal-wd">${d[0]}${d[1]}</div>`).join('')}</div>`
+    + `<div class="ow-cal-g" role="grid">${cells}</div>`
+    + `<div class="ow-cal-f"><div class="ow-cal-b" data-cal="today" role="button">Today</div>`
+    + (owCal.inp && owCal.inp.required ? ''
+       : '<div class="ow-cal-b ow-cal-b-r" data-cal="clear" role="button">No date</div>')
+    + `</div>`;
+}
+/* Under the field, or above it when there is more room there, and never
+   off the screen. Shared with the drawn dropdown: two panels hung off a
+   control is one question, and answering it twice is how they drift. */
+function owPanelPlace(anchor, panel, tallest){
+  const r = anchor.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  const below = vh - r.bottom - 12, above = r.top - 12;
+  const up = below < 160 && above > below;
+  if(tallest) panel.style.maxHeight = Math.max(120, Math.min(tallest, up ? above : below)) + 'px';
+  panel.style.visibility = 'hidden';
+  panel.style.left = '0px'; panel.style.top = '0px';
+  const m = panel.getBoundingClientRect();
+  const left = Math.max(8, Math.min(r.left, vw - m.width - 8));
+  const top = up ? Math.max(8, r.top - m.height - 4) : Math.min(r.bottom + 4, vh - m.height - 8);
+  panel.style.left = Math.round(left) + 'px';
+  panel.style.top = Math.round(Math.max(8, top)) + 'px';
+  panel.style.visibility = '';
+}
+function owCalOpen(inp){
+  owCalClose();
+  owSelClose();
+  owCal.inp = inp;
+  owCal.id = inp.id || '';
+  const at = owCalDate(inp.value) || new Date();
+  owCal.view = new Date(at.getFullYear(), at.getMonth(), 1);
+  owCal.here = inp.value || '';
+  const panel = document.createElement('div');
+  panel.className = 'ow-cal';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Pick a date');
+  owCal.panel = panel;
+  document.body.appendChild(panel);
+  owCalPaint();
+  owPanelPlace(inp, panel, 0);
+  inp.setAttribute('aria-expanded', 'true');
+  // The field keeps the focus, so the background refresh's "a control is
+  // in use" guard holds the screen still while a date is being picked.
+  try{ inp.focus({ preventScroll:true }); }catch(e){ inp.focus(); }
+  /* Rebound rather than shut when the screen is redrawn underneath, for
+     the same reason the dropdown is: a redraw nobody asked for is not an
+     answer to the question the owner is in the middle of. */
+  owCal.mo = new MutationObserver(()=>{
+    if(!owCal.inp) return;
+    if(document.contains(owCal.inp)) return;
+    const again = owCal.id ? document.getElementById(owCal.id) : null;
+    if(!owCalEligible(again)){ owCalClose(); return; }
+    owCal.inp = again;
+    owCalPaint();
+    owPanelPlace(again, owCal.panel, 0);
+    again.setAttribute('aria-expanded', 'true');
+    try{ again.focus({ preventScroll:true }); }catch(e){ again.focus(); }
+  });
+  owCal.mo.observe(document.body, { childList:true, subtree:true });
+}
+function owCalMonth(step){
+  if(!owCal.view) return;
+  owCal.view = new Date(owCal.view.getFullYear(), owCal.view.getMonth() + step, 1);
+  owCalPaint();
+  owPanelPlace(owCal.inp, owCal.panel, 0);
+}
+// Moving by day walks into the next month on its own, which is what a
+// keyboard expects and what a month-at-a-time panel would otherwise stop.
+function owCalStep(days){
+  const from = owCalDate(owCal.here) || owCalDate(owCal.inp && owCal.inp.value) || new Date();
+  const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + days);
+  owCal.here = owCalISO(to);
+  owCal.view = new Date(to.getFullYear(), to.getMonth(), 1);
+  owCalPaint();
+  owPanelPlace(owCal.inp, owCal.panel, 0);
+}
+/* Choosing. Written to the field and announced from it, so every form,
+   every save and every screen still reads the same input. An empty
+   string is a real answer on a field that does not demand one -- "no
+   date" is different from today. */
+function owCalCommit(iso){
+  const inp = owCal.inp;
+  if(!inp) return;
+  if(iso && !owCalAllowed(iso)) return;
+  const before = inp.value;
+  inp.value = iso || '';
+  owCalClose();
+  if(inp.value === before) return;
+  inp.dispatchEvent(new Event('input', { bubbles:true }));
+  inp.dispatchEvent(new Event('change', { bubbles:true }));
+}
+document.addEventListener('mousedown', (e)=>{
+  const t = e.target;
+  if(owCal.panel && t && t.closest && t.closest('.ow-cal')){ e.preventDefault(); return; }
+  const inp = t && t.closest ? t.closest('input[type=date]') : null;
+  if(!inp){ if(owCal.panel) owCalClose(); return; }
+  if(owSelPointerKind !== 'mouse' && owSelPointerKind !== 'pen') return;
+  if(e.button !== 0 || !owCalEligible(inp)) return;
+  const wasOpen = owCal.inp === inp;
+  /* Cancelled so no browser opens its own window over ours -- Chromium's
+     button is already inert in the stylesheet, but the pseudo-element
+     that turns it off is Chromium's alone. Focus is given back by hand,
+     because cancelling the press is what would otherwise have set it. */
+  e.preventDefault();
+  if(wasOpen){ owCalClose(); inp.focus(); return; }
+  owCalOpen(inp);
+}, true);
+document.addEventListener('mouseup', (e)=>{
+  if(!owCal.panel) return;
+  const t = e.target;
+  const move = t && t.closest ? t.closest('[data-mv]') : null;
+  if(move && owCal.panel.contains(move)){ e.preventDefault(); owCalMonth(Number(move.dataset.mv)); return; }
+  const act = t && t.closest ? t.closest('[data-cal]') : null;
+  if(act && owCal.panel.contains(act)){
+    e.preventDefault();
+    owCalCommit(act.dataset.cal === 'today' ? owCalISO(new Date()) : '');
+    return;
+  }
+  const day = t && t.closest ? t.closest('.ow-cal-d') : null;
+  if(day && owCal.panel.contains(day)){ e.preventDefault(); owCalCommit(day.dataset.d); }
+}, true);
+document.addEventListener('keydown', (e)=>{
+  /* F4 and Alt+Down are what the browser itself listens for on a date
+     field. Taken here so the two ways in lead to the same calendar. */
+  if(!owCal.panel){
+    const el = document.activeElement;
+    if(!owCalEligible(el)) return;
+    if(e.key === 'F4' || (e.altKey && e.key === 'ArrowDown')){
+      e.preventDefault(); e.stopPropagation(); owCalOpen(el);
+    }
+    return;
+  }
+  const k = e.key;
+  const stop = ()=>{ e.preventDefault(); e.stopPropagation(); };
+  if(k === 'Escape'){ stop(); const el = owCal.inp; owCalClose(); if(el) el.focus(); return; }
+  if(k === 'ArrowLeft'){ stop(); owCalStep(-1); return; }
+  if(k === 'ArrowRight'){ stop(); owCalStep(1); return; }
+  if(k === 'ArrowUp'){ stop(); owCalStep(-7); return; }
+  if(k === 'ArrowDown'){ stop(); owCalStep(7); return; }
+  if(k === 'PageUp'){ stop(); owCalMonth(-1); return; }
+  if(k === 'PageDown'){ stop(); owCalMonth(1); return; }
+  if(k === 'Enter' || k === ' '){ stop(); owCalCommit(owCal.here || owCalISO(new Date())); return; }
+  if(k === 'Tab'){ stop(); owCalClose(); }
+}, true);
+window.addEventListener('resize', ()=>{ if(owCal.panel) owCalClose(); });
+window.addEventListener('scroll', ()=>{ if(owCal.panel) owPanelPlace(owCal.inp, owCal.panel, 0); }, true);
 
 /* ---------------- The map, read off the rail ----------------
 
