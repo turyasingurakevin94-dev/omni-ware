@@ -1,0 +1,411 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the screen as it stands today, from index.html's own rules ---- */
+    .main.legacy{padding:26px 40px 32px;}
+    .page-head{margin-bottom:24px;}
+    .page-head h1{font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;
+      color:var(--ow-ink-900);letter-spacing:0.2px;}
+    .page-head p{margin:0;color:var(--ow-ink-600);font-size:14px;}
+    .panel{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:12px;
+      padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,30,40,0.04);}
+    .sum-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--ow-rule);
+      border:1px solid var(--ow-rule);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+    .sum-cell{flex:1 1 130px;background:var(--ow-paper);padding:12px 14px;}
+    .sum-value{font-family:var(--mono);font-size:21px;font-weight:700;
+      font-variant-numeric:tabular-nums;line-height:1.1;}
+    .sum-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-top:4px;}
+    .sum-cell.warn .sum-value{color:var(--ow-amber-ink);}
+    .sum-cell.good .sum-value{color:var(--ow-verdigris);}
+    .cons-basis{margin:-6px 0 16px;font-size:12px;color:var(--ow-ink-600);line-height:1.5;}
+    .cons-list{display:flex;flex-direction:column;gap:14px;}
+    .cons-card{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:12px;
+      padding:16px 18px 14px;display:flex;flex-direction:column;gap:13px;}
+    .cons-card-head{display:flex;align-items:flex-start;gap:12px;}
+    .sc-avatar{width:38px;height:38px;border-radius:9px;background:var(--ow-steel-950);
+      color:var(--ow-oxide);flex-shrink:0;display:flex;align-items:center;justify-content:center;
+      font:700 14px 'Archivo Black',sans-serif;}
+    .sc-title{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+    .sc-name{font-size:14.5px;font-weight:700;color:var(--ow-ink-900);line-height:1.3;word-break:break-word;}
+    .cons-card-sub{font-size:11.5px;color:var(--ow-ink-600);}
+    .cons-owed{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:2px;}
+    .cons-owed b{font-family:var(--mono);font-size:19px;font-weight:700;
+      font-variant-numeric:tabular-nums;line-height:1.1;color:var(--ow-ink-600);}
+    .cons-owed span{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ow-ink-600);}
+    .cons-owed.due b{color:var(--ow-oxide);}
+    .sc-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:0;padding-top:0;padding-bottom:13px;
+      border-top:none;border-bottom:1px solid var(--ow-rule);}
+    .sc-stat{flex:1 1 130px;min-width:0;display:flex;flex-direction:column;gap:2px;}
+    .sc-stat b{font-size:16px;color:var(--ow-ink-900);font-family:var(--mono);line-height:1;}
+    .sc-stat span{font-size:10.5px;color:var(--ow-ink-600);text-transform:uppercase;letter-spacing:0.3px;}
+    .sc-stat.zero b{color:var(--ow-ink-600);}
+    .cons-gap{margin-top:10px;border-radius:9px;background:var(--ow-amber-soft);padding:10px 12px;}
+    .cons-gap-row{display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;}
+    .cons-gap-row svg{flex-shrink:0;width:17px;height:17px;margin-top:1px;color:var(--ow-amber-ink);
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .cons-gap-main{flex:1 1 220px;min-width:0;font-size:12.5px;line-height:1.5;color:var(--ow-ink-900);}
+    .cons-gap-dim{display:block;margin-top:4px;color:var(--ow-ink-600);}
+    .cons-goods-head{font-size:10.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:6px;}
+    .cons-goods-table{width:100%;border-collapse:collapse;font-size:13px;}
+    .cons-goods-table td{padding:7px 0;border-bottom:1px solid var(--ow-rule-soft);vertical-align:middle;}
+    .cons-goods-table tr:last-child td{border-bottom:none;}
+    .cons-goods-table td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      text-align:right;white-space:nowrap;padding-left:16px;width:1%;}
+    .cons-goods-name{font-weight:600;color:var(--ow-ink-900);min-width:0;}
+    .cons-goods-each{color:var(--ow-ink-600);font-size:12px;}
+    .cons-goods-val{font-weight:700;}
+    .cons-goods-act{text-align:right;padding-left:14px;width:1%;white-space:nowrap;}
+    .cons-goods-act .btn{padding:7px 13px;font-size:12.5px;}
+    .cons-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;
+      flex-wrap:wrap;padding-top:2px;}
+    .cons-foot-note{margin:0;font-size:11.5px;color:var(--ow-ink-600);}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1260px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Money</span><span>/</span><span>Consignment</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Stock</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span><span class="nav-badge">3</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19h16"></path><path d="M6 19V9"></path><path d="M11 19V5"></path><path d="M16 19v-7"></path><path d="M19 6l-3.5 3.5"></path></svg><span>Your margin</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 7h16l-1.5 12a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8Z"></path><path d="M9 7V5a3 3 0 0 1 6 0v2"></path><path d="M9.5 14.5l5-5"></path></svg><span>Clearance</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"></path><path d="M7 8l-3 3 3 3"></path><path d="M14 15h5"></path><path d="M14 19h7"></path></svg><span>Chase debts</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V5a2 2 0 0 1 2-2z"></path><path d="M8 9h7M8 13h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M5 8h14"></path><path d="M5 8l-2.5 5.5h5zM19 8l-2.5 5.5h5z"></path></svg><span>Who you owe</span></div>
+  </div>
+  <div class="main legacy">
+    <div class="page-head">
+      <h1>Consignment</h1>
+      <p>Goods a supplier has left with you to sell and be paid for as they sell. They sit on your shelf and can be sold like anything else — but they are not yours, so they are not counted in what your stock is worth, and the moment one sells, part of the money in the drawer belongs to whoever left it. That running figure is what this screen exists for. Settling raises an ordinary supplier bill for what has sold, which you then pay the usual way; unsold goods can go back at any time, owing nothing.</p>
+    </div>
+    <div class="panel">
+      <div class="sum-strip">
+        <div class="sum-cell warn"><div class="sum-value">4,182,000 UGX</div><div class="sum-label">owed to suppliers</div></div>
+        <div class="sum-cell"><div class="sum-value">7,640,000 UGX</div><div class="sum-label">of their goods here</div></div>
+        <div class="sum-cell"><div class="sum-value">5</div><div class="sum-label">consignors</div></div>
+        <div class="sum-cell good"><div class="sum-value">1,865,000 UGX</div><div class="sum-label">billed to them</div></div>
+      </div>
+      <p class="cons-basis">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet. <b>1,120,000 UGX of it is still on invoices customers have not paid.</b> You are holding 2,410,000 UGX in cash — less than you owe them.</p>
+      <div class="cons-list">
+
+        <div class="cons-card">
+          <div class="cons-card-head">
+            <div class="sc-avatar">OG</div>
+            <div class="sc-title">
+              <div class="sc-name">Okuosi Gypsum (U) Ltd</div>
+              <div class="cons-card-sub">3 lines of theirs on your shelf</div>
+            </div>
+            <div class="cons-owed due"><b>2,295,000 UGX</b><span>owed to them</span></div>
+          </div>
+          <div class="sc-stats">
+            <div class="sc-stat"><b>168</b><span>on the shelf</span></div>
+            <div class="sc-stat"><b>3,984,000 UGX</b><span>worth to them</span></div>
+            <div class="sc-stat"><b>97</b><span>sold so far</span></div>
+            <div class="sc-stat zero"><b>0 UGX</b><span>billed to them</span></div>
+          </div>
+          <div class="cons-gap">
+            <div class="cons-gap-row">
+              <svg viewBox="0 0 24 24"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.4 17.5A1.9 1.9 0 0 0 4 20.4h16a1.9 1.9 0 0 0 1.6-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0z"></path></svg>
+              <div class="cons-gap-main"><b>26 of GYPSUM Board — Normal / 9mm have already sold</b> on INV-0231, INV-0244, INV-0251, INV-0258 and 2 more — recorded as nobody's, so the 1,014,000 UGX they would owe Okuosi Gypsum (U) Ltd is not counted above.<span class="cons-gap-dim">4 more sold on invoices that kept no record of which stock they took, so those cannot be marked here.</span></div>
+              <button class="btn btn-accent">Record as theirs</button>
+            </div>
+          </div>
+          <div>
+            <div class="cons-goods-head">Their goods on your shelf</div>
+            <table class="cons-goods-table"><tbody>
+              <tr><td class="cons-goods-name">GYPSUM Board — Normal / 9mm</td><td class="num cons-goods-qty">96</td><td class="num cons-goods-each">39,000 UGX each</td><td class="num cons-goods-val">3,744,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+              <tr><td class="cons-goods-name">Ceiling Tile 600×600 — Perforated</td><td class="num cons-goods-qty">48</td><td class="num cons-goods-each">4,000 UGX each</td><td class="num cons-goods-val">192,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+              <tr><td class="cons-goods-name">Cornice 75mm × 3m</td><td class="num cons-goods-qty">24</td><td class="num cons-goods-each">2,000 UGX each</td><td class="num cons-goods-val">48,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+            </tbody></table>
+          </div>
+          <div class="cons-card-foot">
+            <span class="cons-foot-note">Settling raises their bill and then asks how much you are paying now.</span>
+            <button class="btn btn-accent">Settle 2,295,000 UGX</button>
+          </div>
+        </div>
+
+        <div class="cons-card">
+          <div class="cons-card-head">
+            <div class="sc-avatar">KS</div>
+            <div class="sc-title">
+              <div class="sc-name">Kirinya Steel &amp; Hardware Ltd</div>
+              <div class="cons-card-sub">2 lines of theirs on your shelf</div>
+            </div>
+            <div class="cons-owed due"><b>1,865,000 UGX</b><span>owed to them</span></div>
+          </div>
+          <div class="sc-stats">
+            <div class="sc-stat"><b>61</b><span>on the shelf</span></div>
+            <div class="sc-stat"><b>2,910,000 UGX</b><span>worth to them</span></div>
+            <div class="sc-stat"><b>44</b><span>sold so far</span></div>
+            <div class="sc-stat"><b>1,865,000 UGX</b><span>billed to them</span></div>
+          </div>
+          <div>
+            <div class="cons-goods-head">Their goods on your shelf</div>
+            <table class="cons-goods-table"><tbody>
+              <tr><td class="cons-goods-name">Iron Sheets (28 gauge, plain) — 3m box profile</td><td class="num cons-goods-qty">45</td><td class="num cons-goods-each">58,000 UGX each</td><td class="num cons-goods-val">2,610,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+              <tr><td class="cons-goods-name">Ridge Cap 2m</td><td class="num cons-goods-qty">16</td><td class="num cons-goods-each">18,750 UGX each</td><td class="num cons-goods-val">300,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+            </tbody></table>
+          </div>
+          <div class="cons-card-foot">
+            <span class="cons-foot-note">All of it is billed — 1,865,000 UGX still to pay, on their bill under Purchase invoices.</span>
+          </div>
+        </div>
+
+        <div class="cons-card">
+          <div class="cons-card-head">
+            <div class="sc-avatar">BP</div>
+            <div class="sc-title">
+              <div class="sc-name">Bwaise Paints &amp; Fittings</div>
+              <div class="cons-card-sub">1 line of theirs on your shelf</div>
+            </div>
+            <div class="cons-owed due"><b>22,000 UGX</b><span>owed to them</span></div>
+          </div>
+          <div class="sc-stats">
+            <div class="sc-stat"><b>18</b><span>on the shelf</span></div>
+            <div class="sc-stat"><b>198,000 UGX</b><span>worth to them</span></div>
+            <div class="sc-stat"><b>2</b><span>sold so far</span></div>
+            <div class="sc-stat zero"><b>0 UGX</b><span>billed to them</span></div>
+          </div>
+          <div>
+            <div class="cons-goods-head">Their goods on your shelf</div>
+            <table class="cons-goods-table"><tbody>
+              <tr><td class="cons-goods-name">Gloss Paint - White — 4 litre</td><td class="num cons-goods-qty">18</td><td class="num cons-goods-each">11,000 UGX each</td><td class="num cons-goods-val">198,000 UGX</td><td class="cons-goods-act"><button class="btn btn-ghost">Send back</button></td></tr>
+            </tbody></table>
+          </div>
+          <div class="cons-card-foot">
+            <span class="cons-foot-note">Settling raises their bill and then asks how much you are paying now.</span>
+            <button class="btn btn-accent">Settle 22,000 UGX</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

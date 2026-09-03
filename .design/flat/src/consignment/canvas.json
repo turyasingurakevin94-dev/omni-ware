@@ -1,0 +1,96 @@
+{
+  "artboards": [
+    {
+      "file": "Before.dc.html",
+      "title": "As it stands today",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1260,
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Proposed — the consignment console",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "page": "page-1"
+    },
+    {
+      "file": "Scale.dc.html",
+      "title": "Proposed — fourteen consignors",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1040,
+      "page": "page-2"
+    },
+    {
+      "file": "Empty.dc.html",
+      "title": "Proposed — nothing held, and the database not yet updated",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 660,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": -700,
+      "y": 0,
+      "w": 600,
+      "page": "page-1",
+      "text": "THE JOB OF THIS SCREEN\n\nYou told me it is a standing watch, not an event: the question is \"how much of what I am holding is not mine\", asked across everyone, with settling as the rarer act that follows.\n\nSo the screen is a strip that answers that question in one figure, and one ranked queue underneath that says who it is owed to. A consignor opens in place; the goods, the warnings and the settle action live inside the open row and nowhere else.\n\n10–30 consignors, desktop only. You said settling happens at the desk, so I have not drawn a phone. That is a deliberate omission, not an oversight — see the note on the second page.\n\nEverything is drawn from index.html's own values: the 23-colour palette, the 11/12/13/14 type ramp, Inter + Archivo Black + IBM Plex Mono, the .ow-* console components already shipping on Today, Chase debts, Follow-ups and Order tracking, and the existing .btn family. No new component, no new colour, no fourteenth button."
+    },
+    {
+      "id": "faults",
+      "x": -700,
+      "y": 470,
+      "w": 600,
+      "page": "page-1",
+      "text": "WHAT IS WRONG WITH IT AS IT STANDS →\n\n1. A CARD WALL FOR A WATCHING SCREEN. Every consignor is fully expanded, always: a four-tile stat strip and their entire shelf. Three consignors is already 1,000px. At your 10–30 it is 4,000–10,000px, and the one figure you came for is off the top of the screen by the third card.\n\n2. THE RANKING AND THE FIGURE DISAGREE. This is a real defect, not a style point. consignmentRows() sorts by r.owed (accrued minus billed), while the card headline and the strip total both show consignmentDueNow (owed PLUS what is unpaid on bills already raised). A consignor with 3,000,000 unpaid on a raised bill sorts BELOW one with 200,000 unbilled. On a screen whose whole job is ranking what you owe, the order is answering a different question from the column beside it.\n\n3. THE ACCENT IS SPENT THREE TIMES PER CARD. \"Record as theirs\" and \"Settle\" are both btn-accent, in the same card, and \"Record as theirs\" is the louder of the two because it sits higher. The law is: the accent appears ONCE per screen, on the one thing to do next. Repairing the record is housekeeping; settling is the act.\n\n4. OXIDE USED AS A STATE COLOUR. .cons-owed.due paints the figure oxide. That is the accent doing a job the palette already has verdigris and amber for, and it fires on every card at once.\n\n5. A 90-WORD PARAGRAPH IN THE PAGE HEAD. Useful once. The console header is a name, one line, a hairline; the long version lives behind the \"i\".\n\n6. OFF-SYSTEM VALUES. Radius 11 and 12 (the system is 4/6/8). Sizes 19, 14.5, 13.5, 12.5, 11.5, 10.5, 10 — of which only one is on the ramp. Weight 700 on a 19px mono figure.\n\n7. NO TRIAGE. Four genuinely different states — money to settle, money already billed and unpaid, goods held with nothing sold, and sales recorded as nobody's — arrive as one undifferentiated column, distinguished only by a footnote at the bottom of each card.\n\n8. .cons-goods-name HAS min-width:0 BUT NO ELLIPSIS. \"Iron Sheets (28 gauge, plain) — 3m box profile\" wraps the row instead of truncating. The house rule is all three declarations or none."
+    },
+    {
+      "id": "after",
+      "x": 1560,
+      "y": -420,
+      "w": 1440,
+      "page": "page-1",
+      "text": "THE PROPOSAL — what changed, and why\n\nTHE STRIP ANSWERS THE QUESTION. \"Owed to consignors\" is the headline, and it is the only amber thing on the screen, because it is genuinely larger than the cash you are holding. Tile 2 is the part of it already billed — labelled \"part of the figure at left\", because the old strip put \"owed\" and \"billed\" side by side as though they added up, and they do not. Tile 3 says their goods are NOT in what your stock is worth, which is the fact that stops a consignment being double-counted on the balance sheet. Tile 4 counts consignors and names how many carry work.\n\nTHE QUEUE IS 44px ROWS THAT OPEN IN PLACE. Consignor, lines and units, one chip for an exception only, and the figure right-aligned in tabular mono with its BASIS underneath — \"to settle\", \"billed, not yet paid\", \"nothing sold yet\", \"billed and paid\". Four states, readable down the column without opening anything. The sort is consignmentDueNow, the same reading the figure shows, so the ranking and the column finally agree.\n\nCOLOUR MEANS ONE THING EACH. Amber on the strip = you owe more than you hold. Amber chip = a sale of theirs recorded as nobody's. Verdigris = settled and paid. Everything else is ink. A zero is ink-400, not green: nothing owed is not good news, it is an ordinary fact.\n\nTHE ACCENT APPEARS ONCE. \"Settle 2,295,000 UGX\", inside the one open row. \"Record the 26 as theirs\" dropped to a quiet button on the amber ground — it is a correction to the record, and it should not out-shout the money. \"Mark stock as a consignor's\" moved out of the body into a ghost button in the header, where a screen-level action belongs.\n\nTHE GOODS TABLE GOT COLUMN HEADS AND TRUNCATION. Figures are sized to content and right-aligned, the name column takes the slack and ellipsises with a title. Money never truncates — a clipped 1,240,000 reads as 1,240,00, a tenth of the real figure, and looks entirely plausible.\n\nTHE RAIL CARRIES THE REASONING. Three derived figures — owed, still out with customers, cash you are holding — and the sentence the owner actually wanted: if every consignor came today you would be 1,772,000 short. Derived, never invented. Under it, what settling does, which is the prose that used to block the top of the screen."
+    },
+    {
+      "id": "scale",
+      "x": -700,
+      "y": 0,
+      "w": 600,
+      "page": "page-2",
+      "text": "FOURTEEN CONSIGNORS →\n\nThe case the card wall cannot do. Fourteen rows is 616px; the same fourteen as cards would be roughly 3,400px, and the strip would have left the screen.\n\nRead the figure column downwards: it is a ranking, and the basis line under each figure says what kind of money it is. Two amber chips mark the only two accounts with anything wrong. Nothing else is coloured.\n\n\"Ssekitoleko Hardware & General Merchandise Ltd\" is there on purpose — it truncates with an ellipsis and carries the full name in a title, which is the house rule the current .cons-goods-name breaks.\n\nThe four consignors owed nothing are still listed, and the hairline note at the foot says why rather than leaving you to wonder. Named rather than dropped.\n\nWHY THERE IS NO PHONE ARTBOARD\n\nYou said settling happens at the desk. The current screen has a phone layout, but it is the desktop table with two columns hidden by a media query — which is exactly what the two-designs law forbids, and it is worse than nothing because it looks supported. My recommendation is to delete the @media (max-width:640px) block and the 560px one with it, and let this screen be honestly desktop-only, the way the CSS comment already claims it is. If you would rather keep a phone view, say so and I will design one properly — a read-only queue of what is owed, with settling still at the desk."
+    },
+    {
+      "id": "empty",
+      "x": 1560,
+      "y": -520,
+      "w": 900,
+      "page": "page-2",
+      "text": "NOTHING HELD, AND THE DATABASE NOT YET UPDATED →\n\nThe two failure states, drawn, because a screen is only designed once you have looked at it empty.\n\nNO STRIP OF ZEROS. Four tiles reading 0 is data slop — it fills the screen with figures that mean nothing and makes an empty screen look like a broken one. The panel head says \"none\" and that is the whole count.\n\nTHE BLOCKED BAND IS AMBER, NOT OXIDE. Today it is oxide-soft with an oxide icon, which spends the accent on a banner. This is a caution with a fix attached, so it is amber, and it says the thing that matters most in bold: a consignment is REFUSED rather than accepted and lost. That is the app's own promise — a failure must name itself — and it is the sentence that stops someone taking goods on trust.\n\nBOTH ACTIONS ARE SHOWN AND BOTH ARE DISABLED, with one line saying why. The alternative — hiding them until the column exists — leaves the owner with an empty screen and no idea what it would look like working.\n\nThe empty state names the next action rather than describing itself: receive on the Inventory screen and tick \"on consignment\". \"Not enough is an answer\", but only if it says what would be enough."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The console"
+    },
+    {
+      "id": "page-2",
+      "name": "Scale and empty"
+    }
+  ]
+}
