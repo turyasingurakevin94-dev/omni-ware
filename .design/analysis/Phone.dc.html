@@ -1,0 +1,484 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+
+    /* ---- two components that index.html has and this chrome did not.
+       Their absence rendered a panel-header note and a row's state
+       sentence at body size, which is exactly the muddle the ramp exists
+       to prevent. Copied from the OW layer, not re-invented. ---- */
+    .ow-pan-nt{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;}
+    .ow-pan-nt + .ow-pan-n{margin-left:auto;}
+    .ow-q-note{font-size:12px;color:var(--ow-ink-600);margin:0 0 8px;max-width:var(--ow-measure);}
+    /* ---- the five-cell strip ---- */
+    .ow-strip{grid-template-columns:repeat(5,1fr);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt-v .ow-sm2{font-size:.62em;letter-spacing:-.02em;}
+
+    /* ---- the finding row.
+       Same .ow-q as Today and Pricing, widened in the last column: a
+       finding carries a figure AND the clock it is counted on, and
+       "5,760,000" over "a year, if you lift it" will not sit in 128px. */
+    .ow-q-r{grid-template-columns:18px minmax(0,1fr) 118px 176px;}
+    .ow-q-t .ow-q-rest{font-weight:400;}
+    .ow-q-m{justify-content:flex-start;}
+    .ow-q-v.ow-once .ow-q-f{color:var(--ow-ink-900);}
+
+    /* ---- evidence: the old panel, living inside the open finding ---- */
+    .ev{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
+      background:var(--ow-paper);overflow:hidden;margin:0 0 10px;}
+    .ev-h{display:flex;align-items:baseline;gap:8px;height:28px;padding:0 10px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ev-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ev-n{margin-left:auto;font-size:11px;color:var(--ow-ink-600);}
+    .ev-b{padding:10px;}
+    .ev-b.tight{padding:0;}
+    .ev-f{margin:0;padding:7px 10px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+
+    /* the arithmetic, laid out to be checked rather than trusted */
+    .ar{display:grid;grid-template-columns:auto auto;gap:3px 14px;margin:0 0 10px;
+      font-size:12px;width:max-content;}
+    .ar dt{color:var(--ow-ink-600);}
+    .ar dd{margin:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-weight:500;}
+    .ar dd.w{font-weight:600;}
+    .ar .rule{grid-column:1 / -1;height:1px;background:var(--ow-rule-soft);margin:3px 0;}
+    .ar dd.bad{color:var(--ow-crimson);}
+
+    /* the evidence table -- .cg from the shared chrome, one addition */
+    .cg td.why{font-family:'Inter',system-ui,sans-serif;font-size:11.5px;
+      color:var(--ow-ink-600);text-align:left;white-space:normal;line-height:1.4;
+      width:auto;max-width:0;padding-left:16px;}
+    .cg td.ct{font-family:'Inter',system-ui,sans-serif;text-align:left;padding-left:16px;
+      width:auto;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* THE NAME DOES NOT GIVE WAY HERE. Money never truncates, and on this
+       table neither does the item -- "Cement (Tor..." and "Cement (Hi..."
+       are two products in the same shop and a reader cannot tell them
+       apart. The supplier is the column that yields. */
+    .cg td.nm, .cg th.l{width:1%;max-width:none;white-space:nowrap;}
+    .cg td.ct{width:auto;}
+
+    /* charts, on the palette and nowhere near it */
+    .ch{display:block;max-width:100%;height:auto;}
+    .ch-lg{display:flex;gap:16px;font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;}
+    .ch-lg span{display:flex;align-items:center;gap:5px;}
+    .ch-lg i{width:9px;height:9px;border-radius:2px;flex:none;}
+
+    /* the rail */
+    .ow-side .ow-pan-h{background:var(--ow-paper-2);}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rl-h{margin:0;padding:9px 12px 0;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .rl-h + .rl{border-top:0;padding-top:4px;}
+    .rf + .rl-h{border-top:1px solid var(--ow-rule-soft);}
+    .rw{display:flex;flex-direction:column;gap:4px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .rw-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .rw-in{display:flex;align-items:center;justify-content:space-between;gap:6px;height:30px;
+      padding:0 9px;box-sizing:border-box;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-size:12px;}
+    .rw-in svg{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .rw-n{margin:2px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;}
+
+    /* the account of what was read -- the device that lets a list be trusted */
+    .acct{display:flex;flex-wrap:wrap;gap:0 18px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:11px;color:var(--ow-ink-600);}
+    .acct b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      color:var(--ow-ink-900);letter-spacing:-.02em;}
+    /* the reason column: why this finding sits where it sits. Plain ink --
+       the ranking already says which is worst, so a state chip on every
+       row would mark everything and therefore mark nothing. */
+    .ow-q-rs{font-size:11px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-cr{transform-origin:50% 50%;}
+    /* labels on the states artboard -- annotation, not app chrome */
+    .st-l{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--ow-oxide-deep);margin:0 0 7px;}
+    .st-l + .ow-pan, .st-l + .ow-strip{margin-bottom:0;}
+    .ow-empty-t{font-size:15px;font-weight:600;color:var(--ow-ink-900);margin:0 0 6px;}
+    .ow-empty-p{font-size:13px;color:var(--ow-ink-600);line-height:1.55;margin:0 auto 12px;
+      max-width:64ch;}
+    .fail{display:flex;gap:12px;padding:16px;align-items:flex-start;}
+    .fail svg{width:20px;height:20px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .fail h3{margin:0 0 5px;font-size:14px;font-weight:600;color:var(--ow-crimson);}
+    .fail p{margin:0 0 8px;font-size:12.5px;color:var(--ow-ink-600);line-height:1.55;max-width:74ch;}
+
+    /* A finding row inside a narrow panel drops the reason column rather
+       than clipping it. The reason is a whole clause -- half of one is
+       worse than none, and the figure still says what the row is worth. */
+    .ow-pan-nr .ow-q-r{grid-template-columns:18px minmax(0,1fr) 150px;}
+    .ow-pan-nr .ow-q-rs{display:none;}
+    /* ---- THE PHONE. 820px is a switch, so none of this is the desktop
+       reflowed: 15px body, 14-16px padding, cards instead of rows, and a
+       44px navy bar rather than the 54px one with a rail behind it.
+       No fake status bar and no fake keyboard -- the real ones render
+       on top of this. ---- */
+    .ph-app{position:relative;width:390px;height:844px;background:var(--ow-steel-050);overflow:hidden;}
+    .ph-bar{position:absolute;top:0;left:0;right:0;height:44px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:10px;padding:0 14px;color:#fff;z-index:3;}
+    .ph-bar .brand-mark{width:26px;height:26px;border-radius:7px;font-size:10px;}
+    .ph-bar-t{font-size:14px;font-weight:600;}
+    .ph-bar-sp{flex:1;}
+    .ph-bar svg{width:20px;height:20px;fill:none;stroke:#C7CFD8;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    .ph-main{position:absolute;top:44px;left:0;right:0;bottom:60px;padding:14px 16px 0;
+      box-sizing:border-box;overflow:hidden;}
+    .ph-h{margin:0 0 12px;}
+    .ph-h h1{font-family:'Archivo Black',sans-serif;font-size:26px;margin:0;
+      letter-spacing:-.015em;line-height:1.1;}
+    .ph-h p{margin:4px 0 0;font-size:13px;color:var(--ow-ink-600);line-height:1.4;}
+
+    /* the strip, 2x2 in ONE card with hairline dividers -- no per-tile border */
+    .ph-strip{display:grid;grid-template-columns:1fr 1fr;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;
+      margin-bottom:16px;}
+    .ph-mt{padding:11px 14px;border-left:1px solid var(--ow-rule-soft);
+      border-top:1px solid var(--ow-rule-soft);}
+    .ph-mt:nth-child(-n+2){border-top:0;}
+    .ph-mt:nth-child(odd){border-left:0;}
+    .ph-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 3px;}
+    .ph-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;
+      font-weight:500;letter-spacing:-.03em;line-height:1.15;display:block;}
+    .ph-mt.bad .ph-mt-v{color:var(--ow-crimson);}
+    .ph-mt-s{font-size:11px;color:var(--ow-ink-600);margin:3px 0 0;line-height:1.35;}
+
+    .ph-sec{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;}
+    .ph-sec-t{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .ph-sec-n{margin-left:auto;font-size:11px;color:var(--ow-ink-600);}
+
+    /* the card. Actions visible, thumb-sized, 15px body. */
+    .ph-c{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:8px;
+      display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;}
+    .ph-c-t{font-size:15px;font-weight:600;line-height:1.3;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-c-r{grid-column:1;font-size:12.5px;color:var(--ow-ink-600);line-height:1.4;margin-top:2px;
+      min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-c-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;
+      font-weight:600;letter-spacing:-.02em;}
+    .ph-c-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;
+      font-weight:400;color:var(--ow-ink-600);letter-spacing:0;margin-top:2px;}
+    .ph-c-a{grid-column:1 / -1;margin-top:10px;}
+    .ph-c-a .btn{width:100%;height:44px;padding:0 16px;font-size:14px;}
+    .ph-more{margin:2px 0 0;font-size:12.5px;color:var(--ow-ink-600);text-align:center;}
+
+    /* white 60px tab bar. Active is FILLED, inactive stroked -- a shape
+       change reads where a colour change alone does not. */
+    .ph-tabs{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--ow-paper);
+      border-top:1px solid var(--ow-rule-soft);display:grid;grid-template-columns:repeat(5,1fr);z-index:3;}
+    .ph-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      font-size:10.5px;font-weight:500;color:var(--ow-ink-400);}
+    .ph-tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-tab.on{color:var(--ow-steel-950);font-weight:600;}
+    .ph-tab.on svg{fill:var(--ow-steel-950);stroke:var(--ow-steel-950);}
+  </style>
+</helmet>
+<div class="app" style="width:390px;height:844px">
+  <div class="ph-app">
+    <div class="ph-bar">
+      <div class="brand-mark">OW</div>
+      <span class="ph-bar-t">Analysis</span>
+      <span class="ph-bar-sp"></span>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+    </div>
+
+    <div class="ph-main">
+      <div class="ph-h">
+        <h1>Analysis</h1>
+        <p>Seven findings, read at 08:14. Last 30 days.</p>
+      </div>
+
+      <div class="ph-strip">
+        <div class="ph-mt">
+          <p class="ph-mt-l">Kept</p>
+          <span class="ph-mt-v">21.4<span class="ow-u" style="font-size:.6em;color:var(--ow-ink-400);">%</span></span>
+          <p class="ph-mt-s">on 48,200,000</p>
+        </div>
+        <div class="ph-mt">
+          <p class="ph-mt-l">Owed to you</p>
+          <span class="ph-mt-v">8,640,000</span>
+          <p class="ph-mt-s">4,680,000 past 30d</p>
+        </div>
+        <div class="ph-mt bad">
+          <p class="ph-mt-l">Net cash, 8wk</p>
+          <span class="ph-mt-v">&#8722;2,440,000</span>
+          <p class="ph-mt-s">out beat in, 5 of 8</p>
+        </div>
+        <div class="ph-mt">
+          <p class="ph-mt-l">Worth fixing</p>
+          <span class="ph-mt-v">21,000,000</span>
+          <p class="ph-mt-s">over a year, all 7</p>
+        </div>
+      </div>
+
+      <div class="ph-sec">
+        <span class="ph-sec-t">What the books found</span>
+        <span class="ph-sec-n">7</span>
+      </div>
+
+      <div class="ph-c">
+        <span class="ph-c-t">Iron sheets</span>
+        <span class="ph-c-r">Keeping 9.2%, you mean 22%</span>
+        <span class="ph-c-v">5,760,000<span class="ph-c-b">a year, if you lift it</span></span>
+        <span class="ph-c-a"><span class="btn btn-accent">Open the whole finding</span></span>
+      </div>
+
+      <div class="ph-c">
+        <span class="ph-c-t">14 prices past 60 days</span>
+        <span class="ph-c-r">On things the shop actually trades</span>
+        <span class="ph-c-v">4,120,000<span class="ph-c-b">a year, at risk</span></span>
+      </div>
+
+      <div class="ph-c">
+        <span class="ph-c-t">Six regulars gone quiet</span>
+        <span class="ph-c-r">Overdue on their own rhythm</span>
+        <span class="ph-c-v">2,850,000<span class="ph-c-b">a year, at risk</span></span>
+      </div>
+
+      <div class="ph-c">
+        <span class="ph-c-t">Kato Construction Ltd</span>
+        <span class="ph-c-r">96 days owing, and still buying</span>
+        <span class="ph-c-v">2,480,000<span class="ph-c-b">owed, once</span></span>
+      </div>
+
+      <div class="ph-c">
+        <span class="ph-c-t">Cash out beat cash in</span>
+        <span class="ph-c-r">Three weeks running</span>
+        <span class="ph-c-v">2,440,000<span class="ph-c-b">net out, so far</span></span>
+      </div>
+
+      <p class="ph-more">2 more below &#183; 3,390,000 between them</p>
+    </div>
+
+    <div class="ph-tabs">
+      <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0"></path><path d="M12 2v4M4.9 8.9l2.8 2.8M2 18h2M20 18h2M16.3 11.7l2.8-2.8"></path><path d="M2 22h20"></path></svg><span>Today</span></div>
+      <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7-7A2 2 0 0 1 3 12.2V4a1 1 0 0 1 1-1h8.2a2 2 0 0 1 1.4.6l7 7a2 2 0 0 1 0 2.8z"></path><circle cx="7.5" cy="7.5" r="1.3"></circle></svg><span>Sell</span></div>
+      <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><circle cx="12" cy="15" r="2.6"></circle></svg><span>Money</span></div>
+      <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"></path><path d="M8 12V9M12 12v-4M16 12v-2"></path></svg><span>Manager</span></div>
+      <div class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M12 2.6L2.6 7 12 11.4 21.4 7z"></path><path d="M2.6 12L12 16.4 21.4 12" fill="none"></path><path d="M2.6 17L12 21.4 21.4 17" fill="none"></path></svg><span>More</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
