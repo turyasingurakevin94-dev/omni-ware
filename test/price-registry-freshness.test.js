@@ -392,24 +392,51 @@ const sold = (productId, qty, date) => data.stockLog.push({
    Asked for as a report that arrives on its own schedule: a warning
    raised while quoting a client is both too late and in the way. */
 {
-  t.check(/id="dash_priceReview"/.test(src), 'the report has a home on the dashboard');
+  /* WHERE THE REPORT LIVES NOW.
+
+     Analysis stopped being seven panels. It leads with what the books
+     FOUND, ranked by what fixing each is worth, and this report is the
+     EVIDENCE inside one of those findings rather than a panel of its
+     own. So the id it is drawn into changed, and the arithmetic moved
+     from renderDashPriceReview into analysisFindings -- but every
+     question this section was asking is still asked, of the place that
+     now answers it. */
+  t.check(/id="dash_findings"/.test(src), 'the report has a home on the Analysis screen');
   t.check(/function renderDashPriceReview\(\)/.test(code), 'and a renderer');
   t.check(/renderDashPriceReview\(\);/.test(extractFunction(src, 'renderDashboard', 'index.html')),
     'drawn with the rest of the dashboard');
 
-  const panel = extractFunction(src, 'renderDashPriceReview', 'index.html');
-  t.check(/priceReviewCandidates\(\)/.test(panel) && /priceReviewProgress\(\)/.test(panel),
+  const finds = extractFunction(src, 'analysisFindings', 'index.html');
+  t.check(/priceReviewCandidates\(\)/.test(finds) && /priceReviewProgress\(\)/.test(finds),
     'built from the same two functions tested above, not its own arithmetic');
-  t.check(/f\.reasons\.join/.test(panel),
+  t.check(/f\.reasons\.join/.test(finds),
     'every row says why it is there, so the ranking can be argued with');
-  t.check(/threat-empty/.test(panel) && /Nothing to chase/.test(panel),
-    'and an empty list is good news said in words, not a blank panel');
 
-  /* It must NOT follow the dashboard's date range. Every other panel
+  /* A CHANGE WORTH ARGUING, NOT A LOWERED BAR.
+     The old assertion wanted "Nothing to chase" inside this panel: an
+     empty list had to be good news said in words rather than a blank
+     box. It still must be -- but a screen of seven panels each saying
+     its own version of "nothing here" is how Analysis came to be a
+     column nobody read to the end of. A finding with nothing to say now
+     does not appear at all, and the SCREEN says the good news once,
+     naming stale prices among the things it checked. The words moved;
+     they were not dropped, and this checks they were not. */
+  const render = extractFunction(src, 'renderAnalysis', 'index.html');
+  t.check(/ow-empty/.test(render) && /no price you trade is stale/.test(render),
+    'an empty list is still good news said in words — now said once, by the screen');
+  t.check(/if\(prows\.length\)\{/.test(finds),
+    'and the finding is absent rather than empty when there is nothing to chase');
+
+  /* It must NOT follow the dashboard's date range. Every other finding
      answers "how did the chosen window go"; a price does not stop being
-     out of date because you were looking at last quarter. */
-  t.check(!/dash_range|rangeFrom|rangeTo/.test(panel),
+     out of date because you were looking at last quarter. The screen
+     now says so out loud, beside the window control itself, instead of
+     in the fourth sentence of a paragraph nobody reads. */
+  t.check(!/dash_range|rangeFrom|rangeTo|dctx\.from|dctx\.to/.test(
+      finds.slice(finds.indexOf('priceReviewCandidates'), finds.indexOf('3. WHAT IS OWED'))),
     'the report ignores the dashboard date range — staleness is a fact about now');
+  t.check(/Stale prices are not/.test(render),
+    'and the rail says so where the window is set, not buried in prose');
 
   // Reachable as a worklist, ordered the same way.
   t.check(/\{ key:'review',\s+label:'Needs checking' \}/.test(src),
