@@ -385,6 +385,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
     },
+    /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
+       named the word the shop already uses. Two stacked .panel blocks
+       became a strip, one age bar with a legend where there had been a
+       bar AND five bordered cards saying the same five figures, and a
+       six-column <table> with a phone card-wall beside it became .ow-q
+       rows that open in place and emit their own cards.
+
+       .age-* is NOT retired from the file: the creditors list -- "Who
+       you owe" -- is this screen's twin and still wears every one of
+       those classes. What is pinned here is that THIS screen no longer
+       emits them, so converting its twin later cannot be mistaken for
+       already done. */
+    'analytics-debtors': {
+      retired: ['page-head', 'panel', 'panel-head-row', 'an-toolbar', 'btn-row', 'field',
+                'sq-select-all-label', 'empty',
+                'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-aside', 'age-bar', 'age-seg',
+                'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
+                'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
+                'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db'],
+      renders: ['renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail', 'renderDebFilterNote'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-why', 'ow-q-note', 'ow-q-a', 'ow-cp',
+                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+    },
     /* Order tracking. The lane board -- the step rail, the lanes, the
        cards with six controls, the select-all/print row -- became a
        console: a strip, a queue of what needs the owner, one table

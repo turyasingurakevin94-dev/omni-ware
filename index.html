@@ -1057,6 +1057,12 @@
   .chase-controls[hidden]{display:none;}
   .chase-controls{margin-bottom:16px;}
   .ch-strip{margin-bottom:16px;}
+  /* The age of the whole book, read on the chase screen. It is the
+     Debtors component (.ow-db-ag) borrowed whole rather than a lookalike
+     -- the two screens draw the same bar from the same profile, so
+     neither can show an age split the other contradicts. */
+  .ch-age{margin-bottom:16px;}
+  .ch-age-n{padding-left:0;padding-right:0;padding-bottom:0;}
   /* The debtor being worked. */
   .ch-work{display:flex;flex-direction:column;min-height:0;}
   .ch-w-head{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--ow-rule-soft);}
@@ -8652,6 +8658,145 @@
      app's existing breakpoint and is kept, so this switches between two
      layouts rather than reflowing one.
      ================================================================== */
+
+  /* ==================================================================
+     DEBTORS — the register of what customers owe.
+
+     Almost all of this screen is the layer as it already stands: the
+     header, the strip, .ow-pan, .ow-tb, .ow-q with its card twin,
+     .ow-tbl for the invoices in an open row, .ow-sr for the rail, .ow-cp
+     for the age. What is here is the two things it did not have -- the
+     age bar, and five columns instead of four.
+     ================================================================== */
+
+  /* THE AGE OF THE MONEY, as ONE device.
+
+     It was a stacked bar AND five bordered cards repeating the bar's own
+     five figures, both of them the filter: one fact in two voices, over
+     about 120px. The bar keeps the proportion -- widths come from
+     shillings, because one big old balance is the problem and three
+     small fresh ones are not -- and the cards become a legend that
+     labels it rather than a second set of cards competing with it. */
+  .ow-db-ag{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12);}
+  .ow-db-ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);
+    overflow:hidden;background:var(--ow-rule-soft);}
+  /* min-width keeps a 1% band clickable. It distorts the picture
+     slightly; a segment too small to hit is worse. */
+  .ow-db-ag-s{all:unset;flex-basis:0;min-width:14px;cursor:pointer;
+    background:var(--age-hue);transition:opacity .15s ease;}
+  .ow-db-ag-s:hover{opacity:.82;}
+  .ow-db-ag-s.ow-on{box-shadow:inset 0 0 0 2px var(--panel),inset 0 0 0 4px var(--age-hue);}
+  .ow-db-ag-s:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-db-ag-l{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+    gap:var(--ow-sp-10);margin-top:var(--ow-sp-12);}
+  .ow-db-ag-b{all:unset;display:flex;flex-direction:column;gap:1px;min-width:0;
+    cursor:pointer;padding:0 0 0 var(--ow-sp-8);border-left:2px solid var(--age-hue);
+    font-family:'Inter',system-ui,sans-serif;text-align:left;}
+  .ow-db-ag-b:hover{background:var(--ow-paper-2);}
+  .ow-db-ag-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-db-ag-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-db-ag-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  /* ink-600, not ink-400: 11px in ink-400 is 3.12 to 1 on paper. */
+  .ow-db-ag-m{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-db-ag-b.ow-on{background:var(--ow-paper-2);}
+  .ow-db-ag-b.ow-on .ow-db-ag-t{color:var(--ow-ink-900);}
+
+  /* THE BAND RAMP — three state colours, not five.
+
+     The shipped ramp ran verdigris, amber, oxide-light, crimson, grey.
+     Two things were wrong with it. Oxide is the ACCENT, so painting the
+     60-90 band with it spent the screen's one loud colour on a band that
+     fires whether or not anything needs doing. And verdigris on the
+     under-30 band said fresh trade debt is GOOD news, which it is not:
+     it is ordinary, and ordinary is ink.
+
+     So: grey for the month it is normal to be owed, amber at thirty
+     days, crimson from sixty. The two crimson bands read as one crimson
+     block, which is the correct reading -- "this much of it is old" --
+     and the 2px gap plus the legend keep them apart where it matters.
+     The bands the creditors list still wears are untouched: .age-b30 and
+     the rest are shared with that screen, and this one no longer uses
+     them. */
+  .ow-band-b30{--age-hue:var(--ow-steel-400);}
+  .ow-band-b60{--age-hue:var(--ow-amber);}
+  .ow-band-b90{--age-hue:var(--ow-crimson);}
+  .ow-band-b90p{--age-hue:var(--ow-crimson);}
+  .ow-band-unknown{--age-hue:var(--ow-steel-100);}
+
+  /* The strip carries two, three or four tiles depending on what there
+     is to say -- there is no tile for news the book does not have. The
+     count is a MODIFIER, never an inline grid-template-columns: an
+     inline style beats the phone block and pins four tiles in one row at
+     390px, which is how three of them ran off the side of the screen. */
+  .ow-db-strip{margin-bottom:var(--ow-sp-16);}
+  .ow-strip.ow-db-s2{grid-template-columns:repeat(2,1fr);}
+  .ow-strip.ow-db-s3{grid-template-columns:repeat(3,1fr);}
+  .ow-db-ag-pan,.ow-db-clear{margin-bottom:var(--ow-sp-16);}
+
+  /* FIVE COLUMNS, NOT FOUR. .ow-q-r's own tracks are
+     18px / 1fr / 152px / 128px, which is right for a queue whose middle
+     column is one line of prose. A register answers three questions
+     about each name -- are they paying it down, when did they last pay,
+     how old is it -- and each needs its own column so the eye can read
+     one of them down the list. Screen-scoped, so no other queue moves. */
+  .ow-db .ow-q-r{grid-template-columns:18px minmax(0,1fr) 116px 116px 92px 116px;}
+  .ow-db-h{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 92px 116px;
+    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-db-h-c{text-align:center;}
+  .ow-db-h-r{text-align:right;}
+  .ow-db-pr{min-width:0;}
+  .ow-db .ow-q-m{justify-content:center;}
+
+  /* When they last paid anything, over two lines. Never-paid is crimson
+     because it is the one value in this column worth stopping on: a
+     customer who never started is a different thing from one who has
+     gone quiet, and only the first is a reason not to sell to them
+     again. */
+  .ow-db-lp{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-db-lp-d{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);}
+  .ow-db-never .ow-db-lp-d{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+
+  /* The toggle, and the band filter echoed in the toolbar that set it.
+     Both are the layer's own shapes with a state added: .btn.ow-sm and
+     .ow-cp. No fourteenth button family. */
+  .ow-db-tg.ow-on{border-color:var(--ow-steel-950);color:var(--ow-ink-900);}
+  .ow-db-fc{all:unset;display:inline-flex;align-items:center;gap:var(--ow-sp-4);
+    height:28px;padding:0 var(--ow-sp-8);box-sizing:border-box;cursor:pointer;
+    border-radius:var(--ow-r-sm);background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-db-fc-x{width:11px;height:11px;flex:none;}
+  .ow-db-fc:focus-visible{outline:2px solid var(--ow-steel-950);}
+  .ow-tb .ow-tb-n{display:flex;align-items:flex-end;gap:var(--ow-sp-6);}
+
+  /* The note where the filtered-out rows would have been. */
+  .ow-db-note{display:flex;align-items:center;justify-content:space-between;
+    gap:var(--ow-sp-12);flex-wrap:wrap;padding:var(--ow-sp-10) var(--ow-sp-12);
+    margin-top:var(--ow-sp-16);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-db-note .ow-db-em{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+  /* The rail's prose, measured. On a 1660px screen an unmeasured
+     paragraph runs 180 characters; in a 304px rail it runs 38, which is
+     the other failure -- so this is the rail's own line length and not
+     the page's. */
+  .ow-db-rl{margin:0;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.5;}
+  .ow-db-em{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-db-rl + .ow-db-rl{border-top:1px solid var(--ow-rule-soft);}
+  .ow-db-go{all:unset;cursor:pointer;color:var(--ow-oxide);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);}
+  .ow-db-go:hover{color:var(--ow-oxide-deep);text-decoration:underline;}
+  .ow-db-go:focus-visible{outline:2px solid var(--ow-steel-950);}
+
   @media (max-width:820px){
     .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
@@ -8864,6 +9009,47 @@
     .ow-cal{width:min(320px,92vw);}
     .ow-cal-d{height:40px;font-size:14px;}
     .ow-cal-a{width:var(--ow-tap);min-height:var(--ow-tap);}
+  
+    /* ---- DEBTORS on the phone ----
+       820px is a switch, not a reflow. The five console columns have no
+       phone form at all: .ow-q-card takes over from .ow-q-r, and the
+       three readings that had their own columns become one meta line
+       under the figure, because on a phone you are looking ONE customer
+       up rather than reading a column downwards. */
+    .ow-db .ow-q-r{display:none;}
+    .ow-db-h{display:none;}
+    /* Two across, whatever the tile count, and an odd last one takes the
+       whole width rather than half a row of white. */
+    .ow-strip.ow-db-s2,.ow-strip.ow-db-s3{grid-template-columns:1fr 1fr;}
+    .ow-strip.ow-db-s3 .ow-mt:last-child:nth-child(odd){grid-column:1/-1;}
+    /* The bar survives. Five bands across 358px is 60px each and
+       unreadable, so the legend falls to two columns -- and each band
+       gets a thumb, which a 20px-high legend entry does not. */
+    .ow-db-ag{padding:var(--ow-sp-12);}
+    .ow-db-ag-bar{height:16px;}
+    .ow-db-ag-l{grid-template-columns:1fr 1fr;gap:var(--ow-sp-4) var(--ow-sp-12);}
+    .ow-db-ag-b{min-height:var(--ow-tap);justify-content:center;
+      padding:var(--ow-sp-6) 0 var(--ow-sp-6) var(--ow-sp-8);}
+    .ow-db-ag-t,.ow-db-ag-m{font-size:var(--ow-t-12);}
+    .ow-db-ag-v{font-size:14px;}
+    /* Every control in the toolbar is a thumb, and the two that leave
+       the screen take a line of their own rather than being squeezed
+       against the search box. */
+    .ow-db-tg{min-height:var(--ow-tap);}
+    .ow-tb .ow-tb-n{width:100%;margin-left:0;gap:var(--ow-sp-8);}
+    .ow-tb .ow-tb-n .btn.ow-sm{flex:1 1 0;min-width:0;min-height:var(--ow-tap);box-sizing:border-box;}
+    .ow-db-fc{min-height:var(--ow-tap);font-size:var(--ow-t-13);padding:0 var(--ow-sp-12);}
+    .ow-db-cmeta{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:var(--ow-sp-6) 0 0;}
+    .ow-db-rl{font-size:14px;padding:var(--ow-sp-12);}
+    .ow-db-go{font-size:14px;}
+    .ow-db-note{font-size:14px;}
+    .ow-db-note .btn.ow-sm{min-width:0;min-height:var(--ow-tap);box-sizing:border-box;}
+    /* The one accent on the screen is inside the open row, and on a
+       phone it is the row's own action: full width, thumb-high, in the
+       place a thumb actually reaches. */
+    .ow-db .ow-q-a{flex-direction:column;}
+    .ow-db .ow-q-a .btn.ow-sm{width:100%;min-width:0;min-height:var(--ow-tap);
+      font-size:15px;box-sizing:border-box;}
   }
 </style>
 </head>
@@ -9031,9 +9217,18 @@
 
        Search matters more here than it looks. Several screens are
        deliberately named for the question they answer rather than the
-       table they draw -- "Who owes you", not "Debtors list" -- which
-       reads better and is harder to find by scanning. Typing the word
-       you already have in your head finds it either way. -->
+       table they draw -- "Who you owe", "What's coming", "What to buy"
+       -- which reads better and is harder to find by scanning. Typing
+       the word you already have in your head finds it either way.
+
+       The debtors screen used to be one of them, as "Who owes you".
+       It is now plainly "Debtors": the question-shaped name was worth
+       less than it cost here, because this screen alone was carrying
+       THREE names -- "Who owes you" on the rail, "Debtors list" in its
+       own heading, and "Who owes you" again in the bar above -- and a
+       screen that cannot agree with itself about what it is called is
+       not helped by the name being evocative. Both old names live on
+       as its search keywords. -->
   <div class="tb-where" id="tbWhere"></div>
 
   <div class="tb-search" id="tbSearch">
@@ -9231,9 +9426,9 @@
           <span class="nav-label">Chase debts</span>
           <b class="nav-badge" id="navBadgeChase" hidden></b>
         </button>
-        <button data-tab="analytics-debtors" title="Who owes you" data-keywords="debtors receivables credit owing">
+        <button data-tab="analytics-debtors" title="Debtors" data-keywords="debtors receivables credit owing who owes you debtors list aging ageing chase">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span class="nav-label">Who owes you</span>
+          <span class="nav-label">Debtors</span>
           <b class="nav-badge" id="navBadgeDebtors" hidden></b>
         </button>
         <button data-tab="analytics-creditors" title="Who you owe" data-keywords="creditors payables owed suppliers">
@@ -9819,43 +10014,52 @@
     </section>
 
     <!-- DEBTORS LIST -->
+    <!-- DEBTORS. The whole book of what customers owe, the age of it,
+         and the place a payment is received.
+
+         It was called "Who owes you" on the rail and "Debtors list" in
+         its own heading, which is one screen with two names, and the
+         bar above it printed a third. It is Debtors everywhere now, and
+         both old names are still search keywords.
+
+         THE SEQUENCE, and the reason this is not one screen with Chase
+         debts. This screen is the register: every customer with a
+         balance, whatever their terms, with search, the age filter,
+         print and Receive. Chase debts is the day's work: only those
+         past the shop's terms, rested and de-duplicated, each with a
+         message written from their own invoices. The chase queue is
+         DELIBERATELY a subset, so a position computed over it would
+         describe a slice of the shop rather than the shop -- which is
+         why merging the two was considered and rejected. Chase carries
+         a read-only reading of the age split instead, and its bands
+         open this screen filtered. One age filter, on the screen that
+         owns the whole book. -->
     <section id="tab-analytics-debtors" style="display:none;">
-      <div class="page-head">
-        <h1>Debtors list</h1>
-        <p>What customers owe you, and how long they have owed it. The bands below split the money by age — click one to work through it.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Debtors</h1>
+        <p class="ow-ph-sub">Everyone who owes you, oldest money first</p>
+        <p class="ow-ph-help">Every customer carrying a balance, with the age of the money beside it. A balance is the charges not yet paid, walked oldest first the way a ledger settles &mdash; so the age here is the age of the money still open, not the date the customer last came in. The bands split the whole book by age and narrow the list when you tap one; the search box narrows it further; the printed sheet always carries the whole book's profile and says which customers it is listing. Receiving a payment clears their oldest invoice first and posts straight to the cash book. Asking for the money is a different screen: Chase debts has everyone past your terms with the words already written, and nothing sends itself.</p>
+        <span class="ow-ph-sp"></span>
       </div>
 
-      <!-- What you are owed. Always the whole book: the search box and the
-           band filter act on the list further down, never on this. A
-           position that shrinks because somebody left a filter on is a
-           position nobody can trust. -->
-      <div class="panel" id="debPositionWrap"></div>
+      <div class="ow-db">
+        <!-- What you are owed. Always the whole book: the search box and
+             the band filter act on the list further down, never on this.
+             A position that shrinks because somebody left a filter on is
+             a position nobody can trust. -->
+        <div id="debPositionWrap"></div>
 
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">Who to chase</h2>
-          <div class="btn-row" style="margin-top:0;">
-            <button type="button" class="btn btn-ghost btn-icon" id="deb_export_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
-              Export CSV
-            </button>
-            <button type="button" class="btn btn-ghost btn-icon" id="deb_print_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-              Print list
-            </button>
-          </div>
+        <div class="ow-grid">
+          <!-- The register, its toolbar, and the drift banner that has to
+               sit above the rows whose credibility it is about. -->
+          <div id="deb_tableWrap"></div>
+          <div class="ow-side" id="debRailWrap"></div>
         </div>
 
-        <div class="an-toolbar">
-          <div class="field" style="flex:1;min-width:220px;">
-            <label>Search</label>
-            <input id="deb_search" placeholder="Customer name or place...">
-          </div>
-          <label class="sq-select-all-label" style="padding-bottom:9px;"><input type="checkbox" id="deb_hide_no_debt" checked> Hide no debt</label>
-        </div>
-
+        <!-- The band filter is echoed down here where the rows it removed
+             would have been, with the way out beside it. A filter you
+             cannot see is a filter you forget you set. -->
         <div id="debFilterNote"></div>
-        <div class="an-scroll" id="deb_tableWrap"></div>
       </div>
     </section>
 
@@ -19491,8 +19695,13 @@ function updateTopbarWhere(tab){
    Every screen is on the rail, so this is not a way to reach something
    otherwise hidden -- it is a way to reach it without reading. It earns
    its place twice over on the screens deliberately named for the
-   question they answer: "Who owes you" is a better name than "Debtors
-   list" and a worse thing to scan for, and typing either finds it. */
+   question they answer: "Who you owe" is a better name than "Creditors
+   list" and a worse thing to scan for, and typing either finds it.
+
+   Which is why the keywords matter as much as the labels. Debtors was
+   called "Who owes you" until the day it was drawn as a console; the
+   old name is still what some people will type, and it still finds the
+   screen. Renaming a door should never make it harder to open. */
 const navSearchInput = document.getElementById('navSearch');
 /* Read off the element rather than written out again, so the two can
    never disagree about what the box says on a computer. */
@@ -25884,7 +26093,7 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
   saveData();
   renderQuoteAll();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
 }));
 
 function loadSavedQuote(id){
@@ -25953,7 +26162,7 @@ function deleteSavedQuote(id){
   renderSavedQuotes();
   renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -27631,7 +27840,7 @@ async function toggleQuoteInvoiced(id){
   renderInvoices();
   renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -27789,7 +27998,7 @@ document.getElementById('pickShortAmend').addEventListener('click', ()=>{
   saveData();
   renderSavedQuotes();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   toast(`Order amended to what was picked — now ${fmtUGX(savedQuoteTotal(q))}. Invoice it when you're ready.`, 6000);
 });
 document.getElementById('pickShortKeep').addEventListener('click', ()=>{
@@ -29032,7 +29241,7 @@ function setInvoicesVoided(quotes, voided){
   saveData();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
 }
 function toggleInvoiceVoided(id){
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -29131,7 +29340,7 @@ function removeInvoicePayment(id, idx){
   document.getElementById('ip_amount').value = (total-paid)>0 ? (total-paid) : '';
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -29362,7 +29571,7 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   resetInvoicePaymentForm();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   toast('Payment recorded' + paymentDatedSuffix(paidOn));
   /* Money in, paper out -- the supermarket moment, and the only one that
      prints without being asked. Last, so a printer that is off or a
@@ -36352,7 +36561,7 @@ function deleteCustomerDebtLog(customerId, logId){
     deleteCustomerDebtLog(customerId, Number(btn.dataset.id));
   }));
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -36441,7 +36650,7 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
   renderCustomers(document.getElementById('c_search').value);
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
   toast((editingCustomerDebtType==='charge' ? 'Charge recorded' : 'Payment recorded')
     + paymentDatedSuffix(happenedOn));
 });
@@ -37006,7 +37215,10 @@ function pruneDebtChases(){
 }
 
 function debRowsForList(filter=''){
-  const hideNoDebt = document.getElementById('deb_hide_no_debt').checked;
+  /* The toggle is rendered with the toolbar rather than standing in the
+     markup, so its state lives here and not on an element that may not
+     exist yet. */
+  const hideNoDebt = debHideSettled;
   const tokens = searchTokens(filter);
   let rows = debAllRows();
   if(hideNoDebt) rows = rows.filter(r=>r.debt>0);
@@ -37155,7 +37367,7 @@ function debtDriftTargetNow(customerId, expectedDrift){
 function afterDebtDriftRepair(){
   saveData();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  renderDebtorsList();
 }
 function explainDebtDrift(customerId){
   const at = debtDriftTargetNow(customerId);
@@ -37253,90 +37465,118 @@ function renderDebtorsPosition(){
   const p = debAgingProfile();
 
   if(!p.customers){
-    // A shop with no customers yet has not "settled up" -- it has not
-    // started. Saying the second to somebody on their first day reads
-    // as the app misunderstanding what it is looking at.
+    /* NO STRIP OF ZEROS. Four tiles reading 0 is data slop: it fills a
+       settled screen with figures that mean nothing, and makes a book
+       that is straight look like a screen that is broken. One sentence
+       is the whole state.
+
+       A shop with no customers yet has not "settled up" -- it has not
+       started. Saying the second to somebody on their first day reads
+       as the app misunderstanding what it is looking at. */
     const any = (data.customers||[]).length > 0;
-    wrap.innerHTML = `<div class="age-pos-clear">
-      <b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
-      <span>${any ? 'Every customer on file is settled up.' : 'Debts appear here once a customer takes goods on credit.'}</span>
+    wrap.innerHTML = `<div class="ow-pan ow-db-clear">
+      <div class="ow-empty"><b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
+      ${any ? 'Every customer on file is settled up. A balance appears here the moment somebody takes goods on credit.'
+            : 'Debts appear here once a customer takes goods on credit.'}</div>
     </div>`;
     return;
   }
 
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
   const share = (n)=> p.total > 0 ? n / p.total : 0;
   const pct = (n)=> Math.round(share(n) * 100);
   const live = p.bands.filter(b=> b.amount > 0);
+  const worst = p.bands.find(b=> b.key === 'b90p');
+  const unknown = p.bands.find(b=> b.key === 'unknown');
 
-  /* flex-grow carries the proportion, and a floor keeps a 1% band from
-     collapsing into a line nobody can hit. The floor distorts the
-     picture slightly; a segment too small to click is worse. */
-  const segs = live.map(b=> `<button type="button" class="age-seg age-${b.key}${debBandFilter===b.key?' on':''}"
+  /* ---- the strip ----
+     Four questions and not one more. Every tile is a fact about the
+     SHAPE of the money, which is what this screen is for; who owes it
+     is the list underneath. */
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const tiles = [
+    /* Ink, not crimson. Being owed money by a shop's own customers is
+       trade, not a warning -- and this figure is coloured on no screen
+       in the app. What the old page did wrong was set it in Archivo
+       Black, which is loaded for PAGE NAMES: money is mono here like
+       every other figure the shop can act on. */
+    tile('Owed to you', `${f(p.total)}<span class="ow-u">UGX</span>`,
+      `Across ${p.customers} customer${p.customers===1?'':'s'} &middot; the whole book, whatever the list below is filtered to`),
+  ];
+  /* The bad news, or -- when there is none -- the oldest thing there is.
+     A shop with nothing over ninety days should not be shown an empty
+     crimson tile, and it should not be shown nothing either: how old the
+     oldest money is, is worth a tile on any book. */
+  if(worst && worst.amount > 0){
+    tiles.push(tile('Over 90 days', `${f(worst.amount)}<span class="ow-u">UGX</span>`,
+      `<b>${pct(worst.amount)}%</b> of it, from ${worst.count} customer${worst.count===1?'':'s'}. Money this old rarely arrives on its own`,
+      'ow-bad'));
+  } else {
+    const dated = debAllRows().filter(r=> r.debt > 0.5 && r.ageDays >= 0);
+    const oldest = dated.reduce((m,r)=> (!m || r.ageDays > m.ageDays) ? r : m, null);
+    tiles.push(tile('Oldest balance',
+      oldest ? `${oldest.ageDays}<span class="ow-u">days</span>` : '&mdash;',
+      oldest ? `${esc(oldest.name)} &middot; ${f(oldest.debt)} UGX`
+             : 'nothing here has a dated charge behind it',
+      oldest && oldest.ageDays >= 30 ? 'ow-warn' : ''));
+  }
+  /* How exposed the shop is to one name. Withheld when there is only one
+     debtor: "largest single debt, 100% of the total" is not a finding
+     when it is also the only debt, it is the same number twice. */
+  const big = p.customers > 1 ? p.biggest : null;
+  if(big) tiles.push(tile('Largest single debt', `${f(big.debt)}<span class="ow-u">UGX</span>`,
+    `${esc(big.name)} &middot; <b>${pct(big.debt)}%</b> of everything you are owed`));
+  /* Amber, and only when there is any: a figure whose age cannot be
+     worked out is a caution with a repair attached, and this is the only
+     screen that can carry out the repair. */
+  if(unknown && unknown.amount > 0) tiles.push(tile('Age not known',
+    `${f(unknown.amount)}<span class="ow-u">UGX</span>`,
+    `${unknown.count} customer${unknown.count===1?'':'s'} with nothing dated behind the balance, so no age can be worked out`,
+    'ow-warn'));
+
+  /* ---- the age of the money: ONE device, a bar with a legend ----
+     It was a 16px stacked bar AND five bordered cards repeating the same
+     five figures, both of them the filter -- one fact in two voices,
+     across about 120px of height. The bar keeps the proportion, because
+     one big old balance is the problem and three small fresh ones are
+     not; the cards become a legend that labels it. Same figures, same
+     click targets, half the height, and the legend is plainly
+     subordinate to the bar instead of arguing with it.
+
+     Widths come from the money in each band. A floor keeps a 1% band
+     from collapsing into a line nobody can hit: it distorts the picture
+     slightly, and a segment too small to click is worse. */
+  const segs = live.map(b=> `<button type="button" class="ow-db-ag-s ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
       style="flex-grow:${b.amount}"
       data-band="${esc(b.key)}"
       title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'}">
       <span class="sr-only">${esc(b.label)}</span></button>`).join('');
 
-  const cards = live.map(b=> `<button type="button" class="age-band age-${b.key}${debBandFilter===b.key?' on':''}"
+  const legend = live.map(b=> `<button type="button" class="ow-db-ag-b ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
       data-band="${esc(b.key)}">
-      <span class="age-band-label">${esc(b.short)}</span>
-      <b class="age-band-amt">${esc(fmtUGX(Math.round(b.amount)))}</b>
-      <span class="age-band-meta">${b.count} customer${b.count===1?'':'s'} · ${pct(b.amount)}%</span>
+      <span class="ow-db-ag-t">${esc(b.short)}</span>
+      <span class="ow-db-ag-v">${f(b.amount)}</span>
+      <span class="ow-db-ag-m">${b.count} customer${b.count===1?'':'s'} &middot; ${pct(b.amount)}%</span>
     </button>`).join('');
 
-  const worst = p.bands.find(b=> b.key === 'b90p');
-  const unknown = p.bands.find(b=> b.key === 'unknown');
-
-  /* One sentence, only when there is something to say. A shop with
-     nothing over ninety days does not need to be told so in red. */
-  const worstLine = worst && worst.amount > 0
-    ? `<div class="age-verdict bad">
-        <b>${esc(fmtUGX(Math.round(worst.amount)))}</b> has been owing for more than 90 days —
-        ${pct(worst.amount)}% of everything you are owed, across
-        ${worst.count} customer${worst.count===1?'':'s'}. Money this old rarely arrives on its own.
-      </div>`
-    : '';
-
-  const unknownLine = unknown && unknown.amount > 0
-    ? `<div class="age-verdict quiet">
-        <b>${esc(fmtUGX(Math.round(unknown.amount)))}</b> has no dated charge behind it, so how long it
-        has been owing cannot be worked out. That balance was usually typed in rather than built up
-        from charges — open the customer and check their history.
-      </div>`
-    : '';
-
-  /* How exposed the shop is to one name. Withheld when there is only one
-     debtor: "largest single debt, 100% of the total" is not a finding
-     when it is also the only debt, it is the same number twice. */
-  const big = p.customers > 1 ? p.biggest : null;
-  const concentration = big
-    ? `<div class="age-pos-aside">
-        <span class="age-pos-aside-label">Largest single debt</span>
-        <b>${esc(fmtUGX(Math.round(big.debt)))}</b>
-        <span class="age-pos-aside-meta">${esc(big.name)} · ${pct(big.debt)}% of the total</span>
-      </div>`
-    : '';
-
-  wrap.innerHTML = `<div class="age-pos">
-    <div class="age-pos-head">
-      <div class="age-pos-total">
-        <span class="age-pos-label">Owed to you</span>
-        <b>${esc(fmtUGX(Math.round(p.total)))}</b>
-        <span class="age-pos-meta">across ${p.customers} customer${p.customers===1?'':'s'}</span>
-      </div>
-      ${concentration}
+  wrap.innerHTML = `<div class="ow-strip ow-db-strip${tiles.length < 4 ? ' ow-db-s' + tiles.length : ''}">${tiles.join('')}</div>
+  <div class="ow-pan ow-db-ag-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Age of what you are owed</span>
+      <span class="ow-pan-n ow-hide-sm">the whole book &mdash; ${debBandFilter ? 'tap the lit band to show everyone' : 'tap a band to work through it'}</span>
     </div>
-    <div class="age-bar" role="group" aria-label="What you are owed, split by age">${segs}</div>
-    <div class="age-bands">${cards}</div>
-    ${worstLine}
-    ${unknownLine}
+    <div class="ow-db-ag">
+      <div class="ow-db-ag-bar" role="group" aria-label="What you are owed, split by age">${segs}</div>
+      <div class="ow-db-ag-l">${legend}</div>
+    </div>
   </div>`;
 
   wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
     // Clicking the band you are already in takes the filter off, so the
     // way out is the same control as the way in.
     debBandFilter = (debBandFilter === el.dataset.band) ? '' : el.dataset.band;
-    renderDebtorsList(document.getElementById('deb_search').value);
+    renderDebtorsList();
   }));
 }
 
@@ -37949,6 +38189,51 @@ function renderChaseScreen(){
       : q.blocked.every(r=> r.why === 'undated') ? 'nothing dated behind the balance' : 'for checking before anyone is asked', 'ow-warn'));
   let html = `<div class="ow-strip ch-strip${tiles.length === 5 ? ' ow-strip-5' : ''}">${tiles.join('')}</div>`;
 
+  /* ---- the age of the whole book, read-only ----
+     The question this answers is the one somebody working the queue
+     keeps having to leave the screen for: of everything I am owed, how
+     much of it is old? Read from debAgingProfile(), the same reading
+     Debtors draws, so the two screens cannot disagree about it by
+     construction.
+
+     IT IS NOT A FILTER, and it says which figures it is describing.
+     This queue is built from the shop's terms, the rest period and who
+     has named a day: if an age band could narrow it, the queue would
+     stop being the day's work and the strip above would start describing
+     a slice of the shop rather than the shop. So a band OPENS DEBTORS
+     filtered to it -- one age filter, on the screen that owns the whole
+     book, reachable from both.
+
+     And it is labelled "the whole book, not just this queue" because the
+     queue is a subset: the bar totals more than the strip above it does,
+     and a figure that does not say what it is measuring is a figure
+     somebody stops trusting. */
+  const prof = debAgingProfile();
+  if(prof.customers){
+    const liveBands = prof.bands.filter(b=> b.amount > 0);
+    html += `<div class="ow-pan ch-age">
+      <div class="ow-pan-h">
+        <span class="ow-pan-t">Age of everything you are owed</span>
+        <span class="ow-pan-n ow-hide-sm">the whole book &mdash; not just this queue</span>
+      </div>
+      <div class="ow-db-ag">
+        <div class="ow-db-ag-bar" role="img" aria-label="What you are owed, split by age">
+          ${liveBands.map(b=> `<span class="ow-db-ag-s ow-band-${b.key}" style="flex-grow:${b.amount}"
+            title="${esc(b.label)}: ${esc(f(b.amount))} from ${b.count} customer${b.count===1?'':'s'}"></span>`).join('')}
+        </div>
+        <div class="ow-db-ag-l">
+          ${liveBands.map(b=> `<button type="button" class="ow-db-ag-b ow-band-${b.key}" data-age-band="${esc(b.key)}"
+            title="Open Debtors, showing ${esc(b.label.toLowerCase())} only">
+            <span class="ow-db-ag-t">${esc(b.short)}</span>
+            <span class="ow-db-ag-v">${n(b.amount)}</span>
+            <span class="ow-db-ag-m">${b.count} customer${b.count===1?'':'s'}</span>
+          </button>`).join('')}
+        </div>
+        <p class="ow-mini ch-age-n">Reading only. This queue is who is past your terms &mdash; tapping a band opens <b>Debtors</b>, where the whole book lives and the filter belongs.</p>
+      </div>
+    </div>`;
+  }
+
   /* ---- the queue ---- */
   const queueRow = (r)=> {
     const meta = [r.location,
@@ -37989,7 +38274,7 @@ function renderChaseScreen(){
       `chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())} ago`,
       `<button type="button" class="btn btn-ghost ow-sm chase-promise" data-id="${esc(r.id)}">They promised…</button><button type="button" class="btn btn-ghost ow-sm chase-undo" data-id="${esc(r.id)}">Chase again</button>`)).join('')}</div>`;
   if(q.blocked.length) quiet += `<div class="ch-grp"><div class="ch-g">Held back until the balance is checked</div>${q.blocked.map(r=> quietRow(r,
-      r.why === 'drift' ? 'this balance does not match its own history, so no demand is written for it — fix it on Who owes you'
+      r.why === 'drift' ? 'this balance does not match its own history, so no demand is written for it — fix it on Debtors'
                         : 'nothing dated behind this balance, so there is no age to measure against your terms', '', true)).join('')}</div>`;
   const quietPanel = `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Deliberately not asked</span>${quietCount ? `<span class="ow-pan-n">${quietCount} · ${n(quietSum)}</span>` : ''}</div>
@@ -38072,6 +38357,14 @@ function renderChaseScreen(){
     return box ? box.value : '';
   };
   const rowFor = (id)=> q.due.find(r=> r.id === id);
+  /* A band is a DOOR, not a filter: it takes the reader to the screen
+     that owns the whole book, with that band already narrowed. Setting
+     debBandFilter here rather than on arrival keeps the filter in one
+     place -- Debtors reads it, and this screen only ever writes it. */
+  el.querySelectorAll('[data-age-band]').forEach(btn=> btn.addEventListener('click', ()=>{
+    debBandFilter = btn.dataset.ageBand;
+    goToTab('analytics-debtors');
+  }));
   el.querySelectorAll('.ch-row').forEach(btn=> btn.addEventListener('click', ()=>{
     chaseSelectedId = btn.dataset.id;
     renderChaseScreen();
@@ -38476,39 +38769,116 @@ document.getElementById('chase_rules_btn').addEventListener('click', ()=>{
   if(open) document.getElementById('chase_after').focus();
 });
 
-function renderDebtorsList(filter=''){
-  const wrap = document.getElementById('deb_tableWrap');
-  const rows = debRowsForList(filter);
-  debLastRows = rows;
-  const driftBanner = debtDriftBannerHTML();
-  renderDebtorsPosition();
-  renderDebFilterNote(rows.length);
-  if(rows.length===0){
-    wrap.innerHTML = driftBanner + (data.customers.length===0
-      ? '<div class="empty">No customers yet — add one in the Customers tab.</div>'
-      : debBandFilter
-        ? `<div class="empty">Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band with the current search.</div>`
-        : '<div class="empty">No debtors match this filter.</div>');
-    // Drift can exist on a customer the current filter hides, so the fix
-    // has to be reachable from this path too, not just the populated one.
-    wireDebtDriftFix(wrap);
-    return;
-  }
-  const sortArrow = (key)=> DEB_SORT_STATE.key===key ? `<span class="sort-arrow">${DEB_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
-  const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
+/* THE REGISTER.
 
-  // The age, coloured by its band. A day count on its own makes the
-  // reader do the banding in their head, thirty rows at a time.
-  const agePill = (r)=>{
-    const def = agingBandDef(r.band);
-    return `<span class="age-pill age-${r.band}" title="${esc(def ? def.label : '')}">${esc(
-      r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
+   One 44px row per debtor, opening in place, and the same call emits the
+   phone's card -- so the console and the phone can never say different
+   things about what somebody owes.
+
+   WHAT THE OLD TABLE SAID TWICE. The age of a balance was carried by a
+   coloured pill AND a 3px coloured stripe down the first cell. Two
+   devices, one fact -- and since every balance has an age, every row was
+   coloured, which is a marker that marks nothing. The age is one chip
+   now, and it is toned only when the money is genuinely old.
+
+   WHERE THE ACCENT WENT. btn-accent appeared nowhere on this screen:
+   "Receive" was a 12px grey text link in the last cell, quieter than
+   "Export CSV", while oxide was spent as the 60-90 day band colour, as a
+   row stripe and on a name hover. Oxide is not a band any more, and it
+   appears once, on "Receive a payment" inside the one open row -- beside
+   the invoices that payment will clear. */
+let debSearch = '';
+/* Named for what it does rather than against what it hides. It was
+   "Hide no debt", a double negative over a checkbox nudged into line
+   with padding-bottom:9px. */
+let debHideSettled = true;
+// Which debtor is open. One at a time: the invoices behind a balance are
+// the reason to open one, and two sets of them side by side is a wall.
+let debOpenId = null;
+
+/* The four ways this list is worth ordering, as one control. The old
+   screen sorted by clicking column headings, which a queue of rows has
+   nowhere to put -- and three of the six headings were not sortable
+   anyway. DEB_SORT_STATE is unchanged underneath; this only sets it. */
+const DEB_SORT_CHOICES = [
+  {key:'ageDays',  label:'Oldest money first'},
+  {key:'debt',     label:'Biggest balance first'},
+  {key:'lastPaid', label:'Quietest customer first'},
+  {key:'name',     label:'Customer name, A to Z'},
+];
+
+function renderDebtorsList(){
+  const wrap = document.getElementById('deb_tableWrap');
+  if(!wrap) return;
+  const rows = debRowsForList(debSearch);
+  debLastRows = rows;
+  renderDebtorsPosition();
+  renderDebtorsRail();
+  renderDebFilterNote(rows.length);
+
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
+  const allRows = debAllRows();
+  const owingAll = allRows.filter(r=> r.debt > 0.5);
+  const bandDef = debBandFilter ? agingBandDef(debBandFilter) : null;
+
+  /* ---- the toolbar ----
+     Search, the toggle, the sort and the two things that leave the
+     screen, in one band directly above the rows they act on. All four
+     already existed; they were unfindable because search sat in a form
+     field with a floating label, and Print and Export sat up in the
+     panel head, one heading away from the list and ABOVE the search box
+     that decides what they will contain. */
+  const sortLabel = (DEB_SORT_CHOICES.find(c=> c.key === DEB_SORT_STATE.key) || DEB_SORT_CHOICES[0]).label;
+  const toolbar = `<div class="ow-tb">
+    <label class="ow-f ow-f-grow ow-tb-s${debSearch ? ' ow-set' : ''}">
+      <span class="ow-f-l">Find a customer</span>
+      <span class="ow-f-in">
+        <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <input class="ow-f-v ow-f-t" id="deb_search" type="text" placeholder="Name or place" value="${esc(debSearch)}">
+      </span>
+    </label>
+    <div class="ow-f">
+      <span class="ow-f-l">Order</span>
+      <span class="ow-f-in">
+        <select class="ow-f-sel" id="deb_sort" aria-label="How the list is ordered">
+          ${DEB_SORT_CHOICES.map(c=> `<option value="${c.key}"${DEB_SORT_STATE.key===c.key?' selected':''}>${esc(c.label)}</option>`).join('')}
+        </select>
+      </span>
+    </div>
+    <button type="button" class="btn btn-ghost ow-sm ow-db-tg${debHideSettled ? ' ow-on' : ''}"
+      id="deb_hide_no_debt" role="switch" aria-checked="${debHideSettled}">
+      <svg class="icon" viewBox="0 0 24 24">${debHideSettled
+        ? '<path d="M4 12.5l5 5L20 6.5"/>'
+        : '<rect x="4" y="4" width="16" height="16" rx="2"/>'}</svg>
+      Hide settled</button>
+    ${debBandFilter ? `<button type="button" class="ow-cp ow-warn ow-db-fc" id="deb_band_chip"
+      title="Showing only ${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')} — tap to show everyone">
+      ${esc(bandDef ? bandDef.short : 'one band')} only
+      <svg class="ow-db-fc-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>` : ''}
+    ${rows.length ? `<span class="ow-tb-n">
+      <button type="button" class="btn btn-ghost ow-sm" id="deb_print_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+        ${debBandFilter || debSearch ? `Print these ${rows.length}` : 'Print list'}</button>
+      <button type="button" class="btn btn-ghost ow-sm" id="deb_export_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
+        Export CSV</button>
+    </span>` : ''}
+  </div>`;
+
+  /* ---- the age chip ----
+     ONE device for the age, and toned only where the tone means
+     something: crimson past sixty days, amber past thirty and on a
+     balance whose age cannot be worked out at all, plain otherwise. A
+     figure under a month is ordinary trade and is not marked. */
+  const ageChip = (r)=>{
+    const tone = r.ageDays < 0 ? ' ow-warn'
+      : r.ageDays >= 60 ? ' ow-bad'
+      : r.ageDays >= 30 ? ' ow-warn' : '';
+    return `<span class="ow-cp${tone}">${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
   };
-  // When somebody last paid ANYTHING. The single best read on whether a
-  // customer has gone quiet, and the list has never carried it.
-  const paidCell = (r)=> r.lastPaid
-    ? `<span class="age-paid">${esc(fmtShortDate(r.lastPaid))}</span><span class="age-paid-ago">${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="age-never">Never paid</span>';
+
   /* How far through their CURRENT debt they are. Absent rather than
      empty when there is nothing to measure it from: a bar at zero would
      say they have paid nothing, which is a claim about somebody's
@@ -38519,7 +38889,7 @@ function renderDebtorsList(filter=''){
       const why = (p && p.reason === 'drift')
         ? 'This balance does not match its own history, so anything measured from that history would describe a different figure. Fix it with the note above.'
         : 'No dated charges behind this balance, so there is nothing to measure against.';
-      return `<span class="deb-prog-none" title="${esc(why)}">—</span>`;
+      return `<span class="deb-prog-none" title="${esc(why)}">&mdash;</span>`;
     }
     const pct = Math.round(p.pct*100);
     return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} charged on what is still open">
@@ -38528,98 +38898,244 @@ function renderDebtorsList(filter=''){
     </div>`;
   };
 
-  const receiveBtn = (r)=> `<button type="button" class="age-act deb-receive" data-id="${esc(r.id)}">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>
-      Receive</button>`;
+  /* When somebody last paid ANYTHING. The single best read on whether a
+     customer has gone quiet -- and never-paid is crimson because it is
+     the one value in this column worth stopping on: a customer who never
+     started is a different thing from one who has gone quiet, and only
+     the first is a reason not to sell to them again. */
+  const paidCell = (r)=> r.lastPaid
+    ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
+    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>no payment of any size</span>';
 
-  const cardsHtml = rows.map(r=>`
-    <div class="pi-card age-card age-edge-${r.band}">
-      <div class="pi-card-top">
-        <div class="pi-card-title">
-          <button type="button" class="age-name" data-stats="${esc(r.id)}">${esc(r.name)}</button>
-        </div>
-        ${agePill(r)}
-      </div>
-      ${r.location ? `<div class="pi-card-meta"><div>${esc(r.location)}</div></div>` : ''}
-      <div class="age-card-foot">
-        <span class="age-card-amt">${fmtUGX(Math.round(r.debt))}</span>
-        <span class="age-card-paid">${paidCell(r)}</span>
-      </div>
-      <div class="deb-card-prog">${progressCell(r)}</div>
-      <div class="age-card-act">${receiveBtn(r)}</div>
-    </div>`).join('');
+  /* ---- one debtor, opened ----
+     The invoices behind the balance, from the same reading Chase debts
+     names them by, so the two screens cannot list a customer's invoices
+     differently. This is what the screen is for: seeing WHY the figure
+     is what it is before anybody is asked for it. */
+  const openBody = (r)=>{
+    const p = r.progress;
+    const invs = debtChaseInvoices(r.id);
+    const listed = invs.reduce((s,i)=> s + i.due, 0);
+    const carried = r.debt - listed;
+    const why = [
+      `<b>${esc(fmtUGX(Math.round(r.debt)))}</b> still open`,
+      invs.length ? `across ${invs.length} invoice${invs.length===1?'':'s'}` : 'with no invoice behind it',
+      r.ageDays >= 0 ? `and the oldest of it has been owing <b>${r.ageDays}</b> day${r.ageDays===1?'':'s'}`
+                     : 'and nothing dated stands behind it, so its age cannot be worked out',
+    ].join(' ') + '.';
+    const paidLine = p && p.pct !== null
+      ? ` They have paid <b>${esc(fmtUGX(Math.round(p.paid)))}</b> of the <b>${esc(fmtUGX(Math.round(p.charged)))}</b> charged on what is still open.`
+      : '';
 
-  wrap.innerHTML = driftBanner + `<div class="pi-table-wrap"><table class="age-table">
-    <thead><tr>
-      <th class="sortable${DEB_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Customer${sortArrow('name')}</th>
-      <th class="r sortable${DEB_SORT_STATE.key==='debt'?' sorted':''}" data-key="debt">Owing${sortArrow('debt')}</th>
-      <th>Paid off</th>
-      <th class="sortable${DEB_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Owing for${sortArrow('ageDays')}</th>
-      <th class="sortable${DEB_SORT_STATE.key==='lastPaid'?' sorted':''}" data-key="lastPaid">Last payment${sortArrow('lastPaid')}</th>
-      <th></th>
-    </tr></thead>
-    <tbody>${rows.map(r=>`<tr class="age-edge-${r.band}">
-      <td>
-        <button type="button" class="age-name" data-stats="${esc(r.id)}">${esc(r.name)}</button>
-        ${r.location ? `<div class="age-where">${esc(r.location)}</div>` : ''}
-      </td>
-      <td class="price age-amt">${fmtUGX(Math.round(r.debt))}</td>
-      <td>${progressCell(r)}</td>
-      <td>${agePill(r)}</td>
-      <td class="age-paid-cell">${paidCell(r)}</td>
-      <td class="row-actions">${receiveBtn(r)}</td>
-    </tr>`).join('')}</tbody>
-    <tfoot><tr class="inv-total-row">
-      <td class="inv-total-label">${rows.length} customer${rows.length===1?'':'s'}${
-        debBandFilter ? ` · ${esc((agingBandDef(debBandFilter)||{}).short || '')}` : ''}</td>
-      <td class="price">${fmtUGX(Math.round(totalDebt))}</td>
-      <td></td><td></td><td></td><td></td>
-    </tr></tfoot>
-  </table></div>
-  <div class="pi-cards">
-    ${cardsHtml}
-    <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDebt))}</b><span>${rows.length} customer${rows.length===1?'':'s'} shown</span></div>
-    </div>
+    const table = invs.length ? `<div class="ow-tbl" style="--ow-tbl-cols:minmax(0,1fr) 92px 116px">
+      <div class="ow-tbl-h"><span class="ow-tbl-c">Invoice</span><span class="ow-tbl-c">Dated</span><span class="ow-tbl-n">Still open</span></div>
+      ${invs.map(i=> `<div class="ow-tbl-r">
+        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(i.no)}</span>${i.what ? `<span class="ow-tbl-s">${esc(i.what)}</span>` : ''}</span>
+        <span class="ow-tbl-c" data-l="Dated">${esc(i.date ? fmtShortDate(i.date) : 'no date')}</span>
+        <span class="ow-tbl-n" data-l="Still open">${f(i.due)}</span>
+      </div>`).join('')}
+      ${Math.abs(carried) > 0.5 ? `<div class="ow-tbl-f">
+        <span class="ow-tbl-c">${carried > 0 ? 'Carried from before these invoices' : 'The invoices come to more than the balance'}</span>
+        <span class="ow-tbl-c"></span><span class="ow-tbl-n">${f(Math.abs(carried))}</span></div>` : ''}
+    </div>` : `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their debt history on the customer page says where it came from.</p>`;
+
+    return `<div class="ow-q-x">
+      <p class="ow-q-why">${why}${paidLine}</p>
+      ${table}
+      <p class="ow-q-note">A payment clears their <b>oldest invoice first</b>, the way a ledger settles, and posts straight to the cash book. Nothing is asked for from here &mdash; the words for that are on Chase debts, already written.</p>
+      <div class="ow-q-a">
+        <button type="button" class="btn btn-accent ow-sm deb-receive" data-id="${esc(r.id)}">Receive a payment</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-stats="${esc(r.id)}">Their statement</button>
+      </div>
+    </div>`;
+  };
+
+  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
+     emitted together from this one function, so neither can drift from
+     the other -- the guarantee .ow-q was built to give. */
+  const rowHTML = (r)=>{
+    const open = r.id === debOpenId;
+    const meta = [r.location,
+      r.lastPaid ? 'last paid ' + fmtShortDate(r.lastPaid) : 'never paid',
+      r.progress && r.progress.pct !== null ? Math.round(r.progress.pct*100) + '% paid off' : '',
+    ].filter(Boolean).join(' · ');
+    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(r.id)}">
+      <button type="button" class="ow-q-r" data-open="${esc(r.id)}" aria-expanded="${open}">
+        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="ow-q-t" title="${esc(r.name)}${r.location ? ' · ' + esc(r.location) : ''}"><span class="ow-q-who">${esc(r.name)}</span>${
+          r.location ? `<span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${esc(r.location)}</span>` : ''}</span>
+        <span class="ow-db-pr">${progressCell(r)}</span>
+        ${paidCell(r)}
+        <span class="ow-q-m">${ageChip(r)}</span>
+        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span></span>
+      </button>
+      <button type="button" class="ow-q-card" data-open="${esc(r.id)}" aria-expanded="${open}">
+        <div class="ow-q-cm">${ageChip(r)}
+          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+        <p class="ow-q-ct">${esc(r.name)}</p>
+        <span class="ow-q-cv">${f(r.debt)}<span class="ow-q-b">${
+          r.ageDays >= 0 ? 'owing ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span></span>
+        <p class="ow-q-note ow-db-cmeta">${esc(meta)}</p>
+      </button>
+      ${open ? openBody(r) : ''}
+    </div>`;
+  };
+
+  /* THE COLUMN NAMES. Five columns of which three are figures need
+     saying, and a queue of rows has no <thead> to say them in. Hidden on
+     the phone, where every cell that had a name carries its own. */
+  const head = `<div class="ow-db-h">
+    <span></span><span>Customer</span><span>Paid off</span><span>Last payment</span>
+    <span class="ow-db-h-c">Owing for</span><span class="ow-db-h-r">Owing</span>
   </div>`;
 
-  wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
-    const key = th.dataset.key;
-    if(DEB_SORT_STATE.key===key) DEB_SORT_STATE.dir *= -1;
-    else { DEB_SORT_STATE.key = key; DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[key] || -1; }
-    renderDebtorsList(document.getElementById('deb_search').value);
+  /* Named rather than dropped: what the filters removed is said where it
+     would have been, with the figure it takes with it. */
+  const hiddenCount = owingAll.length - rows.filter(r=> r.debt > 0.5).length;
+  const hiddenSum = owingAll.reduce((s,r)=>s+r.debt,0) - totalDebt;
+  const foot = rows.length && hiddenCount > 0
+    ? `<p class="ow-mini">${debBandFilter ? `Showing <b>${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')}</b> only. ` : ''}${
+        hiddenCount} customer${hiddenCount===1?'':'s'} owing <b>${f(hiddenSum)}</b> ${hiddenCount===1?'is':'are'} not listed${
+        debSearch ? ' by the search and the filters' : ''}. A printed sheet says the same on its face.</p>`
+    : '';
+
+  const empty = data.customers.length === 0
+    ? '<div class="ow-empty"><b>No customers yet.</b> Add one on the Customers screen, or just sell to somebody by name &mdash; a balance appears here the moment they take goods on credit.</div>'
+    : debBandFilter
+      ? `<div class="ow-empty"><b>Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit band above to show everyone.</div>`
+      : debSearch
+        ? `<div class="ow-empty"><b>No customer matches &ldquo;${esc(debSearch)}&rdquo;.</b> Search a name or a place.</div>`
+        /* The panel above has already said nobody owes anything, and
+           saying it again here is the screen agreeing with itself out
+           loud. What is left to say is what this panel is hiding. */
+        : debHideSettled
+          ? `<div class="ow-empty">Nothing to list. <b>Hide settled</b> is on, so the ${data.customers.length} settled customer${data.customers.length===1?'':'s'} on file ${data.customers.length===1?'is':'are'} not shown &mdash; turn it off to see everyone.</div>`
+          : '<div class="ow-empty">No customer on file is carrying a balance.</div>';
+
+  wrap.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Debtors</span>
+      <span class="ow-pan-n">${rows.length ? `${rows.length}${
+        rows.length !== owingAll.length ? ' of ' + owingAll.length : ''} &middot; ${f(totalDebt)}${
+        debBandFilter || debSearch ? ' shown' : ''}` : 'none'}</span>
+    </div>
+    ${toolbar}
+    ${debtDriftBannerHTML()}
+    ${rows.length ? head + rows.map(rowHTML).join('') + foot : empty}
+  </div>`;
+
+  wireDebToolbar(wrap);
+  /* Drift can exist on a customer the current filter hides, so the fix
+     has to be reachable from the empty path too, not just the populated
+     one. */
+  wireDebtDriftFix(wrap);
+
+  wrap.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
+    // Clicking the row that is open closes it: the way out is the way in.
+    debOpenId = (debOpenId === btn.dataset.open) ? null : btn.dataset.open;
+    renderDebtorsList();
   }));
-  wrap.querySelectorAll('.deb-receive').forEach(btn=>btn.addEventListener('click', ()=>{
+  wrap.querySelectorAll('.deb-receive').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
   // Before chasing somebody it helps to see who they are and what they
   // have bought. The statement to hand them prints from there too.
-  wrap.querySelectorAll('[data-stats]').forEach(btn=>btn.addEventListener('click', ()=>{
+  wrap.querySelectorAll('[data-stats]').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
     openCustomerStats(btn.dataset.stats);
   }));
-  wireDebtDriftFix(wrap);
 }
 
-/* The band filter lives up in the bar, so its effect is echoed down here
-   where the rows it removed would have been -- with the way out beside
-   it. A filter you cannot see is a filter you forget you set. */
+/* The toolbar is rendered with the list, so its controls are wired after
+   every render rather than once at parse time -- the pattern the drift
+   fix already uses. Search keeps focus and caret across the re-render it
+   causes, or typing a second letter would put the caret back at the
+   start. */
+function wireDebToolbar(wrap){
+  const box = wrap.querySelector('#deb_search');
+  if(box){
+    box.addEventListener('input', (e)=>{
+      const at = e.target.selectionStart;
+      debSearch = e.target.value;
+      renderDebtorsList();
+      const again = document.getElementById('deb_search');
+      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(_){} }
+    });
+  }
+  const sort = wrap.querySelector('#deb_sort');
+  if(sort) sort.addEventListener('change', (e)=>{
+    DEB_SORT_STATE.key = e.target.value;
+    DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[e.target.value] || -1;
+    renderDebtorsList();
+  });
+  const tg = wrap.querySelector('#deb_hide_no_debt');
+  if(tg) tg.addEventListener('click', ()=>{ debHideSettled = !debHideSettled; renderDebtorsList(); });
+  const chip = wrap.querySelector('#deb_band_chip');
+  if(chip) chip.addEventListener('click', ()=>{ debBandFilter = ''; renderDebtorsList(); });
+  const prt = wrap.querySelector('#deb_print_btn');
+  if(prt) prt.addEventListener('click', debPrintList);
+  const exp = wrap.querySelector('#deb_export_btn');
+  if(exp) exp.addEventListener('click', debExportCSV);
+}
+
+/* THE RAIL. Why the figure beside a customer is the figure it is, three
+   derived readings, and the handoff to the screen that does the asking.
+   Derived, never invented: every number here is read from the books. */
+function renderDebtorsRail(){
+  const el = document.getElementById('debRailWrap');
+  if(!el) return;
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const p = debAgingProfile();
+  const q = debtChaseRows();
+  const dueSum = q.due.reduce((s,r)=> s + r.debt, 0);
+
+  el.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">How a balance is worked out</span></div>
+    <p class="ow-db-rl">Every figure here is the <b class="ow-db-em">charges not yet paid</b>, walked oldest first the way a ledger settles. So the age beside a customer is the age of the money still open &mdash; not the day they last came in.</p>
+    ${p.customers ? `<div class="ow-sr"><span class="ow-sr-k">Owed to you</span><span class="ow-sr-v">${f(p.total)}<span class="ow-u">UGX</span></span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Of it, past your ${q.graceDays}&#8209;day terms</span><span class="ow-sr-v${dueSum > 0 ? ' ow-bad' : ''}">${f(dueSum)}<span class="ow-u">UGX</span></span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Customers carrying a balance</span><span class="ow-sr-v">${p.customers}</span></div>`
+    /* Three rows reading 0 is the strip of zeros again, in the rail. A
+       settled book has one thing to say and it has been said above. */
+    : `<p class="ow-db-rl">Nothing is outstanding, so there is nothing here to break down.</p>`}
+  </div>
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Asking for it</span></div>
+    <p class="ow-db-rl">${q.due.length
+      ? `<b class="ow-db-em">Chase debts</b> has the ${q.due.length} past your terms, worst aged first, each with the message already written from their own invoices. Nobody is chased inside the grace period, and nothing sends itself.`
+      : `<b class="ow-db-em">Chase debts</b> has nobody: nothing is past your ${q.graceDays}&#8209;day terms.`}</p>
+    <p class="ow-db-rl">This screen is the whole book, and where money is received. That one is the day's work.
+      <button type="button" class="ow-db-go" id="deb_to_chase">Open Chase debts</button></p>
+  </div>
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What a payment does</span></div>
+    <p class="ow-db-rl">It clears their <b class="ow-db-em">oldest invoice first</b> and posts straight to the cash book. Part payments are fine &mdash; and whatever is left keeps its original age rather than starting again, which is why a balance can be older than the last thing they bought.</p>
+  </div>`;
+
+  const go = el.querySelector('#deb_to_chase');
+  if(go) go.addEventListener('click', ()=> goToTab('chase'));
+}
+
+/* The band filter lives up in the position panel, so its effect is
+   echoed down here where the rows it removed would have been -- with the
+   way out beside it. A filter you cannot see is a filter you forget you
+   set, and then you trust a total that is a slice. */
 function renderDebFilterNote(shown){
   const el = document.getElementById('debFilterNote');
   if(!el) return;
   if(!debBandFilter){ el.innerHTML = ''; return; }
   const def = agingBandDef(debBandFilter);
-  el.innerHTML = `<div class="age-filter-note">
-    <span>Showing only <b>${esc(def ? def.label.toLowerCase() : 'one band')}</b> — ${shown} customer${shown===1?'':'s'}.</span>
-    <button type="button" class="btn btn-ghost" id="debClearBand">Show everyone</button>
+  el.innerHTML = `<div class="ow-pan ow-db-note">
+    <span>Showing only <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'one band')}</b> &mdash; ${shown} customer${shown===1?'':'s'}. The figures above are still the whole book.</span>
+    <button type="button" class="btn btn-ghost ow-sm" id="debClearBand">Show everyone</button>
   </div>`;
   el.querySelector('#debClearBand').addEventListener('click', ()=>{
     debBandFilter = '';
-    renderDebtorsList(document.getElementById('deb_search').value);
+    renderDebtorsList();
   });
 }
-document.getElementById('deb_hide_no_debt').addEventListener('change', ()=>renderDebtorsList(document.getElementById('deb_search').value));
-document.getElementById('deb_search').addEventListener('input', e=>renderDebtorsList(e.target.value));
-document.getElementById('deb_export_btn').addEventListener('click', ()=>{
+function debExportCSV(){
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to export'); return; }
   const lines = [['No.','Customer name','Location','Owing','Owing for (days)','Age band','Last payment'].join(',')];
@@ -38643,8 +39159,8 @@ document.getElementById('deb_export_btn').addEventListener('click', ()=>{
   a.href = url; a.download = `debtors-list-${todayISO()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-});
-document.getElementById('deb_print_btn').addEventListener('click', ()=>{
+}
+function debPrintList(){
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to print'); return; }
   const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
@@ -38674,7 +39190,7 @@ document.getElementById('deb_print_btn').addEventListener('click', ()=>{
     : `${rows.length} customer${rows.length===1?'':'s'}`;
 
   const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Debtors list</title><style>
+  win.document.write(`<html><head><title>Debtors</title><style>
     @page{size:A4 portrait;margin:14mm;}
     body{font-family:Arial,sans-serif;padding:0;color:#1B2430;}
     table{width:100%;border-collapse:collapse;font-size:11.5px;}
@@ -38689,7 +39205,7 @@ document.getElementById('deb_print_btn').addEventListener('click', ()=>{
     .sign{width:70px;}
     tr{page-break-inside:avoid;}
   </style></head><body>
-    <h1>Debtors list</h1>
+    <h1>Debtors</h1>
     <p class="sub">${esc(fmtShortDate(todayISO()))} · ${scope} · ${fmtUGX(Math.round(totalDebt))} listed</p>
 
     <h2>What you are owed, by age — whole book</h2>
@@ -38707,7 +39223,7 @@ document.getElementById('deb_print_btn').addEventListener('click', ()=>{
   win.document.close();
   win.focus();
   win.print();
-});
+}
 
 /* ================= PAYROLL AND RENT =================
 
@@ -48524,7 +49040,7 @@ async function saveCashTxn(column){
       resetCashTxnForms();
       renderCbTransactions(); renderCbSummary(); renderCbTriggers();
       renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-      renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+      renderDebtorsList();
       toast('Cash in recorded');
       return;
     }
@@ -59197,7 +59713,7 @@ const MANAGER_DOORS = {
   consignment: { tab: 'consignment', label: 'Open Consignment' },
   orders: { tab: 'quote-saved', label: 'Open Order tracking' },
   invoices: { tab: 'invoices', label: 'Open Invoices' },
-  debtors: { tab: 'analytics-debtors', label: 'Open Who owes you' },
+  debtors: { tab: 'analytics-debtors', label: 'Open Debtors' },
   creditors: { tab: 'analytics-creditors', label: 'Open Who you owe' },
   followups: { tab: 'followups', label: 'Open Follow-ups' },
   inventory: { tab: 'inventory', label: 'Open Inventory' },

@@ -233,10 +233,20 @@ if (fns) {
     'no balance is touched: the balance is the figure being explained, not the one being changed');
   t.check(/if\(!confirm\(msg\)\) return;/.test(code), 'and it asks first, naming the total');
 
-  // Reachable from both render paths -- drift can sit on a customer the
-  // current filter hides.
-  t.check((code.match(/wireDebtDriftFix\(wrap\);/g) || []).length === 2,
-    'wired from the empty list as well as the populated one');
+  /* Reachable however the list rendered -- drift can sit on a customer
+     the current filter hides, so the repair must not be behind the
+     populated path.
+     ------------------------------------------------------------------
+     It used to be wired TWICE, once on each of renderDebtorsList's two
+     exits. The list has one exit now: the banner is emitted and the fix
+     wired unconditionally, before the rows-or-empty choice, which is
+     why one call is the right number and two would mean the old
+     early-return had come back. */
+  t.check((code.match(/wireDebtDriftFix\(wrap\);/g) || []).length === 1,
+    'wired once, on the single render path that cannot skip it');
+  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(!/return;[\s\S]*wireDebtDriftFix/.test(render.replace(/if\(!wrap\) return;/, '')),
+    'and no early return gets out of the function ahead of it');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -395,8 +395,15 @@ const INDEX = railIndex();
   const labels = (q) => navSearchMatches(q).map((x) => x.label);
   const first = (q) => (navSearchMatches(q)[0] || {}).label;
 
-  t.check(first('debtors') === 'Who owes you',
-    `the old name still finds the new one (${first('debtors')})`);
+  /* Debtors is now called Debtors, so this pair no longer tests the
+     same thing on both sides -- and the half that matters has moved.
+     What has to hold is that the name somebody ALREADY HAS IN THEIR
+     HEAD still opens the screen: "who owes you" was this screen's name
+     until it was redrawn, and renaming a door must never make it harder
+     to open. It is a keyword now. */
+  t.check(first('debtors') === 'Debtors', `the table-shaped word finds it (${first('debtors')})`);
+  t.check(first('who owes you') === 'Debtors',
+    `and the name it used to carry still finds it (${first('who owes you')})`);
   t.check(first('creditors') === 'Who you owe', `and so does the other (${first('creditors')})`);
   t.check(first('stock') === 'Inventory', `a word the screen is not called finds it (${first('stock')})`);
   t.check(first('photos') === 'Media', `and so does what is actually in it (${first('photos')})`);
@@ -526,10 +533,28 @@ const INDEX = railIndex();
     `every KEY that grabs the box is a chord (${keyRoutes.length} key route(s) of ${focuses.length}, ${unguarded.length} unguarded)`);
 }
 
-/* ---------- 9. the labels name the question, not the table ----------- */
+/* ---------- 9. the labels name the question, not the table ----------- *
+ * Still the rule, with ONE screen deliberately out of it.
+ *
+ * Debtors was "Who owes you" on the rail, "Debtors list" in its own
+ * heading and "Who owes you" again in the bar above -- three names for
+ * one screen, which is a defect whichever of them you prefer. Asked to
+ * settle it, the owner chose Debtors. The question-shaped name was worth
+ * less than it cost here: this screen is the one an accountant, a bank
+ * and every other shop already has a word for, and a name being
+ * evocative does not help a screen that cannot agree with itself about
+ * what it is called.
+ *
+ * The rule is not repealed -- "Who you owe", "What's coming" and "What
+ * to buy" still answer questions, and are still checked. The cost of the
+ * exception is paid in keywords, tested above: "who owes you" still
+ * finds it.
+ */
 {
-  t.check(/nav-label">Who owes you</.test(rail), 'the debtors list is named for what it answers');
-  t.check(/nav-label">Who you owe</.test(rail), 'and so is the creditors list');
+  t.check(/nav-label">Debtors</.test(rail), 'the debtors list is named the word the shop already uses');
+  t.check(/data-keywords="[^"]*who owes you/.test(rail),
+    'and the name it used to carry is kept as a keyword rather than dropped');
+  t.check(/nav-label">Who you owe</.test(rail), 'the creditors list is named for what it answers');
   t.check(!/Debtors List</.test(sidebar) && !/Creditors List</.test(sidebar),
     'the table-shaped names are gone from the rail');
   t.check(!/Debtors List</.test(sheet) && !/Creditors List</.test(sheet),

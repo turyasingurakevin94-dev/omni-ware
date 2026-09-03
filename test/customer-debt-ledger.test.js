@@ -199,10 +199,24 @@ const invoice = (id, total, paid) => {
     'the debtors list says nothing at all when everything reconciles');
   t.check(/overstated|understated/.test(banner),
     'and names the direction rather than just flagging a mismatch');
+  /* IT USED TO BE COUNTED: the banner had to appear at least three
+     times in renderDebtorsList, because the function had an early
+     return for the empty list and a separate populated path, and the
+     banner had to be pasted onto every one of them. Forget one and a
+     drifted balance became invisible exactly when the filter hid its
+     customer.
+     ------------------------------------------------------------------
+     There is one path now. The banner is emitted UNCONDITIONALLY, above
+     the point where the rows-or-empty choice is made, so there is no
+     longer a path it can be left off -- which is a stronger guarantee
+     than three copies that have to agree. What is pinned is that
+     structure: emitted once, and not inside the branch. */
   const render = extractFunction(src, 'renderDebtorsList', 'index.html');
-  const uses = (render.match(/driftBanner/g) || []).length;
-  t.check(uses >= 3,
-    `the banner is rendered on the empty path as well as the table path (${uses} references)`);
+  const uses = (render.match(/debtDriftBannerHTML\(\)/g) || []).length;
+  t.check(uses === 1, `the banner is emitted from one place (${uses} references)`);
+  const shell = (/wrap\.innerHTML = `[\s\S]*?`;/.exec(render) || [''])[0];
+  t.check(/\$\{debtDriftBannerHTML\(\)\}[\s\S]*\$\{rows\.length \?/.test(shell),
+    'and above the rows-or-empty choice, so there is no path it can be left off');
 }
 
 process.exit(t.done() ? 1 : 0);

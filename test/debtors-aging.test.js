@@ -307,15 +307,26 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
     'the list reads the same rows the profile totals — one arithmetic, two panels');
 
   /* The two totals sit on one screen, so the smaller one has to say what
-     it is the total OF. Pinned on the tfoot cell specifically: the same
-     "N customers" phrasing appears in the mobile card summary, and a
-     looser check passed on that while the tfoot said "Total". */
+     it is the total OF.
+     ------------------------------------------------------------------
+     WAS PINNED ON A <tfoot> CELL, and there is no longer a table to have
+     one: the list is .ow-q rows that open in place, emitted with their
+     own phone cards from one call. The requirement is unchanged and is
+     now met in two places instead of one -- the panel head counts what
+     is shown AGAINST the whole book ("3 of 14 · 2,180,000 shown"), and
+     the note where the removed rows would have been says how many
+     customers and how much money the filters took away. Both are
+     checked, because the second is the one a reader who has scrolled
+     actually sees. */
   const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  const tfoot = (/<tfoot>[\s\S]*?<\/tfoot>/.exec(render) || [''])[0];
-  t.check(/rows\.length\} customer\$\{rows\.length===1\?'':'s'\}/.test(tfoot),
-    'the table foot counts what it is showing rather than printing a bare Total');
-  t.check(/debBandFilter \?/.test(tfoot),
-    'and names the band when one is narrowing it');
+  const panHead = (/<div class="ow-pan-h">[\s\S]*?<\/div>/.exec(render) || [''])[0];
+  t.check(/rows\.length !== owingAll\.length \? ' of ' \+ owingAll\.length/.test(panHead),
+    'the panel head counts what it is showing against the whole book, not a bare total');
+  t.check(/customer\$\{hiddenCount===1\?'':'s'\} owing/.test(render)
+    && /hiddenSum/.test(render),
+    'and the foot names how many customers, and how much money, the filters removed');
+  t.check(/debBandFilter \?/.test(render) && /bandDef \? bandDef\.label/.test(render),
+    'naming the band when one is narrowing it');
 }
 
 /* ---------- 8. the bar is honest and reachable ----------------------- */
@@ -356,7 +367,13 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 
 /* ---------- 9. what leaves the screen -------------------------------- */
 {
-  const exp = (/deb_export_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  /* The toolbar is RENDERED with the list now rather than standing in
+     the markup, so the two things that leave the screen are named
+     functions the rendered buttons call, not listeners bound to
+     elements at parse time -- which would have thrown on load, since
+     #deb_export_btn no longer exists when the script runs. The
+     behaviour they are held to is unchanged. */
+  const exp = (/function debExportCSV\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/r\.ageDays < 0 \? '' : r\.ageDays/.test(exp),
     'an unknown age exports blank, not 0 — a spreadsheet will average a zero in');
   t.check(/r\.lastPaid \|\| 'Never'/.test(exp),
@@ -370,11 +387,15 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
      very block uses the words "whole book" -- checking the extracted
      handler for that phrase passed while the heading said something
      else entirely. The markup itself is what has to be pinned. */
-  const prt = (/deb_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  const prt = (/function debPrintList\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const p = debAgingProfile\(\);/.test(prt),
     'the print carries the aging profile, not just the rows');
   t.check(/<h2>What you are owed, by age — whole book<\/h2>/.test(prt),
     'and says on its face that the profile is the whole book');
+  /* Which is the whole shape of what the printed sheet promises: the
+     PROFILE is always the book, the LIST is what is on screen, and the
+     sheet says which. A printed page that under-reports what is owed,
+     or that cannot say what it is a list of, is worse than none. */
   t.check(/\$\{scope\}/.test(prt),
     'while the list says which customers it is actually listing');
 }
@@ -470,7 +491,13 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 /* ---------- 12. what the cell says ----------------------------------- */
 {
   const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/<th>Paid off<\/th>/.test(render), 'the list has a column for it');
+  /* WAS <th>Paid off</th>. There is no <thead> in a queue of rows, so
+     the column names are a header band on the same grid tracks the rows
+     use -- and it is hidden on the phone, where each card carries its
+     own labels instead. The requirement is that the column be NAMED,
+     not that it be named in a table. */
+  t.check(/<div class="ow-db-h">[\s\S]*?>Paid off</.test(render),
+    'the list names the column it draws the bar in');
   t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
     'drawn as a bar whose width is the share paid');
   /* A dash, not an empty bar: an empty bar reads as "has paid nothing",
