@@ -292,8 +292,9 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     /* Chase debts. The page head and the .panel wrapper went; the
        card-per-debtor (.chase-card, .chase-list) and the private strip
        (.sum-strip) became the layer's strip, list rows, panels and the
-       message box. .chase-mini is deliberately not retired: "Who you
-       owe" still wears it. */
+       message box. .chase-mini outlived this screen for a while because
+       the creditors list wore it; that screen is a console now too, so
+       the rules are gone from the file entirely. */
     chase: {
       retired: ['page-head', 'panel', 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub'],
@@ -392,11 +393,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        six-column <table> with a phone card-wall beside it became .ow-q
        rows that open in place and emit their own cards.
 
-       .age-* is NOT retired from the file: the creditors list -- "Who
-       you owe" -- is this screen's twin and still wears every one of
-       those classes. What is pinned here is that THIS screen no longer
-       emits them, so converting its twin later cannot be mistaken for
-       already done. */
+       .age-* is no longer worn by either ledger screen: the creditors
+       list, which was this screen's last wearer, has since been drawn
+       as a console of its own. Both entries retire the same families,
+       and each is pinned separately so neither conversion can be
+       mistaken for the other's. */
     'analytics-debtors': {
       retired: ['page-head', 'panel', 'panel-head-row', 'an-toolbar', 'btn-row', 'field',
                 'sq-select-all-label', 'empty',
@@ -421,6 +422,47 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
                     'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+    },
+    /* CREDITORS -- "Who you owe" until it was drawn as a console, and
+       now named the word the shop already uses, like its twin.
+
+       NOT that twin mirrored. The sell side ranks by age because the
+       only question there is who has been owing longest; this ranks by
+       what to pay today against what is actually in the drawer. Three
+       stacked .panel blocks became one strip, one borrowed age bar and
+       one queue: the position panel whose headline figure was set in
+       Archivo Black at 34px and buried the cash figure under two
+       coloured verdict blocks; the whole second console, "When you said
+       you would pay", with three headed sub-lists driven by prompt()
+       and confirm(); and a seven-column <table> in which the one fact
+       that decides who to pay appeared nowhere.
+
+       It borrows .ow-db-ag and .ow-db-lp WHOLE from Debtors rather than
+       growing lookalikes -- the same reason Chase debts borrows the bar,
+       so two screens drawing one profile cannot contradict each other --
+       which is why those appear in rendersUses here as well. */
+    'analytics-creditors': {
+      retired: ['page-head', 'panel', 'panel-head-row', 'an-toolbar', 'btn-row', 'field',
+                'sq-select-all-label', 'empty', 'ah-sub', 'chase-tail', 'chase-mini', 'pp-more',
+                'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-aside', 'age-bar', 'age-seg',
+                'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
+                'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
+                'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-cr'],
+      renders: ['renderCreditorsList', 'renderCreditorsPosition', 'renderCreditorsRail', 'renderCredFilterNote'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
+                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
+                    /* the two borrowed whole from Debtors */
+                    'ow-db-ag', 'ow-db-lp',
+                    /* and the three this screen owns: why a supplier is
+                       ranked where it is, how far today's cash reaches,
+                       and naming a day on the bill it belongs to */
+                    'ow-cr-rz', 'ow-cr-wl', 'ow-cr-dy',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
     },
     /* Order tracking. The lane board -- the step rail, the lanes, the

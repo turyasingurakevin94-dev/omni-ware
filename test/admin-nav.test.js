@@ -404,7 +404,20 @@ const INDEX = railIndex();
   t.check(first('debtors') === 'Debtors', `the table-shaped word finds it (${first('debtors')})`);
   t.check(first('who owes you') === 'Debtors',
     `and the name it used to carry still finds it (${first('who owes you')})`);
-  t.check(first('creditors') === 'Who you owe', `and so does the other (${first('creditors')})`);
+  /* And now the same on the buy side: the creditors list was "Who you
+     owe" until it was drawn as a console, so the question-shaped name
+     is a keyword rather than the label. Both halves of the book are
+     named the words a shop, an accountant and a bank already use, and
+     both keep the name they used to carry. */
+  t.check(first('creditors') === 'Creditors', `and so does the other (${first('creditors')})`);
+  /* Inclusion, not first place, and that is not a weaker check being
+     settled for. The two screens' old names are near-anagrams of each
+     other -- "who owes you" and "who you owe" share every word, and the
+     match is per-term and unordered by design -- so both doors open on
+     either phrase and neither can be made to win. What must hold is
+     that the word already in somebody's head reaches its screen. */
+  t.check(labels('who you owe').includes('Creditors'),
+    `and the name IT used to carry still finds it (${labels('who you owe').join(', ')})`);
   t.check(first('stock') === 'Inventory', `a word the screen is not called finds it (${first('stock')})`);
   t.check(first('photos') === 'Media', `and so does what is actually in it (${first('photos')})`);
 
@@ -545,16 +558,24 @@ const INDEX = railIndex();
  * evocative does not help a screen that cannot agree with itself about
  * what it is called.
  *
- * The rule is not repealed -- "Who you owe", "What's coming" and "What
- * to buy" still answer questions, and are still checked. The cost of the
- * exception is paid in keywords, tested above: "who owes you" still
- * finds it.
+ * The rule is not repealed -- "What's coming" and "What to buy" still
+ * answer questions, and are still checked. But the exception has now
+ * been taken twice, and for the same reason both times: "Who you owe"
+ * was the creditors list's third name, beside a "Creditors list"
+ * heading and a "Who you owe" breadcrumb, and a screen that cannot
+ * agree with itself about what it is called is a defect whichever name
+ * you prefer. The two ledger screens are the ones every shop, bank and
+ * accountant already has a word for. The cost is paid in keywords,
+ * tested above: "who owes you" and "who you owe" both still find their
+ * screen.
  */
 {
   t.check(/nav-label">Debtors</.test(rail), 'the debtors list is named the word the shop already uses');
   t.check(/data-keywords="[^"]*who owes you/.test(rail),
     'and the name it used to carry is kept as a keyword rather than dropped');
-  t.check(/nav-label">Who you owe</.test(rail), 'the creditors list is named for what it answers');
+  t.check(/nav-label">Creditors</.test(rail), 'and the creditors list is named the same way, for the same reason');
+  t.check(/data-keywords="[^"]*who you owe/.test(rail),
+    'with the name IT used to carry kept as a keyword too');
   t.check(!/Debtors List</.test(sidebar) && !/Creditors List</.test(sidebar),
     'the table-shaped names are gone from the rail');
   t.check(!/Debtors List</.test(sheet) && !/Creditors List</.test(sheet),

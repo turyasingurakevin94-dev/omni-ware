@@ -275,10 +275,12 @@ if (scope) {
     && !/\.chase-row\{/.test(src) && !/\.chase-head\{/.test(src)
     && !/\.chase-card\{/.test(src) && !/\.chase-list\{/.test(src) && !/\.chase-acts\{/.test(src),
     'the borrowed classes are deleted, not left in the drawer — the card-per-debtor rules with them');
-  /* .chase-mini and .chase-tail are NOT chase's own any more: "Who you
-     owe" wears them for its undated and missed bills. They stay. */
-  t.check(/\.chase-mini\{/.test(src) && /\.chase-tail h4\{/.test(src),
-    'while the two families another screen still wears are kept');
+  /* .chase-mini and .chase-tail outlived this screen once, because the
+     creditors list wore them for its undated and missed bills. That
+     panel is gone too -- a day is named on the bill it belongs to now --
+     so the last wearer went with it and so did the rules. */
+  t.check(!/\.chase-mini\{/.test(src) && !/\.chase-tail h4\{/.test(src),
+    'and the two that outlived it are gone as well, now their last wearer has');
 }
 
 process.exit(t.done() ? 1 : 0);

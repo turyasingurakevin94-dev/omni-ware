@@ -38,6 +38,7 @@ const ago = (days) => new Date(Date.parse(TODAY + 'T00:00:00Z') - days * 8640000
 
 const scope = compileScope([
   extractDeclaration(src, 'AGING_BANDS', 'index.html'),
+  extractDeclaration(src, 'CRED_SORT_CHOICES', 'index.html'),
   extractDeclaration(src, 'CRED_SORT_STATE', 'index.html'),
   extractDeclaration(src, 'CRED_SORT_FIRST_DIR', 'index.html'),
   extractDeclaration(src, 'credBandFilter', 'index.html'),
@@ -55,6 +56,7 @@ const scope = compileScope([
   extractFunction(src, 'credCashOnHand', 'index.html'),
   'function sortState(){ return CRED_SORT_STATE; }',
   'function sortFirstDir(){ return CRED_SORT_FIRST_DIR; }',
+  'function sortChoices(){ return CRED_SORT_CHOICES; }',
   'function setBandFilter(v){ credBandFilter = v; }',
 ], {
   data,
@@ -65,7 +67,7 @@ const scope = compileScope([
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '',
   cbDayPosition: (d) => ({ closing: data.__closing[d] }),
 }, ['credOpenInvoices', 'credAgingProfile', 'credAllRows', 'credRowAmount', 'credRowProgress', 'credCashOnHand',
-  'creditorLastPaymentDate', 'agingBandFor', 'sortState', 'sortFirstDir', 'setBandFilter']);
+  'creditorLastPaymentDate', 'agingBandFor', 'sortState', 'sortFirstDir', 'sortChoices', 'setBandFilter']);
 
 let iid = 1;
 // An invoice: [supplier, daysAgo, total, amountPaid, paymentDaysAgo]
@@ -225,8 +227,20 @@ const reset = (suppliers, invoices) => {
 /* ---------- 6. the payment order ------------------------------------- */
 {
   const state = scope.sortState(), firstDir = scope.sortFirstDir();
-  t.check(state.key === 'ageDays' && state.dir === -1,
-    'the list opens oldest first — a payment order, not a league table of who you buy most from');
+  /* IT STILL OPENS AS A PAYMENT ORDER; the order is just a better one.
+     Oldest-first was this screen's answer to "who do I pay", borrowed
+     from the debtors list, where age IS the whole question. It is not
+     the whole question here: a supplier you promised to pay on the 22nd
+     and did not is owed something age cannot see, and they are the one
+     who stops delivering. So the default is the rule the screen states
+     on itself and in its rail -- a day you named and let pass, then
+     days you have given, then longest waiting -- with oldest-first
+     still on the menu beside it. */
+  t.check(state.key === 'pay',
+    'the list opens in pay order — a payment order, not a league table of who you buy most from');
+  t.check(Array.isArray(scope.sortChoices()) && scope.sortChoices()[0].key === 'pay'
+    && scope.sortChoices().some((c) => c.key === 'ageDays'),
+    'and it is the first of the orders offered, with oldest-first still among them');
   eq(firstDir.name, 1, 'a name column opens A to Z');
   eq(firstDir.owed, -1, 'a money column opens with the biggest');
   eq(firstDir.lastPaid, 1, 'and last paid opens with those left waiting longest');
@@ -302,7 +316,7 @@ const reset = (suppliers, invoices) => {
      Pinned on the band CARD: the same phrasing sits in the bar segment's
      title attribute, and a looser check passed on that one while the
      card underneath said "suppliers". */
-  t.check(/<span class="age-band-meta">\$\{b\.count\} invoice\$\{b\.count===1\?'':'s'\}/.test(pos),
+  t.check(/<span class="ow-db-ag-m">\$\{b\.count\} invoice\$\{b\.count===1\?'':'s'\}/.test(pos),
     'a band card says how many INVOICES are in it');
 }
 
@@ -321,7 +335,14 @@ const reset = (suppliers, invoices) => {
 
 /* ---------- 10. what leaves the screen ------------------------------- */
 {
-  const exp = (/cred_export_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  /* Both were wired at parse time to buttons up in the panel head, one
+     heading above the search box that decided what they would contain.
+     The toolbar is drawn with the list now -- directly above the rows it
+     acts on -- so #cred_export_btn does not exist when the script runs
+     and the same code is a function wired per render, exactly as
+     debExportCSV is on the other side of the book. What each one does is
+     unchanged, and that is what is pinned below. */
+  const exp = (/function credExportCSV\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/r\.ageDays < 0 \? '' : r\.ageDays/.test(exp),
     'an unknown age exports blank, not 0 — a spreadsheet will average a zero in');
   t.check(/r\.lastPaid \|\| 'Never'/.test(exp),
@@ -329,7 +350,7 @@ const reset = (suppliers, invoices) => {
   t.check(/credRowAmount\(r\)/.test(exp),
     'and the exported figure is the one that was on screen');
 
-  const prt = (/cred_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  const prt = (/function credPrintList\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const p = credAgingProfile\(\);/.test(prt),
     'the print carries the aging profile, not just the rows');
   t.check(/<h2>What you owe, by age — whole book<\/h2>/.test(prt),
@@ -343,9 +364,15 @@ const reset = (suppliers, invoices) => {
   t.check(!/Overdue/i.test(render), 'nothing claims to be overdue, since no terms are ever agreed');
   t.check(/>Waiting/.test(render), 'it says how long the supplier has been waiting');
   t.check(/>Last paid/.test(render), 'and when they were last paid');
-  const tfoot = (/<tfoot>[\s\S]*?<\/tfoot>/.exec(render) || [''])[0];
-  t.check(/rows\.length\} supplier\$\{rows\.length===1\?'':'s'\}/.test(tfoot),
-    'the table foot counts what it is showing rather than printing a bare Total');
+  /* There is no <tfoot> to count in: the table became a queue of rows
+     that open in place. The promise it was making is kept in two places
+     instead -- the panel head carries "3 of 9 · 2,180,000 shown", and
+     the foot names what the filters removed and the figure it takes
+     with it. Neither prints a bare Total, which was the point. */
+  t.check(/rows\.length\}\$\{\s*\n?\s*rows\.length !== owingAll\.length \? ' of ' \+ owingAll\.length/.test(render),
+    'the panel head counts what it is showing against the whole book');
+  t.check(/supplier\$\{hiddenCount===1\?'':'s'\} owed <b>\$\{f\(hiddenSum\)\}<\/b>/.test(render),
+    'and what the filters removed is named, with the money it takes with it');
 }
 
 /* ---------- how far through paying a supplier off -------------------- *
@@ -424,9 +451,21 @@ const reset = (suppliers, invoices) => {
 {
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const render = (/function renderCreditorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/<th>Paid off<\/th>/.test(render), 'the list has a column for it');
-  t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
-    'drawn as a bar whose width is the share paid');
+  /* IT IS NO LONGER A COLUMN, and that is the buy side differing from
+     the sell side rather than a feature dropped. On the customer list a
+     part-payer is a signal about THEM -- somebody paying it down is a
+     different prospect from somebody who has stopped. Here the
+     part-payer is you, and how far through your own bill you are does
+     not decide who to pay next. The width goes to the column that does
+     decide it: whether you gave this supplier a day and let it pass.
+
+     So the figure moves into the open row, where there is room to say
+     what it is measured from -- which is where the customer side put
+     its own charged-and-paid figures for the same reason. */
+  t.check(!/<th>Paid off<\/th>/.test(render),
+    'the queue row does not spend a column on how far through your own bill you are');
+  t.check(/of the way through paying them off/.test(render),
+    'and an opened supplier says it in words, with the figures behind it');
 
   /* The dash means something DIFFERENT here from on the customer side.
      A supplier balance is the sum of their own invoices, so it cannot
@@ -436,6 +475,8 @@ const reset = (suppliers, invoices) => {
      on the buy side is never the reason. */
   t.check(/Nothing outstanding to this supplier/.test(render),
     'a supplier with nothing owing is told that, not the customer-side reason');
+  t.check(/nothing to be part way through/.test(render),
+    'and told what that means rather than shown a dash');
   t.check(!/No dated charges behind this balance/.test(render),
     'and the customer-side wording is not borrowed for a case it cannot describe');
 
@@ -443,8 +484,8 @@ const reset = (suppliers, invoices) => {
   // invoice the shop received.
   t.check(/invoiced on what is still open/.test(render),
     'the figures behind the percentage are named in buy-side words');
-  t.check(/credBandFilter\?', in this band':''/.test(render),
-    'and say so when a band has narrowed what is being measured');
+  t.check((render.match(/credBandFilter\s*\?\s*', in this band'\s*:\s*''/g) || []).length >= 2,
+    'and say so when a band has narrowed what is being measured — in both readings');
 }
 
 process.exit(t.done() ? 1 : 0);

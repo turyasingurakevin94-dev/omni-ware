@@ -1148,18 +1148,12 @@
     .chase-controls .form-grid{grid-template-columns:1fr;}
   }
   .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
-  /* Worn by "Who you owe" -- its undated and missed bills -- not by this
-     screen any more. Kept exactly as they were. */
-  .chase-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
-    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
-  .chase-mini{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:10px 0;
-    border-bottom:1px solid var(--ow-rule-soft);font-size:12.5px;}
-  .chase-mini:last-child{border-bottom:none;}
-  .chase-mini-name{font-weight:700;color:var(--ink);}
-  .chase-mini-why{flex:1 1 220px;min-width:0;color:var(--ink-soft);line-height:1.5;}
-  .chase-mini-amt{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-weight:700;color:var(--ink);white-space:nowrap;}
-  .chase-mini-act{padding:6px 12px;font-size:12px;flex-shrink:0;}
+  /* .chase-tail and .chase-mini stood here for one reason: Chase debts
+     had stopped wearing them and "Who you owe" still did, for its
+     undated and missed bills. That panel is gone -- a day is named on
+     the bill it belongs to now -- so nothing in the app wears them and
+     they go with it. A dead rule in the stylesheet is how a sixth
+     screen ends up in one. */
   /* The textarea keeps its old name for the handlers that read it and
      takes its look from the layer's .ow-msg. */
   .chase-msg{resize:vertical;}
@@ -8797,6 +8791,154 @@
   .ow-db-go:hover{color:var(--ow-oxide-deep);text-decoration:underline;}
   .ow-db-go:focus-visible{outline:2px solid var(--ow-steel-950);}
 
+  /* ==================================================================
+     CREDITORS — what the shop owes, ranked against what it can pay.
+
+     NOT the debtors register mirrored. The sell side ranks by age,
+     because the only question there is who has been owing longest. The
+     buy side is a decision under a constraint: the owner comes to this
+     screen with money in the drawer and chooses who gets it. So the
+     strip leads with what is in hand, the queue is ordered by what a
+     supplier stops delivering over, and a waterline says how far the
+     money reaches.
+
+     Almost all of it is the layer as it stands, and two things are
+     borrowed WHOLE from Debtors rather than copied into lookalikes:
+     .ow-db-ag (the age bar and its legend) and .ow-db-lp (when they were
+     last paid). Both screens draw the same shapes from the same
+     arithmetic, so neither can show a split the other contradicts --
+     the same reason Chase debts borrows the bar. What is new here is
+     the column that says WHY a supplier is where it is, the waterline,
+     and naming a day on the bill it belongs to.
+     ================================================================== */
+
+  .ow-cr-strip{margin-bottom:var(--ow-sp-16);}
+  .ow-cr-ag-pan,.ow-cr-clear{margin-bottom:var(--ow-sp-16);}
+
+  /* FIVE COLUMNS. The reason column is 150px and the widest of the
+     three: "12 days past your word" is the whole basis of the order, and
+     a truncated ranking reason is a list nobody can check. The name
+     gives way instead -- names may be cut, the reason may not, and money
+     never is. */
+  .ow-cr .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 116px 132px;}
+  .ow-cr-h{display:grid;grid-template-columns:18px minmax(0,1fr) 176px 116px 132px;
+    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-cr-h-r{text-align:right;}
+
+  /* WHY THIS SUPPLIER IS HERE. Two lines, the same anatomy as .ow-db-lp
+     beside it so the row keeps its rhythm, and toned only where the tone
+     means something: crimson for a day you gave and let pass, amber for
+     one coming, plain grey for a bill nobody has dated. A supplier with
+     no day named is not in trouble -- they are just unscheduled. */
+  .ow-cr-rz{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-cr-rz-h{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-cr-rz.ow-bad .ow-cr-rz-h{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-cr-rz.ow-warn .ow-cr-rz-h{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .ow-cr-rz.ow-none .ow-cr-rz-h{color:var(--ow-ink-600);}
+
+  /* THE WATERLINE. Where today's cash stops reaching, drawn as a LEVEL
+     rather than a boundary between records -- hence the dashed rule. It
+     is a measurement, not a plan: the copy states its own assumption
+     (paying down the list in full, in this order) in the same breath, so
+     it cannot be read as the app having decided who gets paid. Nothing
+     below it is dimmed; a figure the shop owes is not less true for
+     being further down the page.
+
+     No cash figure means NO LINE -- the amber variant says why instead.
+     credCashOnHand() returns null when today has not been opened in the
+     cash book, and drawing a level from a zero nobody recorded would be
+     inventing the one figure this screen exists to measure against. */
+  .ow-cr-wl{display:flex;align-items:center;gap:var(--ow-sp-12);
+    padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule);border-bottom:1px solid var(--ow-rule);}
+  .ow-cr-wl-r{flex:1;height:0;border-top:1px dashed var(--ow-rule);min-width:12px;}
+  .ow-cr-wl-t{font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-ink-600);
+    text-align:center;max-width:64ch;}
+  .ow-cr-wl-l{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);
+    margin-bottom:var(--ow-sp-4);}
+  .ow-cr-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-cr-wl.ow-warn{background:var(--ow-amber-faint);border-color:var(--ow-amber-soft);}
+  .ow-cr-wl.ow-warn .ow-cr-wl-t{color:var(--ow-amber-ink);}
+  .ow-cr-wl.ow-warn .ow-cr-wl-r{border-top-color:var(--ow-amber-soft);}
+
+  /* NAMING A DAY, on the bill it belongs to.
+
+     This replaced a prompt() box asking for YYYY-MM-DD typed by hand --
+     on a phone in a yard, a dialog nobody fills in, for the act that
+     decides whether a bill reaches the cash line in What's coming. A day
+     is a fact about ONE bill, so it is named on that bill's line, where
+     the amount and the age of it are already on screen to name it
+     against. */
+  .ow-cr-dy{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-500);white-space:nowrap;}
+  .ow-cr-dy-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+  .ow-cr-dy-m{color:var(--ow-ink-600);}
+  .ow-cr-dy.ow-bad .ow-cr-dy-d,.ow-cr-dy.ow-bad .ow-cr-dy-m{color:var(--ow-crimson);}
+  .ow-cr-dy.ow-bad .ow-cr-dy-d{font-weight:var(--ow-fw-600);}
+  .ow-cr-dy.ow-warn .ow-cr-dy-d,.ow-cr-dy.ow-warn .ow-cr-dy-m{color:var(--ow-amber-ink);}
+  .ow-cr-dy.ow-warn .ow-cr-dy-d{font-weight:var(--ow-fw-600);}
+  .ow-cr-dy-e{all:unset;box-sizing:border-box;width:24px;height:24px;flex:none;cursor:pointer;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--ow-ink-600);}
+  .ow-cr-dy-e:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
+  .ow-cr-dy-e:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-cr-ic{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .ow-cr-dy-set{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;
+    gap:var(--ow-sp-4);height:26px;padding:0 var(--ow-sp-8);cursor:pointer;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-cr-dy-set:hover{border-color:var(--ow-steel-950);color:var(--ow-ink-900);}
+  .ow-cr-dy-set:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-cr-dy-in{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;}
+  .ow-cr-dy-f{height:28px;padding:0 var(--ow-sp-8);box-sizing:border-box;
+    border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-sm);
+    background:var(--ow-paper);color:var(--ow-ink-900);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);letter-spacing:-.02em;}
+  /* What writing it down will do, said on the row being named rather
+     than in a standing paragraph under every supplier in the book. */
+  .ow-cr-dy-note{margin:var(--ow-sp-8) 0 0;padding:var(--ow-sp-8) var(--ow-sp-10);
+    font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-amber-ink);
+    background:var(--ow-amber-faint);border:1px solid var(--ow-amber-soft);
+    border-radius:var(--ow-r-sm);}
+  .ow-cr-dy-note .ow-cr-fig{color:inherit;}
+
+  @media (max-width:820px){
+    /* The column names go with the columns: every card carries its own.
+       Left in, they printed "SUPPLIER WHY NOW LAST PAID" across the top
+       of a card wall that has no columns to name. */
+    .ow-cr-h{display:none;}
+
+    /* The day and its two controls wrap rather than run off the edge of
+       a 390px screen -- they were being clipped at the right margin. */
+    .ow-cr-dy{flex-wrap:wrap;row-gap:var(--ow-sp-6);}
+
+    /* THE WATERLINE, TURNED. A centred rule with text either side has no
+       room at 390px, so it becomes a full-width band with its label
+       above the sentence. Same fact, same wording, one column. */
+    .ow-cr-wl{display:block;padding:var(--ow-sp-12);}
+    .ow-cr-wl-r{display:none;}
+    .ow-cr-wl-t{display:block;max-width:none;text-align:left;font-size:var(--ow-t-12);}
+    /* Naming a day is done one-handed, so the field and both answers are
+       thumb-sized rather than the 26px they are at a desk. */
+    .ow-cr-dy-f{height:var(--ow-tap);flex:1 1 100%;font-size:15px;}
+    .ow-cr-dy-set,.ow-cr-dy-e{min-height:var(--ow-tap);}
+    .ow-cr-dy-e{width:var(--ow-tap);}
+  }
+
   @media (max-width:820px){
     .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
@@ -9217,11 +9359,12 @@
 
        Search matters more here than it looks. Several screens are
        deliberately named for the question they answer rather than the
-       table they draw -- "Who you owe", "What's coming", "What to buy"
-       -- which reads better and is harder to find by scanning. Typing
-       the word you already have in your head finds it either way.
+       table they draw -- "What's coming", "What to buy" -- which reads
+       better and is harder to find by scanning. Typing the word you
+       already have in your head finds it either way.
 
-       The debtors screen used to be one of them, as "Who owes you".
+       Both ledger screens used to be among them, as "Who owes you" and
+       "Who you owe".
        It is now plainly "Debtors": the question-shaped name was worth
        less than it cost here, because this screen alone was carrying
        THREE names -- "Who owes you" on the rail, "Debtors list" in its
@@ -9431,9 +9574,9 @@
           <span class="nav-label">Debtors</span>
           <b class="nav-badge" id="navBadgeDebtors" hidden></b>
         </button>
-        <button data-tab="analytics-creditors" title="Who you owe" data-keywords="creditors payables owed suppliers">
+        <button data-tab="analytics-creditors" title="Creditors" data-keywords="creditors payables owed suppliers who you owe creditors list pay bills aging ageing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
-          <span class="nav-label">Who you owe</span>
+          <span class="nav-label">Creditors</span>
         </button>
         <button data-tab="ahead" title="What falls due, and what it leaves you" data-keywords="cash forecast ahead coming due rent wages loan commitments tight short budget runway">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 15h3M14 15h2"/></svg>
@@ -10166,46 +10309,33 @@
       <div id="chase_list"></div>
     </section>
 
+    <!-- CREDITORS. Not the debtors register mirrored: the sell side
+         ranks by age, this ranks by what to pay today against what is
+         actually in the drawer. The constraint leads, and a waterline
+         says how far it reaches. -->
     <section id="tab-analytics-creditors" style="display:none;">
-      <div class="page-head">
-        <h1>Creditors list</h1>
-        <p>What you owe suppliers, and how long they have waited for it. The bands below split the money by age — click one to work through it. Paying here settles that supplier's oldest invoices first and logs it straight to the Cash Book.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Creditors</h1>
+        <p class="ow-ph-sub">What you owe, and how far today&#39;s cash reaches</p>
+        <p class="ow-ph-help">Every supplier carrying a balance, ordered by who to pay first: a day you named and let pass, then days you have given, then whoever has been kept waiting longest. The strip leads with what is in hand today, because what you owe is only half a sentence &mdash; the question is always what can be paid now. A dashed line across the list marks how far today&#39;s cash reaches if you pay down the list in full; when the cash book has not been opened there is no line, because there is no figure to measure against. The bands split the whole book by age and narrow the list when you tap one. Opening a supplier shows the bills behind the figure, and each bill is where you name the day you will pay it &mdash; that day puts the bill on the cash line in What&#39;s coming and drops what you can safely spend, and a bill with no day stays off that line rather than have a date invented for it. Paying settles that supplier&#39;s oldest bill first and posts straight to the cash book.</p>
+        <span class="ow-ph-sp"></span>
       </div>
 
-      <!-- What you owe. Always every open invoice: the search box and the
-           band filter act on the list further down, never on this. -->
-      <div class="panel" id="credPositionWrap"></div>
+      <div class="ow-cr">
+        <!-- What you owe and what you hold. Always the whole book: the
+             search box and the band filter act on the list further down,
+             never on this. A position that shrinks because somebody left
+             a filter on is a position nobody can trust. -->
+        <div id="credPositionWrap"></div>
 
-      <!-- When you said you would pay. A bill with a day you named goes
-           onto the cash line in What's coming; one without stays off it,
-           because putting it there would mean inventing a date. -->
-      <div class="panel" id="credDueWrap"></div>
-
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">Who to pay</h2>
-          <div class="btn-row" style="margin-top:0;">
-            <button type="button" class="btn btn-ghost btn-icon" id="cred_export_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
-              Export CSV
-            </button>
-            <button type="button" class="btn btn-ghost btn-icon" id="cred_print_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-              Print list
-            </button>
-          </div>
+        <div class="ow-grid">
+          <div id="cred_tableWrap"></div>
+          <div class="ow-side" id="credRailWrap"></div>
         </div>
 
-        <div class="an-toolbar">
-          <div class="field" style="flex:1;min-width:220px;">
-            <label>Search</label>
-            <input id="cred_search" placeholder="Supplier name...">
-          </div>
-          <label class="sq-select-all-label" style="padding-bottom:9px;"><input type="checkbox" id="cred_hide_no_debt" checked> Hide no balance</label>
-        </div>
-
+        <!-- The band filter is echoed down here where the rows it
+             removed would have been, with the way out beside it. -->
         <div id="credFilterNote"></div>
-        <div class="an-scroll" id="cred_tableWrap"></div>
       </div>
     </section>
 
@@ -15631,7 +15761,7 @@ function fmtUGXPerUnitPack(n, row){
 // grids somebody scans.
 const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
   market: 8, marketUnder: 5, marketLift: 5, ahead: 12, invoices: 24, purchaseInvoices: 24,
-  clearance: 6, clearanceOffers: 5, margin: 6, credDue: 8 };
+  clearance: 6, clearanceOffers: 5, margin: 6 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -15668,7 +15798,6 @@ const LIST_PAGE_RERENDER = {
   marketUnder: ()=> renderMarket(),
   marketLift: ()=> renderMarket(),
   ahead: ()=> renderAhead(),
-  credDue: ()=> renderCreditorsDue(),
   clearance: ()=> renderClearance(),
   clearanceOffers: ()=> renderClearance(),
   margin: ()=> renderMargin(),
@@ -19695,13 +19824,17 @@ function updateTopbarWhere(tab){
    Every screen is on the rail, so this is not a way to reach something
    otherwise hidden -- it is a way to reach it without reading. It earns
    its place twice over on the screens deliberately named for the
-   question they answer: "Who you owe" is a better name than "Creditors
-   list" and a worse thing to scan for, and typing either finds it.
+   question they answer: "What's coming" is a better name than "Cash
+   forecast" and a worse thing to scan for, and typing either finds it.
 
-   Which is why the keywords matter as much as the labels. Debtors was
-   called "Who owes you" until the day it was drawn as a console; the
-   old name is still what some people will type, and it still finds the
-   screen. Renaming a door should never make it harder to open. */
+   Which is why the keywords matter as much as the labels. BOTH ledger
+   screens were named that way once -- "Who owes you" and "Who you owe"
+   -- and both were renamed the day they were drawn as consoles, because
+   each was carrying three names at once and a screen that cannot agree
+   with itself about what it is called is a defect whichever name you
+   prefer. The old names are still what some people will type, and they
+   still find the screens. Renaming a door should never make it harder
+   to open. */
 const navSearchInput = document.getElementById('navSearch');
 /* Read off the element rather than written out again, so the two can
    never disagree about what the box says on a computer. */
@@ -30253,7 +30386,7 @@ function consignmentMarkApply(productId, variantIdx, supplierId, shelfWanted, so
    What the shop owes them has been accruing sale by sale; this turns
    that reading into an ordinary supplier bill, itemised by what
    actually sold. From here it behaves like every other bill -- it shows
-   in Purchase invoices, in Who you owe, in the payables, and is paid by
+   in Purchase invoices, in Creditors, in the payables, and is paid by
    the usual door -- so there is no second place to reconcile and
    nothing new to learn. The flag is what stops it being double-counted:
    the accrual reads sales, this reads settlements, and owed is the
@@ -30441,7 +30574,7 @@ function voidDuplicatePurchaseInvoices(idsRaw){
   drop.forEach(pi=>{ pi.voided = true; });
   saveData();
   renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
-  if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+  if(typeof renderCreditorsList === 'function') renderCreditorsList();
   refreshNavBadges();
   toast(`${drop.length} duplicate bill${drop.length===1?'':'s'} voided — check that product's stock count next`, 7000);
 }
@@ -30793,8 +30926,8 @@ document.getElementById('pbe_save').addEventListener('click', ()=>{
   saveData();
   closeModal('piBillEditModal');
   renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
-  if(typeof renderCreditorsList === 'function' && document.getElementById('cred_search')){
-    renderCreditorsList(document.getElementById('cred_search').value);
+  if(typeof renderCreditorsList === 'function'){
+    renderCreditorsList();
   }
   refreshNavBadges();
   if(res.overpaid){
@@ -30944,7 +31077,7 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
     closeModal('piPaymentModal');
     resetPiPaymentForm();
     renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
-    if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+    if(typeof renderCreditorsList === 'function') renderCreditorsList();
     // A consignment settlement is one of these bills, and the card
     // reports what is still to pay on it -- so it is stale the moment a
     // payment lands anywhere else.
@@ -32744,7 +32877,7 @@ Add them anyway?`)) return;
   // Every screen that counts what the shop owes has just changed.
   if(opened){
     renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
-    if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+    if(typeof renderCreditorsList === 'function') renderCreditorsList();
     refreshNavBadges();
   }
   toast(opened
@@ -37932,7 +38065,7 @@ function renderConsignment(){
     </div>
     <div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">What settling does</span></div>
-      <p class="ow-mini">It raises an ordinary supplier bill for what has sold. The money then reaches Who you owe, the payables and the cash book by the route every other bill takes.</p>
+      <p class="ow-mini">It raises an ordinary supplier bill for what has sold. The money then reaches Creditors, the payables and the cash book by the route every other bill takes.</p>
       <p class="ow-mini">Nothing is paid by settling. You pay that bill the usual way, in full or in part.</p>
       <p class="ow-mini">Unsold goods can go back at any time, owing nothing.</p>
     </div>
@@ -38905,7 +39038,7 @@ function renderDebtorsList(){
      the first is a reason not to sell to them again. */
   const paidCell = (r)=> r.lastPaid
     ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>no payment of any size</span>';
+    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
 
   /* ---- one debtor, opened ----
      The invoices behind the balance, from the same reading Chase debts
@@ -40545,11 +40678,37 @@ document.getElementById('pr_next').addEventListener('click', ()=>{
 
 // Oldest first, for the same reason as the debtors list: the page is a
 // payment order, not a league table of who you buy most from.
-const CRED_SORT_STATE = {key:'ageDays', dir:-1};
-const CRED_SORT_FIRST_DIR = {name:1, owed:-1, ageDays:-1, lastPaid:1, openCount:-1};
+/* THE ORDER THE LIST IS IN, and it is not the debtors list's.
+
+   The sell side ranks by age because the only question there is who has
+   been owing longest. Here the owner has money in the drawer and is
+   choosing who gets it, so the default is the pay-priority rule stated
+   on screen and in the rail: a day you named and let pass first -- that
+   is what a supplier actually stops delivering over -- then days you
+   have given, soonest first, then whoever has been kept waiting longest.
+
+   The other orders stay available in the toolbar, because "who do I owe
+   the most" is a real question this screen should still answer. */
+const CRED_SORT_CHOICES = [
+  {key:'pay', label:'Who to pay first'},
+  {key:'owed', label:'Largest owed'},
+  {key:'ageDays', label:'Longest waiting'},
+  {key:'lastPaid', label:'Longest since you paid'},
+  {key:'name', label:'Supplier name'},
+];
+const CRED_SORT_STATE = {key:'pay', dir:-1};
+const CRED_SORT_FIRST_DIR = {pay:1, name:1, owed:-1, ageDays:-1, lastPaid:1, openCount:-1};
 let credLastRows = [];
 // Which age band the list is narrowed to. Set by clicking the bar.
 let credBandFilter = '';
+let credSearch = '';
+/* Was a checkbox reading "Hide no balance" -- a double negative on a
+   screen about balances. Same behaviour, on by default, said forwards. */
+let credHideSettled = true;
+// The one supplier opened onto its bills, and the one bill being given a
+// day. Only ever one of each: this is a register, not a form.
+let credOpenId = null;
+let credDayEditId = null;
 function creditorOutstandingInvoices(supplierId){
   return data.purchaseInvoices
     .filter(pi=>pi.supplierId===supplierId && !pi.voided && purchaseInvoiceBalanceDue(pi) > 0.5)
@@ -40714,12 +40873,29 @@ function credAllRows(){
     const ageDays = dated.length ? Math.max(...dated.map(i=> i.ageDays)) : -1;
     const inBand = {};
     mine.forEach(i=>{ inBand[i.band] = (inBand[i.band]||0) + i.due; });
+    /* THE DAYS THIS SUPPLIER HAS BEEN GIVEN, which is what the list is
+       ordered by. A bill is in exactly one of three states -- no day
+       named, a day still ahead, a day that has gone by -- and the three
+       account for every open bill, which is the promise the panel this
+       replaced was built to keep. Kept here rather than recomputed in
+       the renderer so the order, the reason on the row and the tiles
+       above cannot disagree about which state a bill is in.
+
+       The oldest broken word and the soonest day coming, because those
+       are the two the ranking turns on: the word you broke longest ago
+       is the one costing the most credit, and the day falling soonest is
+       the next one you can still keep. */
+    const missed = mine.filter(i=> i.missedOwnWord).map(i=> i.dueOn).sort();
+    const ahead = mine.filter(i=> i.dueOn && !i.missedOwnWord).map(i=> i.dueOn).sort();
     return {
       id: s.id, name: s.name || 'Unnamed supplier',
       owed: creditorTotalOwed(s.id),
       ageDays, band: agingBandFor(ageDays),
       openCount: mine.length,
       undatedCount: mine.length - dated.length,
+      missedOn: missed[0] || null, missedCount: missed.length,
+      dueNext: ahead[0] || null, dueCount: ahead.length,
+      noDayCount: mine.filter(i=> !i.dueOn).length,
       inBand,
       // Kept on the row so the bar can be scoped exactly as the amount is.
       openInvoices: mine,
@@ -40762,16 +40938,35 @@ function credRowAmount(r){
   return credBandFilter ? (r.inBand[credBandFilter] || 0) : r.owed;
 }
 function credRowsForList(filter=''){
-  const hideNoDebt = document.getElementById('cred_hide_no_debt').checked;
   const tokens = searchTokens(filter);
   let rows = credAllRows();
-  if(hideNoDebt) rows = rows.filter(r=>r.owed>0.5);
+  if(credHideSettled) rows = rows.filter(r=>r.owed>0.5);
   // Suppliers with money in the chosen band. What they show is that
   // band's share of what they are owed, not their whole balance.
   if(credBandFilter) rows = rows.filter(r=> (r.inBand[credBandFilter]||0) > 0.5);
   if(tokens.length) rows = rows.filter(r=>matchesAllTokens(r.name.toLowerCase(), tokens));
   rows.sort((a,b)=>{
     const key = CRED_SORT_STATE.key;
+    /* THE PAY-PRIORITY RULE, and the only sort here that is not a column.
+
+       Three ranks, and within each the thing that rank is about: a
+       broken word by how long ago it was broken, a day given by how
+       soon it falls, and everything else by how long they have waited.
+       It ignores CRED_SORT_STATE.dir -- "who to pay first, backwards"
+       is not a question anybody asks, and reversing it would put the
+       supplier you owe nothing urgent to at the top of a list whose
+       whole claim is that the top is where to start. */
+    if(key === 'pay'){
+      const rank = (r)=> r.missedOn ? 0 : (r.dueNext ? 1 : 2);
+      const ra = rank(a), rb = rank(b);
+      if(ra !== rb) return ra - rb;
+      if(ra === 0) return String(a.missedOn).localeCompare(String(b.missedOn));
+      if(ra === 1) return String(a.dueNext).localeCompare(String(b.dueNext));
+      // Undated last within the tail, for the same reason as below.
+      const au = a.ageDays < 0, bu = b.ageDays < 0;
+      if(au !== bu) return au ? 1 : -1;
+      return (b.ageDays - a.ageDays) || (credRowAmount(b) - credRowAmount(a));
+    }
     /* An age nobody knows has no place on an age axis. It sorts to the
        end whichever way the column is pointed, rather than posing as
        the newest bill in the book. */
@@ -40796,129 +40991,224 @@ function credRowsForList(filter=''){
   return rows;
 }
 
-/* The bar and its bands, mirroring the debtors position with the one
-   fact the buy side needs that the sell side does not: what is in hand
-   to pay any of it with. */
+/* THE POSITION, and it leads with what is in the drawer.
+
+   The old panel opened with what you owe set in Archivo Black at 34px --
+   the face loaded for PAGE NAMES, asked for tabular figures it does not
+   have -- and buried what is in hand at the bottom, under two stacked
+   coloured verdict blocks. That is backwards for this screen: "you owe
+   12,400,000" is half a sentence, and the half that decides anything is
+   what you can pay it with.
+
+   So four tiles, and not one more. What you hold and what share of the
+   book it covers; what you owe, said to be the whole book whatever the
+   list is filtered to; what is past a day you named; and what falls due
+   inside a week. The bad-news tile is a broken word rather than "over 90
+   days" because a supplier stops delivering over the promise, not the
+   calendar -- the calendar is the bar underneath. */
 function renderCreditorsPosition(){
   const wrap = document.getElementById('credPositionWrap');
   if(!wrap) return;
   const p = credAgingProfile();
 
   if(!p.suppliers){
+    /* NO STRIP OF ZEROS. Four tiles reading 0 is data slop: it fills a
+       settled screen with figures that mean nothing, and makes a book
+       that is straight look like a screen that is broken.
+
+       A shop that has never bought on credit has not "settled every
+       bill" -- it has not begun. Saying the first sentence to somebody
+       with an empty book reads as the app misunderstanding what it is
+       looking at. */
     const any = (data.suppliers||[]).length > 0;
-    wrap.innerHTML = `<div class="age-pos-clear">
-      <b>${any ? 'You owe nothing to anybody.' : 'Nothing is owed by you yet.'}</b>
-      <span>${any ? 'Every supplier invoice on file is settled.' : 'Balances appear here once a purchase invoice goes unpaid.'}</span>
+    wrap.innerHTML = `<div class="ow-pan ow-cr-clear">
+      <div class="ow-empty"><b>${any ? 'You owe nothing to anybody.' : 'Nothing is owed by you yet.'}</b>
+      ${any ? 'Every supplier invoice on file is settled. A balance appears here the moment a purchase invoice goes unpaid.'
+            : 'Balances appear here once a purchase invoice goes unpaid. Bills are raised for you when a quote is marked invoiced &mdash; there is nothing to record by hand.'}</div>
     </div>`;
     return;
   }
 
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
   const pct = (n)=> p.total > 0 ? Math.round(n / p.total * 100) : 0;
   const live = p.bands.filter(b=> b.amount > 0);
+  const rows = credAllRows();
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
 
-  const segs = live.map(b=> `<button type="button" class="age-seg age-${b.key}${credBandFilter===b.key?' on':''}"
-      style="flex-grow:${b.amount}"
-      data-band="${esc(b.key)}"
-      title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} across ${b.count} invoice${b.count===1?'':'s'}">
-      <span class="sr-only">${esc(b.label)}</span></button>`).join('');
-
-  const cards = live.map(b=> `<button type="button" class="age-band age-${b.key}${credBandFilter===b.key?' on':''}"
-      data-band="${esc(b.key)}">
-      <span class="age-band-label">${esc(b.short)}</span>
-      <b class="age-band-amt">${esc(fmtUGX(Math.round(b.amount)))}</b>
-      <span class="age-band-meta">${b.count} invoice${b.count===1?'':'s'} · ${pct(b.amount)}%</span>
-    </button>`).join('');
-
-  const worst = p.bands.find(b=> b.key === 'b90p');
-  const worstLine = worst && worst.amount > 0
-    ? `<div class="age-verdict bad">
-        <b>${esc(fmtUGX(Math.round(worst.amount)))}</b> has been unpaid for more than 90 days —
-        ${pct(worst.amount)}% of what you owe, across ${worst.count} invoice${worst.count===1?'':'s'}.
-        This is the money a supplier stops delivering over.
-      </div>`
-    : '';
-
-  /* Owed against held. Without it "you owe 12,400,000" is half a
-     sentence: the question is always what can be paid today. */
+  /* WHAT IS IN HAND, first, and amber only when it is genuinely MISSING
+     rather than low. Money you hold is a fact, not a warning -- colouring
+     an ordinary Tuesday red is how a screen teaches somebody to ignore
+     its colours. Zero in the drawer on a day that has been opened is a
+     real figure and reads as one; null is the absence, and it says so. */
   const cash = credCashOnHand();
-  let cashLine;
+  const tiles = [];
   if(cash === null){
-    cashLine = `<div class="age-verdict quiet">
-      Today has not been opened in the Cash Book, so there is no figure for what is in hand to pay this with.
-    </div>`;
-  } else if(cash >= p.total){
-    cashLine = `<div class="age-verdict ok">
-      <b>${esc(fmtUGX(Math.round(cash)))}</b> is in hand today — enough to clear everything you owe.
-    </div>`;
+    tiles.push(tile('In hand today', 'Not known',
+      'Today has not been opened in the cash book, so there is no figure for what is in the drawer', 'ow-warn'));
   } else {
-    const covers = p.total > 0 ? Math.round(cash / p.total * 100) : 0;
-    cashLine = `<div class="age-verdict warn">
-      <b>${esc(fmtUGX(Math.round(cash)))}</b> is in hand today, which covers ${covers}% of what you owe.
-      The rest has to wait on money coming in.
-    </div>`;
+    tiles.push(tile('In hand today', `${f(cash)}<span class="ow-u">UGX</span>`,
+      cash >= p.total
+        ? 'Today&rsquo;s closing in the cash book &middot; <b>enough to clear everything you owe</b>'
+        : `Today&rsquo;s closing in the cash book &middot; covers <b>${pct(cash)}%</b> of what you owe`));
+  }
+  tiles.push(tile('You owe', `${f(p.total)}<span class="ow-u">UGX</span>`,
+    `Across ${p.invoices} unpaid bill${p.invoices===1?'':'s'} from ${p.suppliers} supplier${p.suppliers===1?'':'s'} &middot; the whole book, whatever the list below is filtered to`));
+
+  /* THE BAD NEWS IS A BROKEN WORD. Crimson, and only when there is one:
+     an empty crimson tile on a shop that has kept every day it named is
+     the strip of zeros in miniature. When there is none, the tile turns
+     into how exposed the shop is to a single supplier, which is worth a
+     tile on any book -- and is withheld in turn when there is only one
+     supplier, since "largest single balance, 100% of the total" is the
+     same number twice rather than a finding. */
+  const missed = rows.filter(r=> r.missedOn);
+  const missedSum = missed.reduce((n,r)=> n + r.openInvoices.filter(i=> i.missedOwnWord).reduce((m,i)=> m + i.due, 0), 0);
+  const missedBills = missed.reduce((n,r)=> n + r.missedCount, 0);
+  if(missedSum > 0.5){
+    const worst = missed.reduce((m,r)=> (!m || String(r.missedOn) < String(m.missedOn)) ? r : m, null);
+    tiles.push(tile('Past the day you named', `${f(missedSum)}<span class="ow-u">UGX</span>`,
+      `${missedBills} bill${missedBills===1?'':'s'}, the oldest <b>${daysSinceDate(worst.missedOn)}</b> days past your word. This is what a supplier stops delivering over`,
+      'ow-bad'));
+  } else {
+    const big = p.suppliers > 1 ? p.biggest : null;
+    if(big) tiles.push(tile('Largest single balance', `${f(big.owed)}<span class="ow-u">UGX</span>`,
+      `${esc(big.name)} &middot; <b>${pct(big.owed)}%</b> of everything you owe`));
   }
 
-  const big = p.suppliers > 1 ? p.biggest : null;
-  const concentration = big
-    ? `<div class="age-pos-aside">
-        <span class="age-pos-aside-label">Largest single supplier</span>
-        <b>${esc(fmtUGX(Math.round(big.owed)))}</b>
-        <span class="age-pos-aside-meta">${esc(big.name)} · ${pct(big.owed)}% of the total</span>
-      </div>`
-    : '';
+  /* WHAT FALLS DUE INSIDE A WEEK. Amber: a day you have given is not bad
+     news, it is a commitment with a date on it -- and it is already on
+     the cash line in What's coming, which is the fact worth saying, so
+     nobody reads this as a second demand on the same money. */
+  const today = todayISO();
+  const soon = [];
+  rows.forEach(r=> (r.openInvoices||[]).forEach(i=>{
+    if(i.dueOn && !i.missedOwnWord && daysSinceDate(i.dueOn) >= -7) soon.push(i);
+  }));
+  const soonSum = soon.reduce((n,i)=> n + i.due, 0);
+  if(soonSum > 0.5) tiles.push(tile('Due in the next 7 days', `${f(soonSum)}<span class="ow-u">UGX</span>`,
+    `${soon.length} bill${soon.length===1?'':'s'} with a day you named &middot; already on the cash line in What&rsquo;s coming`,
+    'ow-warn'));
 
-  wrap.innerHTML = `<div class="age-pos">
-    <div class="age-pos-head">
-      <div class="age-pos-total">
-        <span class="age-pos-label">You owe</span>
-        <b>${esc(fmtUGX(Math.round(p.total)))}</b>
-        <span class="age-pos-meta">across ${p.invoices} unpaid invoice${p.invoices===1?'':'s'}
-          from ${p.suppliers} supplier${p.suppliers===1?'':'s'}</span>
-      </div>
-      ${concentration}
+  /* THE AGE OF THE MONEY: ONE device, the Debtors bar borrowed whole.
+     It was a stacked bar AND five bordered cards repeating the same five
+     figures, both of them the filter -- one fact in two voices. Widths
+     come from the money in each band, because one big old bill is the
+     problem and three small fresh ones are not. */
+  const segs = live.map(b=> `<button type="button" class="ow-db-ag-s ow-band-${b.key}${credBandFilter===b.key?' ow-on':''}"
+      style="flex-grow:${b.amount}"
+      data-band="${esc(b.key)}"
+      title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} across ${b.count} bill${b.count===1?'':'s'}">
+      <span class="sr-only">${esc(b.label)}</span></button>`).join('');
+
+  /* Bands count INVOICES, rows count SUPPLIERS. One supplier can have
+     money in several bands, so counting suppliers here would double-count
+     them -- and each object has to name what it is counting or the two
+     figures on screen read as a contradiction. */
+  const legend = live.map(b=> `<button type="button" class="ow-db-ag-b ow-band-${b.key}${credBandFilter===b.key?' ow-on':''}"
+      data-band="${esc(b.key)}">
+      <span class="ow-db-ag-t">${esc(b.short)}</span>
+      <span class="ow-db-ag-v">${f(b.amount)}</span>
+      <span class="ow-db-ag-m">${b.count} invoice${b.count===1?'':'s'} &middot; ${pct(b.amount)}%</span>
+    </button>`).join('');
+
+  wrap.innerHTML = `<div class="ow-strip ow-cr-strip${tiles.length < 4 ? ' ow-db-s' + tiles.length : ''}">${tiles.join('')}</div>
+  <div class="ow-pan ow-cr-ag-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Age of what you owe</span>
+      <span class="ow-pan-n ow-hide-sm">the whole book &mdash; ${credBandFilter ? 'tap the lit band to show every supplier' : 'tap a band to work through it'}</span>
     </div>
-    <div class="age-bar" role="group" aria-label="What you owe, split by age">${segs}</div>
-    <div class="age-bands">${cards}</div>
-    ${worstLine}
-    ${cashLine}
+    <div class="ow-db-ag">
+      <div class="ow-db-ag-bar" role="group" aria-label="What you owe, split by age">${segs}</div>
+      <div class="ow-db-ag-l">${legend}</div>
+    </div>
   </div>`;
 
   wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
+    // Clicking the band you are already in takes the filter off, so the
+    // way out is the same control as the way in.
     credBandFilter = (credBandFilter === el.dataset.band) ? '' : el.dataset.band;
-    renderCreditorsList(document.getElementById('cred_search').value);
+    renderCreditorsList(credSearch);
   }));
 }
 
 /* Echoed where the rows it removed would have been, with the way out
-   beside it -- and it has to say that the amounts shown have narrowed
-   too, or a smaller figure beside a familiar name reads as a mistake. */
+   beside it -- and it has to say that the AMOUNTS have narrowed too, or
+   a smaller figure beside a familiar name reads as the balance having
+   changed rather than the view having. */
 function renderCredFilterNote(shown){
   const el = document.getElementById('credFilterNote');
   if(!el) return;
   if(!credBandFilter){ el.innerHTML = ''; return; }
   const def = agingBandDef(credBandFilter);
-  el.innerHTML = `<div class="age-filter-note">
-    <span>Showing what is <b>${esc(def ? def.label.toLowerCase() : 'in one band')}</b> —
-      ${shown} supplier${shown===1?'':'s'}, and only that band's share of what each is owed.</span>
-    <button type="button" class="btn btn-ghost" id="credClearBand">Show everything</button>
+  el.innerHTML = `<div class="ow-pan ow-db-note">
+    <span>Showing only what is <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'in one band')}</b> &mdash; ${shown} supplier${shown===1?'':'s'}, and only that band&rsquo;s share of what each is owed. The figures above are still the whole book.</span>
+    <button type="button" class="btn btn-ghost ow-sm" id="credClearBand">Show everything</button>
   </div>`;
   el.querySelector('#credClearBand').addEventListener('click', ()=>{
     credBandFilter = '';
-    renderCreditorsList(document.getElementById('cred_search').value);
+    renderCreditorsList(credSearch);
   });
 }
-/* ============ WHEN YOU SAID YOU WOULD PAY ============================
 
-   The supplier-side twin of the chase queue, and it works the way that
-   one does deliberately: a prompt rather than a form, because this is
-   done one-handed with a phone at the ear and a modal to fill in is a
-   modal nobody fills in.
+/* THE RAIL. The reasoning the screen owes the reader, measured, and out
+   of the way of the money -- including the one thing the old screen said
+   in a standing paragraph above every row: what naming a day does. */
+function renderCreditorsRail(){
+  const el = document.getElementById('credRailWrap');
+  if(!el) return;
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const p = credAgingProfile();
+  const q = credDueRows();
+  const cash = credCashOnHand();
+  const missedSum = q.missed.reduce((n,b)=> n + b.due, 0);
+  const dated = q.count - q.undated.length;
+
+  el.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">How the order is worked out</span></div>
+    <p class="ow-db-rl">A day you named and <b class="ow-db-em">let pass</b> first &mdash; that is the one a supplier stops delivering over. Then days you have given, soonest first. Then whoever has been kept waiting longest.</p>
+    ${p.suppliers ? `<div class="ow-sr"><span class="ow-sr-k">You owe</span><span class="ow-sr-v">${f(p.total)}<span class="ow-u">UGX</span></span></div>
+    <div class="ow-sr"><span class="ow-sr-k">Of it, past a day you named</span><span class="ow-sr-v${missedSum > 0.5 ? ' ow-bad' : ''}">${f(missedSum)}<span class="ow-u">UGX</span></span></div>
+    <div class="ow-sr"><span class="ow-sr-k">In hand today</span><span class="ow-sr-v">${cash === null ? 'not known' : f(cash) + '<span class="ow-u">UGX</span>'}</span></div>`
+    /* Three rows reading 0 is the strip of zeros again, in the rail. */
+    : `<p class="ow-db-rl">Nothing is outstanding, so there is nothing here to break down.</p>`}
+  </div>
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What a payment does</span></div>
+    <p class="ow-db-rl">It clears that supplier&rsquo;s <b class="ow-db-em">oldest bill first</b>, the way a ledger settles, and posts straight to the cash book as a stock purchase. Part payments are fine &mdash; and whatever is left keeps its original age rather than starting again, which is why a balance can be older than the last thing you bought.</p>
+  </div>
+  <div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Naming a day</span></div>
+    <p class="ow-db-rl">A bill with a day on it goes onto the cash line in <b class="ow-db-em">What&rsquo;s coming</b>, and what you can safely spend drops by it. One with no day stays off that line &mdash; until somebody says a date, putting it there would mean inventing one.</p>
+    ${q.count ? `<p class="ow-db-rl">Of the ${q.count} bill${q.count===1?'':'s'} open, <b class="ow-db-em">${dated}</b> carr${dated===1?'ies':'y'} a day.
+      <button type="button" class="ow-db-go" id="cred_to_ahead">Open What&rsquo;s coming</button></p>` : ''}
+  </div>`;
+
+  const go = el.querySelector('#cred_to_ahead');
+  if(go) go.addEventListener('click', ()=> goToTab('ahead'));
+}
+
+/* ============ WHEN YOU SAID YOU WOULD PAY ============================
 
    THE WHOLE OF WHAT IS OWED IS ACCOUNTED FOR HERE. Every open bill is
    in exactly one of three states -- no day named, a day still ahead, a
    day that has gone by -- and the three sum to the total. A screen
    about money that quietly drops a row is how 17,600,000 stayed
-   invisible to the cash line in the first place. */
+   invisible to the cash line in the first place.
+
+   THIS IS NO LONGER A PANEL. It was a whole second console on the
+   creditors screen -- its own paragraph, three headed sub-lists and up
+   to five buttons a line, roughly 900px above the list somebody came
+   for -- driven by a prompt() box asking for YYYY-MM-DD typed by hand.
+   A day is a fact about ONE bill, so it is named on that bill's line in
+   the open supplier row, where the amount and the age are already on
+   screen to name it against.
+
+   The three states are still accounted for, in three places at once:
+   two tiles at the top of the strip, the reason on every row, and the
+   rail's count of how many bills carry a day. What is left of this
+   reading is the rows themselves, which the rail and the manager both
+   still ask for -- so it stays a function and stops being a screen. */
 function credDueRows(){
   const today = todayISO();
   const open = credOpenInvoices();
@@ -40937,205 +41227,422 @@ function credDueRows(){
   };
 }
 
-function renderCreditorsDue(){
-  const el = document.getElementById('credDueWrap');
-  if(!el) return;
-  const q = credDueRows();
-  if(!q.count){ el.innerHTML = ''; el.style.display = 'none'; return; }
-  el.style.display = '';
-  const f = (n)=> fmtUGX(Math.round(n));
-  const who = (b)=> supplierName(b.supplierId) || 'Unnamed supplier';
-  const undatedTotal = q.undated.reduce((n, b)=> n + b.due, 0);
 
-  let html = `<div class="panel-head-row"><h2 style="margin-bottom:0;">When you said you would pay</h2></div>
-    <p class="ah-sub">A bill you have named a day for goes onto the line in <b>What's coming</b>, and
-      what you can safely spend drops by it. One with no day stays off that line — until somebody
-      says a date, putting it there would mean inventing one.</p>`;
+/* WHY THIS SUPPLIER IS WHERE IT IS.
 
-  if(q.undated.length){
-    html += `<div class="chase-tail"><h4>Bills with no day named — ${f(undatedTotal)}</h4>${
-      listPageSlice('credDue', q.undated).map(b=> `<div class="chase-mini">
-        <span class="chase-mini-name">${esc(who(b))}</span>
-        <span class="chase-mini-why">bill ${esc(String(b.invoice.id))} · ${
-          b.ageDays >= 0 ? esc(agingDaysLabel(b.ageDays)) + ' on the books' : 'not dated'}</span>
-        <span class="chase-mini-amt">${f(b.due)}</span>
-        <button type="button" class="btn btn-ghost chase-mini-act cred-due-set" data-id="${esc(String(b.invoice.id))}">I'll pay on…</button>
-      </div>`).join('')}</div>${listMoreButtonHTML('credDue', q.undated.length, 'bills')}`;
+   The column the sell side does not have, and the one fault the old
+   table could not fix by sorting: you could order by owed, waiting,
+   bills or last paid, but nothing on a row said whether you had given
+   this supplier a day and let it pass -- which is the single fact that
+   decides who gets paid first. Same three ranks the order uses, so the
+   row can never explain itself differently from the list it sits in. */
+function credRowReason(r){
+  if(r.missedOn){
+    const late = daysSinceDate(r.missedOn);
+    return {tone:'ow-bad',
+      head: `${late} day${late===1?'':'s'} past your word`,
+      sub: `you said ${fmtShortDate(r.missedOn)}${r.missedCount > 1 ? ` &middot; ${r.missedCount} bills` : ''}`};
   }
-
-  if(q.missed.length){
-    html += `<div class="chase-tail"><h4>Days you named that have gone by</h4>${
-      q.missed.map(b=> `<div class="chase-mini">
-        <span class="chase-mini-name">${esc(who(b))}</span>
-        <span class="chase-mini-why">you said ${esc(fmtShortDate(b.dueOn))} · ${
-          esc(agingDaysLabel(daysSinceDate(b.dueOn)))} ago</span>
-        <span class="chase-mini-amt">${f(b.due)}</span>
-        <button type="button" class="btn btn-ghost chase-mini-act cred-due-set" data-id="${esc(String(b.invoice.id))}">Name a new day</button>
-        <button type="button" class="btn btn-ghost chase-mini-act cred-due-clear" data-id="${esc(String(b.invoice.id))}">Take the day back</button>
-      </div>`).join('')}</div>`;
+  if(r.dueNext){
+    /* daysBetweenISO, not daysSinceDate: that one clamps at zero, so
+       every day still ahead came back as today -- on the one screen
+       whose whole subject is when you said you would pay. */
+    const inDays = daysBetweenISO(todayISO(), r.dueNext);
+    return {tone:'ow-warn',
+      head: inDays <= 0 ? 'You said today' : inDays === 1 ? 'You said tomorrow' : `You said ${fmtShortDate(r.dueNext)}`,
+      sub: inDays <= 1 ? esc(fmtShortDate(r.dueNext)) : `in ${inDays} days`};
   }
-
-  if(q.ahead.length){
-    html += `<div class="chase-tail"><h4>Days you have named — on the line in What's coming</h4>${
-      q.ahead.map(b=> `<div class="chase-mini">
-        <span class="chase-mini-name">${esc(who(b))}</span>
-        <span class="chase-mini-why">you said ${esc(fmtShortDate(b.dueOn))}</span>
-        <span class="chase-mini-amt">${f(b.due)}</span>
-        <button type="button" class="btn btn-ghost chase-mini-act cred-due-set" data-id="${esc(String(b.invoice.id))}">A different day</button>
-        <button type="button" class="btn btn-ghost chase-mini-act cred-due-clear" data-id="${esc(String(b.invoice.id))}">Take the day back</button>
-      </div>`).join('')}</div>`;
-  }
-
-  /* THE ACCOUNTING. Three buckets, and they sum to every open bill --
-     so a row cannot fall out of this screen without the total saying so. */
-  html += `<p class="pp-more">${q.count} open ${q.count === 1 ? 'bill' : 'bills'}, ${f(q.total)} in all:
-    ${q.undated.length} with no day, ${q.ahead.length} dated ahead, ${q.missed.length} past the day you named.</p>`;
-  el.innerHTML = html;
-
-  const after = (msg)=>{
-    if(msg) toast(msg);
-    renderCreditorsList(document.getElementById('cred_search').value);
-    renderAhead();
-  };
-  el.querySelectorAll('.cred-due-set').forEach(btn=> btn.addEventListener('click', ()=>{
-    const b = credOpenInvoices().find(x=> String(x.invoice.id) === btn.dataset.id);
-    if(!b) return;
-    const when = prompt('What day will you pay ' + who(b) + ' the ' + f(b.due) + ' on bill '
-      + b.invoice.id + '?\n\nAs YYYY-MM-DD. It goes onto the cash line in What’s coming, and what you can safely spend drops by it.',
-      b.dueOn || todayISO());
-    if(when === null) return;
-    const res = setBillDueDate(b.invoice.id, String(when||'').trim());
-    if(!res.ok){ toast(res.why, 9000); return; }
-    after('Written down — ' + f(b.due) + ' to ' + who(b) + ' on ' + fmtShortDate(String(when).trim())
-      + '. It is on the line in What’s coming now.');
-  }));
-  el.querySelectorAll('.cred-due-clear').forEach(btn=> btn.addEventListener('click', ()=>{
-    const b = credOpenInvoices().find(x=> String(x.invoice.id) === btn.dataset.id);
-    if(!b) return;
-    if(!confirm('Take back the day you named for ' + who(b) + '’s ' + f(b.due) + '?\n\n'
-      + 'The bill stays owed. It comes off the cash line, and what you can safely spend goes back up by it.')) return;
-    const res = clearBillDueDate(b.invoice.id);
-    if(!res.ok){ toast(res.why, 9000); return; }
-    after('Day taken back — the bill is owed with no day named.');
-  }));
+  return {tone:'ow-none', head:'No day named',
+    sub: r.openCount > 1
+      ? (r.noDayCount === r.openCount ? `on none of the ${r.openCount}` : `on ${r.noDayCount} of the ${r.openCount}`)
+      : ''};
 }
 
-function renderCreditorsList(filter=''){
+/* THE CONSOLE. */
+function renderCreditorsList(filter=credSearch){
   const wrap = document.getElementById('cred_tableWrap');
+  if(!wrap) return;
+  credSearch = filter;
   const rows = credRowsForList(filter);
   credLastRows = rows;
   renderCreditorsPosition();
-  renderCreditorsDue();
+  renderCreditorsRail();
   renderCredFilterNote(rows.length);
-  if(rows.length===0){
-    wrap.innerHTML = data.suppliers.length===0
-      ? '<div class="empty">No suppliers yet — add one in the Suppliers tab.</div>'
-      : credBandFilter
-        ? `<div class="empty">Nothing is ${esc(((agingBandDef(credBandFilter)||{}).label||'in that band').toLowerCase())} with the current search.</div>`
-        : '<div class="empty">No creditors match this filter.</div>';
-    return;
-  }
-  const sortArrow = (key)=> CRED_SORT_STATE.key===key ? `<span class="sort-arrow">${CRED_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
-  const totalOwed = rows.reduce((s,r)=> s + credRowAmount(r), 0);
 
-  const agePill = (r)=>{
-    const def = agingBandDef(r.band);
-    return `<span class="age-pill age-${r.band}" title="${esc(def ? def.label : '')}">${esc(
-      r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
-  };
-  // How many bills are behind the figure, and whether any of them cannot
-  // be aged -- an undated invoice quietly left out of the oldest-of would
-  // otherwise make a supplier look more current than they are.
-  const billsCell = (r)=> `<span class="age-paid">${r.openCount} unpaid</span>${
-    r.undatedCount ? `<span class="age-paid-ago">${r.undatedCount} with no date</span>` : ''}`;
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const totalOwed = rows.reduce((s,r)=> s + credRowAmount(r), 0);
+  const allRows = credAllRows();
+  const owingAll = allRows.filter(r=> r.owed > 0.5);
+  const bandDef = credBandFilter ? agingBandDef(credBandFilter) : null;
+
+  /* ---- the toolbar ----
+     Search, the order, the toggle and the two things that leave the
+     screen, in one band directly above the rows they act on. All four
+     already existed; they were unfindable because search sat in a form
+     field with a floating label, and Print and Export sat up in the
+     panel head, one heading away from the list and ABOVE the search box
+     that decides what they will contain. */
+  const toolbar = `<div class="ow-tb">
+    <label class="ow-f ow-f-grow ow-tb-s${credSearch ? ' ow-set' : ''}">
+      <span class="ow-f-l">Find a supplier</span>
+      <span class="ow-f-in">
+        <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <input class="ow-f-v ow-f-t" id="cred_search" type="text" placeholder="Supplier name" value="${esc(credSearch)}">
+      </span>
+    </label>
+    <div class="ow-f">
+      <span class="ow-f-l">Order</span>
+      <span class="ow-f-in">
+        <select class="ow-f-sel" id="cred_sort" aria-label="How the list is ordered">
+          ${CRED_SORT_CHOICES.map(c=> `<option value="${c.key}"${CRED_SORT_STATE.key===c.key?' selected':''}>${esc(c.label)}</option>`).join('')}
+        </select>
+      </span>
+    </div>
+    <button type="button" class="btn btn-ghost ow-sm ow-db-tg${credHideSettled ? ' ow-on' : ''}"
+      id="cred_hide_no_debt" role="switch" aria-checked="${credHideSettled}">
+      <svg class="icon" viewBox="0 0 24 24">${credHideSettled
+        ? '<path d="M4 12.5l5 5L20 6.5"/>'
+        : '<rect x="4" y="4" width="16" height="16" rx="2"/>'}</svg>
+      Hide settled</button>
+    ${credBandFilter ? `<button type="button" class="ow-cp ow-warn ow-db-fc" id="cred_band_chip"
+      title="Showing only ${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')} — tap to show every supplier">
+      ${esc(bandDef ? bandDef.short : 'one band')} only
+      <svg class="ow-db-fc-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>` : ''}
+    ${rows.length ? `<span class="ow-tb-n">
+      <button type="button" class="btn btn-ghost ow-sm" id="cred_print_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+        ${credBandFilter || credSearch ? `Print these ${rows.length}` : 'Print list'}</button>
+      <button type="button" class="btn btn-ghost ow-sm" id="cred_export_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
+        Export CSV</button>
+    </span>` : ''}
+  </div>`;
+
+  /* When they were last paid, borrowed whole from the debtors register:
+     the best single read on whether a relationship has gone quiet.
+     Never-paid is crimson because it is the one value in this column
+     worth stopping on -- a supplier who has never been paid anything is
+     a different thing from one who was paid last month. */
   const paidCell = (r)=> r.lastPaid
-    ? `<span class="age-paid">${esc(fmtShortDate(r.lastPaid))}</span><span class="age-paid-ago">${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="age-never">Never paid</span>';
-  // Under a band filter the row reports that band's share, so it has to
-  // say what the supplier is owed in total or the smaller figure reads
-  // as the balance having changed.
-  const amountCell = (r)=> credBandFilter
-    ? `<span class="age-amt">${fmtUGX(Math.round(credRowAmount(r)))}</span><span class="age-paid-ago">of ${fmtUGX(Math.round(r.owed))} owed</span>`
-    : `<span class="age-amt">${fmtUGX(Math.round(r.owed))}</span>`;
-  /* How far through paying them off. The dash here means something
-     different from the customer side's: not "unknowable" but "nothing
-     outstanding to be part way through", which is what a settled
-     supplier left on screen by the Hide-no-balance box actually is. */
-  const progressCell = (r)=>{
+    ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
+    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
+
+  const reasonCell = (r)=>{
+    const z = credRowReason(r);
+    return `<span class="ow-cr-rz ${z.tone}"><span class="ow-cr-rz-h">${z.head}</span>${z.sub}</span>`;
+  };
+
+  /* The age, as the basis line under the figure -- the only place age
+     lives on a row now. The old table said it twice, as a coloured pill
+     AND a coloured stripe down the first cell, and since every row has
+     an age, every row was coloured. Toned only where the tone means
+     something: crimson past sixty days, amber past thirty and on a
+     balance whose age cannot be worked out at all. */
+  const basis = (r)=> `<span class="ow-q-b">${r.ageDays >= 0 ? 'waiting ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span>`;
+
+  /* ---- one supplier, opened ----
+     The bills behind the figure, and the place a day is named. This is
+     what the screen is for: seeing WHY the figure is what it is, and
+     saying when you will do something about it, without leaving. */
+  const openBody = (r)=>{
+    const scoped = credBandFilter
+      ? (r.openInvoices||[]).filter(i=> i.band === credBandFilter)
+      : (r.openInvoices||[]);
+    const bills = scoped.slice().sort((a,b)=> String(a.invoice.date||'').localeCompare(String(b.invoice.date||'')));
+
+    const dayCell = (b)=>{
+      const id = String(b.invoice.id);
+      if(credDayEditId === id){
+        return `<span class="ow-cr-dy-in">
+          <input class="ow-cr-dy-f" type="date" id="cred_day_field" value="${esc(b.dueOn || todayISO())}" aria-label="The day you will pay this bill">
+          <button type="button" class="btn btn-accent ow-sm cred-due-save" data-id="${esc(id)}">Write it down</button>
+          <button type="button" class="btn btn-ghost ow-sm cred-due-cancel">Cancel</button>
+        </span>`;
+      }
+      if(b.dueOn){
+        const late = b.missedOwnWord;
+        const off = daysBetweenISO(todayISO(), b.dueOn);
+        return `<span class="ow-cr-dy ${late ? 'ow-bad' : 'ow-warn'}">
+          <span class="ow-cr-dy-d">${esc(fmtShortDate(b.dueOn))}</span>
+          <span class="ow-cr-dy-m">${late ? `${-off} day${off===-1?'':'s'} past` : off === 0 ? 'today' : off === 1 ? 'tomorrow' : `in ${off} days`}</span>
+          <button type="button" class="ow-cr-dy-e cred-due-set" data-id="${esc(id)}" title="Name a different day">
+            <svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+          <button type="button" class="ow-cr-dy-e cred-due-clear" data-id="${esc(id)}" title="Take the day back">
+            <svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </span>`;
+      }
+      return `<button type="button" class="ow-cr-dy-set cred-due-set" data-id="${esc(id)}">
+        <svg class="ow-cr-ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+        Name a day</button>`;
+    };
+
+    const table = bills.length ? `<div class="ow-tbl" style="--ow-tbl-cols:minmax(0,1fr) 104px 92px minmax(0,236px) 116px">
+      <div class="ow-tbl-h"><span class="ow-tbl-c">Bill</span><span class="ow-tbl-c">Dated</span><span class="ow-tbl-c">Waiting</span><span class="ow-tbl-c">Day you named</span><span class="ow-tbl-n">Still open</span></div>
+      ${bills.map(b=> `<div class="ow-tbl-r">
+        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(purchaseInvoiceNumberLabel(b.invoice))}</span></span>
+        <span class="ow-tbl-c" data-l="Dated">${esc(b.invoice.date ? fmtShortDate(b.invoice.date) : 'no date')}</span>
+        <span class="ow-tbl-c" data-l="Waiting">${b.ageDays >= 0 ? esc(agingDaysLabel(b.ageDays)) : '&mdash;'}</span>
+        <span class="ow-tbl-c" data-l="Day you named">${dayCell(b)}</span>
+        <span class="ow-tbl-n" data-l="Still open">${f(b.due)}</span>
+      </div>`).join('')}
+    </div>` : `<p class="ow-q-note">No open bill stands behind this balance.</p>`;
+
+    /* What writing a day down will DO, on the bill being named rather
+       than as a standing paragraph under every supplier in the book.
+       And what it will not do, because the old prompt() said it in a
+       dialog nobody reads: it pays nothing and it tells nobody. */
+    const naming = credDayEditId && bills.some(b=> String(b.invoice.id) === credDayEditId)
+      ? (()=>{ const b = bills.find(x=> String(x.invoice.id) === credDayEditId);
+          return `<p class="ow-cr-dy-note">Writing this down puts <b class="ow-cr-fig">${f(b.due)} UGX</b> on the cash line in What&rsquo;s coming for that day, and what you can safely spend that week drops by it. It does not pay anything and it tells nobody &mdash; it is your own note of what you intend.</p>`; })()
+      : '';
+
+    /* How far through paying them off, in the open row where there is
+       room to say what it is measured from. It is not on the queue row:
+       on the buy side the part-payer is YOU, and how far through your
+       own bill you are does not decide who to pay next -- the reason
+       column earns that width instead. */
     const p = credRowProgress(r);
-    if(!p) return `<span class="deb-prog-none" title="Nothing outstanding to this supplier${credBandFilter?' in this band':''}, so there is nothing to be part way through">—</span>`;
-    const pct = Math.round(p.pct*100);
-    return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} invoiced on what is still open${credBandFilter?', in this band':''}">
-      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${pct}%"></div></div>
-      <span class="deb-prog-pct">${pct}%</span>
+    const prog = p
+      ? `You have paid <b class="ow-cr-fig">${f(p.paid)}</b> of the <b class="ow-cr-fig">${f(p.charged)}</b> invoiced on what is still open${credBandFilter?', in this band':''} &mdash; ${Math.round(p.pct*100)}% of the way through paying them off.`
+      : `Nothing outstanding to this supplier${credBandFilter?', in this band':''}, so there is nothing to be part way through.`;
+
+    return `<div class="ow-q-x">
+      ${table}
+      ${naming}
+      <p class="ow-q-note">${prog}</p>
+      <div class="ow-q-a">
+        <button type="button" class="btn btn-accent ow-sm cred-pay" data-id="${esc(r.id)}">Pay this supplier</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-sup="${esc(r.id)}">Their bills</button>
+      </div>
     </div>`;
   };
 
-  const payBtn = (r)=> `<button type="button" class="age-act cred-pay" data-id="${esc(r.id)}">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>
-      Pay</button>`;
+  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
+     emitted together, so neither can drift from the other. */
+  const rowHTML = (r)=>{
+    const open = r.id === credOpenId;
+    const z = credRowReason(r);
+    const meta = [`${r.openCount} bill${r.openCount===1?'':'s'}`,
+      r.lastPaid ? 'last paid ' + fmtShortDate(r.lastPaid) : 'never paid',
+    ].filter(Boolean).join(' · ');
+    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(r.id)}">
+      <button type="button" class="ow-q-r" data-open="${esc(r.id)}" aria-expanded="${open}">
+        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="ow-q-t" title="${esc(r.name)}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${r.openCount} bill${r.openCount===1?'':'s'}</span></span>
+        ${reasonCell(r)}
+        ${paidCell(r)}
+        <span class="ow-q-v"><span class="ow-q-f">${f(credRowAmount(r))}</span>${basis(r)}${
+          credBandFilter ? `<span class="ow-q-b">of ${f(r.owed)} owed in all</span>` : ''}</span>
+      </button>
+      <button type="button" class="ow-q-card" data-open="${esc(r.id)}" aria-expanded="${open}">
+        <div class="ow-q-cm"><span class="ow-cp${z.tone === 'ow-none' ? '' : ' ' + z.tone}">${z.head}</span>
+          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+        <p class="ow-q-ct">${esc(r.name)}</p>
+        <span class="ow-q-cv">${f(credRowAmount(r))}<span class="ow-q-b">${
+          r.ageDays >= 0 ? 'waiting ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span></span>
+        <p class="ow-q-note ow-db-cmeta">${esc(meta)}${z.sub ? ' · ' + z.sub : ''}</p>
+      </button>
+      ${open ? openBody(r) : ''}
+    </div>`;
+  };
 
-  const cardsHtml = rows.map(r=>`
-    <div class="pi-card age-card age-edge-${r.band}">
-      <div class="pi-card-top">
-        <div class="pi-card-title"><span class="cmp-card-supplier">${esc(r.name)}</span></div>
-        ${agePill(r)}
-      </div>
-      <div class="pi-card-meta"><div>${billsCell(r)}</div></div>
-      <div class="age-card-foot">
-        <span class="age-card-amt">${fmtUGX(Math.round(credRowAmount(r)))}</span>
-        <span class="age-card-paid">${paidCell(r)}</span>
-      </div>
-      <div class="deb-card-prog">${progressCell(r)}</div>
-      <div class="age-card-act">${payBtn(r)}</div>
-    </div>`).join('');
-
-  wrap.innerHTML = `<div class="pi-table-wrap"><table class="age-table">
-    <thead><tr>
-      <th class="sortable${CRED_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Supplier${sortArrow('name')}</th>
-      <th class="r sortable${CRED_SORT_STATE.key==='owed'?' sorted':''}" data-key="owed">${
-        credBandFilter ? 'In this band' : 'Owed'}${sortArrow('owed')}</th>
-      <th>Paid off</th>
-      <th class="sortable${CRED_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Waiting${sortArrow('ageDays')}</th>
-      <th class="sortable${CRED_SORT_STATE.key==='openCount'?' sorted':''}" data-key="openCount">Bills${sortArrow('openCount')}</th>
-      <th class="sortable${CRED_SORT_STATE.key==='lastPaid'?' sorted':''}" data-key="lastPaid">Last paid${sortArrow('lastPaid')}</th>
-      <th></th>
-    </tr></thead>
-    <tbody>${rows.map(r=>`<tr class="age-edge-${r.band}">
-      <td>${esc(r.name)}</td>
-      <td class="price">${amountCell(r)}</td>
-      <td>${progressCell(r)}</td>
-      <td>${agePill(r)}</td>
-      <td class="age-paid-cell">${billsCell(r)}</td>
-      <td class="age-paid-cell">${paidCell(r)}</td>
-      <td class="row-actions">${payBtn(r)}</td>
-    </tr>`).join('')}</tbody>
-    <tfoot><tr class="inv-total-row">
-      <td class="inv-total-label">${rows.length} supplier${rows.length===1?'':'s'}${
-        credBandFilter ? ` · ${esc((agingBandDef(credBandFilter)||{}).short || '')}` : ''}</td>
-      <td class="price">${fmtUGX(Math.round(totalOwed))}</td>
-      <td></td><td></td><td></td><td></td><td></td>
-    </tr></tfoot>
-  </table></div>
-  <div class="pi-cards">
-    ${cardsHtml}
-    <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalOwed))}</b><span>${rows.length} supplier${rows.length===1?'':'s'} shown</span></div>
-    </div>
+  /* THE COLUMN NAMES. Four columns of which two are figures need saying,
+     and a queue of rows has no <thead> to say them in. Hidden on the
+     phone, where every card carries its own. */
+  const head = `<div class="ow-cr-h">
+    <span></span><span>Supplier</span><span>Why now</span><span>Last paid</span>
+    <span class="ow-cr-h-r">Owed</span>
   </div>`;
-  wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
-    const key = th.dataset.key;
-    if(CRED_SORT_STATE.key===key) CRED_SORT_STATE.dir *= -1;
-    else { CRED_SORT_STATE.key = key; CRED_SORT_STATE.dir = CRED_SORT_FIRST_DIR[key] || -1; }
-    renderCreditorsList(document.getElementById('cred_search').value);
+
+  /* ---- THE WATERLINE ----
+     How far today's cash reaches down the list. It states its own
+     assumption in the same breath, so it reads as a measurement and not
+     as the app having decided who gets paid.
+
+     Drawn ONLY on the whole book in pay-priority order. Under a search,
+     a band filter or another sort the list is a slice or a different
+     question, and a level measured against a slice would say the cash
+     goes further than it does -- the one lie this screen must not tell.
+     And with no figure for what is in hand there is no line at all: the
+     amber variant says why, rather than drawing one from a zero nobody
+     recorded. */
+  const cash = credCashOnHand();
+  const scoped = credBandFilter || credSearch || CRED_SORT_STATE.key !== 'pay' || credHideSettled === false;
+  let waterAt = -1, waterSum = 0;
+  if(!scoped && cash !== null && rows.length){
+    let run = 0;
+    for(let i = 0; i < rows.length; i++){
+      const next = run + credRowAmount(rows[i]);
+      if(next > cash){ waterAt = i; waterSum = run; break; }
+      run = next;
+    }
+    if(waterAt === -1) waterSum = run;
+  }
+  const waterHTML = ()=>{
+    if(scoped || !rows.length) return '';
+    if(cash === null) return `<div class="ow-cr-wl ow-warn">
+      <span class="ow-cr-wl-r"></span>
+      <span class="ow-cr-wl-t"><span class="ow-cr-wl-l">No line today</span>Today has not been opened in the cash book, so there is no figure to measure this list against.
+        <button type="button" class="ow-db-go" id="cred_to_cash">Open today in the cash book</button></span>
+      <span class="ow-cr-wl-r"></span>
+    </div>`;
+    if(waterAt === -1) return `<div class="ow-cr-wl">
+      <span class="ow-cr-wl-r"></span>
+      <span class="ow-cr-wl-t"><span class="ow-cr-wl-l">Everything is within reach</span>The <b class="ow-cr-fig">${f(cash)}</b> in hand today covers all <b class="ow-cr-fig">${f(waterSum)}</b> of what is listed here.</span>
+      <span class="ow-cr-wl-r"></span>
+    </div>`;
+    const below = rows.length - waterAt;
+    return `<div class="ow-cr-wl">
+      <span class="ow-cr-wl-r"></span>
+      <span class="ow-cr-wl-t"><span class="ow-cr-wl-l">Today&rsquo;s cash runs out here</span>Paying down this list in full, the <b class="ow-cr-fig">${waterAt}</b> above come to <b class="ow-cr-fig">${f(waterSum)}</b> of the <b class="ow-cr-fig">${f(cash)}</b> in hand. The ${below} below wait on money coming in.</span>
+      <span class="ow-cr-wl-r"></span>
+    </div>`;
+  };
+
+  /* Named rather than dropped: what the filters removed is said where it
+     would have been, with the figure it takes with it. */
+  const hiddenCount = owingAll.length - rows.filter(r=> r.owed > 0.5).length;
+  const hiddenSum = owingAll.reduce((s,r)=> s + r.owed, 0) - rows.reduce((s,r)=> s + r.owed, 0);
+  const foot = rows.length && hiddenCount > 0
+    ? `<p class="ow-mini">${credBandFilter ? `Showing <b>${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')}</b> only, and each figure above is that band&rsquo;s share rather than the whole balance. ` : ''}${
+        hiddenCount} supplier${hiddenCount===1?'':'s'} owed <b>${f(hiddenSum)}</b> ${hiddenCount===1?'is':'are'} not listed${
+        credSearch ? ' by the search and the filters' : ''}. A printed sheet says the same on its face.</p>`
+    : '';
+
+  const empty = data.suppliers.length === 0
+    ? '<div class="ow-empty"><b>No suppliers yet.</b> Add one on the Suppliers screen. A balance appears here once one of their purchase invoices goes unpaid.</div>'
+    : credBandFilter
+      ? `<div class="ow-empty"><b>Nothing is in the ${esc((agingBandDef(credBandFilter)||{}).label || 'chosen')} band${credSearch ? ' under this search' : ''}.</b> Tap the lit band above to show every supplier.</div>`
+      : credSearch
+        ? `<div class="ow-empty"><b>No supplier matches &ldquo;${esc(credSearch)}&rdquo;.</b> Search by supplier name.</div>`
+        /* The panel above has already said you owe nothing; saying it
+           again is the screen agreeing with itself out loud. What is
+           left to say is what this panel is hiding. */
+        : credHideSettled
+          ? `<div class="ow-empty">Nothing to list. <b>Hide settled</b> is on, so the ${data.suppliers.length} settled supplier${data.suppliers.length===1?'':'s'} on file ${data.suppliers.length===1?'is':'are'} not shown &mdash; turn it off to see everyone.</div>`
+          : '<div class="ow-empty">No supplier on file is carrying a balance.</div>';
+
+  /* WHERE THE BAND GOES. A level belongs at the level: between the row
+     the cash still reaches and the first one it does not. But the two
+     cases that are not a level are statements about the whole list --
+     no figure to measure against, or a figure that covers everything --
+     and a statement about the list belongs at the top of it, not
+     trailing off the bottom where it reads as a footnote. */
+  const listHTML = rows.length
+    ? (waterAt === -1 ? waterHTML() : '') + head
+      + rows.map((r,i)=> (i === waterAt ? waterHTML() : '') + rowHTML(r)).join('') + foot
+    : empty;
+
+  wrap.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Who to pay</span>
+      <span class="ow-pan-n">${rows.length ? `${rows.length}${
+        rows.length !== owingAll.length ? ' of ' + owingAll.length : ''} &middot; ${f(totalOwed)}${
+        credBandFilter || credSearch ? ' shown' : ''}` : 'none'}</span>
+    </div>
+    ${toolbar}
+    ${listHTML}
+  </div>`;
+
+  wireCredToolbar(wrap);
+
+  wrap.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
+    // Clicking the row that is open closes it: the way out is the way in.
+    credOpenId = (credOpenId === btn.dataset.open) ? null : btn.dataset.open;
+    // A day half-named on one supplier has no business surviving into
+    // another, or into a closed row where nothing can be seen to confirm it.
+    credDayEditId = null;
+    renderCreditorsList(credSearch);
   }));
-  wrap.querySelectorAll('.cred-pay').forEach(btn=>btn.addEventListener('click', ()=>{
+  wrap.querySelectorAll('.cred-pay').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
     openCreditorPaymentModal(btn.dataset.id);
   }));
+  wrap.querySelectorAll('[data-sup]').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    goToTab('purchase-invoices');
+  }));
+
+  /* ---- naming a day, on the bill ----
+     Nothing sends itself and nothing dates itself: each of these is an
+     owner tap, and the write goes through the same setBillDueDate the
+     old prompt() called, so What's coming cannot disagree with this
+     screen about which bills are on its line. */
+  wrap.querySelectorAll('.cred-due-set').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    credDayEditId = btn.dataset.id;
+    renderCreditorsList(credSearch);
+    const box = document.getElementById('cred_day_field');
+    if(box) box.focus();
+  }));
+  wrap.querySelectorAll('.cred-due-cancel').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    credDayEditId = null;
+    renderCreditorsList(credSearch);
+  }));
+  wrap.querySelectorAll('.cred-due-save').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const box = document.getElementById('cred_day_field');
+    const when = String((box && box.value) || '').trim();
+    const res = setBillDueDate(Number(btn.dataset.id), when);
+    // A refusal names itself and leaves the field open on the day that
+    // was refused, rather than closing and losing what was typed.
+    if(!res.ok){ toast(res.why, 9000); return; }
+    credDayEditId = null;
+    renderCreditorsList(credSearch);
+    renderAhead();
+    toast('Written down — it is on the line in What’s coming for ' + fmtShortDate(when) + '.');
+  }));
+  wrap.querySelectorAll('.cred-due-clear').forEach(btn=> btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(!confirm('Take back the day you named for this bill?\n\nThe bill stays owed. It comes off the cash line in What’s coming, and what you can safely spend goes back up by it.')) return;
+    const res = clearBillDueDate(Number(btn.dataset.id));
+    if(!res.ok){ toast(res.why, 9000); return; }
+    credDayEditId = null;
+    renderCreditorsList(credSearch);
+    renderAhead();
+    toast('Day taken back — the bill is owed with no day named.');
+  }));
+
+  const cashGo = wrap.querySelector('#cred_to_cash');
+  if(cashGo) cashGo.addEventListener('click', ()=> goToTab('cashbook'));
 }
-document.getElementById('cred_hide_no_debt').addEventListener('change', ()=>renderCreditorsList(document.getElementById('cred_search').value));
-document.getElementById('cred_search').addEventListener('input', e=>renderCreditorsList(e.target.value));
-document.getElementById('cred_export_btn').addEventListener('click', ()=>{
+
+/* The toolbar is rendered with the list, so its controls are wired after
+   every render rather than once at parse time. Search keeps focus and
+   caret across the re-render it causes, or typing a second letter would
+   put the caret back at the start. */
+function wireCredToolbar(wrap){
+  const box = wrap.querySelector('#cred_search');
+  if(box){
+    box.addEventListener('input', (e)=>{
+      const at = e.target.selectionStart;
+      renderCreditorsList(e.target.value);
+      const again = document.getElementById('cred_search');
+      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(_){} }
+    });
+  }
+  const sort = wrap.querySelector('#cred_sort');
+  if(sort) sort.addEventListener('change', (e)=>{
+    CRED_SORT_STATE.key = e.target.value;
+    CRED_SORT_STATE.dir = CRED_SORT_FIRST_DIR[e.target.value] || -1;
+    renderCreditorsList(credSearch);
+  });
+  const tg = wrap.querySelector('#cred_hide_no_debt');
+  if(tg) tg.addEventListener('click', ()=>{ credHideSettled = !credHideSettled; renderCreditorsList(credSearch); });
+  const chip = wrap.querySelector('#cred_band_chip');
+  if(chip) chip.addEventListener('click', ()=>{ credBandFilter = ''; renderCreditorsList(credSearch); });
+  const exp = wrap.querySelector('#cred_export_btn');
+  if(exp) exp.addEventListener('click', credExportCSV);
+  const prt = wrap.querySelector('#cred_print_btn');
+  if(prt) prt.addEventListener('click', credPrintList);
+}
+
+/* Was wired at parse time to a button in the panel head. The toolbar
+   is drawn with the list now, so #cred_export_btn does not exist when
+   this script runs -- same code, wired per render. */
+function credExportCSV(){
   const rows = credLastRows;
   if(rows.length===0){ toast('No creditors to export'); return; }
   const lines = [['No.','Supplier name','Owed','Waiting (days)','Age band','Unpaid bills','Last paid'].join(',')];
@@ -41159,8 +41666,9 @@ document.getElementById('cred_export_btn').addEventListener('click', ()=>{
   a.href = url; a.download = `creditors-list-${todayISO()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-});
-document.getElementById('cred_print_btn').addEventListener('click', ()=>{
+}
+
+function credPrintList(){
   const rows = credLastRows;
   if(rows.length===0){ toast('No creditors to print'); return; }
   const totalOwed = rows.reduce((s,r)=> s + credRowAmount(r), 0);
@@ -41230,7 +41738,7 @@ document.getElementById('cred_print_btn').addEventListener('click', ()=>{
   win.document.close();
   win.focus();
   win.print();
-});
+}
 
 // Recent payments across every one of this supplier's purchase invoices,
 // newest first, each tagged with which invoice it landed on -- lets a rep
@@ -41257,7 +41765,7 @@ function wireCreditorPaymentHistory(supplierId){
     removePiPayment(Number(btn.dataset.pi), Number(btn.dataset.idx));
     wireCreditorPaymentHistory(supplierId);
     renderCreditorPaymentSummary(supplierId);
-    renderCreditorsList(document.getElementById('cred_search').value);
+    renderCreditorsList();
   }));
 }
 function renderCreditorPaymentSummary(supplierId){
@@ -41333,7 +41841,7 @@ document.getElementById('crp_save').addEventListener('click', ()=>{
   saveData();
   closeModal('creditorPaymentModal');
   resetCreditorPaymentForm();
-  renderCreditorsList(document.getElementById('cred_search').value);
+  renderCreditorsList();
   if(document.getElementById('tab-purchase-invoices') && document.getElementById('tab-purchase-invoices').style.display !== 'none'){
     renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
   }
@@ -50978,8 +51486,8 @@ document.getElementById('ipe_save').addEventListener('click', ()=>{
   if(document.getElementById('pi_doc_search')){
     renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
   }
-  if(typeof renderCreditorsList === 'function' && document.getElementById('cred_search')){
-    renderCreditorsList(document.getElementById('cred_search').value);
+  if(typeof renderCreditorsList === 'function'){
+    renderCreditorsList();
   }
   refreshNavBadges();
   /* The overpayment is worth interrupting for: the shop is owed money
@@ -52714,7 +53222,7 @@ function consignmentAccrued(supplierId, asOf){
 
 /* Settling up raises an ordinary supplier bill, flagged as this. So
    "what has been settled" is a reading of the purchase invoices, and
-   the money reaches Who you owe, the payables and the cash book by the
+   the money reaches Creditors, the payables and the cash book by the
    route every other bill takes -- no separate account to reconcile. */
 function consignmentSettlements(supplierId, asOf){
   return (data.purchaseInvoices||[]).filter(pi=>
@@ -54438,7 +54946,7 @@ function renderAhead(){
   const owed = a.owedByYou;
   html += `<div class="pw-tail"><h4>Money with no date on it</h4>
     <div class="ah-sub">Nobody has named a day for any of this. When a customer names one, tap <b>They promised…</b> on Chase debts and they move to the band above.
-      When <b>you</b> name one for a supplier's bill, tap <b>I'll pay on…</b> on Who you owe and it moves onto the line. Until somebody says a date, putting it there would mean inventing one.</div>
+      When <b>you</b> name one for a supplier's bill, open that supplier on <b>Creditors</b> and tap <b>Name a day</b> on the bill itself, and it moves onto the line. Until somebody says a date, putting it there would mean inventing one.</div>
     <div class="ah-rows">
       <div class="ah-row"><span class="ah-when">no date</span>
         <span class="ah-what">Owed to you<span class="ah-kind">${a.owedToYou.count} ${a.owedToYou.count === 1 ? 'customer' : 'customers'}</span></span>
@@ -54456,7 +54964,7 @@ function renderAhead(){
       : `You owe <b>${f(owed.total)}</b> on ${owed.count} open ${owed.count === 1 ? 'bill' : 'bills'} in all. ${
         owed.dated ? `${owed.dated} of them, ${f(owed.datedTotal)}, ${owed.dated === 1 ? 'carries a day you named and is' : 'carry days you named and are'} already on the line above — not counted twice.`
           : 'None of them carries a day yet, so none of it is on the line above.'} ${
-        owed.undated ? `<b>Open Who you owe</b> to name a day for the other ${owed.undated}; safe to spend will drop by what you commit, which is the point of saying it.` : ''}`}</p>
+        owed.undated ? `<b>Open Creditors</b> to name a day for the other ${owed.undated}; safe to spend will drop by what you commit, which is the point of saying it.` : ''}`}</p>
     ${owed.missedOwnWord ? `<p class="pp-more"><b>${owed.missedOwnWord} ${owed.missedOwnWord === 1 ? 'bill has' : 'bills have'} gone past the day you named.</b>
       That is your own word rather than the supplier's patience, and it is what costs a shop its credit. ${
         owed.missedOwnWord === 1 ? 'It counts' : 'They count'} against today on the line above until paid or re-dated.</p>` : ''}
@@ -57331,7 +57839,7 @@ function buyHoldsSweep(dateISO){
 
    It stays OFF the cash line. Money leaves on a day somebody named,
    and nobody has named one -- the day is given when the goods arrive
-   and the bill is dated, on Who you owe, in the owner's own hand. The
+   and the bill is dated, on Creditors, in the owner's own hand. The
    same law the supplier bills already keep.
 
    Riding the presets blob, beside the buy holds and the chases: no new
@@ -57543,7 +58051,7 @@ function buyOrderWaUrl(o){
    nine bills for one lorry.
 
    THE BILL IS LEFT UNDATED ON PURPOSE. When the shop will pay is the
-   shop's word to give, and Who you owe is where it is given. Deriving
+   shop's word to give, and Creditors is where it is given. Deriving
    a day from the order would put money on the cash line that nobody
    promised.
 
@@ -58939,7 +59447,7 @@ function openBuyReceive(id){
   document.getElementById('buyReceiveTitle').textContent = `What came from ${o.supplier}`;
   document.getElementById('buyReceiveNote').textContent =
     'Change anything that came differently — fewer, or at a different price. What you leave here is what goes on the shelf and on the bill. '
-    + 'The bill is raised with no day to pay on: name that on Who you owe, and it goes onto the cash line.';
+    + 'The bill is raised with no day to pay on: name that on Creditors, on the bill itself, and it goes onto the cash line.';
   document.getElementById('buyReceiveRows').innerHTML = `
     <table class="bo-table">
       <thead><tr><th>Item</th><th class="r">Ordered</th><th class="r">Came</th><th class="r">Each</th></tr></thead>
@@ -58973,7 +59481,7 @@ __btn_buy_receive_save.addEventListener('click', saveOnceAtATime(__btn_buy_recei
      that in the figures it will be raised at. */
   if(!confirm(`Put these goods on the shelf and raise a bill of ${fmtUGX(Math.round(total))} to ${o.supplier}?\n\n`
     + `${got.length} ${got.length === 1 ? 'line' : 'lines'}. You will owe it from today. `
-    + `It carries no day to pay on until you name one on Who you owe.`)) return;
+    + `It carries no day to pay on until you name one on Creditors.`)) return;
   const res = await receiveBuyOrder(o.id, got);
   if(!res){ toast('That delivery could not be recorded'); return; }
   closeModal('buyReceiveModal');
@@ -58989,10 +59497,10 @@ __btn_buy_receive_save.addEventListener('click', saveOnceAtATime(__btn_buy_recei
      this app already knows how to say. */
   const when = prompt(`What day will you pay ${o.supplier} the ${fmtUGX(Math.round(res.total))} on bill ${res.billId}?\n\n`
     + 'As YYYY-MM-DD. It goes onto the cash line in What’s coming, and what you can safely spend drops by it.\n'
-    + 'Leave it empty if they have not given you terms — it stays owed with no day, and Who you owe will keep asking.', '');
+    + 'Leave it empty if they have not given you terms — it stays owed with no day, and Creditors will keep asking.', '');
   if(when === null || !String(when).trim()) return;
   const set = setBillDueDate(res.billId, String(when).trim());
-  if(!set.ok){ toast(set.why + ' The bill is raised — name the day on Who you owe.', 9000); return; }
+  if(!set.ok){ toast(set.why + ' The bill is raised — name the day on Creditors.', 9000); return; }
   renderPurchasePlanPanel();
   toast('Written down — ' + fmtUGX(Math.round(res.total)) + ' to ' + o.supplier + ' on '
     + fmtShortDate(String(when).trim()) + '. It is on the line in What’s coming now.', 7000);
@@ -59719,7 +60227,7 @@ const MANAGER_DOORS = {
   orders: { tab: 'quote-saved', label: 'Open Order tracking' },
   invoices: { tab: 'invoices', label: 'Open Invoices' },
   debtors: { tab: 'analytics-debtors', label: 'Open Debtors' },
-  creditors: { tab: 'analytics-creditors', label: 'Open Who you owe' },
+  creditors: { tab: 'analytics-creditors', label: 'Open Creditors' },
   followups: { tab: 'followups', label: 'Open Follow-ups' },
   inventory: { tab: 'inventory', label: 'Open Inventory' },
   statements: { tab: 'statements', label: 'Open Statements' },

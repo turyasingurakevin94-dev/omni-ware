@@ -243,8 +243,14 @@ const build = (data) => compileScope(
     'the undated band draws the undated share, not the whole of what is owed');
   t.check(/not counted twice/.test(ahead),
     'and says out loud that the dated bills on the line are not counted again');
-  t.check(/I'll pay on…/.test(ahead) || /I&#39;ll pay on/.test(ahead) || /I'll pay on/.test(ahead),
-    'and points at the door that dates them');
+  /* The door moved and so did its name. "I'll pay on…" was a button in
+     a panel of undated bills on the creditors screen; that panel is
+     gone, and a day is now named on the bill itself inside the opened
+     supplier. What must still hold is that this screen SENDS you there
+     rather than describing the problem and stopping -- so the check is
+     on the destination and the control, not on the old wording. */
+  t.check(/Creditors/.test(ahead) && /Name a day/.test(ahead),
+    'and points at the door that dates them, and at the control that does it');
   t.check(!/There is no such record on the supplier side/.test(src),
     'the screen no longer says the supplier side has no such record — it has one now');
 
