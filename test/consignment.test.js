@@ -573,28 +573,57 @@ if (scope) {
 
 /* ---------- 12. the screen has its own shape ------------------------- */
 /*
- * It was wearing three other screens' clothes: .chase-row (a name, an
- * amount and a sentence -- right for a customer who owes you, wrong for
- * an account with four figures worth comparing and a list of goods under
- * them), .buy-tail/.buy-row (a shopping list), .buy-controls (a filter
- * bar). Together they read as a screen assembled from spare parts, which
- * is what it was. It is built on the supplier card's shape now -- the
- * app's existing answer to "one party, several figures, some actions".
+ * FIRST it wore three other screens' clothes -- .chase-row (a name, an
+ * amount and a sentence), .buy-tail/.buy-row (a shopping list),
+ * .buy-controls (a filter bar) -- and was rebuilt on the supplier card:
+ * an avatar, a title, a four-tile strip and a table, per consignor.
+ *
+ * That was right about the card and wrong about the screen. A supplier
+ * card is the shape for looking AT one party; this screen is a standing
+ * watch across all of them -- "how much of what is in the drawer is not
+ * mine" -- and it answered that by expanding every consignor in full,
+ * always. Three consignors was a thousand pixels. At the ten to thirty
+ * this shop deals with, the figure the screen exists for was off the top
+ * of the window by the third card, and the ranking could not be read
+ * without scrolling the whole list.
+ *
+ * So the assertions below moved with it: the strip, ONE .ow-q queue whose
+ * rows open in place, the layer's .ow-tbl for the goods and .ow-sr for
+ * the rail. What each one is protecting is the same property it always
+ * was -- the figures sit where they can be compared, the goods line up
+ * down a column, the two notices are notices -- said in the vocabulary
+ * the rest of the app now speaks.
  */
 {
   const render = extractFunction(src, 'renderConsignment', 'index.html');
   const form = extractFunction(src, 'markAlreadyHereHTML', 'index.html');
 
-  t.check(/class="cons-card"/.test(render) && !/class="chase-row"/.test(render),
-    'a consignor is a card of its own, not a debt-chase row');
-  t.check(/class="sum-strip"/.test(render) && /of your cash is theirs/.test(render),
+  /* A consignor is a queue row that opens, not a card that is always
+     open. This is the assertion that changed in substance: the old one
+     said "a card of its own, not a debt-chase row", and a card of its
+     own is precisely what stopped working at ten of them. */
+  t.check(/class="ow-q" data-id=/.test(render) && !/class="cons-card"/.test(render)
+    && !/class="chase-row"/.test(render),
+    'a consignor is a queue row that opens in place, not a card that is always open');
+  /* The layer's queue emits the desk row AND the phone card from one
+     call, which is what makes the two designs unable to say different
+     things. The old screen had a desktop table and a media query that
+     hid two of its columns -- a reflow, not a second design. */
+  t.check(/class="ow-q-r ow-qtog"/.test(render) && /class="ow-q-card ow-qtog"/.test(render),
+    'and the desk row and the phone card come from that one call');
+  t.check(/class="ow-strip"/.test(render) && !/class="sum-strip"/.test(render),
     'the figures the screen exists for are in the strip every other screen uses for them');
-  t.check(/class="sc-stats"/.test(render)
-    && /'on the shelf'/.test(render) && /'worth to them'/.test(render)
-    && /'sold so far'/.test(render) && /'billed to them'/.test(render),
-    'and the four that make up one consignment sit together where they can be compared');
-  t.check(/cons-goods-table/.test(render) && !/class="buy-row"/.test(render),
-    'their goods are a table, so the figures line up down the column');
+  /* The four figures of one consignment are still together and still
+     comparable -- they are the strip's four tiles now rather than a
+     private stat strip inside each card, so they are read once for the
+     whole screen instead of once per consignor. */
+  t.check(/'Owed to consignors'/.test(render) && /'Of it, already billed'/.test(render)
+    && /'Their goods here'/.test(render) && /'Consignors'/.test(render)
+    && !/class="sc-stats"/.test(render),
+    'and the four that make up the whole holding sit together where they can be compared');
+  t.check(/class="ow-tbl cons-tbl"/.test(render) && !/cons-goods-table/.test(render)
+    && !/class="buy-row"/.test(render),
+    'their goods are the layer\'s table, so the figures line up down the column');
   t.check(/class="form-panel cons-mark"/.test(form) && /class="form-grid"/.test(form)
     && !/class="buy-controls"/.test(form),
     'and marking goods is a form, not a row of inline controls reading like a filter bar');
@@ -603,16 +632,34 @@ if (scope) {
      coloured one -- both of them the shape of a placeholder. */
   t.check(/class="cons-empty"/.test(render), 'nothing held reads as an empty state, not a stray sentence');
   t.check(/class="cons-blocked"/.test(render), 'and the migration notice as a notice');
+  /* And an empty screen shows no strip. Four tiles reading zero fill it
+     with figures that mean nothing and make a quiet screen look like a
+     broken one, so the count lives in the panel head instead. */
+  const emptyArm = render.slice(render.indexOf('if(!rows.length)'), render.indexOf('GOODS OF THEIRS'));
+  t.check(!/ow-strip/.test(emptyArm) && /ow-pan-n">none/.test(emptyArm),
+    'and shows no strip of zeros when there is nothing to count');
 
   const css = (sel) => (new RegExp(`\\${sel}\\{([^}]*)\\}`).exec(src) || ['', ''])[1];
-  t.check(/border-radius/.test(css('.cons-card')) && /border:1px solid/.test(css('.cons-card')),
-    'the card carries its own border and corner rather than a dashed rule between rows');
-  /* Five columns -- name, count, unit cost, value, button -- came to more
-     than 375px however tightly they were set, and the right-hand end left
-     the screen. Measured in a real 375px frame after the fix: nothing
-     crosses the edge. */
-  t.check(/@media \(max-width:640px\)\{[\s\S]{0,600}?\.cons-goods-table tr\{display:grid/.test(src),
-    'and on a phone the row stacks rather than running off the side');
+  /* The queue's own tracks, declared once on the container so every row
+     shares them -- which is what makes a column of figures line up at
+     the glance it is read at. The old assertion asked the card for a
+     border and a corner; there is no card to ask.
+
+     .ow-tbl.cons-tbl, not .cons-tbl: the layer sets the same custom
+     property on .ow-tbl, and a bare class would lose the cascade to it
+     on document order. */
+  t.check(/--ow-tbl-cols:/.test(css('.ow-tbl.cons-tbl')),
+    'the goods table declares its tracks on the container, so the rows cannot disagree about them');
+  /* THE PHONE IS NOT A SQUEEZED TABLE ANY MORE.
+     Five columns of figures came to more than 375px however tightly they
+     were set, and the old answer was @media (max-width:640px) hiding two
+     of them -- a reflow of one design, which is the thing the two-designs
+     law forbids. The layer's table turns every labelled cell into a line
+     of its own from the data-l it was emitted with, so the media query
+     and its 560px companion are gone and nothing is hidden from anybody. */
+  t.check(!/\.cons-goods-table tr\{display:grid/.test(src)
+    && /data-l="On shelf"/.test(render) && /data-l="Worth to them"/.test(render),
+    'and on a phone the goods carry their column names instead of losing two columns to a media query');
 }
 
 /* ---------- 12b. a finding with nothing to fix is not a warning ------- */
@@ -638,7 +685,15 @@ if (scope) {
     'and reached only when there is something to fix');
   t.check(/sold without a trace/.test(render),
     'a finding with nothing markable gets its own sentence');
-  t.check(/g\.qty > 0 \? `<button type="button" class="btn btn-accent cons-gap-fix"/.test(render),
+  /* GHOST, not accent -- and that is a deliberate change to what this
+     line asserts. The button was oxide and it sat ABOVE the money, so on
+     any account with a finding the loudest thing on the screen was a
+     correction to the record rather than the debt the screen is about.
+     The accent is the one thing to do next, and on this screen that is
+     Settle. What the assertion still protects is unchanged: the button
+     exists only where g.qty > 0, because a finding nothing can be done
+     about must not offer to do something. */
+  t.check(/g\.qty > 0 \? `<div class="cons-gap-act"><button type="button" class="btn btn-ghost ow-sm cons-gap-fix"/.test(render),
     'and no button, because there is nothing the app can do about it');
 }
 
@@ -736,17 +791,32 @@ if (scope) {
   // it exists to explain.
   t.check(!/of your cash is theirs/.test(render.replace(/\/\*[\s\S]*?\*\//g, '')),
     'the screen no longer calls a liability cash');
-  t.check(/'owed to suppliers'/.test(render), 'it calls it what it is');
-  t.check(/still on invoices customers have not paid/.test(render)
-    && /You are holding \$\{f\(cashHeld\)\} in cash/.test(render),
+  t.check(/'Owed to consignors'/.test(render), 'it calls it what it is');
+  /* The same three derived figures, moved from a paragraph under the
+     strip into the rail's own rows, where they read as the arithmetic
+     behind the headline rather than as a caveat trailing it. The
+     shortfall is now stated outright -- dueTotal against
+     cashOnHandByAccount -- which is the question the old sentence was
+     reaching for and never actually answered. */
+  t.check(/Still out with customers/.test(render)
+    && /Cash you are holding/.test(render)
+    && /const cashHeld = cashOnHandByAccount\(\)\.total;/.test(render)
+    && /you would be \$\{esc\(f\(short\)\)\} short/.test(render),
     'and answers the question that sentence was reaching for, out of figures it can actually derive');
-  t.check(/'billed to them'/.test(render) && /still to pay, on their bill/.test(render),
-    'billed and paid are two facts, and the card carries both');
+  t.check(/'Of it, already billed'/.test(render) && /still to pay, on their bill/.test(render),
+    'billed and paid are two facts, and the screen carries both');
   /* And the headline is the whole debt, not the half of it that has no
      bill yet. It read "0 UGX · nothing owed" the moment Settle was
      tapped, about a supplier still waiting for every shilling -- the
      same complaint that started this, one layer down. */
-  t.check(/consignmentDueNow\(r\)/.test(render) && /<b>\$\{f\(dueNow\)\}<\/b>/.test(render),
+  /* Same claim, new markup: the figure is the queue row's own, and its
+     value is still consignmentDueNow and nothing narrower. The strip's
+     total is built by reducing the same call over the same rows, so the
+     headline and the column under it cannot disagree about one figure. */
+  t.check(/const dueNow = consignmentDueNow\(r\);/.test(render)
+    && /const money = f\(dueNow\);/.test(render)
+    && /<b class="ow-q-f">\$\{esc\(money\)\}<\/b>/.test(render)
+    && /rows\.reduce\(\(n,r\)=> n \+ consignmentDueNow\(r\)\)/.test(render.replace(/, 0\)/g, ')')),
     'and the headline counts what is billed-but-unpaid as owed, because it is');
   const dn = scope.consignmentDueNow;
   eq(dn({ owed: 100000, settlementDue: 0 }), 100000, 'nothing billed: what is owed is what has sold');

@@ -356,6 +356,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-cp', 'ow-av',
                     'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-fig', 'ow-empty'],
     },
+    /* Consignment. A card per consignor, each one always fully open --
+       an avatar, a title, a private four-tile stat strip and their whole
+       shelf under it. That is the shape for looking AT one party, and
+       this screen is a standing watch across all of them: at ten to
+       thirty consignors the one figure it exists for was off the top of
+       the window by the third card.
+
+       So the private card, its stat strip and its hand-rolled goods
+       table became the layer's strip, one .ow-q queue whose rows open in
+       place, .ow-tbl for the goods and .ow-sr for the rail -- and the
+       phone stopped being that table with two columns hidden by a media
+       query. .sc-avatar, .sc-stats and .sc-stat are NOT retired from the
+       file: the supplier and staff directories are card screens and
+       still wear them properly. Only this screen may not emit them
+       again. .cons-mark* stay: the marking form is a form, and the layer
+       has no opinion about forms. */
+    consignment: {
+      retired: ['page-head', 'panel', 'sum-strip', 'sum-cell', 'sum-value', 'sum-label',
+                'cons-card', 'cons-card-head', 'cons-card-sub', 'cons-card-foot', 'cons-foot-note',
+                'cons-owed', 'cons-list', 'cons-basis', 'cons-goods', 'cons-goods-head',
+                'cons-goods-table', 'cons-goods-name', 'cons-goods-act',
+                'sc-avatar', 'sc-title', 'sc-name', 'sc-stats', 'sc-stat', 'chase-row'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
+      renders: 'renderConsignment',
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-note', 'ow-q-a',
+                    'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
+    },
     /* Order tracking. The lane board -- the step rail, the lanes, the
        cards with six controls, the select-all/print row -- became a
        console: a strip, a queue of what needs the owner, one table
