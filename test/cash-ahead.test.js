@@ -97,7 +97,13 @@ const env = (data, over) => ({
     { id: 1, name: 'Milly', debt: 840000, ageDays: 62 },
     { id: 2, name: 'Mulongo', debt: 160000, ageDays: 9 },
   ],
-  credOpenInvoices: () => [{ due: 2100000, ageDays: 47 }, { due: 300000, ageDays: 4 }],
+  /* The bill BEHIND the balance, not just the balance. The forecast only
+     ever needed `due` and `ageDays`; the screen now names a day on an
+     undated bill, and a day is a fact about one invoice — so the stub
+     carries the invoice, as the real reading always has. Same figures. */
+  credOpenInvoices: () => [
+    { due: 2100000, ageDays: 47, supplierId: 'S1', invoice: { id: 91, date: '2026-07-13' } },
+    { due: 300000, ageDays: 4, supplierId: 'S2', invoice: { id: 92, date: '2026-08-25' } }],
   console, Date, JSON, Math, Number, String, Array, Object, Boolean,
   ...(over || {}),
 });
@@ -294,15 +300,41 @@ const build = (data, extraSrc, names, over) => compileScope(
 /* ---------- 6. the screen -------------------------------------------- */
 {
   const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
-  const draw = (over, d) => { build(d || makeData(), [extractFunction(src, 'renderAhead', 'index.html')], ['renderAhead'], Object.assign({
+  /* THE SCREEN IS THREE FUNCTIONS NOW, not one. renderAhead draws the
+     strip, the ledger and the rail; aheadRunwaySVG draws the line the
+     ledger is a reading of; cashAheadDays says how far it runs. They are
+     compiled together because they are one screen -- every assertion
+     below is the one that was here before it was redrawn. */
+  const AHEAD = ['cashAheadDays', 'aheadRunwaySVG', 'renderAhead'];
+  const aheadStubs = {
     document: { getElementById: (id) => (id === 'ah_body' ? el : null) },
     esc: (x) => String(x == null ? '' : x),
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
-  }, over || {})).renderAhead(); return el.innerHTML; };
+    daysBetweenISO: (from, to) => Math.round(
+      (Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000),
+    debtsCovering: (amt, rows) => ({ rows: rows || [], covered: 0, enough: false }),
+    collectableDebts: () => [],
+    supplierName: () => 'Supplier',
+    purchaseInvoiceNumberLabel: (pi) => 'PINV-' + String(pi.id),
+    agingDaysLabel: (n) => n + ' days',
+    /* Which bill is having a day named on it. Module state on the real
+       screen; nothing is open when it is drawn cold. */
+    aheadDayEditId: null,
+  };
+  const draw = (over, d) => { build(d || makeData(), AHEAD.map((n) => extractFunction(src, n, 'index.html')), AHEAD, Object.assign({}, aheadStubs, over || {})).renderAhead(); return el.innerHTML; };
 
   const html = draw();
-  t.check(/in hand today/.test(html) && html.includes('5,000,000'), 'the strip opens on the cash in hand');
-  t.check(/promised in 30 days/.test(html) && html.includes('2,500,000'), 'against what is promised');
+  /* THE STRIP OPENS ON SAFE TO SPEND, not on cash in hand. It is the
+     lowest point the line reaches, it is what the buying plan budgets
+     from, and it is the only figure here that answers "can I commit
+     money today". Cash in hand is the figure that MISLEADS -- some of it
+     is already spent -- so it comes second, and the leading tile says
+     what it is measured against. Both figures are still on the strip;
+     what changed is which one a reader meets first. */
+  t.check(/Safe to spend/.test(html) && html.indexOf('Safe to spend') < html.indexOf('In hand today'),
+    'the strip opens on what is safe to spend, ahead of the cash in hand');
+  t.check(/In hand today/.test(html) && html.includes('5,000,000'), 'and carries the cash in hand');
+  t.check(/Falls due in 30 days/.test(html) && html.includes('2,500,000'), 'against what is promised');
   t.check(/safe to spend/.test(html), 'and names what is safe to spend');
   t.check(/tightest day/.test(html) && /2026-09-05/.test(html), 'and the day it is tightest');
   t.check(/leaves 4,600,000/.test(html) && /leaves 2,500,000/.test(html),
@@ -312,21 +344,26 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/1 of these is not costed yet/.test(html),
     'and is counted underneath, so the line can admit it is generous by whatever it turns out to be');
   t.check(/not raised yet/.test(html), 'a rent derived from the agreement says it has not been raised');
-  t.check(/Money with no date on it/.test(html) && /oldest 62 days/.test(html),
+  t.check(/Money with no date on it/.test(html) && /the oldest <b[^>]*>47<\/b> days old/.test(html),
     'what has no date sits beside the line with its age');
-  t.check(/Nobody has named a day for any of this/.test(html),
+  t.check(/because nobody has named a day for it/.test(html),
     'and says WHY it is not on the line — nobody has said when');
   t.check(/They promised/.test(html) && /Chase debts/.test(html),
     'pointing at where a day IS written down, now that there is somewhere');
-  t.check(!/What they said they would pay/.test(html),
-    'while a shop nobody has promised anything gets no band at all rather than an empty heading');
+  t.check(!/said they would pay/.test(html) && !/ow-ah-ghost/.test(html),
+    'while a shop nobody has promised anything gets no promise row and no second line, rather than an empty heading');
   t.check(!/short of/.test(html), 'a shop that can cover its promises is not told it is short');
 
   const pd = makeData();
   pd.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-09-10', madeOn: '2026-08-29', amount: null }];
   const band = draw(null, pd);
-  t.check(/What they said they would pay/.test(band), 'a promise gets its own band, between the line and the undated pools');
-  t.check(/If these are kept/.test(band) && /840,000/.test(band) && /by 2026-09-10/.test(band),
+  /* A PROMISE SITS IN THE LEDGER, in date order, rather than in a band
+     of its own below it. The line above draws commitments and promises
+     as one sequence, and a reader cannot check a picture against two
+     separate lists. What must still hold -- and does, on the row itself
+     -- is that it never dresses itself up as money in the drawer. */
+  t.check(/said they would pay/.test(band), 'a promise appears on the ledger, in date order with what falls due');
+  t.check(/Promised to you, if kept/.test(band) && /840,000/.test(band) && /2026-09-10/.test(band),
     'saying what it comes to and by when');
   t.check(/Not counted in what is safe to spend/.test(band),
     'and saying so out loud — the one sentence standing between a promise and the buy plan spending it');
@@ -337,25 +374,27 @@ const build = (data, extraSrc, names, over) => compileScope(
      border-bottom:none}` resets the WIDTH to medium and the colour to
      currentColor; setting only the style back re-lit both, and the last
      promised row drew a 3px near-black dashed rule across the screen. */
-  const css = (/\.ah-row\.promised\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  const css = (/\.ow-ah-lr\.ow-ah-said\{([^}]*)\}/.exec(src) || ['', ''])[1];
   t.check(/border-bottom:\s*[\d.]+px\s+dashed\s+var\(/.test(css),
     `the promised row states its whole border — width, style and colour (${css})`);
-  t.check(/\.ah-row\.promised:last-child\{[^}]*border-bottom:\s*none/.test(src),
+  t.check(/\.ow-ah-lr\.ow-ah-said:last-child\{[^}]*border-bottom:\s*none/.test(src),
     'and re-asserts the last-child reset it would otherwise have overridden');
   t.check(/safe to spend/.test(band) && /2,500,000/.test(band),
     'the figure itself being untouched by any of it');
 
   const tight = draw({ cashOnHandByAccount: () => ({ total: 1000000, byAccount: [] }) });
-  t.check(/comes to more than you hold/.test(tight), 'a shop that cannot is told plainly');
-  t.check(/1,500,000 short/.test(tight), 'by how much');
+  /* The red-railed paragraph is gone: the line itself goes into a
+     crimson field and the strip says it in the tile a reader is already
+     looking at. The two facts it carried -- that you cannot cover what
+     you have promised, and by how much -- are both still stated. */
+  t.check(/goes under on/.test(tight) && /nothing you can safely commit today/.test(tight),
+    'a shop that cannot is told plainly');
+  t.check(/Short <b>1,500,000<\/b> by then/.test(tight), 'by how much');
   t.check(/Chase debts/.test(tight), 'and pointed at the thing that closes it');
+  t.check(/ow-ah-neg/.test(tight), 'and the line is drawn going into the ground below nothing');
 
   const empty = build(Object.assign(makeData(), { dues: [], loans: [], rentAgreements: [] }),
-    [extractFunction(src, 'renderAhead', 'index.html')], ['renderAhead'], {
-      document: { getElementById: (id) => (id === 'ah_body' ? el : null) },
-      esc: (x) => String(x == null ? '' : x),
-      listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
-    });
+    AHEAD.map((n) => extractFunction(src, n, 'index.html')), AHEAD, Object.assign({}, aheadStubs));
   empty.renderAhead();
   t.check(/Nothing falls due in the next 30 days/.test(el.innerHTML), 'a clear window says so');
   t.check(/not the same as nothing being owed/.test(el.innerHTML),
