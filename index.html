@@ -8518,6 +8518,56 @@
   /* a small act in a panel head */
   .ow-pan-a{flex:none;margin-left:var(--ow-sp-8);}
 
+
+  /* ==================================================================
+     THE DROPDOWN, DRAWN BY THE APP.
+
+     The owner reported three times that no dropdown could be used with a
+     mouse: the list appears, and the moment the pointer moves toward an
+     option it is gone. Keyboard selection always worked. Every browser on
+     their machine failed; other sites did not.
+
+     Every mechanical probe came back clean, and so did a full-fidelity
+     reproduction here — a real Chromium under a real X server, driven by
+     real pointer events, every dropdown on every screen, with a shop's
+     worth of data loaded. The native list opened and stayed open through
+     layout shifts, scrolls, option rebuilds and a background refresh
+     landing on top of it. Whatever is destroying that list is not
+     something this page can see, because the list is not part of this
+     page: it is an operating-system window the browser opens beside it.
+
+     So the app stops asking for one. On a POINTER — a mouse or a pen —
+     the choice is drawn here, in the page, out of the same rules as
+     every other surface: hairline, one elevation, paper. On a touch
+     screen nothing changes; the phone's own wheel is better than
+     anything drawn here, and the fault was never reported there.
+
+     Because it is ours, it also survives what a native list cannot: a
+     background refresh that rebuilds the screen underneath re-binds the
+     open list to the redrawn control instead of shutting it.
+     ================================================================== */
+  .ow-selm{position:fixed;z-index:900;display:flex;flex-direction:column;gap:1px;
+    min-width:132px;max-width:min(440px,92vw);padding:var(--ow-sp-4);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);
+    box-shadow:var(--ow-lift);overflow-y:auto;overscroll-behavior:contain;}
+  .ow-selm-g{padding:var(--ow-sp-6) var(--ow-sp-8) var(--ow-sp-2);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-selm-o{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:26px;
+    padding:var(--ow-sp-4) var(--ow-sp-8);border-radius:var(--ow-r);cursor:pointer;
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);}
+  /* The row the pointer or the arrow keys are on. One highlight, never
+     two: hover and the keyboard write the same class. */
+  .ow-selm-o.ow-here{background:var(--ow-paper-2);}
+  .ow-selm-o.ow-on{font-weight:var(--ow-fw-600);}
+  /* An option the form has turned off is shown rather than hidden -- a
+     list that silently drops choices reads as a shorter list, not as a
+     restricted one. */
+  .ow-selm-o.ow-off{color:var(--ow-ink-600);cursor:default;}
+  .ow-selm-t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-selm-k{width:14px;height:14px;flex:none;color:var(--ow-ink-900);visibility:hidden;}
+  .ow-selm-o.ow-on .ow-selm-k{visibility:visible;}
+
   /* ==================================================================
      THE PHONE. Not the console squeezed — its own design. 820px is the
      app's existing breakpoint and is kept, so this switches between two
@@ -8728,6 +8778,9 @@
     .ow-ot-load .ow-f-v{font-size:16px;}
     .ow-ot-load-go .btn.ow-sm{width:100%;justify-content:center;min-height:var(--ow-tap);font-size:14px;box-sizing:border-box;}
     .ow-pan-a{min-height:0;height:28px;flex:none;}
+    /* A mouse on a narrow window still gets the drawn list; give it
+       a thumb's worth of row in case the window is a phone's. */
+    .ow-selm-o{min-height:var(--ow-tap);font-size:15px;}
   }
 </style>
 </head>
@@ -18827,6 +18880,239 @@ document.addEventListener('keydown', (e)=>{
   closeTopbarMenus();
   open.querySelector('button.tb-top').focus();
 });
+
+/* ---------------- THE DROPDOWN, DRAWN BY THE APP ----------------
+
+   Reported three times, and each fix before this one aimed at the page:
+   a label forwarding the click, a background refresh redrawing the
+   screen, a quiet period around the poll. All three were real, all three
+   landed, and the owner's answer did not change -- the list appears, the
+   pointer moves toward an option, the list is gone.
+
+   The reason none of them was it: a native <select>'s list is not part
+   of this page. The browser opens an operating-system window beside the
+   page and draws the options in that. Nothing here can style it, move
+   it, read it, or keep it open -- and, as it turns out, nothing here was
+   closing it either. Driving a real Chromium under a real X server with
+   real pointer events, every dropdown on every screen with a shop's
+   worth of data loaded, that window opened and stayed open through
+   layout shifts, page scrolls, option rebuilds and a background refresh
+   landing on top of it. What CAN close it -- blur, the control being
+   replaced, removed, disabled or hidden -- this app was not doing.
+
+   So the app stops asking the browser for that window. On a mouse or a
+   pen the list is drawn HERE, from the same rules as every other
+   surface, and the <select> stays exactly what it was: the value, the
+   options and the change event all still come from it, so every screen,
+   every renderer and every test that reads a select is untouched. On a
+   TOUCH screen nothing changes -- the phone's own wheel is better than
+   anything drawn here, and the fault was never reported there.
+
+   Drawing it also buys back what a native list could never survive: the
+   thirty-second refresh rebuilding the screen underneath re-binds the
+   open list to the redrawn control instead of shutting it. */
+const owSel = { menu:null, sel:null, id:null, opts:[], here:-1, type:'', typedAt:0, mo:null };
+// What the pointer was for the press we are handling. mousedown carries
+// no such thing, and a touch produces one a moment after the finger
+// leaves -- so the kind is recorded on pointerdown and read on mousedown.
+let owSelPointerKind = 'mouse';
+/* A control this can stand in for. A multiple or a sized list is not a
+   dropdown at all -- it is already drawn in the page -- and a disabled
+   one has nothing to offer. */
+function owSelEligible(sel){
+  return !!sel && sel.tagName === 'SELECT' && !sel.disabled && !sel.multiple && (sel.size || 1) <= 1;
+}
+function owSelClose(){
+  if(owSel.mo){ owSel.mo.disconnect(); owSel.mo = null; }
+  if(owSel.menu && owSel.menu.parentNode) owSel.menu.parentNode.removeChild(owSel.menu);
+  if(owSel.sel) owSel.sel.setAttribute('aria-expanded', 'false');
+  owSel.menu = null; owSel.sel = null; owSel.id = null; owSel.opts = []; owSel.here = -1; owSel.type = '';
+}
+// The options as the form actually has them, in order, with the groups
+// they were written in. A hidden option is left out; a disabled one is
+// shown and not choosable, because a list that silently drops choices
+// reads as a shorter list rather than a restricted one.
+function owSelOptions(sel){
+  const out = [];
+  [...sel.querySelectorAll('option')].forEach(o=>{
+    if(o.hidden) return;
+    const g = o.parentElement && o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : '';
+    out.push({ el:o, label:o.textContent, group:g, off:o.disabled || (o.parentElement && o.parentElement.disabled) });
+  });
+  return out;
+}
+const OW_SEL_TICK = '<svg class="ow-selm-k" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"'
+  + ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+function owSelPaint(){
+  const sel = owSel.sel, menu = owSel.menu;
+  if(!sel || !menu) return;
+  let html = '', lastGroup = null;
+  owSel.opts.forEach((o, i)=>{
+    if(o.group !== lastGroup){
+      if(o.group) html += `<div class="ow-selm-g">${esc(o.group)}</div>`;
+      lastGroup = o.group;
+    }
+    const on = o.el.selected;
+    const cls = 'ow-selm-o' + (on ? ' ow-on' : '') + (o.off ? ' ow-off' : '') + (i === owSel.here ? ' ow-here' : '');
+    // The full text in a title as well: an option can be longer than the
+    // box, and a clipped supplier name reads as a different supplier.
+    html += `<div class="${cls}" role="option" aria-selected="${on ? 'true' : 'false'}" data-i="${i}" title="${esc(o.label)}">`
+      + OW_SEL_TICK + `<span class="ow-selm-t">${esc(o.label)}</span></div>`;
+  });
+  menu.innerHTML = html;
+}
+// Under the control, or above it when there is more room there. Never
+// off the screen, and never taller than the room it has.
+function owSelPlace(){
+  const sel = owSel.sel, menu = owSel.menu;
+  if(!sel || !menu) return;
+  const r = sel.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  const below = vh - r.bottom - 12, above = r.top - 12;
+  const up = below < 160 && above > below;
+  menu.style.maxHeight = Math.max(120, Math.min(288, up ? above : below)) + 'px';
+  menu.style.minWidth = Math.max(132, Math.round(r.width)) + 'px';
+  menu.style.visibility = 'hidden';
+  menu.style.left = '0px'; menu.style.top = '0px';
+  const m = menu.getBoundingClientRect();
+  const left = Math.max(8, Math.min(r.left, vw - m.width - 8));
+  const top = up ? Math.max(8, r.top - m.height - 4) : Math.min(r.bottom + 4, vh - m.height - 8);
+  menu.style.left = Math.round(left) + 'px';
+  menu.style.top = Math.round(Math.max(8, top)) + 'px';
+  menu.style.visibility = '';
+}
+function owSelOpen(sel){
+  owSelClose();
+  owSel.sel = sel;
+  owSel.id = sel.id || '';
+  owSel.opts = owSelOptions(sel);
+  owSel.here = owSel.opts.findIndex(o=> o.el.selected);
+  const menu = document.createElement('div');
+  menu.className = 'ow-selm';
+  menu.setAttribute('role', 'listbox');
+  if(sel.id) menu.setAttribute('aria-label', sel.id);
+  owSel.menu = menu;
+  document.body.appendChild(menu);
+  owSelPaint();
+  owSelPlace();
+  sel.setAttribute('aria-expanded', 'true');
+  // The control keeps the focus, so the background refresh's "a control
+  // is in use" guard still holds the screen still while the list is up.
+  try{ sel.focus({ preventScroll:true }); }catch(e){ sel.focus(); }
+  const here = menu.querySelector('.ow-selm-o.ow-here');
+  if(here) here.scrollIntoView({ block:'nearest' });
+  /* The screen being rebuilt underneath. The refresh replaces the whole
+     tab, so the control this list belongs to becomes a different object
+     with the same id -- which is exactly the case a native list cannot
+     survive. Re-bound rather than closed: the owner asked a question and
+     a redraw nobody asked for is not an answer to it. */
+  owSel.mo = new MutationObserver(()=>{
+    if(!owSel.sel) return;
+    if(document.contains(owSel.sel)) return;
+    const again = owSel.id ? document.getElementById(owSel.id) : null;
+    if(!owSelEligible(again)){ owSelClose(); return; }
+    owSel.sel = again;
+    owSel.opts = owSelOptions(again);
+    if(owSel.here >= owSel.opts.length) owSel.here = owSel.opts.findIndex(o=> o.el.selected);
+    owSelPaint();
+    owSelPlace();
+    again.setAttribute('aria-expanded', 'true');
+    try{ again.focus({ preventScroll:true }); }catch(e){ again.focus(); }
+  });
+  owSel.mo.observe(document.body, { childList:true, subtree:true });
+}
+function owSelMove(step){
+  if(!owSel.opts.length) return;
+  let i = owSel.here;
+  for(let n = 0; n < owSel.opts.length; n++){
+    i = (i + step + owSel.opts.length) % owSel.opts.length;
+    if(!owSel.opts[i].off){ owSel.here = i; break; }
+  }
+  owSelPaint();
+  const here = owSel.menu && owSel.menu.querySelector('.ow-selm-o.ow-here');
+  if(here) here.scrollIntoView({ block:'nearest' });
+}
+/* Choosing. The value is written to the control and the events a native
+   list would have fired are fired from it, so every screen keeps reading
+   its own select and nothing downstream knows the difference. Choosing
+   what was already chosen fires nothing, which is also what the browser
+   does. */
+function owSelCommit(i){
+  const o = owSel.opts[i];
+  const sel = owSel.sel;
+  if(!o || !sel || o.off) return;
+  const before = sel.value;
+  sel.value = o.el.value;
+  owSelClose();
+  if(sel.value === before) return;
+  sel.dispatchEvent(new Event('input', { bubbles:true }));
+  sel.dispatchEvent(new Event('change', { bubbles:true }));
+}
+document.addEventListener('pointerdown', (e)=>{ owSelPointerKind = e.pointerType || 'mouse'; }, true);
+document.addEventListener('mousedown', (e)=>{
+  const t = e.target;
+  if(owSel.menu && t && t.closest && t.closest('.ow-selm')) return;   // handled on mouseup
+  const sel = t && t.closest ? t.closest('select') : null;
+  if(!sel){ if(owSel.menu) owSelClose(); return; }
+  // A finger keeps the phone's own wheel, which is better than this and
+  // was never what was reported broken.
+  if(owSelPointerKind !== 'mouse' && owSelPointerKind !== 'pen') return;
+  if(e.button !== 0 || !owSelEligible(sel)) return;
+  const wasOpen = owSel.sel === sel;
+  // The native window never opens. Focus is given back by hand below,
+  // because cancelling the press is what would otherwise have set it.
+  e.preventDefault();
+  if(wasOpen){ owSelClose(); sel.focus(); return; }
+  owSelOpen(sel);
+}, true);
+/* Released over an option. mouseup rather than click, so both ways of
+   using a list work: press-drag-release in one movement, the way a
+   native list is used, and click-then-click. */
+document.addEventListener('mouseup', (e)=>{
+  if(!owSel.menu) return;
+  const row = e.target && e.target.closest ? e.target.closest('.ow-selm-o') : null;
+  if(!row || !owSel.menu.contains(row)) return;
+  e.preventDefault();
+  owSelCommit(Number(row.dataset.i));
+}, true);
+document.addEventListener('mousemove', (e)=>{
+  if(!owSel.menu) return;
+  const row = e.target && e.target.closest ? e.target.closest('.ow-selm-o') : null;
+  if(!row || !owSel.menu.contains(row)) return;
+  const i = Number(row.dataset.i);
+  if(i === owSel.here || owSel.opts[i] && owSel.opts[i].off) return;
+  owSel.here = i;
+  owSelPaint();
+}, true);
+document.addEventListener('keydown', (e)=>{
+  if(!owSel.menu) return;
+  const k = e.key;
+  const stop = ()=>{ e.preventDefault(); e.stopPropagation(); };
+  if(k === 'Escape'){ stop(); const s = owSel.sel; owSelClose(); if(s) s.focus(); return; }
+  if(k === 'ArrowDown'){ stop(); owSelMove(1); return; }
+  if(k === 'ArrowUp'){ stop(); owSelMove(-1); return; }
+  if(k === 'Home'){ stop(); owSel.here = -1; owSelMove(1); return; }
+  if(k === 'End'){ stop(); owSel.here = 0; owSelMove(-1); return; }
+  if(k === 'Enter' || k === ' ' || k === 'Tab'){ stop(); owSelCommit(owSel.here); return; }
+  if(k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+    // Type-ahead, the way a native list does it: letters typed close
+    // together look for one word, not for each letter in turn.
+    stop();
+    const now = Date.now();
+    owSel.type = (now - owSel.typedAt < 900 ? owSel.type : '') + k.toLowerCase();
+    owSel.typedAt = now;
+    const at = owSel.opts.findIndex(o=> !o.off && o.label.trim().toLowerCase().startsWith(owSel.type));
+    if(at >= 0){
+      owSel.here = at; owSelPaint();
+      const here = owSel.menu.querySelector('.ow-selm-o.ow-here');
+      if(here) here.scrollIntoView({ block:'nearest' });
+    }
+  }
+}, true);
+// The list is anchored to a control on the screen; if the screen moves
+// out from under it, it is pointing at nothing.
+window.addEventListener('resize', ()=>{ if(owSel.menu) owSelClose(); });
+window.addEventListener('scroll', ()=>{ if(owSel.menu) owSelPlace(); }, true);
 
 /* ---------------- The map, read off the rail ----------------
 
@@ -65383,6 +65669,16 @@ async function pollForUpdatesNow(){
     reportDebtReconciliation(reconcileCustomerDebts(fresh));
     data = fresh;
     lastSynced = freshSynced;
+    /* The guards above were read BEFORE the load, and a load on a shop's
+       real connection is seconds long. The owner can start using a
+       control inside that window -- and the redraw below lands on it
+       exactly as if there had been no guard at all. So the same question
+       is asked again here, with the answer in hand: `data` is fresh
+       either way, and a screen that is one render stale until the next
+       one costs nothing next to a form redrawn under somebody's hands. */
+    if(document.querySelector('.modal-overlay.show') || document.querySelector('.wv-assign-overlay')
+       || document.querySelector('.ap-confirm-pending')
+       || (owControlInUse() && Date.now() - lastUserInputAt < 60000)) return;
     /* The redraw, with the page kept where it was. A refresh nobody
        asked for must not move the ground: the window's own position and
        every scroller on the screen are put back after it. */
