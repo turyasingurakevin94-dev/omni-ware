@@ -417,7 +417,14 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       lastUserInputAt: 0,
       currentShopId: 'shop-1',
       currentActiveTab: 'invoices',
-      document: { querySelector: () => null },
+      /* The refresh now keeps the page where it was across its redraw, so
+         it reaches for the screen and for the window. Null answers are
+         enough: owScrollSnapshot(null) records nothing and
+         owScrollRestore returns early, which is the honest behaviour for
+         a refresh running with no screen drawn. The scroll keeping itself
+         is pinned and driven by test/order-board-layout.test.js. */
+      document: { querySelector: () => null, getElementById: () => null },
+      window: { scrollX: 0, scrollY: 0, scrollTo: () => {} },
       saveData: async () => { log.push('save'); return true; },
       loadData: async () => { log.push('load'); return serverState(); },
       buildLastSynced: (d) => ({ savedQuotes: Object.fromEntries((d.savedQuotes || []).map((q) => [String(q.id), q])) }),
@@ -437,7 +444,11 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       console: { error: () => { log.push('error'); } },
     }, over || {});
     const scope = compileScope(
-      [extractFunction(adminSrc, 'pollForUpdatesNow', 'index.html'),
+      [extractFunction(adminSrc, 'owScrollSnapshot', 'index.html'),
+        extractFunction(adminSrc, 'owScrollRestore', 'index.html'),
+        extractFunction(adminSrc, 'owScrollPath', 'index.html'),
+        extractFunction(adminSrc, 'owScrollAt', 'index.html'),
+        extractFunction(adminSrc, 'pollForUpdatesNow', 'index.html'),
         'function __peek(){ return { data: data, pollInFlight: pollInFlight }; }'],
       env, ['pollForUpdatesNow', '__peek'],
     );

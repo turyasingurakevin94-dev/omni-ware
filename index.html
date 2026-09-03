@@ -65235,7 +65235,7 @@ let lastUserInputAt = 0;
    doing anything, and the refresh was free to redraw the screen out from
    under an open list. The same set the worker app has used for its own
    quiet period since it had this bug. */
-['input','change','keydown','pointerdown','focusin'].forEach(ev=>{
+['input','change','keydown','pointerdown','focusin','scroll'].forEach(ev=>{
   document.addEventListener(ev, ()=>{ lastUserInputAt = Date.now(); }, true);
 });
 /* Something the owner is in the middle of. The background refresh redraws
@@ -65244,6 +65244,52 @@ let lastUserInputAt = 0;
    but not yet saved is gone. A control with the focus is the honest
    signal for "wait" -- a native select keeps the focus for as long as its
    list is open. */
+/* WHERE THE OWNER HAS SCROLLED TO, kept across the refresh's redraw.
+
+   The redraw rebuilds the screen, and a rebuilt element starts at the
+   beginning: a table scrolled sideways to read the far columns jumps
+   back to the first one, hiding the very thing being looked at. The
+   sourcing board already kept its own place this way; this does it for
+   every scroller on the screen rather than the one that happened to be
+   noticed first.
+
+   Only elements actually scrolled are recorded, so nothing is restored
+   that was never moved, and each is found again by its position in the
+   tree -- the rebuilt element is a different object, so identity is no
+   use here. */
+function owScrollPath(el, root){
+  const path = [];
+  for(let n = el; n && n !== root; n = n.parentElement){
+    const p = n.parentElement;
+    if(!p) return null;
+    path.unshift([...p.children].indexOf(n));
+  }
+  return path;
+}
+function owScrollAt(root, path){
+  let n = root;
+  for(const i of path){ n = n && n.children[i]; if(!n) return null; }
+  return n;
+}
+function owScrollSnapshot(root){
+  const out = [];
+  if(!root || !root.querySelectorAll) return out;
+  root.querySelectorAll('*').forEach(el=>{
+    if(!el.scrollLeft && !el.scrollTop) return;
+    const path = owScrollPath(el, root);
+    if(path) out.push({ path, l: el.scrollLeft, t: el.scrollTop });
+  });
+  return out;
+}
+function owScrollRestore(root, snap){
+  if(!root || !snap || !snap.length) return;
+  snap.forEach(s=>{
+    const el = owScrollAt(root, s.path);
+    if(!el) return;
+    if(s.l) el.scrollLeft = s.l;
+    if(s.t) el.scrollTop = s.t;
+  });
+}
 function owControlInUse(){
   const el = document.activeElement;
   if(!el || !el.tagName) return false;
@@ -65337,7 +65383,15 @@ async function pollForUpdatesNow(){
     reportDebtReconciliation(reconcileCustomerDebts(fresh));
     data = fresh;
     lastSynced = freshSynced;
+    /* The redraw, with the page kept where it was. A refresh nobody
+       asked for must not move the ground: the window's own position and
+       every scroller on the screen are put back after it. */
+    const scrolledSection = document.getElementById('tab-' + currentActiveTab);
+    const scrollSnap = owScrollSnapshot(scrolledSection);
+    const pageX = window.scrollX, pageY = window.scrollY;
     goToTab(currentActiveTab);
+    owScrollRestore(document.getElementById('tab-' + currentActiveTab), scrollSnap);
+    if(window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
     // goToTab redraws ONE screen. The rail's counts describe collections
     // this refresh may have just changed underneath every other screen.
     refreshNavBadges();

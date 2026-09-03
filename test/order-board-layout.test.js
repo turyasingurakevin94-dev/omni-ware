@@ -440,10 +440,52 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
     'an open dropdown counts -- it keeps the focus for as long as its list is open');
   t.check(/\['button','submit','reset','checkbox','radio','file'\]/.test(inUse),
     'a button or a tick does not, holding no unsaved words');
-  t.check(/\['input','change','keydown','pointerdown','focusin'\]/.test(src),
+  t.check(/\['input','change','keydown','pointerdown','focusin','scroll'\]/.test(src),
     "and the clock it reads is armed by opening a control, not only by typing into one -- a dropdown being read fires no input event at all");
   t.check(/closest\('#savedQuotesWrap \[data-load\]'\)/.test(extractFunction(src, 'otTyping', 'index.html')),
     "while the board's own minute timer still asks the narrower question about its own form");
+
+  /* And where the owner had scrolled to. The redraw rebuilds the screen,
+     and a rebuilt element starts at the beginning -- a table scrolled
+     sideways to read the far columns jumps back to the first one, hiding
+     the very thing being looked at. The sourcing board already kept its
+     own place this way; the refresh now does it for every scroller on the
+     screen, and for the window itself. */
+  const pollFn = extractFunction(src, 'pollForUpdatesNow', 'index.html');
+  const iNoted = pollFn.indexOf('owScrollSnapshot(scrolledSection)');
+  const iRedraw = pollFn.indexOf('goToTab(currentActiveTab)');
+  const iPutBack = pollFn.indexOf('owScrollRestore(');
+  t.check(iNoted > -1 && iRedraw > -1 && iPutBack > -1 && iNoted < iRedraw && iRedraw < iPutBack,
+    'the refresh notes where every scroller was, redraws, and puts them back — in that order');
+  t.check(/if\(window\.scrollX !== pageX \|\| window\.scrollY !== pageY\) window\.scrollTo\(pageX, pageY\);/.test(pollFn),
+    'and the page itself does not move under a refresh nobody asked for');
+
+  const snapFn = extractFunction(src, 'owScrollSnapshot', 'index.html');
+  t.check(/if\(!el\.scrollLeft && !el\.scrollTop\) return;/.test(snapFn),
+    'only what was actually scrolled is recorded, so nothing is put back that was never moved');
+  const restoreFn = extractFunction(src, 'owScrollRestore', 'index.html');
+  t.check(/owScrollAt\(root, s\.path\)/.test(restoreFn),
+    'and each is found again by its place in the tree -- the rebuilt element is a different object, so identity is no use');
+
+  // Driven, not just read: a rebuild loses the place and the restore returns it.
+  {
+    const kids = (n) => n.children || [];
+    const mk = (children) => ({ children, scrollLeft: 0, scrollTop: 0, parentElement: null });
+    const scroller = mk([]); scroller.scrollLeft = 300;
+    const row = mk([scroller]); scroller.parentElement = row;
+    const root = mk([row]); row.parentElement = root;
+    root.querySelectorAll = () => [row, scroller];
+    const sc = compileScope(['owScrollPath', 'owScrollAt', 'owScrollSnapshot', 'owScrollRestore']
+      .map((n) => extractFunction(src, n, 'index.html')), {},
+      ['owScrollPath', 'owScrollAt', 'owScrollSnapshot', 'owScrollRestore']);
+    const snap = sc.owScrollSnapshot(root);
+    t.check(snap.length === 1 && JSON.stringify(snap[0].path) === '[0,0]' && snap[0].l === 300,
+      'the scrolled element is recorded by its path and its place');
+    scroller.scrollLeft = 0;                       // what the rebuild does
+    sc.owScrollRestore(root, snap);
+    t.check(scroller.scrollLeft === 300, 'and the restore puts it back where it was');
+    t.check(kids(root).length === 1, 'without disturbing the tree it walked');
+  }
 }
 
 process.exit(t.done() ? 1 : 0);
