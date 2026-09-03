@@ -33,7 +33,7 @@ build(){ # $1 out $2 body $3 extracss $4 w $5 h $6 rail $7 where $8 navfrag
 }
 X="_extra_main.css"
 build Before.dc.html   body_before.html   "$X _extra_before.css" 1440 2620 1 'Analysis' _nav_before.html
-build Main.dc.html     body_main.html     "$X"                   1440 1030 1 'Analysis' _nav_after.html
+build Main.dc.html     body_main.html     "$X"                   1440 1075 1 'Analysis' _nav_after.html
 build Evidence.dc.html body_evidence.html "$X"                   1440 1840 1 'Analysis' _nav_after.html
 build Empty.dc.html    body_empty.html    "$X"                   1440  900 1 'Analysis' _nav_after.html
 build Phone.dc.html    body_phone.html    "$X _extra_phone.css"   390  844 0
