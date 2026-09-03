@@ -1212,8 +1212,21 @@ const trip = (over) => Object.assign({
   const load = extractFunction(shared, 'loadOrder', 'shared-worker.js');
   t.check(/assignee = '__client__'/.test(load) || /} else {\n    assignee = '__client__';/.test(load),
     "and the client's own person is written as the sentinel the board reads as settled");
-  t.check(/if\(!st\)\{ toast\('Choose who of ours is taking it'\); return false; \}/.test(load),
+  /* Was pinned on the words "Choose who of ours is taking it", which
+     belonged to a second box that appeared under the first once you had
+     said "one of ours". Nobody found that box -- the shop has a handful
+     of staff and the obvious thing is to pick the person -- so the people
+     are now named in the one list and the second box is gone. The RULE it
+     was guarding is unchanged and is what is pinned instead: a person
+     chosen has to resolve to somebody really on the delivery list, or
+     nothing is written. */
+  t.check(/const st = \(data\.staff\|\|\[\]\)\.find\(x=> String\(x\.id\) === String\(c\.staffId\) && staffEligibleForRole\(x, 'delivery'\)\);/.test(load)
+    && /if\(!st\)\{ toast\([^)]*\); return false; \}/.test(load),
     'while "one of ours" must actually name somebody on the delivery list');
+  const form = extractFunction(shared, 'carrierFormHTML', 'shared-worker.js');
+  t.check(/staffEligibleForRole\(st, 'delivery'\) && !st\.unavailable/.test(form)
+    && /'staff:' \+ st\.id/.test(form),
+    'and the list names those people itself, rather than a category that hides them behind a second box');
 }
 
 process.exit(t.done() ? 1 : 0);

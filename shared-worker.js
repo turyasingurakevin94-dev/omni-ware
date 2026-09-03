@@ -1213,45 +1213,81 @@ const CARRIER_KINDS = {
 function carrierKindsFor(q){
   return Object.keys(CARRIER_KINDS).filter(k=> k !== 'agent' || (q && q.deliveryMode === 'agent_pickup'));
 }
+/* ONE LIST, AND IT NAMES THE PEOPLE. It used to ask for a kind first --
+   hired transport, one of ours, the client's own -- and only then, in a
+   second box that appeared underneath, which of ours. Nobody found the
+   second box: the shop has a handful of staff and the obvious thing is to
+   pick the person. So the people are IN this list, by name, above the
+   ways an order goes out with somebody who is not ours.
+
+   A person's value is 'staff:<id>'; everything else is its own key from
+   CARRIER_KINDS. Nothing is chosen for you unless the order answers the
+   question itself (an agent collecting their own), because "who took it"
+   is a fact about the world and the app has no business guessing it. */
 function carrierFormHTML(q, cls, draft){
   const d = draft || {};
   const kinds = carrierKindsFor(q);
-  const kind = kinds.includes(d.kind) ? d.kind : (q.deliveryMode === 'agent_pickup' ? 'agent' : 'hired');
-  const drivers = (data.staff||[]).filter(s=> staffEligibleForRole(s, 'delivery') && !s.unavailable);
+  const people = (data.staff||[]).filter(st=> staffEligibleForRole(st, 'delivery') && !st.unavailable);
+  const auto = q.deliveryMode === 'agent_pickup' ? 'agent' : '';
+  const chosen = d.kind === 'staff' && d.staffId ? 'staff:' + d.staffId
+    : (kinds.includes(d.kind) ? d.kind : auto);
+  const kind = chosen.indexOf('staff:') === 0 ? 'staff' : chosen;
   const v = (x)=> esc(x == null ? '' : x);
-  const show = (k)=> ({ staff: kind === 'staff', hired: kind === 'hired' || kind === 'staff' || kind === 'client', phone: kind === 'hired' || kind === 'client' })[k];
+  const opt = (val, label)=> `<option value="${v(val)}"${val === chosen ? ' selected' : ''}>${esc(label)}</option>`;
+  const roleWord = (st)=> st.role === 'delivery' ? 'delivery' : 'worker';
+  const list = [
+    `<option value=""${chosen ? '' : ' selected'}>Choose who…</option>`,
+    people.length ? `<optgroup label="Ours">${people.map(st=> opt('staff:' + st.id, st.name + ' · ' + roleWord(st))).join('')}</optgroup>` : '',
+    // 'staff' is not offered as a category here: the people it stood for
+    // are named above it, and a category beside the names it covers is the
+    // second box all over again.
+    `<optgroup label="${people.length ? 'Somebody else' : 'Nobody of ours is on the staff list'}">${kinds.filter(k=> k !== 'staff').map(k=> opt(k, CARRIER_KINDS[k])).join('')}</optgroup>`,
+  ].join('');
   // The console's field puts its control in a bordered box (.ow-f-in);
   // the phone's control is its own box. `cls.wrap` is that difference.
   const box = (inner)=> cls.wrap ? `<span class="${cls.wrap}">${inner}</span>` : inner;
   const field = (label, inner, extra, on)=> `<label class="${cls.field}${extra ? ' ' + extra : ''}"${on === false ? ' style="display:none"' : ''}><span class="${cls.label}">${label}</span>${box(inner)}</label>`;
+  // Only what the answer still leaves open. One of ours needs nothing more
+  // -- their name and number are already on their staff card.
+  const asks = carrierAsks(kind);
   return `<div class="${cls.form}" data-load="${q.id}">
-    ${field('Who is carrying it', `<select class="${cls.select}" data-car="kind">${kinds.map(k=> `<option value="${k}"${k === kind ? ' selected' : ''}>${esc(CARRIER_KINDS[k])}</option>`).join('')}</select>`)}
-    ${field('Who of ours', `<select class="${cls.select}" data-car="staff">${drivers.length ? drivers.map(st=> `<option value="${v(st.id)}"${String(st.id) === String(d.staffId) ? ' selected' : ''}>${esc(st.name)}</option>`).join('') : '<option value="">Nobody on the delivery list</option>'}</select>`, cls.staffField, show('staff'))}
-    ${field(kind === 'client' ? 'Their name' : 'Driver or company', `<input class="${cls.input}" data-car="name" value="${v(d.name)}" placeholder="Kasule" autocomplete="off">`, cls.hiredField, show('hired') && kind !== 'staff')}
-    ${field('Vehicle', `<input class="${cls.input}" data-car="what" value="${v(d.what)}" placeholder="Fuso UAX 123K" autocomplete="off">`, cls.hiredField, show('hired'))}
-    ${field('Phone', `<input class="${cls.input}" data-car="phone" value="${v(d.phone)}" inputmode="tel" placeholder="07…" autocomplete="off">`, cls.phoneField, show('phone'))}
+    ${field('Who is carrying it', `<select class="${cls.select}" data-car="kind">${list}</select>`)}
+    ${field(kind === 'client' ? 'Their name' : 'Driver or company', `<input class="${cls.input}" data-car="name" value="${v(d.name)}" placeholder="Kasule" autocomplete="off">`, cls.hiredField, asks.name)}
+    ${field('Vehicle', `<input class="${cls.input}" data-car="what" value="${v(d.what)}" placeholder="Fuso UAX 123K" autocomplete="off">`, cls.hiredField, asks.what)}
+    ${field('Phone', `<input class="${cls.input}" data-car="phone" value="${v(d.phone)}" inputmode="tel" placeholder="07…" autocomplete="off">`, cls.phoneField, asks.phone)}
   </div>`;
 }
-/* The kind decides which of the other fields are asked. Shown and hidden
-   with style rather than the hidden attribute: a field's own display rule
+/* What is still unanswered once the list has been answered. One place,
+   so the render and the change handler cannot disagree about it. */
+function carrierAsks(kind){
+  return { name: kind === 'hired' || kind === 'client',
+    what: kind === 'hired',
+    phone: kind === 'hired' || kind === 'client' };
+}
+/* The list decides which of the rest are asked. Shown and hidden with
+   style rather than the hidden attribute: a field's own display rule
    would outrank the attribute. */
 function syncCarrierForm(root){
   if(!root) return;
   const kindEl = root.querySelector('[data-car="kind"]');
-  const kind = kindEl ? kindEl.value : 'hired';
-  const on = { staff: kind === 'staff', name: kind === 'hired' || kind === 'client', what: kind === 'hired' || kind === 'staff', phone: kind === 'hired' || kind === 'client' };
-  ['staff','name','what','phone'].forEach(k=>{
+  const val = kindEl ? kindEl.value : '';
+  const kind = val.indexOf('staff:') === 0 ? 'staff' : val;
+  const asks = carrierAsks(kind);
+  ['name','what','phone'].forEach(k=>{
     const el = root.querySelector(`[data-car="${k}"]`);
     const label = el && el.closest('label');
-    if(label) label.style.display = on[k] ? '' : 'none';
+    if(label) label.style.display = asks[k] ? '' : 'none';
   });
-  const nameLabel = root.querySelector('[data-car="name"]');
-  const nl = nameLabel && nameLabel.closest('label') && nameLabel.closest('label').firstElementChild;
+  const nameEl = root.querySelector('[data-car="name"]');
+  const nl = nameEl && nameEl.closest('label') && nameEl.closest('label').firstElementChild;
   if(nl) nl.textContent = kind === 'client' ? 'Their name' : 'Driver or company';
 }
 function readCarrierForm(root){
   const get = (k)=>{ const el = root && root.querySelector(`[data-car="${k}"]`); return el ? el.value : ''; };
-  return { kind: get('kind') || 'hired', staffId: get('staff'), name: get('name'), what: get('what'), phone: get('phone') };
+  const val = get('kind');
+  const isStaff = val.indexOf('staff:') === 0;
+  return { kind: isStaff ? 'staff' : val, staffId: isStaff ? val.slice(6) : '',
+    name: get('name'), what: get('what'), phone: get('phone') };
 }
 function carrierDraftsFrom(root){
   const m = new Map();
@@ -1283,13 +1319,17 @@ function loadOrder(orderId, carrier){
   }
   const c = carrier || {};
   const kind = carrierKindsFor(q).includes(c.kind) ? c.kind : null;
-  if(!kind){ toast('Say who is carrying it first'); return false; }
+  if(!kind){ toast('Choose who is carrying it first'); return false; }
   const name = String(c.name || '').trim(), what = String(c.what || '').trim(), phone = String(c.phone || '').trim();
   let assignee;
+  let fromCard = '';
   if(kind === 'staff'){
     const st = (data.staff||[]).find(x=> String(x.id) === String(c.staffId) && staffEligibleForRole(x, 'delivery'));
-    if(!st){ toast('Choose who of ours is taking it'); return false; }
+    if(!st){ toast('Choose who is carrying it'); return false; }
     assignee = st.id;
+    // Their number is already on their staff card, so the row's tel: link
+    // works without anybody retyping it.
+    fromCard = st.phone || '';
   } else if(kind === 'hired'){
     if(!name){ toast('Name the transport — the driver or the company'); return false; }
     assignee = '__carrier__';
@@ -1299,7 +1339,7 @@ function loadOrder(orderId, carrier){
     assignee = '__client__';
   }
   const now = Date.now();
-  q.carrier = { kind, name: kind === 'staff' ? (name || staffName(assignee)) : name, what, phone, at: now,
+  q.carrier = { kind, name: kind === 'staff' ? (name || staffName(assignee)) : name, what, phone: phone || fromCard, at: now,
     by: String(c.by || (typeof myStaff !== 'undefined' && myStaff ? myStaff.name : '') || '') };
   q.assignedDeliveryId = assignee;
   if(alreadyOut){
