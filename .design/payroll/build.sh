@@ -32,8 +32,8 @@ build(){ # $1 out $2 body $3 extracss $4 w $5 h $6 rail $7 where $8 active $9 ba
 }
 X="_extra_main.css"
 build Before.dc.html body_before.html "_extra_before.css" 1440 1600 1 'Payroll \&amp; rent' '' ''
-build Main.dc.html   body_main.html   "$X"                1440 1500 1 'Payroll' active '<span class="nav-badge">4</span>'
-build Pay.dc.html    body_pay.html    "$X"                1440 1580 1 'Payroll' active '<span class="nav-badge">4</span>'
-build States.dc.html body_states.html "$X"                1440 1300 1 'Payroll' active ''
+build Main.dc.html   body_main.html   "$X"                1440 1570 1 'Payroll' active '<span class="nav-badge">4</span>'
+build Pay.dc.html    body_pay.html    "$X"                1440 1570 1 'Payroll' active '<span class="nav-badge">4</span>'
+build States.dc.html body_states.html "$X"                1440 1340 1 'Payroll' active ''
 build Phone.dc.html  body_phone.html  "$X _extra_phone.css" 390 844 0
 exit 0
