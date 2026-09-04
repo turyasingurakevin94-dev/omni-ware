@@ -1532,6 +1532,77 @@
   }
 
 
+
+  /* ---- PURCHASE ANALYTICS, the console. Beside the screen it belongs
+     to and NOT in the .ow- layer, for the same reason the sales block
+     above is: the layer's second law is that every selector in it starts
+     .ow-. Everything the layer already had -- .ow-ph, .ow-strip, .ow-pan,
+     .ow-seg, .ow-tbl, .ow-tb, .ow-fig, .ow-mini -- is used as it stands,
+     and the chart shares .an-th/.an-no/.an-tbl with the sales side. What
+     is here is the concentration bar, which neither has. ---- */
+
+  /* THE ONE CHART: one bar, the period's spend cut by supplier, largest
+     first. MONOCHROME on purpose -- concentration is read as LENGTH, and
+     the palette has no categorical set to invent one from. Six steel
+     values already in the 23, darkest for the largest, each carrying ink
+     that clears 4.5:1 on it. */
+  .pan-cc-w{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-4);}
+  .pan-cc-bar{display:flex;height:34px;border-radius:var(--ow-r-sm);overflow:hidden;
+    border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+  .pan-cc-seg{display:flex;align-items:center;justify-content:center;min-width:0;box-sizing:border-box;}
+  .pan-cc-seg + .pan-cc-seg{border-left:1px solid rgba(255,255,255,.5);}
+  .pan-cc-seg span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    overflow:hidden;white-space:nowrap;padding:0 var(--ow-sp-4);}
+  .pan-cc-1{background:var(--ow-ink-900);} .pan-cc-1 span{color:var(--ow-paper);}
+  .pan-cc-2{background:var(--ow-steel-800);} .pan-cc-2 span{color:var(--ow-paper);}
+  .pan-cc-3{background:var(--ow-ink-600);} .pan-cc-3 span{color:var(--ow-paper);}
+  .pan-cc-4{background:var(--ow-steel-400);} .pan-cc-4 span{color:var(--ow-ink-900);}
+  .pan-cc-5{background:var(--ow-steel-100);} .pan-cc-5 span{color:var(--ow-ink-900);}
+  .pan-cc-6{background:var(--ow-steel-050);} .pan-cc-6 span{color:var(--ow-ink-600);}
+  /* The legend is rows, not chips: a name, its share, its money, in
+     columns that line up because the figures are tabular. */
+  .pan-cc-leg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    column-gap:var(--ow-sp-24);margin:var(--ow-sp-12) 0 0;padding:0;list-style:none;}
+  .pan-cc-l{display:flex;align-items:baseline;gap:var(--ow-sp-8);padding:var(--ow-sp-4) 0;
+    border-bottom:1px solid var(--ow-rule-soft);min-width:0;}
+  .pan-cc-k{width:9px;height:9px;border-radius:2px;flex:none;align-self:center;
+    border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+  /* Three declarations, never two, and min-width:0 so it yields inside
+     the flex parent rather than pushing the money out of the row. */
+  .pan-cc-n{flex:1;min-width:0;font-size:var(--ow-t-12);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pan-cc-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .pan-cc-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);white-space:nowrap;}
+
+  /* A rise is money leaving and a fall is money kept -- the two state
+     colours the palette already has for exactly that, and the only
+     colour in this table. A non-answer ("level", "not bought before") is
+     grey and set in the interface face, because it is not a figure. */
+  .pan-none{color:var(--ow-ink-400);font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);letter-spacing:0;}
+  /* A column that cannot honestly be totalled prints a dash and says why
+     on hover -- it never falls through to a generic sum. */
+  .pan-nototal{color:var(--ow-ink-400);cursor:help;font-weight:var(--ow-fw-400);}
+  .pan-partial-mark{color:var(--ow-amber-ink);font-weight:var(--ow-fw-700);
+    margin-left:2px;cursor:help;}
+
+  @media (max-width:820px){
+    /* The phone keeps the sentence and the bar -- a single stacked bar is
+       read as length, and length still reads at 390 where thirty daily
+       bars would be a smudge -- and drops the legend, which does not. */
+    .pan-cc-leg{display:none;}
+    .pan-cc-w{padding:var(--ow-sp-12);}
+    #pan_export_btn.btn-accent{background:transparent;color:var(--ow-ink-600);
+      border:1px solid var(--ow-rule);}
+    #pan_export_btn{flex:0 0 auto;min-width:0;margin-left:auto;}
+  }
+
   .an-subtabs{display:flex;gap:22px;margin-bottom:18px;border-bottom:1px solid var(--line);}
   .an-subtabs button{
     all:unset;cursor:pointer;padding:4px 2px 12px;font-size:14px;font-weight:600;
@@ -11407,59 +11478,113 @@
       </div>
     </section>
 
-    <!-- PURCHASE ANALYTICS -->
-    <section id="tab-analytics-purchase" style="display:none;">
-      <div class="page-head">
-        <h1>Purchase analytics</h1>
-        <p>Numbers pulled from the Purchase Invoices list — every supplier purchase, whether it's stock bought in for a customer's order or a restock to top up our own shelf. Pick a date range, then break it down by item or by supplier.</p>
-      </div>
+    <!-- PURCHASE ANALYTICS. The buyer's screen, and it is asked one
+         question in four shapes: is a price going up, where is my money
+         going, what did a rise cost me, and am I owed commission.
 
-      <div class="panel">
-        <div class="an-toolbar">
-          <div class="field">
-            <label>Date range</label>
-            <select id="pan_range_preset">
-              <option value="today">Today</option>
+         Four questions cannot each have a panel -- that is how a screen
+         becomes a dashboard nobody reads. So they are answered in one
+         order: the STRIP is what was spent, the CHART is who it went to,
+         the RANKING is what the changes cost, and commission is a column
+         on the supplier view where it belongs.
+
+         THE RANKING IS THE DESIGN. It used to land ordered by total
+         spend, which only ever answers the second question -- cement is
+         first because cement is the biggest line, which the owner
+         already knew. It ranks on what the price change ADDED TO THIS
+         PERIOD'S BILL, in money, because a percentage cannot be
+         prioritised: binding wire moved +14.5% and cost 345,600, paint
+         moved +2.4% and cost 117,300, and ranked on the percentage you
+         deal with the wrong one. The money is the answer and the
+         percentage is the evidence for it.
+
+         Evidence, not a verdict, as Sales analytics settled. No findings
+         queue and no badges; the one thing it does is DECLARE ITS ORDER
+         in the panel header, so it can be argued with. -->
+    <section id="tab-analytics-purchase" style="display:none;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Purchase analytics</h1>
+        <!-- Never folded, so it carries the one thing that goes stale:
+             which window is on screen and how much of the book is in it. -->
+        <p class="ow-ph-sub" id="pan_ph_sub">What you paid, and what it is doing</p>
+        <p class="ow-ph-help">Numbers pulled from the Purchase Invoices list &mdash; every supplier purchase,
+          whether it&rsquo;s stock bought in for a customer&rsquo;s order or a restock to top up our own shelf.
+          A voided invoice is not a purchase and is never counted. Pick a date range, then read it by item
+          or by supplier. A price is compared with what the same item cost in the period immediately before
+          this one; a line first bought this period has not gone up, it has appeared, and says so rather
+          than showing a rise.</p>
+        <span class="ow-ph-sp"></span>
+        <div class="ow-f ow-ph-f an-f">
+          <label class="ow-f-l" for="pan_range_preset">Date range</label>
+          <select id="pan_range_preset" class="ow-f-in an-sel">
+            <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="7">Last 7 days</option>
-              <option value="30" selected>Last 30 days</option>
-              <option value="90">Last 90 days</option>
-              <option value="month">This month</option>
-              <option value="all">All time</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="field" id="pan_from_field" style="display:none;">
-            <label>From</label>
-            <input type="date" id="pan_from">
-          </div>
-          <div class="field" id="pan_to_field" style="display:none;">
-            <label>To</label>
-            <input type="date" id="pan_to">
-          </div>
-          <button type="button" class="btn btn-accent" id="pan_apply_btn">Search</button>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="month">This month</option>
+            <option value="all">All time</option>
+            <option value="custom">Custom</option>
+          </select>
         </div>
-
-        <div class="kpi-grid" id="pan_kpiGrid"></div>
-        <!-- The period compared against, whether a search is narrowing
-             the figures, which units are in play, and how much of the
-             spending the commission total does not cover. -->
-        <div class="an-kpi-note" id="pan_kpiNote" style="display:none;"></div>
-
-        <div class="an-subtabs" id="pan_subtabs">
-          <button type="button" data-view="item" class="active">Statistics by item</button>
-          <button type="button" data-view="supplier">Statistics by supplier</button>
+        <div class="ow-f ow-ph-f an-f" id="pan_from_field" style="display:none;">
+          <label class="ow-f-l" for="pan_from">From</label>
+          <input type="date" id="pan_from" class="ow-f-in an-sel">
         </div>
-
-        <div class="an-table-head-row">
-          <input id="pan_table_search" placeholder="Search this table...">
-          <button type="button" class="btn btn-ghost btn-icon" id="pan_export_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
-            Export CSV
-          </button>
+        <div class="ow-f ow-ph-f an-f" id="pan_to_field" style="display:none;">
+          <label class="ow-f-l" for="pan_to">To</label>
+          <input type="date" id="pan_to" class="ow-f-in an-sel">
         </div>
+        <!-- Only Custom needs this. Every preset re-renders the moment it
+             is chosen, so a Search button standing there permanently was
+             a control that did nothing, wearing the screen's one accent
+             while it did it. -->
+        <button type="button" class="btn btn-ghost ow-sm" id="pan_apply_btn" style="display:none;">Search</button>
+        <!-- THE ACCENT, and the only one on this screen. On a screen that
+             exists to be read, taking the evidence away is the one thing
+             there is to do next. -->
+        <button type="button" class="btn btn-accent ow-sm" id="pan_export_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
+          Export CSV
+        </button>
+      </div>
 
-        <div class="an-scroll" id="pan_tableWrap"></div>
+      <div class="ow-strip" id="pan_kpiGrid"></div>
+      <!-- What the four figures above rest on: the period compared
+           against, whether a search is narrowing them, which units are in
+           play, and how many lines have nothing to be compared with. -->
+      <p class="an-kpi-note" id="pan_kpiNote" style="display:none;"></p>
+
+      <!-- THE ONE CHART, and the only thing here a table cannot show:
+           how much of the shop's buying sits with how few people. Not a
+           spend-per-day chart -- purchases are lumpy by nature and thirty
+           bars of a restock pattern is noise wearing a chart's clothes.
+           The sentence comes first and the bar proves it. -->
+      <div class="ow-pan" id="pan_concPan" style="display:none;">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">Where the money went</span>
+          <span class="ow-pan-n" id="pan_concRange"></span>
+        </div>
+        <div id="pan_concBody"></div>
+        <p class="ow-mini"><span>Counted on the date of the purchase invoice, not the day you paid it.
+          Share is of what you bought, not of what you still owe &mdash; a supplier you use once for a big
+          job sits high here for one period and is gone the next.</span></p>
+      </div>
+
+      <div class="ow-pan an-tbl-pan">
+        <div class="ow-pan-h an-tbh">
+          <div class="ow-seg" id="pan_subtabs" role="tablist" aria-label="What the rows are">
+            <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-view="item">By item</button>
+            <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-view="supplier">By supplier</button>
+          </div>
+          <span class="ow-pan-nt" id="pan_order"></span>
+          <span class="ow-pan-n" id="pan_count"></span>
+        </div>
+        <div class="ow-tb">
+          <input id="pan_table_search" class="ow-tb-s an-search" placeholder="Search these rows" aria-label="Search these rows">
+        </div>
+        <div id="pan_tableWrap"></div>
+        <p class="ow-mini" id="pan_tableNote"></p>
       </div>
     </section>
 
@@ -33471,19 +33596,65 @@ const PAN_COLUMNS = {
     // The number a buyer actually works from, and the only one that says
     // whether this is getting worse.
     {key:'unitPrice', label:'Price paid', numeric:true, money:true},
-    {key:'priceMove', label:'vs last period', numeric:true, pctMove:true}
+    {key:'priceMove', label:'vs last period', numeric:true, pctMove:true},
+    /* WHAT THE RISE ACTUALLY COST, which is the column this screen was
+       missing and the one it now ranks on. The move was a bare
+       percentage, and a percentage cannot be prioritised: binding wire
+       at +14.5% cost 345,600 and paint at +2.4% cost 117,300, so ranked
+       on the percentage you deal with the wrong one first. Multiply the
+       move by what was actually bought and the two become comparable
+       money. */
+    {key:'priceCost', label:'Added to this period\u2019s bill', numeric:true, money:true, signed:true}
   ],
   supplier: [
     {key:'name', label:'Supplier name'},
     {key:'amt', label:'Amt', numeric:true, money:true},
     {key:'docCount', label:'Doc number', numeric:true},
+    // Concentration. The chart above says who is biggest; this is that
+    // chart with its arithmetic shown, which is why it is a column here
+    // and on no other view.
+    {key:'share', label:'Share of spend', numeric:true, pct:true},
     {key:'commission', label:'Expected commission', numeric:true, money:true}
   ]
 };
+/* What is DRAWN, out of PAN_COLUMNS. The table showed all eight columns
+   of the item view at 13px -- Item name, Variant, Category and Unit are
+   four text columns competing with four money columns, in a table where
+   the item name was the one that truncated. Variant and category belong
+   to the name and move into it; the export still writes every column,
+   because a spreadsheet is where the rest is actually read. */
+const PAN_SCREEN = {
+  item:     ['name','unit','purchased','unitPrice','priceMove','priceCost','amt'],
+  supplier: ['name','docCount','amt','share','commission']
+};
+/* The grid tracks per view. The figure columns are fixed and never give
+   way; the identity column is the minmax(0,1fr) that yields. Money never
+   truncates -- a clipped figure is not a shortened figure, it is a wrong
+   one. */
+const PAN_TRACKS = {
+  item:     '36px minmax(0,1fr) 74px 92px 116px 104px 148px 148px',
+  supplier: '36px minmax(0,1fr) 96px 152px 88px 152px'
+};
+/* The head a column wears ON SCREEN. PAN_COLUMNS' labels are written for
+   the export, where a column called "Amt" in a file with no other
+   context is worse than one called "Total spent" -- but the long names
+   overflow their tracks, and a column name lying across another is worse
+   than either. */
+const PAN_HEAD = {
+  name:'Item', unit:'Unit', purchased:'Bought', unitPrice:'Price paid',
+  priceMove:'vs last', priceCost:'Added to bill', amt:'Spent',
+  docCount:'Purchases', share:'Share', commission:'Commission'
+};
 let panView = 'item'; // 'item' | 'supplier'
 let panLastEntries = [];
+/* IT LANDED ORDERED BY TOTAL SPEND, which only ever answers "where did
+   the money go" -- cement is first because cement is the biggest line,
+   which the buyer already knew. The item view opens on what the price
+   changes ADDED TO THE BILL, worst first; the supplier view keeps spend,
+   because for a supplier the question is concentration and not movement.
+   Both say which they are, in the panel header. */
 const panSortState = {
-  item: {key:'amt', dir:-1},
+  item: {key:'priceCost', dir:-1},
   supplier: {key:'amt', dir:-1}
 };
 
@@ -33598,10 +33769,16 @@ function panRowsBySupplier(invoices){
     row.amt += purchaseInvoiceTotal(pi);
     (pi.items||[]).forEach(it=>{ row.qty += Number(it.qty)||0; });
   });
+  const whole = [...map.values()].reduce((a,r)=> a + (Number(r.amt)||0), 0);
   return [...map.values()].map(r=>{
     const s = data.suppliers.find(x=>x.id===r.supplierId);
     const pct = s && s.commissionPct!=null ? s.commissionPct : null;
-    return {...r, commission: pct!=null ? Math.round(r.amt * pct / 100) : null};
+    return {...r, commissionPct: pct,
+      // Of the whole period, never of whatever a search has left on
+      // screen: a share that shrinks because somebody typed in a box is
+      // a share nobody can trust.
+      share: whole > 0 ? (r.amt / whole) * 100 : 0,
+      commission: pct!=null ? Math.round(r.amt * pct / 100) : null};
   });
 }
 function panRowsForView(){
@@ -33611,7 +33788,17 @@ function panRowsForView(){
      has gone up most" is the whole reason to want it. */
   const prev = panPreviousUnitPrices();
   return panRowsByItem(panLastEntries)
-    .map(r=>({ ...r, priceMove: panPriceMove(r, prev && prev.prices) }));
+    .map(r=>{
+      const move = panPriceMove(r, prev && prev.prices);
+      const before = prev && prev.prices ? prev.prices.get(r.key) : null;
+      /* Null, not zero, wherever there is nothing to compare with. A line
+         first bought this period has not gone up, it has appeared, and a
+         zero here would sort it into the middle of a ranking it is not
+         on -- among the lines whose price genuinely held. */
+      const cost = (move == null || before == null) ? null
+        : (r.unitPrice - before) * (Number(r.purchased)||0);
+      return { ...r, priceMove: move, priceCost: cost };
+    });
 }
 // Same rows the table shows, filtered and sorted once. anFilterRows and
 // anSortRows are the Sales Analytics ones -- the behaviour is identical
@@ -33684,27 +33871,131 @@ function panPreviousTotals(){
   if(!prev.length) return null;
   return { ...panOverallTotals(prev), count: prev.length, from: prevFrom, to: prevTo };
 }
+/* THE COST OF EVERY PRICE THAT MOVED, over the rows in front of
+   somebody. Money, so it totals -- and it is the only figure on the
+   strip that is news rather than size. */
+function panMoveTotals(rows){
+  const moved = rows.filter(r=> r.priceCost != null);
+  return {
+    cost: moved.reduce((a,r)=> a + (Number(r.priceCost)||0), 0),
+    moved: moved.length,
+    /* Named rather than dropped: how many lines could not be compared at
+       all, because they were not bought in the period before. */
+    uncompared: rows.length - moved.length,
+    any: moved.length > 0
+  };
+}
+/* Where the money went, largest first -- the one thing on this screen a
+   table cannot show. Five named, the rest gathered into a sixth that
+   says how many it is standing for. */
+function panConcentration(rows){
+  const sorted = [...rows].sort((a,b)=> (Number(b.amt)||0) - (Number(a.amt)||0));
+  const whole = sorted.reduce((a,r)=> a + (Number(r.amt)||0), 0);
+  if(!(whole > 0) || !sorted.length) return null;
+  const named = sorted.slice(0, 5);
+  const rest = sorted.slice(5);
+  const restAmt = rest.reduce((a,r)=> a + (Number(r.amt)||0), 0);
+  const segs = named.map(r=>({name: r.name, amt: r.amt, pct: (r.amt/whole)*100}));
+  if(rest.length) segs.push({name: `${rest.length} other supplier${rest.length===1?'':'s'}`,
+    amt: restAmt, pct: (restAmt/whole)*100, rest: true});
+  const topThree = sorted.slice(0,3);
+  return {
+    segs, whole, count: sorted.length,
+    top: sorted[0],
+    topPct: (sorted[0].amt/whole)*100,
+    threePct: topThree.reduce((a,r)=> a + r.amt, 0)/whole*100,
+    threeDocs: topThree.reduce((a,r)=> a + (Number(r.docCount)||0), 0),
+    threeCount: topThree.length
+  };
+}
+/* The sentence comes first and the bar proves it. A share is a shape,
+   not a verdict -- nothing here is coloured to call it good or bad. */
+function renderPanConc(){
+  const pan = document.getElementById('pan_concPan');
+  if(!pan) return;
+  const suppliers = panRowsBySupplier(panLastEntries);
+  const c = panConcentration(suppliers);
+  /* One supplier is not a concentration, it is a fact already on the
+     row below. The panel goes rather than drawing a bar of one colour
+     across the whole width and calling it a chart. */
+  if(!c || c.count < 2){ pan.style.display = 'none'; return; }
+  pan.style.display = '';
+  const {from, to} = panGetDateRange();
+  document.getElementById('pan_concRange').textContent =
+    `${c.count} suppliers${(from && to) ? ` · ${fmtShortDate(from)} – ${fmtShortDate(to)}` : ''}`;
+  const money = n => `<span class="an-d">${esc(fmtUGX(Math.round(n)))}</span>`;
+  const three = c.count >= 3
+    ? ` Your three largest suppliers are <b>${c.threePct.toFixed(1)}%</b> of it, across <span class="an-d">${
+        c.threeDocs}</span> of <span class="an-d">${panLastEntries.length}</span> purchases.`
+    : '';
+  document.getElementById('pan_concBody').innerHTML = `<div class="pan-cc-w">
+    <p class="an-say"><b>${esc(c.top.name)} is ${c.topPct.toFixed(1)}% of your buying this period</b> — ${
+      money(c.top.amt)} of ${money(c.whole)}.${three}</p>
+    <div class="pan-cc-bar">${c.segs.map((g,i)=>
+      `<div class="pan-cc-seg pan-cc-${i+1}" style="width:${g.pct.toFixed(2)}%" title="${
+        esc(`${g.name} — ${fmtUGX(Math.round(g.amt))}, ${g.pct.toFixed(1)}% of the period`)}"><span>${
+        g.pct >= 5 ? g.pct.toFixed(1)+'%' : ''}</span></div>`).join('')}</div>
+    <ul class="pan-cc-leg">${c.segs.map((g,i)=>
+      `<li class="pan-cc-l"><span class="pan-cc-k pan-cc-${i+1}"></span><span class="pan-cc-n" title="${
+        esc(g.name)}">${esc(g.name)}</span><span class="pan-cc-p">${g.pct.toFixed(1)}%</span><span class="pan-cc-v">${
+        esc(fmtUGX(Math.round(g.amt)))}</span></li>`).join('')}</ul>
+  </div>`;
+}
 function renderPanKpis(rows){
   const visible = rows || panVisibleRows();
+  /* NO STRIP OF ZEROS. Four figures reading 0 in 22px mono says the shop
+     is broken; it is not, and the panel below says what it actually
+     knows instead. A position nobody can read is worse than no position. */
+  const grid = document.getElementById('pan_kpiGrid');
+  const zNote = document.getElementById('pan_kpiNote');
+  const exp = document.getElementById('pan_export_btn');
+  if(!panLastEntries.length){
+    grid.innerHTML = ''; grid.style.display = 'none';
+    zNote.innerHTML = ''; zNote.style.display = 'none';
+    /* And the accent goes with them. Exporting an empty file is not the
+       thing to do next; widening the window is, and that button is in
+       the panel below. */
+    exp.classList.remove('btn-accent'); exp.classList.add('btn-ghost');
+    return;
+  }
+  grid.style.display = '';
+  exp.classList.add('btn-accent'); exp.classList.remove('btn-ghost');
   const t = panVisibleTotals(visible);
   const prev = panPreviousTotals();
   const filtered = !!document.getElementById('pan_table_search').value.trim();
   const cmp = filtered ? null : prev;
   const cov = panView==='supplier' ? panCommissionCoverage(visible) : null;
+  /* The move is worked out on the item rows whatever tab is open: it is
+     a fact about the period, not about which table is on screen, and
+     hiding it on the supplier tab would make the strip say two different
+     things about one window. */
+  const mv = panMoveTotals(panView==='item' ? visible : panRowsForViewItems());
 
   /* "Total stock 1,400" was 600 bags plus 200 sheets plus 600 kilograms.
      A quantity only totals where every row shares a unit; otherwise the
-     honest second figure is how many purchases were made. */
+     honest second figure is how many lines were bought. */
   const secondCell = t.qty != null
-    ? `<div class="kpi-cell"><div class="kpi-label">Bought (${esc(t.sameUnit)})</div><div class="kpi-value">${t.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</div></div>`
-    : `<div class="kpi-cell"><div class="kpi-label">${panView==='supplier' ? 'Suppliers' : 'Items bought'}</div><div class="kpi-value">${visible.length}${
-        cmp ? '' : ''}</div></div>`;
+    ? anMtHTML(`Bought (${esc(t.sameUnit)})`, fmtNumAn(t.qty),
+        t.units.size ? `in ${esc([...t.units].join(', '))}` : '')
+    : anMtHTML(panView==='supplier' ? 'Suppliers' : 'Items bought', fmtNumAn(visible.length),
+        t.units.size > 1 ? `in <span class="an-d">${t.units.size}</span> different units` : '');
+  /* A PRICE RISE IS MONEY LEAVING, which is the palette's own definition
+     of genuinely bad -- so this is the one figure on the screen that
+     carries a state colour, and a fall carries the other. Nothing to
+     compare with is not a rise of nothing: it says so instead. */
+  const moveCell = !mv.any
+    ? anMtHTML('Price changes added', '<span class="ow-fig-none">Not stated</span>',
+        'no earlier period to compare with')
+    : anMtHTML('Price changes added',
+        `${mv.cost > 0 ? '+' : ''}${esc(fmtUGX(Math.round(mv.cost)))}`,
+        `on the <span class="an-d">${mv.moved}</span> line${mv.moved===1?'':'s'} you also bought last period`,
+        mv.cost > 0 ? 'ow-bad' : mv.cost < 0 ? 'ow-good' : '');
   document.getElementById('pan_kpiGrid').innerHTML = `
-    <div class="kpi-cell"><div class="kpi-label">Total amt</div><div class="kpi-value">${fmtUGX(Math.round(t.amt))}${
-      cmp ? anDeltaHTML(t.amt, cmp.amt, false) : ''}</div></div>
+    ${anMtHTML('Spent', esc(fmtUGX(Math.round(t.amt))), cmp ? anDeltaText(t.amt, cmp.amt) : '')}
+    ${anMtHTML('Purchases', fmtNumAn(panLastEntries.length),
+      `from <span class="an-d">${panRowsBySupplier(panLastEntries).length}</span> suppliers`)}
     ${secondCell}
-    ${cov ? `<div class="kpi-cell"><div class="kpi-label">Expected commission</div><div class="kpi-value ${cov.complete?'':'partial'}">${
-      fmtUGX(Math.round(cov.total))}</div></div>` : ''}
+    ${moveCell}
   `;
 
   const note = document.getElementById('pan_kpiNote');
@@ -33712,9 +34003,24 @@ function renderPanKpis(rows){
   if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('pan_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
   else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.amt)))} spent across ${prev.count} purchase${prev.count===1?'':'s'}.`);
   if(t.units.size > 1) bits.push(`Bought in ${t.units.size} different units (${esc([...t.units].join(', '))}), so there is no one quantity to total.`);
+  /* Named rather than dropped. A ranking built on a price change owes
+     the reader an account of every line it could not rank. */
+  if(mv.uncompared > 0) bits.push(`${mv.uncompared} line${mv.uncompared===1?' was':'s were'} not bought in the period before, so no price change is claimed for ${mv.uncompared===1?'it':'them'}.`);
   if(cov && !cov.complete) bits.push(`<span class="an-note-estimated">This covers ${esc(fmtUGX(Math.round(cov.ratedSpend)))} of purchases. ${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of spending earns nothing here — set a rate to include ${cov.unratedCount===1?'them':'those'}.</span>`);
   note.innerHTML = bits.join(' ');
   note.style.display = bits.length ? '' : 'none';
+}
+/* The item rows for the current range, whichever tab is open. The strip
+   needs them on the supplier tab too. */
+function panRowsForViewItems(){
+  const prev = panPreviousUnitPrices();
+  return panRowsByItem(panLastEntries).map(r=>{
+    const move = panPriceMove(r, prev && prev.prices);
+    const before = prev && prev.prices ? prev.prices.get(r.key) : null;
+    return { ...r, priceMove: move,
+      priceCost: (move == null || before == null) ? null
+        : (r.unitPrice - before) * (Number(r.purchased)||0) };
+  });
 }
 function panFormatCell(col, value){
   // Expected commission is only meaningful once a supplier has a rate on
@@ -33724,104 +34030,264 @@ function panFormatCell(col, value){
      first time this period has not gone up -- it has appeared. Both read
      as a dash rather than as a figure nobody can act on. */
   if(col.pctMove){
-    if(value == null) return '<span class="pan-none">—</span>';
+    if(value == null) return '<span class="pan-none">not bought before</span>';
     const pct = Number(value)*100;
     if(Math.abs(pct) < 0.5) return '<span class="pan-none">level</span>';
     return `<span class="an-delta ${pct > 0 ? 'down' : 'up'}">${pct>0?'+':''}${pct.toFixed(0)}%</span>`;
   }
   if(col.money && value == null) return '<span class="pan-none">—</span>';
-  if(col.money) return fmtUGX(Math.round(Number(value)||0));
-  if(col.numeric) return Number(value||0).toLocaleString('en-UG', {maximumFractionDigits:2});
+  /* fmtNumAn, not fmtUGX: "UGX" on every cell of four money columns is
+     twenty-four repetitions of a fact the strip has already stated, and
+     it pushes the figures apart in a column that is read by scanning
+     down it. The strip, the notes and the export keep the currency. */
+  if(col.signed && value != null) return `${Number(value) > 0 ? '+' : ''}${fmtNumAn(Math.round(Number(value)||0))}`;
+  if(col.money) return fmtNumAn(Math.round(Number(value)||0));
+  if(col.pct) return (Number(value)||0).toFixed(1) + '%';
+  if(col.numeric) return fmtNumAn(value);
   return esc(value||'');
 }
-function renderPanTable(){
-  const rows = panVisibleRows();
-  const cols = PAN_COLUMNS[panView];
-  const sort = panSortState[panView];
-  // The summary describes these rows, so it is drawn from them.
-  renderPanKpis(rows);
-  const wrap = document.getElementById('pan_tableWrap');
-  if(rows.length===0){
-    wrap.innerHTML = panLastEntries.length===0
-      ? '<div class="empty">No purchase invoices in this date range. Purchase analytics is built from the Purchase Invoices list.</div>'
-      : '<div class="empty">No rows match your search.</div>';
-    return;
+/* The identity cell: what the row IS, and the detail that tells two of
+   them apart. Variant and category were columns of their own, competing
+   with the money for width and truncating the name between them; they
+   belong to the name.
+
+   AND THE SUPPLIER IS NOT ON AN ITEM ROW. An item row groups a product
+   across every invoice in the range, so it spans suppliers -- naming one
+   would simply be false. How MANY it was bought from is both true and
+   the thing worth knowing when its price has moved. */
+function panIdentityHTML(row){
+  const meta = panView==='item'
+    ? [row.variant && row.variant!=='--' ? row.variant : '', row.category].filter(Boolean).join(' · ')
+    : (row.commissionPct != null ? `${row.commissionPct}% commission on file` : 'no commission rate on file');
+  const name = esc(row.name || '—');
+  return `<div class="ow-tbl-c">
+    <span class="ow-tbl-p" title="${name}">${name}</span>
+    ${meta ? `<span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>` : ''}
+  </div>`;
+}
+/* One cell, drawn from the column's own definition, so the header, the
+   row, the total and the export can never drift apart. data-l is what
+   turns the row into a card below 820px -- the label the cell lost when
+   the header row was hidden. */
+function panCellHTML(col, row, isFoot){
+  const v = row[col.key];
+  if(col.key==='name'){
+    if(isFoot) return `<div class="ow-tbl-c"><span class="ow-tbl-p">${esc(String(v||''))}</span></div>`;
+    return panIdentityHTML(row);
   }
-  /* BOTH views get a total now. The item view was refused one because
-     "an item-level total would just be a meaningless sum of unrelated
-     products' amounts" -- but the amount is MONEY, and money adds up:
-     it is the total spend, which the KPI was already showing. What is
-     genuinely not addable is a quantity in mixed units, and that was the
-     one being totalled, at the top, in the largest type on the page. */
+  if(!col.numeric){
+    return `<div class="ow-tbl-c" data-l="${esc(PAN_HEAD[col.key]||col.label)}"><span class="ow-tbl-p">${esc(String(v||''))}</span></div>`;
+  }
+  /* A RISE IS MONEY LEAVING AND A FALL IS MONEY KEPT. These are the two
+     things on the row that are genuinely bad and genuinely good, so they
+     are the only two that carry a state colour; everything else -- the
+     spend, the quantity, the price itself -- is a size, and a size is
+     ink. */
+  let state = '';
+  if((col.key==='priceCost' || col.key==='priceMove') && v != null && Number(v) !== 0){
+    state = Number(v) > 0 ? ' ow-fig ow-bad' : ' ow-fig ow-good';
+  }
+  const partial = col.key==='commission' && isFoot && row.panPartial;
+  const mark = partial
+    ? `<span class="pan-partial-mark" title="${esc(row.panPartialWhy||'')}">*</span>` : '';
+  if(partial) state = ' ow-fig ow-warn';
+  return `<div class="ow-tbl-n${state}${v==null?' pan-none':''}" data-l="${esc(PAN_HEAD[col.key]||col.label)}">${
+    panFormatCell(col, v)}${mark}</div>`;
+}
+/* A column that cannot honestly be totalled says so, and says WHY on
+   hover. Nothing here falls through to a generic reduce: that is what
+   printed 35,503 + 42,000 + 7,000 = 84,503 as a "price paid" total, the
+   same mistake as adding bags to kilograms one column along. */
+function panNoTotalHTML(col, why){
+  return `<div class="ow-tbl-n pan-nototal" data-l="${esc(PAN_HEAD[col.key]||col.label)}" title="${esc(why)}">—</div>`;
+}
+function panFootRowHTML(cols, rows){
+  if(!rows.length) return '';
   const pt = panVisibleTotals(rows);
   const cov = panView==='supplier' ? panCommissionCoverage(rows) : null;
-  const totalRowHTML = `<tfoot><tr class="an-total-row">
-    <td></td>
-    ${cols.map((c,i)=>{
-      if(!c.numeric) return `<td>${i===0 ? '<strong>Total</strong>' : ''}</td>`;
+  const mv = panMoveTotals(rows);
+  const units = [...pt.units].join(', ');
+  const label = panView==='item'
+    ? `All ${rows.length} line${rows.length===1?'':'s'}`
+    : `All ${rows.length} supplier${rows.length===1?'':'s'}`;
+  const lead = 1 + cols.filter(c=>!c.numeric).length;
+  return `<div class="ow-tbl-f">
+    <div class="ow-tbl-c an-foot-l" style="--an-fs:${lead}"><span class="ow-tbl-p">${esc(label)}</span></div>
+    ${cols.filter(c=>c.numeric).map(c=>{
       // A quantity across bags, sheets and kilograms is not a number.
       if(c.key==='purchased' && pt.qty == null){
-        return `<td class="price pan-nototal" title="Bought in ${esc([...pt.units].join(', '))} — different units cannot be added">—</td>`;
+        return panNoTotalHTML(c, `Bought in ${units} — different units cannot be added`);
       }
-      // And a commission total is only the suppliers who have a rate.
-      if(c.key==='commission'){
-        return `<td class="price${cov && !cov.complete ? ' pan-partial' : ''}"><strong>${panFormatCell(c, cov ? cov.total : 0)}</strong>${
-          cov && !cov.complete ? `<span class="pan-partial-mark" title="${esc(fmtUGX(Math.round(cov.unratedSpend)))} of purchases is with ${cov.unratedCount} supplier${cov.unratedCount===1?' who has':'s who have'} no rate on file">*</span>` : ''}</td>`;
-      }
-      /* A PRICE DOES NOT TOTAL, and neither does a percentage. Falling
-         through to a generic reduce, this row added 35,503 + 42,000 +
-         7,000 and printed 84,503 as the "price paid" -- the same mistake
-         as adding bags to kilograms, one column along. Every numeric
-         column now has to say what its total means.
-
-         A price paid does have a real total where the units match: the
+      /* A PRICE PAID DOES HAVE A REAL TOTAL where the units match: the
          whole spend over the whole quantity, which is the weighted
          average and not the average of the prices. */
       if(c.key==='unitPrice'){
         const avg = (pt.qty != null && pt.qty > 0) ? pt.amt/pt.qty : null;
         return avg == null
-          ? `<td class="price pan-nototal" title="Bought in ${esc([...pt.units].join(', '))} — prices in different units cannot be averaged">—</td>`
-          : `<td class="price"><strong>${panFormatCell(c, avg)}</strong></td>`;
+          ? panNoTotalHTML(c, `Bought in ${units} — prices in different units cannot be averaged`)
+          : panCellHTML(c, {[c.key]: avg}, true);
       }
-      if(c.pctMove) return '<td class="price pan-nototal" title="A change is per item — there is no total of percentages">—</td>';
-      const sum = c.key==='purchased' ? pt.qty
+      // And a percentage has no total at all.
+      if(c.pctMove) return panNoTotalHTML(c, 'A change is per item — there is no total of percentages');
+      /* A commission total is only the suppliers who HAVE a rate. This
+         used to fall through to `Number(r.commission)||0`, which counted
+         a missing rate as a zero and printed 723,054 under 33,901,800 of
+         purchases, 8,400,000 of it with a supplier who has no rate at
+         all. The row was honest; the line under it was not. */
+      if(c.key==='commission'){
+        return panCellHTML(c, {commission: cov ? cov.total : 0, panPartial: cov && !cov.complete,
+          panPartialWhy: cov ? `${fmtUGX(Math.round(cov.unratedSpend))} of purchases is with ${cov.unratedCount} supplier${cov.unratedCount===1?' who has':'s who have'} no rate on file` : ''}, true);
+      }
+      const v = c.key==='purchased' ? pt.qty
         : c.key==='amt' ? pt.amt
-        : rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0);
-      return `<td class="price"><strong>${panFormatCell(c, sum)}</strong></td>`;
+        : c.key==='priceCost' ? (mv.any ? mv.cost : null)
+        : c.key==='share' ? rows.reduce((a,r)=> a + (Number(r.share)||0), 0)
+        : rows.reduce((a,r)=> a + (Number(r[c.key])||0), 0);
+      return panCellHTML(c, {[c.key]: v}, true);
     }).join('')}
-  </tr></tfoot>`;
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
-    <th>No.</th>
-    ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
-  </tr></thead><tbody>${rows.map((r,i)=>`<tr>
-    <td class="an-rank">${i+1}</td>
-    ${cols.map(c=>`<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`).join('')}
-  </tr>`).join('')}</tbody>${totalRowHTML}</table></div>
-  <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, panFormatCell)).join('')}</div>`;
-  wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
-    const key = th.dataset.key;
-    if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
-    renderPanTable();
-  }));
+  </div>`;
+}
+/* An empty window says what it knows, and names the next thing to do.
+   Four zeros in 22px mono says the shop is broken; it is not. */
+function panNothingHereHTML(){
+  const {from, to} = panGetDateRange();
+  const prev = panPreviousTotals();
+  const span = (from && to) ? dashRangeSpanDays(from, to) : null;
+  /* The way out is only offered where there is one. On a window that is
+     already thirty days -- or on All time, which cannot be widened at
+     all -- a button that "widens to the last 30 days" does nothing, and
+     a control that does nothing is the fault this screen's old Search
+     button had. */
+  const narrow = span != null && span < 30;
+  return `<div class="an-nothing">
+    <h3>No purchase invoices in this range.</h3>
+    ${prev ? `<p>In the ${span} day${span===1?'':'s'} before this window you made <span class="an-nothing-n">${
+      prev.count}</span> purchase${prev.count===1?'':'s'} worth <span class="an-nothing-n">${
+      esc(fmtUGX(Math.round(prev.amt)))}</span>, so the books are reading fine.</p>` : ''}
+    <p>Two things bring you here: you genuinely bought nothing, or stock arrived and
+      <b>no purchase invoice was raised for it</b>. Goods received without an invoice do not
+      exist to this screen, and that is the one that catches people.</p>
+    ${narrow ? `<div class="an-nothing-a"><button type="button" class="btn btn-accent ow-sm" id="pan_widen">Widen to the last 30 days</button></div>` : ''}
+  </div>`;
+}
+function panWireNothingHere(){
+  const b = document.getElementById('pan_widen');
+  if(!b) return;
+  b.addEventListener('click', ()=>{
+    const sel = document.getElementById('pan_range_preset');
+    sel.value = '30';
+    document.getElementById('pan_from_field').style.display = 'none';
+    document.getElementById('pan_to_field').style.display = 'none';
+    document.getElementById('pan_apply_btn').style.display = 'none';
+    renderPurchaseAnalytics();
+  });
+}
+const PAN_ORDER_NOTE = {
+  item: 'ranked by what the price change added to the bill',
+  supplier: 'ranked by what you spent with them'
+};
+function renderPanTable(){
+  const rows = panVisibleRows();
+  const all = PAN_COLUMNS[panView];
+  const cols = PAN_SCREEN[panView].map(k=> all.find(c=>c.key===k)).filter(Boolean);
+  const sort = panSortState[panView];
+  // The summary and the chart describe these rows, so all three are
+  // handed the same list.
+  renderPanKpis(rows);
+  renderPanConc();
+  /* THE ORDER IS DECLARED, so it can be argued with. And when there is
+     no earlier period there is no change to rank on -- the screen falls
+     back to spend and says so, rather than showing a column of dashes
+     and leaving the order looking deliberate. */
+  const noCompare = panView==='item' && !panMoveTotals(rows).any;
+  document.getElementById('pan_order').textContent = noCompare
+    ? 'ranked by spend — no price change can be worked out yet'
+    : PAN_ORDER_NOTE[panView];
+  const noun = panView==='item' ? 'lines' : 'suppliers';
+  document.getElementById('pan_count').textContent = `${rows.length} ${noun}`;
+  const tnote = document.getElementById('pan_tableNote');
+
+  const wrap = document.getElementById('pan_tableWrap');
+  if(rows.length===0){
+    wrap.innerHTML = panLastEntries.length===0
+      ? panNothingHereHTML()
+      : '<div class="ow-empty">No rows match your search.</div>';
+    if(panLastEntries.length===0) panWireNothingHere();
+    if(tnote){ tnote.innerHTML = ''; tnote.style.display = 'none'; }
+    return;
+  }
+  /* The footnote belongs to the table it qualifies, and it is where the
+     commission asterisk is explained -- the mark is not decoration. */
+  if(tnote){
+    const cov = panView==='supplier' ? panCommissionCoverage(rows) : null;
+    tnote.innerHTML = (cov && !cov.complete)
+      ? `<span><span class="pan-partial-mark">*</span> This covers <b>${esc(fmtUGX(Math.round(cov.ratedSpend)))}</b> of purchases. <b>${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file</b>, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of your spending earns nothing here — set a rate on the supplier to include ${cov.unratedCount===1?'them':'those'}. The figure is a projection: the rate times what you actually bought inside this date range, not a recorded month&rsquo;s commission.</span>`
+      : panView==='item'
+        ? `<span><b>Added to this period&rsquo;s bill</b> is what the price move cost: the change in the price paid, times how much you bought. It is money, so it totals; the percentage beside it is not, and does not.</span>`
+        : '';
+    tnote.style.display = tnote.innerHTML ? '' : 'none';
+  }
+  wrap.innerHTML = `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
+    <div class="ow-tbl-h">
+      <div class="ow-tbl-n">No.</div>
+      ${cols.map(c=>{
+        const on = sort.key===c.key;
+        const head = (c.key==='name' && panView==='supplier') ? 'Supplier' : (PAN_HEAD[c.key] || c.label);
+        return `<div class="${c.numeric?'ow-tbl-n':'ow-tbl-c'} an-th${on?' an-on':''}"
+          data-key="${c.key}" role="button" tabindex="0"
+          title="Order the rows by ${esc(c.label)}">${esc(head)}${
+          on ? `<span class="an-arrow">${sort.dir===1?'▲':'▼'}</span>` : ''}</div>`;
+      }).join('')}
+    </div>
+    ${rows.map((r,i)=>`<div class="ow-tbl-r">
+      <div class="ow-tbl-n an-no">${i+1}</div>
+      ${cols.map(c=> panCellHTML(c, r, false)).join('')}
+    </div>`).join('')}
+    ${panFootRowHTML(cols, rows)}
+  </div>`;
+  wrap.querySelectorAll('.an-th').forEach(th=>{
+    const go = ()=>{
+      const key = th.dataset.key;
+      if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
+      renderPanTable();
+    };
+    th.addEventListener('click', go);
+    th.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  });
 }
 function renderPurchaseAnalytics(){
   const {from, to} = panGetDateRange();
   panLastEntries = panInvoicesInRange(from, to);
-  // renderPanTable works out the visible rows and hands them to the KPIs.
+  /* The sub is never folded, so it carries the one thing that goes
+     stale: which window is on screen, and how much of the book is in
+     it. */
+  const sub = document.getElementById('pan_ph_sub');
+  if(sub){
+    const n = panLastEntries.length;
+    sub.textContent = (from && to)
+      ? `${fmtShortDate(from)} – ${fmtShortDate(to)} · ${n} purchase${n===1?'':'s'}`
+      : `All time · ${n} purchase${n===1?'':'s'}`;
+  }
+  // renderPanTable works out the visible rows and hands them to the KPIs
+  // and the chart, so all three describe exactly the same list.
   renderPanTable();
 }
 document.getElementById('pan_range_preset').addEventListener('change', ()=>{
   const isCustom = document.getElementById('pan_range_preset').value==='custom';
   document.getElementById('pan_from_field').style.display = isCustom ? 'flex' : 'none';
   document.getElementById('pan_to_field').style.display = isCustom ? 'flex' : 'none';
+  // The button exists for the two dates below it and for nothing else.
+  document.getElementById('pan_apply_btn').style.display = isCustom ? '' : 'none';
   if(!isCustom) renderPurchaseAnalytics();
 });
 document.getElementById('pan_apply_btn').addEventListener('click', renderPurchaseAnalytics);
 document.getElementById('pan_table_search').addEventListener('input', renderPanTable);
-document.querySelectorAll('#pan_subtabs button').forEach(btn=>{
+document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('#pan_subtabs button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(b=>{
+      b.classList.remove('ow-on'); b.setAttribute('aria-selected','false');
+    });
+    btn.classList.add('ow-on'); btn.setAttribute('aria-selected','true');
     panView = btn.dataset.view;
     renderPanTable();
   });
@@ -33839,6 +34305,7 @@ document.getElementById('pan_export_btn').addEventListener('click', ()=>{
       // different facts, and a spreadsheet will happily total both.
       if(v == null) v = '';
       else if(c.pctMove) v = (Number(v)*100).toFixed(1);
+      else if(c.pct) v = (Number(v)||0).toFixed(1);
       else if(c.money) v = Math.round(Number(v)||0);
       return `"${String(v).replace(/"/g,'""')}"`;
     });

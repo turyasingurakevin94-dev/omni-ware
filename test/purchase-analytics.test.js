@@ -51,6 +51,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 const near = (got, want, msg) => t.check(Math.abs(got - want) < 1e-6, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const kpis = (/function renderPanKpis\(rows\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const table = (/function renderPanTable\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* The totals row moved out of renderPanTable into a panFootRowHTML of its
+   own, beside the panCellHTML that draws every other cell -- exactly the
+   shape the sales side already had (anFootRowHTML / anCellHTML). The
+   checks in section 4 are about what the foot DOES, so they read it where
+   it now lives. Extracted by brace matching, not by a lazy regex. */
+const foot = extractFunction(src, 'panFootRowHTML', 'index.html');
+const cell = extractFunction(src, 'panCellHTML', 'index.html');
 const byItem = (/function panRowsByItem\(invoices\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const forView = (/function panRowsForView\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const exportFn = (/pan_export_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
@@ -91,15 +98,37 @@ if (scope) {
   eq(scope.panPriceMove({ key: 'P003', unitPrice: 100 }, new Map([['P003', 0]])), null,
     'while a previous price of zero is not something to divide by');
 
-  // Attached to the row, so "show me what has gone up most" is a sort.
-  t.check(/priceMove: panPriceMove\(r, prev && prev\.prices\)/.test(forView),
+  /* Attached to the row, so "show me what has gone up most" is a sort.
+     The row now carries the COST of the move as well, because that is
+     what the screen ranks on: a percentage cannot be prioritised. +14.5%
+     on binding wire is 345,600 and +2.4% on paint is 117,300, and
+     ordering on the percentage puts the smaller bill first. */
+  t.check(/priceMove: move/.test(forView) && /panPriceMove\(r, prev && prev\.prices\)/.test(forView),
     'the move is carried on the row so it sorts, filters and exports');
+  t.check(/\(r\.unitPrice - before\) \* \(Number\(r\.purchased\)\|\|0\)/.test(forView),
+    'and beside it, in money, what that move added to this period\u2019s bill');
+  /* Null, not zero. A line first bought this period has not gone up, it
+     has appeared -- and a zero would sort it into the middle of the
+     ranking, among the lines whose price genuinely held. */
+  t.check(/\(move == null \|\| before == null\) \? null/.test(forView),
+    'which is absent, not zero, where there is nothing to compare with');
+  t.check(/\{key:'priceCost'[^}]*money:true/.test(code), 'with a column to show it in');
+  t.check(/item: \{key:'priceCost', dir:-1\}/.test(code),
+    'and the screen opens on it, worst first, rather than on total spend');
 
   t.check(/<span class="an-delta \$\{pct > 0 \? 'down' : 'up'\}">/.test(scope.panFormatCell.toString()),
     'a rising cost is marked as the bad direction, since this is money going out');
   t.check(/level/.test(scope.panFormatCell({ pctMove: true }, 0.001)),
     'and a price that has barely moved says so rather than rounding to +0%');
-  t.check(/—/.test(scope.panFormatCell({ pctMove: true }, null)), 'with nothing to compare shown as a dash');
+  /* It used to print a bare em-dash here, which is indistinguishable
+     from "we could not work it out". The screen now ranks on this
+     column, so a row it cannot rank owes the reader the reason: the item
+     was not bought in the period before. Still not a figure -- grey, and
+     set in the interface face rather than the money one. */
+  t.check(/not bought before/.test(scope.panFormatCell({ pctMove: true }, null)),
+    'with nothing to compare against saying so, rather than printing a bare dash');
+  t.check(/pan-none/.test(scope.panFormatCell({ pctMove: true }, null)),
+    'and reading as a non-answer rather than as a value');
   t.check(/—/.test(scope.panFormatCell({ money: true }, null)),
     'as is a price for something nothing was bought of');
 }
@@ -149,21 +178,36 @@ if (scope) {
  * mistake as adding bags to kilograms, one column along.
  */
 {
-  t.check(/if\(c\.key==='unitPrice'\)\{/.test(table), 'the price column decides its own total');
-  t.check(/const avg = \(pt\.qty != null && pt\.qty > 0\) \? pt\.amt\/pt\.qty : null;/.test(table),
+  t.check(/if\(c\.key==='unitPrice'\)\{/.test(foot), 'the price column decides its own total');
+  t.check(/const avg = \(pt\.qty != null && pt\.qty > 0\) \? pt\.amt\/pt\.qty : null;/.test(foot),
     'which is the whole spend over the whole quantity — the weighted average, not the average of the prices');
-  t.check(/prices in different units cannot be averaged/.test(table),
+  t.check(/prices in different units cannot be averaged/.test(foot),
     'and a dash with a reason when the units differ');
-  t.check(/if\(c\.pctMove\) return '<td class="price pan-nototal"/.test(table),
+  /* The <td> spelling is gone -- the table is the layer's .ow-tbl grid
+     now, so every "this does not total" cell goes through one
+     panNoTotalHTML that carries the class AND the reason. What the check
+     is about is unchanged: a percentage has no total, and the screen
+     says so rather than adding them. */
+  t.check(/if\(c\.pctMove\) return panNoTotalHTML\(c, 'A change is per item/.test(foot),
     'a percentage change has no total at all');
-  /* The item view was refused a totals row entirely. Money adds up. */
-  /* Asserted as UNCONDITIONAL rather than as the absence of one
+  t.check(/pan-nototal[\s\S]*?title="\$\{esc\(why\)\}"/.test(code),
+    'and every column that cannot be totalled says why, rather than falling through to a sum');
+  /* The item view was refused a totals row entirely. Money adds up.
+     Asserted as UNCONDITIONAL rather than as the absence of one
      particular condition -- there are many ways to write "supplier
-     only", and the first draft of this check only ruled out one. */
-  t.check(/const totalRowHTML = `<tfoot><tr class="an-total-row">/.test(table),
-    'and the item view is no longer refused a totals row for the money it spent');
-  t.check(/c\.key==='purchased' && pt\.qty == null/.test(table),
+     only", and the first draft of this check only ruled out one. The
+     <tfoot> is now .ow-tbl-f, the layer's own foot, and the label names
+     the rows it is adding up. */
+  t.check(/return `<div class="ow-tbl-f">/.test(foot)
+    && /All \$\{rows\.length\} line\$\{rows\.length===1\?'':'s'\}/.test(foot),
+  'and the item view is no longer refused a totals row for the money it spent');
+  t.check(/c\.key==='purchased' && pt\.qty == null/.test(foot),
     'while the quantity column dashes out when its units are mixed');
+  /* NEW, and the reason the foot is worth having at the top of the
+     scroll: what the price changes cost DOES total, because it is money.
+     It is the one figure the old screen had no way to state at all. */
+  t.check(/c\.key==='priceCost' \? \(mv\.any \? mv\.cost : null\)/.test(foot),
+    'while what the changes added to the bill totals, because it is money');
 }
 
 /* ---------- 5. a missing rate is not a rate of nothing --------------- */
@@ -189,8 +233,24 @@ if (scope) {
   t.check(/no commission rate on file, so \$\{esc\(fmtUGX\(Math\.round\(cov\.unratedSpend\)\)\)\} of spending earns nothing here/.test(kpis),
     'saying how much spending earns nothing, in money');
   t.check(/set a rate to include/.test(kpis), 'and what to do about it');
-  t.check(/kpi-value \$\{cov\.complete\?'':'partial'\}/.test(kpis), 'marking the figure itself as partial');
-  t.check(/panFormatCell\(c, cov \? cov\.total : 0\)/.test(table),
+  /* THE COMMISSION TILE HAS LEFT THE STRIP, and that is the owner's
+     call, made in the design interview: commission is real money and it
+     is not why this screen gets opened, so it does not get a quarter of
+     the largest type on the page. The old assertion pinned the mark to
+     that tile. Everything it protected is still here, one panel down,
+     where the column it qualifies actually is: the total reads amber --
+     this palette's word for a qualified figure -- it carries the
+     asterisk, and the asterisk is explained underneath in money.
+
+     What would still fail this section: a total that silently added the
+     nulls, an unmarked total, or an asterisk with nothing behind it. */
+  t.check(/if\(partial\) state = ' ow-fig ow-warn';/.test(cell),
+    'marking the figure itself as partial');
+  t.check(/pan-partial-mark/.test(cell) && /panPartialWhy/.test(cell),
+    'and carrying the mark that says the total does not cover everything');
+  t.check(/no commission rate on file<\/b>, so \$\{esc\(fmtUGX\(Math\.round\(cov\.unratedSpend\)\)\)\} of your spending earns nothing here/.test(table),
+    'with the mark explained under the table it qualifies, in money');
+  t.check(/panCellHTML\(c, \{commission: cov \? cov\.total : 0/.test(foot),
     'and the totals row takes the same figure rather than summing nulls as zeros');
   t.check(!/const sum = rows\.reduce\(\(s,r\)=> s \+ \(Number\(r\[c\.key\]\)\|\|0\), 0\);\n      return `<td class="price"><strong>\$\{panFormatCell\(c, sum\)\}/.test(code),
     'which is what turned a missing rate into a zero');
@@ -230,10 +290,35 @@ if (scope) {
     'and the same for prices, which are compared the same way');
   t.check(/if\(!prev\.length\) return null;/.test(prevPrices),
     'so an empty period cannot become a set of prices to measure against');
-  /* Spending more is not good news, which is the opposite of the sales
-     side and the reason the flag exists. */
-  t.check(/anDeltaHTML\(t\.amt, cmp\.amt, false\)/.test(kpis),
-    'and spending more is marked as the bad direction, unlike selling more');
+  /* SPENDING MORE IS A SIZE, NOT A WARNING -- and this reverses what
+     this check used to say, so here is the argument.
+
+     It used to read anDeltaHTML(t.amt, cmp.amt, false), which paints the
+     Spent delta crimson whenever the shop bought more than last period.
+     The belief behind it was "spending more is bad news". It is not: a
+     shop that bought 9% more because it sold 9% more is having a good
+     month, and this screen cannot tell those apart -- it has no sales in
+     it. The palette's own law is that crimson is for the genuinely bad.
+
+     And it now costs something. The strip has a figure that IS
+     unambiguously bad: what the price changes added to the bill, which
+     is money leaving for nothing. Two crimson figures side by side, one
+     of them merely a size, is the "a device that marks everything marks
+     nothing" fault the design system names. So the delta is ink, exactly
+     as the sales side's delta is ink and for the same reason, and the
+     one crimson on the screen is spent on the one thing that earns it.
+
+     What this now pins: the comparison is still made and still shown,
+     and the bad-direction colour is on the price move instead. */
+  t.check(/anDeltaText\(t\.amt, cmp\.amt\)/.test(kpis),
+    'the window is still measured against the one before it');
+  t.check(/mv\.cost > 0 \? 'ow-bad' : mv\.cost < 0 \? 'ow-good' : ''/.test(kpis),
+    'and the bad direction is spent on a price that rose — money leaving for nothing');
+  t.check(!/anDeltaHTML\(t\.amt, cmp\.amt, false\)/.test(kpis),
+    'rather than on having bought more, which is a size and not a warning');
+  /* Nothing to compare with is not a rise of nothing. */
+  t.check(/!mv\.any[\s\S]{0,160}?Not stated/.test(kpis),
+    'and a window with no earlier period says so rather than claiming a change of zero');
 }
 
 process.exit(t.done() ? 1 : 0);

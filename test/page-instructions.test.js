@@ -59,15 +59,22 @@ const src = read('index.html');
      Analytics converted, and The day with it: both traded .page-head for
      .ow-ph and their paragraph for .ow-ph-help, so both are folded BY
      CONSTRUCTION and there are two fewer screens here to police -- not
-     two that stopped being policed. */
+     two that stopped being policed.
+
+     13 -> 12. Purchase analytics, the last of the three analytics
+     screens still on .page-head, went the same way: .ow-ph, and its
+     240-character paragraph -- which ran the full width of the panel,
+     unmeasured, open on every visit -- is now .ow-ph-help behind the
+     "i". One fewer screen to police, for the same reason as the two
+     above. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 13, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 12, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 13,
+  t.check(paras.length >= 12,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
