@@ -39,7 +39,7 @@ PY
 }
 X="_extra_main.css"
 build Before.dc.html   body_before.html   "$X _extra_before.css" 1440 1690 1 ''
-build Main.dc.html     body_main.html     "$X"                   1440 1370 1 ''
+build Main.dc.html     body_main.html     "$X"                   1440 1450 1 ''
 build Counting.dc.html body_counting.html "$X"                   1440 990 1 ''
 build Opening.dc.html  body_opening.html  "$X"                   1440 1130 1 ''
 build Phone.dc.html      body_phone.html      "$X _extra_phone.css _extra_cbphone.css" 390 844 0
