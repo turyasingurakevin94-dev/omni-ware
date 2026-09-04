@@ -34,7 +34,10 @@ const t = createReporter('sales analytics');
 const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-const NAMES = ['anFilterRows', 'anSortRows', 'anVisibleTotals', 'anCostConfidence', 'anDeltaHTML'];
+/* anDeltaHTML is still here because Purchase Analytics still calls it;
+   anDeltaText is what Sales asks now, and both are exercised below. */
+const NAMES = ['anFilterRows', 'anSortRows', 'anVisibleTotals', 'anCostConfidence',
+  'anDeltaHTML', 'anDeltaText'];
 let scope = null; let err = null;
 try {
   scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
@@ -45,26 +48,63 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 const near = (got, want, msg) => t.check(Math.abs(got - want) < 1e-6, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const kpis = (/function renderAnKpis\(rows\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const table = (/function renderAnTable\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const foot = (/function anTableFootHTML\(cols, rows\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* anTableFootHTML -> anFootRowHTML, and it emits an .ow-tbl-f row rather
+   than a <tfoot>: the screen was rebuilt on the layer's own table, where
+   one call yields the desktop row and the phone card. The name changed
+   because the thing it builds did; every check below is on what it says,
+   which has not. */
+const foot = (/function anFootRowHTML\(cols, rows\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* The cell builder. anFormatCell formatted a VALUE and took the row only
+   so it could star it; anCellHTML builds the whole cell from the column's
+   own definition, which is what lets the header, the row, the total and
+   the phone card be emitted from one description instead of four. */
+const cell = (/function anCellHTML\(col, row, isFoot\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const exportFn = (/an_export_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
 const byItem = (/function anRowsByItem\(invoices\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const byCust = (/function anRowsByCustomer\(invoices\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const byDoc = (/function anRowsByDoc\(invoices\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 
-/* ---------- 1. a loss is not a profit -------------------------------- */
+/* ---------- 1. a loss is not a profit -------------------------------- *
+ * WHAT THESE USED TO SAY, AND WHY THEY SAY IT DIFFERENTLY NOW.
+ *
+ * The original bug: the Gross profit tile carried a hardcoded `good`, so
+ * a loss of 60,000 rendered in verdigris -- the colour of good news. The
+ * fix was to colour the tile BY ITS SIGN: verdigris above zero, crimson
+ * below. These assertions pinned that expression.
+ *
+ * The screen was then rebuilt on the .ow- layer, and the design system's
+ * meaning rule applies: "a figure is a size, not a warning ... crimson is
+ * for the genuinely bad". A profit is the ordinary case -- every healthy
+ * window the shop ever has -- so painting it verdigris puts a state
+ * colour on almost every render, and a device that marks everything marks
+ * nothing. A LOSS is genuinely bad and keeps its crimson.
+ *
+ * So the intent is unchanged and slightly sharpened: a loss must never be
+ * drawn as a profit. What changed is that a profit is now ink rather than
+ * green, and the crimson arrives through the layer's own components --
+ * .ow-mt.ow-bad on the tile, .ow-fig.ow-bad on the cell -- instead of a
+ * .kpi-value/.an-neg pair private to this screen.
+ */
 {
-  t.check(/kpi-value \$\{t\.profit >= 0 \? 'good' : 'bad'\}/.test(kpis),
-    'gross profit is coloured by its sign');
+  t.check(/t\.profit < 0 \? 'ow-bad' : ''/.test(kpis),
+    'a loss in the strip is crimson');
   t.check(!/kpi-value good">\$\{fmtUGX\(Math\.round\(t\.profit\)\)\}/.test(code),
     'and no longer carries a hardcoded good, which painted a loss verdigris');
-  t.check(/kpi-value \$\{t\.margin >= 0 \? '' : 'bad'\}/.test(kpis), 'as is the margin');
-  t.check(/\.kpi-value\.bad\{color:var\(--danger\);\}/.test(src),
-    'with a rule that actually gives it the danger colour');
+  t.check(!/'good'/.test(kpis),
+    'nor any good at all — a profit is a size, and marking every window green marks nothing');
+  t.check(/t\.margin < 0 \? 'ow-bad' : ''/.test(kpis), 'as is a negative margin');
+  t.check(/\.ow-mt\.ow-bad \.ow-mt-v\{color:var\(--ow-crimson\);\}/.test(src),
+    'with a rule that actually gives the tile the danger colour');
   // Down to the individual row and the totals line, or a loss hides
   // inside a column of black figures.
-  t.check(/c\.key==='profit' && Number\(r\[c\.key\]\)<0 \? ' an-neg' : ''/.test(table),
+  t.check(/const neg = \(col\.key==='profit' \|\| col\.key==='margin'\) && Number\(v\) < 0;/.test(cell),
     'a row that lost money is marked too');
-  t.check(/c\.key==='profit' && v<0 \? ' an-neg' : ''/.test(foot), 'and so is the total');
+  t.check(/neg\?' ow-fig ow-bad':''/.test(cell),
+    'through the layer\'s own figure component, which is where crimson lives');
+  t.check(/\.ow-fig\.ow-bad\{color:var\(--ow-crimson\);\}/.test(src),
+    'and that component really is crimson — .ow-tbl-n alone carries no state colour');
+  t.check(/anCellHTML\(c, \{\.\.\.t, \[c\.key\]: v\}, true\)/.test(foot),
+    'and so is the total, built by the same cell builder as the rows');
 }
 
 /* ---------- 2. how much of the cost was a guess ---------------------- */
@@ -94,12 +134,23 @@ if (scope) {
     'and says it in terms of what actually happened, not "data quality"');
   t.check(/their sale value counts as profit in full/.test(kpis),
     'spelling out the consequence, since that is the number somebody is about to act on');
-  t.check(/conf\.dominant \? ' — most of this margin rests on a guess' : ''/.test(kpis),
+  /* The warning got STRONGER, not softer. It used to say "most of this
+     margin rests on a guess" and then print the margin anyway, to one
+     decimal, in the tile above. A margin over a cost nobody recorded is
+     not uncertain, it is invented -- so past half the units the screen
+     now withholds profit and margin outright and says why, while
+     turnover and the count, which are real, are still shown. */
+  t.check(/conf\.dominant \? ' — so profit and margin are not stated for this window' : ''/.test(kpis),
     'with the stronger warning kept for when it is warranted');
+  t.check(/mute \? 'not stated'/.test(kpis),
+    'and the figure it warns about is actually withheld, not printed under the warning');
   /* Two decimals on a figure part of whose cost was invented is
      precision the number does not have. */
   t.check(/t\.margin\.toFixed\(1\)/.test(kpis), 'and the margin is not quoted to two decimals');
-  t.check(/if\(col\.pct\) return \(Number\(value\)\|\|0\)\.toFixed\(1\) \+ '%';/.test(code),
+  /* anFormatCell formatted a value and is gone; anCellHTML builds the
+     cell. Same rule, same one decimal, now in the one place every cell
+     on the screen goes through. */
+  t.check(/text = \(Number\(v\)\|\|0\)\.toFixed\(1\) \+ '%';/.test(cell),
     'anywhere on the page');
 }
 
@@ -176,7 +227,7 @@ if (scope) {
   /* Pinned on the CALL, not only on the function. Dropping
      ${anTableFootHTML(...)} from the table left the whole function
      sitting in the file, unreached, while every check on it passed. */
-  t.check(/\$\{anTableFootHTML\(cols, rows\)\}<\/table>/.test(table),
+  t.check(/\$\{anFootRowHTML\(cols, rows\)\}/.test(table),
     'and the table actually renders it');
   t.check(/const t = anVisibleTotals\(rows\);/.test(foot), 'drawn from the visible rows');
   t.check(/c\.key==='margin' \? t\.margin/.test(foot), 'taking the margin from that same arithmetic');
@@ -209,7 +260,17 @@ if (scope) {
     'a margin change is given in points, not as a percentage of a percentage');
   t.check(/level/.test(scope.anDeltaHTML(23.30, 23.32, true, true)),
     'and a margin that has barely moved says so rather than rounding to +0.0');
-  t.check(/anDeltaHTML\(t\.margin, cmp\.margin, true, true\)/.test(kpis), 'which is how the screen asks for it');
+  /* anDeltaHTML still exists and Purchase Analytics still uses it. Sales
+     asks anDeltaText instead, which returns the same arithmetic as WORDS
+     in ink: a window where turnover fell and profit rose is good news,
+     and painting that fall crimson said the opposite of what happened.
+     The points/per-cent distinction is the thing under test and it is
+     unchanged -- the third argument is what asks for points. */
+  t.check(/anDeltaText\(t\.margin, cmp\.margin, true\)/.test(kpis), 'which is how the screen asks for it');
+  t.check(/\+10\.1<\/span> points/.test(scope.anDeltaText(23.3, 13.2, true)),
+    'and it gives a margin move in points too');
+  t.check(/level/.test(scope.anDeltaText(23.30, 23.32, true)),
+    'and says level rather than rounding to +0.0');
 
   /* A comparison against the whole previous period is meaningless while
      a search narrows this one to a single customer. */
@@ -297,9 +358,15 @@ if (scope) {
   eq(markFn({ estimatedQty: 22, qty: 22 }, 'sales'), '',
     'on the cost column only — cost is where the doubt is, and profit and margin both come out of it');
 
-  t.check(/anFormatCell\(c, r\[c\.key\], r\)/.test(table),
+  /* The star is on GROSS PROFIT now, not on cost. The doubt still lives
+     in the cost -- anEstimatedMarkHTML is still asked about 'cost', which
+     is why the two checks above are unchanged -- but cost came off the
+     screen (it is Items sales minus Gross profit, and it was costing a
+     column). So the mark moved to the figure the ranking is built on and
+     the one the doubt actually corrupts. */
+  t.check(/const mark = col\.key==='profit' \? anEstimatedMarkHTML\(row, 'cost'\) : '';/.test(cell),
     'the table hands the row to the formatter, since the value alone cannot know');
-  t.check(/anFormatCell\(c, v, t\)/.test(foot),
+  t.check(/anCellHTML\(c, \{\.\.\.t, \[c\.key\]: v\}, true\)/.test(foot),
     'and the totals line is marked on the same rule as the rows it adds up');
   const card = extractFunction(src, 'reportCardHTML', 'index.html');
   t.check(/formatCellFn\(c, row\[c\.key\], row\)/.test(card),
