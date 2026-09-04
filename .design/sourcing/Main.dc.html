@@ -1,0 +1,531 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    body{margin:0;background:#E9EBED;color:#14171B;
+      font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:13px;
+      -webkit-font-smoothing:antialiased;}
+    a{color:#14171B;} a:hover{color:#B23A26;}
+    .ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  </style>
+</helmet>
+
+<!-- 1440 x 1180. The desktop work console: 220px navy rail, 54px top bar,
+     24px page padding, .ow-grid (work column + 304px context rail). -->
+<div style="width:1440px;height:1180px;background:#E9EBED;display:flex;overflow:hidden">
+
+  <!-- ================= navy rail (chrome, shown for context) ========= -->
+  <div style="width:220px;flex:none;background:#14171B;color:#C7CFD8;display:flex;flex-direction:column">
+    <div style="height:54px;display:flex;align-items:center;gap:10px;padding:0 14px;flex:none">
+      <div style="width:30px;height:30px;border-radius:6px;background:#B23A26;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;letter-spacing:.02em">OW</div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:14px;color:#fff;letter-spacing:-.01em">OMNI-WARE</div>
+    </div>
+    <div style="display:flex;flex-direction:column;padding:8px 0">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#7C8894;padding:12px 16px 6px">SELL</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3v5h5"/></svg>New quote</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Order tracking</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M17 20a5 5 0 0 0-10 0M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>Customers</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#7C8894;padding:16px 16px 6px">BUY</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M3 5h2l2.6 11.3a1 1 0 0 0 1 .7h8.8a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>What to buy</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18M6 8l6-5 6 5M6 16l6 5 6-5"/></svg>Compare prices</div>
+      <!-- current screen -->
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;font-weight:600;background:#B23A26;color:#fff;border-radius:0">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M8 3.5h8a1 1 0 0 1 .8 1.6L14 9v7.5l-4 3V9L7.2 5.1A1 1 0 0 1 8 3.5z"/></svg>
+        <span style="flex:1">Sourcing</span>
+        <span class="mono" style="font-size:11px;background:rgba(255,255,255,.22);border-radius:999px;padding:1px 7px">8</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Suppliers</div>
+    </div>
+  </div>
+
+  <!-- ================= work area ==================================== -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <!-- top bar -->
+    <div style="height:54px;flex:none;background:#14171B;display:flex;align-items:center;gap:14px;padding:0 20px;color:#C7CFD8">
+      <div style="font-size:13px"><span style="color:#7C8894">Buy /</span> <b style="color:#fff;font-weight:600">Sourcing</b></div>
+      <div style="flex:1;max-width:430px;height:32px;border-radius:6px;background:#252A31;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:13px;color:#8A939C">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        Search screens, or ask the Manager
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:16px;font-size:12px">
+        <span style="color:#8A939C">Taken <b class="mono" style="color:#fff">0</b></span>
+        <span style="color:#8A939C">Buying <b class="mono" style="color:#fff">0</b></span>
+        <span style="color:#8A939C">Delivered <b class="mono" style="color:#fff">0</b></span>
+      </div>
+    </div>
+
+    <!-- page body -->
+    <div style="flex:1;min-width:0;padding:0 24px 24px;overflow:hidden">
+
+      <!-- ---- .ow-ph : name, one line of what it is, hairline, the
+           screen's own action on the right ---- -->
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+        padding:16px 0 12px;border-bottom:1px solid #CFD5DA;margin-bottom:16px">
+        <div>
+          <h1 style="font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1">Sourcing</h1>
+        </div>
+        <div style="width:20px;height:20px;border-radius:999px;border:1px solid #CFD5DA;color:#59626B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;margin-bottom:1px">i</div>
+        <p style="font-size:12px;color:#59626B;margin:0 0 1px">Things people asked for that you do not sell yet.</p>
+        <div style="flex:1"></div>
+        <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;
+          border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;
+          display:inline-flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add an item to source</button>
+      </div>
+
+      <!-- ---- .ow-strip : one 64px row, hairline dividers, no per-tile
+           borders. Every figure carries the basis it was derived from. ---- -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);background:#FFFFFF;
+        border:1px solid #E3E7EA;border-radius:8px;overflow:hidden;margin-bottom:16px">
+        <div style="padding:10px 16px">
+          <p style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#59626B;margin:0 0 4px">Being sourced</p>
+          <span class="mono" style="font-size:22px;font-weight:500;line-height:1.1;display:block">8</span>
+          <p style="font-size:11px;color:#59626B;margin:4px 0 0;line-height:1.35">2 more became products this month</p>
+        </div>
+        <div style="padding:10px 16px;border-left:1px solid #E3E7EA">
+          <p style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#59626B;margin:0 0 4px">People waiting</p>
+          <span class="mono" style="font-size:22px;font-weight:500;line-height:1.1;display:block">6</span>
+          <p style="font-size:11px;color:#59626B;margin:4px 0 0;line-height:1.35">16 asks in all</p>
+        </div>
+        <div style="padding:10px 16px;border-left:1px solid #E3E7EA">
+          <p style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#59626B;margin:0 0 4px">Cost to bring in</p>
+          <span class="mono" style="font-size:22px;font-weight:500;line-height:1.1;display:block">996,250<span style="font-size:.55em;color:#8A939C;margin-left:.3em;letter-spacing:0">UGX</span></span>
+          <p style="font-size:11px;color:#59626B;margin:4px 0 0;line-height:1.35">At the cheapest price found, for what was asked — on the 2 items priced</p>
+        </div>
+        <div style="padding:10px 16px;border-left:1px solid #E3E7EA">
+          <p style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#59626B;margin:0 0 4px">Longest wait</p>
+          <span class="mono" style="font-size:22px;font-weight:500;line-height:1.1;display:block;color:#7A4A02">40<span style="font-size:.55em;color:#8A939C;margin-left:.3em;letter-spacing:0">DAYS</span></span>
+          <p style="font-size:11px;color:#59626B;margin:4px 0 0;line-height:1.35">PVC ceiling boards — Kato first asked on 8 Jul</p>
+        </div>
+      </div>
+
+      <!-- ---- .ow-grid : the work column and its 304px context rail ---- -->
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start">
+
+        <!-- ================= the work queue ================= -->
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+
+          <!-- BAND 1 — the one accent on this screen. The oxide edge marks
+               the section that is the thing to do next; nothing else on the
+               page is oxide. -->
+          <div style="background:#FFFFFF;border:1px solid #E3E7EA;border-radius:8px;overflow:hidden;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+              border-bottom:1px solid #E3E7EA;background:#F7F9FB;border-left:3px solid #B23A26">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#8E2C1C">Needs you</span>
+              <span style="font-size:11px;color:#59626B">nobody is moving these — priced ones first</span>
+              <span class="mono" style="font-size:11px;color:#59626B;margin-left:auto">6</span>
+            </div>
+
+            <!-- column headings, so the figures below have names -->
+            <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;
+              align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid #E3E7EA;
+              font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#8A939C">
+              <span></span><span>Item</span><span>How far</span>
+              <span style="text-align:right">Asked</span><span style="text-align:right">Here</span>
+              <span style="text-align:right">To bring in</span><span></span>
+            </div>
+
+            <!-- ROW 1 — open in place -->
+            <div style="border-bottom:1px solid #E3E7EA;background:#F7F9FB">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;
+                align-items:center;gap:10px;min-height:44px;padding:6px 12px;cursor:pointer">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center;transform:rotate(90deg)"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500;letter-spacing:-.005em">Door closers hydraulic 45kg</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#59626B;margin-top:1px">Kato Construction Ltd +2 · Musa Kato</span>
+                </span>
+                <!-- HOW FAR — five segments of ink, not five hues. Past is
+                     steel-400, the step it is on is steel-950, ahead is a
+                     hairline. No colour outside the palette, and the shape
+                     reads at a glance where five mid-greens did not. -->
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Priced</span>
+                </span>
+                <span style="text-align:right">
+                  <span class="mono" style="display:block;font-size:13px;font-weight:600">3</span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 3 asks</span>
+                </span>
+                <span style="text-align:right">
+                  <span class="mono" style="display:block;font-size:13px;font-weight:600">3d</span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span>
+                </span>
+                <span style="text-align:right">
+                  <span class="mono" style="display:block;font-size:13px;font-weight:600">471,850</span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">for 38 pcs</span>
+                </span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;
+                    background:#14171B;color:#fff;font-size:12px;font-weight:700;
+                    display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box">Add it to what we sell</button>
+                </span>
+              </div>
+
+              <!-- the reasoning opens UNDER the row, not in a card that
+                   pushes the next thing off the screen -->
+              <div style="padding:0 12px 12px 40px">
+                <p style="font-size:13px;color:#59626B;line-height:1.5;max-width:76ch;margin:0 0 10px">
+                  Priced three days ago. Two shops quoted it, both by the carton of six.
+                  Adding it to what you sell creates the product and banks both prices — you keep the losing quote too.
+                </p>
+
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start">
+                  <!-- compare AT the quantity people actually asked for -->
+                  <div style="border:1px solid #E3E7EA;border-radius:6px;overflow:hidden;background:#fff;min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;background:#F7F9FB;border-bottom:1px solid #E3E7EA">
+                      <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#59626B">If we buy</span>
+                      <span class="mono" style="font-size:12px;font-weight:600;border:1px solid #CFD5DA;border-radius:4px;padding:1px 8px;background:#fff">38</span>
+                      <span style="font-size:12px;color:#59626B">pcs — what 3 people asked for</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 104px 110px;align-items:center;gap:10px;
+                      padding:5px 10px;border-bottom:1px solid #E3E7EA;font-size:11px;font-weight:600;
+                      letter-spacing:.07em;text-transform:uppercase;color:#8A939C">
+                      <span>Who has it</span><span style="text-align:right">Per carton</span><span style="text-align:right">Per piece</span><span style="text-align:right">38 pcs</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 104px 110px;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid #E3E7EA">
+                      <span class="trunc" style="font-size:13px;font-weight:500">Jinja Road Importers <span style="font-size:11px;font-weight:600;color:#59626B;background:#E9EBED;border-radius:4px;padding:1px 6px;margin-left:4px">Importer</span></span>
+                      <span class="mono" style="text-align:right;font-size:13px">74,500</span>
+                      <span class="mono" style="text-align:right;font-size:13px">12,417</span>
+                      <span class="mono" style="text-align:right;font-size:13px;font-weight:600;color:#1C6B58">471,850</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 104px 110px;align-items:center;gap:10px;padding:7px 10px">
+                      <span class="trunc" style="font-size:13px;font-weight:500">Nakawa Hardware Wholesalers</span>
+                      <span class="mono" style="text-align:right;font-size:13px">82,000</span>
+                      <span class="mono" style="text-align:right;font-size:13px">13,667</span>
+                      <span class="mono" style="text-align:right;font-size:13px;font-weight:600">519,333</span>
+                    </div>
+                    <div style="padding:7px 10px;border-top:1px solid #E3E7EA;background:#F7F9FB;font-size:12px;color:#59626B">
+                      Jinja Road saves <b class="mono" style="color:#14171B;font-weight:600">47,483</b> on this order — 9%. Both go on file either way.
+                    </div>
+                  </div>
+
+                  <!-- who is waiting, in the row itself -->
+                  <div style="border:1px solid #E3E7EA;border-radius:6px;overflow:hidden;background:#fff">
+                    <div style="display:flex;align-items:center;height:30px;padding:0 10px;background:#F7F9FB;border-bottom:1px solid #E3E7EA">
+                      <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#59626B">Who asked</span>
+                      <span class="mono" style="font-size:11px;color:#59626B;margin-left:auto">3</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-bottom:1px solid #E3E7EA">
+                      <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Kato Construction Ltd</span>
+                      <span class="mono" style="font-size:12px;font-weight:500">24</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-bottom:1px solid #E3E7EA">
+                      <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Mulongo Hardware</span>
+                      <span class="mono" style="font-size:12px;font-weight:500">10</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px">
+                      <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Sarah Namono</span>
+                      <span class="mono" style="font-size:12px;font-weight:500">4</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;background:#14171B;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Add it to what we sell</button>
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Open the full record</button>
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Drop it</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROW 2 -->
+            <div style="border-bottom:1px solid #E3E7EA">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">PVC ceiling boards 3m white</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#59626B;margin-top:1px">Kato Construction Ltd +1 · Grace Namuli</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Priced</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">2</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 2 asks</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#7A4A02">12d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">524,400</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">for 230 pcs</span></span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;background:#14171B;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Add it to what we sell</button>
+                </span>
+              </div>
+            </div>
+
+            <!-- ROW 3 — nobody researching. Amber, because it is caution,
+                 not a loss. The state is a word, not a coloured card. -->
+            <div style="border-bottom:1px solid #E3E7EA">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">Mosquito net mesh aluminium 1.2m</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#7A4A02;margin-top:1px">Nobody is looking into it</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Looking</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">1</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 1 ask</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#7F1D1A">16d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Give it to someone</button>
+                </span>
+              </div>
+            </div>
+
+            <!-- ROW 4 — the demand signal that matters: 4 different people -->
+            <div style="border-bottom:1px solid #E3E7EA">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">Sofa legs 4&quot; chrome</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#7A4A02;margin-top:1px">Nobody is looking into it · one shop found, no price</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Looking</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">4</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 5 asks</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#7A4A02">9d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Give it to someone</button>
+                </span>
+              </div>
+            </div>
+
+            <!-- ROW 5 — a name longer than its column. The name gives way;
+                 the figures never do. Three declarations, plus min-width:0. -->
+            <div style="border-bottom:1px solid #E3E7EA">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500" title="Iron sheets G28 3m box profile — charcoal">Iron sheets G28 3m box profile — charcoal</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#7A4A02;margin-top:1px">Nobody is looking into it · came off a quote</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Asked for</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">1</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 1 ask</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">2d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Give it to someone</button>
+                </span>
+              </div>
+            </div>
+
+            <!-- ROW 6 -->
+            <div>
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">Cabinet hinge 3&quot; brass soft-close</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#7A4A02;margin-top:1px">Nobody is looking into it · both asks from WhatsApp</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Asked for</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">2</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 2 asks</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">6d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;justify-content:flex-end">
+                  <button style="all:unset;cursor:pointer;height:28px;padding:0 10px;border-radius:7px;border:1px solid #CFD5DA;color:#59626B;font-size:12px;font-weight:700;display:inline-flex;align-items:center;box-sizing:border-box">Give it to someone</button>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BAND 2 — somebody is on it. No accent, no alarm colour. -->
+          <div style="background:#FFFFFF;border:1px solid #E3E7EA;border-radius:8px;overflow:hidden;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-bottom:1px solid #E3E7EA;background:#F7F9FB">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#59626B">Somebody is on it</span>
+              <span style="font-size:11px;color:#59626B">nothing for you to do yet</span>
+              <span class="mono" style="font-size:11px;color:#59626B;margin-left:auto">2</span>
+            </div>
+            <div style="border-bottom:1px solid #E3E7EA">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">Padlock brass 50mm long shackle</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#59626B;margin-top:1px">Bwaise Paints &amp; Fittings has it — 12 to a box, no price yet</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Source found</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">2</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 2 asks</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#7A4A02">11d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:12px;color:#59626B">
+                  <span style="width:22px;height:22px;border-radius:6px;background:#E9EBED;color:#59626B;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">GN</span>
+                  Grace Namuli
+                </span>
+              </div>
+            </div>
+            <div>
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) 108px 56px 52px 112px 180px;align-items:center;gap:10px;min-height:44px;padding:6px 12px">
+                <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C;justify-self:center"><path d="M9 5l7 7-7 7"/></svg>
+                <span style="min-width:0">
+                  <span class="trunc" style="display:block;font-size:13px;font-weight:500">Wheelbarrow tyre 3.50-8 tubeless</span>
+                  <span class="trunc" style="display:block;font-size:11px;color:#59626B;margin-top:1px">Kisenyi Tyre Centre has it — asking for their price</span>
+                </span>
+                <span style="display:block">
+                  <span style="display:flex;gap:4px">
+                    <span style="width:16px;height:4px;border-radius:2px;background:#8A939C"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#14171B"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                    <span style="width:16px;height:4px;border-radius:2px;background:#E3E7EA"></span>
+                  </span>
+                  <span style="display:block;font-size:11px;color:#59626B;margin-top:3px">Looking</span>
+                </span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">1</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">of 1 ask</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600">1d</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">here</span></span>
+                <span style="text-align:right"><span class="mono" style="display:block;font-size:13px;font-weight:600;color:#8A939C">—</span><span style="display:block;font-size:11px;color:#59626B;margin-top:-1px">no price yet</span></span>
+                <span style="display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:12px;color:#59626B">
+                  <span style="width:22px;height:22px;border-radius:6px;background:#E9EBED;color:#59626B;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">MK</span>
+                  Musa Kato
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BAND 3 — finished. Not a lane that grows without bound: one
+               folded line, because browsing all of them is what Products is
+               for. Verdigris for the genuinely good. -->
+          <div style="background:#FFFFFF;border:1px solid #E3E7EA;border-radius:8px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;cursor:pointer">
+              <svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:#8A939C"><path d="M9 5l7 7-7 7"/></svg>
+              <span style="font-size:13px;font-weight:500">Added to what we sell</span>
+              <span style="font-size:12px;color:#59626B">— Welding rods 2.5mm E6013, Gate wheels 4&quot; heavy duty, and 34 before them</span>
+              <span class="mono" style="font-size:12px;font-weight:600;color:#1C6B58;margin-left:auto">36</span>
+            </div>
+          </div>
+
+          <p style="font-size:11px;color:#8A939C;margin:0;line-height:1.35">
+            Nothing here is ever deleted. <span style="text-decoration:underline;cursor:pointer">3 items you dropped</span> are kept, so the next person to ask starts from what you already found.
+          </p>
+        </div>
+
+        <!-- ================= the 304px context rail ================= -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <div style="background:#FFFFFF;border:1px solid #E3E7EA;border-radius:8px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-bottom:1px solid #E3E7EA;background:#F7F9FB">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#59626B">People waiting</span>
+              <span class="mono" style="font-size:11px;color:#59626B;margin-left:auto">6</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Kato Construction Ltd</span>
+              <span class="mono" style="font-size:12px;font-weight:500;color:#7A4A02">40d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Sarah Namono</span>
+              <span class="mono" style="font-size:12px;font-weight:500;color:#7A4A02">22d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Mulongo Hardware</span>
+              <span class="mono" style="font-size:12px;font-weight:500">18d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Betty Achieng</span>
+              <span class="mono" style="font-size:12px;font-weight:500">16d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Joseph Okello</span>
+              <span class="mono" style="font-size:12px;font-weight:500">12d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Ssekitoleko Hardware</span>
+              <span class="mono" style="font-size:12px;font-weight:500">6d</span>
+            </div>
+            <div style="padding:10px 12px 12px;border-top:1px solid #E3E7EA">
+              <p style="font-size:11px;color:#59626B;margin:0;line-height:1.35">
+                Follow-ups writes one message per person, however many things they are waiting for. Nothing sends itself.
+              </p>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:1px solid #E3E7EA;border-radius:8px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-bottom:1px solid #E3E7EA;background:#F7F9FB">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#59626B">Where the asks came in</span>
+              <span class="mono" style="font-size:11px;color:#59626B;margin-left:auto">16</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">At the counter</span>
+              <span class="mono" style="font-size:12px;font-weight:500">11</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid #E3E7EA">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">WhatsApp</span>
+              <span class="mono" style="font-size:12px;font-weight:500">3</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px">
+              <span class="trunc" style="flex:1;font-size:12px;color:#59626B">Quote search found nothing</span>
+              <span class="mono" style="font-size:12px;font-weight:500">2</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
