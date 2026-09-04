@@ -312,7 +312,7 @@ def drow(cols, cells, last=False, hover=False, door=True):
     bg = 'background:#F7F9FB;' if hover else ''
     chev = (ico('<path d="M9 6l6 6-6 6"/>', 12, '#8A939C', 'justify-self:end') if door else '')
     return ('<div style="display:grid;grid-template-columns:%s;align-items:center;gap:12px;'
-            'min-height:40px;padding:5px 12px;box-sizing:border-box;%s%s">%s%s</div>'
+            'min-height:44px;padding:6px 12px;box-sizing:border-box;%s%s">%s%s</div>'
             % (cols, bg, edge, ''.join(cells), chev))
 
 

@@ -4,7 +4,7 @@ from parts import HEAD, chrome, pan, pan_h, note, checkrow, btn, chip, ico, MONO
 import mainparts as M
 import day_data as D
 
-W, H = 1440, 2130
+W, H = 1440, 2240
 
 closed_chip = chip('Closed and counted', 'good', dot=True)
 TILLCOLS = 'minmax(0,1fr) 72px 72px'

@@ -8,7 +8,7 @@ from parts import (HEAD, chrome, pan, pan_h, bandrow, colhead, drow, nm, amt, no
                    RULE, HAIR, GOOD, WARN, BAD, OXIDE, CUT, ARROW_UP, ARROW_DOWN)
 import mainparts as M
 
-W, H = 1440, 1010
+W, H = 1440, 1050
 TILLCOLS = 'minmax(0,1fr) 72px 72px'
 
 BASE = [
