@@ -11014,11 +11014,11 @@
   .ow-q.ow-open .ow-sf-r{background:var(--ow-paper-2);}
   /* The hover and the open mark move to the pair, so the action cell is
      not left unlit beside a row that is. */
-  .ow-sf .ow-q-r{grid-template-columns:18px minmax(0,1fr) 96px 56px 52px 112px;
+  .ow-sf .ow-q-r{grid-template-columns:18px 28px minmax(0,1fr) 88px 52px 46px 108px;
     padding:var(--ow-sp-6) 0;}
   .ow-sf .ow-q-r:hover{background:none;}
   .ow-sf .ow-q.ow-open .ow-q-r{background:none;}
-  .ow-sf-h{display:grid;grid-template-columns:18px minmax(0,1fr) 96px 56px 52px 112px 168px;
+  .ow-sf-h{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 88px 52px 46px 108px 168px;
     gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
     border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
@@ -11101,6 +11101,26 @@
   .ow-sf-none{color:var(--ow-ink-400);}
   .ow-sf-tbl{--ow-tbl-cols:minmax(0,1fr) 92px 116px 116px;margin-bottom:var(--ow-sp-10);
     border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;}
+
+  /* THE PHOTO ON THE ROW.
+
+     A shop that describes its stock by photograph should not have to
+     open a row to find out which hinge it is looking at. .ow-thumb is
+     the app's own 28px frame, used here as it is everywhere else; what
+     is new is only the fit, because .pc-thumb is drawn at 44 and would
+     be cropped rather than scaled inside it.
+
+     Deliberately NOT zoomable. 28px is not a zoom target, and the row's
+     one job when you press it is to open -- a thumbnail that stole that
+     press would make the picture cost you the row. It zooms in the open
+     panel, where it is 148px and the press means only itself.
+
+     The name loses 38px to this column. That is the right trade on this
+     screen and only this one: here the picture IS the identifier, the
+     figures never give way, and the whole name is still on the row's
+     title for a pointer. */
+  .ow-sf-th{width:100%;height:100%;object-fit:cover;display:block;}
+  .ow-sf-th-n{width:16px;height:16px;color:var(--ow-ink-400);}
 
   /* THE PHOTO, IN THE OPEN ROW.
 
@@ -11189,6 +11209,11 @@
        name. The stage bar stays -- it is the one thing a card cannot say
        in words without spending a line on it. */
     .ow-sf-h{display:none;}
+    /* On the card the thumb leads the chip row, at the 36px .ow-thumb
+       already takes on a phone -- the stage bar keeps its width beside
+       it and the caret still ends the line. */
+    .ow-q-cm .ow-thumb{margin-right:var(--ow-sp-4);}
+    .ow-sf-th-n{width:18px;height:18px;}
     /* The photo goes above the reading rather than beside it, and takes
        the width it is given: on a 390px screen a 148px square is a thumb
        again, which is the thing this was for undoing. */
@@ -72228,6 +72253,7 @@ function sourcingRowHTML(l, nowMs, band){
     <div class="ow-sf-r">
     <button type="button" class="ow-q-r" data-sf-open="${esc(l.id)}" aria-expanded="${open}">
       <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      ${sourcingThumbHTML(l)}
       <span class="ow-q-t" title="${esc(title)}"><span class="ow-q-who">${esc(l.name)}</span></span>
       ${sourcingStageHTML(l)}
       <span class="ow-q-v"><span class="ow-q-f">${askers}</span><span class="ow-q-b">of ${asks} ask${asks===1?'':'s'}</span></span>
@@ -72235,7 +72261,7 @@ function sourcingRowHTML(l, nowMs, band){
       ${costCell}
     </button>
     <button type="button" class="ow-q-card" data-sf-open="${esc(l.id)}" aria-expanded="${open}">
-      <div class="ow-q-cm">${sourcingStageHTML(l)}
+      <div class="ow-q-cm">${sourcingThumbHTML(l)}${sourcingStageHTML(l)}
         <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
       <p class="ow-q-ct">${esc(l.name)}</p>
       <span class="ow-q-cv">${cost ? Math.round(cost.total).toLocaleString('en-UG') : '&mdash;'}<span class="ow-q-b">${
@@ -72290,6 +72316,16 @@ function sourcingOpenBodyHTML(l){
       </div>
     </div>
   </div>`;
+}
+/* The same photo at 28px, for the row. Its own function rather than a
+   size argument on sourcingPhotoHTML: the two differ in more than size
+   -- this one is not zoomable and carries no caption, because a row has
+   neither the room for one nor a press to spare. */
+function sourcingThumbHTML(l){
+  const src = (l && l.image) || null;
+  return `<span class="ow-thumb">${src
+    ? `<img class="ow-sf-th" src="${esc(src)}" alt="">`
+    : `<svg class="ow-sf-th-n" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`}</span>`;
 }
 /* What it looks like. A lead's own photo -- the same one the product
    keeps when this graduates -- shown at a size a fitting can be told
@@ -72569,7 +72605,7 @@ function renderSourcing(){
     .sort((a,b)=> (a.stageEnteredAt||0) - (b.stageEnteredAt||0));
 
   const head = `<div class="ow-sf-h">
-    <span></span><span>Item</span><span>How far</span>
+    <span></span><span></span><span>Item</span><span>How far</span>
     <span class="ow-sf-h-r">Asked</span><span class="ow-sf-h-r">Here</span>
     <span class="ow-sf-h-r">To bring in</span><span></span>
   </div>`;
