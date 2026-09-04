@@ -328,8 +328,31 @@ const advice = async (rows) => {
        tested by running; that the screen calls it can only be checked
        in the source, because renderPlanCards is a closure — so it is
        checked precisely rather than loosely. */
-    t.check(/const cards = mgrMoveOrder\(rows\)\.map\(\(r, i\)=> mgrMoveView\(r, i, rows\)\)/.test(src),
-      'the plan draws its cards through the sequence pass, and hands each one the plan in its own order');
+    /* WHAT THIS USED TO PIN was the one line renderPlanCards had:
+       `mgrMoveOrder(rows).map((r, i)=> mgrMoveView(r, i, rows))`. The
+       law it guards is not that line, it is two claims about it: the
+       plan is drawn in the manager's OWN order (a move that waits on
+       another must never be drawn above it), and every card is handed
+       the WHOLE plan rather than the drawing order, because `after` is
+       a position in the plan and resolving it against the drawn order
+       would point at the wrong move.
+
+       There are two emitters now, and both obey it. Today's plan is
+       drawn as console rows through mgrQueueRowHTML -- the same
+       emitter Today's queue uses, so the two screens cannot describe
+       the same move differently -- and a meeting opened in the journal
+       is drawn as cards through mgrMoveView. A law that held for one
+       emitter and not the other is exactly the drift this checks
+       against, so it is checked on both. */
+    const passes = [...src.matchAll(/mgrMoveOrder\((\w+)\)\s*\.map\(/g)];
+    t.check(passes.length >= 2,
+      `every plan on the screen is drawn through the sequence pass (${passes.length} found)`);
+    t.check(/const ordered = mgrMoveOrder\(rows\);/.test(src),
+      'today\u2019s plan orders the moves once, before it draws any of them');
+    t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open \}\)/.test(src),
+      'and hands each row the whole plan, in its own order, not the drawing order');
+    t.check(/mgrMoveOrder\(w\.moves\)\.map\(\(r, i\)=> mgrMoveView\(r, i, w\.moves\)\)/.test(src),
+      'and a meeting opened in the journal is drawn the same way, through the same pass');
 
     const waiting = scope.mgrMoveView(rows[0], 0, rows);
     t.check(/waiting on: Collect from Milly/.test(waiting),

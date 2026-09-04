@@ -220,8 +220,14 @@ const clock = (over) => clockScope.managerPlayClock(Object.assign({ weeks: 4, st
     /* AND THE CARD CALLS IT. Every check above passes with the clock
        written, correct, and never put on a card — which is exactly how
        a whole build reaches the tests and never the owner. */
-    const card = (/const card = \(p, buttons\)=> `[\s\S]*?<\/div>`;/.exec(src) || [''])[0];
-    t.check(card.length > 200, `the play card was found, not silently skipped (${card.length} chars)`);
+    /* The play is a ROW now rather than a card -- four plays as 90px
+       cards was 360px of chrome for four sentences -- so this locates
+       the emitter by its current name. What is pinned is unchanged and
+       is the point: every check above passes with the clock written,
+       correct, and never put in front of the owner, which is exactly
+       how a whole build reaches the tests and never the shop. */
+    const card = (/const row = \(p, buttons\)=> `[\s\S]*?<\/div>`;/.exec(src) || [''])[0];
+    t.check(card.length > 200, `the play row was found, not silently skipped (${card.length} chars)`);
     t.check(/\$\{clock\(p\)\}/.test(card),
       'THE CARD DRAWS IT — a strategy the owner cannot see the clock on is one they can only be told about, and the meeting is not held every day');
     t.check(/\.mgr-play-clock\.over\{/.test(src) && /ow-oxide-soft/.test(src),

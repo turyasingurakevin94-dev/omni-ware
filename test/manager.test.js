@@ -415,8 +415,16 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const render = extractFunction(src, 'renderManager', 'index.html');
   t.check(/Weekly review — /.test(render) && /st\.reviews/.test(render),
     'the screen reads journalled reviews and names them in the history');
-  t.check(/wk\.sales/.test(render) && /reviewChaseLine\(wk\)/.test(render),
-    'the review card’s week table is built from the stored derivation, never from model text');
+  /* The review's body moved into mgrReviewBody when the weekly review
+     and the meeting became one journal: they are the same kind of event
+     on the same clock, and a row opens to whichever it is. The law is
+     untouched — the table is the stored derivation and never model
+     text — so it is checked where the table now lives. */
+  const revBody = extractFunction(src, 'mgrReviewBody', 'index.html');
+  t.check(/wk\.sales/.test(revBody) && /reviewChaseLine\(wk\)/.test(revBody),
+    'the review’s week table is built from the stored derivation, never from model text');
+  t.check(/mgrReviewBody\(r\)/.test(render),
+    'and the journal draws a review through it rather than writing a second table');
   /* The chase figure moved behind reviewChaseLine, which decides whether
      the week has a figure at all — a bare zero there read as "the chases
      collected nothing" when it usually meant "no chase said who it was
