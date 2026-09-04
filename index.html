@@ -6386,7 +6386,7 @@
      THE FIGURES TAKE WHAT THEY NEED AND THE NAME GIVES WAY -- 156px
      holds "12,480,000 UGX" without wrapping, which is the whole reason
      the old table was unreadable: its money broke across two lines. */
-  .ow-tbl.inv-tbl{--ow-tbl-cols:34px 84px 84px minmax(0,1fr) 148px 162px 132px auto;}
+  .ow-tbl.inv-tbl{--ow-tbl-cols:34px 82px 80px minmax(150px,520px) 132px 150px 168px auto;}
   .inv-tbl .ow-tbl-r{align-items:center;}
   .inv-tbl .ow-tbl-h,.inv-tbl .ow-tbl-r,.inv-tbl .ow-tbl-f{gap:var(--ow-sp-10);}
   .inv-c-ck{display:flex;align-items:center;}
@@ -6395,18 +6395,76 @@
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);}
   .inv-c-date{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
   .inv-c-who{min-width:0;}
-  .inv-c-st{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-4);min-width:0;}
-  .inv-c-st .deb-prog{min-width:0;width:100%;max-width:120px;}
+  /* THE SECOND LINE UNDER THE NAME, and everything that belongs to this
+     document rather than to a column of its own. What the order raised
+     used to be a full-width row of its own beneath the invoice, which
+     made every fourth row twice the height of its neighbours -- a
+     register whose rows are not the same height cannot be scanned, and
+     scanning is the only thing this screen is for. */
+  .inv-meta{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;margin-top:1px;
+    flex-wrap:nowrap;}
+  .inv-meta:empty{display:none;}
+  /* HOW LONG THE MONEY HAS BEEN OPEN IS THE FACT THIS LINE EXISTS FOR,
+     so it does not shrink. "ope..." beside a full row of links is the
+     line spending its width on the wrong thing. */
+  .inv-meta-t{flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  /* The links are the ORDER'S, not the screen's one thing to do. They
+     wear the oxide on the board they came from; here they would be a
+     second accent repeated down the page, so they read as quiet text
+     until the hand arrives. */
+  .inv-c-who .lifecycle-links{margin:0;min-width:0;flex:0 1 auto;flex-wrap:nowrap;
+    overflow:hidden;gap:var(--ow-sp-6);}
+  .inv-c-who .lifecycle-links > *{flex:none;white-space:nowrap;}
+  /* Below a wide console the supplier's name is what gives -- the
+     document number is the handle, and a wrapped PINV- / 0111 is two
+     lines where the register allows one. */
+  @media (max-width:1620px){ .inv-c-who .lc-sup,.inv-c-who .lc-label{display:none;} }
+  /* AND ON A NARROW LAPTOP THEY TAKE A LINE RATHER THAN VANISH. Squeezed
+     onto the meta line at 1280 the links shrank to nothing -- present in
+     the markup, reachable by nobody, which is the silent drop this app
+     has a law against. A row that grows sixteen pixels is the cheaper
+     of the two failures. */
+  @media (max-width:1400px){
+    .inv-meta{flex-wrap:wrap;row-gap:var(--ow-sp-2);}
+    .inv-c-who .lifecycle-links{flex:1 1 100%;overflow:visible;flex-wrap:wrap;}
+  }
+  .inv-c-who .lc-label{color:var(--ow-ink-400);}
+  .inv-c-who .lc-link{color:var(--ow-ink-600);border-bottom-color:transparent;font-size:var(--ow-t-11);}
+  .inv-c-who .lc-link:hover{color:var(--ow-oxide-deep);border-bottom-color:currentColor;}
+  .inv-c-who .lc-link .lc-sup{font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);}
+  /* Chip and bar on ONE line, so the column has a straight edge down it
+     and a row without a bar is the same height as one with. */
+  .inv-c-st{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  /* The bar's job is comparison down the column -- 65% against 95% at a
+     glance -- and under about fifty pixels of track it stops doing it. */
+  .inv-c-st .deb-prog{min-width:56px;flex:1 1 auto;margin-left:auto;}
   /* A cancelled document is quiet, not struck through: the figures on it
      are still the figures, and a line through money is a line through
      digits. The crimson chip is what says cancelled. */
   .inv-r-voided .ow-tbl-p,.inv-r-voided .ow-fig,.inv-r-voided .inv-c-date{color:var(--ow-ink-600);}
+  /* WHY THE PANEL CLIPS RATHER THAN HIDES. .ow-pan carries
+     overflow:hidden so the rows do not square off its rounded corners --
+     and overflow:hidden makes the panel a SCROLL CONTAINER, against
+     which a sticky child sticks to a box that never scrolls, which is
+     to say never. overflow:clip cuts the same corners without becoming
+     one, so the header below sticks to the page the way it reads.
+     Measured, not guessed: the header sat at 101px with its stick point
+     at 170px and nothing looked wrong until you scrolled. */
+  /* .ow-pan.inv-pan, not .inv-pan: the layer sets overflow on .ow-pan
+     later in the file, and a single class would lose the cascade to it. */
+  .ow-pan.inv-pan{overflow:clip;}
+
+  /* THE COLUMN NAMES DO NOT SCROLL AWAY. A register of three hundred
+     rows is read by running down one column, and twenty rows in there
+     was nothing left saying which column it was -- two figures side by
+     side, one of them what was asked for and the other what is still
+     owed, and no way to tell them apart. The offset is measured rather
+     than guessed: the page header above is sticky too and changes
+     height when its fields wrap. */
+  .inv-tbl .ow-tbl-h{position:sticky;top:var(--inv-hh, 134px);z-index:4;
+    background:var(--ow-paper);}
+  .inv-tbl .ow-tbl-g{position:sticky;top:calc(var(--inv-hh, 134px) + 26px);z-index:3;}
   .inv-foot-l{color:var(--ow-ink-600);font-weight:var(--ow-fw-600);white-space:nowrap;}
-  /* The order followed forward to the purchase invoices it raised. Its
-     own line under the row, so the customer's name never gives up width
-     to it. */
-  .inv-lc{grid-column:1/-1;padding-left:22px;}
-  .inv-lc .lifecycle-links{margin:0;}
   /* The icon-only act: the EXISTING ghost button, squared off -- not a
      fourteenth button family. */
   .btn.ow-sm.inv-ib{width:28px;padding:0;flex:none;}
@@ -6419,7 +6477,7 @@
   .ow-ph .inv-ck.inv-f{align-self:flex-end;padding-bottom:var(--ow-sp-6);}
   .inv-f-search{flex:0 1 220px;min-width:150px;}
   .inv-f-search .ow-f-in{width:100%;}
-  .inv-tb{gap:var(--ow-sp-12);}
+  .ow-tb.inv-tb{gap:var(--ow-sp-12);}
 
   /* THE PHONE, beside the console it belongs to and NOT in the .ow-
      layer: every selector in the layer starts .ow- and stays there, and
@@ -6468,12 +6526,12 @@
      which is the one fault this app has actually shipped. So the
      toolbar and the per-row checkbox it drives are console-only --
      the phone is its own design, not this one squeezed. */
-  .inv-tb{display:none;}
+  .ow-tb.inv-tb{display:none;}
   .inv-tbl .inv-c-ck{display:none;}
   .inv-ck{font-size:14px;min-height:var(--ow-tap);}
   .inv-ck input{width:20px;height:20px;}
   .inv-f-search{flex:1 1 100%;}
-  .inv-tb{flex-wrap:wrap;}
+  .ow-tb.inv-tb{flex-wrap:wrap;}
   }
 
   /* Mobile card layout for the Purchase Invoices ledger (phone breakpoint
@@ -11518,7 +11576,7 @@
            it is. -->
       <div class="ow-strip" id="inv_strip"></div>
 
-      <div class="ow-pan">
+      <div class="ow-pan inv-pan">
         <div class="ow-pan-h an-tbh">
           <span class="ow-pan-t">The register</span>
           <!-- The order, named so it can be argued with -- and one
@@ -30919,6 +30977,14 @@ function renderInvoices(filter=''){
     tally[g].n++;
     if(g === 'voided') tally.voided.sum += savedQuoteTotal(q);
   });
+  /* THE BALANCE IS SUMMED CLAMPED, and this is not fussiness. An
+     overpayment is not negative debt -- the app carries no customer
+     credit, and one invoice paid 50,000 over does not cancel 50,000
+     another customer owes. Unclamped, a single overpaid document drove
+     the whole range's "Still open" below zero on screen: the same fault
+     invoiceBalanceDue() was clamped for. It also has to agree with
+     Debtors, which clamps per invoice; two screens disagreeing about
+     one pile of money is what syncInvoiceDebtCharge exists to prevent. */
   let totalAmt=0, totalPaid=0, totalDue=0;
   let oldest = null;
   invoices.forEach(q=>{
@@ -30926,7 +30992,7 @@ function renderInvoices(filter=''){
     const g = invGroupOf(q);
     const total = savedQuoteTotal(q);
     const paid = Number(q.amountPaid)||0;
-    totalAmt += total; totalPaid += paid; totalDue += total - paid;
+    totalAmt += total; totalPaid += paid; totalDue += Math.max(0, total - paid);
     tally[g].sum += g==='open' ? Math.max(0, total-paid) : total;
     if(g==='open'){
       const age = invoiceOpenDays(q);
@@ -30940,6 +31006,7 @@ function renderInvoices(filter=''){
      and wears the one tone that says so; inside them it is a size. */
   const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
   const pctIn = totalAmt > 0 ? Math.round(totalPaid/totalAmt*100) : null;
+  const overIn = totalPaid - totalAmt;
   const mt = (label, value, basis, tone)=> `<div class="ow-mt${tone?' '+tone:''}">
     <p class="ow-mt-l">${esc(label)}</p>
     <p class="ow-mt-v">${value}</p>
@@ -30948,7 +31015,9 @@ function renderInvoices(filter=''){
   const fig = (n)=> `<span class="ow-fig">${fmtUGX(Math.round(n))}</span>`;
   document.getElementById('inv_strip').innerHTML =
     mt('Invoiced', money(totalAmt), `${tally.open.n + tally.settled.n} invoice${tally.open.n+tally.settled.n===1?'':'s'} in this range`)
-    + mt('Received', money(totalPaid), pctIn===null ? 'nothing to take a share of' : `${pctIn}% of what was invoiced`)
+    + mt('Received', money(totalPaid), pctIn===null ? 'nothing to take a share of'
+        : overIn > 0.5 ? `${fmtUGX(Math.round(overIn))} more than was invoiced`
+        : `${pctIn}% of what was invoiced`)
     + mt('Still open', money(totalDue), tally.open.n ? `on ${tally.open.n} invoice${tally.open.n===1?'':'s'}` : 'everything here is settled')
     + (oldest
       ? mt('Oldest open', oldest.age === 0 ? 'today' : `${oldest.age}<span class="ow-u">days</span>`,
@@ -31042,13 +31111,12 @@ function renderInvoices(filter=''){
       <div class="ow-tbl-n inv-c-date" data-l="Date">${esc(q.invoicedAt || q.date || '—')}</div>
       <div class="ow-tbl-c inv-c-who">
         <span class="ow-tbl-p" title="${esc(q.client.name || 'Unnamed client')}">${esc(q.client.name || 'Unnamed client')}</span>
-        ${sub ? `<span class="ow-tbl-s">${esc(sub)}</span>` : ''}
+        <div class="inv-meta">${sub ? `<span class="inv-meta-t" title="${esc(sub)}">${esc(sub)}</span>` : ''}${links}</div>
       </div>
       <div class="ow-tbl-n" data-l="Invoiced">${fig(total)}</div>
       <div class="ow-tbl-n" data-l="Still due">${dueCell}</div>
       <div class="ow-tbl-c inv-c-st" data-l="Status">${chip}${showBar ? progressCell(q) : ''}</div>
       <div class="ow-tbl-a">${acts}</div>
-      ${links ? `<div class="inv-lc">${links}</div>` : ''}
     </div>` + noteRow(q);
   }).join('');
 
@@ -31103,6 +31171,7 @@ function renderInvoices(filter=''){
   wrap.querySelectorAll('.inv-doc-void').forEach(btn=>btn.addEventListener('click', ()=>{
     toggleInvoiceVoided(Number(btn.dataset.id));
   }));
+  invSyncStickyOffset();
   const selectAllTh = document.getElementById('inv_doc_select_all_th');
   if(selectAllTh){
     selectAllTh.checked = false;
@@ -31111,6 +31180,22 @@ function renderInvoices(filter=''){
     };
   }
 }
+
+/* Where the column names come to rest: under the fixed top bar and under
+   the page header, which is itself sticky and grows a line when its
+   fields wrap. Measured on every render and on resize, because a
+   hard-coded number is right at exactly one window width. */
+function invSyncStickyOffset(){
+  const sec = document.getElementById('tab-invoices');
+  if(!sec) return;
+  const ph = sec.querySelector('.ow-ph');
+  if(!ph) return;
+  const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 54;
+  sec.style.setProperty('--inv-hh', Math.round(bar + ph.offsetHeight) + 'px');
+}
+window.addEventListener('resize', ()=>{
+  if(document.getElementById('tab-invoices').style.display !== 'none') invSyncStickyOffset();
+});
 
 // Voiding an invoice is never just a flag. invoiceDebtDesired() returns 0
 // for a voided invoice, so the customer's debt has to be re-synced or they
@@ -32399,7 +32484,10 @@ function renderPurchaseInvoices(filter=''){
     if(pi.voided) return;
     const total = purchaseInvoiceTotal(pi);
     const paid = Number(pi.amountPaid)||0;
-    totalAmt += total; totalPaid += paid; totalDue += total - paid;
+    /* Clamped for the same reason the customer side is: an overpaid
+       supplier invoice is not money owed back, and purchaseInvoiceBalanceDue()
+       -- which Creditors sums -- already clamps. */
+    totalAmt += total; totalPaid += paid; totalDue += Math.max(0, total - paid);
   });
   const shown = listPageSlice('purchaseInvoices', invoices);
   const cut = shown.length < invoices.length;

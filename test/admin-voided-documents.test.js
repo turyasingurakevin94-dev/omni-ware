@@ -120,8 +120,17 @@ const INV = (over = {}) => ({
     'and is not one of a customer\'s outstanding invoices');
   // Summed in its own pass since the table was paged, so that the total
   // describes the range and not the page. Same rule, different place.
-  t.check(/if\(q\.voided\) return;[\s\S]{0,160}totalAmt \+= total; totalPaid \+= paid; totalDue \+= total - paid;/.test(code),
-    'the Invoices tab leaves it out of its totals');
+  /* The guard is what this checks and it is unchanged. The tail moved:
+     the balance is summed CLAMPED now, because an overpaid invoice is
+     not negative debt and one of them used to drive the whole range's
+     "Still open" below zero -- the same fault invoiceBalanceDue() was
+     clamped for, and the reason Debtors and this screen agree. */
+  t.check(/if\(q\.voided\) return;[\s\S]{0,200}totalAmt \+= total; totalPaid \+= paid; totalDue \+= Math\.max\(0, total - paid\);/.test(code),
+    'the Invoices tab leaves a voided invoice out of its totals');
+  /* Both ledgers, because the supplier side carried the identical
+     fault and Creditors clamps the same way Debtors does. */
+  t.check(!/totalDue \+= total - paid;/.test(code),
+    'and neither ledger sums a balance unclamped — an overpaid document is not negative debt');
   t.check(/if\(hideVoided\) invoices = invoices\.filter\(q=>!q\.voided\);/.test(code),
     'while still being able to LIST it, which is why that list is not a bug');
 }

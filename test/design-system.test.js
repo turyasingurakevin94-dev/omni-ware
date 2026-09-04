@@ -604,7 +604,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        old screen and wears every one of them -- but this screen may not
        emit them again. .deb-prog is NOT retired: the payment bar is
        deliberately the same component the debtors and creditors lists
-       use, because it is the same question at a different level. */
+       use, because it is the same question at a different level.
+
+       .ow-tbl-s is deliberately not in rendersUses: the second line
+       under the customer carries the age AND the purchase invoices the
+       order raised, so it is a flex row rather than the layer's single
+       truncating block. Those links used to be a full-width row of
+       their own beneath every fourth invoice, which made the register's
+       rows two different heights -- and a register whose rows are not
+       the same height cannot be scanned, which is the only thing it is
+       for. */
     invoices: {
       retired: ['panel', 'qp-panel', 'an-toolbar', 'field', 'panel-head-row', 'btn-row',
                 'sq-select-all-label', 'empty',
@@ -619,7 +628,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: 'renderInvoices',
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
-                    'ow-tbl-p', 'ow-tbl-s', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+                    'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
