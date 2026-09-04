@@ -533,7 +533,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
       renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
-                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody'],
+                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
                     'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
@@ -546,7 +546,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                        it in the action column, and the archive's fold
                        and its rows */
                     'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg', 'ow-sf-need', 'ow-sf-who',
-                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say'],
+                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph'],
     },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the
