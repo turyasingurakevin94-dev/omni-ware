@@ -42,22 +42,31 @@ const src = read('index.html');
      in the markup is folded rather than deleted. Payroll & rent was the
      twentieth; Staff, rebuilt as a dispatch board, the twenty-first;
      Analysis, rebuilt as a ranked list of findings, the twenty-second --
-     its long paragraph is now .ow-ph-help behind the same "i" bubble. */
+     its long paragraph is now .ow-ph-help behind the same "i" bubble.
+     Sales Analytics is the twenty-third: rebuilt as a ranking on the
+     .ow- layer, its description is .ow-ph-help behind the "i" and its
+     .ow-ph-sub carries the window and the invoice count, which is the
+     one line on that screen that goes stale. */
   /* A FLOOR THAT COMES DOWN AS SCREENS CONVERT, like the ratchets in
      design-system.test.js. It was 17. Assets and Loans were two of them
      and are now one screen on the .ow- layer, which trades .page-head
      for .ow-ph and puts the description behind the "i" by construction
      -- so this file has two fewer screens to police, not two screens
      that stopped being policed. Only ever lower this to match a
-     conversion; raising the count back means a screen regressed. */
+     conversion; raising the count back means a screen regressed.
+
+     15 -> 14: Sales Analytics converted. It traded .page-head for .ow-ph
+     and its paragraph for .ow-ph-help, so it is folded BY CONSTRUCTION
+     and there is one fewer screen here to police -- not one that stopped
+     being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 15, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 14, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 15,
+  t.check(paras.length >= 14,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
