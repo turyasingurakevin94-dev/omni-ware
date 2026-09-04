@@ -587,6 +587,40 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-grid', 'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g',
                     'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty'],
     },
+    /* Invoices. A filing cabinet became a register. The .panel.qp-panel
+       wrapper and its .an-toolbar of .field boxes became the layer's
+       header and its fields; the hand-built <table> (.pi-table-wrap,
+       .sortable, .sort-arrow, .an-rank, .inv-status-cell,
+       .inv-total-row) and its phone twin (.pi-cards, .pi-card and the
+       .sc-stats inside it) became ONE .ow-tbl, which is a lined-up grid
+       on the console and a card per document on the phone from the same
+       call -- the two templates had already drifted, the card carrying a
+       rank the table numbered differently. The four .pc-icon-btn acts on
+       every row became the existing .btn family sized down, so the one
+       accent on the screen is the only oxide on it.
+
+       .inv-doc-link, .inv-status, .inv-row-voided, .inv-total-row and
+       .pc-icon-btn stay in the FILE -- Purchase invoices is still the
+       old screen and wears every one of them -- but this screen may not
+       emit them again. .deb-prog is NOT retired: the payment bar is
+       deliberately the same component the debtors and creditors lists
+       use, because it is the same question at a different level. */
+    invoices: {
+      retired: ['panel', 'qp-panel', 'an-toolbar', 'field', 'panel-head-row', 'btn-row',
+                'sq-select-all-label', 'empty',
+                'pi-table-wrap', 'pi-cards', 'pi-cards-select-all', 'pi-cards-summary',
+                'pi-card', 'pi-card-top', 'pi-card-title', 'pi-card-meta', 'pi-card-foot',
+                'sc-stats', 'sc-stat', 'an-rank', 'sortable', 'sort-arrow',
+                'pc-icon-btn', 'inv-row-actions', 'inv-doc-link', 'inv-status',
+                'inv-status-cell', 'inv-row-voided', 'inv-total-row', 'inv-total-label',
+                'deb-card-prog'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
+      renders: 'renderInvoices',
+      rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
+                    'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
+                    'ow-tbl-p', 'ow-tbl-s', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed

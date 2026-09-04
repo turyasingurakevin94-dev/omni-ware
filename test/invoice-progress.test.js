@@ -138,10 +138,35 @@ if (scope) {
   t.check(/return `<span class="deb-prog-none" title="\$\{esc\(why\)\}">—<\/span>`;/.test(cell),
     'and an unmeasurable one is a dash rather than an empty bar');
 
-  t.check(/<td class="inv-status-cell">[\s\S]{0,220}?\$\{progressCell\(q\)\}/.test(render),
-    'the table carries it beside the status it puts a number on');
-  t.check(/<div class="deb-card-prog">\$\{progressCell\(q\)\}<\/div>/.test(render),
-    'and the card, which is what the shop actually reads on a phone');
+  /* THESE TWO USED TO NAME TWO PLACES: a <td class="inv-status-cell">
+     and a <div class="deb-card-prog"> in the phone card beside it. What
+     they were protecting was that the bar reached BOTH layouts -- a
+     measure that existed only on the console would be missing from the
+     screen the shop actually reads. That was a real hazard while the
+     renderer hand-wrote two templates that could drift, and they had
+     already drifted: the card carried a rank the table numbered
+     differently.
+
+     The screen is one .ow-tbl now, and the layer turns each row into a
+     card below 820px from the SAME call. So "it reaches both layouts"
+     is no longer something this renderer can get wrong -- there is one
+     status cell, and the phone shows it because the phone shows the
+     row. The assertion moves to what can still go wrong: that the bar
+     is emitted once, from the status cell, and that the cell is
+     labelled so the card it becomes says what the figure is. */
+  t.check(/<div class="ow-tbl-c inv-c-st" data-l="Status">[\s\S]{0,120}?progressCell\(q\)/.test(render),
+    'the bar lives in the status cell of the one row template, labelled so the phone card names it');
+  t.check((render.match(/progressCell\(q\)/g) || []).length === 1,
+    'and is emitted exactly once — there is no second template to drift from');
+  /* And the three reasons it can give were hover-only titles, which is
+     to say invisible on the phone. They are rows of the register now,
+     in the same words. */
+  t.check(/const noteRow = \(q\)=>\{/.test(render), 'a document that disagrees with itself gets a row of its own');
+  ['still recorded against it and still sitting in the Cash Book',
+   'more than it asks for',
+   'its items carry no price'].forEach((phrase) => {
+    t.check(render.includes(phrase), `and it says so in words: "${phrase}"`);
+  });
   /* Every reachable branch of the cell is a `title`, so the reason is
      always available -- including on the two that render a bare dash. */
   eq((cell.match(/title="/g) || []).length, 2,

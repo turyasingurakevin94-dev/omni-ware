@@ -321,7 +321,16 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
   // Reprints exist, and reuse the number rather than minting a new one.
   t.check(/class="q-remove-icon inv-pay-print"/.test(src) && /printReceipt\(q, \(q\.payments\|\|\[\]\)\[idx\], idx\)/.test(src),
     'any payment can be reprinted, carrying the number it carried the first time');
-  t.check(/class="pc-icon-btn inv-doc-receipt"/.test(src) && /printReceipt\(q, null, null\)/.test(src),
+  /* The hook, not the skin. This named .pc-icon-btn -- the old Invoices
+     screen's private icon button -- because that was the only handle on
+     the row. The console screen wears the EXISTING .btn family with a
+     size modifier instead (there is no fourteenth button family to add
+     one to), so the class is gone while the guarantee is not: a receipt
+     for the whole sale, with no payment argument, is reachable from the
+     row. That is what .inv-doc-receipt names and what the row binds. */
+  t.check(/class="btn btn-ghost ow-sm inv-ib \$\{cls\}"/.test(src),
+    'the row\'s icon acts are the existing button family, sized — not a new one');
+  t.check(/'inv-doc-receipt'/.test(src) && /printReceipt\(q, null, null\)/.test(src),
     'and the whole sale can be printed from the Invoices row');
 }
 
