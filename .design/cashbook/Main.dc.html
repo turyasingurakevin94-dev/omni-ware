@@ -227,9 +227,9 @@
     .dnav .dd .r{font-size:11px;color:var(--ow-ink-600);}
 
     /* ---- the strip: money on hand leads ---- */
-    .ow-strip.cbs{grid-template-columns:1.35fr 1fr 1fr 1fr 1.15fr;}
+    .ow-strip.cbs{grid-template-columns:1.28fr 1fr 1fr 1fr 1.12fr;}
     .ow-mt-v.big{font-size:27px;}
-    .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+    .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .cb-mv .up{color:var(--ow-verdigris);font-weight:600;font-family:var(--mono);
       font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
     .cb-mv .dn{color:var(--ow-crimson);font-weight:600;font-family:var(--mono);
@@ -267,51 +267,77 @@
     .el-at{width:72px;flex:none;}
     .el-note{flex:1;min-width:0;}
 
-    /* ---- the ledger ---- */
-    .lg{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
-    .lg th{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-      color:var(--ow-ink-400);text-align:left;padding:0 12px 7px;border-bottom:1px solid var(--ow-rule-soft);
-      white-space:nowrap;background:var(--ow-paper-2);height:30px;vertical-align:middle;}
-    .lg th.r{text-align:right;}
-    .lg td{padding:9px 12px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
-    .lg tr:last-child td{border-bottom:0;}
-    .lg .tm{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
-      color:var(--ow-ink-600);letter-spacing:-.02em;white-space:nowrap;}
-    .lg .nm{min-width:0;overflow:hidden;}
-    .lg .nm b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .lg .nm span{display:block;font-size:11px;color:var(--ow-ink-600);margin-top:1px;line-height:1.35;
+    /* ---- the day's movements: the table as it was, in a console panel.
+       Same columns, same rhythm, same running balance per account. The one
+       change is the row's actions, which are marks now rather than two
+       labelled buttons repeated nine times down the page. ---- */
+    .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+    .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+      color:var(--ow-ink-600);text-align:left;padding:10px 8px 8px;border-bottom:1px solid var(--ow-rule);
+      white-space:nowrap;}
+    .cb-ledger th.r{text-align:right;}
+    .cb-ledger td{padding:9px 8px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+    .cb-ledger td.price{text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-ledger .cb-led-time{font-family:var(--mono);font-size:12px;color:var(--ow-ink-600);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-ledger td div:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-ledger .cb-led-desc{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .lg .f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
-      letter-spacing:-.02em;text-align:right;white-space:nowrap;}
-    .lg .f.in{color:var(--ow-verdigris);font-weight:600;}
-    .lg .f.out{color:var(--ow-crimson);font-weight:600;}
-    .lg .f.bal{font-weight:600;}
-    .lg .acct{font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
-    .lg tr.op td{background:var(--ow-paper-2);color:var(--ow-ink-600);font-size:12px;}
-    .lg tr.op .f{color:var(--ow-ink-600);font-weight:600;}
-    .lg tfoot td{border-top:1px solid var(--ow-rule);border-bottom:0;background:var(--ow-paper-2);
-      font-size:12px;color:var(--ow-ink-600);padding:9px 12px;}
-    .lg tfoot .f{font-weight:600;font-size:13px;}
-    .lg .lk{display:flex;gap:4px;justify-content:flex-end;}
-    .lg .lk span{width:26px;height:26px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
+    .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
+    .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
+    .cb-ledger .cb-bal{font-weight:700;}
+    .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);border-bottom:0;font-weight:700;
+      font-size:12px;color:var(--ow-ink-600);}
+    .cb-ledger tr.hov td{background:var(--ow-paper-2);}
+    /* Icon only. Nine rows carrying the words Edit and Delete eighteen times
+       is eighteen labels for two acts nobody is looking for until they are. */
+    .rowa{display:flex;gap:4px;justify-content:flex-end;}
+    .rowa span{width:26px;height:26px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
       display:inline-flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
-    .lg .lk svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+    .rowa svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
       stroke-linecap:round;stroke-linejoin:round;}
-    .lg tr.hov td{background:var(--ow-paper-2);}
-    .lg tr.hov .lk span{color:var(--ow-ink-600);border-color:var(--ow-rule);}
-    .src{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ow-ink-400);}
-    .src svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
-      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .cb-ledger tr.hov .rowa span{color:var(--ow-ink-600);border-color:var(--ow-rule);}
+    .cb-ledger tr.hov .rowa span.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
 
-    /* the account filter, in the panel header */
-    .fseg{display:flex;margin-left:auto;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
-      overflow:hidden;background:var(--ow-paper);height:24px;}
-    .fseg > span{display:inline-flex;align-items:center;gap:5px;padding:0 9px;font-size:11px;
-      font-weight:600;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);}
-    .fseg > span:first-child{border-left:0;}
-    .fseg > span.on{background:var(--ow-steel-950);color:#fff;}
-    .fseg .n{font-family:var(--mono);font-size:10.5px;color:var(--ow-ink-400);}
-    .fseg > span.on .n{color:rgba(255,255,255,.66);}
+    /* the account filter, as it was, sized for the panel header */
+    .cb-ledger-filters{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:7px;padding:2px;}
+    .cb-ledger-filters > span{padding:0 10px;height:22px;display:inline-flex;align-items:center;
+      border-radius:5px;font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .cb-ledger-filters > span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.08);}
+
+    /* ---- the two donuts, in the house palette ----
+       One hue per side, dark to light in size order, so the ring and the
+       list read the same way round and green still means in, red still
+       means out. A transfer is neither, so it is steel in both. ---- */
+    .dn-grid{display:grid;grid-template-columns:1fr 1fr;}
+    .dn{padding:14px 16px 12px;border-left:1px solid var(--ow-rule-soft);}
+    .dn:first-child{border-left:0;}
+    .dn-h{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:12px;}
+    .dn-body{display:flex;align-items:center;gap:16px;}
+    .dn-ring{position:relative;width:128px;height:128px;flex:none;}
+    .dn-ring svg{width:128px;height:128px;display:block;}
+    .dn-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:1px;}
+    .dn-mid-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.03em;}
+    .dn-mid-v.in{color:var(--ow-verdigris);}
+    .dn-mid-v.out{color:var(--ow-crimson);}
+    .dn-mid-l{font-size:11px;color:var(--ow-ink-400);}
+    .dn-lg{flex:1;min-width:0;}
+    .dn-r{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;}
+    .dn-r i{width:9px;height:9px;border-radius:50%;flex:none;}
+    .dn-r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dn-r .v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .dn-r .p{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);width:30px;
+      text-align:right;flex:none;letter-spacing:-.02em;}
+    .dn-note{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:12px 0 0;
+      padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
+    .dn-note b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
 
     /* ---- rail: closing ---- */
     .cl{padding:11px 12px;}
@@ -435,7 +461,7 @@
     .ct-f .btn{height:34px;padding:0 18px;font-size:13.5px;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:1430px">
+<div class="app" style="width:1440px;height:1370px">
   <div class="topbar">
     <div class="brand">
       <div class="brand-mark">OW</div>
@@ -477,27 +503,27 @@
         <div class="ow-mt">
           <p class="ow-mt-l">Money on hand</p>
           <span class="ow-mt-v big">1,805,000</span>
-          <p class="ow-mt-s">opened at <span class="sm">1,840,000</span> &middot; three accounts, not yet counted</p>
+          <p class="ow-mt-s">opened at <span class="sm">1,840,000</span> &middot; not yet counted</p>
         </div>
         <div class="ow-mt">
           <p class="ow-mt-l">Cash</p>
           <span class="ow-mt-v">935,000</span>
-          <p class="cb-mv"><span class="up">+1,520,000</span> in &middot; <span class="dn">&minus;1,205,000</span> out</p>
+          <p class="cb-mv"><span class="up">+315,000</span> on the day</p>
         </div>
         <div class="ow-mt">
           <p class="ow-mt-l">Mobile money</p>
           <span class="ow-mt-v">490,000</span>
-          <p class="cb-mv"><span class="up">+450,000</span> in &middot; <span class="dn">&minus;300,000</span> out</p>
+          <p class="cb-mv"><span class="up">+150,000</span> on the day</p>
         </div>
         <div class="ow-mt">
           <p class="ow-mt-l">Bank</p>
           <span class="ow-mt-v">380,000</span>
-          <p class="cb-mv"><span class="dn">&minus;500,000</span> out &middot; <span class="qt">moved to cash</span></p>
+          <p class="cb-mv"><span class="dn">&minus;500,000</span> <span class="qt">moved to cash</span></p>
         </div>
         <div class="ow-mt">
           <p class="ow-mt-l">Traded today</p>
           <span class="ow-mt-v"><span style="color:var(--ow-verdigris)">+1,470,000</span></span>
-          <p class="cb-mv"><span class="dn">&minus;1,505,000</span> out &middot; <span class="qt">the transfer counts as neither</span></p>
+          <p class="cb-mv"><span class="dn">&minus;1,505,000</span> out, no transfers</p>
         </div>
       </div>
 
@@ -548,109 +574,148 @@
       <div class="ow-pan">
         <div class="ow-pan-h">
           <span class="ow-pan-t">The day&#39;s movements</span>
-          <span class="fseg">
-            <span class="on">All <span class="n">9</span></span>
-            <span>Cash <span class="n">6</span></span>
-            <span>Mobile money <span class="n">2</span></span>
-            <span>Bank <span class="n">1</span></span>
+          <span class="cb-ledger-filters">
+            <span class="on">All</span><span>Cash</span><span>Mobile Money</span><span>Bank</span>
           </span>
         </div>
-        <table class="lg">
-          <colgroup><col style="width:56px"><col style="width:104px"><col><col style="width:104px"><col style="width:104px"><col style="width:128px"><col style="width:66px"></colgroup>
+        <div style="padding:0 12px 2px;">
+        <table class="cb-ledger">
+          <colgroup><col style="width:52px"><col style="width:96px"><col style="width:74px"><col><col style="width:90px"><col style="width:90px"><col style="width:112px"><col style="width:62px"></colgroup>
           <thead><tr>
-            <th>Time</th><th>Account</th><th>What for</th>
+            <th>Time</th><th>Account</th><th>Type</th><th>Category</th>
             <th class="r">In</th><th class="r">Out</th><th class="r">That account now</th><th></th>
           </tr></thead>
           <tbody>
-            <tr class="op">
-              <td class="tm">&mdash;</td><td colspan="2">Opened the day &mdash; cash 620,000, mobile money 340,000, bank 880,000</td>
-              <td class="f"></td><td class="f"></td><td class="f">1,840,000</td><td></td>
+            <tr>
+              <td class="cb-led-time">08:40</td><td>Cash</td><td>Receipt</td>
+              <td><div>Sale</div><div class="cb-led-desc">Walk-in &mdash; iron sheets G28, 3m box profile &times;12</div></td>
+              <td class="price cb-in-cell">840,000</td><td class="price cb-out-cell"></td>
+              <td class="price cb-bal">1,460,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">08:40</td><td class="acct">Cash</td>
-              <td class="nm"><b>Sale</b><span>Walk-in &mdash; iron sheets G28, 3m box profile &times;12</span></td>
-              <td class="f in">840,000</td><td class="f"></td><td class="f bal">1,460,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">09:15</td><td>Mobile Money</td><td>Receipt</td>
+              <td><div>Customer Payment</div><div class="cb-led-desc">Payment for INV-0142 &mdash; Ssekitoleko Hardware</div></td>
+              <td class="price cb-in-cell">450,000</td><td class="price cb-out-cell"></td>
+              <td class="price cb-bal">790,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">09:15</td><td class="acct">Mobile money</td>
-              <td class="nm"><b>Customer payment</b><span class="src"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>INV-0142 &mdash; Ssekitoleko Hardware &middot; posted by Invoices</span></td>
-              <td class="f in">450,000</td><td class="f"></td><td class="f bal">790,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">10:02</td><td>Cash</td><td>Expense</td>
+              <td><div>Stock Purchase</div><div class="cb-led-desc">Cement, Hima &times;40 bags &mdash; Mulongo Hardware</div></td>
+              <td class="price cb-in-cell"></td><td class="price cb-out-cell">1,120,000</td>
+              <td class="price cb-bal">340,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">10:02</td><td class="acct">Cash</td>
-              <td class="nm"><b>Stock purchase</b><span>Cement, Hima &times;40 bags &mdash; Mulongo Hardware</span></td>
-              <td class="f"></td><td class="f out">1,120,000</td><td class="f bal">340,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">11:20</td><td>Cash</td><td>Expense</td>
+              <td><div>Transport</div><div class="cb-led-desc">Boda to Nakawa, delivering INV-0142</div></td>
+              <td class="price cb-in-cell"></td><td class="price cb-out-cell">25,000</td>
+              <td class="price cb-bal">315,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">11:20</td><td class="acct">Cash</td>
-              <td class="nm"><b>Transport</b><span>Boda to Nakawa, delivering INV-0142</span></td>
-              <td class="f"></td><td class="f out">25,000</td><td class="f bal">315,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">12:05</td><td>Bank</td><td>Payment</td>
+              <td><div>Transfer</div><div class="cb-led-desc">Transfer to Cash</div></td>
+              <td class="price cb-in-cell"></td><td class="price cb-out-cell">500,000</td>
+              <td class="price cb-bal">380,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">12:05</td><td class="acct">Bank</td>
-              <td class="nm"><b>Transfer out, to Cash</b><span>The shop&#39;s own money moving &mdash; neither earned nor spent</span></td>
-              <td class="f"></td><td class="f out">500,000</td><td class="f bal">380,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">12:05</td><td>Cash</td><td>Receipt</td>
+              <td><div>Transfer</div><div class="cb-led-desc">Transfer from Bank</div></td>
+              <td class="price cb-in-cell">500,000</td><td class="price cb-out-cell"></td>
+              <td class="price cb-bal">815,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">12:05</td><td class="acct">Cash</td>
-              <td class="nm"><b>Transfer in, from Bank</b><span>The other half of the same move</span></td>
-              <td class="f in">500,000</td><td class="f"></td><td class="f bal">815,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">14:30</td><td>Cash</td><td>Expense</td>
+              <td><div>Wages</div><div class="cb-led-desc">Day labour, offloading the cement &mdash; 2 men</div></td>
+              <td class="price cb-in-cell"></td><td class="price cb-out-cell">60,000</td>
+              <td class="price cb-bal">755,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr>
-              <td class="tm">14:30</td><td class="acct">Cash</td>
-              <td class="nm"><b>Wages</b><span>Day labour, offloading the cement &mdash; 2 men</span></td>
-              <td class="f"></td><td class="f out">60,000</td><td class="f bal">755,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
-            </tr>
-            <tr>
-              <td class="tm">15:10</td><td class="acct">Mobile money</td>
-              <td class="nm"><b>Supplier payment</b><span class="src"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>PINV-0231 &mdash; Katende Steel &middot; posted by Purchase invoices</span></td>
-              <td class="f"></td><td class="f out">300,000</td><td class="f bal">490,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">15:10</td><td>Mobile Money</td><td>Payment</td>
+              <td><div>Supplier Payment</div><div class="cb-led-desc">Katende Steel &mdash; PINV-0231</div></td>
+              <td class="price cb-in-cell"></td><td class="price cb-out-cell">300,000</td>
+              <td class="price cb-bal">490,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
             <tr class="hov">
-              <td class="tm">16:25</td><td class="acct">Cash</td>
-              <td class="nm"><b>Sale</b><span>Walk-in &mdash; binding wire, 6 rolls</span></td>
-              <td class="f in">180,000</td><td class="f"></td><td class="f bal">935,000</td>
-              <td><div class="lk"><span><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div></td>
+              <td class="cb-led-time">16:25</td><td>Cash</td><td>Receipt</td>
+              <td><div>Sale</div><div class="cb-led-desc">Walk-in &mdash; binding wire, 6 rolls</div></td>
+              <td class="price cb-in-cell">180,000</td><td class="price cb-out-cell"></td>
+              <td class="price cb-bal">935,000</td><td><div class="rowa"><span title="Edit this entry"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 1 0-3-3L5 17v3z"></path></svg></span><span class="danger" title="Delete this entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></span></div>
+</td>
             </tr>
           </tbody>
           <tfoot><tr>
-            <td colspan="3">8 movements and one transfer &middot; the balance on each row is that row&#39;s own account, not a total</td>
-            <td class="f in">1,970,000</td><td class="f out">2,005,000</td><td class="f bal">1,805,000</td><td></td>
+            <td colspan="4">9 movements</td>
+            <td class="price cb-in-cell">1,970,000</td><td class="price cb-out-cell">2,005,000</td>
+            <td class="price cb-bal"></td><td></td>
           </tr></tfoot>
         </table>
-        <p class="ow-mini">The In and Out totals include both halves of the 500,000 transfer, because the column is what passed through each account. The strip above leaves it out of <b>Traded today</b>, because the shop neither earned nor spent it.</p>
+        </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-        <div class="ow-pan">
-          <div class="ow-pan-h"><span class="ow-pan-t">Where money came from today</span>
-            <span class="ow-pan-n">1,470,000</span></div>
-          <div class="rk in"><div class="rk-t"><span class="rk-n">Sale</span><span class="rk-v">1,020,000</span><span class="rk-p">69%</span></div>
-            <div class="rk-b"><i style="width:69%"></i></div></div>
-          <div class="rk in"><div class="rk-t"><span class="rk-n">Customer payment</span><span class="rk-v">450,000</span><span class="rk-p">31%</span></div>
-            <div class="rk-b"><i style="width:31%"></i></div></div>
-          <p class="ow-mini">Two kinds. The transfer from the bank is not here &mdash; that money was already the shop&#39;s.</p>
+      <div class="ow-pan" style="margin-top:16px;">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The day by category</span>
+          <span class="ow-pan-n">9 movements &middot; 7 categories</span>
         </div>
-        <div class="ow-pan">
-          <div class="ow-pan-h"><span class="ow-pan-t">Where money went today</span>
-            <span class="ow-pan-n">1,505,000</span></div>
-          <div class="rk out"><div class="rk-t"><span class="rk-n">Stock purchase</span><span class="rk-v">1,120,000</span><span class="rk-p">74%</span></div>
-            <div class="rk-b"><i style="width:74%"></i></div></div>
-          <div class="rk out"><div class="rk-t"><span class="rk-n">Supplier payment</span><span class="rk-v">300,000</span><span class="rk-p">20%</span></div>
-            <div class="rk-b"><i style="width:20%"></i></div></div>
-          <div class="rk out"><div class="rk-t"><span class="rk-n">Wages</span><span class="rk-v">60,000</span><span class="rk-p">4%</span></div>
-            <div class="rk-b"><i style="width:4%"></i></div></div>
-          <div class="rk out"><div class="rk-t"><span class="rk-n">Transport</span><span class="rk-v">25,000</span><span class="rk-p">2%</span></div>
-            <div class="rk-b"><i style="width:2%"></i></div></div>
-          <p class="ow-mini">Ranked, biggest first. One day is a small sample &mdash; the same ranking over a month is on Purchase analytics.</p>
+        <div class="dn-grid">
+
+          <div class="dn">
+            <div class="dn-h">Cash in by category</div>
+            <div class="dn-body">
+              <div class="dn-ring">
+                <svg viewBox="0 0 140 140">
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#1C6B58" stroke-width="18" stroke-dasharray="175.7 163.6" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#8A939C" stroke-width="18" stroke-dasharray="86.1 253.2" stroke-dashoffset="-175.7" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#3D8471" stroke-width="18" stroke-dasharray="77.5 261.8" stroke-dashoffset="-261.8" transform="rotate(-90 70 70)"></circle>
+                </svg>
+                <div class="dn-mid">
+                  <span class="dn-mid-v in">1,970,000</span>
+                  <span class="dn-mid-l">in</span>
+                </div>
+              </div>
+              <div class="dn-lg">
+                <div class="dn-r"><i style="background:#1C6B58"></i><span class="n">Sale</span><span class="v">1,020,000</span><span class="p">52%</span></div>
+                <div class="dn-r"><i style="background:#8A939C"></i><span class="n">Transfer</span><span class="v">500,000</span><span class="p">25%</span></div>
+                <div class="dn-r"><i style="background:#3D8471"></i><span class="n">Customer Payment</span><span class="v">450,000</span><span class="p">23%</span></div>
+              </div>
+            </div>
+            <p class="dn-note">The grey slice is the 500,000 moved from the bank &mdash; the shop&#39;s own money, not a sale. Traded in today was <b>1,470,000</b>.</p>
+          </div>
+
+          <div class="dn">
+            <div class="dn-h">Cash out by category</div>
+            <div class="dn-body">
+              <div class="dn-ring">
+                <svg viewBox="0 0 140 140">
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#7F1D1A" stroke-width="18" stroke-dasharray="189.6 149.7" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#8A939C" stroke-width="18" stroke-dasharray="84.6 254.7" stroke-dashoffset="-189.6" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#9D4340" stroke-width="18" stroke-dasharray="50.8 288.5" stroke-dashoffset="-274.2" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#B76B68" stroke-width="18" stroke-dasharray="10.1 329.2" stroke-dashoffset="-325.0" transform="rotate(-90 70 70)"></circle>
+                  <circle cx="70" cy="70" r="54" fill="none" stroke="#CE9591" stroke-width="18" stroke-dasharray="4.2 335.1" stroke-dashoffset="-335.1" transform="rotate(-90 70 70)"></circle>
+                </svg>
+                <div class="dn-mid">
+                  <span class="dn-mid-v out">2,005,000</span>
+                  <span class="dn-mid-l">out</span>
+                </div>
+              </div>
+              <div class="dn-lg">
+                <div class="dn-r"><i style="background:#7F1D1A"></i><span class="n">Stock Purchase</span><span class="v">1,120,000</span><span class="p">56%</span></div>
+                <div class="dn-r"><i style="background:#8A939C"></i><span class="n">Transfer</span><span class="v">500,000</span><span class="p">25%</span></div>
+                <div class="dn-r"><i style="background:#9D4340"></i><span class="n">Supplier Payment</span><span class="v">300,000</span><span class="p">15%</span></div>
+                <div class="dn-r"><i style="background:#B76B68"></i><span class="n">Wages</span><span class="v">60,000</span><span class="p">3%</span></div>
+                <div class="dn-r"><i style="background:#CE9591"></i><span class="n">Transport</span><span class="v">25,000</span><span class="p">1%</span></div>
+              </div>
+            </div>
+            <p class="dn-note">Darkest is biggest, so the ring and the list read the same way round. Traded out today was <b>1,505,000</b>.</p>
+          </div>
+
         </div>
       </div>
 

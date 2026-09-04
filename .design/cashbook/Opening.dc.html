@@ -227,9 +227,9 @@
     .dnav .dd .r{font-size:11px;color:var(--ow-ink-600);}
 
     /* ---- the strip: money on hand leads ---- */
-    .ow-strip.cbs{grid-template-columns:1.35fr 1fr 1fr 1fr 1.15fr;}
+    .ow-strip.cbs{grid-template-columns:1.28fr 1fr 1fr 1fr 1.12fr;}
     .ow-mt-v.big{font-size:27px;}
-    .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+    .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .cb-mv .up{color:var(--ow-verdigris);font-weight:600;font-family:var(--mono);
       font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
     .cb-mv .dn{color:var(--ow-crimson);font-weight:600;font-family:var(--mono);
@@ -267,51 +267,77 @@
     .el-at{width:72px;flex:none;}
     .el-note{flex:1;min-width:0;}
 
-    /* ---- the ledger ---- */
-    .lg{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
-    .lg th{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-      color:var(--ow-ink-400);text-align:left;padding:0 12px 7px;border-bottom:1px solid var(--ow-rule-soft);
-      white-space:nowrap;background:var(--ow-paper-2);height:30px;vertical-align:middle;}
-    .lg th.r{text-align:right;}
-    .lg td{padding:9px 12px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
-    .lg tr:last-child td{border-bottom:0;}
-    .lg .tm{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
-      color:var(--ow-ink-600);letter-spacing:-.02em;white-space:nowrap;}
-    .lg .nm{min-width:0;overflow:hidden;}
-    .lg .nm b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .lg .nm span{display:block;font-size:11px;color:var(--ow-ink-600);margin-top:1px;line-height:1.35;
+    /* ---- the day's movements: the table as it was, in a console panel.
+       Same columns, same rhythm, same running balance per account. The one
+       change is the row's actions, which are marks now rather than two
+       labelled buttons repeated nine times down the page. ---- */
+    .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+    .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+      color:var(--ow-ink-600);text-align:left;padding:10px 8px 8px;border-bottom:1px solid var(--ow-rule);
+      white-space:nowrap;}
+    .cb-ledger th.r{text-align:right;}
+    .cb-ledger td{padding:9px 8px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+    .cb-ledger td.price{text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-ledger .cb-led-time{font-family:var(--mono);font-size:12px;color:var(--ow-ink-600);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-ledger td div:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-ledger .cb-led-desc{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .lg .f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
-      letter-spacing:-.02em;text-align:right;white-space:nowrap;}
-    .lg .f.in{color:var(--ow-verdigris);font-weight:600;}
-    .lg .f.out{color:var(--ow-crimson);font-weight:600;}
-    .lg .f.bal{font-weight:600;}
-    .lg .acct{font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
-    .lg tr.op td{background:var(--ow-paper-2);color:var(--ow-ink-600);font-size:12px;}
-    .lg tr.op .f{color:var(--ow-ink-600);font-weight:600;}
-    .lg tfoot td{border-top:1px solid var(--ow-rule);border-bottom:0;background:var(--ow-paper-2);
-      font-size:12px;color:var(--ow-ink-600);padding:9px 12px;}
-    .lg tfoot .f{font-weight:600;font-size:13px;}
-    .lg .lk{display:flex;gap:4px;justify-content:flex-end;}
-    .lg .lk span{width:26px;height:26px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
+    .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
+    .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
+    .cb-ledger .cb-bal{font-weight:700;}
+    .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);border-bottom:0;font-weight:700;
+      font-size:12px;color:var(--ow-ink-600);}
+    .cb-ledger tr.hov td{background:var(--ow-paper-2);}
+    /* Icon only. Nine rows carrying the words Edit and Delete eighteen times
+       is eighteen labels for two acts nobody is looking for until they are. */
+    .rowa{display:flex;gap:4px;justify-content:flex-end;}
+    .rowa span{width:26px;height:26px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
       display:inline-flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
-    .lg .lk svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+    .rowa svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
       stroke-linecap:round;stroke-linejoin:round;}
-    .lg tr.hov td{background:var(--ow-paper-2);}
-    .lg tr.hov .lk span{color:var(--ow-ink-600);border-color:var(--ow-rule);}
-    .src{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ow-ink-400);}
-    .src svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
-      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .cb-ledger tr.hov .rowa span{color:var(--ow-ink-600);border-color:var(--ow-rule);}
+    .cb-ledger tr.hov .rowa span.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
 
-    /* the account filter, in the panel header */
-    .fseg{display:flex;margin-left:auto;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
-      overflow:hidden;background:var(--ow-paper);height:24px;}
-    .fseg > span{display:inline-flex;align-items:center;gap:5px;padding:0 9px;font-size:11px;
-      font-weight:600;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);}
-    .fseg > span:first-child{border-left:0;}
-    .fseg > span.on{background:var(--ow-steel-950);color:#fff;}
-    .fseg .n{font-family:var(--mono);font-size:10.5px;color:var(--ow-ink-400);}
-    .fseg > span.on .n{color:rgba(255,255,255,.66);}
+    /* the account filter, as it was, sized for the panel header */
+    .cb-ledger-filters{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:7px;padding:2px;}
+    .cb-ledger-filters > span{padding:0 10px;height:22px;display:inline-flex;align-items:center;
+      border-radius:5px;font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .cb-ledger-filters > span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.08);}
+
+    /* ---- the two donuts, in the house palette ----
+       One hue per side, dark to light in size order, so the ring and the
+       list read the same way round and green still means in, red still
+       means out. A transfer is neither, so it is steel in both. ---- */
+    .dn-grid{display:grid;grid-template-columns:1fr 1fr;}
+    .dn{padding:14px 16px 12px;border-left:1px solid var(--ow-rule-soft);}
+    .dn:first-child{border-left:0;}
+    .dn-h{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:12px;}
+    .dn-body{display:flex;align-items:center;gap:16px;}
+    .dn-ring{position:relative;width:128px;height:128px;flex:none;}
+    .dn-ring svg{width:128px;height:128px;display:block;}
+    .dn-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:1px;}
+    .dn-mid-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.03em;}
+    .dn-mid-v.in{color:var(--ow-verdigris);}
+    .dn-mid-v.out{color:var(--ow-crimson);}
+    .dn-mid-l{font-size:11px;color:var(--ow-ink-400);}
+    .dn-lg{flex:1;min-width:0;}
+    .dn-r{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;}
+    .dn-r i{width:9px;height:9px;border-radius:50%;flex:none;}
+    .dn-r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dn-r .v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .dn-r .p{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);width:30px;
+      text-align:right;flex:none;letter-spacing:-.02em;}
+    .dn-note{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:12px 0 0;
+      padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
+    .dn-note b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
 
     /* ---- rail: closing ---- */
     .cl{padding:11px 12px;}
