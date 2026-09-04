@@ -4378,6 +4378,9 @@
     font-weight:600;letter-spacing:-0.02em;color:var(--ow-ink-900);border-bottom:1px dotted var(--ow-rule);
   }
   .cb-led-doc:hover{border-bottom-color:var(--ow-ink-400);}
+  /* A number whose document is not on file. It is still worth printing --
+     it is what the note said -- but it must not look like a way in. */
+  .cb-led-doc.is-flat{cursor:default;border-bottom:0;color:var(--ow-ink-600);font-weight:400;}
   .cb-led-doc:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   /* Written by another screen, not typed here -- so a row nobody can
      account for is traced to where it came from rather than blamed on
@@ -32358,13 +32361,42 @@ function revealOrderFor(piId){
   goToTab('invoices');
   toast(`Showing ${invoiceNumberLabel(q)}`);
 }
+/* SHOWING ONE DOCUMENT, FROM ANOTHER SCREEN.
+
+   Both registers filter by a date range and hide voided documents, and
+   neither of those is reset when somebody arrives from elsewhere. So
+   pointing at a document by putting its number in the search box was
+   only half the job: a bill from last month, or one that was voided,
+   landed the reader on an empty list with its own number typed above
+   it. The range is widened and the voided filter dropped, so the thing
+   being pointed at is actually there on arrival. */
 function revealPurchaseInvoice(piId){
-  const pi = data.purchaseInvoices.find(x=>x.id===piId);
+  const pi = (data.purchaseInvoices||[]).find(x=>x.id===piId);
   if(!pi){ toast('That purchase invoice no longer exists'); return; }
+  const label = purchaseInvoiceNumberLabel(pi);
   const box = document.getElementById('pi_doc_search');
-  if(box) box.value = purchaseInvoiceNumberLabel(pi);
+  if(box) box.value = label;
+  const hide = document.getElementById('pi_doc_hide_voided');
+  if(hide && pi.voided) hide.checked = false;
+  const preset = document.getElementById('pi_doc_range_preset');
+  // Dispatched rather than set, so the custom from/to fields follow the
+  // preset instead of being left on screen contradicting it.
+  if(preset && preset.value !== 'all'){ preset.value = 'all'; preset.dispatchEvent(new Event('change')); }
   goToTab('purchase-invoices');
-  toast(`Showing ${purchaseInvoiceNumberLabel(pi)}`);
+  toast(`Showing ${label}`);
+}
+function revealInvoice(qId){
+  const q = (data.savedQuotes||[]).find(x=>x.id===qId);
+  if(!q){ toast('That invoice is no longer on file'); return; }
+  const label = invoiceNumberLabel(q);
+  const box = document.getElementById('inv_doc_search');
+  if(box) box.value = label;
+  const hide = document.getElementById('inv_doc_hide_voided');
+  if(hide && q.voided) hide.checked = false;
+  const preset = document.getElementById('inv_doc_range_preset');
+  if(preset && preset.value !== 'all'){ preset.value = 'all'; preset.dispatchEvent(new Event('change')); }
+  goToTab('invoices');
+  toast(`Showing ${label}`);
 }
 // What an order raised, as a line you can follow. Voided ones are named
 // rather than hidden -- a supplier invoice that was cancelled is part of
@@ -53738,7 +53770,7 @@ function cbTxnDisplayDesc(t){
 function cbRowIdentity(t){
   const desc = String((t && t.description) || '').trim();
   const category = String((t && t.category) || '').trim();
-  const out = { who: '', detail: '', doc: null, docTab: null, posted: null };
+  const out = { who: '', detail: '', doc: null, docKind: null, docId: null, posted: null };
 
   // An invoice receipt: the row's own quoteId first, then an INV number
   // written into its text. \bINV- so a PINV row never matches here.
@@ -53748,7 +53780,8 @@ function cbRowIdentity(t){
   if(!q && invM) q = (data.savedQuotes || []).find(x => invoiceNumberLabel(x) === 'INV-' + invM[1]) || null;
   if(q){
     out.doc = invoiceNumberLabel(q);
-    out.docTab = 'invoices';
+    out.docKind = 'inv';
+    out.docId = q.id;
     // Written BY Invoices only when the row carries the link that screen
     // makes. A number typed into the note is a reference, not a posting.
     out.posted = (t && t.quoteId != null) ? 'Invoices' : null;
@@ -53765,7 +53798,11 @@ function cbRowIdentity(t){
       typeof purchaseInvoiceNumberLabel === 'function'
         && purchaseInvoiceNumberLabel(x) === 'PINV-' + pinvM[1]) || null;
     out.doc = 'PINV-' + pinvM[1];
-    out.docTab = 'purchase-invoices';
+    /* Only a bill that is actually on file gets a way in. A number
+       nobody can open is a dead control, which is worse than a number
+       that is plainly just text. */
+    out.docKind = pi ? 'pinv' : null;
+    out.docId = pi ? pi.id : null;
     out.posted = pi ? 'Purchase invoices' : null;
     const sup = pi && String(pi.supplierName || '').trim();
     if(sup) out.who = sup;
@@ -53798,8 +53835,10 @@ function cbDocHTML(idn){
   const title = idn.posted
     ? `Posted by ${idn.posted} — opens ${idn.doc}`
     : `Opens ${idn.doc}`;
+
+  if(idn.docKind == null) return `<span class="cb-led-doc is-flat" title="${esc(idn.doc)} is not on file">${esc(idn.doc)}</span>`;
   return `<button type="button" class="cb-led-doc" title="${esc(title)}"
-    data-doc-tab="${esc(idn.docTab||'')}">${idn.posted ? CB_DOC_ICON : ''}${esc(idn.doc)}</button>`;
+    data-doc-kind="${esc(idn.docKind)}" data-doc-id="${idn.docId}">${idn.posted ? CB_DOC_ICON : ''}${esc(idn.doc)}</button>`;
 }
 function cbCellHTML(t){
   const idn = cbRowIdentity(t);
@@ -53907,8 +53946,15 @@ function renderCbTransactions(){
   </table></div>
   <div class="cb-cards">${cardsHtml}</div>`;
 
-  wrap.querySelectorAll('.cb-led-doc').forEach(b=>{
-    b.addEventListener('click', ()=>{ if(b.dataset.docTab) goToTab(b.dataset.docTab); });
+  /* Opens the DOCUMENT, not the screen it lives on. Landing somebody on
+     the register with 34 other bills on it and leaving them to find the
+     one they pressed is not a link, it is a signpost. */
+  wrap.querySelectorAll('button.cb-led-doc').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const id = Number(b.dataset.docId);
+      if(b.dataset.docKind === 'inv') revealInvoice(id);
+      else if(b.dataset.docKind === 'pinv') revealPurchaseInvoice(id);
+    });
   });
 }
 /* ---- Cash In / Cash Out forms (inside popup modals) ---- */
@@ -60676,13 +60722,7 @@ function stHandleDrillAction(e){
     const [kind, rawId] = String(go.dataset.stGo).split(':');
     const id = Number(rawId);
     if(kind === 'inv'){
-      const q = data.savedQuotes.find(x=> x.id === id);
-      if(q){
-        const box = document.getElementById('inv_doc_search');
-        if(box) box.value = invoiceNumberLabel(q);
-        goToTab('invoices');
-        toast(`Showing ${invoiceNumberLabel(q)}`);
-      }
+      revealInvoice(id);
     } else if(kind === 'pinv'){
       revealPurchaseInvoice(id);
     } else if(kind === 'screen'){
