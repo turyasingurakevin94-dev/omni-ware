@@ -230,9 +230,28 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     t.check(/const totalLabel = cut \? `Total \(all \$\{invoices\.length\}\)` : 'Total';/.test(body),
       `${fn}: and the footer says so when a page is being shown`);
     /* Selection can only reach drawn checkboxes, and the bulk actions
-       behind it include voiding. The label must not imply the rest. */
-    t.check(/const selectAllLabel = cut \? `Select all \$\{shown\.length\} shown`/.test(body),
-      `${fn}: select-all says what it can actually take`);
+       behind it include voiding. The label must not imply the rest.
+       ASKED OF THE REGISTER THAT STILL HAS ONE. Purchase invoices no
+       longer draws checkboxes at all: on that screen voiding is not a
+       flag but an act on the shelf -- a bill raised from the shop's own
+       purchase order takes its goods back off the shelf and reopens the
+       order -- and "void selected" behind a dropdown did several of
+       those irreversible things on one press, with nothing on screen
+       saying which of the ticked rows were deliveries. Its bulk menu
+       and its checkbox column are gone; printing survives as a list
+       print over everything the filters matched, which is not a
+       selection and cannot misreport one. The assertion is kept, and
+       kept sharp, for Invoices, where selection still exists -- the
+       original hazard is that a select-all label promises rows the
+       press cannot reach, and a screen with no select-all makes no
+       promise to break. */
+    if(fn !== 'renderPurchaseInvoices'){
+      t.check(/const selectAllLabel = cut \? `Select all \$\{shown\.length\} shown`/.test(body),
+        `${fn}: select-all says what it can actually take`);
+    } else {
+      t.check(!/pi-doc-check|selectAllLabel|Select all/.test(body),
+        `${fn}: draws no selection at all, so it promises no rows it cannot take`);
+    }
   });
 
   // Printing the list is not paging: it still covers the whole range.

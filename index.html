@@ -10421,6 +10421,162 @@
   }
 
 
+
+  /* ==================================================================
+     PURCHASE INVOICES, ON THE CONSOLE.
+
+     The screen is the layer's: .ow-ph for the head and its filters,
+     .ow-strip for what the range bought, .ow-pan for every region,
+     .ow-seg for the split, .ow-q for the register — one call emitting
+     the 44px desk row and the phone card together, so the two can never
+     say different things — and .ow-sr for the rail's figures.
+
+     What is here is this screen's own: the check band, the five row
+     tracks, and the bill's lines against what the same goods last cost.
+     Nothing outside .ow-* is touched, no colour is added, and the
+     register no longer emits .inv-status / .pi-progress-bar / .pi-card,
+     which were this screen's share of the legacy file.
+     ================================================================== */
+
+  /* ---- WHAT NEEDS YOUR EYE ----
+     A panel with a header, not a red slab. Amber where a person must
+     look; the crimson is spent only on the two findings where the shop
+     is genuinely out of pocket — billed twice, and paid over. */
+  /* The phone's one-line form of the band. Never shown on the desk,
+     where all four findings fit above the list. */
+  .ow-ck-sum{display:none;}
+  .ow-ck-h{background:var(--ow-amber-faint);border-bottom-color:#EBD9B4;}
+  .ow-ck-h .ow-pan-t{color:var(--ow-amber-ink);}
+  .ow-ck-h .ow-pan-n{color:var(--ow-amber-ink);}
+  .ow-ck{display:grid;grid-template-columns:16px minmax(0,1fr) 146px auto;
+    align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-ck:last-of-type{border-bottom:0;}
+  .ow-ck-i{width:15px;height:15px;justify-self:center;color:var(--ow-amber);flex:none;}
+  .ow-ck.ow-sev .ow-ck-i{color:var(--ow-crimson);}
+  .ow-ck-b{min-width:0;}
+  /* THE FINDING IS ONE LINE AND THE EVIDENCE IS THE NEXT. Both truncate
+     with a title carrying the whole of it: a shop's real supplier names
+     are longer than any box drawn for them. */
+  .ow-ck-t{margin:0;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    line-height:var(--ow-lh-snug);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ck-w{margin:2px 0 0;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:var(--ow-lh-snug);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ck-v{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-ck-v.ow-bad{color:var(--ow-crimson);}
+  .ow-ck-u{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
+    white-space:normal;}
+  .ow-ck-a{display:flex;justify-content:flex-end;gap:var(--ow-sp-6);flex:none;}
+  /* Everything is sound. One sentence, and it is the state the old
+     screen could not express at all. */
+  .ow-ck-ok{display:flex;align-items:flex-start;gap:var(--ow-sp-8);padding:var(--ow-sp-12);}
+  .ow-ck-ok-i{width:15px;height:15px;color:var(--ow-verdigris);flex:none;margin-top:2px;}
+  .ow-ck-ok-t{margin:0;font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);
+    color:var(--ow-ink-600);max-width:var(--ow-measure);}
+  /* The boundary of the check, stated where the check ends. */
+  .ow-ck-el{margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);line-height:var(--ow-lh-snug);
+    border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  /* The two bills, side by side, under the duplicate finding. */
+  .ow-ck-x{padding:0 var(--ow-sp-12) var(--ow-sp-12) 44px;
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-ck-q{margin:0 0 var(--ow-sp-8);font-size:var(--ow-t-13);color:var(--ow-ink-900);
+    font-weight:var(--ow-fw-600);max-width:var(--ow-measure);}
+  .ow-ck-cmp{display:flex;gap:var(--ow-sp-12);flex-wrap:wrap;}
+  .ow-ck-cmp-c{flex:1 1 260px;min-width:0;border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r);padding:var(--ow-sp-8) var(--ow-sp-10);}
+
+  /* ---- the register's row: five tracks ----
+     Supplier, doc number and what it was for; the mark, which is EMPTY
+     on a bill with nothing wrong; what it was for; the date; and the
+     money over its basis. A device that marks every row marks nothing,
+     so the mark column is left blank rather than filled with "fine". */
+  .ow-pi .ow-q-r{grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;}
+  .ow-pi-doc{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;color:var(--ow-ink-900);}
+  .ow-pi-h{display:grid;grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;
+    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  /* A word beside a figure — a share, or which of three totals it is.
+     Never .ow-u, which is 9px ink-400 and below the contrast floor. */
+  .ow-pi-u{font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);letter-spacing:0;margin-left:var(--ow-sp-4);}
+  .ow-pi-h-c{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
+    text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pi-h-c.ow-pi-h-r{text-align:right;}
+  /* the date track: the day, and how long ago under it */
+  .ow-pi-dt{font-size:var(--ow-t-12);color:var(--ow-ink-900);white-space:nowrap;}
+  .ow-pi-dt-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  /* the mark track: a finding, or the order it was raised from */
+  .ow-pi-mk{min-width:0;font-size:var(--ow-t-11);line-height:var(--ow-lh-snug);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pi-mk-t{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-pi-mk.ow-bad{color:var(--ow-crimson);}
+  .ow-pi-mk.ow-warn{color:var(--ow-amber-ink);}
+  .ow-pi-mk.ow-ord{color:var(--ow-ink-600);}
+  .ow-pi-mk.ow-ord .ow-pi-mk-t{color:var(--ow-ink-900);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+  .ow-pi-mk.ow-none{color:var(--ow-ink-600);}
+  .ow-pi-mk.ow-none .ow-pi-mk-t{color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+  /* a voided bill is drawn, struck through, and counted towards nothing */
+  .ow-pi .ow-q.ow-void .ow-q-who{text-decoration:line-through;}
+  .ow-pi .ow-q.ow-void .ow-q-t{color:var(--ow-ink-400);}
+  .ow-pi .ow-q.ow-void .ow-q-f{color:var(--ow-ink-400);text-decoration:line-through;}
+
+  /* ---- an open bill: its lines, against what the same goods last cost ----
+     THE CHECK IS A COLUMN, not a badge. "You last paid" carries the
+     figure and the day; the difference beside it carries per-unit and
+     per-line, because a small rise on a big quantity is the one that
+     costs real money. */
+  .ow-pi-bl{width:100%;border-collapse:collapse;font-size:var(--ow-t-12);margin:0 0 var(--ow-sp-10);}
+  .ow-pi-cap{text-align:left;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 var(--ow-sp-6);}
+  .ow-pi-th{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
+    text-transform:uppercase;color:var(--ow-ink-600);text-align:right;
+    padding:0 0 var(--ow-sp-4) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+  .ow-pi-th.ow-l{text-align:left;padding-left:0;}
+  .ow-pi-td{padding:var(--ow-sp-6) 0 var(--ow-sp-6) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);text-align:right;white-space:nowrap;width:1%;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+  .ow-pi-tr:last-child .ow-pi-td{border-bottom:0;}
+  /* MONEY NEVER TRUNCATES; the name gives way. */
+  .ow-pi-td.ow-nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;
+    font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-500);
+    min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .ow-pi-td.ow-w{font-weight:var(--ow-fw-600);}
+  .ow-pi-td.ow-q2{color:var(--ow-ink-600);}
+  .ow-pi-td.ow-bf{color:var(--ow-ink-600);}
+  .ow-pi-when{font-style:normal;color:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+  .ow-pi-td.ow-up{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-pi-td.ow-dn{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .ow-pi-sub{display:block;font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+    font-size:var(--ow-t-11);letter-spacing:0;color:var(--ow-ink-600);}
+  .ow-pi-tr.ow-hi .ow-pi-td{background:var(--ow-crimson-soft);}
+  .ow-pi-tr.ow-hi .ow-pi-td.ow-nm{box-shadow:inset 3px 0 0 var(--ow-crimson);padding-left:var(--ow-sp-8);}
+  .ow-pi-ft .ow-pi-td{border-top:1px solid var(--ow-rule);border-bottom:0;
+    font-weight:var(--ow-fw-600);padding-top:var(--ow-sp-8);}
+  .ow-pi-ft .ow-pi-td.ow-nm{font-family:'Inter',system-ui,sans-serif;color:var(--ow-ink-600);
+    font-weight:var(--ow-fw-500);}
+  /* billed / paid / still owed, above the acts */
+  .ow-pi-bs{display:flex;gap:var(--ow-sp-24);margin:0 0 var(--ow-sp-10);flex-wrap:wrap;}
+  .ow-pi-bs-c{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ow-pi-bs-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-pi-bs-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;}
+  .ow-pi-bs-v.ow-bad{color:var(--ow-crimson);}
+  .ow-pi-bs-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pi-cf{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-12);
+    padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .ow-pi-cf-n{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:var(--ow-lh-snug);max-width:58ch;min-width:0;}
   @media (max-width:820px){
     .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
@@ -10715,6 +10871,63 @@
     .ow-al-sect{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);}
     .ow-al-new{width:100%;}
     .ow-al-new > .btn.ow-sm{flex:1 1 0;min-width:0;}
+
+    /* ---- PURCHASE INVOICES ON THE PHONE ----
+       820px is a switch, not a reflow. The desk row's five tracks have
+       nowhere to go at 390, so .ow-q-card takes over as everywhere
+       else; the check band collapses from four findings to one line,
+       because in a yard you are being told there are four to come back
+       to, not auditing them; and the bill's six-column comparison
+       becomes a line under each figure, since six columns at 358px
+       would clip a figure, and a clipped figure is a WRONG figure. */
+    .ow-pi .ow-q-r,.ow-pi-h{display:none;}
+    .ow-strip.ow-pi-s{grid-template-columns:1fr 1fr;}
+    .ow-strip.ow-pi-s .ow-mt:last-child:nth-child(odd){grid-column:1/-1;}
+    /* One line, tappable, saying how many and what they come to; the
+       findings themselves stay folded until it is pressed. */
+    .ow-ck-sum{display:flex;align-items:center;gap:var(--ow-sp-10);width:100%;
+      box-sizing:border-box;min-height:var(--ow-tap);padding:var(--ow-sp-12);
+      border:0;background:none;text-align:left;cursor:pointer;
+      font-family:inherit;color:var(--ow-amber-ink);}
+    .ow-ck-sum-b{flex:1;min-width:0;}
+    .ow-ck-sum-t{display:block;font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);
+      line-height:var(--ow-lh-snug);}
+    .ow-ck-sum-w{display:block;font-size:var(--ow-t-13);line-height:var(--ow-lh-snug);
+      margin-top:var(--ow-sp-2);}
+    .ow-ck-sum-c{width:16px;height:16px;flex:none;}
+    .ow-ck-pan.ow-ck-on .ow-ck-sum-c{transform:rotate(90deg);}
+    .ow-ck-pan:not(.ow-ck-on) .ow-ck,
+    .ow-ck-pan:not(.ow-ck-on) .ow-ck-x,
+    .ow-ck-pan:not(.ow-ck-on) .ow-ck-el{display:none;}
+    .ow-ck-pan .ow-ck{border-top:1px solid var(--ow-rule-soft);border-bottom:0;}
+    .ow-ck{grid-template-columns:16px minmax(0,1fr);row-gap:var(--ow-sp-6);
+      padding:var(--ow-sp-12);}
+    .ow-ck-v,.ow-ck-a{grid-column:2;justify-content:flex-start;text-align:left;}
+    .ow-ck-a .btn.ow-sm{min-height:var(--ow-tap);font-size:15px;}
+    .ow-ck-t,.ow-ck-w{white-space:normal;}
+    .ow-ck-x{padding-left:var(--ow-sp-12);}
+    /* The comparison, one figure per line rather than one row. */
+    .ow-pi-bl,.ow-pi-tb,.ow-pi-tr,.ow-pi-td{display:block;width:auto;}
+    .ow-pi-hd,.ow-pi-ft{display:none;}
+    /* A <caption> in a table forced to display:block loses its width and
+       sets one word per line. It is a heading here, so it is drawn as one. */
+    .ow-pi-cap{display:block;width:auto;}
+    /* With the columns gone, the line total is the figure the eye needs
+       to find, so it takes the size the column used to give it. */
+    .ow-pi-td.ow-w{font-size:var(--ow-t-16);}
+    .ow-pi-tr{border-bottom:1px solid var(--ow-rule-soft);padding:var(--ow-sp-10) 0;}
+    .ow-pi-td{border-bottom:0;padding:0;text-align:left;white-space:normal;}
+    .ow-pi-td.ow-nm{max-width:none;font-size:var(--ow-t-14);}
+    .ow-pi-sub{display:inline;margin-left:var(--ow-sp-6);}
+    .ow-pi-tr.ow-hi .ow-pi-td.ow-nm{box-shadow:none;padding-left:0;}
+    .ow-pi-tr.ow-hi{background:var(--ow-crimson-soft);
+      box-shadow:inset 3px 0 0 var(--ow-crimson);padding-left:var(--ow-sp-8);}
+    .ow-q-x{padding-left:var(--ow-sp-12);}
+    /* The one accent is the open bill's own act, in the thumb zone. */
+    .ow-pi .ow-q-a{flex-direction:column;}
+    .ow-pi .ow-q-a .btn.ow-sm{width:100%;min-width:0;min-height:var(--ow-tap);
+      font-size:15px;box-sizing:border-box;}
+    .ow-pi-bs{gap:var(--ow-sp-16);}
   }
 </style>
 </head>
@@ -12005,65 +12218,81 @@
       </div>
     </section>
 
-    <!-- PURCHASE INVOICES -->
-    <section id="tab-purchase-invoices" style="display:none;">
-      <div class="page-head">
-        <h1>Purchase invoices</h1>
-        <p>Generated automatically, one per supplier, whenever a quote is marked invoiced. Un-invoicing that quote removes its purchase invoices again.</p>
-      </div>
+    <!-- PURCHASE INVOICES, on the console.
 
-      <div class="panel qp-panel">
-        <div class="an-toolbar">
-          <div class="field">
-            <label>Date range</label>
-            <select id="pi_doc_range_preset">
-              <option value="today">Today</option>
+         The unit here is ONE BILL: what a supplier billed you on one
+         day, and whether it is right. Creditors' unit is one supplier —
+         what you owe them altogether, and who to pay first — and this
+         screen deliberately does not rank anything by age, so the two
+         can never disagree about the same money.
+
+         Four things happen here, and the layout is in that order: read
+         the position, work what needs your eye, find a bill, open it and
+         check its lines against what the same goods last cost you. The
+         old screen could do only the third, and to read a bill at all
+         you had to press Print and open a print dialog. -->
+    <section id="tab-purchase-invoices" style="display:none;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Purchase invoices</h1>
+        <p class="ow-ph-sub">Every bill a supplier has given you &mdash; what it was for, whether it is right, and what is still owed on it</p>
+        <p class="ow-ph-help">A bill is raised when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order. Nothing here is typed in from scratch. Every bill in the range is checked as the screen draws: the same delivery billed twice, a line priced above anything you have ever paid that supplier, a bill with no delivery behind it on the stock record, and money paid out beyond what was billed. What is not checked is said too, because a checking screen whose silence you cannot read is worse than none: nothing here knows whether the goods that came were the ones ordered, or whether a price you have never paid before is a fair one. Opening a bill shows its lines against what the same goods last cost you from that same supplier, so a price can be argued before it is paid rather than after. Who to pay first is Creditors, not this screen. A voided bill is kept and struck through, never deleted, and voiding one raised from your own purchase order takes the goods back off the shelf &mdash; the button says so before it acts.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- SEARCH IS THE FIRST CONTROL, as on Invoices: at this volume
+             the list is never read whole, it is narrowed to a question. -->
+        <div class="ow-f ow-ph-f inv-f inv-f-search">
+          <label class="ow-f-l" for="pi_doc_search">Search</label>
+          <input id="pi_doc_search" class="ow-f-in an-sel" placeholder="Doc No. / supplier / item...">
+        </div>
+        <div class="ow-f ow-ph-f inv-f">
+          <label class="ow-f-l" for="pi_doc_range_preset">Date range</label>
+          <select id="pi_doc_range_preset" class="ow-f-in an-sel">
+            <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="7">Last 7 days</option>
-              <option value="30" selected>Last 30 days</option>
-              <option value="90">Last 90 days</option>
-              <option value="month">This month</option>
-              <option value="all">All time</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="field" id="pi_doc_from_field" style="display:none;">
-            <label>From</label>
-            <input type="date" id="pi_doc_from">
-          </div>
-          <div class="field" id="pi_doc_to_field" style="display:none;">
-            <label>To</label>
-            <input type="date" id="pi_doc_to">
-          </div>
-          <label class="sq-select-all-label" style="padding-bottom:9px;"><input type="checkbox" id="pi_doc_hide_voided" checked> Hide voided</label>
-          <div class="field" style="flex:1;min-width:220px;">
-            <label>Search</label>
-            <input id="pi_doc_search" placeholder="Doc No. / supplier / item...">
-          </div>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="month">This month</option>
+            <option value="all">All time</option>
+            <option value="custom">Custom</option>
+          </select>
         </div>
-
-        <div class="panel-head-row" style="margin-bottom:14px;">
-          <div class="btn-row" style="margin-top:0;">
-            <div class="inv-bulk-dd" id="pi_bulk_dd">
-              <button type="button" class="btn btn-ghost btn-icon" id="pi_bulk_dd_btn">
-                Bulk operation
-                <svg class="icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <div class="inv-bulk-dd-menu" id="pi_bulk_dd_menu">
-                <button type="button" id="pi_doc_print_selected_btn">Print selected (A5)</button>
-                <button type="button" id="pi_doc_void_selected_btn">Void selected</button>
-                <button type="button" id="pi_doc_unvoid_selected_btn">Unvoid selected</button>
-              </div>
-            </div>
-          </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="pi_doc_print_list_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-            Print list
-          </button>
+        <div class="ow-f ow-ph-f inv-f" id="pi_doc_from_field" style="display:none;">
+          <label class="ow-f-l" for="pi_doc_from">From</label>
+          <input type="date" id="pi_doc_from" class="ow-f-in an-sel">
         </div>
+        <div class="ow-f ow-ph-f inv-f" id="pi_doc_to_field" style="display:none;">
+          <label class="ow-f-l" for="pi_doc_to">To</label>
+          <input type="date" id="pi_doc_to" class="ow-f-in an-sel">
+        </div>
+        <label class="inv-ck inv-f" for="pi_doc_hide_voided">
+          <input type="checkbox" id="pi_doc_hide_voided" checked>
+          <span>Hide voided</span>
+        </label>
+        <!-- THE ACCENT LIVES IN THE OPEN BILL, not here. On Invoices the
+             printed sheet is the one thing to do next; here it is
+             whatever the bill you have opened needs, so the list's own
+             print is a ghost and the oxide is spent once, below. -->
+        <button type="button" class="btn btn-ghost ow-sm" id="pi_doc_print_list_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+          Print list
+        </button>
+      </div>
 
-        <div id="piDupWrap"></div>
+      <!-- WHAT THE RANGE BOUGHT. Always the whole range: the search box
+           and the segment act on the list below, never on this. A
+           position that shrinks because somebody left a filter on is a
+           position nobody can trust. -->
+      <div class="ow-strip" id="pi_strip"></div>
+
+      <!-- The checks. A panel with a header like every other region, not
+           a red slab — and it says so when everything is sound, because
+           a band that only ever appears when something is wrong leaves
+           you unable to tell "nothing wrong" from "not looked at". -->
+      <div id="piCheckWrap"></div>
+
+      <div class="ow-grid">
         <div id="purchaseInvoicesWrap"></div>
+        <div class="ow-side" id="piRailWrap"></div>
       </div>
     </section>
 
@@ -32325,7 +32554,6 @@ function returnConsignedStock(productId, variantIdx, supplierId, qty){
   return taken;
 }
 
-const PI_SORT_STATE = {key:'date', dir:-1};
 let piLastRows = [];
 function piDocGetDateRange(){
   const preset = document.getElementById('pi_doc_range_preset').value;
@@ -32377,31 +32605,357 @@ function duplicatePurchaseInvoiceGroups(){
     .map(g=> g.slice().sort((a,b)=> (a.id||0) - (b.id||0)))
     .sort((a,b)=> String(b[0].date||'').localeCompare(String(a[0].date||'')));
 }
-function renderPurchaseInvoiceDuplicates(){
-  const wrap = document.getElementById('piDupWrap');
-  if(!wrap) return;
-  const groups = duplicatePurchaseInvoiceGroups();
-  if(!groups.length){ wrap.innerHTML = ''; return; }
-  const extra = groups.reduce((s2,g)=> s2 + purchaseInvoiceTotal(g[0]) * (g.length - 1), 0);
-  wrap.innerHTML = `<div class="cb-chain-break">
-    <div><b>${groups.length} deliver${groups.length===1?'y appears':'ies appear'} to have been billed more than once.</b></div>
-    <div><b>Did that delivery really arrive twice?</b> If it did, leave these alone. If it did not, void the extra bill —
-      the shop stops owing for goods it never received.</div>
-    <div class="deb-drift-why">Voiding a bill does NOT take the goods back off the shelf. If the same delivery was entered twice,
-      the stock was added twice too — count that product and put it right, then the stock record warning on Inventory will
-      offer to match its cost record.</div>
-    ${groups.map(g=>{
-      const total = purchaseInvoiceTotal(g[0]);
-      return `<div class="inv-lot-row">
-        <span class="inv-lot-name">${esc(g[0].supplierName || 'Supplier')} · ${esc(g[0].date || 'no date')}</span>
-        <span class="inv-lot-figs">${g.length} bills of ${fmtUGX(Math.round(total))} — ${g.map(pi=> esc(purchaseInvoiceNumberLabel(pi))
-          + (((pi.payments||[]).length || (Number(pi.amountPaid)||0) > 0.5) ? ' (paid on)' : '')).join(', ')}</span>
-        <button type="button" class="btn btn-ghost" data-pidup="${esc(g.map(pi=> pi.id).join(','))}">Void the ${g.length - 1} extra</button>
+/* ---- THE FOUR CHECKS -------------------------------------------------
+
+   This screen's job is not only to hold the bills but to say which of
+   them is wrong, and every one of these four is answerable from what is
+   already on file. Nothing here changes anything: a check names a
+   finding, shows the evidence it was drawn from, and leaves the act to
+   the person who knows whether two lorries arrived.
+
+   What is deliberately NOT checked is as important, and is said on the
+   screen rather than left to be inferred: age and broken promises,
+   because Creditors owns the ranking and two screens ranking the same
+   money will drift; whether the goods that came were the ones ordered,
+   because nothing on file knows; and whether a price never paid before
+   is fair, because that is a market question and Compare prices is
+   where it is asked. A checking screen whose silence you cannot read is
+   worse than no checking screen at all. */
+
+/* Prices are only ever compared for the SAME UNIT. A keg against a kilo
+   is not a rise, and a pack price against a piece price is a tenfold
+   "rise" that is nothing of the kind. */
+function piLineKey(it){
+  return [it.productId == null ? '' : it.productId,
+    it.variantIdx == null || it.variantIdx === '' ? '' : it.variantIdx,
+    String(it.unit || '')].join('|');
+}
+
+/* The highest price paid to THIS supplier for THIS line, on a bill that
+   was not voided and is dated strictly before the one being checked.
+
+   Highest rather than most recent, and that is a real choice: a price
+   creeping up one step at a time passes a most-recent test every time,
+   and it is exactly the creep a wholesaler notices only when the year's
+   figures are added up. The cost is that a genuine market rise stays
+   flagged until it is paid at the new level twice — which is why the
+   finding says "you have not paid this much before" and never "you are
+   being overcharged". */
+function piBestPriceBefore(supplierId, key, beforeDate, exceptId){
+  let best = null;
+  (data.purchaseInvoices || []).forEach(pi=>{
+    if(pi.voided) return;
+    if(pi.id === exceptId) return;
+    if(String(pi.supplierId || '') !== String(supplierId || '')) return;
+    const d = pi.date || '';
+    if(!d || !beforeDate || d >= beforeDate) return;
+    (pi.items || []).forEach(it=>{
+      if(piLineKey(it) !== key) return;
+      const p = Number(it.price) || 0;
+      if(p <= 0) return;
+      if(!best || p > best.price) best = {price: p, date: d, piId: pi.id};
+    });
+  });
+  return best;
+}
+
+/* Every line on one bill, each carrying what the same goods last cost
+   from the same supplier. Returned for EVERY line, not just the dear
+   ones: the open bill shows the whole comparison, and a line that came
+   down is worth seeing too. */
+function purchaseInvoiceLineChecks(pi){
+  return (pi.items || []).map(it=>{
+    const qty = Number(it.qty) || 0;
+    const price = Number(it.price) || 0;
+    const best = piBestPriceBefore(pi.supplierId, piLineKey(it), pi.date || '', pi.id);
+    const each = best ? price - best.price : 0;
+    return {
+      item: it, qty, price, line: qty * price, best,
+      each, all: each * qty,
+      up: !!best && each > 0.5, down: !!best && each < -0.5,
+    };
+  });
+}
+/* The bill's finding: only the lines above anything paid before, and
+   what those lines alone cost extra. Not netted against lines that came
+   down — a supplier who raises one line and drops another has still
+   raised one, and netting it away is how a creep hides. */
+function purchaseInvoicePriceRises(pi){
+  const rises = purchaseInvoiceLineChecks(pi).filter(l=> l.up);
+  return {lines: rises, extra: rises.reduce((s,l)=> s + l.all, 0)};
+}
+
+/* Did anything actually arrive for this bill?
+
+   Answerable only where the shop's own stamping is in use: a restock
+   bill records its number on the stock movement it raised (piId), so a
+   restock bill with no movement carrying its number is a bill for goods
+   that are not on the shelf. Bills raised from a customer's order are
+   not asked — those goods went straight out to the customer and were
+   never counted in.
+
+   AND IT REFUSES TO ANSWER FOR ANYTHING OLDER THAN THE STAMPING. Bills
+   from before the shop kept that link would every one of them look
+   unreceived, which is a wall of false findings and the fastest way to
+   teach somebody to ignore this band. Where it cannot know, it says
+   nothing rather than guessing. */
+function piReceiptStampFloor(){
+  let floor = null;
+  (data.stockLog || []).forEach(r=>{
+    if(!r || r.piId == null) return;
+    const d = r.date || '';
+    if(!d) return;
+    if(floor === null || d < floor) floor = d;
+  });
+  return floor;
+}
+function purchaseInvoiceReceiptState(pi, floor){
+  if(pi.voided) return 'not-asked';
+  if(pi.quoteId != null) return 'not-asked';
+  const d = pi.date || '';
+  if(!d || floor === null || d < floor) return 'unknown';
+  const got = (data.stockLog || []).some(r=> r && r.piId != null
+    && String(r.piId) === String(pi.id) && (Number(r.delta) || 0) > 0);
+  return got ? 'received' : 'none';
+}
+
+/* Money that left the drawer beyond what was asked for. The old screen
+   drew this as Balance due -180,000 under a green "Settled" chip: the
+   one reading of it that says nothing is wrong. */
+function purchaseInvoiceOverpaid(pi){
+  if(pi.voided) return 0;
+  const over = (Number(pi.amountPaid) || 0) - purchaseInvoiceTotal(pi);
+  return over > 0.5 ? over : 0;
+}
+
+/* Every finding over one list of bills, in the order they are shown:
+   the two the shop is out of pocket for first. `ids` is what the
+   register reads to mark a row, so a bill and its finding can never
+   disagree about each other. */
+function purchaseInvoiceFindings(invoices){
+  const floor = piReceiptStampFloor();
+  const live = invoices.filter(pi=> !pi.voided);
+  const inRange = new Set(live.map(pi=> pi.id));
+  /* Duplicates are found over the whole book and then narrowed: a group
+     whose other half is outside the range is still a duplicate, and
+     hiding it because of a date filter would be the screen agreeing
+     with the mistake. */
+  const dups = duplicatePurchaseInvoiceGroups().filter(g=> g.some(pi=> inRange.has(pi.id)));
+  const overpaid = live.filter(pi=> purchaseInvoiceOverpaid(pi) > 0);
+  const unreceived = live.filter(pi=> purchaseInvoiceReceiptState(pi, floor) === 'none');
+  const rises = [];
+  live.forEach(pi=>{
+    const r = purchaseInvoicePriceRises(pi);
+    if(r.lines.length) rises.push({pi, ...r});
+  });
+  const ids = new Map();
+  const mark = (pi, kind, label, why)=>{ if(!ids.has(pi.id)) ids.set(pi.id, {kind, label, why}); };
+  dups.forEach(g=> g.forEach((pi,i)=> mark(pi, 'bad',
+    'Same as ' + purchaseInvoiceNumberLabel(g[i === 0 ? 1 : 0]),
+    i === 0 ? 'raised first, so the one to keep' : 'same day, lines and prices')));
+  /* A figure, not a figure-plus-unit: the currency is said once per
+     screen, in the strip. */
+  const fig = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  overpaid.forEach(pi=> mark(pi, 'bad', 'Paid ' + fig(purchaseInvoiceOverpaid(pi)) + ' over',
+    fig(Number(pi.amountPaid)||0) + ' out on a ' + fig(purchaseInvoiceTotal(pi)) + ' bill'));
+  unreceived.forEach(pi=> mark(pi, 'warn', 'Nothing received', 'no delivery on the stock record'));
+  rises.forEach(r=> mark(r.pi, 'warn',
+    r.lines.length === 1 ? 'One line priced up' : r.lines.length + ' lines priced up',
+    'against what you last paid'));
+  const count = new Set([...dups.flat().filter(pi=> inRange.has(pi.id)).map(pi=>pi.id),
+    ...overpaid.map(pi=>pi.id), ...unreceived.map(pi=>pi.id), ...rises.map(r=>r.pi.id)]).size;
+  const money = dups.reduce((s,g)=> s + purchaseInvoiceTotal(g[0]) * (g.length - 1), 0)
+    + overpaid.reduce((s,pi)=> s + purchaseInvoiceOverpaid(pi), 0)
+    + unreceived.reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0)
+    + rises.reduce((s,r)=> s + r.extra, 0);
+  return {dups, overpaid, unreceived, rises, ids, count, money,
+    checked: live.length, floor};
+}
+
+/* ---- THE CHECK BAND --------------------------------------------------
+
+   A panel with a header like every other region on the console, not a
+   red slab pinned above the work. One line per finding: what it is, the
+   evidence it was drawn from, the money at stake, and ONE act.
+
+   It renders when everything is sound too, and that is the state the
+   old screen could not express at all. A band that appears only when
+   something is wrong leaves its absence ambiguous — you cannot tell
+   "nothing wrong" from "not looked at" — and on a screen whose whole
+   claim is that it checks, that is the difference between trusting the
+   silence and ignoring the band. */
+let piDupOpen = null;
+/* ON THE PHONE THE BAND IS ONE LINE UNTIL IT IS ASKED FOR. In a yard you
+   are being TOLD there are four bills to come back to; you are not
+   auditing them one-handed. Four findings at full height push the list
+   you came for off the screen entirely — so the same DOM carries a
+   summary the phone shows and the desk hides, and tapping it opens the
+   findings in place. Not a second design: one call, two skins, as
+   everywhere else on this console. */
+let piChecksOpen = false;
+
+/* THE DUPLICATE FINDING, and the comparison behind it.
+
+   The old banner asked the only question that matters — did that
+   delivery really arrive twice — in three paragraphs at the top of the
+   screen, permanently, above everything else, with a button that voided
+   without ever showing you the two bills. The question survives; it has
+   moved to where it can actually be answered, which is beside the two
+   bills' lines. Nothing here voids on its own: a shop can genuinely buy
+   the same thing twice in one day, and only the person who was at the
+   gate knows. */
+function renderPurchaseInvoiceDuplicates(groups){
+  if(!groups || !groups.length) return '';
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  return groups.map(g=>{
+    const key = g.map(pi=> pi.id).join(',');
+    const open = piDupOpen === key;
+    const total = purchaseInvoiceTotal(g[0]);
+    const names = g.map(pi=> esc(purchaseInvoiceNumberLabel(pi))
+      + (((pi.payments||[]).length || (Number(pi.amountPaid)||0) > 0.5) ? ' (paid on)' : '')).join(' and ');
+    const one = `<div class="ow-ck ow-sev">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h11a2 2 0 0 1 2 2v11"/><rect x="3" y="3" width="12" height="12" rx="1.6"/><path d="M6 7h6M6 11h4"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t" title="${esc(g[0].supplierName || 'Supplier')}">One delivery billed ${g.length === 2 ? 'twice' : g.length + ' times'} &mdash; ${esc(g[0].supplierName || 'Supplier')}, ${esc(fmtShortDate(g[0].date) || g[0].date || 'no date')}</p>
+        <p class="ow-ck-w">${names} carry the same ${(g[0].items||[]).length} line${(g[0].items||[]).length===1?'':'s'}, same day, same prices.</p>
+      </div>
+      <span class="ow-ck-v ow-bad">${money(total * (g.length - 1))}<span class="ow-ck-u">owed ${g.length === 2 ? 'twice' : 'over'}</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pidup-open="${esc(key)}" aria-expanded="${open}">${open ? 'Close' : 'Compare them'}</button></span>
+    </div>`;
+    if(!open) return one;
+    const cols = g.map(pi=>{
+      const paid = (pi.payments||[]).length || (Number(pi.amountPaid)||0) > 0.5;
+      return `<div class="ow-ck-cmp-c">
+        <p class="ow-ck-t">${esc(purchaseInvoiceNumberLabel(pi))}${paid ? ' <span class="ow-cp ow-warn">money paid on it</span>' : ''}</p>
+        <p class="ow-ck-w">${esc(pi.date || 'no date')} &middot; ${money(purchaseInvoiceTotal(pi))}</p>
+        <table class="ow-pi-bl"><tbody class="ow-pi-tb">${(pi.items||[]).map(it=>`<tr class="ow-pi-tr">
+          <td class="ow-pi-td ow-nm" title="${esc(it.productName||'')}">${esc(it.productName||'')}</td>
+          <td class="ow-pi-td ow-q2">${esc(String(Number(it.qty)||0))}</td>
+          <td class="ow-pi-td ow-w">${money((Number(it.qty)||0)*(Number(it.price)||0))}</td>
+        </tr>`).join('')}</tbody></table>
       </div>`;
-    }).join('')}
+    }).join('');
+    return one + `<div class="ow-ck-x">
+      <p class="ow-ck-q">Did that delivery really arrive twice?</p>
+      <p class="ow-ck-w" style="white-space:normal">If it did, leave these alone. If it did not, void the extra bill and the shop stops owing for goods it never received &mdash; but voiding does <b>not</b> take the goods back off the shelf. If the same delivery was entered twice the stock was added twice too: count that product and put it right, and the stock record warning on Inventory will offer to match its cost record.</p>
+      <div class="ow-ck-cmp">${cols}</div>
+      <div class="ow-q-a" style="margin-top:var(--ow-sp-10)">
+        <button type="button" class="btn btn-ghost ow-sm" data-pidup="${esc(key)}">Void the ${g.length - 1} extra</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPurchaseInvoiceChecks(found){
+  const wrap = document.getElementById('piCheckWrap');
+  if(!wrap) return;
+  if(!found){ wrap.innerHTML = ''; return; }
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  const promised = (Number(data.settings && data.settings.piCheckNote) || 0);
+  /* THE BOUNDARY OF THE CHECK, stated where the check ends. Age is
+     Creditors' question and is answered there; saying so here is what
+     stops the two screens ranking the same money differently. */
+  const older = found.floor === null
+    ? 'The delivery check needs the link between a bill and the shelf, which this shop has not recorded yet, so it is not run.'
+    : `Bills dated before ${esc(fmtShortDate(found.floor) || found.floor)} are not asked whether anything arrived: the link between a bill and the shelf was not kept then, and a finding nobody can check is worse than none.`;
+  const foot = `<p class="ow-ck-el">Age is not checked here &mdash; who to pay first is <button type="button" class="ow-link" data-pi-goto="analytics-creditors">Creditors</button>&rsquo; question, and one screen owns it so the two can never disagree. Nor is whether the goods that came were the ones ordered, or whether a price you have <b>never</b> paid before is a fair one: for that, <button type="button" class="ow-link" data-pi-goto="compare">Compare prices</button>. ${older}</p>`;
+
+  if(!found.count){
+    wrap.innerHTML = `<div class="ow-pan" style="margin-bottom:var(--ow-sp-16)">
+      <div class="ow-pan-h"><span class="ow-pan-t">Nothing to look at</span><span class="ow-pan-n">${found.checked} checked</span></div>
+      <div class="ow-ck-ok">
+        <svg class="ow-ck-ok-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+        <p class="ow-ck-ok-t">${found.checked ? `<b>All ${found.checked} bill${found.checked===1?'':'s'} in this range check out.</b> Nothing billed twice, no line above a price you have paid that supplier before, every bill has a delivery behind it, and nothing paid beyond what was asked.` : 'There is nothing in this range to check.'}</p>
+      </div>
+      ${foot}
+    </div>`;
+    piWireChecks(wrap);
+    return;
+  }
+
+  const rows = [];
+  rows.push(renderPurchaseInvoiceDuplicates(found.dups));
+  found.overpaid.forEach(pi=>{
+    const over = purchaseInvoiceOverpaid(pi);
+    rows.push(`<div class="ow-ck ow-sev">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.01"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t">You paid more than you were billed</p>
+        <p class="ow-ck-w" title="${esc(pi.supplierName||'')}"><b>${esc(purchaseInvoiceNumberLabel(pi))}</b> &middot; ${esc(pi.supplierName || 'Unknown supplier')} &middot; <b>${money(Number(pi.amountPaid)||0)}</b> left the drawer against a <b>${money(purchaseInvoiceTotal(pi))}</b> bill on ${esc(fmtShortDate(pi.date) || pi.date || 'no date')}</p>
+      </div>
+      <span class="ow-ck-v ow-bad">${money(over)}<span class="ow-ck-u">overpaid</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${pi.id}">Open the bill</button></span>
+    </div>`);
+  });
+  found.unreceived.forEach(pi=>{
+    rows.push(`<div class="ow-ck">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M9 15l6-6M9 9l6 6"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t">A bill with nothing received against it</p>
+        <p class="ow-ck-w" title="${esc(pi.supplierName||'')}"><b>${esc(purchaseInvoiceNumberLabel(pi))}</b> &middot; ${esc(pi.supplierName || 'Unknown supplier')} &middot; raised on ${esc(fmtShortDate(pi.date) || pi.date || 'no date')}, and nothing on the stock record was added for it</p>
+      </div>
+      <span class="ow-ck-v">${money(purchaseInvoiceTotal(pi))}<span class="ow-ck-u">owed for goods not on the shelf</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${pi.id}">Open the bill</button></span>
+    </div>`);
+  });
+  found.rises.forEach(r=>{
+    const first = r.lines[0];
+    const ev = r.lines.slice(0,2).map(l=> `${esc(itemDisplayName(l.item) || l.item.productName || 'a line')} at <b>${money(l.price)}</b> against <b>${money(l.best.price)}</b> on ${esc(fmtShortDate(l.best.date) || l.best.date)}`).join(', ');
+    rows.push(`<div class="ow-ck">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V7"/><path d="M6 12l6-6 6 6"/><path d="M4 4h16"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t">${r.lines.length === 1 ? 'A line' : r.lines.length + ' lines'} priced above anything you have paid before</p>
+        <p class="ow-ck-w" title="${esc(r.pi.supplierName||'')}"><b>${esc(purchaseInvoiceNumberLabel(r.pi))}</b> &middot; ${esc(r.pi.supplierName || 'Unknown supplier')} &middot; ${ev}${r.lines.length > 2 ? ` and ${r.lines.length - 2} more` : ''}</p>
+      </div>
+      <span class="ow-ck-v">${money(r.extra)}<span class="ow-ck-u">over on this bill</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${r.pi.id}">Open the bill</button></span>
+    </div>`);
+    void first;
+  });
+
+  wrap.innerHTML = `<div class="ow-pan ow-ck-pan${piChecksOpen?' ow-ck-on':''}" style="margin-bottom:var(--ow-sp-16)">
+    <div class="ow-pan-h ow-ck-h">
+      <span class="ow-pan-t">What needs your eye</span>
+      <span class="ow-pan-n">${found.count} of ${found.checked} bill${found.checked===1?'':'s'} &middot; ${money(found.money)}</span>
+    </div>
+    <button type="button" class="ow-ck-sum" data-ck-more aria-expanded="${piChecksOpen}">
+      <span class="ow-ck-sum-b">
+        <span class="ow-ck-sum-t">${found.count} bill${found.count===1?'':'s'} need${found.count===1?'s':''} your eye</span>
+        <span class="ow-ck-sum-w">${money(found.money)} between them &mdash; ${piChecksOpen ? 'tap to fold them away' : 'tap to work through them'}</span>
+      </span>
+      <svg class="ow-ck-sum-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    ${rows.join('')}
+    ${foot}
   </div>`;
-  wrap.querySelectorAll('[data-pidup]').forEach(btn=>
-    btn.addEventListener('click', ()=> voidDuplicatePurchaseInvoices(btn.dataset.pidup)));
+  void promised;
+  piWireChecks(wrap);
+}
+function piWireChecks(wrap){
+  wrap.querySelectorAll('[data-ck-more]').forEach(b=> b.addEventListener('click', ()=>{
+    piChecksOpen = !piChecksOpen;
+    renderPurchaseInvoices(piSearchValue());
+  }));
+  wrap.querySelectorAll('[data-pidup-open]').forEach(b=> b.addEventListener('click', ()=>{
+    piDupOpen = piDupOpen === b.dataset.pidupOpen ? null : b.dataset.pidupOpen;
+    renderPurchaseInvoices(piSearchValue());
+  }));
+  wrap.querySelectorAll('[data-pidup]').forEach(b=>
+    b.addEventListener('click', ()=> voidDuplicatePurchaseInvoices(b.dataset.pidup)));
+  wrap.querySelectorAll('[data-pi-open]').forEach(b=> b.addEventListener('click', ()=>{
+    piOpenId = Number(b.dataset.piOpen);
+    renderPurchaseInvoices(piSearchValue());
+    const row = document.querySelector(`#purchaseInvoicesWrap [data-row="${piOpenId}"]`);
+    if(row && row.scrollIntoView) row.scrollIntoView({block:'nearest'});
+  }));
+  wrap.querySelectorAll('[data-pi-goto]').forEach(b=>
+    b.addEventListener('click', ()=> goToTab(b.dataset.piGoto)));
 }
 /* Voids all but the FIRST of a group -- the one raised first is the one
    the delivery actually produced. Refuses to void a bill with money
@@ -32432,197 +32986,351 @@ function voidDuplicatePurchaseInvoices(idsRaw){
   refreshNavBadges();
   toast(`${drop.length} duplicate bill${drop.length===1?'':'s'} voided — check that product's stock count next`, 7000);
 }
+/* WHICH BILL IS OPEN, and which of the two kinds is being shown.
+
+   The split is the point of the segment: goods bought against a
+   customer's order and goods bought for the shelf are different
+   animals, and the old screen's "Paid / collected" column tried to be
+   about both at once — how much of the CLIENT's order had been
+   collected on one row, how much had been PAID to the supplier on the
+   next. Its own code comment admitted three rows in four read "0% paid,
+   which is not collection". One column cannot mean two things. */
+let piOpenId = null;
+let piKind = 'all';
+function piSearchValue(){
+  const box = document.getElementById('pi_doc_search');
+  return box ? box.value : '';
+}
+function piIsForOrder(pi){ return pi.quoteId != null; }
+
 function renderPurchaseInvoices(filter=''){
-  renderPurchaseInvoiceDuplicates();
   const wrap = document.getElementById('purchaseInvoicesWrap');
+  if(!wrap) return;
   const tokens = searchTokens(filter);
   const {from, to} = piDocGetDateRange();
   const hideVoided = document.getElementById('pi_doc_hide_voided').checked;
-  let invoices = data.purchaseInvoices.filter(pi=>{
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+
+  /* THE RANGE, before anybody searches or picks a kind. The strip, the
+     checks and the rail are all drawn from this: a position that
+     shrinks because somebody left a filter on is a position nobody can
+     trust, and this screen's figures are the shop's purchasing record.
+     `invoices` below is what the LIST shows, and the two are kept
+     deliberately apart. */
+  let ranged = data.purchaseInvoices.filter(pi=>{
     const d = pi.date || '';
     if(from && d < from) return false;
     if(to && d > to) return false;
     return true;
   });
-  if(hideVoided) invoices = invoices.filter(pi=>!pi.voided);
+  if(hideVoided) ranged = ranged.filter(pi=>!pi.voided);
+  const found = purchaseInvoiceFindings(ranged);
+  /* NO STRIP OF ZEROS, AND NO CHECK ON NOTHING. Four tiles reading 0
+     fills an empty range with figures that mean nothing and makes a
+     quiet month look like a broken screen; a band announcing that it
+     found no fault in no bills is the screen agreeing with itself out
+     loud. When the range is empty, one sentence in the list below is
+     the whole state, and the rail keeps only what it can still say. */
+  const bare = ranged.length === 0;
+  renderPurchaseInvoiceStrip(bare ? null : ranged, found);
+  renderPurchaseInvoiceChecks(bare ? null : found);
+  renderPurchaseInvoiceRail(bare ? null : ranged, found);
+
+  let invoices = ranged;
+  if(piKind !== 'all') invoices = invoices.filter(pi=> piIsForOrder(pi) === (piKind === 'order'));
   if(tokens.length){
     invoices = invoices.filter(pi=>{
       const haystack = [pi.supplierName||'', purchaseInvoiceNumberLabel(pi), pi.customerName||'', (pi.quoteId?'':'stock restock'), ...(pi.items||[]).map(it=>it.productName||'')].join(' ').toLowerCase();
       return matchesAllTokens(haystack, tokens);
     });
   }
+  /* Newest first, always. The old screen had four clickable column
+     headings, which is a second ordering mechanism that disappears
+     entirely on the phone, where the headings do — and on a register of
+     documents the only order anybody wants is the one the documents
+     arrived in. Finding a particular bill is what the search box is
+     for. */
   invoices = invoices.slice().sort((a,b)=>{
-    const key = PI_SORT_STATE.key;
-    let av, bv;
-    if(key==='date'){ av = a.date||''; bv = b.date||''; }
-    else if(key==='doc'){ av = purchaseInvoiceNumberLabel(a); bv = purchaseInvoiceNumberLabel(b); }
-    else if(key==='supplier'){ av = a.supplierName||''; bv = b.supplierName||''; }
-    else if(key==='total'){ av = purchaseInvoiceTotal(a); bv = purchaseInvoiceTotal(b); }
-    else { av = a.date||''; bv = b.date||''; }
-    if(typeof av==='number' && typeof bv==='number') return (av-bv)*PI_SORT_STATE.dir;
-    return String(av).localeCompare(String(bv)) * PI_SORT_STATE.dir;
+    const d = String(b.date||'').localeCompare(String(a.date||''));
+    return d !== 0 ? d : (b.id||0) - (a.id||0);
   });
   piLastRows = invoices;
 
-  if(invoices.length===0){
-    wrap.innerHTML = data.purchaseInvoices.length
-      ? '<div class="empty">No purchase invoices in this range.</div>'
-      : '<div class="empty">No purchase invoices yet. Mark a completed quote as invoiced in Order tracking — one purchase invoice is created per supplier used on it.</div>';
-    return;
-  }
-
-  const sortArrow = (key)=> PI_SORT_STATE.key===key ? `<span class="sort-arrow">${PI_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
-  /* Totalled over the whole range before any of it is drawn -- see the
-     same note on renderInvoices. A voided row still shows its own
-     figures (struck through), but must not count towards the totals: a
-     cancelled purchase isn't money owed, and the Creditors list already
-     excludes them, so counting them here made the two disagree. Only
-     reachable with "Hide voided" unchecked, which is exactly when
-     someone is reviewing what was cancelled. */
+  /* Totalled over everything the filters matched, BEFORE the page is
+     cut. A voided bill still shows its own figures, struck through, and
+     counts towards nothing: a cancelled purchase is not money owed, and
+     Creditors already excludes them, so counting them here made the two
+     disagree. */
   let totalAmt=0, totalPaid=0, totalDue=0;
   invoices.forEach(pi=>{
     if(pi.voided) return;
     const total = purchaseInvoiceTotal(pi);
     const paid = Number(pi.amountPaid)||0;
     /* Clamped for the same reason the customer side is: an overpaid
-       supplier invoice is not money owed back, and purchaseInvoiceBalanceDue()
-       -- which Creditors sums -- already clamps. */
+       supplier bill is not money owed back, and purchaseInvoiceBalanceDue()
+       — which Creditors sums — already clamps. What was paid over is a
+       finding in the band above, not a negative balance here. */
     totalAmt += total; totalPaid += paid; totalDue += Math.max(0, total - paid);
   });
   const shown = listPageSlice('purchaseInvoices', invoices);
   const cut = shown.length < invoices.length;
   const totalLabel = cut ? `Total (all ${invoices.length})` : 'Total';
-  const selectAllLabel = cut ? `Select all ${shown.length} shown` : 'Select all';
-  const cardsArr = [];
-  const rowsHtml = shown.map((pi,i)=>{
-    const total = purchaseInvoiceTotal(pi);
-    const paid = Number(pi.amountPaid)||0;
-    const due = total - paid;
-    const status = purchaseInvoicePaymentStatusLabel(pi);
-    const collectionPct = purchaseInvoiceCollectionPct(pi);
-    const isRestock = collectionPct===null;
-    const barPct = isRestock ? purchaseInvoiceSupplierPaidPct(pi) : collectionPct;
-    // Named the CUSTOMER, not the order, and was not clickable -- and when
-    // customerName happened to be empty it rendered nothing at all despite
-    // the invoice being linked to a real order. Now it names the order and
-    // goes there.
-    const linkedOrder = orderForPurchaseInvoice(pi);
-    const fromOrderLabel = linkedOrder
-      ? `<button type="button" class="lc-link" data-order-pi="${pi.id}">${esc(invoiceNumberLabel(linkedOrder))} <span class="lc-sup">${esc(pi.customerName || linkedOrder.client && linkedOrder.client.name || 'order')}</span></button>`
-      : (pi.quoteId ? '' : '<span class="lc-none">Stock restock</span>');
-    const actionsHtml = `<button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
-      ${(!pi.quoteId && !pi.voided) ? `<button type="button" class="pc-icon-btn pi-doc-edit" data-id="${pi.id}" title="Correct this bill (money only — no stock moves)"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z"/></svg></button>` : ''}
-      <button type="button" class="pc-icon-btn pi-doc-pay" data-id="${pi.id}" title="Record payment to supplier"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-      <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${
-        /* THE BUTTON SAYS WHAT IT WILL ACTUALLY DO. On a delivery bill
-           it is not a flag any more: it takes the goods back off the
-           shelf and puts the order back to waiting. A tooltip still
-           reading "Void purchase invoice" would be the one place the
-           owner could learn otherwise, saying nothing. */
-        pi.deliveryUndone ? 'This delivery was undone — receive the order again from What to buy when it really arrives'
-          : pi.voided ? 'Unvoid purchase invoice'
-          : pi.buyOrderId ? 'Undo this delivery — the goods come back off the shelf and nothing is owed'
-          : 'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
-    const progressHtml = `<div class="pi-progress-bar ${isRestock?'restock':'collected'}" title="${isRestock ? `${Math.round(barPct)}% paid to supplier so far` : `${Math.round(barPct)}% of this order collected from the client so far`}">
-        <div class="pi-progress-fill" style="width:${barPct}%;"></div>
-      </div>
-      <div class="pi-progress-label">${Math.round(barPct)}% ${isRestock?'paid':'collected'}</div>`;
 
-    cardsArr.push(`<div class="pi-card ${pi.voided?'pi-card-voided':''}" data-id="${pi.id}">
-      <div class="pi-card-top">
-        <div class="pi-card-title">
-          <input type="checkbox" class="sq-card-check pi-doc-check" data-id="${pi.id}">
-          <span class="an-rank">${i+1}</span>
-          <button type="button" class="inv-doc-link pi-doc-view" data-id="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
-        </div>
-        <div class="inv-row-actions">${actionsHtml}</div>
-      </div>
-      <div class="pi-card-meta">
-        <div>${esc(pi.date || '')} · ${esc(pi.supplierName || 'Unknown supplier')}</div>
-        ${fromOrderLabel ? `<div>${fromOrderLabel}</div>` : ''}
-      </div>
-      <div class="sc-stats">
-        <div class="sc-stat"><b>${fmtUGX(Math.round(total))}</b><span>Total</span></div>
-        <div class="sc-stat"><b>${fmtUGX(Math.round(paid))}</b><span>Paid</span></div>
-        <div class="sc-stat"><b>${fmtUGX(Math.round(due))}</b><span>Balance</span></div>
-      </div>
-      <div class="pi-card-foot">
-        <span class="inv-status ${status.cls}">${esc(status.label)}${pi.voided?' (voided)':''}</span>
-        <div class="pi-progress-cell">${progressHtml}</div>
-      </div>
-    </div>`);
+  const kinds = [
+    {k:'all',   label:'All',            n:ranged.length},
+    {k:'order', label:'For an order',   n:ranged.filter(piIsForOrder).length},
+    {k:'shelf', label:'For the shelf',  n:ranged.filter(pi=> !piIsForOrder(pi)).length},
+  ];
+  const seg = `<div class="ow-seg" id="pi_kind" role="tablist" aria-label="Which bills are shown">${
+    kinds.map(x=> { const on = piKind === x.k;
+      return `<button type="button" class="${on ? 'ow-seg-b ow-on' : 'ow-seg-b'}" role="tab" aria-selected="${on}" data-pikind="${x.k}">${x.label}<span class="ow-seg-n">${x.n}</span></button>`;
+    }).join('')}</div>`;
 
-    return `<tr data-id="${pi.id}" class="${pi.voided?'inv-row-voided':''}">
-      <td><input type="checkbox" class="sq-card-check pi-doc-check" data-id="${pi.id}"></td>
-      <td class="an-rank">${i+1}</td>
-      <td>${esc(pi.date || '')}</td>
-      <td><button type="button" class="inv-doc-link pi-doc-view" data-id="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button></td>
-      <td>${esc(pi.supplierName || 'Unknown supplier')}</td>
-      <td>${fromOrderLabel}</td>
-      <td class="price">${fmtUGX(Math.round(total))}</td>
-      <td class="price">${fmtUGX(Math.round(paid))}</td>
-      <td class="price">${fmtUGX(Math.round(due))}</td>
-      <td><span class="inv-status ${status.cls}">${esc(status.label)}${pi.voided?' (voided)':''}</span></td>
-      <td class="pi-progress-cell">${progressHtml}</td>
-      <td>
-        <div class="inv-row-actions">${actionsHtml}</div>
-      </td>
-    </tr>`;
-  }).join('');
+  const rowsHtml = shown.map((pi)=> piRowHTML(pi, found)).join('');
 
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table>
-    <thead><tr>
-      <th><input type="checkbox" id="pi_doc_select_all_th"></th>
-      <th>No.</th>
-      <th class="sortable${PI_SORT_STATE.key==='date'?' sorted':''}" data-key="date">Date${sortArrow('date')}</th>
-      <th class="sortable${PI_SORT_STATE.key==='doc'?' sorted':''}" data-key="doc">Doc No.${sortArrow('doc')}</th>
-      <th class="sortable${PI_SORT_STATE.key==='supplier'?' sorted':''}" data-key="supplier">Supplier${sortArrow('supplier')}</th>
-      <th>From order</th>
-      <th class="sortable${PI_SORT_STATE.key==='total'?' sorted':''}" data-key="total">Total Amt${sortArrow('total')}</th>
-      <th>Paid to supplier</th>
-      <th>Balance due</th>
-      <th>Payment status</th>
-      <!-- Two metrics share this column on purpose (see .pi-progress-bar):
-           an order-linked invoice shows how much of that order has been
-           collected from the client, a restock how much has been paid to
-           the supplier. The header said only "Collection progress", which
-           on a shop buying mostly for stock was wrong for most rows --
-           three of four here read "0% paid", which is not collection.
-           Each row already says which of the two it is. -->
-      <th>Paid / collected</th>
-      <th></th>
-    </tr></thead>
-    <tbody>${rowsHtml}</tbody>
-    <tfoot><tr class="inv-total-row">
-      <td></td><td></td><td></td><td></td><td></td>
-      <td class="inv-total-label">${totalLabel}</td>
-      <td class="price">${fmtUGX(Math.round(totalAmt))}</td>
-      <td class="price">${fmtUGX(Math.round(totalPaid))}</td>
-      <td class="price">${fmtUGX(Math.round(totalDue))}</td>
-      <td></td><td></td><td></td>
-    </tr></tfoot>
-  </table></div>
-  ${listMoreButtonHTML('purchaseInvoices', invoices.length, 'bills')}
-  <div class="pi-cards">
-    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="pi_doc_select_all_cards"> ${selectAllLabel}</label>
-    ${cardsArr.join('')}
-    <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>${totalLabel}</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalPaid))}</b><span>Paid</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDue))}</b><span>Balance</span></div>
-    </div>
+  const head = `<div class="ow-pi-h">
+    <span class="ow-pi-h-c"></span><span class="ow-pi-h-c">Supplier and bill</span>
+    <span class="ow-pi-h-c">What it was for</span><span class="ow-pi-h-c">Dated</span>
+    <span class="ow-pi-h-c ow-pi-h-r">Billed</span>
   </div>`;
 
-  wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
-    const key = th.dataset.key;
-    if(PI_SORT_STATE.key===key) PI_SORT_STATE.dir *= -1; else { PI_SORT_STATE.key = key; PI_SORT_STATE.dir = -1; }
-    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  /* Named rather than dropped, and it says the figures above do not
+     move: a smaller total beside a familiar name otherwise reads as the
+     book having changed rather than the filter. */
+  const hidden = ranged.filter(pi=> !pi.voided).length - invoices.filter(pi=> !pi.voided).length;
+  const hiddenSum = ranged.reduce((s,pi)=> s + (pi.voided?0:purchaseInvoiceTotal(pi)), 0) - totalAmt;
+  const foot = invoices.length && hidden > 0
+    ? `<p class="ow-mini">${hidden} more bill${hidden===1?'':'s'} in this range, <b>${money(hiddenSum)}</b> between them, ${hidden===1?'is':'are'} not listed${
+        tokens.length ? ' under this search' : ''}${piKind!=='all' ? ' or this kind' : ''}. The figures above the list do not move for a search or a kind &mdash; a position that shrinks because somebody left a filter on is a position nobody can trust.</p>`
+    : '';
+
+  const empty = data.purchaseInvoices.length === 0
+    ? `<div class="ow-empty"><b>No supplier bill has been raised yet.</b> Nothing here is typed in. A bill appears when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order.</div>`
+    : tokens.length
+      ? `<div class="ow-empty"><b>No bill matches &ldquo;${esc(filter)}&rdquo;.</b> Search a doc number, a supplier, or something on the lines.</div>`
+      : piKind !== 'all'
+        ? `<div class="ow-empty"><b>Nothing in this range was bought ${piKind==='order' ? 'against an order' : 'for the shelf'}.</b> Tap <b>All</b> to see every bill in the range.</div>`
+        : (()=>{
+            /* NAMES THE NEAREST ONE. "No purchase invoices in this range"
+               and nothing else leaves you unable to tell a wrong range
+               from an empty book. */
+            const dated = data.purchaseInvoices.filter(pi=> pi.date).slice()
+              .sort((a,b)=> String(b.date).localeCompare(String(a.date)));
+            const near = dated[0];
+            return `<div class="ow-empty"><b>No bills in this range.</b> ${data.purchaseInvoices.length} bill${data.purchaseInvoices.length===1?'':'s'} on file ${data.purchaseInvoices.length===1?'is':'are'} outside it${
+              near ? ` &mdash; the most recent is <b>${esc(purchaseInvoiceNumberLabel(near))}</b> from ${esc(near.supplierName || 'a supplier')} on ${esc(fmtShortDate(near.date) || near.date)}` : ''}. Widen the date range above.</div>`;
+          })();
+
+  wrap.innerHTML = `<div class="ow-pan ow-pi">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">The bills</span>
+      ${seg}
+      <span class="ow-pan-n">${invoices.length ? `${invoices.length} &middot; ${money(totalAmt)} &middot; newest first` : ''}</span>
+    </div>
+    ${invoices.length ? head + rowsHtml : empty}
+    ${invoices.length ? `<div class="ow-sr"><span class="ow-sr-k">${totalLabel}</span><span class="ow-sr-v">${money(totalAmt)}<span class="ow-pi-u">billed</span></span><span class="ow-sr-v">${money(totalPaid)}<span class="ow-pi-u">paid</span></span><span class="ow-sr-v">${money(totalDue)}<span class="ow-pi-u">still owed</span></span></div>` : ''}
+    ${foot}
+  </div>
+  ${listMoreButtonHTML('purchaseInvoices', invoices.length, 'bills')}`;
+
+  piWireRegister(wrap);
+}
+
+/* ONE CALL, TWO SKINS. The 44px desk row and the phone card are emitted
+   together, so neither can drift from the other — the guarantee .ow-q
+   was built to give, and the exact drift the old screen had: its table
+   and its card wall numbered the same bills differently. */
+function piRowHTML(pi, found){
+  const open = pi.id === piOpenId;
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  const total = purchaseInvoiceTotal(pi);
+  const paid = Number(pi.amountPaid)||0;
+  const due = Math.max(0, total - paid);
+  const over = purchaseInvoiceOverpaid(pi);
+  const lines = (pi.items||[]).length;
+  const order = orderForPurchaseInvoice(pi);
+  const flag = found.ids.get(pi.id);
+
+  /* THE MARK IS EMPTY ON A BILL WITH NOTHING WRONG. A device that marks
+     every row marks nothing — six card classes on this app once carried
+     the same red rail and it signalled precisely nothing. So where
+     there is no finding the track says what the bill was FOR, which is
+     the split made visible on every row. */
+  const mk = flag
+    ? `<span class="ow-pi-mk ow-${flag.kind}" title="${esc(flag.label + ' — ' + flag.why)}"><b class="ow-pi-mk-t">${esc(flag.label)}</b>${esc(flag.why)}</span>`
+    : order
+      ? `<span class="ow-pi-mk ow-ord" title="${esc(invoiceNumberLabel(order))} &middot; ${esc(pi.customerName || (order.client && order.client.name) || '')}"><b class="ow-pi-mk-t">${esc(invoiceNumberLabel(order))}</b>${esc(pi.customerName || (order.client && order.client.name) || 'an order')}</span>`
+      : pi.quoteId != null
+        ? '<span class="ow-pi-mk ow-none"><b class="ow-pi-mk-t">An order</b>no longer on file</span>'
+        : '<span class="ow-pi-mk ow-none"><b class="ow-pi-mk-t">For the shelf</b>a restock, not an order</span>';
+
+  const basis = pi.voided ? 'voided'
+    : over > 0 ? `${money(paid)} paid`
+    : paid <= 0.5 ? 'nothing paid yet'
+    : due <= 0.5 ? 'settled'
+    : `${money(due)} still owed`;
+
+  const days = pi.date ? daysSinceDate(pi.date) : -1;
+  const ago = days < 0 ? 'no date on record' : days === 0 ? 'today' : `${agingDaysLabel(days)} ago`;
+  const title = `${pi.supplierName || 'Unknown supplier'} · ${purchaseInvoiceNumberLabel(pi)}`;
+  const meta = [pi.date ? fmtShortDate(pi.date) : 'no date',
+    `${lines} line${lines===1?'':'s'}`,
+    flag ? flag.label : (order ? 'for ' + invoiceNumberLabel(order) : 'for the shelf'),
+  ].join(' · ');
+
+  return `<div class="ow-q${open?' ow-open':''}${pi.voided?' ow-void':''}" data-row="${pi.id}">
+    <button type="button" class="ow-q-r" data-piopen="${pi.id}" aria-expanded="${open}">
+      <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      <span class="ow-q-t" title="${esc(title)}"><span class="ow-q-who">${esc(pi.supplierName || 'Unknown supplier')}</span><span class="ow-q-sep">&middot;</span><span class="ow-pi-doc">${esc(purchaseInvoiceNumberLabel(pi))}</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${lines} line${lines===1?'':'s'}</span></span>
+      ${mk}
+      <span class="ow-pi-dt">${esc(pi.date ? fmtShortDate(pi.date) : '&mdash;')}<span class="ow-pi-dt-s">${esc(ago)}</span></span>
+      <span class="ow-q-v"><span class="ow-q-f">${money(total)}</span><span class="ow-q-b">${esc(basis)}</span></span>
+    </button>
+    <button type="button" class="ow-q-card" data-piopen="${pi.id}" aria-expanded="${open}">
+      <div class="ow-q-cm">${flag ? `<span class="ow-cp ow-${flag.kind}">${esc(flag.label)}</span>` : ''}
+        <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <p class="ow-q-ct">${esc(pi.supplierName || 'Unknown supplier')}</p>
+      <span class="ow-q-cv">${money(total)}<span class="ow-q-b">${esc(basis)}</span></span>
+      <p class="ow-q-note">${esc(purchaseInvoiceNumberLabel(pi))} &middot; ${esc(meta)}</p>
+    </button>
+    ${open ? piOpenBodyHTML(pi, found) : ''}
+  </div>`;
+}
+
+/* THE BILL ITSELF. On the old screen the only way to read what was on a
+   bill was to press Print and open a print dialog — on the screen whose
+   entire subject is supplier bills. Everything else wrong with it grew
+   out of that. */
+function piOpenBodyHTML(pi){
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  const total = purchaseInvoiceTotal(pi);
+  const paid = Number(pi.amountPaid)||0;
+  const due = Math.max(0, total - paid);
+  const over = purchaseInvoiceOverpaid(pi);
+  const linkedOrder = orderForPurchaseInvoice(pi);
+  const checks = purchaseInvoiceLineChecks(pi);
+  const rises = checks.filter(l=> l.up);
+  const receipt = purchaseInvoiceReceiptState(pi, piReceiptStampFloor());
+
+  const rows = checks.map(l=>{
+    const name = itemDisplayName(l.item) || l.item.productName || '';
+    const unit = l.item.unit ? ` ${l.item.unit}` : '';
+    const cmp = !l.best
+      ? '<td class="ow-pi-td ow-bf"><i class="ow-pi-when">first time</i></td><td class="ow-pi-td ow-bf">&mdash;</td>'
+      : `<td class="ow-pi-td ow-bf">${money(l.best.price)} <i class="ow-pi-when">&middot; ${esc(fmtShortDate(l.best.date) || l.best.date)}</i></td>`
+        + (l.up ? `<td class="ow-pi-td ow-up">+${money(l.each)} each<span class="ow-pi-sub">+${money(l.all)} on this line</span></td>`
+          : l.down ? `<td class="ow-pi-td ow-dn">&minus;${money(-l.each)} each<span class="ow-pi-sub">&minus;${money(-l.all)} on this line</span></td>`
+            : '<td class="ow-pi-td ow-bf">&mdash;</td>');
+    return `<tr class="ow-pi-tr${l.up?' ow-hi':''}">
+      <td class="ow-pi-td ow-nm" title="${esc(name)}">${esc(name)}</td>
+      <td class="ow-pi-td ow-q2">${esc(String(l.qty))}${esc(unit)}</td>
+      <td class="ow-pi-td">${money(l.price)}</td>
+      ${cmp}
+      <td class="ow-pi-td ow-w">${money(l.line)}</td>
+    </tr>`;
+  }).join('');
+  const netAll = checks.reduce((s,l)=> s + (l.best ? l.all : 0), 0);
+  const units = checks.reduce((s,l)=> s + l.qty, 0);
+
+  /* WHAT THE COMPARISON IS AND IS NOT. It says you have not paid this
+     much before; it does not say you are being overcharged, because
+     nothing on file knows the market. Derived, never invented. */
+  const note = rises.length
+    ? `<div class="ow-q-un">${rises.length === 1 ? 'One price' : rises.length + ' prices'} you have never paid before.
+        That is <b>${money(rises.reduce((s,l)=>s+l.all,0))}</b> more on this bill than the same goods last cost you from
+        ${esc(pi.supplierName || 'this supplier')}. It is not a verdict &mdash; a line whose market has moved will read
+        this way too. Check it against <b>Compare prices</b> before you argue it${paid > 0.5 ? '' : ', and nothing has been paid on this bill yet'}.</div>`
+    : '';
+
+  const why = receipt === 'none'
+    ? `<b>Nothing on the stock record was added for this bill.</b> ${esc(pi.supplierName || 'The supplier')} billed you on ${esc(fmtShortDate(pi.date) || pi.date || 'no date')}, and no goods were counted in against it. Either the delivery was never recorded, or this bill is for goods that did not come.`
+    : linkedOrder
+      ? `Raised when <b>${esc(invoiceNumberLabel(linkedOrder))}</b> was marked invoiced, for ${esc(pi.customerName || (linkedOrder.client && linkedOrder.client.name) || 'that order')}. Those goods went out to the customer rather than onto the shelf.`
+      : pi.quoteId != null
+        ? 'Raised from an order that is no longer on file.'
+        : receipt === 'received'
+          ? `Bought for the shelf, and counted in against this bill on the stock record.`
+          : 'Bought for the shelf.';
+
+  const acts = [];
+  acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-print" data-id="${pi.id}">Print (A5)</button>`);
+  if(linkedOrder) acts.push(`<button type="button" class="btn btn-ghost ow-sm" data-order-pi="${pi.id}">Open ${esc(invoiceNumberLabel(linkedOrder))}</button>`);
+  if(!pi.quoteId && !pi.voided) acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-edit" data-id="${pi.id}" title="Correct this bill (money only — no stock moves)">Correct it</button>`);
+  acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-void" data-id="${pi.id}" title="${
+    /* THE BUTTON SAYS WHAT IT WILL ACTUALLY DO. On a delivery bill it is
+       not a flag any more: it takes the goods back off the shelf and
+       puts the order back to waiting. A tooltip still reading "Void
+       purchase invoice" would be the one place the owner could learn
+       otherwise, saying nothing. */
+    pi.deliveryUndone ? 'This delivery was undone — receive the order again from What to buy when it really arrives'
+      : pi.voided ? 'Unvoid purchase invoice'
+      : pi.buyOrderId ? 'Undo this delivery — the goods come back off the shelf and nothing is owed'
+      : 'Void purchase invoice'}">${
+    pi.voided ? 'Unvoid' : pi.buyOrderId ? 'Undo the delivery' : 'Void'}</button>`);
+  /* THE ACCENT, ONCE, and it is whatever this bill actually needs next:
+     money to pay, or a price to put right before it is paid. A settled
+     sound bill needs nothing, and gets no oxide. */
+  if(!pi.voided && due > 0.5){
+    acts.push(`<button type="button" class="btn btn-accent ow-sm pi-doc-pay" data-id="${pi.id}">Record payment</button>`);
+  } else if(!pi.voided && !pi.quoteId && rises.length){
+    acts.push(`<button type="button" class="btn btn-accent ow-sm pi-doc-edit" data-id="${pi.id}" title="Correct this bill (money only — no stock moves)">Correct these prices</button>`);
+  }
+
+  return `<div class="ow-q-x">
+    <p class="ow-q-why">${why}</p>
+    <table class="ow-pi-bl">
+      <caption class="ow-pi-cap">What they billed you, against what the same goods last cost you</caption>
+      <thead class="ow-pi-hd"><tr class="ow-pi-tr"><th class="ow-pi-th ow-l">Line</th><th class="ow-pi-th">Qty</th><th class="ow-pi-th">Unit price</th><th class="ow-pi-th">You last paid</th><th class="ow-pi-th">Difference</th><th class="ow-pi-th">Line total</th></tr></thead>
+      <tbody class="ow-pi-tb">${rows}</tbody>
+      <tfoot class="ow-pi-ft"><tr class="ow-pi-tr">
+        <td class="ow-pi-td ow-nm">${checks.length} line${checks.length===1?'':'s'} &middot; ${units} unit${units===1?'':'s'}</td>
+        <td class="ow-pi-td"></td><td class="ow-pi-td"></td><td class="ow-pi-td"></td>
+        <td class="ow-pi-td ${netAll > 0.5 ? 'ow-up' : netAll < -0.5 ? 'ow-dn' : 'ow-bf'}">${netAll > 0.5 ? '+' : netAll < -0.5 ? '&minus;' : ''}${netAll ? money(Math.abs(netAll)) : '&mdash;'}</td>
+        <td class="ow-pi-td ow-w">${money(total)}</td>
+      </tr></tfoot>
+    </table>
+    ${note}
+    <div class="ow-pi-bs">
+      <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">Billed</span><span class="ow-pi-bs-v">${money(total)}</span><span class="ow-pi-bs-s">${esc(fmtShortDate(pi.date) || pi.date || 'no date on record')}</span></div>
+      <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">Paid</span><span class="ow-pi-bs-v${over > 0 ? ' ow-bad' : ''}">${money(paid)}</span><span class="ow-pi-bs-s">${
+        (pi.payments||[]).length ? `${(pi.payments||[]).length} payment${(pi.payments||[]).length===1?'':'s'}` : paid > 0.5 ? 'recorded' : 'nothing yet'}</span></div>
+      <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">${over > 0 ? 'Paid over' : 'Still owed'}</span><span class="ow-pi-bs-v${over > 0 ? ' ow-bad' : ''}">${money(over > 0 ? over : due)}</span><span class="ow-pi-bs-s">${
+        over > 0 ? 'more than was asked for' : due > 0.5 ? 'Creditors decides who is paid first' : 'settled'}</span></div>
+    </div>
+    <div class="ow-pi-cf">
+      <p class="ow-pi-cf-n">${pi.voided
+        ? 'This bill is voided. It is kept and struck through rather than deleted &mdash; a cancelled document that vanishes cannot be explained to anybody later &mdash; and it counts towards nothing above.'
+        : pi.buyOrderId
+          ? 'This bill came off one of <b>your own orders to a supplier</b>. Undoing the delivery takes the goods back off the shelf and puts the order back to waiting; it is refused outright once money has been paid against it.'
+          : linkedOrder
+            ? `Un-invoicing <b>${esc(invoiceNumberLabel(linkedOrder))}</b> takes this bill away again. A payment here settles this bill only &mdash; to pay everything ${esc(pi.supplierName || 'this supplier')} is owed at once, use Creditors.`
+            : 'Correcting this bill changes what is owed and what the goods cost you. It moves nothing on or off the shelf, and it does not touch the price registry.'}</p>
+      <span class="ow-q-a">${acts.join('')}</span>
+    </div>
+  </div>`;
+}
+
+function piWireRegister(wrap){
+  wrap.querySelectorAll('[data-piopen]').forEach(b=> b.addEventListener('click', ()=>{
+    const id = Number(b.dataset.piopen);
+    piOpenId = piOpenId === id ? null : id;
+    renderPurchaseInvoices(piSearchValue());
+  }));
+  wrap.querySelectorAll('[data-pikind]').forEach(b=> b.addEventListener('click', ()=>{
+    piKind = b.dataset.pikind;
+    listPageExpanded.purchaseInvoices = false;
+    renderPurchaseInvoices(piSearchValue());
   }));
   wrap.querySelectorAll('.pi-doc-print').forEach(btn=>btn.addEventListener('click', ()=>{
-    const pi = data.purchaseInvoices.find(x=>x.id===Number(btn.dataset.id));
-    if(pi) printPurchaseInvoicesA5([pi]);
-  }));
-  wrap.querySelectorAll('.pi-doc-view').forEach(btn=>btn.addEventListener('click', ()=>{
     const pi = data.purchaseInvoices.find(x=>x.id===Number(btn.dataset.id));
     if(pi) printPurchaseInvoicesA5([pi]);
   }));
@@ -32640,14 +33348,135 @@ function renderPurchaseInvoices(filter=''){
   wrap.querySelectorAll('.pi-doc-void').forEach(btn=>btn.addEventListener('click', ()=>{
     togglePurchaseInvoiceVoided(Number(btn.dataset.id));
   }));
-  const selectAllTh = document.getElementById('pi_doc_select_all_th');
-  if(selectAllTh) selectAllTh.addEventListener('change', (e)=>{
-    document.querySelectorAll('.pi-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
+}
+
+/* WHAT THE RANGE BOUGHT. Four figures, and the fourth is a COUNT of
+   bills rather than a sum: four bills is a thing you can work through,
+   and the shillings behind four unrelated findings are not one sum
+   anybody can act on. It is the only crimson on the screen. */
+function renderPurchaseInvoiceStrip(ranged, found){
+  const strip = document.getElementById('pi_strip');
+  if(!strip) return;
+  if(!ranged){ strip.className = ''; strip.innerHTML = ''; return; }
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  const live = ranged.filter(pi=> !pi.voided);
+  let billed = 0, paid = 0, owed = 0, shelf = 0;
+  const suppliers = new Set();
+  live.forEach(pi=>{
+    const t = purchaseInvoiceTotal(pi);
+    billed += t;
+    paid += Number(pi.amountPaid)||0;
+    owed += purchaseInvoiceBalanceDue(pi);
+    if(pi.quoteId == null) shelf += t;
+    if(pi.supplierId != null) suppliers.add(String(pi.supplierId));
   });
-  const selectAllCards = document.getElementById('pi_doc_select_all_cards');
-  if(selectAllCards) selectAllCards.addEventListener('change', (e)=>{
-    document.querySelectorAll('.pi-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
+  const openBills = live.filter(pi=> purchaseInvoiceBalanceDue(pi) > 0.5).length;
+  strip.className = 'ow-strip ow-pi-s';
+  strip.innerHTML = `
+    <div class="ow-mt">
+      <p class="ow-mt-l">Billed to you</p>
+      <span class="ow-mt-v">${money(billed)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s"><b>${live.length}</b> bill${live.length===1?'':'s'} from <b>${suppliers.size}</b> supplier${suppliers.size===1?'':'s'} &middot; ${money(shelf)} of it for the shelf</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Paid out against them</p>
+      <span class="ow-mt-v">${money(paid)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s">What actually left the drawer for goods in this range${billed > 0 ? ` &middot; <b>${Math.round(paid/billed*100)}%</b> of what was billed` : ''}</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Still owed on them</p>
+      <span class="ow-mt-v">${money(owed)}<span class="ow-u">UGX</span></span>
+      <p class="ow-mt-s"><b>${openBills}</b> bill${openBills===1?'':'s'} open &middot; who to pay first is <button type="button" class="ow-link" data-pi-goto="analytics-creditors">Creditors</button>, and it counts every open bill, not just this range</p>
+    </div>
+    <div class="ow-mt${found.count ? ' ow-bad' : ''}">
+      <p class="ow-mt-l">Needs your eye</p>
+      <span class="ow-mt-v">${found.count}<span class="ow-u">bill${found.count===1?'':'s'}</span></span>
+      <p class="ow-mt-s">${found.count
+        ? `Billed twice, priced above what you have ever paid, nothing received, or overpaid &mdash; ${money(found.money)} between them`
+        : 'Nothing billed twice, nothing above a price you have paid before, nothing unreceived, nothing overpaid'}</p>
+    </div>`;
+  strip.querySelectorAll('[data-pi-goto]').forEach(b=>
+    b.addEventListener('click', ()=> goToTab(b.dataset.piGoto)));
+}
+
+/* THE RAIL CARRIES THE READING: what this screen is against what
+   Creditors is, what the check covers, what the range bought, and where
+   the money went. That last panel is the "what have I been spending"
+   answer the old screen could not give at all — it had no totals except
+   a footer row you reached by scrolling a table sideways. */
+function renderPurchaseInvoiceRail(ranged, found){
+  const rail = document.getElementById('piRailWrap');
+  if(!rail) return;
+  if(!ranged){
+    /* The two things still true when the range is empty. The figures
+       are not among them, and five rows of 0 would be an answer to a
+       question nobody asked. */
+    rail.innerHTML = `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">This screen, and Creditors</span></div>
+      <p class="ow-rl">Here the unit is <b>one bill</b>: what a supplier billed you on one day, and whether it is right. On <button type="button" class="ow-link" data-pi-goto="analytics-creditors">Creditors</button> the unit is <b>one supplier</b>: what you owe them altogether, and who to pay first.</p>
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Where a bill comes from</span></div>
+      <p class="ow-rl">Nothing here is typed in. A bill is raised when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order.</p>
+    </div>`;
+    rail.querySelectorAll('[data-pi-goto]').forEach(b=>
+      b.addEventListener('click', ()=> goToTab(b.dataset.piGoto)));
+    return;
+  }
+  /* A figure, tabular, with the currency said once per screen in the
+     strip rather than stamped on every cell. fmtUGX() is for prose
+     and toasts, where a lone number would be ambiguous. */
+  const money = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  const live = ranged.filter(pi=> !pi.voided);
+  let billed = 0, paidOut = 0, owed = 0, shelf = 0, forOrder = 0;
+  const bySupplier = new Map();
+  live.forEach(pi=>{
+    const t = purchaseInvoiceTotal(pi);
+    billed += t; paidOut += Number(pi.amountPaid)||0; owed += purchaseInvoiceBalanceDue(pi);
+    if(pi.quoteId == null) shelf += t; else forOrder += t;
+    const k = pi.supplierName || 'Unknown supplier';
+    bySupplier.set(k, (bySupplier.get(k)||0) + t);
   });
+  const top = [...bySupplier.entries()].sort((a,b)=> b[1]-a[1]);
+  const shown = top.slice(0,4);
+  const rest = top.slice(4);
+  const restSum = rest.reduce((s,x)=> s + x[1], 0);
+  const pct = (n)=> billed > 0 ? `<span class="ow-pi-u">${Math.round(n/billed*100)}%</span>` : '';
+
+  rail.innerHTML = `
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">This screen, and Creditors</span></div>
+      <p class="ow-rl">Here the unit is <b>one bill</b>: what a supplier billed you on one day, and whether it is right. On <button type="button" class="ow-link" data-pi-goto="analytics-creditors">Creditors</button> the unit is <b>one supplier</b>: what you owe them altogether, and who to pay first.</p>
+      <p class="ow-rl">A payment recorded on either shows on both. Nothing is counted twice, and nothing is decided in two places.</p>
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">What is checked</span><span class="ow-pan-n">${found.checked}</span></div>
+      <p class="ow-rl">Every bill in the range, every time this screen is drawn: the same delivery billed twice; a line priced above anything you have ever paid <b>that supplier</b> for <b>that line</b>, compared only against the same unit; a bill with no delivery behind it on the stock record; and money paid out beyond what was billed.</p>
+      <p class="ow-rl">Not checked, because nothing on file can answer it: whether the goods that came were the ones ordered, and whether a price you have <b>never</b> paid before is a fair one. For that second question, <button type="button" class="ow-link" data-pi-goto="compare">Compare prices</button>.</p>
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Bought in this range</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Billed to you</span><span class="ow-sr-v">${money(billed)}</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Of it, for the shelf</span><span class="ow-sr-v">${money(shelf)}${pct(shelf)}</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Of it, against an order</span><span class="ow-sr-v">${money(forOrder)}${pct(forOrder)}</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Paid out</span><span class="ow-sr-v">${money(paidOut)}</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Still owed on these</span><span class="ow-sr-v">${money(owed)}</span></div>
+    </div>
+    ${shown.length ? `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Where it went</span><span class="ow-pan-n">${top.length} supplier${top.length===1?'':'s'}</span></div>
+      ${shown.map(([name,sum])=> `<div class="ow-sr"><span class="ow-sr-k" title="${esc(name)}">${esc(name)}</span><span class="ow-sr-v">${money(sum)}${pct(sum)}</span></div>`).join('')}
+      ${rest.length ? `<p class="ow-rl">The other ${rest.length} took <b>${money(restSum)}</b> between them.</p>` : ''}
+    </div>` : ''}
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">What voiding does</span></div>
+      <p class="ow-rl">On a bill raised from one of <b>your own orders to a supplier</b>, voiding is not a flag &mdash; the goods come back off the shelf and the order goes back to waiting. On one raised from a customer&rsquo;s order it drops what is owed and leaves the stock alone.</p>
+      <p class="ow-rl">The button says which of the two it is about to do before it does it, and a bill with money against it cannot be voided at all.</p>
+    </div>`;
+  rail.querySelectorAll('[data-pi-goto]').forEach(b=>
+    b.addEventListener('click', ()=> goToTab(b.dataset.piGoto)));
 }
 
 function togglePurchaseInvoiceVoided(id){
@@ -32971,39 +33800,17 @@ document.getElementById('pi_doc_range_preset').addEventListener('change', ()=>{
 document.getElementById('pi_doc_from').addEventListener('change', ()=>renderPurchaseInvoices(document.getElementById('pi_doc_search').value));
 document.getElementById('pi_doc_to').addEventListener('change', ()=>renderPurchaseInvoices(document.getElementById('pi_doc_search').value));
 
-function piSelectedInvoices(){
-  const ids = [...document.querySelectorAll('.pi-doc-check:checked')].map(cb=>Number(cb.dataset.id));
-  return data.purchaseInvoices.filter(pi=>ids.includes(pi.id));
-}
-document.getElementById('pi_doc_print_selected_btn').addEventListener('click', ()=>{
-  const invoices = piSelectedInvoices();
-  if(invoices.length===0){ toast('Select at least one purchase invoice to print'); return; }
-  printPurchaseInvoicesA5(invoices);
-  document.getElementById('pi_bulk_dd_menu').classList.remove('show');
-});
-document.getElementById('pi_doc_void_selected_btn').addEventListener('click', ()=>{
-  const invoices = piSelectedInvoices();
-  if(invoices.length===0){ toast('Select at least one purchase invoice to void'); return; }
-  invoices.forEach(pi=>pi.voided = true);
-  saveData();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
-  toast(`Voided ${invoices.length} purchase invoice${invoices.length===1?'':'s'}`);
-  document.getElementById('pi_bulk_dd_menu').classList.remove('show');
-});
-document.getElementById('pi_doc_unvoid_selected_btn').addEventListener('click', ()=>{
-  const invoices = piSelectedInvoices();
-  if(invoices.length===0){ toast('Select at least one purchase invoice to unvoid'); return; }
-  invoices.forEach(pi=>pi.voided = false);
-  saveData();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
-  toast(`Unvoided ${invoices.length} purchase invoice${invoices.length===1?'':'s'}`);
-  document.getElementById('pi_bulk_dd_menu').classList.remove('show');
-});
-document.getElementById('pi_bulk_dd_btn').addEventListener('click', (e)=>{
-  e.stopPropagation();
-  document.getElementById('pi_bulk_dd_menu').classList.toggle('show');
-});
-document.addEventListener('click', ()=> document.getElementById('pi_bulk_dd_menu').classList.remove('show'));
+/* THE BULK OPERATIONS ARE GONE, and that is a decision rather than a
+   tidy-up. Print selected / void selected / unvoid selected lived
+   behind a dropdown above a column of checkboxes, and two of the three
+   were destructive: on this screen voiding a delivery bill takes goods
+   back off the shelf and reopens the order, so voiding a tick-list of
+   them in one press is the app doing several irreversible things to the
+   stock record on one click, with nothing on screen saying which of
+   them were deliveries. Printing survives as "Print list", which covers
+   every bill the filters matched and says so — the sheet somebody
+   actually walks the yard with. If a real bulk void is wanted it comes
+   back per row, naming the delivery consequence on each. */
 
 document.getElementById('pi_doc_print_list_btn').addEventListener('click', ()=>{
   if(piLastRows.length===0){ toast('No purchase invoices to print'); return; }
