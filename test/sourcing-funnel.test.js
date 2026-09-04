@@ -2274,8 +2274,8 @@ async function main() {
      passing with the line deleted from the one place it is being claimed
      for -- and the card would sit there asking again for an ask already
      captured. */
-  const waHandler = (/const srcBtn = sug\.querySelector\('#wa_src_add'\);[\s\S]*?\n    \}\);/.exec(code) || [''])[0];
-  t.check(/waInbox\.dismissed\[wamid\] = true;/.test(waHandler),
+  const waHandler = (/const srcBtn = document\.getElementById\('wa_src_add'\);[\s\S]*?\n  \}\);/.exec(code) || [''])[0];
+  t.check(/if\(srcBtn\.dataset\.wamid\) waInbox\.dismissed\[srcBtn\.dataset\.wamid\] = true;/.test(waHandler),
     'and capturing the ask puts the card away, rather than leaving it to ask again');
 
   // Every door goes through the one function, or the dedupe rule drifts.

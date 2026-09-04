@@ -53,12 +53,19 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      next person cannot quietly raise it back. */
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
-    'radii': [28, /border-radius:\s*([^;}]+)/g],
-    /* 62, not 63: the cash book's two floating + / - buttons are gone --
-       they duplicated Money in and Money out from the top of the page,
-       and the entry line that replaced them is permanently on screen, so
-       their drop shadow and its hover went with them. */
-    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
+    /* 27, not 28: the WhatsApp desk's bespoke radii went with the
+       screen they clothed -- 11px stat cards, 12px picks and bubbles,
+       14px on the inbox shell and 21px on the round composer. What
+       replaced them is the layer's 4 / 6 / 8. */
+    'radii': [27, /border-radius:\s*([^;}]+)/g],
+    /* 60, not 62: two more went the same way -- the WhatsApp inbox
+       shell's own drop shadow and the shadow under every chat bubble.
+       Depth on this screen is hairlines now, which is what the rest of
+       the console has been for some time.
+       (62, not 63, was the cash book's two floating + / - buttons: they
+       duplicated Money in and Money out from the top of the page, and
+       the entry line that replaced them is permanently on screen.) */
+    'shadows': [60, /box-shadow:\s*([^;}]+)/g],
     /* 105, not 106: Follow-ups' card wall carried its own hover border,
        its own two near-whites for a card and a settled row, and its own
        hover fill. All four went when that screen became a console on the

@@ -278,16 +278,26 @@ const vercel = read('vercel.json');
 {
   t.check(/id="wa_ai_btn"/.test(app) && /waDraftReply\(\)/.test(app),
     'the draft is one deliberate tap, never automatic');
-  t.check(/waSendReply\(d\.text\)/.test(app),
-    'and Send routes the draft through waSendReply — the same 24h window check as a hand-typed reply');
+  /* The draft's own Send button is gone with the card it sat on: the
+     assistant's text is written straight into the composer, so it
+     leaves through the SAME send as anything the owner types, past the
+     same server-side window check — and past the owner's own eyes,
+     which is the point the separate button kept blurring. */
+  t.check(/const suggested = aiLive && aiLive\.text \? aiLive\.text :/.test(app)
+    && /waInbox\.drafts\[convId\] = suggested;/.test(app),
+    'the draft lands in the composer, and Send routes it through the one send road');
   t.check(/aiDrafts: \{\}/.test(app) && /waInbox\.aiDrafts\[convId\] = \{ wamid: lastIn\.wamid, text,/.test(app),
     'the draft lives in inbox state, so the 12-second poll cannot eat it mid-read');
-  t.check(/\.wa-suggest:not\(\.ai\)/.test(app),
-    'the token-match card keeps its own handlers — the two suggestions coexist');
+  /* The two suggestions no longer race for the same composer: the
+     assistant's draft WINS when it is live for the current question,
+     and the token match fills in otherwise. One line, one precedence,
+     instead of two cards stacked above the reply box. */
+  t.check(/aiLive && aiLive\.text \? aiLive\.text : \(match \? waQuoteReply\(match\) : null\)/.test(app),
+    'the assistant draft outranks the token match, and neither can appear twice');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');
   t.check(/id="wa_ai_order"/.test(app) && /waCreateOrderFromChat\(\)/.test(app)
-    && /hasOrder \? `<button/.test(app),
+    && /\$\{order \? `<button/.test(app),
     'the Create-order button exists only when the draft carries a resolved order');
   const createFn = (/async function waCreateOrderFromChat\(\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
   t.check(/ASSISTANT_TOOLS\.create_quote\.run\(/.test(createFn),
@@ -434,8 +444,12 @@ const vercel = read('vercel.json');
       'no availability words, no order claims — a quotation is only prices');
   }
 
-  t.check(/id="wa_ai_send">Send quote</.test(app)
-    && /if\(d\.order && \(d\.order\.lines\|\|\[\]\)\.length\)\{ waSendQuoteFromChat\(\); return; \}/.test(app),
+  /* One Send, two documents: with a resolved order behind it the press
+     sends the DRAWN quotation, composed by code from lines the owner
+     can read above the button; without one it sends the words in the
+     composer. The label says which, so the press is never a surprise. */
+  t.check(/\$\{order \? 'Send the quotation' : 'Send'\}/.test(app)
+    && /if\(d && d\.order && \(d\.order\.lines\|\|\[\]\)\.length\)\{ waSendQuoteFromChat\(\); return; \}/.test(app),
     'a draft carrying a resolved order sends the drawn quotation, never the model\'s prose');
   const quoteFn = (/async function waSendQuoteFromChat\(\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
   t.check(/kind: 'quote'/.test(quoteFn)

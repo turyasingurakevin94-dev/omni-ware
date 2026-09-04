@@ -27,6 +27,10 @@ try {
     ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
     extractFunction(src, 'waConvUnread', 'index.html'),
     extractFunction(src, 'waWindowInfo', 'index.html'),
+    /* The strip's headline figure is now WHO IS WAITING rather than who
+       is unread, so the stats lean on the queue's own definition. */
+    extractFunction(src, 'waWaitingConvs', 'index.html'),
+    extractFunction(src, 'waConvTitle', 'index.html'),
   ], { WA_WINDOW_MS: 24 * 60 * 60 * 1000 }, NAMES);
 } catch (e) { err = e; }
 t.check(!!scope, `the insight helpers compile${err ? ` (${err.message})` : ''}`);
@@ -105,26 +109,59 @@ const NOW = Date.parse('2026-08-06T12:00:00Z');
   eq(scope.waFmtMins(90), '1.5 h', 'and hours as hours');
 }
 
-/* ---------- 4. the strip is REACHED, the rooms switch ---------------- */
+/* ---------- 4. the strip is REACHED, and the rooms are gone ----------
+
+   THREE ROOMS BEHIND A TAB STRIP is what this section used to hold:
+   Inbox, Today's post, Broadcasts, each a pane, switched by waSetView.
+   That strip was a THIRD level of navigation under the rail and the
+   page header, and two of its three rooms answered one question each
+   -- has today's post gone out; who can we broadcast to and what did
+   the last one cost. Questions that size are rail panels, not rooms.
+   So the tab strip is gone, the panes are gone with it, and this
+   section now pins that the two demoted rooms are still DRAWN and
+   still reachable, which is the thing that would actually be lost. */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src),
-    'entering the tab renders the strip immediately, before the fetches land');
+  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
+    'entering the tab starts the desk');
   t.check(/waFetchInsightMsgs\(\);/.test(src) && /order\('sent_at', \{ ascending: false \}\)\.limit\(500\)/.test(src),
     'one aggregate read feeds the strip — the per-thread fetches only know the open thread');
   const entry = (/async function waInboxEnter\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
   t.check(/await waFetchInsightMsgs\(\);/.test(entry) && /renderWaInsights\(\);/.test(entry),
-    'and the strip re-renders once real data arrives');
-  t.check(/data-waview="inbox"/.test(src) && /data-waview="post"/.test(src) && /data-waview="broadcast"/.test(src),
-    'three rooms: inbox, today\'s post, broadcasts');
-  const setView = extractFunction(src, 'waSetView', 'index.html');
-  t.check(/wa_pane_inbox'\)\.style\.display = v==='inbox' \? '' : 'none';/.test(setView)
-    && /wa_pane_post'\)\.style\.display = v==='post' \? '' : 'none';/.test(setView)
-    && /wa_pane_bc'\)\.style\.display = v==='broadcast' \? '' : 'none';/.test(setView),
-    'switching a room shows exactly one pane and hides the others');
-  t.check(/badge\.style\.display = st\.unread \? '' : 'none';/.test(src),
-    'the inbox tab wears the unread count only when there is one');
-  t.check(/waInsightStats\(waInbox\.convs, waInbox\.allMsgs, data\.savedQuotes, Date\.now\(\)\)/.test(src),
+    'and the strip renders once real data arrives');
+  t.check(/renderWhatsApp\(\);/.test(entry) && /waRenderChannel\(\);/.test(entry)
+    && /waRenderBroadcasts\(\);/.test(entry),
+    'the daily post and broadcasts are still drawn — as rail panels, not as rooms');
+  t.check(!/data-waview|wa_pane_inbox|wa_pane_post|wa_pane_bc|function waSetView/.test(src),
+    'and the tab strip that made them rooms is gone, panes and switcher with it');
+
+  /* The unread badge moved to the rail, where it is one of many and
+     reads against the other screens competing for the same attention.
+     A badge on a tab inside the screen you are already looking at was
+     telling you something you could already see. */
+  t.check(/refreshNavBadges\(\);/.test(src.slice(src.indexOf('function renderWaInsights'),
+    src.indexOf('function waRenderHeadline'))),
+    'and the count the tab badge carried now rides the rail, where it competes with the other screens');
+
+  t.check(/waInsightStats\(waInbox\.convs, waInbox\.allMsgs, data\.savedQuotes, now\)/.test(src),
     'the strip is computed from live records at render time — derived, never stored');
+
+  /* THE FIGURES THEMSELVES CHANGED, and the two that went are worth
+     naming. "Answered by the system: 100%" read as a score for a
+     number that is the share of replies the shop did NOT write; it is
+     "2 of 4" now, which cannot be mistaken for a grade. And "WhatsApp
+     sales this month: —" over "0 orders all time · 0 UGX" was three
+     ways of saying nothing; it is a figure with one honest sentence
+     under it. The tile that replaced them is the one the screen exists
+     for: how long the person waiting longest has waited. */
+  const strip = (/function renderWaInsights\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/tile\('Waiting for an answer', String\(st\.waitingCount\)/.test(strip)
+    && /longest \$\{esc\(waFmtWait\(st\.longestWaitMins\)\)\} · \$\{esc\(st\.longestWaitName\)\}/.test(strip),
+    'the strip leads with who is waiting and how long the worst of them has waited');
+  t.check(/st\.waitingCount \? 'ow-warn' : ''/.test(strip),
+    'and it is amber only when somebody actually is');
+  t.check(/`\$\{st\.autoCount\}<span class="ow-u">of \$\{st\.outboundCount\}<\/span>`/.test(strip),
+    'the system\'s share is a count of replies, not a percentage that reads as a score');
+  t.check(!/100%|autoShare\*100/.test(strip), 'and the percentage is gone, not merely relabelled');
 }
 
 process.exit(t.done() ? 1 : 0);
