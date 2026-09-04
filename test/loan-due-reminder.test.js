@@ -271,11 +271,26 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
     'and tomorrow it is back, which is the whole difference from a flag');
   eq(snoozeScope.loanDueSnoozed('2027-01-01'), false, 'and stays back');
 
-  // Snoozing hides the interruption, not the fact. The Loans screen keeps
-  // a way in for somebody who dismissed it this morning and has the money
-  // this afternoon.
-  t.check(/id="ln_due_banner"/.test(src) && /ln_due_banner'\)/.test(src),
-    'and the Loans screen still offers a way in after it has been dismissed');
+  /* Snoozing hides the interruption, not the fact. Somebody who closed
+     the reminder this morning and has the money this afternoon needs a
+     way back in that does not involve waiting for tomorrow.
+
+     That used to be a banner on the Loans screen -- id="ln_due_banner",
+     which is what this checked for. The banner is gone because the thing
+     it was a shortcut TO is now the first thing on the screen: Assets &
+     loans ranks its register behind-first, so a loan in arrears is row
+     one by rule, and opening it is the repayment form. A banner above
+     that would be a second door onto the row directly beneath it.
+
+     So the assertion moves to the guarantee rather than the widget: the
+     ranking puts what is behind first, and the row it puts there can
+     take the payment. Either half failing would leave a dismissed
+     reminder with nowhere to go, which is the fault this guards. */
+  const rank = extractFunction(src, 'alRows', 'index.html');
+  t.check(/const tier = \(r\)=> r\.gone \? 3 : \(r\.behind > 1 \? 0 :/.test(rank),
+    'and the register ranks anything behind first, so a dismissed reminder is still row one');
+  t.check(/id="ln_pay_add"/.test(src) && /getElementById\('ln_pay_add'\)/.test(src),
+    'and that row is where the repayment is recorded, so there is somewhere to go');
 }
 
 /* ---------- a weekly loan is not asked for the whole month -----------

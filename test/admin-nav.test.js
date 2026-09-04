@@ -89,7 +89,14 @@ const INDEX = railIndex();
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
     'compare', 'sourcing', 'suppliers', 'purchase-invoices',
     'products', 'prices', 'inventory', 'media', 'fasteners',
-    'cashbook', 'analytics-debtors', 'analytics-creditors', 'statements', 'payroll', 'assets', 'loans',
+    /* 'assets' is Assets & loans: ONE destination since the two
+       registers were merged. Loans is not missing from this list, it no
+       longer exists as a screen -- a van and the loan that bought it were
+       two pages that never mentioned each other, and the reading that
+       matters (what a thing is worth against what is still owed on it)
+       could not be asked on either. The check below holds the merge to
+       the thing a merge can quietly lose: the words people search by. */
+    'cashbook', 'analytics-debtors', 'analytics-creditors', 'statements', 'payroll', 'assets',
     'analytics-sales', 'analytics-purchase', 'map',
     'staff', 'worker', 'presets',
   ];
@@ -197,8 +204,23 @@ const INDEX = railIndex();
   t.check(groupOf['analytics-debtors'] === 'Money' && groupOf['analytics-creditors'] === 'Money',
     'who owes you and who you owe are money, not analytics -- they are acted on, not studied');
   t.check(groupOf['cashbook'] === 'Money' && groupOf['statements'] === 'Money'
-    && groupOf['assets'] === 'Money' && groupOf['loans'] === 'Money' && groupOf['payroll'] === 'Money',
-    'and they sit with the cash book, the statements, what the shop owns, what it owes and what it pays');
+    && groupOf['assets'] === 'Money' && groupOf['payroll'] === 'Money',
+    'and they sit with the cash book, the statements, what the shop owns and owes, and what it pays');
+
+  /* WHAT A MERGE LOSES IF NOBODY CHECKS. Two rail entries became one, and
+     the entry that survived was the assets one -- so every word somebody
+     used to reach Loans by ("borrowed", "debt", "repayment", "bank") had
+     to be carried onto it, or the screen would still exist and simply
+     stop being findable by the half of its subject that lost its row. */
+  {
+    const al = INDEX.find((x) => x.tab === 'assets') || { label: '', keywords: '' };
+    t.check(/loan/i.test(al.label),
+      `the merged entry names both halves on the rail itself ("${al.label}")`);
+    const carried = ['borrowed', 'debt', 'repayment', 'bank', 'depreciation', 'equipment'];
+    const lost = carried.filter((w) => !al.keywords.includes(w));
+    t.check(lost.length === 0,
+      `and it carries the search words of both screens it replaced${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
+  }
   t.check(groupOf['compare'] === 'Buy' && groupOf['suppliers'] === 'Buy'
     && groupOf['purchase-invoices'] === 'Buy',
     'buying stock is one job across three screens');

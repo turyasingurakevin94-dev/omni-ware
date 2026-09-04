@@ -213,14 +213,24 @@ const asset = (over) => Object.assign({
      that two more fields sit below the notes -- which is not a thing
      anybody knows. Asked directly: "I dont seem to see how an asset can
      be sold." */
-  t.check(/class="pc-icon-btn fa-sell" data-id="\$\{a\.id\}" title="Sell or scrap it"/.test(src),
-    'the row offers to sell it');
-  t.check(/\.fa-sell'\)\.forEach\(b=>b\.addEventListener\('click', \(\)=>openAssetForm\(Number\(b\.dataset\.id\), true\)\)\)/.test(src),
+  /* WHAT MOVED, AND WHAT DID NOT. The register is one row per thing now
+     and the row opens in place, so Sell is a named button inside the
+     opened row rather than the third of four unlabelled icons at the end
+     of a table row. The fault this section was written for is unchanged
+     and still guarded: selling must be VISIBLE somewhere that is not
+     "open Edit and scroll past the notes", it must go through the one
+     form, and it must never be offered on something already sold. What
+     is no longer asserted is that the door is an icon in a <td>; that
+     table does not exist. */
+  t.check(/class="btn btn-ghost ow-sm al-fa-sell" data-id="\$\{a\.id\}"/.test(src)
+    && /Sell or scrap it/.test(src),
+    'selling is offered on the thing itself, named in words');
+  t.check(/\.al-fa-sell'\)\.forEach\(b=> b\.addEventListener\('click', \(\)=> openAssetForm\(Number\(b\.dataset\.id\), true\)\)\)/.test(src),
     'through the same form, told what it was opened for');
 
   /* Not on something already sold: the row says "sold" and carries the
      gain, and a second disposal would bank the proceeds twice. */
-  t.check(/\$\{gone \? '' : `<button type="button" class="pc-icon-btn fa-sell"/.test(src),
+  t.check(/\$\{gone \? '' : `<button type="button" class="btn btn-ghost ow-sm al-fa-sell"/.test(src),
     'and never on one already sold, which would bank the proceeds a second time');
 
   /* One form, not a second sale dialog -- two places writing the

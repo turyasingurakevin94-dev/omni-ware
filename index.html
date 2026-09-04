@@ -7963,6 +7963,73 @@
   .ow-empty{padding:var(--ow-sp-32);text-align:center;color:var(--ow-ink-600);
     font-size:var(--ow-t-13);}
 
+  /* ==================================================================
+     ASSETS & LOANS: one register, one row per thing.
+
+     Almost all of it is components that already exist -- .ow-q for the
+     rows, .ow-strip for the position, .ow-ev for the schedules inside an
+     open row, .ow-tbl for the schedules themselves, .ow-sr for the rail.
+     What is here is the fifth column, the column names above it, and the
+     band that separates what is still live from what is settled or sold.
+
+     FIVE TRACKS, not .ow-q-r's four. A thing bought on credit carries
+     three figures that only mean anything side by side -- what it is
+     worth, what is still owed on it, and what is therefore yours -- and
+     that last column is the reading the two old screens could not give
+     between them. It is the widest because it is the one with a name
+     long enough to say what it means.
+     ================================================================== */
+  .ow-al .ow-q-r{grid-template-columns:18px minmax(0,1fr) 132px 132px 168px;}
+  .ow-al-h{display:grid;grid-template-columns:18px minmax(0,1fr) 132px 132px 168px;
+    align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ow-ink-600);}
+  .ow-al-hr{text-align:right;}
+  /* The crest and the two lines beside it. min-width:0 on both, or the
+     name refuses to shrink and pushes the figure columns out of the
+     panel instead of ellipsising -- the exact fault the layer's
+     truncation rule exists for. */
+  .ow-al-w{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .ow-al-i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;color:var(--ow-ink-600);flex:none;}
+  .ow-al-t{min-width:0;}
+  .ow-al-nm{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);letter-spacing:-.005em;
+    line-height:1.3;}
+  .ow-al-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-al-m{display:block;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    margin-top:1px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* A dash is not a nought. A loan has no book value and a thing bought
+     outright owes nothing; both say so with a mark that cannot be added
+     up by mistake. ink-600 rather than ink-400: it sits at 13px, and
+     ink-400 does not clear 4.5:1 there. */
+  .ow-al-none{color:var(--ow-ink-600);}
+  /* Settled and sold. Quieter, never hidden -- a thing that was sold at
+     a loss is part of what the year cost. */
+  .ow-al-gone .ow-al-nm{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .ow-al-sect{display:flex;align-items:center;gap:var(--ow-sp-8);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);
+    padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-6);background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-al-sect-n{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;}
+  /* The one place this screen takes typing rather than only reading. */
+  .ow-al-pay{margin:var(--ow-sp-10) 0 0;}
+  /* The two setup actions travel as a pair, so the phone gets one row of
+     them rather than two full-width bars above everything the screen is
+     for. */
+  .ow-al-new{display:flex;gap:var(--ow-sp-6);}
+  /* The agreement is a table and the repayments are a list, so they do
+     not deserve equal width. */
+  .ow-ev-row > .ow-ev.ow-al-wide{flex:2 1 380px;}
+  /* A repayment's date, and under it the one thing that can be wrong
+     about it. As the tail of a sentence it was cut at "not in the c..."
+     -- a warning that is truncated is not a warning. */
+  .ow-al-pd{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-al-pf{display:block;font-size:var(--ow-t-11);color:var(--ow-amber-ink);line-height:1.35;}
+
   /* ---- the sticky page header ---- */
   /* The margin lives HERE rather than on whatever happens to follow.
      Today put it on its stack and the Manager on its grid, which meant
@@ -10089,6 +10156,23 @@
     .ow-an .ow-q-a{flex-direction:column;}
     .ow-an .ow-q-a .btn.ow-sm{width:100%;min-width:0;min-height:var(--ow-tap);
       font-size:15px;box-sizing:border-box;}
+
+    /* The register's fifth column has nowhere to go at 390, so the row
+       stops being a row: .ow-q-card takes over from .ow-q-r as
+       everywhere else, and the three figures become three lines that can
+       be read without opening anything. */
+    .ow-al-h{display:none;}
+    /* THREE FIGURES, THREE LINES. .ow-q-cv is one line on every other
+       screen because every other queue carries one figure; here a row
+       carries what a thing is worth, what is owed on it and what is left,
+       and run together they wrapped mid-figure -- "2,581,250 UGX cost
+       4,200,000 UGX 2,581,250" reads as one number nobody can parse. */
+    .ow-al .ow-q-cv{display:block;margin-top:var(--ow-sp-4);}
+    .ow-al-pay{display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+    .ow-al-in{min-height:var(--ow-tap);width:100%;box-sizing:border-box;}
+    .ow-al-sect{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);}
+    .ow-al-new{width:100%;}
+    .ow-al-new > .btn.ow-sm{flex:1 1 0;min-width:0;}
   }
 </style>
 </head>
@@ -10482,13 +10566,9 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
           <span class="nav-label">Payroll &amp; rent</span>
         </button>
-        <button data-tab="assets" title="What the shop owns and uses" data-keywords="equipment vehicles depreciation owns">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h2l1.5-5h11L19 17h2"/><circle cx="7.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/><path d="M8 12V7h8v5"/></svg>
-          <span class="nav-label">Assets</span>
-        </button>
-        <button data-tab="loans" title="Money the shop has borrowed" data-keywords="borrowed debt repayment bank">
-          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
-          <span class="nav-label">Loans</span>
+        <button data-tab="assets" title="What the shop owns, and what is still owed on it" data-keywords="equipment vehicles depreciation owns assets loans borrowed debt repayment bank lender instalment arrears van shelving">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+          <span class="nav-label">Assets &amp; loans</span>
         </button>
       </div>
       <div class="nav-group" data-group="Insight">
@@ -11995,19 +12075,43 @@
     </section>
 
     <!-- FIXED ASSETS -->
+    <!-- WHAT THE SHOP OWNS, AND WHAT IS OWED ON IT.
+         Two screens for one question. The van was on Assets; the loan
+         that bought the van was on Loans; neither page mentioned the
+         other, so "what is this thing actually worth to me" could not be
+         asked anywhere -- though the app already computed it, three
+         clicks inside the depreciation-schedule modal.
+
+         One register now, one row per thing, ranked: behind first, then
+         what falls due soonest, then what it is worth. The accent moved
+         with it -- off Add an asset, which happens twice a year, and on
+         to the repayment that is two months overdue. -->
     <section id="tab-assets" style="display:none;">
-      <div class="page-head">
-        <h1>Assets</h1>
-        <p>The things the shop owns and uses — a van, shelving, a laptop. Not stock: these are bought to be used, and lose value a little at a time as depreciation rather than all at once when they are paid for.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Assets &amp; loans</h1>
+        <p class="ow-ph-sub">What the shop owns, what is still owed on it, and what falls due next</p>
+        <p class="ow-ph-help">Everything the shop bought to <i>use</i> rather than to sell &mdash; a van, shelving, a laptop &mdash; and every shilling it has borrowed, in one register. A thing bought on credit carries its loan on its own row, so what it is worth, what is still owed on it and what is therefore yours can be read across in one line; that reading is the whole point of borrowing against something and it used to live three clicks inside a dialog. A loan with nothing behind it &mdash; working capital, stock money &mdash; is a row too, with a dash under Worth rather than a nought, because there is no thing to value. Rows are ordered by what needs doing: anything behind first, then whatever falls due soonest, then the largest. Opening one shows how it was worked out &mdash; the depreciation month by month, the agreement payment by payment, every repayment made &mdash; and is where a repayment is recorded. Recording one posts it to the Cash Book from the account you name. Nothing here pays anybody on its own, and no charge is raised by being looked at.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- Both ghost. The accent on this screen is the repayment that
+             is overdue, not the two things done twice a year. -->
+        <div class="ow-al-new">
+          <button type="button" class="btn btn-ghost ow-sm" id="fa_add_btn">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Add an asset
+          </button>
+          <button type="button" class="btn btn-ghost ow-sm" id="ln_add_btn">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Record a loan
+          </button>
+        </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Register</h2>
-          <button class="btn btn-accent" id="fa_add_btn">Add an asset</button>
+      <div class="ow-stack">
+        <div id="alStripWrap"></div>
+        <div class="ow-grid">
+          <div id="alRegWrap"></div>
+          <div class="ow-side" id="alRailWrap"></div>
         </div>
-        <div id="fa_summary"></div>
-        <div id="fa_tableWrap"></div>
       </div>
     </section>
 
@@ -12166,22 +12270,6 @@
       </div>
     </section>
 
-    <!-- LOANS -->
-    <section id="tab-loans" style="display:none;">
-      <div class="page-head">
-        <h1>Loans</h1>
-        <p>Money the shop has borrowed, what it is really costing, and whether the repayments are keeping up with the agreement.</p>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Borrowing</h2>
-          <button class="btn btn-accent" id="ln_add_btn">Record a loan</button>
-        </div>
-        <div id="ln_summary"></div>
-        <div id="ln_tableWrap"></div>
-      </div>
-    </section>
 
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
@@ -13154,17 +13242,6 @@
 </div>
 
 <!-- ONE LOAN: HOW IT IS PERFORMING -->
-<div class="modal-overlay" id="loanPerfModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="loanPerfTitle">Loan</h2>
-      <button class="modal-close" id="loanPerfClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="loanPerfBody"></div>
-  </div>
-</div>
 
 <!-- ADD / EDIT A FIXED ASSET -->
 <div class="modal-overlay" id="assetModal">
@@ -13272,17 +13349,6 @@
 </div>
 
 <!-- ONE ASSET'S DEPRECIATION SCHEDULE -->
-<div class="modal-overlay" id="assetScheduleModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="assetScheduleTitle">Depreciation schedule</h2>
-      <button class="modal-close" id="assetScheduleClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="assetScheduleBody"></div>
-  </div>
-</div>
 
 <!-- CHOOSE A PHOTO (the media picker every upload point opens) -->
 <div class="modal-overlay" id="mediaPickerModal">
@@ -19644,6 +19710,13 @@ function resolveTab(tab){
      deep link and every goToTab call already written go on working. */
   if(tab === 'margin'){ pricingSeg = 'thin'; return 'pricing'; }
   if(tab === 'clearance'){ pricingSeg = 'dead'; return 'pricing'; }
+  /* And the same again: Assets and Loans became one register. This one
+     needs no lens -- the register already ranks anything behind first,
+     so somebody arriving through the old Loans door lands on the loan
+     that needs them. Without this line a shop whose last screen was
+     Loans boots into getElementById('tab-loans').style and throws before
+     anything renders. */
+  if(tab === 'loans') return 'assets';
   return tab;
 }
 function goToTab(tab){
@@ -19691,8 +19764,7 @@ function goToTab(tab){
   if(tab==='consignment') renderConsignment();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
-  if(tab==='assets') renderFixedAssets();
-  if(tab==='loans') renderLoans();
+  if(tab==='assets') renderAssetsLoans();
   if(tab==='payroll') renderPayroll();
   // The device list lives on Presets now, under Signed-in devices.
   if(tab==='presets') loadLoginSessions();
@@ -57512,189 +57584,531 @@ function loanMethodLabel(l){
   const f = loanFrequency(l);
   return f === 'monthly' ? shape : `${shape} · ${LOAN_FREQUENCIES[f].label.toLowerCase()}`;
 }
-function renderLoans(){
-  const today = todayISO();
-  const loans = (data.loans||[]).slice()
-    .sort((a,b)=> String(b.startedOn||'').localeCompare(String(a.startedOn||'')));
-  const perf = loans.map(l=>({ l, p: loanPerformance(l, today) }));
-  const owing = perf.filter(x=> !x.p.settled);
-  const outstanding = owing.reduce((s,x)=> s + x.p.outstanding, 0);
-  const arrears = owing.reduce((s,x)=> s + Math.max(0, x.p.behind), 0);
-  const interestThisYear = loanInterestForPeriod(today.slice(0,4)+'-01-01', today);
+/* ================= WHAT THE SHOP OWNS, AND WHAT IS OWED ON IT =========
 
-  document.getElementById('ln_summary').innerHTML = loans.length ? `
-    <div class="sc-stats fa-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(outstanding))}</b><span>Still owed</span></div>
-      <div class="sc-stat"><b>${owing.length}</b><span>Loan${owing.length===1?'':'s'} running</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(interestThisYear))}</b><span>Interest paid this year</span></div>
-      <div class="sc-stat ${arrears>0?'bad':''}"><b>${fmtUGX(Math.round(arrears))}</b><span>Behind schedule</span></div>
-    </div>
-    ${(()=>{
-      /* The reminder is shown once a day and can be dismissed. That must
-         not be the only way to reach it -- a shopkeeper who closed it
-         this morning and has the money this afternoon needs a way back
-         in that does not involve waiting for tomorrow. */
-      const list = loansNeedingPayment();
-      if(!list.length) return '';
-      const late = list.filter(x=> x.due.status === 'overdue').length;
-      const total = list.reduce((s,x)=> s + x.due.dueNow, 0);
-      return `<button type="button" class="ln-due-banner ${late?'late':''}" id="ln_due_banner">
-        ${ICON_WALLET}
-        <span class="ln-due-text">${late
-          ? `${late} repayment${late===1?'':'s'} overdue`
-          : `${list.length} repayment${list.length===1?'':'s'} due this month`}
-          — <b>${fmtUGX(Math.round(total))}</b></span>
-        <span class="ln-due-cta">Pay now</span>
-      </button>`;
-    })()}` : '';
+   Two screens for one question. The van was on Assets; the Stanbic loan
+   that bought the van was on Loans; neither page mentioned the other, so
+   "what is this thing actually worth to me" could not be asked anywhere.
+   The app already computed it -- worth against owed, month by month --
+   and buried it three clicks inside the depreciation-schedule modal,
+   behind an unlabelled icon.
 
-  const wrap = document.getElementById('ln_tableWrap');
-  if(!loans.length){
-    wrap.innerHTML = '<div class="empty">No borrowing recorded. Adding a loan here is what turns it from a cash receipt into something the books know has to go back.</div>';
-    return;
-  }
-  wrap.innerHTML = `<div class="pi-table-wrap"><table>
-    <thead><tr>
-      <th>Lender</th><th>Taken</th><th>Terms</th>
-      <th class="r">Borrowed</th><th class="r">Still owed</th><th class="r">Keeping up?</th><th></th>
-    </tr></thead>
-    <tbody>${perf.map(({l,p})=>`
-      <tr class="${p.settled?'fa-gone':''}">
-        <td>
-          <div class="fa-name">${esc(l.lender)}${p.settled?'<span class="fa-tag">settled</span>':''}</div>
-          ${l.method==='flat' ? `<div class="fa-sub warn">${Number(l.ratePct)||0}% flat is about ${p.effectiveRatePct.toFixed(0)}% in real terms</div>` : ''}
-        </td>
-        <td>${esc(l.startedOn||'')}</td>
-        <td class="fa-sub">${esc(loanMethodLabel(l))} · ${p.instalments} month${p.instalments===1?'':'s'}</td>
-        <td class="r num">${fmtUGX(Math.round(Number(l.principal)||0))}</td>
-        <td class="r num">${p.settled ? '—' : fmtUGX(Math.round(p.outstanding))}</td>
-        <td class="r">${p.settled
-          ? '<span class="fa-sub good">Paid off</span>'
-          : (p.behind > 1
-            ? `<span class="fa-sub bad">${fmtUGX(Math.round(p.behind))} behind</span>`
-            : '<span class="fa-sub good">On track</span>')}</td>
-        <!-- .pc-icon-btn is display:flex, so three of them dropped
-             straight into a cell stack into a column and the row grows to
-             109px. Every other group of them in this app sits in a flex
-             wrapper -- the invoice table's is this same case, icons
-             right-aligned in a cell, so it is that class rather than a
-             third one meaning the same thing. -->
-        <td class="r">
-          <div class="inv-row-actions">
-            <button type="button" class="pc-icon-btn ln-perf" data-id="${l.id}" title="How it is performing">${ICON_ITEMS}</button>
-            <button type="button" class="pc-icon-btn ln-edit" data-id="${l.id}" title="Edit">${ICON_EDIT}</button>
-            <button type="button" class="pc-icon-btn danger ln-delete" data-id="${l.id}" title="Remove">${ICON_TRASH}</button>
-          </div>
-        </td>
-      </tr>`).join('')}</tbody></table></div>`;
+   One register now, one row per THING. A financed asset carries its loan
+   on its row. A working-capital loan is a row with an em-dash under
+   Worth, which reads as "there is nothing behind this" rather than as a
+   zero. Rows are RANKED -- behind first, then what falls due soonest,
+   then what it is worth -- so a loan in arrears cannot sit at the bottom
+   because of the date it happened to be taken on.
 
-  wrap.querySelectorAll('.ln-perf').forEach(b=>b.addEventListener('click', ()=>openLoanPerformance(Number(b.dataset.id))));
-  wrap.querySelectorAll('.ln-edit').forEach(b=>b.addEventListener('click', ()=>openLoanForm(Number(b.dataset.id))));
-  wrap.querySelectorAll('.ln-delete').forEach(b=>b.addEventListener('click', ()=>deleteLoan(Number(b.dataset.id))));
-  const dueBanner = document.getElementById('ln_due_banner');
-  // Opens the same panel the daily reminder does, snoozed or not: asking
-  // for it is not the same as being interrupted by it.
-  if(dueBanner) dueBanner.addEventListener('click', ()=>{
-    renderLoanDueModal();
-    openModal('loanDueModal');
-  });
-}
+   The accent moved with it. Both old pages spent their one red button on
+   Add an asset and Record a loan, done twice a year; a repayment two
+   months overdue got no accent on either. It is on Record repayment now,
+   inside the open row, and the two setup actions are ghosts. */
+
+/* Which row is open, as a kind and an id: 'a12' or 'l7'. Module-level
+   because the register is rebuilt from scratch on every change, so the
+   cursor cannot live inside it. */
+let alOpen = null;
 /* Which recorded repayment is open for editing, by its index in the
-   loan's own array. Module-level because the panel is rebuilt from
-   scratch on every change, so the cursor cannot live inside it. */
+   loan's own array. Module-level for the same reason alOpen is: the row
+   is rebuilt from scratch on every change, so the cursor cannot live
+   inside it. */
 let lnPayEditIdx = null;
-function openLoanPerformance(id){
-  const l = (data.loans||[]).find(x=>x.id===id);
-  if(!l) return;
-  const today = todayISO();
+
+const AL_CRESTS = {
+  thing: '<svg class="ow-al-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>',
+  loan:  '<svg class="ow-al-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M19 10v9M9.5 10v9M14.5 10v9"/><path d="M3 21h18"/></svg>',
+};
+
+/* The method, short enough for a row. assetMethodLabel() spells out the
+   months AND the years, which is right in a dialog and two words too
+   many in a cell -- and three other screens read it, so it is not the
+   thing to change. */
+function alMethodShort(a){
+  const m = Math.max(0, Math.round(Number(a.lifeMonths)||0));
+  if(a.method === 'reducing_balance') return `Reducing ${Number(a.ratePct)||0}%`;
+  if(!m) return 'Straight line';
+  return m % 12 === 0 ? `Straight line, ${m/12} yr${m===12?'':'s'}` : `Straight line, ${m} months`;
+}
+
+/* A figure for a schedule column: no unit, because the column name
+   carries it. fmtUGX writes "UGX" after every number, which is right
+   for a figure standing on its own and wrong forty times over in a
+   table -- it was what pushed these columns through each other. */
+function alNum(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
+
+/* A figure over its basis, right-aligned. `null` is not zero: a loan has
+   no book value and a thing bought outright owes nothing, and both say so
+   in a word rather than in noughts a reader would add up. */
+function alFig(value, basis, tone){
+  if(value == null) return `<span class="ow-q-v"><span class="ow-q-f ow-al-none">&mdash;</span>
+    <span class="ow-q-b" title="${esc(basis)}">${esc(basis)}</span></span>`;
+  return `<span class="ow-q-v ${tone||''}"><span class="ow-q-f">${fmtUGX(Math.round(value))}</span>
+    <span class="ow-q-b" title="${esc(basis)}">${esc(basis)}</span></span>`;
+}
+
+/* The window a schedule is read through. Sixty rows inside an open row is
+   not a table, it is a scroll -- and the months anybody looks for are the
+   ones around today. How many are not shown is said, because a list that
+   is cut and does not say so is a list that lies about its length. */
+function alWindow(rows, key, today, before, after){
+  if(rows.length <= before + after + 1) return { rows, from:0, hidden:0 };
+  let i = rows.findIndex(r=> String(r[key]||'') >= today.slice(0, String(r[key]||'').length));
+  if(i < 0) i = rows.length - 1;
+  const from = Math.max(0, Math.min(i - before, rows.length - (before+after+1)));
+  const slice = rows.slice(from, from + before + after + 1);
+  return { rows: slice, from, hidden: rows.length - slice.length };
+}
+
+function alTbl(cols, head, body, foot){
+  return `<div class="ow-tbl" style="--ow-tbl-cols:${cols}">
+    <div class="ow-tbl-h">${head}</div>${body}</div>${foot||''}`;
+}
+
+/* ---- one row, two skins ---------------------------------------------
+   The desk row and the phone card come out of ONE call, so they can
+   never say different things about the same thing. */
+function alRowHTML(r){
+  const open = alOpen === r.key;
+  const dim = r.gone ? ' ow-al-gone' : '';
+  const chips = (r.chips||[]).map(c=> `<span class="ow-cp ${c.tone||''}">${
+    c.tone==='bad' ? '<span class="ow-cp-d"></span>' : ''}${esc(c.text)}</span>`).join('');
+  return `<div class="ow-q${open?' ow-open':''}${dim}">
+    <button type="button" class="ow-q-r" data-open="${esc(r.key)}" aria-expanded="${open}">
+      ${OW_CARET}
+      <span class="ow-al-w">${r.crest}<span class="ow-al-t">
+        <span class="ow-al-nm"><span class="ow-al-n" title="${esc(r.name)}">${esc(r.name)}</span>${chips}</span>
+        <span class="ow-al-m" title="${esc(r.meta)}">${esc(r.meta)}</span></span></span>
+      ${alFig(r.worth, r.worthBasis)}
+      ${alFig(r.owed, r.owedBasis, r.owedTone)}
+      ${alFig(r.yours, r.yoursBasis, r.yoursTone)}
+    </button>
+    <button type="button" class="ow-q-card" data-open="${esc(r.key)}" aria-expanded="${open}">
+      <div class="ow-q-cm">${chips}
+        <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <p class="ow-q-ct">${esc(r.name)}</p>
+      <p class="ow-q-note">${esc(r.meta)}</p>
+      ${r.worth != null ? `<span class="ow-q-cv">${fmtUGX(Math.round(r.worth))}<span class="ow-q-b">${esc(r.worthBasis)}</span></span>` : ''}
+      ${r.owed != null ? `<span class="ow-q-cv ${r.owedTone||''}">${fmtUGX(Math.round(r.owed))}<span class="ow-q-b">${esc(r.owedBasis)}</span></span>` : ''}
+      ${r.yours != null ? `<span class="ow-q-cv ${r.yoursTone||''}">${fmtUGX(Math.round(r.yours))}<span class="ow-q-b">${esc(r.yoursBasis)}</span></span>` : ''}
+    </button>
+    ${open ? `<div class="ow-q-x">${r.body()}</div>` : ''}
+  </div>`;
+}
+
+/* ---- a loan, opened -------------------------------------------------
+   Everything the performance modal held, on the row it belongs to. */
+function alLoanBody(l, today){
   const p = loanPerformance(l, today);
+  const due = loanDuePosition(l, today);
   const sched = loanSchedule(l);
   const paid = loanRepayments(l);
   const stated = Number(l.ratePct)||0;
-  document.getElementById('loanPerfTitle').textContent = l.lender || 'Loan';
-  document.getElementById('loanPerfBody').innerHTML = `
-    <div class="sc-stats fa-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(p.outstanding))}</b><span>Still owed</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(p.interestPaid))}</b><span>Interest paid</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(p.totalInterest))}</b><span>Interest over the whole term</span></div>
-      <div class="sc-stat ${p.behind>1?'bad':'good'}"><b>${p.behind>1 ? fmtUGX(Math.round(p.behind)) : 'On track'}</b><span>${p.behind>1?'Behind schedule':'Against the agreement'}</span></div>
-    </div>
-    ${loanFees(l) > 0 ? `<p class="ln-callout">${ICON_WARN}<span>The lender kept <b>${fmtUGX(Math.round(loanFees(l)))}</b> for insurance and paperwork, so <b>${fmtUGX(Math.round(loanNetAdvanced(l)))}</b> actually reached you while you repay against the full ${fmtUGX(Math.round(Number(l.principal)||0))}. That makes the money cost about <b>${loanTrueCostRate(l).toFixed(1)}%</b> a year rather than ${stated}%.</span></p>` : ''}
-    ${l.method==='flat' ? `<p class="ln-callout">${ICON_WARN}<span>This is quoted at <b>${stated}% flat</b>, which costs about <b>${p.effectiveRatePct.toFixed(1)}%</b> a year in real terms. Flat interest is charged on the whole ${fmtUGX(Math.round(Number(l.principal)||0))} for the entire term, including the part you have already paid back.</span></p>` : ''}
-    <p class="sp-lead">${p.instalmentsDue} of ${p.instalments} instalments due by today. The agreement asks for ${fmtUGX(Math.round(p.scheduledByNow))} by now; ${fmtUGX(Math.round(p.paidByNow))} has been paid.</p>
+  const bought = (data.fixedAssets||[]).filter(a=> { const fl = assetFinancingLoan(a); return fl && fl.id === l.id; });
+  const w = alWindow(sched, 'date', today, 3, 4);
 
-    <section class="dr-rest">
-      <h4>${ICON_MONEY}Repayments made</h4>
-      ${paid.length ? `<div class="dr-singles">${paid.map(rp=>{
-        /* The key is the index in the loan's OWN array, not in this
-           sorted view: loanRepayments() sorts a copy by date, so a row's
-           position here says nothing about where it lives. Editing by
-           display position would rewrite the wrong payment the moment
-           one was entered out of order. */
-        const idx = (l.repayments||[]).indexOf(rp);
-        const amt = Math.round(Number(rp.amount)||0);
-        if(idx === lnPayEditIdx) return `
-        <div class="dr-single editing">
-          <input type="date" class="ln-pe-date" value="${esc(rp.date||'')}">
-          <input type="number" class="ln-pe-amount" min="0" step="any" value="${amt}">
-          <div class="dr-single-acts">
-            <button type="button" class="btn btn-accent ln-pe-save" data-idx="${idx}">Save</button>
-            <button type="button" class="btn btn-ghost ln-pe-cancel">Cancel</button>
-          </div>
-        </div>`;
-        return `
-        <div class="dr-single">
-          <span>${esc(rp.date||'')}${rp.note?` · ${esc(rp.note)}`:''}${
-            rp.cashTxnId==null ? ' · not in the cash book' : ''}</span>
-          <b>${fmtUGX(amt)}</b>
-          <div class="dr-single-acts">
-            <button type="button" class="pc-icon-btn ln-pe-edit" data-idx="${idx}" title="Change this repayment">${ICON_EDIT}</button>
-            <button type="button" class="pc-icon-btn danger ln-pe-del" data-idx="${idx}" title="Remove this repayment">${ICON_TRASH}</button>
-          </div>
-        </div>`;}).join('')}</div>`
-        : '<p class="preset-hint">Nothing recorded against this loan yet.</p>'}
-      <div class="ln-addpay">
-        <input type="date" id="ln_pay_date" value="${esc(today)}">
-        <input type="number" id="ln_pay_amount" min="0" step="any" placeholder="Amount paid">
-        <select id="ln_pay_account">
-          <option value="bank">Paid from bank</option>
-          <option value="momo">Paid from mobile money</option>
-          <option value="cash">Paid in cash</option>
-          <option value="">Do not touch the cash book</option>
-        </select>
-        <button type="button" class="btn btn-accent" id="ln_pay_add" data-id="${l.id}">Record repayment</button>
+  /* FOUR COLUMNS, not six. Six in a half-width block do not collide
+     gracefully -- they overlap, and a payment printed through an
+     interest figure is worse than a column that is not there. The charge
+     column appears only on a loan that actually carries per-period fees;
+     the closing balance is the sentence underneath, where one figure
+     reads better than a column of sixty. */
+  const hasFee = sched.some(r=> r.fee);
+  const rows = w.rows.map(r=>{
+    const dt = String(r.date || r.month || '');
+    return `<div class="ow-tbl-r">
+      <span class="ow-tbl-c" data-l="Due"><span class="ow-tbl-p">${esc(dt)}</span></span>
+      <span class="ow-tbl-n" data-l="Payment">${alNum(r.payment)}</span>
+      <span class="ow-tbl-n" data-l="Interest">${alNum(r.interest)}</span>
+      ${hasFee ? `<span class="ow-tbl-n" data-l="Charge">${r.fee ? fmtUGX(Math.round(r.fee)) : '&mdash;'}</span>` : ''}
+      <span class="ow-tbl-n" data-l="Principal">${alNum(r.principal)}</span>
+    </div>`;
+  }).join('');
+  const last = sched[sched.length-1];
+  const agreement = alTbl(`max-content repeat(${hasFee ? 4 : 3}, minmax(84px,1fr))`,
+    `<span>Due</span><span class="ow-tbl-n">Payment</span><span class="ow-tbl-n">Interest</span>
+     ${hasFee ? '<span class="ow-tbl-n">Charge</span>' : ''}<span class="ow-tbl-n">Principal</span>`,
+    rows,
+    `<p class="ow-mini">${w.hidden ? `${w.rows.length} of ${sched.length} instalments, around today &mdash; ${w.hidden} not shown. ` : ''}${
+      last ? `The last one falls on ${esc(String(last.date || last.month || ''))} and clears it.` : ''}</p>`);
+
+  const paidList = paid.length ? `<div class="dr-singles">${paid.map(rp=>{
+    /* The key is the index in the loan's OWN array, not in this sorted
+       view: loanRepayments() sorts a copy by date, so a row's position
+       here says nothing about where it lives. Editing by display
+       position would rewrite the wrong payment the moment one was
+       entered out of order. */
+    const idx = (l.repayments||[]).indexOf(rp);
+    const amt = Math.round(Number(rp.amount)||0);
+    if(idx === lnPayEditIdx) return `
+    <div class="dr-single editing">
+      <input type="date" class="ln-pe-date" value="${esc(rp.date||'')}">
+      <input type="number" class="ln-pe-amount" min="0" step="any" value="${amt}">
+      <div class="dr-single-acts">
+        <button type="button" class="btn btn-accent ln-pe-save" data-idx="${idx}">Save</button>
+        <button type="button" class="btn btn-ghost ln-pe-cancel">Cancel</button>
       </div>
-    </section>
+    </div>`;
+    return `
+    <div class="dr-single">
+      <span><span class="ow-al-pd">${esc(rp.date||'')}${rp.note?` &middot; ${esc(rp.note)}`:''}</span>${
+        rp.cashTxnId==null ? '<span class="ow-al-pf">not in the cash book</span>' : ''}</span>
+      <b>${fmtUGX(amt)}</b>
+      <div class="dr-single-acts">
+        <button type="button" class="pc-icon-btn ln-pe-edit" data-idx="${idx}" title="Change this repayment">${ICON_EDIT}</button>
+        <button type="button" class="pc-icon-btn danger ln-pe-del" data-idx="${idx}" title="Remove this repayment">${ICON_TRASH}</button>
+      </div>
+    </div>`;}).join('')}</div>`
+    : '<p class="ow-mini">Nothing recorded against this loan yet.</p>';
 
-    <section class="dr-rest">
-      <h4>${ICON_ITEMS}The agreement, payment by payment</h4>
-      <div class="dr-lines"><table>
-        <thead><tr><th>Due</th><th class="r">Opening</th><th class="r">Payment</th><th class="r">Interest</th><th class="r">Charge</th><th class="r">Principal</th><th class="r">Closing</th></tr></thead>
-        <tbody>${sched.map(r=>`<tr>
-          <td>${esc(r.date || r.month)}</td>
-          <td class="r num">${fmtUGX(Math.round(r.opening))}</td>
-          <td class="r num">${fmtUGX(Math.round(r.payment))}</td>
-          <td class="r num">${fmtUGX(Math.round(r.interest))}</td>
-          <td class="r num">${r.fee ? fmtUGX(Math.round(r.fee)) : '—'}</td>
-          <td class="r num">${fmtUGX(Math.round(r.principal))}</td>
-          <td class="r num">${fmtUGX(Math.round(r.closing))}</td>
-        </tr>`).join('')}</tbody>
-      </table></div>
-    </section>`;
+  return `
+    ${p.behind > 1 ? `<p class="ow-q-un">${fmtUGX(Math.round(p.behind))} behind what the agreement asked for by today${
+      due.instalmentsBehind ? `, across ${due.instalmentsBehind} instalment${due.instalmentsBehind===1?'':'s'}` : ''}. Nothing here has chased it.</p>` : ''}
+    ${p.settled ? '<p class="ow-q-un">Settled. Nothing is owed on this one.</p>' : ''}
+    <p class="ow-q-why">${fmtUGX(Math.round(loanPrincipal(l)))} taken on ${esc(l.startedOn||'an unrecorded date')} over ${p.instalments} instalment${p.instalments===1?'':'s'}. The agreement asks for <b>${fmtUGX(Math.round(p.scheduledByNow))}</b> by today; <b>${fmtUGX(Math.round(p.paidByNow))}</b> has been paid, across ${p.instalmentsDue} of ${p.instalments} due.${
+      bought.length ? ` It bought ${bought.map(a=> esc(a.name)).join(' and ')}, which the register carries above.`
+                    : ' Nothing the shop still holds was bought with it, so there is nothing to sell to clear it.'}</p>
+    ${loanFees(l) > 0 ? `<p class="ow-q-note">The lender kept <b>${fmtUGX(Math.round(loanFees(l)))}</b> for insurance and paperwork, so <b>${fmtUGX(Math.round(loanNetAdvanced(l)))}</b> actually reached you while you repay against the full ${fmtUGX(Math.round(loanPrincipal(l)))}. That makes the money cost about <b>${loanTrueCostRate(l).toFixed(1)}%</b> a year rather than ${stated}%.</p>` : ''}
+    ${l.method==='flat' ? `<p class="ow-q-note">Quoted at <b>${stated}% flat</b>, which costs about <b>${p.effectiveRatePct.toFixed(1)}%</b> a year in real terms: flat interest is charged on the whole ${fmtUGX(Math.round(loanPrincipal(l)))} for the entire term, including the part already paid back.</p>` : ''}
+
+    <div class="ow-ev-row">
+      <div class="ow-ev ow-al-wide">
+        <div class="ow-ev-h"><span class="ow-ev-t">The agreement, payment by payment</span>
+          <span class="ow-ev-n">${p.instalmentsDue} of ${p.instalments} due &middot; UGX</span></div>
+        <div class="ow-ev-b">${agreement}</div>
+      </div>
+      <div class="ow-ev">
+        <div class="ow-ev-h"><span class="ow-ev-t">Repayments made</span>
+          <span class="ow-ev-n">${paid.length} &middot; ${fmtUGX(Math.round(p.paidByNow))}</span></div>
+        <div class="ow-ev-b">${paidList}</div>
+      </div>
+    </div>
+
+    <div class="ln-addpay ow-al-pay">
+      <input type="date" class="ow-al-in" id="ln_pay_date" value="${esc(today)}">
+      <input type="number" class="ow-al-in" id="ln_pay_amount" min="0" step="any" placeholder="Amount paid"
+        value="${due.dueNow > 0 ? Math.round(due.dueNow) : ''}">
+      <select class="ow-al-in" id="ln_pay_account">
+        <option value="bank">Paid from bank</option>
+        <option value="momo">Paid from mobile money</option>
+        <option value="cash">Paid in cash</option>
+        <option value="">Do not touch the cash book</option>
+      </select>
+      <button type="button" class="btn btn-accent" id="ln_pay_add" data-id="${l.id}">Record repayment</button>
+    </div>
+    <p class="ow-mini">It posts the payment to the Cash Book under Loan repayments, from the account you name. Nothing leaves any account on its own.</p>
+    <div class="ow-q-a">
+      <button type="button" class="btn btn-ghost ow-sm al-ln-edit" data-id="${l.id}">${ICON_EDIT}Edit the agreement</button>
+      <button type="button" class="btn btn-ghost ow-sm al-ln-del" data-id="${l.id}">${ICON_TRASH}Remove</button>
+    </div>`;
+}
+
+/* ---- a thing, opened ------------------------------------------------ */
+function alAssetBody(a, today){
+  const gone = assetIsDisposed(a, today);
+  const d = gone ? assetDisposalResult(a) : null;
+  const sched = assetSchedule(a);
+  const loan = assetFinancingLoan(a);
+  const nbv = gone ? 0 : assetNBVAt(a, today);
+  const owed = loan ? loanOutstanding(loan, today) : 0;
+  const w = alWindow(sched, 'month', today, 3, 4);
+
+  const depRows = w.rows.map(r=>`<div class="ow-tbl-r">
+      <span class="ow-tbl-c" data-l="Month">${esc(r.month)}</span>
+      <span class="ow-tbl-n" data-l="Opening">${alNum(r.opening)}</span>
+      <span class="ow-tbl-n" data-l="Charge">${alNum(r.charge)}</span>
+      <span class="ow-tbl-n" data-l="Closing">${alNum(r.closing)}</span>
+    </div>`).join('');
+  const dep = sched.length ? alTbl('max-content repeat(3, minmax(84px,1fr))',
+      `<span>Month</span><span class="ow-tbl-n">Opening</span><span class="ow-tbl-n">Charge</span><span class="ow-tbl-n">Closing</span>`,
+      depRows,
+      `<p class="ow-mini">${w.hidden ? `${w.rows.length} of ${sched.length} months, around today. ${w.hidden} not shown. ` : ''}It runs to ${Number(a.salvage)>0 ? `a residual ${fmtUGX(Math.round(Number(a.salvage)||0))}` : 'nil'}. A charge is not a payment: nothing leaves any account.</p>`)
+    : '<p class="ow-mini">Nothing to depreciate &mdash; check the life or rate on this thing.</p>';
+
+  let fin = '';
+  if(loan){
+    const rows = assetFinancingSchedule(a, loan);
+    const under = rows.filter(r=> r.equity < 0);
+    const fw = alWindow(rows, 'month', today, 3, 4);
+    fin = `<div class="ow-ev">
+      <div class="ow-ev-h"><span class="ow-ev-t">Worth against owed, month by month</span>
+        <span class="ow-ev-n">${esc(loan.lender)} &middot; UGX</span></div>
+      <div class="ow-ev-b">${alTbl('max-content repeat(3, minmax(84px,1fr))',
+        `<span>Month</span><span class="ow-tbl-n">Worth</span><span class="ow-tbl-n">Owed</span><span class="ow-tbl-n">Difference</span>`,
+        fw.rows.map(r=>`<div class="ow-tbl-r">
+          <span class="ow-tbl-c" data-l="Month">${esc(r.month)}</span>
+          <span class="ow-tbl-n" data-l="Worth">${alNum(r.nbv)}</span>
+          <span class="ow-tbl-n" data-l="Owed (agreed)">${alNum(r.owed)}</span>
+          <span class="ow-tbl-n ${r.equity<0?'ow-bad':''}" data-l="Difference">${alNum(r.equity)}</span>
+        </div>`).join(''),
+        `<p class="ow-mini">${fw.hidden ? `${fw.rows.length} of ${rows.length} months, around today. ${fw.hidden} not shown. ` : ''}The Owed column is the AGREED plan &mdash; what the lender is holding you to. Repayments you record change what is owed today, not that.</p>`)}</div>
+      </div>`;
+    if(under.length && !gone){
+      fin = `<p class="ow-q-un">On the agreed repayments this is worth less than is owed on it for ${under.length} month${under.length===1?'':'s'}, through to <b>${esc(under[under.length-1].month)}</b>. Selling it in that window would not clear the debt.</p>` + fin;
+    }
+  }
+
+  return `
+    ${d ? `<p class="ow-q-un">Sold on ${esc(a.disposedOn||'')} for ${fmtUGX(Math.round(Number(a.disposalProceeds)||0))}, against a book value of ${fmtUGX(Math.round(nbv || assetNBVAt(a, a.disposedOn)))}. ${d.gain>=0?'Gain':'Loss'} of ${fmtUGX(Math.abs(Math.round(d.gain)))}.</p>` : ''}
+    <p class="ow-q-why">Bought on ${esc(a.acquiredOn||'an unrecorded date')} for ${fmtUGX(Math.round(Number(a.cost)||0))}${
+      loan ? `, financed by the ${esc(loan.lender)} loan` : ', paid for outright'}. ${esc(assetMethodLabel(a))}.${
+      gone ? ' It is no longer held.' : ''}</p>
+    ${(!gone && loan) ? `<div class="ow-ar">
+      <span class="ow-ar-k">Worth on the books today</span><span class="ow-ar-v">${fmtUGX(Math.round(nbv))}</span>
+      <span class="ow-ar-k">Still owed to ${esc(loan.lender)}</span><span class="ow-ar-v">&minus; ${fmtUGX(Math.round(owed))}</span>
+      <span class="ow-ar-k ow-w">${nbv-owed < 0 ? 'Owed over its value' : 'Yours, free of debt'}</span>
+      <span class="ow-ar-v ow-w ${nbv-owed < 0 ? 'ow-bad' : ''}">${fmtUGX(Math.round(Math.abs(nbv-owed)))}</span>
+    </div>` : ''}
+    <div class="ow-ev-row">
+      <div class="ow-ev">
+        <div class="ow-ev-h"><span class="ow-ev-t">Depreciation, month by month</span>
+          <span class="ow-ev-n">${alNum(assetAccumulatedAt(a, gone ? a.disposedOn : today))} charged &middot; UGX</span></div>
+        <div class="ow-ev-b">${dep}</div>
+      </div>
+      ${fin}
+    </div>
+    <div class="ow-q-a">
+      ${loan && !loanPerformance(loan, today).settled ? `<button type="button" class="btn btn-ghost ow-sm al-go-loan" data-id="${loan.id}">${ICON_MONEY}Record a repayment on it</button>` : ''}
+      ${gone ? '' : `<button type="button" class="btn btn-ghost ow-sm al-fa-sell" data-id="${a.id}">${ICON_MONEY}Sell or scrap it</button>`}
+      <button type="button" class="btn btn-ghost ow-sm al-fa-edit" data-id="${a.id}">${ICON_EDIT}Edit</button>
+      <button type="button" class="btn btn-ghost ow-sm al-fa-del" data-id="${a.id}">${ICON_TRASH}Remove</button>
+    </div>`;
+}
+
+/* ---- the register --------------------------------------------------- */
+function alRows(today){
+  const assets = (data.fixedAssets||[]);
+  const loans = (data.loans||[]);
+  const financed = new Set();
+  const out = [];
+
+  assets.forEach(a=>{
+    const gone = assetIsDisposed(a, today);
+    const loan = assetFinancingLoan(a);
+    if(loan) financed.add(loan.id);
+    const p = loan ? loanPerformance(loan, today) : null;
+    const due = loan ? loanDuePosition(loan, today) : null;
+    const nbv = gone ? null : assetNBVAt(a, today);
+    const owed = (loan && p && !p.settled) ? p.outstanding : null;
+    const d = gone ? assetDisposalResult(a) : null;
+    const behind = (p && !p.settled) ? Math.max(0, p.behind) : 0;
+    const chips = [];
+    if(gone) chips.push({ text:'Sold' });
+    else if(behind > 1) chips.push({ text:'Behind', tone:'bad' });
+    else if(due && due.status === 'due') chips.push({ text:'Due this month', tone:'' });
+    if(!gone && owed != null && nbv != null && nbv < owed) chips.push({ text:'Under water', tone:'bad' });
+    out.push({
+      key: 'a'+a.id, kind:'a', crest: AL_CRESTS.thing, kindWord:'Owned', chips,
+      name: a.name || 'Unnamed', gone, behind,
+      dueOn: (due && due.next) ? due.next.month : '',
+      /* Raw, not escaped: alRowHTML escapes it once on the way out, and
+         escaping twice turns an ampersand in a lender's name into
+         &amp;amp; on screen. A meta line that repeats the columns and
+         then runs out of room says nothing twice: the dates are in the
+         open row, where there is space to say what they mean. */
+      meta: [alMethodShort(a),
+             gone ? `sold ${a.disposedOn||''}` : (loan ? loan.lender : 'paid outright')]
+              .filter(Boolean).join(' \u00b7 '),
+      worth: nbv, worthBasis: gone ? 'no longer held' : `cost ${fmtUGX(Math.round(Number(a.cost)||0))}`,
+      owed,
+      owedBasis: gone ? (loan ? `${loan.lender}, still owed` : 'nothing was owed')
+        : loan ? (p.settled ? `${loan.lender}, paid off`
+                            : `${loan.lender}${behind>1 ? ', behind' : ', on track'}`)
+               : 'paid outright',
+      owedTone: behind > 1 ? 'ow-bad' : '',
+      yours: gone ? (d ? d.gain : null) : (nbv == null ? null : nbv - (owed||0)),
+      yoursBasis: gone ? (d && d.gain>=0 ? 'gain on sale' : 'loss on sale')
+                       : (owed ? 'worth less what is owed' : 'all of it'),
+      yoursTone: gone ? (d && d.gain>=0 ? 'ow-good' : 'ow-bad')
+                      : ((nbv != null && owed && nbv < owed) ? 'ow-bad' : ''),
+      sortWorth: nbv || 0,
+      body: ()=> alAssetBody(a, today),
+    });
+  });
+
+  loans.filter(l=> !financed.has(l.id)).forEach(l=>{
+    const p = loanPerformance(l, today);
+    const due = loanDuePosition(l, today);
+    const behind = p.settled ? 0 : Math.max(0, p.behind);
+    const chips = [];
+    if(p.settled) chips.push({ text:'Settled' });
+    else if(behind > 1) chips.push({ text:'Behind', tone:'bad' });
+    else if(due.status === 'due') chips.push({ text:'Due this month', tone:'' });
+    out.push({
+      key: 'l'+l.id, kind:'l', crest: AL_CRESTS.loan, kindWord:'Borrowed',
+      name: l.lender || 'Unnamed lender', gone: p.settled, behind,
+      dueOn: due.next ? due.next.month : '',
+      meta: `${loanMethodLabel(l)} · ${p.instalments} instalment${p.instalments===1?'':'s'} · ${p.instalmentsDue} due, ${loanRepayments(l).length} paid`,
+      worth: null, worthBasis: 'nothing behind it',
+      owed: p.settled ? null : p.outstanding,
+      /* Arrears live in the OWED cell's basis, never in the Yours
+         column. That column means worth less what is owed on it, and a
+         loan with nothing behind it has no such figure -- putting the
+         arrears there would give one column two meanings depending on
+         the row, which is the fault the whole redesign is about. */
+      owedBasis: p.settled ? 'paid off'
+        : (behind > 1 ? `${fmtUGX(Math.round(behind))} behind` : `of ${fmtUGX(Math.round(p.totalPayable))}`),
+      owedTone: behind > 1 ? 'ow-bad' : '',
+      yours: null, yoursBasis: 'borrowing, not a thing',
+      chips,
+      sortWorth: p.settled ? 0 : p.outstanding,
+      body: ()=> alLoanBody(l, today),
+    });
+  });
+
+  /* Behind first, then what falls due soonest, then what it is worth.
+     Stated in the panel header, so the order can be checked rather than
+     taken on trust -- the old tables sorted by the date a thing was
+     acquired, which put a loan in arrears wherever its start date fell. */
+  const tier = (r)=> r.gone ? 3 : (r.behind > 1 ? 0 : (r.dueOn ? 1 : 2));
+  return out.sort((x,y)=>
+    tier(x) - tier(y)
+    || (tier(x) === 0 ? y.behind - x.behind : 0)
+    || (tier(x) === 1 ? String(x.dueOn).localeCompare(String(y.dueOn)) : 0)
+    || y.sortWorth - x.sortWorth
+    || String(x.name).localeCompare(String(y.name)));
+}
+
+function renderAssetsLoans(){
+  const today = todayISO();
+  const assets = (data.fixedAssets||[]);
+  const loans = (data.loans||[]);
+  const strip = document.getElementById('alStripWrap');
+  const reg = document.getElementById('alRegWrap');
+  const rail = document.getElementById('alRailWrap');
+  if(!strip || !reg || !rail) return;
+
+  /* THE ACCENT IS THE ONE THING TO DO NEXT, and what that is changes.
+     With something on the register it is the repayment that is behind,
+     inside the open row. With nothing on it there is nothing to be
+     behind on, and the one act left is putting the first thing in. */
+  const addBtn = document.getElementById('fa_add_btn');
+  if(addBtn){
+    const first = !assets.length && !loans.length;
+    addBtn.classList.toggle('btn-accent', first);
+    addBtn.classList.toggle('btn-ghost', !first);
+  }
+
+  if(!assets.length && !loans.length){
+    strip.innerHTML = '';
+    rail.innerHTML = '';
+    /* No strip at all. Four tiles of nought would be four figures the
+       books cannot derive, and this app does not show those. */
+    reg.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The register</span></div>
+      <div class="ow-empty">Nothing here yet. Add the van, the shelving, the laptop &mdash; anything the shop bought to
+      <i>use</i> rather than to sell. Record a loan when the shop borrows, so money the books show arriving is also
+      shown as something that has to go back.</div></div>`;
+    return;
+  }
+
+  const live = loans.map(l=> ({ l, p: loanPerformance(l, today), due: loanDuePosition(l, today) }))
+                    .filter(x=> !x.p.settled);
+  const outstanding = live.reduce((s,x)=> s + x.p.outstanding, 0);
+  const arrears = live.reduce((s,x)=> s + Math.max(0, x.p.behind), 0);
+  const thisMonth = live.reduce((s,x)=> s + x.due.thisMonth, 0);
+  const held = assets.filter(a=> !assetIsDisposed(a, today));
+  const cost = held.reduce((s,a)=> s + (Number(a.cost)||0), 0);
+  const nbv = fixedAssetsNBVAt(today);
+  const behindNames = live.filter(x=> x.p.behind > 1).map(x=> x.l.lender);
+  const behindCount = behindNames.length;
+  const dueNames = live.filter(x=> x.due.thisMonth > 0).map(x=> x.l.lender);
+
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt ${tone||''}">
+    <p class="ow-mt-l">${label}</p>
+    <span class="ow-mt-v">${value}</span>
+    <p class="ow-mt-s">${sub}</p></div>`;
+  strip.innerHTML = `<div class="ow-strip">
+    ${tile('Still owed', live.length ? fmtUGX(Math.round(outstanding)) : '&mdash;',
+        live.length ? `across ${live.length} loan${live.length===1?'':'s'}${
+          behindCount ? `, ${behindCount === live.length ? (live.length===1?'it is':'all') : behindCount} behind` : ''}` : 'nothing borrowed')}
+    ${tile('Falls due this month', thisMonth > 0 ? fmtUGX(Math.round(thisMonth)) : '&mdash;',
+        thisMonth > 0 ? esc(dueNames.join(', ')) : 'nothing to pay')}
+    ${tile('Behind schedule', arrears > 1 ? fmtUGX(Math.round(arrears)) : '&mdash;',
+        arrears > 1 ? esc(behindNames.join(', ')) : 'nothing overdue', arrears > 1 ? 'ow-bad' : '')}
+    ${tile('Worth on the books', held.length ? fmtUGX(Math.round(nbv)) : '&mdash;',
+        held.length ? `${held.length} thing${held.length===1?'':'s'} held, cost ${fmtUGX(Math.round(cost))}` : 'nothing held')}
+  </div>`;
+
+  const rows = alRows(today);
+  const liveRows = rows.filter(r=> !r.gone);
+  const doneRows = rows.filter(r=> r.gone);
+  reg.innerHTML = `<div class="ow-pan ow-al">
+    <div class="ow-pan-h"><span class="ow-pan-t">The register</span>
+      <span class="ow-pan-nt">behind first, then what falls due soonest, then what it is worth</span>
+      <span class="ow-pan-n">${liveRows.length}</span></div>
+    <div class="ow-al-h"><span></span><span>What it is</span>
+      <span class="ow-al-hr">Worth</span><span class="ow-al-hr">Owed</span><span class="ow-al-hr">Yours, free of debt</span></div>
+    ${liveRows.map(alRowHTML).join('')}
+    ${doneRows.length ? `<div class="ow-al-sect"><span>Settled and sold</span><span class="ow-al-sect-n">${doneRows.length}</span></div>` : ''}
+    ${doneRows.map(alRowHTML).join('')}
+  </div>`;
+
+  const sr = (k, v, tone, strong)=> `<div class="ow-sr"><span class="ow-sr-k">${k}</span>
+    <span class="ow-sr-v ${tone||''}"${strong?' style="font-weight:var(--ow-fw-600)"':''}>${v}</span></div>`;
+  const yearStart = today.slice(0,4)+'-01-01';
+  const repaid = loans.reduce((s,l)=> s + loanRepayments(l)
+      .filter(rp=> String(rp.date||'') >= yearStart && String(rp.date||'') <= today)
+      .reduce((t,rp)=> t + Math.max(0, Number(rp.amount)||0), 0), 0);
+  const interestYr = loanInterestForPeriod(yearStart, today);
+  rail.innerHTML = `
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The position</span>
+      <span class="ow-pan-n">today</span></div>
+      ${sr('What they cost', fmtUGX(Math.round(cost)))}
+      ${sr('Written off so far', fmtUGX(Math.round(cost - nbv)))}
+      ${sr('Worth on the books', fmtUGX(Math.round(nbv)))}
+      ${sr('Still owed on them', fmtUGX(Math.round(outstanding)))}
+      ${sr('Yours, free of debt', fmtUGX(Math.round(nbv - outstanding)), nbv - outstanding < 0 ? 'ow-bad' : '', true)}
+      <p class="ow-mini">Cost, what is written off and what is left are the Balance sheet&#39;s own three lines, taken from the same records &mdash; so the two cannot disagree.</p>
+    </div>
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">This year</span>
+      <span class="ow-pan-n">${esc(yearStart)} &ndash; ${esc(today)}</span></div>
+      ${sr('Depreciation charged', fmtUGX(Math.round(depreciationForPeriod(yearStart, today))))}
+      ${sr('Interest paid', fmtUGX(Math.round(interestYr)))}
+      ${sr('Repaid to lenders', fmtUGX(Math.round(repaid)))}
+      <p class="ow-mini">Depreciation and interest are costs and reach the Profit &amp; loss. Money repaid off the principal is not a cost &mdash; it only moves.</p>
+    </div>
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Not counted here</span></div>
+      <p class="ow-mini">Stock on the shelf is not an asset of this kind &mdash; it was bought to sell, and lives in Inventory. Rent is not borrowing; it is on Payroll &amp; rent. What falls due across every kind of promise, loans included, is drawn on What&#39;s coming.</p>
+    </div>`;
+
+  alWire(reg, today);
+}
+
+/* One handler set, rebound on every draw. The register is rebuilt from
+   scratch whenever anything changes, so nothing may hold a reference
+   into it. */
+function alWire(reg, today){
+  reg.querySelectorAll('[data-open]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.open;
+    alOpen = alOpen === k ? null : k;
+    lnPayEditIdx = null;
+    renderAssetsLoans();
+  }));
+  reg.querySelectorAll('.al-fa-sell').forEach(b=> b.addEventListener('click', ()=> openAssetForm(Number(b.dataset.id), true)));
+  reg.querySelectorAll('.al-fa-edit').forEach(b=> b.addEventListener('click', ()=> openAssetForm(Number(b.dataset.id))));
+  reg.querySelectorAll('.al-fa-del').forEach(b=> b.addEventListener('click', ()=> deleteFixedAsset(Number(b.dataset.id))));
+  reg.querySelectorAll('.al-ln-edit').forEach(b=> b.addEventListener('click', ()=> openLoanForm(Number(b.dataset.id))));
+  reg.querySelectorAll('.al-ln-del').forEach(b=> b.addEventListener('click', ()=> deleteLoan(Number(b.dataset.id))));
+  reg.querySelectorAll('.al-go-loan').forEach(b=> b.addEventListener('click', ()=> openLoanPerformance(Number(b.dataset.id))));
+
+  const id = alOpen && alOpen[0] === 'l' ? Number(alOpen.slice(1)) : null;
+  if(id == null) return;
+  const l = (data.loans||[]).find(x=> x.id === id);
+  if(!l) return;
   /* Changing a repayment has to change its cash-book entry too, or the
      books and the loan tell different stories about the same money. A
      repayment recorded with "do not touch the cash book" has no entry to
      carry, and stays that way. */
   const reopen = ()=>{ saveData(); renderLoans(); openLoanPerformance(id); };
-  document.querySelectorAll('.ln-pe-edit').forEach(b=> b.addEventListener('click', ()=>{
+  reg.querySelectorAll('.ln-pe-edit').forEach(b=> b.addEventListener('click', ()=>{
     lnPayEditIdx = Number(b.dataset.idx);
     openLoanPerformance(id);
   }));
-  document.querySelectorAll('.ln-pe-cancel').forEach(b=> b.addEventListener('click', ()=>{
+  reg.querySelectorAll('.ln-pe-cancel').forEach(b=> b.addEventListener('click', ()=>{
     lnPayEditIdx = null;
     openLoanPerformance(id);
   }));
-  document.querySelectorAll('.ln-pe-save').forEach(b=> b.addEventListener('click', ()=>{
+  reg.querySelectorAll('.ln-pe-save').forEach(b=> b.addEventListener('click', ()=>{
     const loan = (data.loans||[]).find(x=>x.id===id);
     const rp = loan && (loan.repayments||[])[Number(b.dataset.idx)];
     if(!rp) return;
@@ -57710,7 +58124,7 @@ function openLoanPerformance(id){
     reopen();
     toast(txn ? 'Repayment updated — cash book too' : 'Repayment updated');
   }));
-  document.querySelectorAll('.ln-pe-del').forEach(b=> b.addEventListener('click', ()=>{
+  reg.querySelectorAll('.ln-pe-del').forEach(b=> b.addEventListener('click', ()=>{
     const loan = (data.loans||[]).find(x=>x.id===id);
     const i = Number(b.dataset.idx);
     const rp = loan && (loan.repayments||[])[i];
@@ -57725,8 +58139,8 @@ function openLoanPerformance(id){
     toast('Repayment removed');
   }));
 
-  const btn = document.getElementById('ln_pay_add');
-  if(btn) btn.addEventListener('click', ()=>{
+  const addBtn = document.getElementById('ln_pay_add');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
     const amount = Number(document.getElementById('ln_pay_amount').value)||0;
     const date = document.getElementById('ln_pay_date').value;
     if(!(amount>0)){ toast('Enter what was paid'); return; }
@@ -57750,7 +58164,20 @@ function openLoanPerformance(id){
     openLoanPerformance(id);
     toast(account ? 'Repayment recorded' : 'Repayment recorded — cash book untouched');
   });
-  openModal('loanPerfModal');
+}
+
+/* The old names, kept because nine call sites and two tests speak them,
+   and because "redraw the loans" and "redraw the assets" are still true
+   sentences about one screen. */
+function renderLoans(){ renderAssetsLoans(); }
+function renderFixedAssets(){ renderAssetsLoans(); }
+/* And the old doors. Both used to open a modal; both now open the row,
+   which is where everything those modals held has gone. */
+function openLoanPerformance(id){ alOpen = 'l'+id; renderAssetsLoans(); alReveal(); }
+function openAssetSchedule(id){ alOpen = 'a'+id; renderAssetsLoans(); alReveal(); }
+function alReveal(){
+  const el = document.querySelector(`#alRegWrap [data-open="${alOpen}"]`);
+  if(el && typeof el.scrollIntoView === 'function') el.scrollIntoView({block:'nearest'});
 }
 /* ---- Being reminded, and being able to act on the reminder ----------
 
@@ -58180,7 +58607,6 @@ function deleteLoan(id){
 document.getElementById('ln_add_btn').addEventListener('click', ()=>openLoanForm(null));
 document.getElementById('ln_cancel').addEventListener('click', ()=>closeModal('loanModal'));
 document.getElementById('loanModalClose').addEventListener('click', ()=>closeModal('loanModal'));
-document.getElementById('loanPerfClose').addEventListener('click', ()=>closeModal('loanPerfModal'));
 /* ln_fees was missing from this list, so typing a fee changed nothing
    and the sentence saying what the money really costs never appeared --
    unless you happened to touch another field afterwards. Every input
@@ -58239,130 +58665,6 @@ function assetMethodLabel(a){
   const m = Math.max(1, Math.round(Number(a.lifeMonths)||0));
   const years = m/12;
   return `Straight line · ${m} months${years>=1 && Number.isInteger(years) ? ` (${years} yr${years===1?'':'s'})` : ''}`;
-}
-function renderFixedAssets(){
-  const today = todayISO();
-  const assets = (data.fixedAssets||[]).slice()
-    .sort((a,b)=> String(b.acquiredOn||'').localeCompare(String(a.acquiredOn||'')));
-  const held = assets.filter(a=> !assetIsDisposed(a, today));
-  const cost = held.reduce((s,a)=> s + (Number(a.cost)||0), 0);
-  const nbv = fixedAssetsNBVAt(today);
-  const yearStart = today.slice(0,4)+'-01-01';
-
-  document.getElementById('fa_summary').innerHTML = assets.length ? `
-    <div class="sc-stats fa-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(cost))}</b><span>What they cost</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(cost-nbv))}</b><span>Written off so far</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(nbv))}</b><span>Worth on the books</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(depreciationForPeriod(yearStart, today)))}</b><span>Charge this year</span></div>
-    </div>` : '';
-
-  const wrap = document.getElementById('fa_tableWrap');
-  if(!assets.length){
-    wrap.innerHTML = '<div class="empty">Nothing here yet. Add the van, the shelving, the laptop — anything the shop bought to use rather than to sell.</div>';
-    return;
-  }
-  wrap.innerHTML = `<div class="pi-table-wrap"><table>
-    <thead><tr>
-      <th>Asset</th><th>Acquired</th><th>How it depreciates</th>
-      <th class="r">Cost</th><th class="r">Written off</th><th class="r">Book value</th><th></th>
-    </tr></thead>
-    <tbody>${assets.map(a=>{
-      const gone = assetIsDisposed(a, today);
-      const d = gone ? assetDisposalResult(a) : null;
-      return `<tr class="${gone?'fa-gone':''}">
-        <td>
-          <div class="fa-name">${esc(a.name)}${gone?'<span class="fa-tag">sold</span>':''}</div>
-          ${a.category ? `<div class="fa-sub">${esc(a.category)}</div>` : ''}
-          ${d ? `<div class="fa-sub ${d.gain>=0?'good':'bad'}">${d.gain>=0?'Gain':'Loss'} on sale ${fmtUGX(Math.abs(Math.round(d.gain)))}</div>` : ''}
-        </td>
-        <td>${esc(a.acquiredOn||'')}</td>
-        <td class="fa-sub">${esc(assetMethodLabel(a))}</td>
-        <td class="r num">${fmtUGX(Math.round(Number(a.cost)||0))}</td>
-        <td class="r num">${fmtUGX(Math.round(assetAccumulatedAt(a, gone ? a.disposedOn : today)))}</td>
-        <td class="r num">${gone ? '—' : fmtUGX(Math.round(assetNBVAt(a, today)))}</td>
-        <!-- Same omission as the loans table above, same fix. -->
-        <td class="r">
-          <div class="inv-row-actions">
-            <button type="button" class="pc-icon-btn fa-schedule" data-id="${a.id}" title="Depreciation schedule">${ICON_ITEMS}</button>
-            <!-- Selling was only reachable by knowing that Edit hides two
-                 more fields below the notes, which is not a thing anybody
-                 knows. Not offered on something already sold: the row
-                 says "sold" and carries the gain, and a second sale would
-                 bank the proceeds twice. -->
-            ${gone ? '' : `<button type="button" class="pc-icon-btn fa-sell" data-id="${a.id}" title="Sell or scrap it">${ICON_MONEY}</button>`}
-            <button type="button" class="pc-icon-btn fa-edit" data-id="${a.id}" title="Edit">${ICON_EDIT}</button>
-            <button type="button" class="pc-icon-btn danger fa-delete" data-id="${a.id}" title="Remove">${ICON_TRASH}</button>
-          </div>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
-
-  wrap.querySelectorAll('.fa-schedule').forEach(b=>b.addEventListener('click', ()=>openAssetSchedule(Number(b.dataset.id))));
-  wrap.querySelectorAll('.fa-sell').forEach(b=>b.addEventListener('click', ()=>openAssetForm(Number(b.dataset.id), true)));
-  wrap.querySelectorAll('.fa-edit').forEach(b=>b.addEventListener('click', ()=>openAssetForm(Number(b.dataset.id))));
-  wrap.querySelectorAll('.fa-delete').forEach(b=>b.addEventListener('click', ()=>deleteFixedAsset(Number(b.dataset.id))));
-}
-function openAssetSchedule(id){
-  const a = (data.fixedAssets||[]).find(x=>x.id===id);
-  if(!a) return;
-  const rows = assetSchedule(a);
-  document.getElementById('assetScheduleTitle').textContent = a.name || 'Depreciation schedule';
-  document.getElementById('assetScheduleBody').innerHTML = `
-    <div class="bl-top">
-      <span class="bl-top-label">${esc(assetMethodLabel(a))} · from ${esc(a.acquiredOn||'')}</span>
-      <span class="bl-top-fig">${fmtUGX(Math.round(Number(a.cost)||0))}</span>
-    </div>
-    ${rows.length ? `<div class="dr-lines"><table>
-      <thead><tr><th>Month</th><th class="r">Opening</th><th class="r">Charge</th><th class="r">Closing</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr>
-        <td>${esc(r.month)}</td>
-        <td class="r num">${fmtUGX(Math.round(r.opening))}</td>
-        <td class="r num">${fmtUGX(Math.round(r.charge))}</td>
-        <td class="r num">${fmtUGX(Math.round(r.closing))}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-    <p class="sp-foot">${rows.length} month${rows.length===1?'':'s'} to ${Number(a.salvage)>0 ? `its residual value of ${fmtUGX(Math.round(Number(a.salvage)||0))}` : 'nil'}.</p>`
-    : '<p class="preset-hint">Nothing to depreciate — check the life or rate on this asset.</p>'}
-    ${assetFinancingHTML(a)}`;
-  openModal('assetScheduleModal');
-}
-
-/* What the thing is worth against what is still owed on it.
-
-   Neither schedule says this alone. A van depreciating over five years
-   against a loan repaid over three is worth less than its debt for the
-   first stretch of its life -- ordinary, and worth knowing before it is
-   sold or written off, because that gap has to come from somewhere. */
-function assetFinancingHTML(a){
-  const loan = assetFinancingLoan(a);
-  if(!loan) return '';
-  const rows = assetFinancingSchedule(a, loan);
-  if(!rows.length) return '';
-  const today = todayISO();
-  const nbv = assetNBVAt(a, today);
-  const owed = loanOutstanding(loan, today);
-  const equity = nbv - owed;
-  const under = rows.filter(r=>r.equity < 0);
-  return `<section class="dr-rest">
-    <h4>${ICON_MONEY}Bought with the ${esc(loan.lender)} loan</h4>
-    <div class="sc-stats fa-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(nbv))}</b><span>What it is worth</span></div>
-      <div class="sc-stat"><b>${fmtUGX(Math.round(owed))}</b><span>Still owed on it</span></div>
-      <div class="sc-stat ${equity<0?'bad':''}"><b>${fmtUGX(Math.round(Math.abs(equity)))}</b><span>${equity<0?'Owed over its value':'Yours, free of the loan'}</span></div>
-    </div>
-    ${under.length ? `<p class="ln-callout">${ICON_WARN}<span>On the agreed repayments this is worth less than is owed on it for ${under.length} month${under.length===1?'':'s'}, through to <b>${esc(under[under.length-1].month)}</b>. Ordinary when a thing is depreciated over longer than it is financed — but selling it in that window would not clear the debt.</span></p>` : ''}
-    <p class="sp-lead">The figures above are where things stand today. The table below is the plan: what it will be worth each month against what the agreement says will still be owed. Repayments you record on the loan change the first, not the second.</p>
-    <div class="dr-lines"><table>
-      <thead><tr><th>Month</th><th class="r">Worth</th><th class="r">Owed (agreed)</th><th class="r">Difference</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr>
-        <td>${esc(r.month)}</td>
-        <td class="r num">${fmtUGX(Math.round(r.nbv))}</td>
-        <td class="r num">${fmtUGX(Math.round(r.owed))}</td>
-        <td class="r num ${r.equity<0?'fa-neg':''}">${fmtUGX(Math.round(r.equity))}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </section>`;
 }
 
 let editingAssetId = null;
@@ -58604,7 +58906,6 @@ function deleteFixedAsset(id){
 document.getElementById('fa_add_btn').addEventListener('click', ()=>openAssetForm(null));
 document.getElementById('fa_cancel').addEventListener('click', ()=>closeModal('assetModal'));
 document.getElementById('assetModalClose').addEventListener('click', ()=>closeModal('assetModal'));
-document.getElementById('assetScheduleClose').addEventListener('click', ()=>closeModal('assetScheduleModal'));
 /* The cards drive the hidden field, so nothing listens on a select any
    more. Everything that can change either the schedule or the money is
    wired to redraw both -- the cost feeds each of them. */

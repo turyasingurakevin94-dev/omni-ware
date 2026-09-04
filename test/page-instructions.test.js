@@ -43,14 +43,21 @@ const src = read('index.html');
      twentieth; Staff, rebuilt as a dispatch board, the twenty-first;
      Analysis, rebuilt as a ranked list of findings, the twenty-second --
      its long paragraph is now .ow-ph-help behind the same "i" bubble. */
+  /* A FLOOR THAT COMES DOWN AS SCREENS CONVERT, like the ratchets in
+     design-system.test.js. It was 17. Assets and Loans were two of them
+     and are now one screen on the .ow- layer, which trades .page-head
+     for .ow-ph and puts the description behind the "i" by construction
+     -- so this file has two fewer screens to police, not two screens
+     that stopped being policed. Only ever lower this to match a
+     conversion; raising the count back means a screen regressed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 17, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 15, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 17,
+  t.check(paras.length >= 15,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

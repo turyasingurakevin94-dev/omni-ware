@@ -510,6 +510,30 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        grouped by stage with rows that open in place, and a rail. The
        sourcing funnel still wears .sq-board/.sq-col/.sq-card by design,
        so those stay in the FILE; only this screen may not emit them. */
+    /* Assets & loans. Two screens for one question: the van on Assets,
+       the loan that bought the van on Loans, neither page mentioning the
+       other -- so "what is this thing worth to me" could not be asked
+       anywhere, though the app already computed it three clicks inside a
+       modal. One register now, one row per thing, ranked behind-first,
+       opening in place. The two modals it replaced are gone from the
+       file, so their families are retired from the screen AND from what
+       the renderers emit. */
+    'assets': {
+      retired: ['page-head', 'panel', 'panel-head', 'sc-stats', 'fa-summary', 'pi-table-wrap',
+                'fa-name', 'fa-sub', 'fa-tag', 'fa-gone', 'empty', 'ln-due-banner', 'sp-lead'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-stack', 'ow-grid', 'ow-side'],
+      renders: ['renderAssetsLoans', 'alRows', 'alRowHTML', 'alFig', 'alTbl', 'alLoanBody', 'alAssetBody'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-un', 'ow-q-a', 'ow-cp',
+                    'ow-ev', 'ow-ev-h', 'ow-ev-t', 'ow-ev-row', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n',
+                    'ow-ar', 'ow-ar-k', 'ow-ar-v', 'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty',
+                    /* the five this screen owns: the fifth column and its
+                       names, the crest and two-line title beside it, the
+                       dash that is not a nought, the band under which
+                       settled and sold things live, and the repayment
+                       form that is the one place it takes typing */
+                    'ow-al', 'ow-al-h', 'ow-al-nm', 'ow-al-none', 'ow-al-sect', 'ow-al-pay'],
+    },
     'quote-saved': {
       retired: ['sq-board-tools', 'sq-select-all-label', 'panel', 'qp-panel', 'sq-board', 'sq-col', 'sq-stepper',
                 'sq-card', 'sq-goods-row', 'sq-cash', 'sq-assignee-row', 'sq-meta', 'empty'],

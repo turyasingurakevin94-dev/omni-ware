@@ -475,7 +475,16 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
   const cells = [...src.matchAll(/<td[^>]*>((?:(?!<\/td>)[\s\S])*?)<\/td>/g)]
     .map(m => m[1])
     .filter(inner => (inner.match(/pc-icon-btn/g) || []).length >= 2);
-  t.check(cells.length >= 2, `there are table cells carrying a group of icon buttons (${cells.length})`);
+  /* THE FLOOR CAME OFF, THE RULE DID NOT. This asserted that at least
+     two such cells exist, which was a measurement of the app rather than
+     a statement of the rule -- and the two it was measuring were the
+     loans and fixed-asset tables, the only two that had the fault. Both
+     are gone: those screens are one register of rows that open in place,
+     and their actions are named buttons in the opened row, not icons
+     crammed into a table cell. The rule that a group of display:flex
+     buttons needs a flex wrapper still binds every OTHER table in the
+     app and every table written after this, so it is kept and applied to
+     however many such cells exist -- including none. */
   const bare = cells.filter(inner => !/<div class="[a-z-]*actions"/.test(inner));
   t.check(bare.length === 0,
     bare.length
