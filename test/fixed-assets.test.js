@@ -37,6 +37,7 @@ const data = { fixedAssets: [] };
 const scope = compileScope([
   extractDeclaration(src, 'DEPRECIATION_MAX_MONTHS', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
+  extractFunction(src, 'monthChargeFraction', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
@@ -256,6 +257,75 @@ const asset = (over) => Object.assign({
   const modal = (/<div class="modal-overlay" id="assetModal">[\s\S]*?\n<\/div>/.exec(src) || [''])[0];
   t.check((modal.match(/id="fa_preview"/g) || []).length === 1,
     'and the asset form declares fa_preview once, not twice');
+}
+
+/* ---------- a window gets the days of a month it covers ---------------
+ *
+ * Reported from the shop, off the profit and loss: "how can depreciation
+ * of the month and a day be the same". It could, and it was worse than
+ * that -- assetChargeBetween matched schedule rows on YYYY-MM and took
+ * every matching month WHOLE, so:
+ *
+ *   one day of September charged the whole of September;
+ *   ten days in the middle of August charged the whole of August;
+ *   25 August to 4 September charged TWO full months, which is more
+ *   depreciation than eleven days contains time for.
+ *
+ * Depreciation is above operating profit and inside break-even's running
+ * costs, so every short window overstated what the shop costs to run and
+ * understated what it made.
+ *
+ * The schedule stays whole months -- that is what a monthly charge means
+ * and what the register shows. What a WINDOW takes is apportioned by the
+ * days of each month it actually covers.
+ */
+{
+  data.fixedAssets = [asset({ id: 1, cost: 30000000, salvage: 6000000,
+    acquiredOn: '2025-01-01', method: 'straight_line', lifeMonths: 60 })];
+  const month = (30000000 - 6000000) / 60;   // 400,000 a month
+  const near = (a, b) => Math.abs(a - b) < 0.5;
+
+  t.check(near(scope.depreciationForPeriod('2026-08-01', '2026-08-31'), month),
+    'a whole month is still exactly a month -- no month-end figure this app has shown ever moved');
+  t.check(near(scope.depreciationForPeriod('2026-08-01', '2026-08-04'), month * 4 / 31),
+    `four days of August charge four days of it (got ${r(scope.depreciationForPeriod('2026-08-01','2026-08-04'))})`);
+  t.check(near(scope.depreciationForPeriod('2026-08-04', '2026-08-04'), month / 31),
+    'and one day charges one day, which is the report this came from');
+  t.check(near(scope.depreciationForPeriod('2026-08-10', '2026-08-20'), month * 11 / 31),
+    'eleven days in the middle of a month charge eleven days, not the month around them');
+
+  /* The one that was not merely imprecise but arithmetically impossible:
+     a window shorter than a month charging more than a month. */
+  const across = scope.depreciationForPeriod('2026-08-25', '2026-09-04');
+  t.check(near(across, month * 7 / 31 + month * 4 / 30),
+    `eleven days spanning a month end charge eleven days (got ${r(across)})`);
+  t.check(across < month,
+    'and a window shorter than a month can no longer charge more than a month');
+
+  /* THE INVARIANT THAT KEEPS THE TWO STATEMENTS AGREEING. Whatever the
+     profit and loss charges over a window, the balance sheet's book
+     value must fall by exactly that much across it -- otherwise the van
+     is worth a month less on the 4th while the P&L shows four days. */
+  const dayBefore = (iso) => {
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  };
+  const a = data.fixedAssets[0];
+  [['2026-08-01', '2026-08-04'], ['2026-08-01', '2026-08-31'],
+   ['2026-08-25', '2026-09-04'], ['2026-08-10', '2026-08-20'],
+   ['2026-07-01', '2026-09-30']].forEach(([from, to]) => {
+    const charge = scope.assetChargeBetween(a, from, to);
+    const fall = scope.assetNBVAt(a, dayBefore(from)) - scope.assetNBVAt(a, to);
+    t.check(near(charge, fall),
+      `${from} to ${to}: the charge equals the fall in book value (${r(charge)} vs ${r(fall)})`);
+  });
+
+  /* Nothing is created or destroyed by apportioning: a life still costs
+     exactly cost less salvage, whoever asks and however they slice it. */
+  t.check(r(scope.depreciationForPeriod('2025-01-01', '2035-01-31')) === 30000000 - 6000000,
+    'and the whole life still charges exactly cost less salvage');
+  data.fixedAssets = [];
 }
 
 process.exit(t.done() ? 1 : 0);

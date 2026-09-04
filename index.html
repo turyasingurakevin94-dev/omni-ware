@@ -58192,11 +58192,55 @@ function assetSchedule(asset, untilISO){
   }
   return rows;
 }
-// Book value at a date: cost less everything charged up to it.
+/* HOW MUCH OF ONE MONTH'S CHARGE FALLS INSIDE A WINDOW.
+
+   The schedule is whole months, and stays whole months: that is what the
+   register shows and what a monthly charge means. But a statement is
+   asked for arbitrary dates, and a month is not a unit you can charge
+   four days of and call it a month.
+
+   This was a real defect, reported from the shop off the profit and
+   loss: the period charge matched months as YYYY-MM strings and took
+   each matching month WHOLE. So one day of September charged the whole
+   of September; ten days in the middle of August charged the whole of
+   August; and eleven days spanning 25 August to 4 September charged TWO
+   full months -- more depreciation than the window contains time for.
+   Depreciation feeds operating profit, net profit and the break-even
+   target, so a part-month period overstated the cost of running the
+   shop and understated what it made.
+
+   A WHOLE MONTH IS 1, which is the important property: every month-end
+   figure this app has ever shown is exactly what it was, and only
+   part-month windows move.
+
+   What is deliberately NOT changed: the month an asset is bought in is
+   still charged from the first of that month rather than from the day it
+   arrived. That is the acquisition convention the schedule is built on,
+   it changes what an asset costs over its whole life, and it is a
+   separate decision from what a window covers. */
+function monthChargeFraction(monthISO, fromISO, toISO){
+  const [y, m] = String(monthISO).split('-').map(Number);
+  if(!y || !m) return 0;
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const first = `${monthISO}-01`;
+  const last = `${monthISO}-${String(days).padStart(2,'0')}`;
+  const a = String(fromISO) > first ? String(fromISO) : first;
+  const b = String(toISO) < last ? String(toISO) : last;
+  if(a > b) return 0;
+  const covered = Number(b.slice(8,10)) - Number(a.slice(8,10)) + 1;
+  return Math.max(0, Math.min(1, covered / days));
+}
+/* Book value at a date: cost less everything charged up to it.
+
+   Up to it, not up to the end of the month containing it -- the same
+   apportioning as the charge above, or the balance sheet would take a
+   full month off a van's value on the 4th while the profit and loss
+   beside it showed four days. */
 function assetNBVAt(asset, asOfISO){
   const cost = Number(asset.cost)||0;
   const rows = assetSchedule(asset, asOfISO);
-  const charged = rows.reduce((s,r)=> s + r.charge, 0);
+  const charged = rows.reduce((s,r)=>
+    s + r.charge * monthChargeFraction(r.month, r.month + '-01', asOfISO), 0);
   return cost - charged;
 }
 function assetAccumulatedAt(asset, asOfISO){
@@ -58209,7 +58253,7 @@ function assetChargeBetween(asset, fromISO, toISO){
   const fromMonth = String(fromISO).slice(0,7), toMonth = String(toISO).slice(0,7);
   return assetSchedule(asset, toISO)
     .filter(r=> r.month >= fromMonth && r.month <= toMonth)
-    .reduce((s,r)=> s + r.charge, 0);
+    .reduce((s,r)=> s + r.charge * monthChargeFraction(r.month, fromISO, toISO), 0);
 }
 function liveFixedAssets(){ return (data.fixedAssets||[]); }
 function depreciationForPeriod(fromISO, toISO){
@@ -58564,7 +58608,9 @@ function assetFinancingSchedule(asset, loan, untilISO){
     return loanPrincipal(loan);      // before the first instalment falls due
   };
   return months.map(month=>{
-    const nbv = assetNBVAt(asset, month + '-28');
+    // The month's END, not its 28th: book value is apportioned by days
+    // now, so "the 28th" would report five sixths of a 31-day month.
+    const nbv = assetNBVAt(asset, periodEndDate(month));
     const owed = owedIn(month);
     return { month, nbv, owed, equity: nbv - owed };
   });

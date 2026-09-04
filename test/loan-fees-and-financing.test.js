@@ -38,6 +38,8 @@ const data = { loans: [], fixedAssets: [] };
 const scope = compileScope([
   'const DEPRECIATION_MAX_MONTHS = 40*12;',
   extractFunction(src, 'monthsBetween', 'index.html'),
+  extractFunction(src, 'monthChargeFraction', 'index.html'),
+  extractFunction(src, 'periodEndDate', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),

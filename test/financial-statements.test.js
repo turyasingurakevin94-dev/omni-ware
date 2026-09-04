@@ -91,6 +91,7 @@ const scope = compileScope([
   extractFunction(src, 'duesOwedAsAt', 'index.html'),
   extractFunction(src, 'balanceSheetAsAt', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
+  extractFunction(src, 'monthChargeFraction', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
@@ -211,7 +212,18 @@ const reset = () => {
     method: 'reducing_balance', termMonths: 36, startedOn: '2026-08-01', repayments: [] }];
   const is = scope.incomeStatement('2026-08-01', TODAY);
 
-  t.check(is.depreciation === 300000, 'a month of depreciation is charged: (20m less 2m) over 60');
+  /* THREE DAYS OF A MONTH, NOT THE MONTH. This read `=== 300000` -- a
+     whole month's charge -- over a window of 1 to 3 August, and it was
+     pinning the defect the shop reported off this very line: the period
+     charge matched months as YYYY-MM and took each match WHOLE, so one
+     day of a month charged all of it and eleven days spanning a month
+     end charged two. The monthly charge is still (20m - 2m) / 60 =
+     300,000; what changed is that a window gets the days of it that it
+     covers. 3 of August's 31. */
+  t.check(Math.round(is.depreciation) === Math.round(300000 * 3 / 31),
+    `three days of a month's depreciation is charged, not the month (got ${Math.round(is.depreciation)})`);
+  t.check(Math.round(scope.incomeStatement('2026-08-01', '2026-08-31').depreciation) === 300000,
+    'and a whole month is still exactly a month, which is why no month-end figure moved');
   t.check(is.loanFees === 600000, 'and the fee the lender kept is a cost of the month it was drawn');
 
   // Interest reaches the statement too, but only once a repayment has
@@ -228,7 +240,13 @@ const reset = () => {
   t.check(scope.incomeStatement('2026-08-01', TODAY).interest === 0,
     'and none of it lands in the month before it was paid');
   data.loans[0].repayments = [];
-  t.check(is.operatingProfit === 150000 - 300000, 'depreciation sits above operating profit');
+  /* The point is WHERE depreciation sits, not what it is: above
+     operating profit, below gross. Written against the charge the same
+     window produces rather than a copy of it, so this keeps testing the
+     ordering after the apportioning above changed the amount. */
+  t.check(r(is.operatingProfit) === r(150000 - is.depreciation),
+    `depreciation sits above operating profit (got ${r(is.operatingProfit)})`);
+  t.check(is.depreciation > 0, 'and it is a real charge, so the line above is not passing on a nought');
   t.check(is.netProfit === is.operatingProfit - 600000,
     'while the loan fee sits below it, being a cost of borrowing rather than of trading');
 
@@ -272,7 +290,11 @@ const reset = () => {
     'stock is valued at what it cost, from the same lots cost of sales is drawn from');
   t.check(bs.inventoryUncostedQty === 20,
     'and stock with no cost on file is counted rather than valued at a guess');
-  t.check(bs.fixedAssets === 19700000, 'equipment is at book value, not what it cost');
+  /* Book value follows the charge, or the balance sheet would take a
+     full month off the van on the 3rd while the profit and loss beside
+     it showed three days. 20m less 3/31 of the 300,000 month. */
+  t.check(Math.round(bs.fixedAssets) === Math.round(20000000 - 300000 * 3 / 31),
+    `equipment is at book value, worn by the days elapsed, not what it cost (got ${Math.round(bs.fixedAssets)})`);
   t.check(bs.loans === 20000000, 'the loan is a liability for what is owed, not what arrived');
   t.check(bs.liabilities === bs.payables + bs.loans,
     'and it is inside total liabilities, not merely reported beside them');
