@@ -74,11 +74,15 @@ const books = () => ({
     ] },
     { id: 8, name: 'Dad', debtLog: [] },
   ],
+  /* Every cash total in the app filters on an exact account id, so a
+     row carrying none is invisible to all of them. The closing check
+     below reads per account, and a fixture without one would have it
+     reconciling a drawer nothing was ever put into. */
   cashTxns: [
-    { id: 'T1', date: TUE, type: 'receipt', amount: 150000 },
-    { id: 'T2', date: TUE, type: 'receipt', amount: 200000 },
-    { id: 'T3', date: TUE, type: 'payment', amount: 60000 },
-    { id: 'T4', date: TODAY, type: 'receipt', amount: 5000 },
+    { id: 'T1', date: TUE, account: 'cash', type: 'receipt', amount: 150000 },
+    { id: 'T2', date: TUE, account: 'cash', type: 'receipt', amount: 200000 },
+    { id: 'T3', date: TUE, account: 'cash', type: 'payment', amount: 60000 },
+    { id: 'T4', date: TODAY, account: 'cash', type: 'receipt', amount: 5000 },
   ],
   stockLog: [
     { key: 'P1', label: 'Cement', type: 'restock', delta: 40, qtyAfter: 44, date: TUE, note: 'Roto' },
@@ -110,6 +114,20 @@ const scope = (data) => compileScope([
   anOverallTotals: (inv) => ({ count: inv.length,
     sales: inv.reduce((n, q) => n + (Number(q.total) || 0), 0),
     profit: inv.length * 1000, estimatedQty: 0 }),
+  /* WHAT EACH BUYER WAS WORTH. The day now costs its buyers through the
+     same reading the statements make, so the eight rows on screen add up
+     to the gross profit in the strip above them instead of to a second
+     opinion about it. Stubbed at a tenth of the sale, which is enough
+     for the rows to be checked against each other. */
+  anInvoiceTotals: (q) => ({ sales: Number(q.total) || 0, cost: 0,
+    profit: Math.round((Number(q.total) || 0) / 10), estimatedQty: 0 }),
+  invoiceNumberLabel: (q) => 'INV-' + String(q.id),
+  /* HOW IT ARRIVED. debtCollectionsOn carries the account and the
+     invoice on the row now, so the screen never reads either source a
+     second time -- a second reading is a second chance to get the
+     cashTxnId law wrong. */
+  accountLabel: (k) => ({ cash: 'Cash', momo: 'Mobile Money', bank: 'Bank' })[k] || k || '',
+  Date,
   SQ_STATUSES: { completed: { label: 'Completed' }, preparing: { label: 'Being Prepared' } },
   Math, Number, String, Array, Object, Map, Set,
 }, ['dayRecord']).dayRecord;
@@ -125,6 +143,7 @@ const scope = (data) => compileScope([
   eq(d.sold.clients[0].name, 'Milly', 'named, not counted');
   eq(d.sold.clients[0].orders, 2, 'with how many times they came');
   eq(d.sold.clients[0].total, 500000, 'and what they spent');
+  eq(d.sold.clients[0].profit, 50000, 'and what the shop kept of it, costed the way the statements cost it');
 
   /* AS AT THAT DAY. Today sold 900,000 to a different customer; a
      reading that reached for now instead of the date would say so. */
@@ -224,10 +243,208 @@ const scope = (data) => compileScope([
     'the empty state says it in a sentence — "recorded today", never "recorded on Today"');
   t.check(/const phrase = named \? named\.toLowerCase\(\) : 'on ' \+ fmtShortDate\(day\)/.test(view),
     'so Today and Yesterday go in lower case with no "on", and a date keeps its "on"');
-  t.check(/const tail = named \? ' — ' \+ fmtShortDate\(day\) : ''/.test(view),
-    'and the date is appended only where the heading is a WORD — appending it to one that is already the date said it twice');
-  t.check(/mgr-sec-title">\$\{esc\(when\)\}\$\{esc\(tail\)\}/.test(view),
-    'the heading uses the two together and nothing else');
+  /* THE THIRD JOB HAS GONE, and this is the assertion that changed.
+     `tail` existed to bolt the date onto a heading that was sometimes
+     the WORD "Today" and sometimes already the date — a conditional
+     that could only ever be right by remembering to be, and the pair of
+     assertions here pinned that conditional rather than the thing it
+     was for.
+
+     The heading is now ALWAYS the date in full, with its weekday, and
+     it has to be: the comparison beside it is keyed on the weekday, and
+     a heading reading "Today" hides the one fact a reader needs to
+     check that claim. The word Today or Yesterday is still said — as a
+     chip next to the date instead of in place of it — so nothing was
+     lost, and the bug that printed "25 Aug 2026 — 25 Aug 2026" cannot
+     be written again because there is no longer a string with two
+     things in it to get wrong.
+
+     `phrase` is untouched above: a sentence still needs "recorded
+     today", never "recorded on Today". */
+  t.check(/const heading = dayLongDate\(day\);/.test(view),
+    'the heading is always the full date with its weekday, whatever day is being read');
+  t.check(!/\btail\b/.test(view),
+    'and there is no second half left to remember to append');
+  t.check(/named \? `<span class="ow-cp ow-dy-hc">\$\{esc\(named\)\}<\/span>`/.test(view),
+    'Today and Yesterday are said as a chip BESIDE the date, so naming a day never costs its weekday');
+  t.check(!/mgr-sec-title/.test(view),
+    'and the day no longer wears the Manager screen’s section title — it has a panel header of its own');
+}
+
+/* ---------- 5d. was it a good day ------------------------------------ */
+{
+  /* The question the screen could not answer. Four figures stood at the
+     top of it with nothing behind them, and 11,540,000 is a strong
+     Tuesday or a poor one depending on facts the owner was left to hold
+     in their head. Every clause of the comparison is load-bearing and
+     every one of them is checked here. */
+  const day = (iso, total) => ({ id: 'X' + iso, status: 'completed', invoiced: true,
+    invoicedAt: iso, client: { name: 'Someone' }, total, payments: [] });
+  /* Five Tuesdays with data, one Tuesday with none in the middle of
+     them, and a MONDAY carrying a figure large enough that a reading
+     which ignored the weekday could not come out right by accident. */
+  const weeks = () => ({
+    savedQuotes: [
+      day('2026-08-18', 300000), day('2026-08-04', 500000),
+      day('2026-07-28', 2000000), day('2026-07-21', 400000), day('2026-07-14', 600000),
+      day('2026-08-24', 9000000),
+    ],
+    customers: [], cashTxns: [], stockLog: [], paymentPromises: [],
+  });
+
+  const cmpScope = (data) => compileScope([
+    extractFunction(src, 'dayTypical', 'index.html'),
+    extractFunction(src, 'dayCompare', 'index.html'),
+    extractFunction(src, 'dayDelta', 'index.html'),
+    extractFunction(src, 'dayPulse', 'index.html'),
+    extractFunction(src, 'dayMedian', 'index.html'),
+    extractFunction(src, 'anInvoicesInRange', 'index.html'),
+    extractFunction(src, 'debtCollectionsOn', 'index.html'),
+    extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
+    extractFunction(src, 'cashIsMoneyIn', 'index.html'),
+    extractDeclaration(src, 'DAY_TYPICAL_N', 'index.html'),
+    extractDeclaration(src, 'DAY_TYPICAL_MIN', 'index.html'),
+  ], {
+    data, todayISO: () => TODAY, anShiftDate: shift,
+    anOverallTotals: (inv) => ({ count: inv.length,
+      sales: inv.reduce((n, q) => n + (Number(q.total) || 0), 0), profit: 0, estimatedQty: 0 }),
+    anInvoiceTotals: (q) => ({ sales: Number(q.total) || 0, cost: 0, profit: 0, estimatedQty: 0 }),
+    invoiceNumberLabel: (q) => 'INV-' + String(q.id),
+    accountLabel: (k) => k || '', Date,
+    Math, Number, String, Array, Object, Map, Set,
+  }, ['dayTypical', 'dayCompare', 'dayDelta']);
+
+  const typ = cmpScope(weeks()).dayTypical(TUE);
+
+  /* THE SAME WEEKDAY. A wholesaler's week is not flat, and the Monday
+     before is a different trade from the Tuesday. */
+  eq(typ.count, 5, 'five earlier days of the same weekday were found');
+  t.check(typ.days.every((d) => shift(d, 7 * Math.round((Date.parse(TUE) - Date.parse(d)) / 604800000)) === TUE),
+    'and every one of them is a Tuesday');
+  t.check(!typ.days.includes('2026-08-24'), 'the Monday before is not one of them, whatever it sold');
+
+  /* THE MIDDLE, NOT THE MEAN. 2,000,000 on one Tuesday is a lorry-load,
+     and a mean would let it rewrite what typical means for a month. */
+  eq(typ.sales, 500000, 'typical is the MIDDLE of them');
+  t.check(typ.sales !== 780000, 'and not the average, which one lorry-load would have dragged up by half');
+
+  /* A DATE WITH NOTHING ON IT is not a quiet Tuesday, it is a Tuesday
+     before the books started — and counting it as a zero drags the
+     middle down and calls every real day exceptional. */
+  t.check(!typ.days.includes('2026-08-11'),
+    'a Tuesday with nothing at all on record is skipped rather than counted as a zero');
+  t.check(typ.days.includes('2026-07-14'),
+    'and the sample reaches further back to make up its five');
+
+  /* AT LEAST THREE. A middle drawn from two days is a coin toss wearing
+     a percentage, and saying so is an answer. */
+  const thin = cmpScope({ savedQuotes: [day('2026-08-18', 300000), day('2026-08-11', 500000)],
+    customers: [], cashTxns: [], stockLog: [], paymentPromises: [] }).dayCompare(TUE);
+  eq(thin.state, 'thin', 'two earlier Tuesdays are not enough to draw a middle from');
+  eq(thin.count, 2, 'and the screen is told how many there were, so it can say so');
+
+  /* A PART DAY IS NOT COMPARABLE WITH WHOLE ONES. A sale carries a date
+     and no time, so there is no way to ask where a typical Tuesday
+     stood at ten to five — and an unfinished day set beside five
+     finished ones reads as a bad day every afternoon of its life. */
+  eq(cmpScope(weeks()).dayCompare(TODAY).state, 'open',
+    'today is compared with nothing, because a part day beside whole ones is not a comparison');
+  eq(cmpScope(weeks()).dayCompare('2026-09-30').state, 'open', 'and neither is a day that has not happened');
+  eq(cmpScope(weeks()).dayCompare(TUE).state, 'ok', 'while a finished day with enough behind it is compared');
+
+  /* ONLY UPWARDS IS TONED. A day above its typical is genuinely good; a
+     day below it is an ordinary day, and a screen that reaches for
+     crimson every average Tuesday teaches the eye to stop reading the
+     colour. */
+  const delta = cmpScope(weeks()).dayDelta;
+  eq(delta(600000, 500000).tone, 'good', 'a day above typical is said in the good colour');
+  eq(delta(400000, 500000).tone, '', 'a day below it is ink, not a warning');
+  eq(delta(500000, 500000).dir, 'flat', 'and a day on it is neither');
+  eq(delta(400000, 500000).text, '20% below', 'the figure is how far off, said plainly');
+  eq(delta(50000, 0).text, 'nothing typical to compare with',
+    'and a typical of nothing cannot be divided into, so it says that rather than an infinite rise');
+}
+
+/* ---------- 5e. is the day properly on the record -------------------- */
+{
+  /* THE CLOSING JOB, and the one the old screen could not do at all: a
+     Tuesday where nobody opened the cash book looked exactly like a
+     Tuesday that reconciled to the shilling. */
+  const closScope = (data) => compileScope([
+    extractFunction(src, 'dayClosing', 'index.html'),
+    extractFunction(src, 'dayCashPosition', 'index.html'),
+    extractFunction(src, 'dayRecord', 'index.html'),
+    extractFunction(src, 'cbAccountTotals', 'index.html'),
+    extractFunction(src, 'carriedOpening', 'index.html'),
+    extractFunction(src, 'previousCashDate', 'index.html'),
+    extractFunction(src, 'cbClosingFor', 'index.html'),
+    extractFunction(src, 'anInvoicesInRange', 'index.html'),
+    extractFunction(src, 'debtCollectionsOn', 'index.html'),
+    extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
+    extractFunction(src, 'cashIsMoneyIn', 'index.html'),
+    extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+    extractDeclaration(src, 'DAY_ROWS', 'index.html'),
+  ], {
+    data, todayISO: () => TODAY, anShiftDate: shift,
+    fmtUGX: (n) => String(n),
+    savedQuoteTotal: (q) => Number(q.total) || 0,
+    anOverallTotals: (inv) => ({ count: inv.length,
+      sales: inv.reduce((n, q) => n + (Number(q.total) || 0), 0), profit: 0, estimatedQty: 0 }),
+    anInvoiceTotals: (q) => ({ sales: Number(q.total) || 0, cost: 0, profit: 0, estimatedQty: 0 }),
+    invoiceNumberLabel: (q) => 'INV-' + String(q.id),
+    accountLabel: (k) => k || '', Date,
+    SQ_STATUSES: { completed: { label: 'Completed' } },
+    Math, Number, String, Array, Object, Map, Set,
+  }, ['dayClosing', 'dayCashPosition']);
+
+  const withBook = (cashDays) => ({ ...books(), cashDays });
+
+  /* Nobody opened it. */
+  const never = closScope(withBook({})).dayClosing(TUE);
+  eq(never.checks[0].mark, 'warn', 'a day whose cash book was never opened says so');
+  eq(never.act.label, 'Open the cash book', 'and the one thing to do is to open it');
+  eq(never.closed, false, 'such a day is not closed');
+
+  /* Opened, but the drawer was never counted. Counting is what closes
+     a day: until then the till figure is what the book says rather than
+     what is in the drawer. */
+  const open = closScope(withBook({ [TUE]: { openingSet: true,
+    opening: { cash: 100000, momo: 0, bank: 0 }, actual: { cash: null, momo: null, bank: null } } }))
+    .dayClosing(TUE);
+  eq(open.checks[0].mark, 'good', 'an opened book is a good mark');
+  eq(open.act.label, 'Count the till', 'and the one thing left to do is to count');
+
+  /* Counted, and short. This is the state the old screen had no way of
+     showing, because it never read the count at all. */
+  const short = closScope(withBook({ [TUE]: { openingSet: true,
+    opening: { cash: 0, momo: 0, bank: 0 },
+    actual: { cash: 200000, momo: 0, bank: 0 } } })).dayClosing(TUE);
+  /* 350,000 came in and 60,000 went out on the cash account in the
+     books above, so the book says 290,000 and the drawer held 200,000. */
+  eq(short.pos.accounts[0].variance, -90000, 'the shortfall is the count against the book');
+  eq(short.checks[1].mark, 'bad', 'and a drawer that disagrees with the book is the one bad mark on this screen');
+  eq(short.closed, false, 'a day that does not add up is not a closed day');
+
+  /* Counted, and agreed, with nothing waiting on an invoice. There is
+     then nothing to do here, and the accent leaves this panel. */
+  const done = closScope({ ...books(), savedQuotes: books().savedQuotes.filter((q) => q.id !== 'Q4'),
+    cashDays: { [TUE]: { openingSet: true, opening: { cash: 0, momo: 0, bank: 0 },
+      actual: { cash: 290000, momo: 0, bank: 0 } } } }).dayClosing(TUE);
+  eq(done.act, null, 'a day already opened, counted and agreed has nothing left to do');
+  eq(done.closed, true, 'and says it is closed');
+
+  /* LOOKING WRITES NOTHING. cbDayPosition calls getDayRecord, which
+     CREATES a day row when one is missing — so merely looking at last
+     Tuesday would write last Tuesday into the cash book, and the shop
+     would find a day it never opened sitting in its own books. */
+  const live = withBook({});
+  closScope(live).dayClosing(TUE);
+  eq(Object.keys(live.cashDays).length, 0,
+    'reading a day that was never opened does not create it in the cash book');
+  const fn = extractFunction(src, 'dayCashPosition', 'index.html')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(?<!:)\/\/.*$/gm, ' ');
+  t.check(!/cbDayPosition|getDayRecord/.test(fn),
+    'and the reading is its own, never through the reader that creates a day row');
 }
 
 /* ---------- 5c. the review never prints a bare zero to the owner ------ */
@@ -288,6 +505,10 @@ const scope = (data) => compileScope([
     savedQuoteTotal: (q) => Number(q.total) || 0,
     anOverallTotals: (inv) => ({ count: inv.length,
       sales: inv.reduce((n, q) => n + (Number(q.total) || 0), 0), profit: 0, estimatedQty: 0 }),
+    anInvoiceTotals: (q) => ({ sales: Number(q.total) || 0, cost: 0, profit: 0, estimatedQty: 0 }),
+    invoiceNumberLabel: (q) => 'INV-' + String(q.id),
+    accountLabel: (k) => k || '',
+    Date,
     SQ_STATUSES: {},
     Math, Number, String, Array, Object, Map, Set, Promise,
   }, ['dayThreadLine']).dayThreadLine();

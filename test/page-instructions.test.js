@@ -50,14 +50,18 @@ const src = read('index.html');
      -- so this file has two fewer screens to police, not two screens
      that stopped being policed. Only ever lower this to match a
      conversion; raising the count back means a screen regressed. */
+  /* The day was the fifteenth, and is now a console on the .ow- layer:
+     .page-head became .ow-ph and its four-line description .ow-ph-help,
+     behind the same "i" bubble the same fold puts it there. One fewer
+     screen to police, not a screen that stopped being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 15, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 14, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 15,
+  t.check(paras.length >= 14,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

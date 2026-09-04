@@ -553,6 +553,40 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          one template. What this list can see is what the screen writes
          itself, and that is what it holds to. */
     },
+    /* THE DAY. The last screen in the app still emitting .sum-strip and
+       .ah-row -- families this file's own source marks "not to be
+       reached for again" -- and 2,620px of one column on a 1,440px
+       screen, with four headline figures and nothing to measure them
+       against.
+
+       The eight lists survive with the same derivations; they are
+       arranged rather than rewritten. .sum-strip became .ow-strip
+       carrying a comparison line, the eight .pw-tail sections became
+       .ow-tbl with .ow-tbl-g bands -- so the phone gets that component's
+       own card skin for nothing -- and the day picker left its 82px
+       bordered region for the page header, because the day is what the
+       screen is about rather than a filter on it.
+
+       .mgr-sec-title, .mgr-keyline and .mgr-objective went with them:
+       the Manager's own section title, worn on a screen that is not the
+       Manager, was a fourth opinion about what a heading looks like.
+       .ah-* and .pw-* stay in the FILE -- Cash ahead and Margin still
+       wear them -- and .mgr-move stays because renderDayMeeting draws
+       the Manager's real move cards rather than a second set of its own.
+       Only this screen may not emit the families again, which is what
+       this list means. */
+    day: {
+      retired: ['page-head', 'panel', 'an-toolbar', 'field',
+                'sum-strip', 'sum-cell', 'sum-value', 'sum-label',
+                'pw-tail', 'pw-empty', 'pp-more',
+                'ah-sub', 'ah-rows', 'ah-row', 'ah-when', 'ah-what', 'ah-amt', 'ah-left', 'ah-kind',
+                'mgr-sec-title', 'mgr-keyline', 'mgr-objective', 'mgr-why'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-dy-nav', 'ow-dy-b', 'ow-dy-d'],
+      renders: ['renderDay', 'renderDayMeeting', 'dayTile'],
+      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-strip', 'ow-mt', 'ow-mt-v', 'ow-mt-d',
+                    'ow-grid', 'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g',
+                    'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
@@ -578,7 +612,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const renders = Array.isArray(spec.renders) ? spec.renders : spec.renders ? [spec.renders] : [];
     if (renders.length) {
       const bodies = renders.map((name) => {
-        const fn = new RegExp(`\\nfunction ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src);
+        /* `async function` too. A renderer that waits on the journal is
+           still the function that draws the screen, and a finder that
+           could not see one would have quietly policed nothing while
+           reporting a pass. */
+        const fn = new RegExp(`\\n(?:async )?function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src);
         t.check(!!fn, `${tab}: ${name} is found`);
         return (fn || [''])[0];
       });

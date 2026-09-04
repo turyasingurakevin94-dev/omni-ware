@@ -113,6 +113,13 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
       { id: 'C8', name: 'Second', debt: 100000, ageDays: 3 },
     ],
     fmtShortDate: (d) => String(d),
+    /* debtCollectionsOn carries the account the money arrived on and the
+       invoice it was against, so The day never reads either source a
+       second time. The brief reads the same rows and simply ignores the
+       two extra fields. */
+    accountLabel: (k) => ({ cash: 'Cash', momo: 'Mobile Money', bank: 'Bank' })[k] || k || '',
+    invoiceNumberLabel: (q) => 'INV-' + String(q.id),
+    Date,
     todayISO: () => '2026-08-29',
     followUpClientsToContact: () => [{ name: 'Mulongo' }, { name: 'Achen' }],
     getStockQty: (pid) => (pid === 'P2' ? 12 : 0),
