@@ -1,0 +1,500 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+
+    /* ---- two components that index.html has and this chrome did not.
+       Their absence rendered a panel-header note and a row's state
+       sentence at body size, which is exactly the muddle the ramp exists
+       to prevent. Copied from the OW layer, not re-invented. ---- */
+    .ow-pan-nt{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;}
+    .ow-pan-nt + .ow-pan-n{margin-left:auto;}
+    .ow-q-note{font-size:12px;color:var(--ow-ink-600);margin:0 0 8px;max-width:var(--ow-measure);}
+
+    /* ================================================================
+       Everything below is either copied from index.html's OW layer or is
+       a variant of a component already in it. No new colour, no weight
+       outside 400/500/600/700, no size off the 11/12/13/14/19 ramp.
+       ================================================================ */
+
+    /* ---- THE ONE CHART: supplier concentration ----------------------
+       One bar, the period's spend cut by supplier, largest first. It is
+       monochrome on purpose: concentration is read as LENGTH, and the
+       palette has no categorical set to invent one from. Six steel
+       values already in the 23, darkest for the largest. ---- */
+    .cc-w{padding:12px 12px 4px;}
+    .cc-s{font-size:13px;line-height:1.5;color:var(--ow-ink-900);margin:0 0 11px;max-width:var(--ow-measure);}
+    .cc-s b{font-weight:600;}
+    .cc-s .m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .cc-bar{display:flex;height:34px;border-radius:var(--ow-r-sm);overflow:hidden;
+      border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+    .cc-seg{display:flex;align-items:center;justify-content:center;min-width:0;box-sizing:border-box;}
+    .cc-seg + .cc-seg{border-left:1px solid rgba(255,255,255,.5);}
+    .cc-seg span{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
+      letter-spacing:-.02em;overflow:hidden;white-space:nowrap;padding:0 4px;}
+    /* Six grounds from the palette, and the ink each one clears 4.5:1 on. */
+    .cc-1{background:var(--ow-ink-900);} .cc-1 span{color:#fff;}
+    .cc-2{background:var(--ow-steel-800);} .cc-2 span{color:#fff;}
+    .cc-3{background:var(--ow-ink-600);} .cc-3 span{color:#fff;}
+    .cc-4{background:var(--ow-steel-400);} .cc-4 span{color:var(--ow-ink-900);}
+    .cc-5{background:var(--ow-steel-100);} .cc-5 span{color:var(--ow-ink-900);}
+    .cc-6{background:var(--ow-steel-050);} .cc-6 span{color:var(--ow-ink-600);}
+    /* The legend is rows, not chips: a name, its share, its money, in a
+       column that lines up because the figures are tabular. */
+    .cc-leg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      column-gap:24px;margin:12px 0 0;padding:0;list-style:none;}
+    .cc-l{display:flex;align-items:baseline;gap:8px;padding:5px 0;
+      border-bottom:1px solid var(--ow-rule-soft);min-width:0;}
+    .cc-k{width:9px;height:9px;border-radius:2px;flex:none;align-self:center;border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+    .cc-n{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cc-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;white-space:nowrap;}
+    .cc-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+      letter-spacing:-.02em;white-space:nowrap;}
+
+    /* ---- THE RANKING. A grid rather than a <table>, so the name column
+       can be told to give way (min-width:0) while every money column is
+       sized to its content and can never truncate. Money never
+       truncates: a clipped figure is a wrong figure. ---- */
+    .tr{display:grid;grid-template-columns:30px minmax(0,1fr) 74px 92px 116px 96px 132px 132px;
+      align-items:center;column-gap:12px;padding:0 12px;box-sizing:border-box;}
+    .tr.tw-sup{grid-template-columns:30px minmax(0,1fr) 92px 152px 78px 152px;}
+    .th{height:30px;border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .th span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-400);white-space:nowrap;}
+    .th .r,.tb .r,.tf .r{text-align:right;}
+    .th .s{color:var(--ow-ink-900);}
+    .th .s::after{content:"\25BC";font-size:8px;margin-left:4px;}
+    .tb{min-height:38px;border-bottom:1px solid var(--ow-rule-soft);}
+    .tb:nth-child(even){background:#FCFDFE;}
+    .nm{min-width:0;}
+    .nm b{display:block;font-size:13px;font-weight:500;letter-spacing:-.005em;line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .nm i{display:block;font-style:normal;font-size:11px;color:var(--ow-ink-400);line-height:1.3;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;}
+    .no{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);
+      font-variant-numeric:tabular-nums;text-align:right;}
+    .f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+    .f.w{font-weight:600;}
+    .f.q{color:var(--ow-ink-600);font-weight:400;}
+    .f .u{font-size:11px;color:var(--ow-ink-400);margin-left:3px;letter-spacing:0;}
+    /* A rise is money leaving and a fall is money kept. These are the
+       two state colours the palette already has for exactly that, and
+       they are the only colour in the table. */
+    .f.up{color:var(--ow-crimson);font-weight:600;}
+    .f.dn{color:var(--ow-verdigris);font-weight:600;}
+    /* "It has not gone up, it has appeared" and "level" are both
+       non-answers, and a non-answer is grey, not a figure. */
+    .f.none{color:var(--ow-ink-400);font-weight:400;font-family:'Inter',system-ui,sans-serif;
+      font-size:11px;letter-spacing:0;}
+    .est{color:var(--ow-amber-ink);font-weight:700;margin-left:2px;}
+    .tf{min-height:40px;border-top:2px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .tf span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .tf .f{font-weight:600;}
+    /* A column that cannot honestly be totalled prints a dash and says
+       why on hover -- it does not fall through to a generic sum. */
+    .tf .f.no-t{color:var(--ow-ink-400);font-weight:400;}
+    .trest{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;color:var(--ow-ink-600);}
+    .trest b{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;color:var(--ow-ink-900);letter-spacing:-.02em;}
+
+    /* ---- panel toolbar: 42px because it carries 28px controls. A
+       variant of .ow-pan-h, not a new component. ---- */
+    .ow-pan-h.tbh{height:42px;gap:10px;}
+    .seg{display:flex;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);padding:2px;gap:2px;}
+    .seg span{font-size:12px;font-weight:600;color:var(--ow-ink-600);padding:0 10px;
+      height:24px;display:flex;align-items:center;border-radius:var(--ow-r-sm);white-space:nowrap;}
+    .seg span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 1px rgba(20,30,40,.08);}
+    .tsearch{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;width:216px;
+      box-sizing:border-box;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);color:var(--ow-ink-400);font-size:12px;}
+    .tsearch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ow-f-in.sel{justify-content:space-between;min-width:150px;}
+    .ow-f-in.sel svg{width:12px;height:12px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ow-mt-s .d{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;color:var(--ow-ink-900);font-weight:500;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    /* The hairline belongs to the panel, the measure to the text. */
+    .ow-mini{max-width:none;}
+    .ow-mini > span{display:block;max-width:var(--ow-measure);}
+    .ow-strip.s4{grid-template-columns:repeat(4,1fr);}
+    /* The basis line: what the figures above rest on. */
+    .basis{font-size:11px;color:var(--ow-ink-600);line-height:1.5;margin:8px 0 0;max-width:var(--ow-measure);}
+    .basis .d{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;color:var(--ow-ink-900);font-weight:500;}
+    .stack{display:flex;flex-direction:column;gap:16px;}
+
+    /* ---- THE PHONE. 820px is a switch, not a reflow. 15px body, 14-16px
+       padding, cards not rows, a navy 44px bar and a white 60px tab bar
+       whose active mark is FILLED rather than merely coloured. No fake
+       status bar and no fake keyboard: the real ones render on top. ---- */
+    .ph{position:relative;width:390px;height:844px;background:var(--ow-steel-050);overflow:hidden;}
+    .ph-tb{height:44px;background:var(--ow-steel-950);display:flex;align-items:center;
+      gap:10px;padding:0 16px;color:#fff;}
+    .ph-tb .brand-mark{width:26px;height:26px;border-radius:7px;font-size:10px;}
+    .ph-tb .tag{font-family:'Archivo Black',sans-serif;font-size:13.5px;letter-spacing:.3px;}
+    .ph-tb svg{width:19px;height:19px;fill:none;stroke:#C7CFD8;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;margin-left:auto;}
+    .ph-b{padding:16px 16px 0;display:flex;flex-direction:column;gap:14px;}
+    .ph-h h1{font-family:'Archivo Black',sans-serif;font-size:26px;margin:0 0 4px;
+      letter-spacing:-.02em;line-height:1.08;}
+    .ph-h p{font-size:13px;color:var(--ow-ink-600);margin:0;}
+    .ph-r{display:flex;align-items:center;justify-content:space-between;gap:10px;height:44px;
+      padding:0 14px;box-sizing:border-box;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);font-size:15px;font-weight:500;}
+    .ph-r svg{width:15px;height:15px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* The 2x2 position: ONE card, hairline dividers, no per-tile border. */
+    .ph-g{display:grid;grid-template-columns:1fr 1fr;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-t{padding:11px 14px;border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ph-t:nth-child(-n+2){border-top:0;}
+    .ph-t:nth-child(odd){border-left:0;}
+    .ph-t p{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 3px;}
+    .ph-t b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.15;display:block;}
+    .ph-t.bad b{color:var(--ow-crimson);}
+    .ph-t i{font-style:normal;display:block;font-size:11px;color:var(--ow-ink-600);margin-top:3px;line-height:1.3;}
+    .ph-p{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-ph{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ph-ph span{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ph-ph em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:11px;
+      font-variant-numeric:tabular-nums;color:var(--ow-ink-600);}
+    .ph-s{font-size:14px;line-height:1.5;margin:0;padding:12px 14px 10px;color:var(--ow-ink-900);}
+    .ph-s b{font-weight:600;}
+    .ph-s .m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .ph-bar{display:flex;height:26px;margin:0 14px 12px;border-radius:var(--ow-r-sm);overflow:hidden;
+      border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+    /* An item card. Actions are not on it because there are none: this is
+       a reading screen. So the card is a figure, its basis, and a name. */
+    .ph-c{padding:12px 14px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-c:last-child{border-bottom:0;}
+    .ph-c-t{display:flex;align-items:baseline;gap:10px;}
+    .ph-c-n{flex:1;min-width:0;font-size:15px;font-weight:500;line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-c-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;
+      letter-spacing:-.02em;white-space:nowrap;color:var(--ow-crimson);}
+    .ph-c-m{font-size:13px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.4;}
+    .ph-c-m .m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:500;color:var(--ow-ink-900);}
+    .ph-more{padding:12px 14px;font-size:13px;color:var(--ow-ink-600);line-height:1.45;
+      border-top:1px solid var(--ow-rule-soft);}
+    .ph-more b{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;color:var(--ow-ink-900);letter-spacing:-.02em;}
+    .ph-note{font-size:12px;color:var(--ow-ink-600);line-height:1.5;margin:0;padding:0 2px 12px;}
+    /* The tab bar. Active is FILLED; a shape change reads at a glance
+       where a colour change alone does not. */
+    .ph-tabs{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--ow-paper);
+      border-top:1px solid var(--ow-rule);display:grid;grid-template-columns:repeat(5,1fr);}
+    .ph-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      font-size:10.5px;font-weight:500;color:var(--ow-ink-400);}
+    .ph-tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-tab.on{color:var(--ow-ink-900);font-weight:600;}
+    .ph-tab.on svg{fill:var(--ow-ink-900);stroke:var(--ow-ink-900);}
+
+    /* The tab bar floats over the page, so the scrolling body must clear
+       it -- content running underneath a bar is content you cannot read
+       or tap. What falls past the fold is the tail of the ranking, which
+       is what a phone is expected to scroll for. */
+    .ph-b{padding-bottom:68px;gap:12px;}
+    .ph-h h1{margin-bottom:2px;}
+    .ph-c{padding:11px 14px;}
+
+  </style>
+</helmet>
+<div class="ph">
+  <div class="ph-tb">
+    <div class="brand-mark">OW</div>
+    <div class="tag">OMNI&#8209;WARE</div>
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+
+  <div class="ph-b">
+    <div class="ph-h">
+      <h1>Purchase analytics</h1>
+      <p>What you paid, and what it is doing</p>
+    </div>
+
+    <!-- 44px, full width, thumb-sized. The one control that survives. -->
+    <div class="ph-r"><span>Last 30 days</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+
+    <!-- The position: 2x2 in ONE card, hairline dividers, no per-tile
+         border. Same four figures as the desk, same order. -->
+    <div class="ph-g">
+      <div class="ph-t"><p>Spent</p><b>33,901,800</b><i>+20.5% on the period before</i></div>
+      <div class="ph-t"><p>Purchases</p><b>47</b><i>from 12 suppliers</i></div>
+      <div class="ph-t"><p>Lines</p><b>149</b><i>in 7 different units</i></div>
+      <div class="ph-t bad"><p>Prices added</p><b>+1,841,000</b><i>on the 23 you also bought last period</i></div>
+    </div>
+
+    <!-- The chart's SENTENCE, and the one bar that survives 390 -- a
+         single stacked bar is read as length, and length still reads at
+         this width. The legend does not; the sentence carries it. -->
+    <div class="ph-p">
+      <div class="ph-ph"><span>Where the money went</span><em>12 suppliers</em></div>
+      <p class="ph-s"><b>Kato Hardware is 36.8%</b> of your buying &mdash; <span class="m">12,480,000</span>. Your three largest are <b>76.2%</b> of it.</p>
+      <div class="ph-bar">
+        <div class="cc-seg cc-1" style="width:36.8%;"><span>37%</span></div>
+        <div class="cc-seg cc-2" style="width:23.9%;"><span>24%</span></div>
+        <div class="cc-seg cc-3" style="width:15.5%;"><span>15%</span></div>
+        <div class="cc-seg cc-4" style="width:11.7%;"></div>
+        <div class="cc-seg cc-5" style="width:5.5%;"></div>
+        <div class="cc-seg cc-6" style="width:6.6%;"></div>
+      </div>
+    </div>
+
+    <!-- Three rows, ranked the same way the desk ranks them, and then an
+         honest account of the 146 it is not showing you. -->
+    <div class="ph-p">
+      <div class="ph-ph"><span>What the changes cost</span><em>149 lines</em></div>
+      <div class="ph-c">
+        <div class="ph-c-t"><span class="ph-c-n">Cement 32.5N</span><span class="ph-c-v">+696,000</span></div>
+        <p class="ph-c-m"><span class="m">35,500</span> a bag, up <span class="m">8.9%</span> &middot; 240 bought</p>
+      </div>
+      <div class="ph-c">
+        <div class="ph-c-t"><span class="ph-c-n">Iron sheets &mdash; G28, 3m</span><span class="ph-c-v">+486,000</span></div>
+        <p class="ph-c-m"><span class="m">47,200</span> a sheet, up <span class="m">6.1%</span> &middot; 180 bought</p>
+      </div>
+      <div class="ph-c">
+        <div class="ph-c-t"><span class="ph-c-n">Binding wire 16g</span><span class="ph-c-v">+345,600</span></div>
+        <p class="ph-c-m"><span class="m">28,400</span> a roll, up <span class="m">14.5%</span> &middot; 96 bought</p>
+      </div>
+      <div class="ph-more">146 more lines, <b>14,159,400</b> spent between them and <b>+313,400</b> added by their price changes.</div>
+    </div>
+
+    <p class="ph-note">By supplier, the whole table and the export are on the desk screen &mdash; a nine&#8209;column table is not read one&#8209;handed in a yard.</p>
+  </div>
+
+  <div class="ph-tabs">
+    <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 3v4M5.6 5.6l2.9 2.9M3 12h4M21 12h-4M18.4 5.6l-2.9 2.9"></path><path d="M8 16a4 4 0 0 1 8 0"></path><path d="M2 20h20"></path></svg><span>Today</span></div>
+    <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7-7A2 2 0 0 1 3 12.2V5a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l7 7a2 2 0 0 1 0 2.8z"></path><circle cx="7.8" cy="7.8" r="1.3"></circle></svg><span>Sell</span></div>
+    <div class="ph-tab on"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"></rect><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff"></circle><path d="M5.6 8.4h.01M18.4 15.6h.01" stroke="#fff"></path></svg><span>Money</span></div>
+    <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M20.5 14a2 2 0 0 1-2 2H8l-4 3.5V5a2 2 0 0 1 2-2h12.5a2 2 0 0 1 2 2z"></path><path d="M8 8.5h5M8 11.5h8"></path></svg><span>Manager</span></div>
+    <div class="ph-tab"><svg viewBox="0 0 24 24"><path d="M3.5 7.5h17M3.5 12h17M3.5 16.5h17"></path></svg><span>More</span></div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
