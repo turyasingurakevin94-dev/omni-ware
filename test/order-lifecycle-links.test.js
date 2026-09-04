@@ -126,8 +126,29 @@ if (s) {
     'both directions have a reveal');
   // They work by filling the destination tab's own search box before
   // switching, because goToTab() re-renders each list from that box.
-  t.check(/document\.getElementById\('pi_doc_search'\)[\s\S]{0,120}goToTab\('purchase-invoices'\)/.test(code),
+  // The window is 400 rather than 120 because filling the box turned out
+  // to be only half the job: both registers ALSO filter by a date range
+  // and hide voided documents, and neither was reset for a reader
+  // arriving from another screen -- so a bill from last month, or one
+  // that had been voided, landed them on an empty list with its own
+  // number typed above it. Those two guards sit between the box and the
+  // switch, and are checked in their own right below.
+  t.check(/document\.getElementById\('pi_doc_search'\)[\s\S]{0,400}goToTab\('purchase-invoices'\)/.test(code),
     'revealing a purchase invoice fills its search box before switching tab');
+
+  const reveals = [
+    ['revealPurchaseInvoice', 'pi_doc_hide_voided', 'pi_doc_range_preset'],
+    ['revealInvoice', 'inv_doc_hide_voided', 'inv_doc_range_preset'],
+  ];
+  reveals.forEach(([fn, hide, preset]) => {
+    const body = (new RegExp('function ' + fn + '\\([\\s\\S]*?\\n\\}').exec(code) || [''])[0];
+    t.check(body.includes(hide),
+      `${fn} drops the voided filter, so a cancelled document is not pointed at and then hidden`);
+    t.check(new RegExp(preset + "[\\s\\S]{0,160}'all'").test(body),
+      `${fn} widens the date range, so a document outside it is not pointed at and then hidden`);
+  });
+  t.check(/function revealInvoice\(qId\)/.test(code),
+    'and an invoice has a reveal of its own, rather than three screens keeping their own copy of it');
   t.check(/document\.getElementById\('inv_doc_search'\)[\s\S]{0,120}goToTab\('invoices'\)/.test(code),
     'and revealing an order does the same');
 
