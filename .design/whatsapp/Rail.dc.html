@@ -1,0 +1,493 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---------- WhatsApp console additions ---------- */
+    .ow-grid{grid-template-columns:minmax(0,1fr) 304px;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+
+    /* the ask row: who, what they asked for, how long they have waited */
+    .ow-q-r.ask{grid-template-columns:18px minmax(0,1fr) 116px 104px;}
+    .ow-q-r.ans{grid-template-columns:minmax(0,1fr) 116px 104px;padding-left:40px;}
+    .ow-q-w{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+    .ow-q-age{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+    .ow-q-age.late{color:var(--ow-amber-ink);}
+    .ow-q-age.cold{color:var(--ow-ink-400);}
+
+    /* the transcript — a record, not a chat app */
+    .tx{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:2px 0;margin:0 0 12px;max-width:var(--ow-measure);}
+    .tx-r{display:grid;grid-template-columns:46px 78px minmax(0,1fr);align-items:baseline;
+      column-gap:10px;padding:6px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .tx-r:first-child{border-top:0;}
+    .tx-t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-400);}
+    .tx-w{font-size:11px;font-weight:600;color:var(--ow-ink-600);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .tx-w.us{color:var(--ow-ink-400);}
+    .tx-b{font-size:13px;line-height:1.45;color:var(--ow-ink-900);min-width:0;}
+    .tx-r.out .tx-b{color:var(--ow-ink-600);}
+    .tx-more{display:block;padding:6px 12px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);}
+
+    /* what the ask matched to, and at what price */
+    .mt-h{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;}
+    .mt-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .mt-n{font-size:11px;color:var(--ow-ink-400);}
+
+    /* the reply the owner is about to send */
+    .cmp{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      max-width:var(--ow-measure);}
+    .cmp-b{padding:9px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;color:var(--ow-ink-900);min-height:74px;}
+    .cmp-f{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);border-radius:0 0 var(--ow-r) var(--ow-r);}
+    .cmp-f .sp{flex:1;}
+    .cmp-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+    .cmp-n b{font-weight:600;color:var(--ow-ink-900);}
+    .cursor{display:inline-block;width:1px;height:15px;background:var(--ow-ink-900);
+      vertical-align:-3px;margin-left:1px;}
+
+    /* window state, stated once, in the row it governs */
+    .win{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-verdigris);}
+    .win.shut{color:var(--ow-amber-ink);}
+    .win svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* right rail */
+    .rp{padding:10px 12px;}
+    .rp-l{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
+    .rp-l b{color:var(--ow-ink-900);font-weight:600;}
+    .rp-a{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px;}
+    .pick{display:flex;gap:10px;padding:10px 12px;align-items:flex-start;}
+    .pick-im{width:56px;height:56px;border-radius:var(--ow-r-sm);flex:none;
+      background:var(--ow-steel-100);color:var(--ow-ink-400);display:flex;align-items:center;
+      justify-content:center;font-size:10px;font-weight:600;letter-spacing:.06em;}
+    .pick-b{min-width:0;}
+    .pick-n{font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .pick-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;margin-top:3px;}
+    .pick-w{font-size:11px;color:var(--ow-ink-600);margin-top:3px;line-height:1.4;}
+
+    /* segmented room switch (direction B) */
+    .seg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;background:var(--ow-paper);}
+    .seg span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;
+      font-size:12px;font-weight:600;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);}
+    .seg span:first-child{border-left:0;}
+    .seg span.on{background:var(--ow-steel-950);color:#fff;}
+    .seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      background:var(--ow-steel-100);color:var(--ow-ink-600);border-radius:var(--ow-r-sm);padding:0 4px;}
+    .seg span.on .n{background:rgba(255,255,255,.2);color:#fff;}
+
+    /* two-pane chat console (direction B) */
+    .cv{display:grid;grid-template-columns:288px minmax(0,1fr);}
+    .cv-l{border-right:1px solid var(--ow-rule-soft);min-width:0;}
+    .cv-r{min-width:0;display:flex;flex-direction:column;}
+    .cv-hd{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .cv-nm{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cv-sb{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);}
+    .cv-bd{padding:12px 14px;}
+    .ow-lr.unread .ow-lr-n{font-weight:600;}
+    .ow-lr-t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);white-space:nowrap;}
+
+    /* states board */
+    .st-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;}
+    .note{margin:0;padding:10px 12px;font-size:11px;line-height:1.5;color:var(--ow-ink-600);
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .note b{color:var(--ow-ink-900);font-weight:600;}
+    .kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .kv:first-child{border-top:0;}
+    .kv-l{font-size:12px;color:var(--ow-ink-600);}
+    .kv-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+      letter-spacing:-.02em;}
+    .pick-b{min-width:0;flex:1;}
+    .pick-n,.pick-p,.pick-w{display:block;}
+    .ow-cp.fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .cv-bd .cg,.ow-q-x .cg{max-width:var(--ow-measure);}
+    .ow-pan-n.w{font-family:'Inter',system-ui,sans-serif;}
+    /* the rail, at its true width */
+    .board{display:flex;gap:56px;padding:28px 32px;align-items:flex-start;
+      background:var(--ow-steel-050);}
+    .col{width:304px;flex:none;display:flex;flex-direction:column;gap:16px;}
+    .col-h{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:-.01em;
+      margin:0 0 2px;}
+    .col-s{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 6px;
+      max-width:304px;}
+    .bad{color:var(--ow-crimson);font-weight:600;}
+    .clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* the offending row, as it ships */
+    .rl{display:flex;align-items:baseline;gap:8px;padding:6px 12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .rl-n{flex:1;min-width:0;font-size:12px;}
+    .rl-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .rl-x{color:var(--ow-ink-400);font-size:12px;}
+    /* fixed: the row wraps at every width, because 304 is the narrow one */
+    /* The row wraps its TEXT, not its button. Pushing the control to a
+       second line makes every row two lines tall and blurs the boundary
+       between one row and the next -- which is the complaint. */
+    .rl.ok{align-items:flex-start;}
+    .rl.ok .rl-n{white-space:normal;overflow:visible;line-height:1.4;}
+    .rl.ok .rl-d,.rl.ok .rl-x{margin-top:1px;}
+    .kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:6px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .kv-l{font-size:12px;color:var(--ow-ink-600);}
+    .kv-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;}
+    .kv-v .u{font-size:.85em;color:var(--ow-ink-400);margin-left:.35em;letter-spacing:0;}
+    .note{margin:0;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;line-height:1.45;color:var(--ow-ink-600);}
+    .note b{color:var(--ow-ink-900);font-weight:600;}
+    .note.first{border-top:0;}
+    .pk{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;}
+    .pk-im{width:56px;height:56px;border-radius:4px;flex:none;background:var(--ow-steel-100);
+      color:var(--ow-ink-400);display:flex;align-items:center;justify-content:center;}
+    .pk-im svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pk-b{min-width:0;flex:1;}
+    .pk-n{display:block;font-size:12px;font-weight:600;line-height:1.3;}
+    .pk-p{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12px;font-weight:600;letter-spacing:-.02em;margin-top:2px;}
+    .pk-w{display:block;font-size:11px;color:var(--ow-ink-600);margin-top:2px;line-height:1.4;}
+    .ra{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;}
+    .tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;
+      text-transform:uppercase;padding:2px 6px;border-radius:4px;}
+    .tag.b{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .tag.g{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .mark{position:relative;}
+    .mark::after{content:'';position:absolute;inset:-2px -4px;border-radius:4px;
+      border:1.5px solid var(--ow-crimson);pointer-events:none;}
+    .job{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-crimson);padding:2px 12px 0;}
+    .job.ok-job{color:var(--ow-verdigris);}
+  </style>
+</helmet>
+<div class="app" style="width:820px;height:1230px">
+  <div class="board">
+
+    <div class="col">
+      <h2 class="col-h">As it ships</h2>
+      <p class="col-s">One panel, one header, five jobs. Every boundary below that header is the
+        same hairline, so nothing reads as a group &mdash; and two of the five are not about
+        today&rsquo;s post at all.</p>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s post</span><span class="ow-pan-n">sent</span></div>
+        <span class="job">1 &middot; what went out</span>
+        <p class="note first">Posted today: <b>Clamps &mdash; 51mm</b>. The next pick is ready below
+          whenever you want a second one.</p>
+        <span class="job">2 &middot; what to post next</span>
+        <div class="pk">
+          <span class="pk-im">AD</span>
+          <span class="pk-b">
+            <span class="pk-n">Adjustable Stands 4" &mdash; 4"</span>
+            <span class="pk-p">1,590 UGX / Pcs</span>
+            <span class="pk-w">2 customers asked for this &middot; Never been posted &middot; No photo yet</span>
+          </span>
+        </div>
+        <div class="ra">
+          <span class="btn btn-ghost ow-sm">Open the picture</span>
+          <span class="btn btn-ghost ow-sm">Pick another</span>
+        </div>
+        <span class="job">3 &middot; what limits the picks</span>
+        <div class="rl"><span class="rl-n mark clip">418 have no photo &mdash; still pickable, bett</span><span class="btn btn-ghost ow-sm">Fix</span></div>
+        <div class="rl"><span class="rl-n clip">106 have no selling price &mdash; nothing to a</span><span class="btn btn-ghost ow-sm">Fix</span></div>
+        <div class="rl"><span class="rl-n clip">56 would run out &mdash; selling too fast to a</span><span class="btn btn-ghost ow-sm">Fix</span></div>
+        <span class="job">4 &middot; what is resting</span>
+        <p class="note">31 resting after a recent post: Wall Plugs &mdash; 6mm &mdash; back in 5d,
+          Clamps &mdash; 12mm &mdash; back in 5d, Clamps &mdash; 16mm &mdash; back in 5d&hellip;</p>
+        <span class="job">5 &middot; the record</span>
+        <div class="kv"><span class="kv-l">Posted this week</span><span class="kv-v mark">16<span class="u">of 7</span></span></div>
+        <div class="rl"><span class="rl-n clip">Clamps &mdash; 51mm</span><span class="rl-d">2026-09-04</span><span class="rl-x">&#10005;</span></div>
+        <div class="rl"><span class="rl-n clip">Black Screws &mdash; 6* / Coarse t</span><span class="rl-d">2026-09-01</span><span class="rl-x">&#10005;</span></div>
+        <div class="rl"><span class="rl-n clip">WISEUP Staple Gun 4 Way</span><span class="rl-d">2026-09-01</span><span class="rl-x">&#10005;</span></div>
+        <div class="rl"><span class="rl-n clip">Truss Head Screws &mdash; 4*19</span><span class="rl-d">2026-09-01</span><span class="rl-x">&#10005;</span></div>
+        <p class="note">35 earlier posts kept in the record, not shown.</p>
+        <p class="note">The posting itself happens in WhatsApp on your phone. This only draws the
+          picture and keeps the record, so the same thing is not posted twice.</p>
+      </div>
+
+      <p class="col-s"><span class="tag b">Two real faults</span><br>
+        <span class="bad">16 of 7</span> &mdash; the figure counts POSTS, the label says DAYS. Post
+        twice on a Monday and it goes over seven.<br>
+        <span class="bad">Clipped rows</span> &mdash; the row was taught to wrap on a phone. Nobody
+        checked the 304px rail, which is narrower than the phone.</p>
+    </div>
+
+    <div class="col">
+      <h2 class="col-h">Proposed</h2>
+      <p class="col-s">Each job gets its own header, and the two that were never about today&rsquo;s
+        post move to the panel that already owns the fact. The rail does not get longer &mdash; the
+        content moved, it did not grow.</p>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s post</span><span class="ow-pan-n">sent</span></div>
+        <p class="note first">Posted today: <b>Clamps &mdash; 51mm</b>. Pick another below whenever
+          you want a second one.</p>
+        <div class="pk">
+          <span class="pk-im"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M21 16l-5-5L5 20"></path></svg></span>
+          <span class="pk-b">
+            <span class="pk-n">Adjustable Stands 4" &mdash; 4"</span>
+            <span class="pk-p">1,590 UGX / Pcs</span>
+            <span class="pk-w">Asked for twice &middot; never posted &middot; no photo, so it goes as a text card</span>
+          </span>
+        </div>
+        <div class="ra">
+          <span class="btn btn-ghost ow-sm">Open the picture</span>
+          <span class="btn btn-ghost ow-sm">Pick another</span>
+        </div>
+        <p class="note">Posting happens in WhatsApp on your phone. This draws the picture and keeps
+          the record, so the same thing is not posted twice.</p>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">Post record</span><span class="ow-pan-n">39 kept</span></div>
+        <div class="kv"><span class="kv-l">Days posted this week</span><span class="kv-v">5<span class="u">of 7</span></span></div>
+        <div class="kv"><span class="kv-l">Resting, back within</span><span class="kv-v">5<span class="u">days</span></span></div>
+        <div class="rl ok"><span class="rl-n">Clamps &mdash; 51mm</span><span class="rl-d">2026-09-04</span><span class="rl-x">&#10005;</span></div>
+        <div class="rl ok"><span class="rl-n">Black Screws &mdash; 6* / Coarse thread</span><span class="rl-d">2026-09-01</span><span class="rl-x">&#10005;</span></div>
+        <div class="rl ok"><span class="rl-n">WISEUP Staple Gun 4 Way</span><span class="rl-d">2026-09-01</span><span class="rl-x">&#10005;</span></div>
+        <p class="note">36 earlier posts kept, not shown. 31 products are resting after a recent post
+          and become pickable again as they age out.</p>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">The channel</span></div>
+        <div class="kv"><span class="kv-l">Chats on file</span><span class="kv-v">412</span></div>
+        <div class="kv"><span class="kv-l">In the catalogue</span><span class="kv-v">62<span class="u">of 480</span></span></div>
+        <span class="job ok-job">what limits the picks, where the catalogue already lives</span>
+        <div class="rl ok"><span class="rl-n">418 have no photo</span><span class="btn btn-ghost ow-sm">Add photos</span></div>
+        <div class="rl ok"><span class="rl-n">106 have no selling price</span><span class="btn btn-ghost ow-sm">Set prices</span></div>
+        <div class="rl ok"><span class="rl-n">56 are selling too fast to advertise</span><span class="btn btn-ghost ow-sm">Restock</span></div>
+        <p class="note">A photo is wanted, not required &mdash; anything with a price can still go
+          out as a text card. Only a photo <b>and</b> a price puts a product in the catalogue
+          customers browse inside WhatsApp.</p>
+      </div>
+
+      <p class="col-s"><span class="tag g">What changed</span><br>
+        Three panels, three headers, one job each. The gap rows join <b>The channel</b>, which
+        already reports the catalogue count &mdash; the same fact was being told twice, in two
+        panels. The resting bench becomes one figure in the record instead of a paragraph of names.
+        And every row wraps at 304px.</p>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
