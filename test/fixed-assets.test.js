@@ -38,6 +38,8 @@ const scope = compileScope([
   extractDeclaration(src, 'DEPRECIATION_MAX_MONTHS', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
   extractFunction(src, 'monthChargeFraction', 'index.html'),
+  extractFunction(src, 'assetCoverInMonth', 'index.html'),
+  extractFunction(src, 'assetRowFraction', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
@@ -62,17 +64,29 @@ const asset = (over) => Object.assign({
 
 /* ---------- 1. straight line ------------------------------------------ */
 {
-  const a = asset();
+  /* THE ASSET IS BOUGHT ON THE 15th, which is why the first row is not a
+     whole month any more. A month's charge is still (30m - 6m) / 60 =
+     400,000; the January row is the 17 days of January the shop owned
+     it, and the tail runs one calendar month further to finish the sixty
+     months of life. Everything the shop is charged over that life is
+     unchanged -- what moved is WHEN, and it moved to the truth. */
+  const a = asset();               // acquired 2026-01-15
   const s = scope.assetSchedule(a);
-  t.check(r(s[0].charge) === 400000,
-    `(cost less salvage) over the life: (30m - 6m)/60 = 400,000 a month (got ${r(s[0].charge)})`);
-  t.check(s.length === 60, `and it runs exactly the life, not a month more (got ${s.length})`);
+  t.check(r(s[1].charge) === 400000,
+    `(cost less salvage) over the life: (30m - 6m)/60 = 400,000 a whole month (got ${r(s[1].charge)})`);
+  t.check(r(s[0].charge) === r(400000 * 17 / 31),
+    `and the month it arrived charges the 17 days it was there for (got ${r(s[0].charge)})`);
+  t.check(s.length === 61,
+    `sixty months from the 15th end in the 61st calendar month (got ${s.length})`);
+  t.check(r(s.reduce((n, row) => n + row.charge, 0)) === 30000000 - 6000000,
+    'and the life still costs exactly cost less salvage, whatever day it started on');
   t.check(s[0].month === '2026-01', 'starting the month it was acquired');
   t.check(r(s[s.length - 1].closing) === 6000000,
     'and finishing exactly on the residual value, never below it');
-  t.check(r(scope.assetNBVAt(a, '2026-12-31')) === 25200000,
-    `book value after twelve charges is cost less twelve months (got ${r(scope.assetNBVAt(a, '2026-12-31'))})`);
-  t.check(r(scope.assetAccumulatedAt(a, '2026-12-31')) === 4800000, 'with accumulated depreciation its mirror');
+  t.check(r(scope.assetNBVAt(a, '2026-12-31')) === r(30000000 - 400000 * (11 + 17 / 31)),
+    `book value is cost less the months owned -- eleven whole and 17 days (got ${r(scope.assetNBVAt(a, '2026-12-31'))})`);
+  t.check(r(scope.assetAccumulatedAt(a, '2026-12-31')) === r(400000 * (11 + 17 / 31)),
+    'with accumulated depreciation its mirror');
 
   // Salvage is a floor, not a target: an asset with none goes to nil.
   const nil = asset({ salvage: 0, cost: 1200000, lifeMonths: 12 });
@@ -85,9 +99,14 @@ const asset = (over) => Object.assign({
 {
   const a = asset({ method: 'reducing_balance', lifeMonths: null, ratePct: 25 });
   const s = scope.assetSchedule(a);
-  t.check(r(s[0].charge) === r(30000000 * 0.25 / 12),
-    `the first month is the annual rate over twelve, on the full cost (got ${r(s[0].charge)})`);
-  t.check(s[1].charge < s[0].charge && s[11].charge < s[1].charge,
+  /* Same asset, same 15th: the first row is 17 days of the annual rate
+     over twelve, on the full cost. The second row is the first WHOLE
+     month, so it is the one that carries the rule. */
+  t.check(r(s[0].charge) === r(30000000 * 0.25 / 12 * 17 / 31),
+    `the month it arrived is 17 days of the monthly rate, on the full cost (got ${r(s[0].charge)})`);
+  t.check(r(s[1].charge) === r((30000000 - s[0].charge) * 0.25 / 12),
+    'and the first whole month is the annual rate over twelve, on what is left after it');
+  t.check(s[2].charge < s[1].charge && s[11].charge < s[2].charge,
     'and every month after is smaller -- the point of the method, and how a vehicle actually loses value');
   t.check(r(s[s.length - 1].closing) === 6000000,
     'it still stops at the residual value, which a percentage of a shrinking balance would never reach on its own');
@@ -113,25 +132,49 @@ const asset = (over) => Object.assign({
   t.check(scope.assetMonthsCharged(a, '2026-01-31') === 0,
     'and the count is zero rather than negative, which would ADD value to an asset the shop did not own yet');
 
-  t.check(r(scope.assetNBVAt(asset({ ...a, acquiredOn: '2026-03-03' }), '2026-06-30'))
-    === r(scope.assetNBVAt(asset({ ...a, acquiredOn: '2026-03-28' }), '2026-06-30')),
-  'the day of the month makes no difference -- whole months, deliberately');
+  /* THE DAY OF THE MONTH NOW MAKES THE DIFFERENCE IT ALWAYS SHOULD HAVE.
+     This read `=== `: a van bought on the 3rd and one bought on the 28th
+     were worth the same on 30 June, because a month was the smallest
+     thing that could be charged. The shop asked for the days, and the
+     days are what an asset is worn by -- one was owned for 29 of March's
+     31 and the other for 4. */
+  const early = scope.assetNBVAt(asset({ ...a, acquiredOn: '2026-03-03' }), '2026-06-30');
+  const late = scope.assetNBVAt(asset({ ...a, acquiredOn: '2026-03-28' }), '2026-06-30');
+  t.check(r(early) === r(1200000 - 100000 * (3 + 29 / 31)),
+    `bought on the 3rd, it is worn by 29 days of March and three whole months (got ${r(early)})`);
+  t.check(r(late) === r(1200000 - 100000 * (3 + 4 / 31)),
+    `bought on the 28th, by four days of March and the same three (got ${r(late)})`);
+  t.check(late > early,
+    'so the one bought later in the month is worth more, which is the whole point');
 
-  const sold = asset({ ...a, disposedOn: '2026-06-30', disposalProceeds: 1000000 });
-  t.check(scope.assetMonthsCharged(sold, '2026-12-31') === 3,
-    'the disposal month is NOT charged, so March, April and May are the three');
-  t.check(r(scope.assetNBVAt(sold, '2026-12-31')) === r(scope.assetNBVAt(sold, '2026-06-30')),
-    'and nothing is charged after it is gone');
+  /* AND THE DISPOSAL MONTH IS CHARGED FOR THE DAYS IT WAS OWNED. Skipping
+     it entirely was the conservative half of a choice that only existed
+     because a month could not be split: something sold on the 20th had
+     to take either a whole month or none. It takes twenty days. */
+  const sold = asset({ ...a, disposedOn: '2026-06-20', disposalProceeds: 1000000 });
+  t.check(scope.assetMonthsCharged(sold, '2026-12-31') === 4,
+    'March to June inclusive is four calendar months, the last two of them part months');
+  t.check(r(scope.assetChargeBetween(sold, '2026-01-01', '2026-12-31'))
+    === r(100000 * (22 / 31 + 1 + 1 + 20 / 30)),
+    'and what it cost the shop is exactly the days it was owned: 22 of March, April, May, 20 of June');
+  t.check(r(scope.assetNBVAt(sold, '2026-12-31')) === r(scope.assetNBVAt(sold, '2026-06-20')),
+    'and nothing is charged after the day it went');
 }
 
 /* ---------- 4. selling it --------------------------------------------- */
 {
+  /* Owned 10 March to 30 June: 22 days of March, then three whole
+     months. The book value it is sold against is worn by exactly that,
+     where it used to skip both end months and charge three flat. */
   const sold = asset({ cost: 1200000, lifeMonths: 12, salvage: 0, acquiredOn: '2026-03-10',
     disposedOn: '2026-06-30', disposalProceeds: 1000000 });
+  const worn = 100000 * (22 / 31 + 3);
   const d = scope.assetDisposalResult(sold);
-  t.check(r(d.book) === 900000, `book value at disposal is cost less what was charged (got ${r(d.book)})`);
-  t.check(r(d.gain) === 100000, 'and the gain is what it fetched over that');
-  t.check(r(scope.assetDisposalResult({ ...sold, disposalProceeds: 500000 }).gain) === -400000,
+  t.check(r(d.book) === r(1200000 - worn),
+    `book value at disposal is cost less the days it was owned (got ${r(d.book)})`);
+  t.check(r(d.gain) === r(1000000 - (1200000 - worn)), 'and the gain is what it fetched over that');
+  t.check(r(scope.assetDisposalResult({ ...sold, disposalProceeds: 500000 }).gain)
+    === r(500000 - (1200000 - worn)),
     'a sale below book value is a loss, signed rather than clamped');
   t.check(scope.assetDisposalResult(asset()) === null,
     'an asset still owned has no disposal result -- null, so "not sold" cannot be read as "sold for nothing"');
@@ -143,8 +186,10 @@ const asset = (over) => Object.assign({
     asset({ id: 1, cost: 1200000, lifeMonths: 12, salvage: 0, acquiredOn: '2026-01-10' }),
     asset({ id: 2, cost: 600000, lifeMonths: 12, salvage: 0, acquiredOn: '2026-01-10' }),
   ];
-  t.check(r(scope.depreciationForPeriod('2026-01-01', '2026-03-31')) === 3 * (100000 + 50000),
-    `the period charge adds every asset's months in that window (got ${r(scope.depreciationForPeriod('2026-01-01', '2026-03-31'))})`);
+  /* Both bought on 10 January, so January is 22 of its 31 days. */
+  const owned = 22 / 31 + 2;
+  t.check(r(scope.depreciationForPeriod('2026-01-01', '2026-03-31')) === r(owned * (100000 + 50000)),
+    `the period charge adds every asset's days in that window (got ${r(scope.depreciationForPeriod('2026-01-01', '2026-03-31'))})`);
   // A period that does NOT begin at acquisition. Every window above starts
   // the month the assets were bought, where "this period" and "everything
   // so far" are the same number and the window is doing no work.
@@ -154,7 +199,8 @@ const asset = (over) => Object.assign({
     'and a two-month window charges two');
   t.check(r(scope.depreciationForPeriod('2025-01-01', '2025-12-31')) === 0,
     'a period entirely before they were bought charges nothing');
-  t.check(r(scope.fixedAssetsNBVAt('2026-03-31')) === (1200000 - 300000) + (600000 - 150000),
+  t.check(r(scope.fixedAssetsNBVAt('2026-03-31'))
+    === r((1200000 - owned * 100000) + (600000 - owned * 50000)),
     'and the balance-sheet figure is what they are all still worth');
 
   // The two have to agree: what was charged is what came off the books.

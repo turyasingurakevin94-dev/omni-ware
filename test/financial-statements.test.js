@@ -92,6 +92,15 @@ const scope = compileScope([
   extractFunction(src, 'balanceSheetAsAt', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
   extractFunction(src, 'monthChargeFraction', 'index.html'),
+  extractFunction(src, 'assetCoverInMonth', 'index.html'),
+  extractFunction(src, 'assetRowFraction', 'index.html'),
+  extractDeclaration(src, 'DUE_KINDS', 'index.html'),
+  extractFunction(src, 'dueCostBetween', 'index.html'),
+  extractFunction(src, 'dueCostRows', 'index.html'),
+  extractFunction(src, 'dueSettledCashIds', 'index.html'),
+  extractFunction(src, 'unlinkedDuePayments', 'index.html'),
+  extractFunction(src, 'uncostedDuesInRange', 'index.html'),
+  extractFunction(src, 'statementOpexRows', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
@@ -143,7 +152,7 @@ const scope = compileScope([
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   dashTotalCreditors: () => 0,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed', 'statementBasisGap', 'balanceSheetAsAt']);
+}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed', 'statementBasisGap', 'balanceSheetAsAt', 'dueSettledCashIds', 'dueCostRows', 'statementOpexRows']);
 
 const r = (n) => Math.round(n);
 const txn = (over) => Object.assign({ id: 1, date: TODAY, account: 'cash', type: 'expense', category: 'Rent', amount: 0 }, over);
@@ -156,7 +165,7 @@ const sale = (over) => Object.assign({
 const reset = () => {
   data.savedQuotes = []; data.customers = []; data.cashTxns = [];
   data.cashDays = { [TODAY]: { opening: { cash: 0, momo: 0, bank: 0 }, actual: {}, openingSet: true } };
-  data.stock = {}; data.stockLots = {}; data.fixedAssets = []; data.loans = [];
+  data.stock = {}; data.stockLots = {}; data.fixedAssets = []; data.loans = []; data.dues = [];
 };
 
 /* ---------- 1. profit, built from the corrected pieces ---------------- */
@@ -200,6 +209,83 @@ const reset = () => {
   t.check(is.revenue === 450000,
     'and revenue is the invoice alone: a loan is borrowed, the owner\'s money is equity, and collecting a debt books a sale that was already booked');
   t.check(is.netProfit === 150000, 'so profit is unmoved by 25,300,000 of cash arriving');
+}
+
+/* ---------- rent and wages are the months they are FOR ----------------
+ *
+ * Reported from the shop, off a one-day profit and loss: rent showed
+ * 600,000 on the day it was paid and nothing on any other day, and the
+ * day before showed a whole month of wages. Both lines came from the
+ * CASH BOOK, so they landed whole on payday -- a month settled a week
+ * late showed no rent in the month it was for and two in the month
+ * after.
+ *
+ * Phase 1 settled on cash for operating costs and said why: "the
+ * alternative needs a prepayments subledger this app does not have". It
+ * has one now -- data.dues, a row per premises per month and per person
+ * per month, which the balance sheet has read as a liability since
+ * Payroll & rent was built. So these two lines come from the month they
+ * are FOR, apportioned across its days. Every other running cost has no
+ * month behind it and is still cash.
+ */
+{
+  reset();
+  data.dues = [
+    { id: 1, kind: 'rent', refId: '1', period: '2026-08', dueDate: '2026-08-01',
+      amount: 620000, paid: 0, payments: [] },
+    { id: 2, kind: 'wage', refId: '1', period: '2026-08', dueDate: '2026-08-31',
+      amount: 310000, paid: 0, payments: [] },
+  ];
+  const day = scope.incomeStatement('2026-08-03', '2026-08-03');
+  t.check(r(day.opexRows.Rent) === r(620000 / 31),
+    `one day of August charges one day of its rent (got ${r(day.opexRows.Rent)})`);
+  t.check(r(day.opexRows['Salaries & Wages']) === r(310000 / 31),
+    'and one day of its wages');
+
+  const month = scope.incomeStatement('2026-08-01', '2026-08-31');
+  t.check(r(month.opexRows.Rent) === 620000 && r(month.opexRows['Salaries & Wages']) === 310000,
+    'a whole month is still the whole month, so no monthly figure moved');
+  t.check(r(scope.incomeStatement('2026-09-01', '2026-09-30').opexRows.Rent || 0) === 0,
+    'and August rent is not in September, whatever month it was paid in');
+
+  /* THE MONTH IT IS FOR, NOT THE MONTH IT WAS PAID. Settled on 4
+     September, and August still carries it. This is the whole change. */
+  data.dues[0].payments = [{ date: '2026-09-04', amount: 620000, account: 'cash', cashTxnId: 99 }];
+  data.dues[0].paid = 620000;
+  data.cashTxns = [txn({ id: 99, type: 'payment', category: 'Rent', amount: 620000, date: '2026-09-04' })];
+  t.check(r(scope.incomeStatement('2026-08-01', '2026-08-31').opexRows.Rent) === 620000,
+    'rent settled in September is still August\'s cost');
+  t.check(!scope.incomeStatement('2026-09-01', '2026-09-30').opexRows.Rent,
+    'and it is not charged again in the month the money left');
+
+  /* Which is only safe because the payment that settles a month is
+     dropped from the cash side. Counting both would be the same rent
+     twice, and it is the failure mode this design has to be proof
+     against rather than merely careful about. */
+  t.check(scope.dueSettledCashIds().has('99'),
+    'the payment that settles a month is known by its link, not by its category');
+
+  /* A rent payment typed straight into the Cash Book has no month behind
+     it. It is a real cost and it stays -- on the day it was paid -- and
+     the trust checks name it, because beside an accrued month it is the
+     one line that could be the same rent twice. */
+  data.cashTxns.push(txn({ id: 100, type: 'payment', category: 'Rent', amount: 55000, date: '2026-09-10' }));
+  const sept = scope.incomeStatement('2026-09-01', '2026-09-30');
+  t.check(r(sept.opexRows.Rent) === 55000,
+    'a rent payment with no month behind it is still counted, on the day it was paid');
+  t.check(sept.unlinkedDues.length === 1 && r(sept.unlinkedDuesTotal) === 55000,
+    'and it is reported, so a check can say the same rent may be on the statement twice');
+
+  /* A daily-paid month nobody has costed is a wage MISSING, not a wage
+     of nothing. Named rather than shown as a nought. */
+  data.dues.push({ id: 3, kind: 'wage', refId: '2', period: '2026-09', dueDate: '2026-09-30',
+    amount: null, paid: 0, payments: [] });
+  const sept2 = scope.incomeStatement('2026-09-01', '2026-09-30');
+  t.check(sept2.uncostedDues.length === 1,
+    'a month with no days entered is reported rather than counted as zero');
+  t.check(!sept2.opexRows['Salaries & Wages'],
+    'and nothing is invented for it');
+  reset();
 }
 
 /* ---------- 3. assets and borrowing reach the statement --------------- */
@@ -255,10 +341,14 @@ const reset = () => {
     method: 'straight_line', lifeMonths: 12, salvage: 0, disposedOn: '2026-08-02', disposalProceeds: 900000 }];
   data.loans = [];
   const is2 = scope.incomeStatement('2026-08-01', TODAY);
-  // Seven months charged (January to July; the disposal month is not),
-  // so 1,200,000 less 700,000 leaves a book value of 500,000 and the
-  // 900,000 it fetched is a 400,000 gain.
-  t.check(is2.disposals.length === 1 && r(is2.disposalGain) === 400000,
+  /* Bought on 1 January, sold on 2 August: seven whole months and the
+     two days of August it was still owned. The disposal month used to be
+     skipped entirely -- the conservative half of a choice that only
+     existed because a month could not be split -- so this read 400,000
+     against a book value worn by seven months flat. Two days is not much
+     of a correction, which is the point: it is the right two days. */
+  const worn = 100000 * (7 + 2 / 31);
+  t.check(is2.disposals.length === 1 && r(is2.disposalGain) === r(900000 - (1200000 - worn)),
     `a disposal is reported on its own line (got ${r(is2.disposalGain)})`);
   t.check(is2.operatingProfit !== is2.netProfit, 'below operating profit, not inside it');
   // And a sale that happened in another period belongs to that one.

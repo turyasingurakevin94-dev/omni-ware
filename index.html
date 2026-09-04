@@ -58132,13 +58132,44 @@ function assetIsDisposed(asset, asOfISO){
    depreciating today, and a negative count would silently ADD value. */
 function assetMonthsCharged(asset, asOfISO){
   if(!asset || !asset.acquiredOn) return 0;
-  const end = assetIsDisposed(asset, asOfISO)
-    // The disposal month is not charged, so the last charged month is the
-    // one before it.
-    ? String(asset.disposedOn)
-    : String(asOfISO);
-  const months = monthsBetween(asset.acquiredOn, end) + (assetIsDisposed(asset, asOfISO) ? 0 : 1);
-  return Math.max(0, months);
+  /* The disposal month IS charged now -- for the days it was owned, like
+     the acquisition month. It used to be skipped entirely, which was the
+     only sane answer while a month was the smallest unit that could be
+     charged: something sold on the 20th had either a whole month or
+     none, and none was the conservative half of a choice that should not
+     have had to be made. Charging the days removes the choice. */
+  const end = assetIsDisposed(asset, asOfISO) ? String(asset.disposedOn) : String(asOfISO);
+  return Math.max(0, monthsBetween(asset.acquiredOn, end) + 1);
+}
+/* WHICH DAYS OF A MONTH AN ASSET WAS OWNED FOR.
+
+   The whole month, unless it arrived or left inside it. Null when the
+   month falls outside ownership altogether, which is what stops the
+   schedule running past a disposal. */
+function assetCoverInMonth(asset, monthISO){
+  const [y, m] = String(monthISO).split('-').map(Number);
+  if(!y || !m) return null;
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const first = `${monthISO}-01`;
+  const last = `${monthISO}-${String(days).padStart(2,'0')}`;
+  const acquired = String(asset.acquiredOn || '');
+  const disposed = String(asset.disposedOn || '');
+  const from = acquired > first ? acquired : first;
+  const to = (disposed && disposed < last) ? disposed : last;
+  if(from > to) return null;
+  return { from, to, days,
+    covered: Number(to.slice(8,10)) - Number(from.slice(8,10)) + 1 };
+}
+/* How much of ONE schedule row falls inside a window. The row knows the
+   days it covers, so a month the asset was owned for six days of is
+   asked about those six, never about all thirty-one. */
+function assetRowFraction(row, fromISO, toISO){
+  if(!row || !row.covDays) return 0;
+  const a = String(fromISO) > row.covFrom ? String(fromISO) : row.covFrom;
+  const b = String(toISO) < row.covTo ? String(toISO) : row.covTo;
+  if(a > b) return 0;
+  const covered = Number(b.slice(8,10)) - Number(a.slice(8,10)) + 1;
+  return Math.max(0, Math.min(1, covered / row.covDays));
 }
 // What one month takes off, given what is left. Split out because both
 // the schedule and the period total need exactly this and must not
@@ -58177,15 +58208,33 @@ function assetSchedule(asset, untilISO){
   const limit = untilISO ? assetMonthsCharged(asset, untilISO) : DEPRECIATION_MAX_MONTHS;
   let nbv = cost;
   const start = new Date(String(asset.acquiredOn)+'T00:00:00Z');
+  /* One row per calendar month owned, and the two end months carry only
+     the days they were owned for. A van bought on the 28th is not a
+     month old on the 1st, and charging it as though it were is where
+     "the day of the month makes no difference" came from -- a rule that
+     was true only because a month was the smallest thing that could be
+     charged.
+
+     A part month at the start pushes the tail one month out: sixty
+     months of life beginning on the 15th end on the 14th, five years and
+     one calendar month later. The loop runs until the book value reaches
+     salvage, so it finds that on its own and the life still costs
+     exactly cost less salvage. */
   for(let i=0; i<Math.min(limit, DEPRECIATION_MAX_MONTHS); i++){
-    const charge = assetMonthlyCharge(asset, nbv);
-    if(charge <= 0) break;
     const m = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i, 1));
+    const month = m.toISOString().slice(0,7);
+    const cover = assetCoverInMonth(asset, month);
+    if(!cover) break;                       // sold before this month began
+    const full = assetMonthlyCharge(asset, nbv);
+    if(full <= 0) break;
+    const charge = full * (cover.covered / cover.days);
+    if(charge <= 0) break;
     rows.push({
-      month: m.toISOString().slice(0,7),
+      month,
       opening: nbv,
       charge,
       closing: nbv - charge,
+      covFrom: cover.from, covTo: cover.to, covDays: cover.covered,
     });
     nbv -= charge;
     if(nbv <= salvage + 1e-9) break;
@@ -58239,8 +58288,7 @@ function monthChargeFraction(monthISO, fromISO, toISO){
 function assetNBVAt(asset, asOfISO){
   const cost = Number(asset.cost)||0;
   const rows = assetSchedule(asset, asOfISO);
-  const charged = rows.reduce((s,r)=>
-    s + r.charge * monthChargeFraction(r.month, r.month + '-01', asOfISO), 0);
+  const charged = rows.reduce((s,r)=> s + r.charge * assetRowFraction(r, r.covFrom, asOfISO), 0);
   return cost - charged;
 }
 function assetAccumulatedAt(asset, asOfISO){
@@ -58253,7 +58301,7 @@ function assetChargeBetween(asset, fromISO, toISO){
   const fromMonth = String(fromISO).slice(0,7), toMonth = String(toISO).slice(0,7);
   return assetSchedule(asset, toISO)
     .filter(r=> r.month >= fromMonth && r.month <= toMonth)
-    .reduce((s,r)=> s + r.charge * monthChargeFraction(r.month, fromISO, toISO), 0);
+    .reduce((s,r)=> s + r.charge * assetRowFraction(r, fromISO, toISO), 0);
 }
 function liveFixedAssets(){ return (data.fixedAssets||[]); }
 function depreciationForPeriod(fromISO, toISO){
@@ -59217,18 +59265,36 @@ function inventoryValue(){
 
    Revenue and cost of sales come from invoices, so both sit on the same
    accrual footing -- a sale is earned when it is invoiced, not when it is
-   paid for. Operating costs come from the cash book, so they land when
-   they were paid. That mixture is deliberate and was settled in phase 1:
-   the alternative needs a prepayments subledger this app does not have,
-   and a lone accrual among cash entries is worse than a consistent
-   simplification. It is named on the statement so nobody has to guess. */
+   paid for.
+
+   Operating costs came from the cash book, so they landed on the day
+   they were paid, whole. Phase 1 settled on that and said why: "the
+   alternative needs a prepayments subledger this app does not have".
+
+   RENT AND WAGES NOW HAVE ONE. data.dues is a row per premises per month
+   and per person per month; the balance sheet has read it as a liability
+   since Payroll & rent was built. So those two lines are the months they
+   are FOR, apportioned across those months' days -- see dueCostRows --
+   and the payments that settle them are dropped from the cash side so
+   nothing is counted twice.
+
+   EVERY OTHER RUNNING COST IS STILL CASH. Transport, power, airtime and
+   the rest have no month behind them and no subledger to give them one,
+   so they land when they were paid, exactly as before. That is still a
+   mixture and it is still deliberate; what changed is that the two lines
+   big enough to swing a month's profit are no longer among the ones that
+   move depending on when somebody happened to pay. It is named on the
+   statement so nobody has to guess. */
 function incomeStatement(fromISO, toISO){
   const invoices = anInvoicesInRange(fromISO, toISO);
   const trade = anOverallTotals(invoices);
   const cash = dashCashTxnsInRange(fromISO, toISO);
 
-  const opexRows = cashOpexRows(cash);
+  const opexRows = statementOpexRows(cash, fromISO, toISO);
   const opex = Object.values(opexRows).reduce((s,v)=>s+v, 0);
+  // What the reader has to be told about those two lines.
+  const unlinkedDues = unlinkedDuePayments(cash);
+  const uncostedDues = uncostedDuesInRange(fromISO, toISO);
 
   const depreciation = depreciationForPeriod(fromISO, toISO);
   const interest = loanInterestForPeriod(fromISO, toISO);
@@ -59257,6 +59323,11 @@ function incomeStatement(fromISO, toISO){
     invoiceCount: invoices.length,
     // How much of the cost figure above is estimate rather than evidence.
     estimatedCostUnits: trade.estimatedQty,
+    /* Rent and wages are the months they are FOR, not the days they were
+       paid on. These two say where that can still be wrong: a payment
+       with no month behind it, and a month nobody has costed. */
+    unlinkedDues, unlinkedDuesTotal: unlinkedDues.reduce((n,t)=> n + (Number(t.amount)||0), 0),
+    uncostedDues,
   };
 }
 
@@ -59873,6 +59944,28 @@ function statementChecks(is, bs, cf){
           : `, which understates both. Invoice counter sales to bring them in.`),
     });
   }
+  /* THE TWO WAYS THE NEW RENT AND WAGE LINES CAN STILL BE WRONG, and
+     neither of them is silent. A payment typed straight into the cash
+     book beside a month raised on Payroll & rent is the same rent twice;
+     a month nobody has costed is a wage missing altogether. */
+  if(is.unlinkedDues && is.unlinkedDues.length){
+    checks.push({
+      ok: false,
+      label: `${is.unlinkedDues.length} rent or wage payment${is.unlinkedDues.length===1?'':'s'} with no month behind ${is.unlinkedDues.length===1?'it':'them'}`,
+      detail: `${fmtUGX(Math.round(is.unlinkedDuesTotal))} was paid straight into the Cash Book under `
+        + `${[...new Set(is.unlinkedDues.map(t=> t.category))].join(' or ')} rather than against a month on Payroll & rent. `
+        + `It is counted on the day it was paid, and if the month it was for was also raised there, that month is on this statement twice.`,
+    });
+  }
+  if(is.uncostedDues && is.uncostedDues.length){
+    checks.push({
+      ok: false,
+      label: `${is.uncostedDues.length} month${is.uncostedDues.length===1?'':'s'} of wages nobody has costed`,
+      detail: `A daily-paid month costs what the days come to, and the days have not been entered for `
+        + `${[...new Set(is.uncostedDues.map(d=> periodLabel(d.period)))].join(', ')}. `
+        + `Those wages are missing from the running costs above rather than shown as nothing. Enter the days on Payroll & rent.`,
+    });
+  }
   const day = (data.cashDays||{})[bs.asOf];
   const counted = day && day.actual
     ? ACCOUNTS.reduce((s,a)=>{
@@ -60209,6 +60302,12 @@ function stZero(n){ return Math.round(n) || 0; }
 
 function stDeltaChip(now, before, higherIsBetter){
   if(before === 0 || before == null) return '';
+  /* Nothing changed, so nothing is said. Two losses of the same size
+     used to wear "changed", because the only test was now >= before and
+     equal passes it -- a chip claiming movement beside two identical
+     printed figures, which is worse than no chip. Rounded, because the
+     statement prints rounded figures and the reader is comparing those. */
+  if(Math.round(now) === Math.round(before)) return '';
   const up = now >= before;
   const good = higherIsBetter === false ? !up : up;
   /* A percentage change measured from a loss is arithmetic without
@@ -61451,7 +61550,10 @@ function stProfitAndLoss(ctx){
       ${(is.loanFees||prev.loanFees) ? stLine('Loan arrangement fees', -is.loanFees, -prev.loanFees, {drill:'pl:loanfees'}) : ''}
       ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
-    <p class="st-read">Sales counted when invoiced, costs when paid. ${stComparisonNote(ctx)}</p>
+    <p class="st-read">Sales counted when invoiced. Rent and wages counted against the months
+      they are for, spread across those months&rsquo; days, so a short period shows its own
+      share rather than a whole month or none; every other running cost is counted when it
+      was paid. ${stComparisonNote(ctx)}</p>
   </section>`;
 }
 
@@ -63242,6 +63344,97 @@ function cashOpexRows(rows){
 }
 function cashOpexTotal(rows){
   return Object.values(cashOpexRows(rows)).reduce((s,v)=> s + v, 0);
+}
+
+/* ================= WHAT A MONTH OF RENT AND WAGES COST =================
+
+   Rent and wages reached the profit and loss from the CASH BOOK, so they
+   landed whole on the day they were paid. A statement for one day showed
+   a month's rent or none of it, depending only on whether that day
+   happened to be payday; a month whose rent was settled a week late
+   showed no rent at all, and the month after showed two.
+
+   The mixture was deliberate once, and the comment above incomeStatement
+   said why: "the alternative needs a prepayments subledger this app does
+   not have". It has one now. data.dues carries a row per premises per
+   month and per person per month, with what it costs and when it falls
+   due, and the balance sheet has counted the unpaid ones as a liability
+   since Payroll & rent was built. So the cost can come from the month it
+   is FOR, apportioned across that month's days, and the payment can go
+   on being a payment.
+
+   TWO QUESTIONS, TWO ANSWERS, AND THEY ARE BOTH RIGHT. dueAccruedAsAt --
+   which the balance sheet uses -- answers "what does the shop OWE on the
+   22nd", and rent is not accrued by the day there because a tenancy
+   agreement says a month falls due whole on its day. This answers "what
+   did the 22nd COST", and occupying the premises for 22 days costs 22
+   days of rent whoever is owed what. Neither figure is the other's, and
+   the sheet and the statement are no longer built from one number
+   pretending to be both. */
+function dueCostBetween(d, fromISO, toISO){
+  const amount = Number(d && d.amount) || 0;
+  if(!amount) return 0;
+  return amount * monthChargeFraction(String(d.period||''), fromISO, toISO);
+}
+/* The running-cost lines rent and wages contribute to a window, under the
+   same names the cash book uses for them -- so a shop reading the
+   statement sees "Rent", not a second line meaning the same thing. */
+function dueCostRows(fromISO, toISO){
+  const out = {};
+  (data.dues||[]).forEach(d=>{
+    const kind = DUE_KINDS[d && d.kind];
+    if(!kind) return;
+    const cost = dueCostBetween(d, fromISO, toISO);
+    if(!cost) return;
+    out[kind.cashCategory] = (out[kind.cashCategory]||0) + cost;
+  });
+  return out;
+}
+/* Every cash entry that settles a due, by id. Those are the ones the
+   accrual replaces; anything else categorised Rent or Salaries & Wages
+   was typed straight into the cash book with no month behind it, and it
+   goes on counting as what it is. Matching on the LINK rather than on
+   the category is the same discipline the counter-sales gap uses: a
+   payment either points at the month it settles or it does not. */
+function dueSettledCashIds(){
+  const ids = new Set();
+  (data.dues||[]).forEach(d=> (d.payments||[]).forEach(p=>{
+    if(p && p.cashTxnId != null) ids.add(String(p.cashTxnId));
+  }));
+  return ids;
+}
+/* A rent or wage payment with no month behind it. Counted, never
+   dropped: it is a real cost, it stays on the statement on the day it
+   was paid, and the trust checks say so -- because beside an accrued
+   month it is the one line on the page that could be counting the same
+   rent twice. */
+function unlinkedDuePayments(rows){
+  const settled = dueSettledCashIds();
+  const cats = Object.keys(DUE_KINDS).map(k=> DUE_KINDS[k].cashCategory);
+  return (rows||[]).filter(t=> cashIsOperatingExpense(t)
+    && cats.indexOf(t.category) !== -1
+    && !settled.has(String(t.id)));
+}
+/* Months the shop cannot cost: a daily-paid worker whose days nobody has
+   entered. Their wage is missing from the statement entirely, which is
+   the kind of hole that must be named rather than shown as a nought. */
+function uncostedDuesInRange(fromISO, toISO){
+  return (data.dues||[]).filter(d=>
+    DUE_KINDS[d && d.kind]
+    && (d.amount === null || d.amount === undefined)
+    && monthChargeFraction(String(d.period||''), fromISO, toISO) > 0);
+}
+/* The running costs a STATEMENT shows: the cash book, less the payments
+   that settle a month, plus the months themselves. The cash book's own
+   rows are left alone -- cashOpexRows still means "what the drawer paid,
+   by category", which is what the cash flow and the dashboards ask it. */
+function statementOpexRows(cashRows, fromISO, toISO){
+  const settled = dueSettledCashIds();
+  const out = cashOpexRows((cashRows||[]).filter(t=> !settled.has(String(t.id))));
+  const accrued = dueCostRows(fromISO, toISO);
+  Object.keys(accrued).forEach(k=>{ out[k] = (out[k]||0) + accrued[k]; });
+  Object.keys(out).forEach(k=>{ if(Math.abs(out[k]) < 0.5) delete out[k]; });
+  return out;
 }
 
 /* A preset list with a category the app depends on guaranteed to be in

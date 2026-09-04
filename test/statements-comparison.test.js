@@ -220,4 +220,21 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
     'and after the context, which seeds the dates on a first open — otherwise the screen it opens showing would light nothing');
 }
 
+/* ---------- a chip that says nothing changed, when nothing did --------
+ *
+ * Surfaced by the rent fix: a one-day statement beside the day before it
+ * showed the same rent, the same wages and the same loss, and the loss
+ * wore "changed". The only test was `now >= before`, which equal passes,
+ * and the negative branch has no percentage to fall back on -- so two
+ * identical figures were reported as movement.
+ */
+{
+  const src2 = read('index.html');
+  const chip = extractFunction(src2, 'stDeltaChip', 'index.html');
+  t.check(/Math\.round\(now\) === Math\.round\(before\)/.test(chip),
+    'two figures that print the same wear no chip at all');
+  t.check(chip.indexOf('Math.round(now) === Math.round(before)') < chip.indexOf('const up ='),
+    'and the check comes before the direction, which is what read equal as a rise');
+}
+
 process.exit(t.done() ? 1 : 0);
