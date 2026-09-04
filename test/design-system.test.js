@@ -54,10 +54,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
     'radii': [28, /border-radius:\s*([^;}]+)/g],
-    /* 63, not 62: the layer's one elevation, --ow-lift, is used for the
-       first time (the basket bar on What to buy). The value was declared
-       with the layer; no rule had spent it until now. */
-    'shadows': [63, /box-shadow:\s*([^;}]+)/g],
+    /* 62, not 63: the cash book's two floating + / - buttons are gone --
+       they duplicated Money in and Money out from the top of the page,
+       and the entry line that replaced them is permanently on screen, so
+       their drop shadow and its hover went with them. */
+    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
     /* 105, not 106: Follow-ups' card wall carried its own hover border,
        its own two near-whites for a card and a settled row, and its own
        hover fill. All four went when that screen became a console on the

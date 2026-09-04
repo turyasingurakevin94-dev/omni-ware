@@ -74,15 +74,23 @@ const src = read('index.html');
      now .ow-ph-help behind the "i", with a one-line .ow-ph-sub saying
      what the screen is. Folded by construction, so there is one fewer
      screen here to police rather than one that stopped being
+     policed.
+
+     11 -> 10. The cash book converted: .page-head became .ow-ph, and the
+     paragraph it opened with -- which explained what a cash book is to
+     somebody who has opened one every morning for a year -- is now
+     .ow-ph-help behind the "i", with an .ow-ph-sub that says what the
+     day actually holds. Folded by construction, so there is one fewer
+     screen here to police rather than one that stopped being
      policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 11, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 10, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 11,
+  t.check(paras.length >= 10,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
