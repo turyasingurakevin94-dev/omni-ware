@@ -2155,24 +2155,52 @@ async function main() {
   eq(srcHues.filter(h=> ordHues.includes(h)).join(), '',
     'with not one hex shared between them');
 
-  /* A ramp has to actually descend, or it is five mid-tones that happen
-     to differ in hue -- which is what the first attempt at this was. */
+  /* WHAT THIS ASSERTION USED TO SAY, AND WHY IT STOPPED BEING TRUE.
+
+     It demanded that all five descend in luminance -- a ramp that does
+     not descend is five mid-tones that happen to differ in hue, which is
+     what the first attempt at this board was. That held while the five
+     were the board's OWN colours: #818E9B through #11402E, none of them
+     in the palette, argued for as a ramp deep enough to read as one.
+
+     On screen it did not read as one. Four of the five were the same
+     dark green at a glance, so the ramp bought nothing and cost the app
+     four values §2 says it may not own. The board those colours painted
+     is gone (the screen is a queue banded by what needs the owner, and
+     the stage is five segments of ink on the row -- see .ow-sf-sg).
+     What is left of these five is the lead's own stage rail and the
+     graduation screen, through the shared stageStepsHTML.
+
+     So the rule is stronger in one direction and deliberately weaker in
+     another. STRONGER: every one of the five must now be a value the
+     palette actually owns -- that is the check that would have stopped
+     the original five, and no check here did. WEAKER: only the first
+     four have to descend. The fifth is verdigris, which is LIGHTER than
+     the ink above it on purpose, because reaching Listed is the good
+     outcome and verdigris is what good means on every other screen in
+     this app. A meaning is not a fifth step of a gradient. */
+  const PALETTE = [...(/:root\{[\s\S]*?\n  \}/.exec(read('index.html')) || [''])[0]
+    .matchAll(/#[0-9A-Fa-f]{6}/g)].map(m=> m[0].toUpperCase());
+  const strays = srcHues.filter(h=> !PALETTE.includes(h));
+  t.check(strays.length === 0,
+    `every step colour is a value the palette owns${strays.length ? ' — strays ' + strays.join(', ') : ''}`);
   const lum = (hex)=>{
     const c = [1,3,5].map(i=> parseInt(hex.substr(i,2),16)/255)
       .map(v=> v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
     return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
   };
-  const L = srcHues.map(lum);
+  const L = srcHues.slice(0, 4).map(lum);
   t.check(L.slice(1).every((v,i)=> v < L[i]),
-    `each step is darker than the one before it (${srcHues.join(' → ')})`);
-  /* The lightest still has to hold the ring the live step wears. The
-     order board's own grey is 2.48:1 and does not, which is the reason
-     this ramp starts on a steel rather than a pale grey. */
+    `the four working steps darken in order (${srcHues.slice(0,4).join(' → ')})`);
+  /* Every one of them, not merely the lightest: they are drawn as dots
+     and 5px rings, and a step nobody can see is a step that is not
+     saying where the item has got to. */
   const onWhite = (hex)=> 1.05 / (lum(hex) + 0.05);
-  t.check(onWhite(srcHues[0]) >= 3,
-    `and even the lightest clears 3:1 on white (${onWhite(srcHues[0]).toFixed(2)}:1)`);
-  t.check(srcHues.includes('#1C6B58'),
-    'with the shop\'s own verdigris among them rather than five invented greens');
+  const faint = srcHues.filter(h=> onWhite(h) < 3);
+  t.check(faint.length === 0,
+    `and every one clears 3:1 on white${faint.length ? ' — ' + faint.join(', ') : ''}`);
+  eq(srcHues[4], '#1C6B58',
+    'with the last one the shop\'s own verdigris, because reaching it is the good outcome');
 }
 
 /* ---------- 8. the two boards do not reach into each other ----------- */
@@ -2199,11 +2227,21 @@ async function main() {
   t.check(/#savedQuotesWrap \.ow-ot-r\[data-id=/.test(code),
     'announceOrderMove finds the moved row on the ORDERS board, never a lane of the funnel\'s');
 
-  /* Its own state AND its own starting value: seeding either from the
-     order board's would make opening Sourcing land wherever Orders was
-     last left. */
-  t.check(/let sourcingActiveMobileStep = 'asked';/.test(code) && /let sourcingBoardScrollLeft = 0;/.test(code),
-    'the sourcing board keeps its own scroll and active-step state, starting from its own first lane');
+  /* THIS USED TO PIN A LANE BOARD'S SCROLL POSITION AND ACTIVE STEP.
+
+     It was a real rule while there were lanes: seeding either value from
+     the order board's would have made opening Sourcing land wherever
+     Orders was last left. There are no lanes now -- the screen is a
+     queue banded by what needs the owner, because the question it is
+     opened with ("what do I push on today") crosses all five stages and
+     no column can answer it.
+
+     What survives of the rule is what it was protecting: this screen
+     holds its own view state and reads none of the order board's. The
+     state is now which row is open. */
+  t.check(/let sourcingOpenId = null;/.test(code)
+    && !/sourcingActiveMobileStep|sourcingBoardScrollLeft/.test(code),
+    'the sourcing screen keeps its own open-row state and no lane state at all');
   t.check(!/let sqActiveMobileStep|let sqBoardScrollLeft/.test(code) && /let otStageLens = 'all';/.test(code),
     'and the order board keeps no lane state at all now -- its filter is a lens of its own');
 
@@ -2243,11 +2281,29 @@ async function main() {
   t.check(/sl_steps'\)\.innerHTML = sourcingStepsHTML\(l\)/.test(src),
     'and the rail is redrawn with the body, so it cannot lag a change that just made the next stage reachable');
 
+  /* These two used to check that the rail and the lanes were BOTH built
+     by mapping SOURCING_STATUS_ORDER, over the same already-filtered
+     set. That was the guard against a stage existing in one and missing
+     from the other, and against a dropped lead surviving in one of them.
+
+     There is one place left that draws the stages -- the segment bar on
+     the row -- so there is nothing left to keep in step with anything.
+     The guard that still matters is that it is generated rather than
+     enumerated: a bar that lists its stages by hand is one that will be
+     wrong the next time a stage is added, which is exactly how the order
+     board once shipped an Awaiting Goods lane no phone rule matched. */
+  const stageBar = extractFunction(src, 'sourcingStageHTML', 'index.html');
+  t.check(/SOURCING_STATUS_ORDER\.map\(/.test(stageBar)
+    && !/'asked'|'looking'|'sourced'|'priced'/.test(stageBar),
+    'the stage bar is generated from SOURCING_STATUS_ORDER, never a hand-written list of stages');
   const render = extractFunction(src, 'renderSourcing', 'index.html');
-  t.check((render.match(/SOURCING_STATUS_ORDER\.map\(/g) || []).length >= 2,
-    'the rail and the board are both generated from SOURCING_STATUS_ORDER');
-  t.check((render.match(/leads\.filter\(l=> l\.status===status\)/g) || []).length >= 2,
-    'and both group the SAME already-filtered set, so a dropped lead is off both');
+  /* Every band starts from sourcingBoardLeads(), which is what drops the
+     voided ones -- so a dropped lead cannot survive in one band by being
+     filtered in a different place from the others. */
+  t.check(/const leads = sourcingBoardLeads\(\);/.test(render)
+    && (render.match(/leads\.filter\(/g) || []).length >= 2
+    && !/sourcingLeadsAll\(\)\.filter\(/.test(render),
+    'and every band is filtered out of the one already-dropped-free set');
 }
 
 /* ---------- 9. the three doors ---------------------------------------- */
