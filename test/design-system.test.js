@@ -52,7 +52,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      ceiling, never a target: lower it when the count falls, and the
      next person cannot quietly raise it back. */
   const CEILING = {
-    'font sizes': [32, /font-size:\s*([\d.]+)px/g],
+    /* 31, not 32: the statements' half-pixel ramp -- 9, 9.5, 10.5,
+       11.5, 12.5, 15.5 and 29px across sixteen sizes in one block --
+       came onto the 11/12/13/14/16/20 ramp when that screen was drawn
+       as a console. */
+    'font sizes': [31, /font-size:\s*([\d.]+)px/g],
     /* 27, not 28: the WhatsApp desk's bespoke radii went with the
        screen they clothed -- 11px stat cards, 12px picks and bubbles,
        14px on the inbox shell and 21px on the round composer. What
@@ -73,12 +77,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        (62, not 63, was the cash book's two floating + / - buttons: they
        duplicated Money in and Money out from the top of the page, and
        the entry line that replaced them is permanently on screen.) */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
-    /* 105, not 106: Follow-ups' card wall carried its own hover border,
-       its own two near-whites for a card and a settled row, and its own
-       hover fill. All four went when that screen became a console on the
-       layer, and the one that survives is the layer's --ow-paper-2. */
-    'distinct colours': [105, /#[0-9A-Fa-f]{6}\b/g],
+    /* 55, not 56: a second elevation, on a tab. The statements' active
+       document tab lifted itself off the tray it sat in; it is
+       underscored now, and depth on this app is hairlines. */
+    'shadows': [55, /box-shadow:\s*([^;}]+)/g],
+    /* 104, not 105: the statements' verdict slab carried #C4DED6, a
+       verdigris keyline that was in no palette and existed only to edge
+       a tinted banner. The banner is a row in ink now and the colour
+       went with it. (105 was Follow-ups' card wall: its own hover
+       border, its own two near-whites for a card and a settled row, and
+       its own hover fill -- all four gone when that screen became a
+       console on the layer.) */
+    'distinct colours': [104, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -584,6 +594,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                        settled and sold things live, and the repayment
                        form that is the one place it takes typing */
                     'ow-al', 'ow-al-h', 'ow-al-nm', 'ow-al-none', 'ow-al-sect', 'ow-al-pay'],
+    },
+    /* STATEMENTS. Five documents over one period, and a page that had
+       grown a wrapper around itself: one .panel holding a tab tray, a
+       seven-control period row and the figures, so nothing said which
+       control chose the period, which chose the document and which
+       acted on the choice.
+
+       The period rides in the page header now, where Payroll carries
+       its month; the five documents are names on a hairline; and the
+       Overview leads with the verdict, then the layer's strip, then two
+       columns -- this period on the left, the trustworthiness of the
+       figures on the right, where the checks sit BESIDE the verdict
+       they are the evidence for instead of 880px below it.
+
+       .st-vitals survives as a marker on the layer's strip, because two
+       test files read the order the Overview emits its parts in and the
+       rule they pin -- the verdict before the numbers -- is the point
+       of the screen. .st-doc, .st-check, .st-lean, .st-be-* and the
+       whole drill-down family stay: they are this screen's own, and the
+       records rail was kept deliberately, on the shop's instruction.
+       .st-bar, .st-period and .st-to went with the box they lived in. */
+    'statements': {
+      retired: ['page-head', 'panel', 'st-bar', 'st-period', 'st-to', 'st-two', 'st-vital',
+                'st-vital-label', 'st-vital-note', 'rost-period', 'rost-per', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-sel'],
+      renders: ['stOverview', 'stBreakevenHTML', 'stTrendChartHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
     },
     'quote-saved': {
       retired: ['sq-board-tools', 'sq-select-all-label', 'panel', 'qp-panel', 'sq-board', 'sq-col', 'sq-stepper',

@@ -89,15 +89,24 @@ const src = read('index.html');
      once and never again -- is now .ow-ph-help behind the "i", with an
      .ow-ph-sub saying what the screen holds. Folded by construction, so
      there is one fewer screen here to police rather than one that
+     stopped being policed.
+
+     9 -> 8. Statements converted: .page-head became .ow-ph, and the
+     paragraph describing what the five documents are -- read once, by
+     somebody deciding whether to trust the screen -- is now
+     .ow-ph-help behind the "i". Its .ow-ph-sub is the one thing on this
+     screen that genuinely goes stale: WHICH DATES the figures cover,
+     which the page never said at all before. Folded by construction, so
+     there is one fewer screen here to police rather than one that
      stopped being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 9, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 8, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 9,
+  t.check(paras.length >= 8,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

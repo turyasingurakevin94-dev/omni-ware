@@ -5743,53 +5743,86 @@
      design: one accent, hairline rules doing the structural work, and
      every figure in tabular mono so columns line up down the page the way
      they do on a printed statement. */
-  .st-bar{
-    display:flex;align-items:center;justify-content:space-between;gap:14px;
-    flex-wrap:wrap;padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--line);
-  }
-  .st-tabs{display:flex;gap:2px;background:var(--ow-steel-050);padding:3px;border-radius:9px;flex-wrap:wrap;}
+  /* THE CONTROLS ARE TWO BANDS, NOT ONE ROW OF SEVENTEEN.
+
+     Thirteen controls used to sit in one bordered box with the figures:
+     five tabs, three presets, two dates, a comparison and two print
+     buttons, all at the same weight, so nothing said which of them
+     chose the period, which chose the document and which acted on
+     what was chosen.
+
+     The PERIOD governs all five documents, so it rides in the page
+     header where Payroll carries its month. WHICH DOCUMENT is a strip
+     of names on a hairline below it, with the two things that act on
+     the choice pushed to the far end. */
+  .st-per{display:flex;align-items:flex-end;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  /* Sized for the whole value and the picker the browser draws inside
+     it. The layer's field is 84px wide because most of what it holds is
+     a short figure; a native date renders MM/DD/YYYY plus a calendar
+     button and clips mid-glyph at that width, with no ellipsis, no
+     marker and no tooltip -- so "08/01/2026" reads as "08/01/202",
+     which is not a shortened date but a wrong one. */
+  .st-f .ow-f-in{min-width:158px;}
+  .st-f .ow-f-v{width:auto;flex:1 1 auto;}
+  .st-f-cmp .ow-f-in{min-width:190px;}
+
+  .st-docs{display:flex;align-items:flex-end;gap:var(--ow-sp-2);
+    border-bottom:1px solid var(--ow-rule);margin-bottom:var(--ow-sp-16);}
+  .st-docs-sp{flex:1;}
+  .st-tabs{display:flex;gap:var(--ow-sp-2);min-width:0;overflow-x:auto;}
   .st-tab{
-    all:unset;cursor:pointer;padding:7px 14px;border-radius:6px;
-    font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+    all:unset;cursor:pointer;padding:0 var(--ow-sp-12);height:34px;display:flex;align-items:center;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
   }
-  .st-tab:hover{color:var(--ink);}
-  .st-tab.active{background:var(--panel);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(20,30,40,.13);}
-  .st-tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-  .st-period{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-  .st-period .btn{padding:6px 11px;font-size:12px;}
-  .st-period input{width:auto;min-width:126px;}
-  .st-to{font-size:12px;color:var(--ow-ink-400);}
-  /* The two print buttons kept together, and pushed right whenever the
-     row has slack to push into.
+  .st-tab:hover{color:var(--ow-ink-900);}
+  /* Underscored in steel, not filled in the accent: choosing which
+     document to read is navigation, and the one accent this screen is
+     allowed belongs to the thing to do next. */
+  .st-tab.active{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);border-bottom-color:var(--ow-steel-950);}
+  .st-tab:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .st-actions{display:flex;gap:var(--ow-sp-6);flex:none;padding-bottom:var(--ow-sp-6);}
 
-     Deliberately nothing more. This row is 859px wide and its controls
-     come to 829, so at every width the app actually renders there is no
-     free space: an auto margin resolves to zero and a drawn separator --
-     tried, measured -- costs 13px the row has not got and tips the
-     buttons onto a second line, where a vertical rule points at nothing.
-     The grouping is structural, and honest about being so. */
-  .st-actions{display:flex;gap:6px;margin-left:auto;}
-  @media (max-width:560px){ .st-actions{margin-left:0;} }
+  /* THE VERDICT. Stated before the figures it qualifies, because a
+     statement's first job is to say whether it can be believed.
 
-  /* The four figures a day actually turns on. */
-  /* The verdict. Stated before the figures it qualifies, because a
-     statement's first job is to say whether it can be believed. */
-  .st-verdict{display:flex;flex-direction:column;gap:3px;border-radius:11px;
-    padding:13px 15px;margin-bottom:16px;border:1px solid transparent;}
-  .st-verdict b{font-size:15px;line-height:1.35;}
-  .st-verdict span{font-size:13px;line-height:1.5;}
-  .st-verdict.ok{background:var(--ow-verdigris-soft);border-color:#C4DED6;color:var(--ow-verdigris);}
-  .st-verdict.warn{background:var(--ow-amber-soft);border-color:#EBD9B4;color:var(--ow-amber-ink);}
-  .st-verdict.bad{background:var(--ow-crimson-soft);border-color:#EAC7C1;color:var(--ow-crimson);}
+     It used to be a full-width tinted slab, and on a healthy month that
+     meant the loudest device on the screen carried the good news. A
+     device that shouts every month is furniture, and when it turned red
+     for a real problem it read as the same furniture in another colour.
 
-  /* Month by month. Two points have no direction, and this page had two. */
-  .st-trend{border:1px solid var(--line);border-radius:11px;padding:13px 15px 10px;margin-bottom:16px;}
-  .st-trend-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px;}
-  .st-trend-title{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
-  .st-trend-key{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);}
-  .st-trend-key .st-trend-dot{margin-left:8px;}
+     So: a row on paper, in ink, with the state carried by ONE mark and
+     the ink of the headline. The accent, when there is something to do
+     about it, is the button -- and it is the only oxide on the screen. */
+  .st-verdict{
+    display:flex;align-items:center;gap:var(--ow-sp-12);background:var(--ow-paper);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+    padding:var(--ow-sp-10) var(--ow-sp-12);margin-bottom:var(--ow-sp-16);
+  }
+  .st-verdict-i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .st-verdict-m{min-width:0;flex:1;}
+  .st-verdict b{display:flex;align-items:center;gap:var(--ow-sp-8);
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-snug);}
+  .st-verdict span{display:block;font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);
+    color:var(--ow-ink-600);margin-top:2px;max-width:var(--ow-measure);}
+  /* The one action, and the screen's one accent. It never shrinks: a
+     button whose own words are cut cannot say what it will do. */
+  .st-verdict-a{flex:none;}
+  .st-verdict.ok b{color:var(--ow-verdigris);}
+  .st-verdict.warn b{color:var(--ow-amber-ink);}
+  .st-verdict.bad b{color:var(--ow-crimson);}
+
+  /* Month by month. Two points have no direction, and this page had two.
+     It is a panel body now: the region's own border and 34px header do
+     the framing, so the chart stopped carrying a second frame inside
+     the first. */
+  .st-trend{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-10);}
+  .st-trend-key{display:flex;align-items:center;gap:var(--ow-sp-6);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+  .st-trend-key .st-trend-dot{margin-left:var(--ow-sp-8);}
   .st-trend-key .st-trend-dot:first-child{margin-left:0;}
-  .st-trend-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .st-trend-dot{width:8px;height:8px;border-radius:var(--ow-r-sm);display:inline-block;}
   .st-trend-dot.a{background:var(--ow-steel-800);}
   .st-trend-dot.b{background:var(--ow-verdigris);}
   /* Fixed height with a non-uniform viewBox: the bars carry proportion
@@ -5803,80 +5836,110 @@
      being under the line -- recolouring it red would read as a third
      series rather than as the same one below zero. */
   .st-tr-bar.neg{opacity:.42;}
-  .st-trend-x{display:flex;margin-top:5px;}
-  .st-trend-x span{flex:1;text-align:center;font-size:10.5px;color:var(--ink-soft);}
-  @media (max-width:560px){ .st-trend-svg{height:96px;} .st-trend-x span{font-size:9.5px;} }
+  .st-trend-x{display:flex;margin-top:var(--ow-sp-4);}
+  .st-trend-x span{flex:1;text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-400);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;}
+  @media (max-width:820px){ .st-trend-svg{height:96px;} }
 
   /* What the shop leans on. The risk that appears on no statement:
      trading well and one phone call from trouble. */
-  .st-leans{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:12px;}
-  .st-lean{display:flex;flex-direction:column;gap:2px;background:var(--bg);
-    border:1px solid var(--line);border-radius:9px;padding:10px 12px;border-left:3px solid var(--ow-rule);}
-  .st-lean.warn{border-left-color:var(--ow-amber);background:var(--ow-amber-soft);}
-  .st-lean.hot{border-left-color:var(--ow-crimson);background:var(--ow-crimson-soft);}
-  .st-lean-label{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink-soft);}
-  .st-lean b{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
-    font-variant-numeric:tabular-nums;color:var(--ink);line-height:1.15;}
+  /* What the shop leans on, in the rail beside the documents. Four
+     bordered cards became four rows on hairlines: the tinted grounds and
+     the left keylines were saying "this is a card" on every one of them,
+     which is not what a keyline is for. The state survives where it
+     means something -- the FIGURE goes amber or crimson when the share
+     genuinely is one -- and nowhere else. */
+  .st-leans{display:flex;flex-direction:column;}
+  /* A grid rather than a flex row, because the name and its note are two
+     lines beside ONE figure -- and the figure column is sized to its
+     content so the name is what gives way. */
+  .st-lean{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--ow-sp-10);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .st-lean:first-child{border-top:0;}
+  .st-lean-label{grid-column:1;grid-row:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The note carries the customer's name AND what they were worth, so
+     it wraps rather than truncates: a clipped figure is not a shortened
+     figure, it is a wrong one. */
+  .st-lean-note{grid-column:1;grid-row:2;min-width:0;font-size:var(--ow-t-11);
+    line-height:var(--ow-lh-snug);color:var(--ow-ink-600);}
+  .st-lean b{grid-column:2;grid-row:1 / span 2;align-self:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    color:var(--ow-ink-900);white-space:nowrap;}
   .st-lean.hot b{color:var(--ow-crimson);}
   .st-lean.warn b{color:var(--ow-amber-ink);}
-  .st-lean-note{font-size:11.5px;line-height:1.4;color:var(--ink-soft);}
   .st-lean-bad{color:var(--ow-crimson);}
 
   /* Breakeven. The target the shop is trading against, which nothing on
      this page could state until it knew what the shop was committed to. */
-  .st-breakeven{border:1px solid var(--line);border-radius:11px;padding:14px 15px;margin-bottom:16px;}
-  .st-be-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
-  .st-be-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
-  .st-be-head b{font-family:'Archivo Black',sans-serif;font-size:29px;line-height:1.1;color:var(--ink);
-    font-variant-numeric:tabular-nums;letter-spacing:-0.4px;word-break:break-word;}
-  .st-be-head b.st-be-none{color:var(--ink-soft);}
-  .st-be-sub{font-size:12.5px;color:var(--ink-soft);}
-  .st-be-verdict{font-size:13px;line-height:1.5;border-radius:9px;padding:9px 12px;margin-bottom:11px;}
-  .st-be-verdict b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .st-be-verdict.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .st-be-verdict.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
-  .st-be-parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;}
-  .st-be-part{display:flex;flex-direction:column;gap:2px;background:var(--bg);
-    border:1px solid var(--line);border-radius:9px;padding:9px 11px;}
-  .st-be-part > span:first-child{font-size:11px;font-weight:700;letter-spacing:0.5px;
-    text-transform:uppercase;color:var(--ink-soft);}
-  .st-be-part b{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;
-    font-variant-numeric:tabular-nums;color:var(--ink);}
-  .st-be-part-note{font-size:11px;color:var(--ink-soft);line-height:1.4;}
-  .st-be-caveat{margin-top:10px;font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
-  @media (max-width:560px){ .st-be-head b{font-size:24px;} }
+  /* Breakeven. The target the shop is trading against.
 
-  .st-vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
-    background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px;}
-  .st-vital{background:var(--panel);padding:14px 15px 13px;}
-  .st-vital-label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ow-ink-400);}
-  .st-vital b{
-    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0 3px;
-    font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
-    font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.3px;
+     A 29px Archivo figure, a tinted verdict strip and three grey boxes
+     inside a bordered box inside the page's panel: three levels of
+     container for three figures, and the biggest type on a screen full
+     of money spent on a number that is a TARGET rather than a takng.
+     It is a panel body now, and the three parts are hairline-divided
+     cells with no borders of their own -- the strip pattern, which is
+     what this always was. */
+  .st-breakeven{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-10);}
+  .st-be-head{display:flex;flex-direction:column;gap:2px;margin-bottom:var(--ow-sp-10);}
+  .st-be-label{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .st-be-head b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-20);
+    font-weight:var(--ow-fw-500);line-height:var(--ow-lh-tight);color:var(--ow-ink-900);
+    font-variant-numeric:tabular-nums;letter-spacing:-.03em;word-break:break-word;}
+  .st-be-head b.st-be-none{color:var(--ow-ink-400);}
+  .st-be-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  /* Above or below the line is genuinely good or bad news, so it keeps
+     its state -- in ink and one mark, not a tinted band. */
+  .st-be-verdict{font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);
+    margin-bottom:var(--ow-sp-10);max-width:var(--ow-measure);color:var(--ow-ink-600);}
+  .st-be-verdict b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .st-be-verdict.good b{color:var(--ow-verdigris);}
+  .st-be-verdict.bad b{color:var(--ow-crimson);}
+  .st-be-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    border-top:1px solid var(--ow-rule-soft);}
+  .st-be-part{display:flex;flex-direction:column;gap:2px;
+    padding:var(--ow-sp-10) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);}
+  .st-be-part:first-child{border-left:0;padding-left:0;}
+  .st-be-part > span:first-child{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .st-be-part b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-16);
+    font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.03em;color:var(--ow-ink-900);}
+  .st-be-part-note{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);}
+  .st-be-caveat{margin-top:var(--ow-sp-10);font-size:var(--ow-t-11);
+    line-height:var(--ow-lh-snug);color:var(--ow-ink-600);max-width:var(--ow-measure);}
+  @media (max-width:820px){
+    .st-be-parts{grid-template-columns:1fr 1fr;}
+    .st-be-part:nth-child(3){grid-column:1 / -1;border-left:0;padding-left:0;border-top:1px solid var(--ow-rule-soft);}
   }
-  .st-vital.neg b{color:var(--ow-crimson);}
-  .st-vital-note{display:block;font-size:11px;line-height:1.45;color:var(--ink-soft);}
+
+  /* The delta chip, worn beside a figure in the strip. */
   .st-delta{
-    font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:700;
-    padding:1px 6px;border-radius:99px;letter-spacing:.02em;
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    padding:1px 6px;border-radius:var(--ow-r-sm);letter-spacing:.02em;
   }
   .st-delta.up{color:var(--ow-verdigris);background:var(--ow-verdigris-soft);}
   .st-delta.down{color:var(--ow-crimson);background:var(--ow-crimson-soft);}
 
-  /* min() so the track can go below 300px when the screen has less than
-     that to give. A bare minmax(300px,1fr) is a floor the grid honours
-     even when it overflows, which is how the profit-and-loss column ran
-     6px past its panel and clipped the "changed" badges off every row. */
-  .st-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:18px;}
-  .st-doc{border:1px solid var(--line);border-radius:12px;padding:16px 18px 14px;background:var(--panel);}
-  .st-doc-wide{max-width:760px;}
-  .st-doc-flag{border-color:#E4CFA6;background:#FEFCF7;}
-  .st-doc-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-    flex-wrap:wrap;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--line);}
-  .st-doc-head h3{margin:0;font-size:15.5px;font-weight:700;color:var(--ink);letter-spacing:-.15px;}
-  .st-doc-when{font-size:11.5px;color:var(--ow-ink-400);}
+  /* A statement is a bordered region with a 34px header, like every
+     other region in the console. It kept a 12px radius, 16/18px padding
+     and a 15.5px heading of its own, which is a fourth opinion about
+     what a panel looks like on a screen that had three already. */
+  .st-doc{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);overflow:hidden;}
+  .st-doc-wide{max-width:820px;}
+  .st-doc-flag{border-color:#EBD9B4;}
+  .st-doc-head{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);
+    min-height:34px;padding:var(--ow-sp-6) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .st-doc-head h3{margin:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .st-doc-when{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .st-doc-b{padding:var(--ow-sp-12);}
 
   .st-table{width:100%;border-collapse:collapse;font-size:12.5px;}
   .st-table td{padding:6px 0;vertical-align:baseline;}
@@ -5893,9 +5956,14 @@
     padding:0 0 6px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:700;
     letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-400);
   }
+  /* The three headings on a balance sheet are structure, not the thing
+     to do next. In the accent they were three accents on a screen
+     allowed one, and they marked nothing the eye could act on -- so they
+     wear the same uppercase caption as every other label in the console. */
   .st-table tr.st-section td{
-    padding:12px 0 4px;font-size:10px;font-weight:700;letter-spacing:.07em;
-    text-transform:uppercase;color:var(--accent);
+    padding:var(--ow-sp-12) 0 var(--ow-sp-4);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);
   }
   .st-table tr.st-total td{border-top:1px solid var(--ow-rule);font-weight:700;color:var(--ink);padding-top:7px;}
   .st-table tr.st-total td.st-l{color:var(--ink);}
@@ -5967,9 +6035,12 @@
   /* On paper the lines are not doors, so nothing should say they are. */
   .st-print .st-drill-aff{display:none;}
 
+  /* The invitation stays -- it is what tells a first-time reader the
+     lines are doors, and the shop asked for it kept. Only its radius and
+     its type came onto the scale with the rest of the screen. */
   .st-drill-hint{
-    border:1px dashed var(--line);border-radius:12px;padding:18px 16px;
-    font-size:12px;line-height:1.6;color:var(--ow-ink-400);
+    border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:var(--ow-sp-16);
+    font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);color:var(--ow-ink-400);
     display:flex;align-items:center;justify-content:center;text-align:center;
   }
   /* Inside the panel the hint loses its own frame -- the panel already
@@ -5978,18 +6049,20 @@
      there is nothing to list. */
   .st-drill .st-drill-hint{border:0;flex:1 1 auto;min-height:0;}
   .st-drill{
-    border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);background:var(--ow-paper);
     display:flex;flex-direction:column;overflow:hidden;
   }
   .st-drill-head{
     display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
     padding:13px 14px 0;
   }
-  .st-drill-title{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;
-    text-transform:uppercase;color:var(--accent);}
-  .st-drill-amt{display:block;margin-top:2px;font-size:19px;color:var(--ink);
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .st-drill-note{margin:8px 14px 0;font-size:11.5px;line-height:1.55;color:var(--ink-soft);}
+  .st-drill-title{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-oxide-deep);}
+  .st-drill-amt{display:block;margin-top:2px;font-size:var(--ow-t-20);color:var(--ow-ink-900);
+    font-weight:var(--ow-fw-500);letter-spacing:-.03em;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .st-drill-note{margin:var(--ow-sp-8) 14px 0;font-size:var(--ow-t-11);
+    line-height:var(--ow-lh-snug);color:var(--ow-ink-600);}
   .st-drill-list{margin-top:10px;border-top:1px solid var(--ow-rule-soft);overflow-y:auto;
     flex:1 1 auto;min-height:0;}
   .st-drill-row{
@@ -6001,16 +6074,16 @@
   .st-drill-main b{display:block;font-weight:600;color:var(--ink);overflow-wrap:anywhere;}
   .st-drill-main span{display:block;font-size:11px;color:var(--ow-ink-400);overflow-wrap:anywhere;}
   .st-drill-meta{display:flex;flex-direction:column;align-items:flex-end;flex:none;}
-  .st-drill-date{font-size:10.5px;color:var(--ow-ink-400);}
-  .st-drill-val{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12.5px;color:var(--ink);white-space:nowrap;}
+  .st-drill-date{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  .st-drill-val{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);letter-spacing:-.02em;color:var(--ow-ink-900);white-space:nowrap;}
   .st-drill-go{cursor:pointer;}
   .st-drill-go:hover{background:var(--ow-steel-050, rgba(60,90,120,.05));}
   .st-drill-go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .st-drill-more{padding:8px 14px;font-size:11px;color:var(--ow-ink-400);}
+  .st-drill-more{padding:var(--ow-sp-8) 14px;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
   .st-drill-foot{
-    padding:10px 14px;border-top:1px solid var(--ow-rule);font-size:11.5px;line-height:1.5;
-    color:var(--ink-soft);background:var(--bg);
+    padding:var(--ow-sp-10) 14px;border-top:1px solid var(--ow-rule);font-size:var(--ow-t-11);
+    line-height:var(--ow-lh-normal);color:var(--ow-ink-600);background:var(--ow-paper-2);
   }
   /* The tripwire tripped: the rows do not add up to the statement.
      Loud on purpose -- this is a fault in the app, not in the shop. */
@@ -6022,43 +6095,152 @@
   }
   /* Ratios. Grouped by the question they answer rather than by the
      textbook family they belong to -- "can it pay its bills" is what a
-     shopkeeper wants to know; "liquidity" is what an accountant calls it. */
-  .st-ratios{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
-  .st-ratios h3{margin:0 0 6px;font-size:14px;font-weight:700;color:var(--ink);}
-  .st-ratio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:14px;}
+     shopkeeper wants to know; "liquidity" is what an accountant calls it.
+
+     A bordered region like the four statements, rather than a bare block
+     hung under a hairline. Its type came off the ramp with it: 12.5 /
+     11.5 / 9px became 13 / 11 / 11, and the 9px uppercase pill -- which
+     no shop owner over forty was ever going to read in daylight -- is
+     the chip the rest of the app already uses. */
+  .st-ratios{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);overflow:hidden;}
+  .st-ratios h3{margin:0;min-height:34px;display:flex;align-items:center;
+    padding:var(--ow-sp-6) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-bottom:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .st-ratios > .st-note{margin:var(--ow-sp-10) var(--ow-sp-12) 0;max-width:var(--ow-measure);}
+  .st-ratio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:0;margin-top:var(--ow-sp-10);}
+  .st-ratio-group{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-12);
+    border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
   .st-ratio-group h4{
-    margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ow-ink-400);
+    margin:0 0 var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);
   }
-  .st-ratio{padding:9px 0;border-top:1px solid var(--ow-rule-soft);}
+  .st-ratio{padding:var(--ow-sp-8) 0;border-top:1px solid var(--ow-rule-soft);}
   .st-ratio:first-of-type{border-top:0;}
-  .st-ratio-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
-  .st-ratio-label{font-size:12.5px;color:var(--ink);}
+  .st-ratio-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-10);}
+  .st-ratio-label{min-width:0;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
   .st-ratio-label em{
-    font-style:normal;margin-left:6px;padding:1px 5px;border-radius:99px;
-    background:var(--ow-steel-050);color:var(--ow-ink-400);
-    font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    font-style:normal;margin-left:var(--ow-sp-6);padding:1px 6px;border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-050);color:var(--ow-ink-600);white-space:nowrap;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.02em;
   }
   .st-ratio-head b{
-    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
-    font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-14);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;color:var(--ow-ink-900);white-space:nowrap;
   }
-  .st-ratio.ok .st-ratio-head b{color:var(--good);}
+  .st-ratio.ok .st-ratio-head b{color:var(--ow-verdigris);}
   .st-ratio.warn .st-ratio-head b{color:var(--ow-amber-ink);}
-  .st-ratio-read{display:block;font-size:11.5px;line-height:1.5;color:var(--ink-soft);margin-top:3px;}
+  .st-ratio-read{display:block;font-size:var(--ow-t-11);line-height:var(--ow-lh-normal);
+    color:var(--ow-ink-600);margin-top:3px;}
 
-  /* The reconciliation notes are the point, not a footnote: with no
-     general ledger they stand in for a trial balance. */
-  .st-checks{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
-  .st-checks h3{margin:0 0 12px;font-size:14px;font-weight:700;color:var(--ink);}
-  .st-check{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-top:1px solid var(--ow-rule-soft);}
+  /* The reconciliation checks are the point, not a footnote: with no
+     general ledger they stand in for a trial balance. They live in the
+     rail on the Overview now, beside the verdict they are the evidence
+     for -- they used to be 880px below it. */
+  .st-check{display:flex;align-items:flex-start;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
   .st-check:first-of-type{border-top:0;}
   .st-check .icon{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
-  .st-check.ok .icon{color:var(--good);}
+  .st-check.ok .icon{color:var(--ow-verdigris);}
   .st-check.bad .icon{color:var(--ow-amber-ink);}
   .st-check.note .icon{color:var(--ow-ink-400);}
-  .st-check b{display:block;font-size:12.5px;color:var(--ink);}
-  .st-check span{display:block;font-size:12px;line-height:1.55;color:var(--ink-soft);margin-top:2px;}
+  .st-check b{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);line-height:var(--ow-lh-snug);}
+  .st-check span{display:block;font-size:var(--ow-t-11);line-height:var(--ow-lh-snug);
+    color:var(--ow-ink-600);margin-top:2px;}
+
+  /* The bordered region gives its children their room, so what sits
+     inside one no longer draws its own box. */
+  /* The strip sits between the verdict and the two columns. */
+  .st-vitals{margin-bottom:var(--ow-sp-16);}
+
+  .st-doc > .st-table{width:calc(100% - (var(--ow-sp-12) * 2));margin:var(--ow-sp-12) var(--ow-sp-12) 0;}
+  /* Every prose block gets a measure: on a 1660px screen an unmeasured
+     paragraph runs 180 characters, and the sentence under a statement is
+     the part a shopkeeper actually reads. */
+  .st-doc > .st-read{margin:0;padding:var(--ow-sp-10) var(--ow-sp-12);
+    max-width:var(--ow-measure);border-top:1px solid var(--ow-rule-soft);}
+  .st-doc > .st-note{margin:0;padding:0 var(--ow-sp-12) var(--ow-sp-10);}
+
+  /* The desk never shows the line that stands in for the chart. */
+  .st-trend-desk{display:none;}
+
+  /* ---- THE PHONE. 820px is a switch, not a reflow ------------------
+
+     What the desk shows and the phone does not: the six-month chart.
+     Twelve bars across 358px is a smudge, and this screen's own law is
+     that what is dropped gets NAMED rather than quietly left out -- so
+     the panel stays and says where the chart is.
+
+     Everything else survives because it is already the layer's: the
+     strip goes 2x2, the two columns become one, and the panels stack.
+     What needed drawing for the phone is the chrome the desk crams into
+     one line -- the period, and which document. */
+  @media (max-width:820px){
+    .st-per{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-8);width:100%;}
+    .st-per .ow-seg{grid-column:1 / -1;}
+    .st-per .ow-seg-b{flex:1;justify-content:center;height:var(--ow-tap);}
+    .st-f-cmp{grid-column:1 / -1;}
+    .st-f .ow-f-in{min-width:0;height:var(--ow-tap);}
+
+    /* Five names and two buttons will not share 358px. The names scroll,
+       because choosing a document is the frequent move; the two prints
+       take a row of their own, because on a phone they are the rare one
+       and a control cut in half is worse than a control below. */
+    .st-docs{flex-wrap:wrap;gap:var(--ow-sp-6);}
+    .st-tabs{flex:1 1 100%;min-width:0;-webkit-overflow-scrolling:touch;}
+    .st-tab{height:var(--ow-tap);font-size:var(--ow-t-16);}
+    .st-docs-sp{display:none;}
+    .st-actions{flex:1 1 100%;min-width:0;padding:0 0 var(--ow-sp-8);}
+    /* The phone gives every .ow-sm a min-width of half a row, which two
+       buttons plus a gap cannot fit; the same override the chase and
+       follow-up feet already carry. Raised over that rule by naming the
+       strip, since this block sits earlier in the file. */
+    .st-docs .st-actions .btn.ow-sm{flex:1 1 calc(50% - 3px);min-width:0;
+      height:var(--ow-tap);font-size:var(--ow-t-14);box-sizing:border-box;}
+
+    .st-verdict{align-items:flex-start;flex-direction:column;gap:var(--ow-sp-10);
+      padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .st-verdict b{font-size:var(--ow-t-16);}
+    .st-verdict span{font-size:var(--ow-t-14);}
+    .st-verdict .btn{width:100%;height:var(--ow-tap);font-size:var(--ow-t-16);}
+
+    .st-breakeven,.st-trend{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);}
+    .st-be-parts{grid-template-columns:1fr;}
+    .st-be-part{border-left:0;padding-left:0;padding-right:0;
+      border-top:1px solid var(--ow-rule-soft);}
+    .st-be-part:first-child{border-top:0;}
+    .st-be-part:nth-child(3){border-left:0;}
+    .st-be-sub,.st-be-verdict,.st-be-caveat,.st-be-part-note{font-size:var(--ow-t-14);}
+    .st-be-head b{font-size:var(--ow-t-20);}
+    .st-be-part b{font-size:var(--ow-t-20);}
+
+    /* Named, not dropped. */
+    .st-trend-svg,.st-trend-x,.st-trend-key{display:none;}
+    .st-trend-desk{display:block;font-size:var(--ow-t-14);line-height:var(--ow-lh-normal);
+      color:var(--ow-ink-600);margin:0;}
+
+    .st-check{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .st-check b{font-size:var(--ow-t-16);}
+    .st-check span{font-size:var(--ow-t-14);}
+    .st-lean{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .st-lean-label{font-size:var(--ow-t-16);}
+    .st-lean-note{font-size:var(--ow-t-13);}
+    .st-lean b{font-size:var(--ow-t-16);}
+    .st-doc > .st-table{width:calc(100% - (var(--ow-sp-16) * 2));margin:var(--ow-sp-12) var(--ow-sp-16) 0;}
+    .st-doc > .st-read{padding:var(--ow-sp-12) var(--ow-sp-16);font-size:var(--ow-t-14);}
+    .st-doc > .st-note{padding:0 var(--ow-sp-16) var(--ow-sp-12);font-size:var(--ow-t-13);}
+    .st-ratios > .st-note{margin:var(--ow-sp-12) var(--ow-sp-16) 0;font-size:var(--ow-t-13);}
+    .st-ratio-group{padding:var(--ow-sp-12) var(--ow-sp-16);border-left:0;}
+    .st-ratio-label{font-size:var(--ow-t-16);}
+    .st-ratio-read{font-size:var(--ow-t-13);}
+    .st-ratio-head b{font-size:var(--ow-t-16);}
+  }
+
   .sc-stat.bad b{color:var(--ow-crimson);}
   /* A flat rate is not the rate it says on the paper, and that is the one
      thing on this screen worth interrupting for. */
@@ -13681,50 +13863,58 @@
 
     <!-- FINANCIAL STATEMENTS -->
     <section id="tab-statements" style="display:none;">
-      <div class="page-head">
-        <h1>Statements</h1>
-        <p>What the shop earned, what it is worth, and where the money went — built from the same records the rest of the app uses, so they are never out of date.</p>
-      </div>
-      <div class="panel">
-        <div class="st-bar">
-          <div class="st-tabs" id="st_tabs">
-            <button type="button" class="st-tab active" data-stab="overview">Overview</button>
-            <button type="button" class="st-tab" data-stab="pl">Profit &amp; loss</button>
-            <button type="button" class="st-tab" data-stab="bs">Balance sheet</button>
-            <button type="button" class="st-tab" data-stab="cf">Cash flow</button>
-            <button type="button" class="st-tab" data-stab="ratios">Ratios</button>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Statements</h1>
+        <p class="ow-ph-sub" id="st_period_says">The period on screen</p>
+        <p class="ow-ph-help">What the shop earned, what it is worth, and where the money went &mdash; built from the same records the rest of the app uses, so they are never out of date. Five documents over one period: the Overview says whether the figures can be believed before it shows you any, then the profit and loss, the balance sheet, the cash flow and the ratios, each one a document a bank or an accountant would recognise. Every line on the four statements is a door: click a figure and the records behind it open beside it, ending with a check that they add to the figure shown. Sales are counted when they are invoiced and costs when they are paid, so counter takings with no invoice behind them sit outside the profit and loss &mdash; the Overview says how much that is rather than letting you read past it. Print puts what is on screen onto paper; Print all five is the set that leaves the building, reconciliation checks included.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- The period governs all five documents, so it belongs to the
+             page rather than to any one of them -- the same place Payroll
+             carries its month. Presets and a typed range at equal weight:
+             the shop uses both. -->
+        <div class="st-per">
+          <div class="ow-seg" id="st_presets">
+            <button type="button" class="ow-seg-b st-preset" data-preset="month">Month</button>
+            <button type="button" class="ow-seg-b st-preset" data-preset="quarter">Quarter</button>
+            <button type="button" class="ow-seg-b st-preset" data-preset="year">Year</button>
           </div>
-          <div class="st-period">
-            <!-- The roster's own segmented control, not three loose
-                 buttons. They are three shapes of one setting, and as
-                 plain buttons nothing ever said which shape the figures
-                 on screen actually covered. -->
-            <div class="rost-period">
-              <button type="button" class="rost-per st-preset" data-preset="month">Month</button>
-              <button type="button" class="rost-per st-preset" data-preset="quarter">Quarter</button>
-              <button type="button" class="rost-per st-preset" data-preset="year">Year</button>
-            </div>
-            <input type="date" id="st_from"><span class="st-to">to</span><input type="date" id="st_to">
-            <select id="st_basis" title="What this period is measured against">
+          <label class="ow-f st-f"><span class="ow-f-l">From</span>
+            <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_from"></span></label>
+          <label class="ow-f st-f"><span class="ow-f-l">To</span>
+            <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_to"></span></label>
+          <!-- A div, never a label: a label forwards its click to the
+               select it wraps and shuts the list again. -->
+          <div class="ow-f st-f st-f-cmp"><span class="ow-f-l">Compared with</span>
+            <span class="ow-f-in"><select class="ow-f-sel" id="st_basis" title="What this period is measured against">
               <option value="">Compare automatically</option>
               <option value="lastyear">vs same dates last year</option>
               <option value="previous">vs the period just before</option>
-            </select>
-            <!-- Pushed to the far end: everything to the left of this
-                 chooses what to look at, and these two act on it. In one
-                 undifferentiated row of seven, a print button sat at the
-                 same weight as a date. -->
-            <div class="st-actions">
-              <button type="button" class="btn btn-ghost" id="st_print" title="Print the statement on screen">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
-                Print
-              </button>
-              <button type="button" class="btn btn-ghost" id="st_print_all" title="Print all five, one per page">Print all</button>
-            </div>
-          </div>
+            </select></span></div>
         </div>
-        <div id="st_body"></div>
       </div>
+
+      <!-- Which document. Five names on a hairline, and at the far end
+           the two things that act on what is chosen rather than choose
+           it. In one undifferentiated row of seven, a print button sat
+           at the same weight as a date. -->
+      <div class="st-docs">
+        <div class="st-tabs" id="st_tabs">
+          <button type="button" class="st-tab active" data-stab="overview">Overview</button>
+          <button type="button" class="st-tab" data-stab="pl">Profit &amp; loss</button>
+          <button type="button" class="st-tab" data-stab="bs">Balance sheet</button>
+          <button type="button" class="st-tab" data-stab="cf">Cash flow</button>
+          <button type="button" class="st-tab" data-stab="ratios">Ratios</button>
+        </div>
+        <span class="st-docs-sp"></span>
+        <div class="st-actions">
+          <button type="button" class="btn btn-ghost ow-sm" id="st_print" title="Print the statement on screen">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+            Print this
+          </button>
+          <button type="button" class="btn btn-ghost ow-sm" id="st_print_all" title="Print all five, one per page">Print all five</button>
+        </div>
+      </div>
+      <div id="st_body"></div>
     </section>
 
     <!-- PAYROLL AND RENT -->
@@ -59398,7 +59588,10 @@ function stBreakevenHTML(be){
       ? `<div class="st-be-verdict bad">Selling more will not fix this. The prices will.</div>`
       : '';
 
-  return `<div class="st-breakeven">
+  return `<section class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What this period had to cover</span>
+      <span class="ow-pan-n">${be.reason === 'ok' ? esc(money(be.actual)) + ' invoiced' : ''}</span></div>
+    <div class="st-breakeven">
     ${head}
     ${standing}
     <div class="st-be-parts">
@@ -59417,7 +59610,8 @@ function stBreakevenHTML(be){
       </div>
     </div>
     ${floorNote.length ? `<div class="st-be-caveat">${esc(floorNote.join('. '))}.</div>` : ''}
-  </div>`;
+    </div>
+  </section>`;
 }
 
 /* ================= WHAT THE SHOP LEANS ON =========================
@@ -60847,6 +61041,31 @@ function renderAhead(){
   }));
 }
 
+/* The period in words, for the page's own sub line.
+
+   A whole month, quarter or year is named rather than spelled as two
+   dates -- "August 2026" is what the shop calls it, and the two boxes
+   are still there for anyone who wants the exact ends. Anything that is
+   not one of those three is given as the range it is, because a
+   hand-typed window has no name and inventing one would misdescribe the
+   figures under it. */
+function stPeriodWords({from, to}){
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  if(!fy || !fm || !ty || !tm) return `${from} to ${to}`;
+  const lastOf = (y, m)=> new Date(Date.UTC(y, m, 0)).getUTCDate();
+  /* periodLabel is the app's own month-and-year, so the sub line and the
+     month stepper on Payroll cannot drift into two spellings. */
+  const month = (y, m)=> periodLabel(`${y}-${String(m).padStart(2,'0')}`);
+  if(fd === 1 && td === lastOf(ty, tm) && fy === ty){
+    if(fm === tm) return month(fy, fm);
+    if(fm === 1 && tm === 12) return String(fy);
+    if(fm % 3 === 1 && tm === fm + 2) return `Q${Math.ceil(fm/3)} ${fy}`;
+    return `${month(fy, fm)} to ${month(ty, tm)}`;
+  }
+  return `${from} to ${to}`;
+}
+
 function renderStatements(){
   const body = document.getElementById('st_body');
   const ctx = statementsContext();
@@ -60856,10 +61075,17 @@ function renderStatements(){
      too, since a backwards range still has to clear the buttons rather
      than leave one lit over an error. */
   stSyncPresetButtons();
+  const says = document.getElementById('st_period_says');
   if(!ctx){
-    body.innerHTML = '<div class="empty">The start of the period is after its end.</div>';
+    says.textContent = 'The start of the period is after its end';
+    body.innerHTML = '<div class="ow-empty"><b>The start of the period is after its end.</b><br>Put the earlier date in From.</div>';
     return;
   }
+  /* The sub is never folded, and on this screen the thing that goes
+     stale is WHICH DATES the figures cover. A page name with nothing
+     under it made the reader look at two date boxes to find out what
+     they were reading. */
+  says.textContent = `${stPeriodWords(ctx)} · ${ST_BASES[ctx.basis].toLowerCase()}`;
   document.querySelectorAll('#st_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.stab === stActiveTab));
   /* Left on "automatically", the control says which one that turned out
@@ -60994,32 +61220,46 @@ function stTrendChartHTML(trend){
       ><title>${esc(m.label)} — ${esc(s.label)}: ${esc(fmtUGX(Math.round(v)))}</title></rect>`;
   }).join('')).join('');
 
-  return `<div class="st-trend">
-    <div class="st-trend-head">
-      <span class="st-trend-title">The last ${trend.length} months</span>
-      <span class="st-trend-key">
-        ${series.map(s=> `<span class="st-trend-dot ${s.cls}"></span>${esc(s.label)}`).join('')}
-      </span>
-    </div>
+  return `<section class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">The last ${trend.length} months</span>
+      <span class="ow-pan-n">
+        <span class="st-trend-key">${series.map(s=>
+          `<span class="st-trend-dot ${s.cls}"></span>${esc(s.label)}`).join('')}</span>
+      </span></div>
+    <div class="st-trend">
     <svg class="st-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
       aria-label="Net profit and cash from trading, by month">
       <line class="st-tr-zero" x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}"></line>
       ${bars}
     </svg>
     <div class="st-trend-x">${trend.map(m=> `<span>${esc(m.short)}</span>`).join('')}</div>
-  </div>`;
+    <p class="st-trend-desk">${trend.length} months of net profit against cash from trading, ${
+      esc(trend[0].label)} to ${esc(trend[trend.length-1].label)}. The chart is on the desk screen &mdash;
+      twelve bars across a phone is a smudge, and a smudge of the shop&rsquo;s own money is worse than none.</p>
+    </div>
+  </section>`;
 }
 
 /* The answer to "how are we doing", before any document is opened. */
 function stOverview({from, to, is, prev, bs, cf, checks}){
   const failing = checks.filter(c=>c.ok === false).length;
+  /* Figure, then unit -- the unit at 0.55em in ink-400, which is the
+     strip's own convention. A full-size "UGX" beside every figure reads
+     as part of the number. */
+  const fig = (n)=> `${Math.round(n).toLocaleString('en-UG')}<span class="ow-u">UGX</span>`;
   const vitals = [
     /* A margin needs something to be a margin OF. With no invoiced
        sales the ratio is 0/0, and "0.0% of everything sold" reads as
-       breaking even on a full month of trade. */
+       breaking even on a full month of trade.
+
+       And it is "of what was invoiced", not "of everything sold": on a
+       shop whose counter takings never reach an invoice those are two
+       different numbers, and this screen's own headline says so three
+       inches above. Naming the wrong denominator here would have the
+       page contradict itself. */
     { label:'Net profit', value:is.netProfit, prior:prev.netProfit, higherIsBetter:true,
       note: is.revenue > 0
-        ? `${is.netMarginPct.toFixed(1)}% of everything sold`
+        ? `${is.netMarginPct.toFixed(1)}% of what was invoiced`
         : 'no invoiced sales to measure it against' },
     { label:'Cash in hand', value:bs.cash, prior:null,
       note:`across ${bs.cashAccounts.length} account${bs.cashAccounts.length===1?'':'s'}, right now` },
@@ -61033,68 +61273,69 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
      A statement's first job is to say whether it can be believed, and
      that was a box at the foot of one of five tabs. Somebody reading a
      loss learned only afterwards -- if they scrolled -- that the loss
-     was an artefact of counter sales never being invoiced. */
+     was an artefact of counter sales never being invoiced.
+
+     It is a row in ink now rather than a tinted slab. A device that
+     paints the whole width every month, good news included, is
+     furniture; when it turned red for something real it read as the
+     same furniture in another colour. The state is one mark and the
+     colour of one line -- and where there is something to DO about it,
+     the screen's single accent is the button that does it. */
   const gap = statementBasisGap(is, cf);
   const failing2 = checks.filter(c=>c.ok === false).length;
   const verdict = gap && gap.dominant
     ? {state:'bad', head:`These figures are missing ${Math.round((1-gap.invoicedShare)*100)}% of what the shop took`,
-       body:`${fmtUGX(gap.uninvoiced)} came in as sales cash with no invoice behind it, and the profit and loss counts invoiced sales only. Read the cash flow for the fuller picture, or start invoicing the counter sales.`}
+       body:`${fmtUGX(gap.uninvoiced)} came in as sales cash with no invoice behind it, and the profit and loss counts invoiced sales only. Read the cash flow for the fuller picture, or start invoicing the counter sales.`,
+       act:{label:'Open the till receipts', tab:'cashbook'}}
     : failing2
       ? {state:'warn', head:`${failing2} thing${failing2===1?'':'s'} below would change these figures`,
          body:'The numbers are shown as they stand. What is unresolved is listed under “Can these be trusted?”.'}
       : gap
         ? {state:'warn', head:'Some sales are not in these figures',
-           body:`${fmtUGX(gap.uninvoiced)} of counter takings has no invoice behind it, so it is outside the profit and loss.`}
+           body:`${fmtUGX(gap.uninvoiced)} of counter takings has no invoice behind it, so it is outside the profit and loss.`,
+           act:{label:'Open the till receipts', tab:'cashbook'}}
         : {state:'ok', head:'Nothing is outstanding against these figures',
            body:'Everything the app can check about them agrees.'};
+  const verdictIcon = verdict.state === 'ok' ? ICON_CHECK
+    : verdict.state === 'bad' ? ICON_WARN : ICON_WARN;
 
   return `
     <div class="st-verdict ${verdict.state}">
-      <b>${esc(verdict.head)}</b>
-      <span>${esc(verdict.body)}</span>
+      <div class="st-verdict-m">
+        <b>${verdictIcon}${esc(verdict.head)}</b>
+        <span>${esc(verdict.body)}</span>
+      </div>
+      ${verdict.act ? `<button type="button" class="btn btn-accent ow-sm st-verdict-a"
+        data-goto="${esc(verdict.act.tab)}">${esc(verdict.act.label)}</button>` : ''}
     </div>
 
-    ${stTrendChartHTML(statementsTrend(6))}
-
-    ${stBreakevenHTML(breakevenPosition(is, periodOf(to)))}
-
-    <div class="st-vitals">
-      ${vitals.map(v=>`<div class="st-vital ${v.value<0?'neg':''}">
-        <span class="st-vital-label">${esc(v.label)}</span>
-        <b>${fmtUGX(Math.round(v.value))}${v.prior!=null?stDeltaChip(v.value,v.prior,v.higherIsBetter):''}</b>
-        <span class="st-vital-note">${esc(v.note)}</span>
+    <div class="ow-strip st-vitals">
+      ${vitals.map(v=>`<div class="ow-mt ${v.value<0?'ow-bad':''}">
+        <p class="ow-mt-l">${esc(v.label)}</p>
+        <span class="ow-mt-v">${fig(v.value)}${v.prior!=null?stDeltaChip(v.value,v.prior,v.higherIsBetter):''}</span>
+        <p class="ow-mt-s">${esc(v.note)}</p>
       </div>`).join('')}
     </div>
 
-    <div class="st-two">
-      <section class="st-doc">
-        <header class="st-doc-head"><h3>Where the profit went</h3>
-          <span class="st-doc-when">${esc(from)} to ${esc(to)}</span></header>
-        <table class="st-table">
-          ${stLine('Sales', is.revenue, prev.revenue, {delta:true, higherIsBetter:true})}
-          ${stLine('Less what the goods cost', -is.costOfSales, -prev.costOfSales)}
-          ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
-          ${stLine('Less running costs', -(is.opex + is.depreciation), -(prev.opex + prev.depreciation))}
-          ${stLine('Less cost of borrowing', -(is.interest + is.loanFees), -(prev.interest + prev.loanFees))}
-          ${is.disposalGain ? stLine('Assets sold', is.disposalGain, prev.disposalGain) : ''}
-          ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
-        </table>
-        <p class="st-read">${is.revenue>0
-          ? `Of every 100 shillings sold, ${Math.round(is.grossMarginPct)} was left after the goods and ${Math.round(is.netMarginPct)} after everything.`
-          : 'Nothing was invoiced in this period.'}</p>
-      </section>
+    <div class="ow-grid">
+      <div class="ow-stack">
+        ${stBreakevenHTML(breakevenPosition(is, periodOf(to)))}
+        ${stTrendChartHTML(statementsTrend(6))}
+      </div>
 
-      <section class="st-doc ${failing?'st-doc-flag':''}">
-        <header class="st-doc-head"><h3>Can these be trusted?</h3>
-          <span class="st-doc-when">${failing ? `${failing} thing${failing===1?'':'s'} to look at` : 'nothing outstanding'}</span></header>
-        ${checks.map(c=>`<div class="st-check ${c.ok===true?'ok':(c.ok===false?'bad':'note')}">
-          ${c.ok===true?ICON_CHECK:(c.ok===false?ICON_WARN:ICON_ITEMS)}
-          <div><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></div>
-        </div>`).join('')}
-      </section>
-    </div>
+      <div class="ow-side">
+        <section class="ow-pan ${failing?'st-doc-flag':''}">
+          <div class="ow-pan-h"><span class="ow-pan-t">Can these be trusted?</span>
+            <span class="ow-pan-n">${failing ? `${failing} to look at` : ''}</span></div>
+          ${checks.map(c=>`<div class="st-check ${c.ok===true?'ok':(c.ok===false?'bad':'note')}">
+            ${c.ok===true?ICON_CHECK:(c.ok===false?ICON_WARN:ICON_ITEMS)}
+            <div><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></div>
+          </div>`).join('')}
+        </section>
 
-    ${stConcentrationHTML(is, breakevenPosition(is, periodOf(to)))}`;
+        ${stConcentrationHTML(is, breakevenPosition(is, periodOf(to)))}
+      </div>
+    </div>`;
 }
 
 function stProfitAndLoss(ctx){
@@ -61290,7 +61531,7 @@ function stSyncPresetButtons(){
   const to = document.getElementById('st_to').value;
   document.querySelectorAll('.st-preset').forEach(b=>{
     const d = stDefaultRange(b.dataset.preset);
-    b.classList.toggle('active', !!from && d.from === from && d.to === to);
+    b.classList.toggle('ow-on', !!from && d.from === from && d.to === to);
   });
 }
 document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', ()=>{
@@ -61301,6 +61542,15 @@ document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', (
 }));
 ['st_from','st_to'].forEach(id=>
   document.getElementById(id).addEventListener('change', renderStatements));
+/* The verdict's one action. It NAVIGATES -- it does not invoice
+   anything -- because nothing in this app sends itself, and a button on
+   a statement that raised documents would be the worst place in the app
+   to break that rule. It goes to the till receipts, which is where the
+   takings with no invoice behind them actually are. */
+document.getElementById('st_body').addEventListener('click', (e)=>{
+  const go = e.target.closest ? e.target.closest('.st-verdict-a[data-goto]') : null;
+  if(go) goToTab(go.dataset.goto);
+});
 document.getElementById('st_basis').addEventListener('change', (e)=>{
   stComparisonBasis = e.target.value;
   renderStatements();

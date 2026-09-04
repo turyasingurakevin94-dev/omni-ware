@@ -103,13 +103,20 @@ const rule = (sel) => {
  * A bare minmax(300px,1fr) is a floor the grid honours even when it
  * overflows, which is how the profit-and-loss column ran past its panel
  * and clipped the "changed" badge off every row.
+ *
+ * .st-two was that grid, and it is gone: the Overview's two columns are
+ * the layer's own .ow-grid now -- a flexible track and a fixed 304px
+ * rail that collapses to one column at 820. So what is pinned here is
+ * the same rule one level up, on the grid every converted screen uses:
+ * the flexible track's floor is ZERO, not its content, or the whole
+ * console inherits the bug this file was opened for.
  */
 {
-  const two = rule('.st-two');
-  t.check(/minmax\(min\(300px,100%\),1fr\)/.test(two),
-    `the track may go below its preferred width when the screen has less (${two})`);
-  t.check(!/minmax\(300px,1fr\)/.test(two),
-    'rather than keeping a floor it cannot honour');
+  const grid = rule('.ow-grid');
+  t.check(/minmax\(0,\s*1fr\)/.test(grid),
+    `the flexible track may go below its content when the screen has less (${grid})`);
+  t.check(!/\.st-two\{/.test(src),
+    'and the statements grid it replaced is gone rather than left behind as dead rules');
 }
 
 /* ---------- 4. the rule behind all three ------------------------------ */
