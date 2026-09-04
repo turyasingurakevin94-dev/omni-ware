@@ -20,7 +20,7 @@ def tile(label, value, sub, tone, first_row, first_col):
 STRIP = ('<div style="display:grid;grid-template-columns:1fr 1fr;background:#fff;'
          'border:1px solid #E3E7EA;border-radius:8px;overflow:hidden">%s%s%s%s</div>' % (
   tile('Still owed', '9,143,300', 'two loans', '', 1, 1),
-  tile('Due this month', '1,346,200', '5 Sep &middot; 12 Sep', '', 1, 0),
+  tile('Due this month', '1,346,233', '5 Sep &middot; 12 Sep', '', 1, 0),
   tile('Behind', '1,546,600', 'Centenary, two', 'bad', 0, 1),
   tile('Worth', '15,985,000', 'three things held', '', 0, 0)))
 
@@ -55,7 +55,7 @@ def tap(label, kind='accent'):
 CARDS = (
   card(CRESTS['bank'], 'Centenary Bank &mdash; working capital',
        'Flat 16% &middot; 5 of 12 paid &middot; next 5 Sep',
-       [('Still owed', '5,413,300', ''), ('Behind', '1,546,600', 'bad')],
+       [('Still owed', '5,413,300', ''), ('Behind', '2,320,000', 'bad')],
        chips=chip('Behind', 'bad', dot=True), action=tap('Record repayment')) +
   card(CRESTS['van'], 'Toyota Hiace van &middot; UBK 442F',
        'Straight line, 5 years &middot; Stanbic 22%',
@@ -105,7 +105,7 @@ tb = ''.join(
   'color:%s"><svg viewBox="0 0 24 24" style="width:23px;height:23px;stroke:currentColor;stroke-width:1.8;'
   'stroke-linecap:round;stroke-linejoin:round;fill:%s">%s</svg>'
   '<span style="font-size:10px;font-weight:%d">%s</span></div>'
-  % ('#B23A26' if act else '#59626B', 'rgba(178,58,38,.13)' if act else 'none', p, 600 if act else 500, n)
+  % ('#B23A26' if act else '#59626B', '#F6E7E3' if act else 'none', p, 600 if act else 500, n)
   for n, p, act in TABS)
 
 body = '''
@@ -115,7 +115,7 @@ body = '''
     <div style="width:22px;height:22px;border-radius:6px;background:#B23A26;color:#fff;display:flex;
       align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:9px">OW</div>
     <div style="color:#fff;font-size:13px;font-weight:600">Omni&#8209;Ware</div>
-    <div style="margin-left:auto;color:#8E9BA8"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+    <div style="margin-left:auto;color:#8A939C"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
   </div>
 
   <div style="padding:12px 16px 76px;box-sizing:border-box">
@@ -151,7 +151,7 @@ body = '''
                  [('What they cost', '28,080,000', 0), ('Written off so far', '12,095,000', 0),
                   ('Worth on the books', '15,985,000', 0), ('Still owed on them', '9,143,300', 0),
                   ('Yours, free of debt', '6,841,700', 1)],
-                 'The same three figures the Balance sheet carries, from the same records.'),
+                 'Cost, written off and what is left are the Balance sheet&#39;s own three lines.'),
              pan('This year', '1 Jan &ndash; 3 Sep',
                  [('Depreciation charged', '3,750,000', 0), ('Interest paid', '1,392,700', 0),
                   ('Repaid off the principal', '7,056,900', 0)],

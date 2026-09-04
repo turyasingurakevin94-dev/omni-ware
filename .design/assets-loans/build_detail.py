@@ -33,10 +33,10 @@ def minitable(cols, rows, foot_row=None):
             tone = ''
             if v.startswith('!'):
                 v = v[1:]; tone = 'color:#7F1D1A;font-weight:600;'
-            cells.append('<span style="%s%s%sfont-size:12px;min-width:0;overflow:hidden;'
-                         'text-overflow:ellipsis;white-space:nowrap">%s</span>'
+            cells.append('<span style="%s%s%sfont-size:12px;min-width:0;white-space:nowrap;'
+                         '%s">%s</span>'
                          % (MONO if right else '', 'text-align:right;' if right else 'color:#59626B;',
-                            tone, v))
+                            tone, '' if right else 'overflow:hidden;text-overflow:ellipsis;', v))
         out.append('<div style="display:grid;%s;gap:8px;padding:5px 10px;border-bottom:1px solid #E3E7EA" '
                    'class="hair">%s</div>' % (grid, ''.join(cells)))
     if foot_row:
@@ -49,23 +49,23 @@ DEP = minitable('1fr 1fr 1fr 1fr', [
     ['Jul 2026', '12,600,000', '300,000', '12,300,000'],
     ['Aug 2026', '12,300,000', '300,000', '12,000,000'],
     ['Sep 2026', '12,000,000', '300,000', '11,700,000'],
-], '&hellip; 54 more, to Mar 2029 and a residual 3,000,000')
+], '&hellip; 26 more, to Feb 2029 and a residual 3,000,000')
 
 AGR = minitable('72px 1fr 1fr 1fr', [
     ['Due', '>Payment', '>Interest', '>Principal'],
-    ['12 Jul 26', '572,900', '77,600', '495,300'],
-    ['12 Aug 26', '572,900', '68,500', '504,400'],
-    ['12 Sep 26', '572,900', '59,300', '513,600'],
-    ['12 Oct 26', '572,900', '50,000', '522,900'],
-], '&hellip; 3 more, to 12 Feb 2027')
+    ['12 Sep 26', '572,900', '68,400', '504,500'],
+    ['12 Oct 26', '572,900', '59,200', '513,700'],
+    ['12 Nov 26', '572,900', '49,800', '523,100'],
+    ['12 Dec 26', '572,900', '40,200', '532,700'],
+], '&hellip; 3 more, to 12 Mar 2027')
 
 EQ = minitable('1fr 1fr 1fr 1fr', [
     ['Month', '>Worth', '>Owed (agreed)', '>Difference'],
     ['Sep 2026', '12,000,000', '3,730,000', '8,270,000'],
-    ['Dec 2026', '11,100,000', '2,171,000', '8,929,000'],
-    ['Mar 2027', '10,200,000', '567,000', '9,633,000'],
+    ['Dec 2026', '11,100,000', '2,190,000', '8,910,000'],
+    ['Mar 2027', '10,200,000', '&mdash;', '10,200,000'],
     ['Apr 2027', '9,900,000', '&mdash;', '9,900,000'],
-], 'The loan clears in Feb 2027; the van keeps depreciating to Mar 2029.')
+], 'The last instalment falls on 12 Mar 2027; the van keeps depreciating to Feb 2029.')
 
 ACTS = ('<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">%s%s%s%s</div>'
         % (btn('Record a repayment', 'accent', '<path d="M12 5v14M5 12h14"/>'),

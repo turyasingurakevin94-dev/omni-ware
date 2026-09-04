@@ -54,10 +54,10 @@ def chrome(crumb_group, crumb_page, height):
       <div style="color:#fff;font-size:13px;font-weight:600;letter-spacing:-.01em">Omni&#8209;Ware</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;color:#fff;white-space:nowrap">
-      <span style="color:#8E9BA8;font-weight:500">%s</span><span style="color:#4A545E">/</span><span>%s</span>
+      <span style="color:#8A939C;font-weight:500">%s</span><span style="color:#59626B">/</span><span>%s</span>
     </div>
     <div style="flex:1"></div>
-    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,.07);color:#8E9BA8;font-size:12px;width:230px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,.07);color:#8A939C;font-size:12px;width:230px;box-sizing:border-box">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
       Search anything
     </div>

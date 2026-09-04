@@ -51,7 +51,7 @@ ASSETS = legacy(
   'The things the shop owns and uses &mdash; a van, shelving, a laptop. Not stock: these are bought to be '
   'used, and lose value a little at a time as depreciation rather than all at once when they are paid for.',
   'Register', btn('Add an asset', 'accent'),
-  [('28,080,000', 'What they cost', 0), ('12,095,000', 'Written off so far', 0),
+  [('31,680,000', 'What they cost', 0), ('15,095,000', 'Written off so far', 0),
    ('15,985,000', 'Worth on the books', 0), ('3,750,000', 'Charge this year', 0)],
   ['Asset', 'Acquired', 'How it depreciates', '>Cost', '>Written off', '>Book value', ''],
   [['Toyota Hiace van &middot; UBK 442F', '2024-03-12', 'Straight line, 60 months',
@@ -60,8 +60,9 @@ ASSETS = legacy(
     '4,200,000', '1,575,000', '2,625,000', ICONS],
    ['Lenovo laptop &amp; POS printer', '2025-02-10', 'Straight line, 36 months',
     '2,880,000', '1,520,000', '1,360,000', ICONS],
-   ['Welding plant &amp; compressor', '2022-05-01', 'Straight line, 60 months',
-    '3,600,000', '3,000,000', '&mdash;', ICONS]])
+   ['Welding plant &amp; compressor <span style="color:#8A939C">(sold 30 Jun)</span>',
+    '2022-05-01', 'Straight line, 60 months',
+    '3,600,000', '3,000,000', '600,000', ICONS]])
 
 LOANS = legacy(
   'Loans',
@@ -69,10 +70,10 @@ LOANS = legacy(
   'with the agreement.',
   'Borrowing', btn('Record a loan', 'accent'),
   [('9,143,300', 'Still owed', 0), ('2', 'Loans running', 0),
-   ('1,392,700', 'Interest paid this year', 0), ('1,546,600', 'Behind schedule', 1)],
+   ('1,392,700', 'Interest paid this year', 0), ('2,320,000', 'Behind schedule', 1)],
   ['Lender', 'Taken', 'Terms', '>Borrowed', '>Still owed', '>Keeping up?', ''],
   [['Centenary Bank', '2026-01-05', 'Flat 16% &middot; 12 months',
-    '8,000,000', '5,413,300', '<span style="color:#7F1D1A">1,546,600 behind</span>', ICONS],
+    '8,000,000', '5,413,300', '<span style="color:#7F1D1A">2,320,000 behind</span>', ICONS],
    ['Stanbic Bank', '2024-03-12', 'Reducing 22% &middot; 36 months',
     '15,000,000', '3,730,000', '<span style="color:#1C6B58">On track</span>', ICONS]])
 

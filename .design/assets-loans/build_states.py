@@ -43,7 +43,7 @@ EMPTY = frame(
 # 2 --------------------------------------------------------------------
 ONE = frame(
   'One thing, paid outright',
-  'nothing is owed, so the owed tiles say so in words rather than in noughts',
+  'nothing is owed, so the owed tiles carry a dash and a reason rather than a nought',
   mini_strip([('Still owed', '&mdash;', 'nothing borrowed', ''),
               ('Falls due this month', '&mdash;', 'nothing to pay', ''),
               ('Behind schedule', '&mdash;', 'nothing overdue', ''),
@@ -59,8 +59,8 @@ ONE = frame(
 UNDER_X = '''
 <div style="padding:0 12px 12px 40px">
   <div style="display:inline-block;font-size:11px;color:#7A4A02;background:#FBEFD9;
-    border:1px solid #EBD9B4;border-radius:4px;padding:2px 8px;margin:0 0 10px">
-    Worth less than is owed on it until Aug&nbsp;2028. Selling it now would not clear the debt.</div>
+    border:1px solid #FBEFD9;border-radius:4px;padding:2px 8px;margin:0 0 10px">
+    Worth less than is owed on it until Dec&nbsp;2027. Selling it now would not clear the debt.</div>
   <p style="font-size:13px;color:#59626B;line-height:1.5;max-width:76ch;margin:0 0 10px">
     Bought on 10&nbsp;Jun&nbsp;2026 for 6,400,000 with nothing down, on a <b style="color:#7A4A02">flat
     20%</b> SACCO loan over 30 months. Flat interest is charged on the whole 6,400,000 for the entire
@@ -87,7 +87,7 @@ UNDER = frame(
             'Straight line, 4 years &middot; SACCO, flat 20% &middot; nothing down',
             fig('6,000,000', 'cost 6,400,000'), fig('8,960,000', 'SACCO, on track'),
             fig('&minus;&nbsp;2,960,000', 'owed over its value', tone='bad'),
-            open_=True, chips=chip('Under water', 'warn'), expand=UNDER_X) +
+            open_=True, chips=chip('Under water', 'bad'), expand=UNDER_X) +
     reg_row(CRESTS['van'], 'Toyota Hiace van &middot; UBK 442F',
             'Straight line, 5 years &middot; Stanbic, reducing 22%',
             fig('12,000,000', 'cost 21,000,000'), fig('3,730,000', 'Stanbic, on track'),
