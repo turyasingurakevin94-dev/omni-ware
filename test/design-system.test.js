@@ -53,12 +53,27 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      next person cannot quietly raise it back. */
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
-    'radii': [28, /border-radius:\s*([^;}]+)/g],
-    /* 62, not 63: the cash book's two floating + / - buttons are gone --
-       they duplicated Money in and Money out from the top of the page,
-       and the entry line that replaced them is permanently on screen, so
-       their drop shadow and its hover went with them. */
-    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
+    /* 27, not 28: the WhatsApp desk's bespoke radii went with the
+       screen they clothed -- 11px stat cards, 12px picks and bubbles,
+       14px on the inbox shell and 21px on the round composer. What
+       replaced them is the layer's 4 / 6 / 8. */
+    'radii': [27, /border-radius:\s*([^;}]+)/g],
+    /* 56, not 62, and this number is MEASURED rather than argued from
+       one side: two screens lost their bespoke depth in the same week
+       and the merge had to be counted, not reasoned about.
+
+       Four went with the sourcing lane board -- the card at rest and on
+       hover, the lane's flash ring, and the count bubble's ring on the
+       step rail; a board of thirty floating cards was the largest
+       single argument in the file against depth being hairlines.
+
+       Two went with the WhatsApp inbox -- the shell's own drop shadow
+       and the shadow under every chat bubble.
+
+       (62, not 63, was the cash book's two floating + / - buttons: they
+       duplicated Money in and Money out from the top of the page, and
+       the entry line that replaced them is permanently on screen.) */
+    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
     /* 105, not 106: Follow-ups' card wall carried its own hover border,
        its own two near-whites for a card and a settled row, and its own
        hover fill. All four went when that screen became a console on the
@@ -508,9 +523,44 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     /* Order tracking. The lane board -- the step rail, the lanes, the
        cards with six controls, the select-all/print row -- became a
        console: a strip, a queue of what needs the owner, one table
-       grouped by stage with rows that open in place, and a rail. The
-       sourcing funnel still wears .sq-board/.sq-col/.sq-card by design,
-       so those stay in the FILE; only this screen may not emit them. */
+       grouped by stage with rows that open in place, and a rail.
+       Sourcing was the last screen wearing .sq-board/.sq-col/.sq-card
+       and it has now converted too, so the ~330 lines of lane CSS are
+       out of the file entirely rather than kept alive for one caller. */
+    /* Sourcing. Five lanes for a question that crosses all five: a thing
+       priced and ready to list and a thing nobody has touched in three
+       weeks are the same work -- the owner's -- and they sat two columns
+       apart. Listed had already been special-cased into a searchable
+       list INSIDE a lane, because it grows without bound and nothing
+       leaves it, which is the layout saying the shape was wrong.
+
+       A queue banded by what needs doing, with the stage carried on the
+       row as five segments of ink. The board's own five colours went
+       with it: they were outside the palette and read as one dark green
+       at a glance (see SOURCING_STATUSES for what replaced them). The
+       archive is one folded line that opens on its search, because
+       browsing a hundred listed items is what Products is for. */
+    'sourcing': {
+      retired: ['page-head', 'panel', 'qp-panel', 'sq-board-tools', 'sq-select-all-label',
+                'sq-board', 'sq-col', 'sq-card', 'sq-stepper', 'sf-card', 'sf-facts', 'sf-fact',
+                'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
+      renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
+                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-why', 'ow-q-a', 'ow-cp',
+                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-c',
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-av', 'ow-mini', 'ow-empty',
+                    /* the seven this screen owns: the column heads, the
+                       stage as segments rather than as a colour, the
+                       band that is the one thing to do next, who is on
+                       it in the action column, and the archive's fold
+                       and its rows */
+                    'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg', 'ow-sf-need', 'ow-sf-who',
+                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb'],
+    },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the
        other -- so "what is this thing worth to me" could not be asked

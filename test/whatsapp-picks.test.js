@@ -444,43 +444,73 @@ const THU = '2026-08-06', MON = '2026-08-03';
   eq(scope.waPostDeskStats([{ id: 1, date: '2026-08-03', name: 'Mon' }], THU).lastDaysAgo, 3,
     'quiet since Monday reads as 3 days ago');
 
-  /* worn by the render */
+  /* worn by the render.
+     The desk head used to be a room of its own behind a tab: a kicker,
+     the date at 19px/800, a status pill, a lead card at 42% width, a
+     grid of alternates and three side panels. It answers ONE question
+     -- has today's gone out, and what should it be -- so it is one
+     304px rail panel now, and the machinery above it is untouched. */
   t.check(/waPostDeskStats\(data\.waPosts, today\)/.test(src)
-    && /id="wa_desk_head"/.test(src),
-    'the desk head is derived at render, from the same rows as the rotation');
-  t.check(/wa-desk-state \$\{desk\.postedTodayName \? 'done' : 'due'\}/.test(src),
-    'and the status pill changes state with the fact');
+    && /id="wa_post_pan"/.test(src),
+    'the post panel is derived at render, from the same rows as the rotation');
+  t.check(/\$\{desk\.postedTodayName \? 'sent' : 'not sent'\}/.test(src),
+    'and its header states the fact rather than colouring a pill');
 }
 
-/* ---------- 9. the board wears the evidence -------------------------- */
+/* ---------- 9. the pick wears the evidence ---------------------------
+   WHAT THIS SECTION USED TO ASSERT. A two-column board: the lead pick
+   rendered large with a rank in words ("Today's pick", "Alternate 1"),
+   and every reason worn as a chip in one of TEN colours -- sitting,
+   margin, drop, weekday, fresh, earner, justin, asked, fast, nophoto.
+
+   Ten chip colours is the design system's own example of the disease:
+   a device that marks everything marks nothing, and none of those ten
+   was a state the shop could act on. They were reasons, which is prose.
+   So the reasons are a sentence now, the alternates live behind "Pick
+   another" (which is what the board's second column was for), and the
+   evidence still reaches the owner in the same words -- the reason
+   TEXT is unchanged and still travels into the post record.
+
+   What is asserted instead: that every one of those facts still
+   reaches the screen, and that the two gap wordings the shop most
+   needs are still exact. */
 {
-  t.check(/class="wa-pick\$\{i===0\?' lead':''\}"/.test(src),
-    'the first pick leads the board, larger than its alternates');
-  t.check(/\$\{i===0 \? "Today's pick" : 'Alternate ' \+ i\}/.test(src),
-    'and every card names its rank in words');
-  t.check(/class="wap-chip \$\{esc\(r\.kind\)\}"/.test(src)
-    && /\$\{esc\(r\.text\)\}/.test(src),
-    'each reason renders as a chip coloured by its kind');
-  ['sitting', 'margin', 'drop', 'weekday', 'fresh', 'earner', 'justin', 'asked', 'fast', 'nophoto'].forEach((k) =>
-    t.check(new RegExp(`\\.wap-chip\\.${k}\\{`).test(src), `the ${k} chip has its own colour`));
-  t.check(/wap-thumb wap-noimg/.test(src) && /\.wap-thumb\.wap-noimg\{/.test(src),
+  t.check(/lead\.reasons\.map\(r=> r\.text\)\.join\(' · '\)/.test(src),
+    'the reasons a pick was chosen still reach the owner, as a sentence rather than ten colours');
+  t.check(/\$\{others\.length \? `<button[^`]*id="wa_swap"/.test(src),
+    'and the alternates are one press away, which is what the second column was for');
+  t.check(/<span class="wa-pk-im">\$\{esc\(lead\.name\.slice\(0,2\)\.toUpperCase\(\)\)\}<\/span>/.test(src),
     'a photo-less pick renders a lettered tile, not a broken image');
-  t.check(/data-go="media"/.test(src) && /data-go="products"/.test(src)
-    && /goToTab\(btn\.dataset\.go\)/.test(src),
-    'the unlock rail walks straight to Media and Products');
+  t.check(/go: 'media'/.test(src) && /go: 'products'/.test(src)
+    && /data-go="\$\{esc\(g\.go\)\}"/.test(src) && /goToTab\(btn\.dataset\.go\)/.test(src),
+    'the gaps walk straight to Media and Products');
+  /* These two wordings are load-bearing. A shop that reads "no photo"
+     as "cannot be posted" stops posting; a shop told only "low stock"
+     does not know the screen means restock before advertising. */
   t.check(/still pickable, better with one/.test(src),
-    'the photo rail says plainly that a photo is wanted, not required');
-  t.check(/selling too fast to advertise — restock first/.test(src) && /data-go="inventory"/.test(src),
+    'the photo gap says plainly that a photo is wanted, not required');
+  t.check(/selling too fast to advertise — restock first/.test(src) && /go: 'inventory'/.test(src),
     'the depth skips are shown with the way to fix them');
   t.check(/resting after a recent post/.test(src) && /back in \$\{WA_ROTATION_DAYS - e\.daysAgo\}d/.test(src),
-    'and the rotation bench is visible — what is resting, and when it returns');
-  t.check(/class="btn btn-ghost wa-hist-del"/.test(src) && /class="wa-rec-sub"/.test(src),
-    'the record list still lets a row be removed, and shows why it was picked');
+    'and the rotation bench is still visible — what is resting, and when it returns');
+  t.check(/class="wa-rl-x wa-hist-del"/.test(src) && /class="wa-rl-d"/.test(src),
+    'the record list still lets a row be removed, and shows when it was picked');
+  /* Truncation, the rule that keeps biting this app: "Iron sheets —
+     G28, 3m box profile" does not fit 304px, so the name must ellipsis
+     and carry the full value where a pointer can still read it. */
+  t.check(/\.wa-pk-n\{[^}]*text-overflow:ellipsis/.test(src)
+    && /class="wa-pk-n" title="\$\{esc\(lead\.name\)\}"/.test(src),
+    'and a name too long for the rail is cut with a mark, not clipped mid-word');
 }
 
 /* ---------- 10. all of it is REACHED ---------------------------------- */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src), 'the tab renders on entry');
+  /* waInboxEnter draws every panel once it knows whether the number is
+     linked. Drawing the rail before that answer arrives showed a shop
+     its daily post above a desk it had not connected. */
+  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src), 'the tab renders on entry')
+  t.check(/waRenderInbox\(\);\n  renderWaInsights\(\);\n  waRenderHeadline\(\);\n  renderWhatsApp\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
+    'and entry draws the queue, the strip, the headline and all three rail panels');
   /* One rail entry is enough now: the phone sheet is generated from the
      rail, so a screen listed once is reachable on both. Counting two
      copies was counting the duplicate that has since been removed. */

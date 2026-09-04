@@ -269,7 +269,17 @@ const build = (rows, over) => compileScope(
     t.check(/id="managerTrackWrap"/.test(src), 'the screen has a place for it');
     t.check(src.includes('managerTrackRecord(todayISO()).then'),
       'AND FILLS IT — a memory the owner cannot see is one they can only be told about');
-    t.check(/What has worked, and what has not/.test(src), 'under a heading that says which question it answers');
+    /* THE HEADING CHANGED BECAUSE THE SECTION ABSORBED TWO OTHERS.
+       "What has worked, and what has not" sat beside "Advice you have
+       passed on" and "Advice that is not landing" -- three headings,
+       three row formats, and the source comment beside them already
+       said they were the same question asked three ways. They are one
+       table now, and its heading names what the rows ARE while the
+       filter names which of the three questions you are asking. */
+    t.check(/Every lever it has pulled/.test(src), 'under a heading that says what the rows are');
+    ['Works', 'Never worked', 'Not landing', 'You passed on'].forEach(q=>
+      t.check(new RegExp(`label: '${q}'`).test(src),
+        `and a filter for "${q}" \u2014 the three old sections are three questions of one list`));
     t.check(/never once worked/.test(src), 'and marks the levers that never have');
   }
 })().then(() => {
