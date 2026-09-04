@@ -11102,6 +11102,30 @@
   .ow-sf-tbl{--ow-tbl-cols:minmax(0,1fr) 92px 116px 116px;margin-bottom:var(--ow-sp-10);
     border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;}
 
+  /* THE PHOTO, IN THE OPEN ROW.
+
+     Most of what walks into this shop is described by a picture rather
+     than by a name: somebody sends a photo of a hinge and asks whether
+     it can be got, and "makitah" typed in a box is not that photo. The
+     record has carried one since the funnel was built -- what the board
+     did was put five clicks between the list and it.
+
+     So it opens with the row, at a size you can actually recognise a
+     fitting in, and zooms to the app's own lightbox from there. */
+  .ow-sf-x{display:grid;grid-template-columns:148px minmax(0,1fr);
+    gap:var(--ow-sp-12);align-items:start;}
+  .ow-sf-ph{min-width:0;}
+  .ow-sf-ph-i{display:block;width:148px;height:148px;object-fit:cover;
+    border-radius:var(--ow-r);border:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  /* No photo is not an empty box: it says so, and says what to do about
+     it, because a lead nobody can picture is the one that gets researched
+     twice. Dashed, so it does not read as a photo that failed to load. */
+  .ow-sf-ph-none{width:148px;height:148px;border-radius:var(--ow-r);
+    border:1px dashed var(--ow-rule);background:var(--ow-paper-2);color:var(--ow-ink-400);
+    display:flex;align-items:center;justify-content:center;}
+  .ow-sf-ph-c{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:var(--ow-lh-snug);margin-top:var(--ow-sp-6);max-width:148px;}
+
   /* An empty screen still has to be read. .ow-empty centres its text and
      sets no measure, which on a 1,660px screen is a 150-character line. */
   .ow-sf-say{max-width:var(--ow-measure);margin:var(--ow-sp-6) auto 0;
@@ -11165,6 +11189,12 @@
        name. The stage bar stays -- it is the one thing a card cannot say
        in words without spending a line on it. */
     .ow-sf-h{display:none;}
+    /* The photo goes above the reading rather than beside it, and takes
+       the width it is given: on a 390px screen a 148px square is a thumb
+       again, which is the thing this was for undoing. */
+    .ow-sf-x{grid-template-columns:minmax(0,1fr);}
+    .ow-sf-ph-i,.ow-sf-ph-none{width:100%;height:auto;aspect-ratio:4 / 3;}
+    .ow-sf-ph-c{max-width:none;}
     /* The pair stops being a row: .ow-q-card takes over from .ow-q-r as
        everywhere else, and the action drops under the card at thumb
        size rather than squeezing into a column that no longer exists. */
@@ -72248,12 +72278,40 @@ function sourcingOpenBodyHTML(l){
         ? `${found} shop${found===1?' has':'s have'} it, ${found===1?'but nobody has':'but none has'} quoted for ${esc(String(askAt))} ${esc(unit)} yet.`
         : 'Nobody has been found who sells it yet.'}</p>`;
   return `<div class="ow-q-x">
-    <p class="ow-q-why">${esc(sourcingOpenWhy(l, askAt, unit))}</p>
-    ${table}
-    <div class="ow-q-a">
-      ${sourcingReadyToList(l) ? `<button type="button" class="btn btn-primary ow-sm" data-lead-graduate="${esc(l.id)}">Add it to what we sell</button>` : ''}
-      <button type="button" class="btn btn-ghost ow-sm" data-lead-open="${esc(l.id)}">Open the full record</button>
+    <div class="ow-sf-x">
+      ${sourcingPhotoHTML(l)}
+      <div>
+        <p class="ow-q-why">${esc(sourcingOpenWhy(l, askAt, unit))}</p>
+        ${table}
+        <div class="ow-q-a">
+          ${sourcingReadyToList(l) ? `<button type="button" class="btn btn-primary ow-sm" data-lead-graduate="${esc(l.id)}">Add it to what we sell</button>` : ''}
+          <button type="button" class="btn btn-ghost ow-sm" data-lead-open="${esc(l.id)}">Open the full record</button>
+        </div>
+      </div>
     </div>
+  </div>`;
+}
+/* What it looks like. A lead's own photo -- the same one the product
+   keeps when this graduates -- shown at a size a fitting can be told
+   apart at, and zoomable through the app's own lightbox from there.
+
+   img-zoomable is what puts it in the lightbox, and it is also why the
+   screen's click handler steps over it: without that, pressing the photo
+   would close the row it is in before the lightbox could open.
+
+   A lead with no photo says so and names the one thing to do about it.
+   The picker itself is not lifted out here -- it is the media library's,
+   it de-duplicates against every photo the shop holds, and it belongs
+   with the rest of the record rather than half-copied into a list. */
+function sourcingPhotoHTML(l){
+  const src = (l && l.image) || null;
+  return `<div class="ow-sf-ph">
+    ${src
+      ? `<img class="ow-sf-ph-i img-zoomable" src="${esc(src)}" alt="Photo of ${esc(l.name)}">`
+      : `<div class="ow-sf-ph-none"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
+    <span class="ow-sf-ph-c">${src
+      ? 'It becomes the product&rsquo;s photo when this is listed.'
+      : 'No photo yet — and most of what is asked for here is described by one.'}</span>
   </div>`;
 }
 /* The sentence at the top of the open row. Says what this step is for
@@ -73325,6 +73383,10 @@ document.getElementById('tab-sourcing').addEventListener('click', (e)=>{
      is answered by what the research already found, and a dialog over
      the list is a worse place to answer it than under the row. The full
      record is one press further in, from inside. */
+  /* The photo in an open row opens the lightbox on a document-level
+     handler. Without this the row's own toggle would fire too and shut
+     the row underneath it, so the picture appeared and vanished. */
+  if(e.target.closest('.img-zoomable')) return;
   const row = e.target.closest('[data-sf-open]');
   if(row){
     const id = row.dataset.sfOpen;
