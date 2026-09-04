@@ -1,0 +1,539 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---------- WhatsApp console additions ---------- */
+    .ow-grid{grid-template-columns:minmax(0,1fr) 304px;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+
+    /* the ask row: who, what they asked for, how long they have waited */
+    .ow-q-r.ask{grid-template-columns:18px minmax(0,1fr) 116px 104px;}
+    .ow-q-r.ans{grid-template-columns:minmax(0,1fr) 116px 104px;padding-left:40px;}
+    .ow-q-w{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+    .ow-q-age{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+    .ow-q-age.late{color:var(--ow-amber-ink);}
+    .ow-q-age.cold{color:var(--ow-ink-400);}
+
+    /* the transcript — a record, not a chat app */
+    .tx{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:2px 0;margin:0 0 12px;max-width:var(--ow-measure);}
+    .tx-r{display:grid;grid-template-columns:46px 78px minmax(0,1fr);align-items:baseline;
+      column-gap:10px;padding:6px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .tx-r:first-child{border-top:0;}
+    .tx-t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-400);}
+    .tx-w{font-size:11px;font-weight:600;color:var(--ow-ink-600);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .tx-w.us{color:var(--ow-ink-400);}
+    .tx-b{font-size:13px;line-height:1.45;color:var(--ow-ink-900);min-width:0;}
+    .tx-r.out .tx-b{color:var(--ow-ink-600);}
+    .tx-more{display:block;padding:6px 12px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);}
+
+    /* what the ask matched to, and at what price */
+    .mt-h{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;}
+    .mt-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .mt-n{font-size:11px;color:var(--ow-ink-400);}
+
+    /* the reply the owner is about to send */
+    .cmp{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      max-width:var(--ow-measure);}
+    .cmp-b{padding:9px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;color:var(--ow-ink-900);min-height:74px;}
+    .cmp-f{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);border-radius:0 0 var(--ow-r) var(--ow-r);}
+    .cmp-f .sp{flex:1;}
+    .cmp-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+    .cmp-n b{font-weight:600;color:var(--ow-ink-900);}
+    .cursor{display:inline-block;width:1px;height:15px;background:var(--ow-ink-900);
+      vertical-align:-3px;margin-left:1px;}
+
+    /* window state, stated once, in the row it governs */
+    .win{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-verdigris);}
+    .win.shut{color:var(--ow-amber-ink);}
+    .win svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* right rail */
+    .rp{padding:10px 12px;}
+    .rp-l{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
+    .rp-l b{color:var(--ow-ink-900);font-weight:600;}
+    .rp-a{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px;}
+    .pick{display:flex;gap:10px;padding:10px 12px;align-items:flex-start;}
+    .pick-im{width:56px;height:56px;border-radius:var(--ow-r-sm);flex:none;
+      background:var(--ow-steel-100);color:var(--ow-ink-400);display:flex;align-items:center;
+      justify-content:center;font-size:10px;font-weight:600;letter-spacing:.06em;}
+    .pick-b{min-width:0;}
+    .pick-n{font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .pick-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;margin-top:3px;}
+    .pick-w{font-size:11px;color:var(--ow-ink-600);margin-top:3px;line-height:1.4;}
+
+    /* segmented room switch (direction B) */
+    .seg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;background:var(--ow-paper);}
+    .seg span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;
+      font-size:12px;font-weight:600;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);}
+    .seg span:first-child{border-left:0;}
+    .seg span.on{background:var(--ow-steel-950);color:#fff;}
+    .seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      background:var(--ow-steel-100);color:var(--ow-ink-600);border-radius:var(--ow-r-sm);padding:0 4px;}
+    .seg span.on .n{background:rgba(255,255,255,.2);color:#fff;}
+
+    /* two-pane chat console (direction B) */
+    .cv{display:grid;grid-template-columns:288px minmax(0,1fr);}
+    .cv-l{border-right:1px solid var(--ow-rule-soft);min-width:0;}
+    .cv-r{min-width:0;display:flex;flex-direction:column;}
+    .cv-hd{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .cv-nm{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cv-sb{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);}
+    .cv-bd{padding:12px 14px;}
+    .ow-lr.unread .ow-lr-n{font-weight:600;}
+    .ow-lr-t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);white-space:nowrap;}
+
+    /* states board */
+    .st-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;}
+    .note{margin:0;padding:10px 12px;font-size:11px;line-height:1.5;color:var(--ow-ink-600);
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .note b{color:var(--ow-ink-900);font-weight:600;}
+    .kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .kv:first-child{border-top:0;}
+    .kv-l{font-size:12px;color:var(--ow-ink-600);}
+    .kv-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+      letter-spacing:-.02em;}
+    .pick-b{min-width:0;flex:1;}
+    .pick-n,.pick-p,.pick-w{display:block;}
+    .ow-cp.fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .cv-bd .cg,.ow-q-x .cg{max-width:var(--ow-measure);}
+    .ow-pan-n.w{font-family:'Inter',system-ui,sans-serif;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1150px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Sell</span><span>/</span><span>WhatsApp</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Sell</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4L12 22l-9-9V3h10z"></path><circle cx="8" cy="8" r="1.3"></circle></svg><span>New quote</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"></path></svg><span>Order tracking</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Invoices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg><span>Customers</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg><span>Follow-ups</span><span class="nav-badge">4</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.6 8.6 0 0 1-4-1L3 20l1.2-5.3a8.3 8.3 0 0 1-1.1-4.2A8.4 8.4 0 0 1 11.6 2a8.4 8.4 0 0 1 9.4 9.5z"></path><path d="M8.6 8.2c.6-.1 1 .3 1.2.8l.4 1c.1.4 0 .7-.3 1l-.4.4c.5 1 1.3 1.8 2.3 2.3l.4-.4c.3-.3.6-.4 1-.3l1 .4c.5.2.9.6.8 1.2-.1.7-.7 1.3-1.5 1.3-3 0-6-3-6-6 0-.8.5-1.5 1.1-1.7z"></path></svg><span>WhatsApp</span><span class="nav-badge">3</span></div>
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 21V7M4 7l5-4 6 4 5-3v14l-5 3-6-4-5 4z"></path></svg><span>Sourcing</span><span class="nav-badge">2</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Debtors</span><span class="nav-badge">6</span></div>
+  </div>
+
+  <div class="main">
+
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">WhatsApp</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">Three people are waiting for an answer. The longest has waited 41 minutes.</p>
+      <span class="ow-ph-sp"></span>
+      <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>Search all chats</span>
+    </div>
+
+    <div class="ow-strip" style="margin-bottom:16px;">
+      <div class="ow-mt ow-warn">
+        <p class="ow-mt-l">Waiting for an answer</p>
+        <span class="ow-mt-v">3</span>
+        <p class="ow-mt-s">longest 41 min &middot; Kato Construction Ltd</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Reply window closing</p>
+        <span class="ow-mt-v">2</span>
+        <p class="ow-mt-s">free to answer for 3h and 9h more</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Asked for today</p>
+        <span class="ow-mt-v">3,624,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">12 questions, priced from your catalogue</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Won from chat</p>
+        <span class="ow-mt-v">4,190,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">this month &middot; 6 orders &middot; 14% of sales</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Posted this week</p>
+        <span class="ow-mt-v">2<span class="ow-u">of 7</span></span>
+        <p class="ow-mt-s">today not yet &middot; last sent Tuesday</p>
+      </div>
+    </div>
+
+    <div class="ow-grid">
+      <div class="ow-stack">
+
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">People waiting</span>
+            <span class="ow-pan-n">3 asks &middot; 3,624,000 asked for</span>
+          </div>
+
+          <div class="ow-q ow-open">
+            <div class="ow-q-r ask">
+              <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+              <span class="ow-q-t"><span class="ow-q-who">Kato Construction Ltd</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">40 bags of cement, Tororo 50kg</span></span>
+              <span class="ow-q-w"><span class="ow-cp">Customer</span></span>
+              <span class="ow-q-age late">41 min</span>
+            </div>
+            <div class="ow-q-x">
+
+              <div class="tx">
+                <div class="tx-r"><span class="tx-t">12:14</span><span class="tx-w">Kato Constr.</span><span class="tx-b">Good morning. How much for 30 iron sheets G28 3m?</span></div>
+                <div class="tx-r out"><span class="tx-t">12:15</span><span class="tx-w us">You &middot; auto</span><span class="tx-b">G28 3m box profile is 48,000 each. 30 sheets is 1,440,000.</span></div>
+                <div class="tx-r"><span class="tx-t">12:17</span><span class="tx-w">Kato Constr.</span><span class="tx-b">Ok. And 40 bags of cement?</span></div>
+                <span class="tx-more">14 earlier messages, back to 26 August</span>
+              </div>
+
+              <div class="mt-h">
+                <span class="mt-t">What they asked for</span>
+                <span class="mt-n">matched in your catalogue &middot; priced as it stands now</span>
+              </div>
+              <table class="cg">
+                <tr><th class="l">Item</th><th>Qty</th><th>Each</th><th>Total</th><th>In the yard</th><th></th></tr>
+                <tr>
+                  <td class="nm">Cement &mdash; Tororo 50 kg</td>
+                  <td>40</td><td>32,000</td><td class="w">1,280,000</td><td>62 bags</td>
+                  <td class="a"><span class="btn btn-ghost">Wrong item</span></td>
+                </tr>
+              </table>
+
+              <div class="cmp">
+                <div class="cmp-b">40 bags of Tororo 50kg is <b>32,000</b> each &mdash; 1,280,000 for the forty. We have 62 bags in the yard now. Delivery to Kyaliwajjala is 60,000 on top.<span class="cursor"></span></div>
+                <div class="cmp-f">
+                  <span class="win"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Free to answer for 23h</span>
+                  <span class="sp"></span>
+                  <span class="btn btn-ghost ow-sm">Make it an order &middot; 1,280,000</span>
+                  <span class="btn btn-ghost ow-sm">We don't stock it</span>
+                  <span class="btn btn-accent ow-sm">Send the price</span>
+                </div>
+              </div>
+              <p class="cmp-n">The reply is written from the catalogue, not sent. It leaves the shop when you press <b>Send the price</b> &mdash; and lands in this same chat on your phone.</p>
+
+            </div>
+          </div>
+
+          <div class="ow-q">
+            <div class="ow-q-r ask">
+              <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+              <span class="ow-q-t"><span class="ow-q-who">Sarah Namono</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">4 inch nails &mdash; has not said how many</span></span>
+              <span class="ow-q-w"><span class="ow-cp">Customer</span></span>
+              <span class="ow-q-age late">52 min</span>
+            </div>
+          </div>
+
+          <div class="ow-q">
+            <div class="ow-q-r ask">
+              <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+              <span class="ow-q-t"><span class="ow-q-who">Mulongo Hardware &amp; General Merchandise</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">sent a cart &mdash; 6 lines</span></span>
+              <span class="ow-q-w"><span class="ow-cp">Cart</span><span class="ow-cp fig">2,344,000</span></span>
+              <span class="ow-q-age">3 h</span>
+            </div>
+          </div>
+
+          <p class="ow-mini">Waiting means they spoke last and nothing has gone back. A chat leaves this list the moment you answer it &mdash; from here or from the phone in your pocket.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">Answered today</span>
+            <span class="ow-pan-n">9 &middot; 6 by you, 3 by the system</span>
+          </div>
+          <div class="ow-q">
+            <div class="ow-q-r ans">
+              <span class="ow-q-t"><span class="ow-q-who">Ssekitoleko Hardware</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">quoted 20 sheets G28 &mdash; 960,000</span></span>
+              <span class="ow-q-w"><span class="ow-cp ow-good">Ordered</span></span>
+              <span class="ow-q-age cold">11:40</span>
+            </div>
+          </div>
+          <div class="ow-q">
+            <div class="ow-q-r ans">
+              <span class="ow-q-t"><span class="ow-q-who">Bwaise Site Foreman</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">told them we have no 6 inch nails</span></span>
+              <span class="ow-q-w"><span class="ow-cp">Sourcing</span></span>
+              <span class="ow-q-age cold">10:52</span>
+            </div>
+          </div>
+          <div class="ow-q">
+            <div class="ow-q-r ans">
+              <span class="ow-q-t"><span class="ow-q-who">Namusoke Grace</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">binding wire, 8,500 a roll</span></span>
+              <span class="ow-q-w"><span class="ow-cp ow-warn">Answered by the system</span></span>
+              <span class="ow-q-age cold">09:31</span>
+            </div>
+          </div>
+          <p class="ow-mini">Six more, earlier today. The system answers only an exact catalogue match and marks the reply so the customer&rsquo;s next question still reaches you.</p>
+        </div>
+
+      </div>
+
+      <div class="ow-side">
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s post</span><span class="ow-pan-n">not sent</span></div>
+          <div class="pick">
+            <span class="pick-im">PHOTO</span>
+            <span class="pick-b">
+              <span class="pick-n">Iron sheets &mdash; G28, 3m box profile</span>
+              <span class="pick-p">48,000<span class="ow-u"> each</span></span>
+              <span class="pick-w">14 days in the yard, 22% margin, asked for twice this week.</span>
+            </span>
+          </div>
+          <div class="rp-a">
+            <span class="btn btn-ghost ow-sm">Open the picture</span>
+            <span class="btn btn-ghost ow-sm">Mark as posted</span>
+          </div>
+          <p class="note">Picked from what has sat longest and still has a photo and a price. The posting itself happens in WhatsApp on your phone; this only keeps the record so the same thing is not posted twice.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Broadcasts</span></div>
+          <div class="kv"><span class="kv-l">In the audience</span><span class="kv-v">3</span></div>
+          <div class="kv"><span class="kv-l">Opted out</span><span class="kv-v">1</span></div>
+          <div class="kv"><span class="kv-l">Last sent</span><span class="kv-v">26 Aug</span></div>
+          <div class="rp-a" style="padding-top:10px;"><span class="btn btn-ghost ow-sm">Write one</span></div>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">The channel</span></div>
+          <div class="kv"><span class="kv-l">Number</span><span class="kv-v">0772 900 900</span></div>
+          <div class="kv"><span class="kv-l">In the catalogue</span><span class="kv-v">42 of 60</span></div>
+          <div class="kv"><span class="kv-l">Answers by itself</span><span class="kv-v">exact matches</span></div>
+          <div class="rp-a" style="padding-top:10px;"><span class="btn btn-ghost ow-sm">Connection</span></div>
+          <p class="note">18 products have no photo, so customers cannot see them inside WhatsApp.</p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
