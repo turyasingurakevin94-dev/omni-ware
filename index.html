@@ -1225,7 +1225,15 @@
   .mgr-move.skipped{border-left-color:var(--line);opacity:.75;}
   .mgr-move-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .mgr-move-title{font-weight:700;font-size:14.5px;color:var(--ink);}
-  .mgr-worth{font-weight:700;font-size:13px;color:var(--accent-ink);white-space:nowrap;}
+  /* MONEY IS A COMPONENT, NOT A SPAN. This was Inter at weight 700 in
+     --accent-ink -- the amber ink -- so every figure on a screen about
+     money was set in the app's warning colour, in a proportional face,
+     and no two of them lined up in a column. A figure is a size, not a
+     warning; and a column of money that does not line up is unreadable
+     at the only speed it is ever read. */
+  .mgr-worth{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;}
   .mgr-why{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:4px 0 9px;}
   .mgr-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   /* Its own line, above the buttons. As a flex item between Skip and
@@ -1265,7 +1273,9 @@
   .mgr-target.missed{border-left:3px solid var(--danger);opacity:.8;}
   .mgr-target-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .mgr-target-name{font-weight:700;font-size:14px;color:var(--ink);}
-  .mgr-target-fig{font-weight:700;font-size:13.5px;color:var(--accent-ink);white-space:nowrap;text-align:right;}
+  .mgr-target-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;text-align:right;}
   .mgr-target-foot{font-size:12px;color:var(--ink-soft);margin-top:5px;}
   .mgr-pace{background:var(--panel);border:1px solid var(--line);
     border-radius:8px;padding:8px 12px;margin:0 0 8px;display:flex;align-items:center;
@@ -1309,8 +1319,8 @@
      have to count the weeks to notice. */
   .mgr-play-clock{font-size:11px;color:var(--ink-soft);white-space:nowrap;
     padding:2px 8px;border-radius:20px;background:var(--ow-steel-050);margin-right:auto;}
-  .mgr-play-clock.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:650;}
-  .mgr-play-sized{font-size:12.5px;color:var(--accent-ink);margin:0 0 6px;}
+  .mgr-play-clock.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:600;}
+  .mgr-play-sized{font-size:12px;color:var(--ink-soft);margin:0 0 6px;}
   /* What the books did over the same weeks. Deliberately quiet and
      deliberately neutral by default: a green number beside a strategy
      reads as credit, and nothing here has earned credit. */
@@ -1323,6 +1333,276 @@
     padding:8px 0;border-bottom:1px solid var(--line);}
   .mgr-pol-row span:first-child{color:var(--ink);font-weight:600;white-space:nowrap;}
   .mgr-pol-row span:last-child{color:var(--ink-soft);text-align:right;}
+
+  /* ==== THE MANAGER, as a record ==================================
+
+     The screen carried twelve sections of equal weight and no opinion
+     about which mattered. It now opens with a VERDICT -- four figures
+     on whether this manager has earned its credit -- and sorts the
+     rest into two beds behind one switch: STANDING, what still wants
+     an answer from you, and THE RECORD, what it has advised and what
+     the books say followed.
+
+     Everything below is built from components the console already
+     ships (.ow-strip, .ow-pan, .ow-q, .ow-cp) plus the rows those do
+     not have. No new colour, no fourteenth button family. ==== */
+
+  /* Four cells, not five: on the phone .ow-strip is 2x2, and a fifth
+     leaves one cell stranded on a row of its own. What was cut --
+     meetings held -- is a fact about the record, so it lives in the
+     record's own rail where it can carry its denominator. */
+  .mgr-verdict{grid-template-columns:repeat(4,1fr);margin-bottom:var(--ow-sp-12);}
+  .mgr-verdict .ow-mt-v .of{color:var(--ow-ink-400);font-size:.62em;margin:0 .12em;letter-spacing:0;}
+  /* Reading, not zero. A strip that paints 0 while the journal is still
+     answering says the manager has done nothing, which is a different
+     claim from "not read yet" and the wrong one. */
+  .mgr-verdict .mgr-wait .ow-mt-v{color:var(--ow-ink-400);}
+
+  /* ---- the switch. Two beds of one ledger. The same segmented
+     control the cash book uses for its account filter. ---- */
+  .mgr-sw-row{display:flex;align-items:center;gap:var(--ow-sp-10);
+    margin:0 0 var(--ow-sp-16);flex-wrap:wrap;}
+  .mgr-sw{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+    border-radius:7px;padding:2px;flex:none;}
+  .mgr-sw > button{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 13px;
+    border:0;background:none;border-radius:5px;font-family:inherit;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+    white-space:nowrap;cursor:pointer;}
+  /* Depth here is the ground change, not a shadow: white on the steel
+     track is the whole signal, and this app's depth is hairlines. */
+  .mgr-sw > button.on{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .mgr-sw .n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:11px;font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;color:var(--ow-ink-400);}
+  .mgr-sw > button.on .n{color:var(--ow-ink-600);}
+  .mgr-sw-w{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;
+    min-width:0;max-width:64ch;margin:0;}
+
+  /* Which bed is showing. Both are rendered -- the readings behind them
+     run either way -- so the switch is a paint and never a reload. */
+  .mgr-bed{display:none;}
+  #tab-manager.mgr-on-standing .mgr-bed-s,
+  #tab-manager.mgr-on-record .mgr-bed-r{display:block;}
+  /* An empty wrap must not leave a gap in the stack it sits in. */
+  .mgr-bed:empty{display:none;}
+
+  /* ---- the one thing, at the head of the plan ---- */
+  .mgr-key{display:flex;align-items:baseline;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);line-height:1.45;}
+  .mgr-key-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);flex:none;}
+  .mgr-key-t{min-width:0;max-width:var(--ow-measure);}
+
+  /* ---- the quiet second offer, at the foot of a panel ---- */
+  .mgr-pfoot{display:flex;align-items:center;gap:var(--ow-sp-12);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);flex-wrap:wrap;}
+  .mgr-pfoot p{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:1.45;max-width:70ch;flex:1 1 320px;min-width:0;}
+  .mgr-pfoot .btn{flex:none;}
+
+  /* ---- the empty state: no meeting held yet ---- */
+  .mgr-emp{padding:var(--ow-sp-32) var(--ow-sp-32);text-align:center;}
+  .mgr-emp-i{width:34px;height:34px;margin:0 auto var(--ow-sp-12);display:block;
+    fill:none;stroke:var(--ow-ink-400);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-emp-t{font-size:15px;font-weight:var(--ow-fw-600);margin:0 0 var(--ow-sp-6);}
+  .mgr-emp-w{font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.55;
+    margin:0 auto var(--ow-sp-12);max-width:58ch;}
+  .mgr-emp-n{font-size:var(--ow-t-11);color:var(--ow-ink-400);margin:var(--ow-sp-10) 0 0;}
+
+  /* ---- the journal: meetings and reviews, one list ----
+     "The last meeting", "The weekly review" and "Earlier meetings" were
+     three sections asking one question in three shapes. They are the
+     same kind of event on the same clock. ---- */
+  .mgr-jr{border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-jr:last-child{border-bottom:0;}
+  .mgr-jr-r{display:grid;grid-template-columns:18px 88px minmax(0,1fr) 104px;
+    align-items:center;column-gap:var(--ow-sp-10);width:100%;min-height:44px;
+    padding:var(--ow-sp-6) var(--ow-sp-12);box-sizing:border-box;border:0;background:none;
+    text-align:left;font-family:inherit;cursor:pointer;}
+  .mgr-jr.ow-open .mgr-jr-r{background:var(--ow-paper-2);}
+  .mgr-jr-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);letter-spacing:-.02em;
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .mgr-jr.ow-open .mgr-jr-d{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .mgr-jr-t{min-width:0;font-size:var(--ow-t-13);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-jr-v{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  .mgr-jr-v.ow-zero{color:var(--ow-ink-400);}
+  .mgr-jr-x{display:none;padding:0 var(--ow-sp-12) var(--ow-sp-12) 118px;}
+  .mgr-jr.ow-open .mgr-jr-x{display:block;}
+
+  /* ---- the levers: what the advice has actually done ----
+     "Advice you have passed on", "Advice that is not landing" and "What
+     has worked, and what has not" are the same question asked three
+     ways -- did you turn it down, is it not reaching you, and does it
+     ever actually work. One table, one filter, and the verdict column
+     says which. ---- */
+  .mgr-fp{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+    border:1px solid var(--ow-rule);border-radius:7px;padding:2px;flex:none;}
+  .mgr-fp > button{display:inline-flex;align-items:center;gap:6px;padding:0 9px;height:22px;
+    border:0;background:none;border-radius:5px;font-family:inherit;font-size:11px;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);white-space:nowrap;cursor:pointer;}
+  .mgr-fp > button.on{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .mgr-fp .n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:10.5px;
+    letter-spacing:-.02em;color:var(--ow-ink-400);}
+  .mgr-lv{width:100%;border-collapse:collapse;font-size:var(--ow-t-13);table-layout:fixed;}
+  .mgr-lv th{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);text-align:left;
+    padding:9px var(--ow-sp-8) var(--ow-sp-8) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
+  .mgr-lv th.r{text-align:right;padding-right:var(--ow-sp-12);}
+  .mgr-lv td{padding:9px var(--ow-sp-8) 9px var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .mgr-lv tr:last-child td{border-bottom:0;}
+  /* Truncation is three declarations, never two -- and the name is what
+     gives way, because money never truncates. */
+  .mgr-lv .nm{font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);line-height:1.3;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-lv .kd{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-lv .vd{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.45;}
+  .mgr-lv .vd b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .mgr-lv .vd i{font-style:normal;color:var(--ow-ink-900);}
+  .mgr-lv td.sc{text-align:right;padding-right:var(--ow-sp-12);white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .mgr-lv td.sc .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+  .mgr-lv td.sc.t{color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+  /* The only colour in the table, and it is on the verdict alone. */
+  .mgr-lv tr.mgr-works td.sc.w{color:var(--ow-verdigris);}
+  .mgr-lv tr.mgr-never td.sc.w{color:var(--ow-crimson);}
+  .mgr-lv td.cp{text-align:right;padding-right:var(--ow-sp-12);}
+
+  /* ---- the rail: a figure row, and the account of the relationship ---- */
+  .mgr-rf{display:flex;align-items:baseline;justify-content:space-between;
+    gap:var(--ow-sp-10);padding:7px var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .mgr-rf:first-child{border-top:0;}
+  .mgr-rf-l{font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:0;}
+  .mgr-rf-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  .mgr-rf-v.ow-good{color:var(--ow-verdigris);}
+  .mgr-rf-v.ow-bad{color:var(--ow-crimson);}
+  .mgr-rl{margin:0;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.5;}
+  .mgr-rl b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+  /* ---- the playbook, as rows rather than cards ---- */
+  .mgr-pb{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--ow-sp-12);
+    align-items:baseline;padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-pb:last-of-type{border-bottom:0;}
+  .mgr-pb-n{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);}
+  .mgr-pb-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-pb-m{grid-column:1;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;
+    margin:3px 0 0;max-width:var(--ow-measure);}
+  .mgr-pb-a{grid-column:2;grid-row:1 / span 2;display:flex;gap:var(--ow-sp-4);
+    align-self:center;flex:none;}
+
+  /* ---- the rail's scoreboard and its offers ---- */
+  .mgr-tg{padding:9px var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .mgr-tg:first-child{border-top:0;}
+  .mgr-tg-t{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
+  .mgr-tg-n{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-tg-v{margin-left:auto;flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  .mgr-tg-b{height:5px;border-radius:2px;background:var(--ow-steel-100);
+    overflow:hidden;margin:var(--ow-sp-6) 0 5px;}
+  .mgr-tg-b i{display:block;height:100%;background:var(--ow-steel-800);border-radius:2px;}
+  .mgr-tg.mgr-met .mgr-tg-b i{background:var(--ow-verdigris);}
+  .mgr-tg.mgr-behind .mgr-tg-b i{background:var(--ow-crimson);}
+  .mgr-tg-f{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0;}
+  .mgr-tg-f.mgr-behind{color:var(--ow-crimson);}
+  .mgr-tg-f.mgr-met{color:var(--ow-verdigris);}
+  /* An ask in the rail keeps the .mgr-ask vocabulary it already had --
+     a proposed target and an open question are both the manager asking
+     something -- and only loses the rounded card it sat in, because the
+     panel around it is the card now. */
+  .ow-pan > .mgr-ask{padding:var(--ow-sp-10) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pan > .mgr-ask:first-of-type{border-top:0;}
+  .ow-pan .mgr-ask-q{font-size:var(--ow-t-12);line-height:1.4;margin-bottom:3px;}
+  .ow-pan .mgr-ask-w{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0 0 var(--ow-sp-8);}
+  .ow-pan .mgr-ask-w b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-pan .mgr-ask-row{flex-wrap:nowrap;gap:var(--ow-sp-6);}
+  .ow-pan .mgr-ask-input{flex:1 1 auto;min-width:0;height:34px;}
+
+  @media (max-width:820px){
+    /* 820 is a switch. The rail's panels become cards in the scroll, the
+       strip is already 2x2, and the move rows are already cards -- the
+       queue's own phone treatment, which this screen now shares. */
+    .mgr-sw{width:100%;}
+    .mgr-sw > button{flex:1;justify-content:center;height:40px;font-size:14px;}
+    .mgr-sw-w{display:none;}
+    .mgr-jr-r{grid-template-columns:18px 76px minmax(0,1fr);min-height:52px;
+      row-gap:2px;padding:var(--ow-sp-10) var(--ow-sp-12);}
+    .mgr-jr-t{white-space:normal;font-size:14px;}
+    .mgr-jr-v{grid-column:2 / -1;text-align:left;}
+    .mgr-jr-x{padding-left:var(--ow-sp-12);}
+    /* A HEADER THAT CARRIES A CONTROL gets a second line rather than
+       squeezing its own title to two words. */
+    /* .ow-pan-h fixes its own height at 34px and is declared later in
+       the file, so the class alone loses to it and the control lands on
+       top of the first row. Both classes, and it wins. */
+    .ow-pan-h.mgr-h{height:auto;min-height:34px;flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12);row-gap:var(--ow-sp-8);}
+    .ow-pan-h.mgr-h .btn{width:100%;order:3;height:44px;}
+    .ow-pan-h.mgr-h .mgr-fp{order:4;width:100%;flex-wrap:wrap;overflow:visible;margin-left:0;}
+    .ow-pan-h.mgr-h .mgr-fp > button{height:32px;}
+    .ow-pan-h.mgr-h .ow-pan-n{order:2;}
+
+    /* THE LEVERS ARE NOT A TABLE ON A PHONE. Four columns at 390 is a
+       sideways scroll over the one reading on this screen that is meant
+       to be skimmed, so each lever becomes a block: what it advised on,
+       what followed, and the verdict. The Times column goes entirely --
+       the sentence already opens with "Chased 7 times since 6 Jul", so
+       printing the 7 again beside it was a column of nothing. */
+    .mgr-lv-wrap{overflow-x:visible;}
+    .mgr-lv{min-width:0;table-layout:auto;}
+    .mgr-lv colgroup,.mgr-lv thead,.mgr-lv td.sc.t{display:none;}
+    .mgr-lv tbody,.mgr-lv tr,.mgr-lv td{display:block;}
+    .mgr-lv tr{padding:var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .mgr-lv tr:last-child{border-bottom:0;}
+    .mgr-lv td{padding:0;border-bottom:0;}
+    .mgr-lv .nm{white-space:normal;font-size:15px;}
+    .mgr-lv .kd{white-space:normal;}
+    .mgr-lv .vd{font-size:13px;margin-top:var(--ow-sp-4);}
+    .mgr-lv td.sc,.mgr-lv td.cp{text-align:left;padding-right:0;margin-top:var(--ow-sp-6);}
+    .mgr-lv td.sc .b{display:inline;margin:0 0 0 var(--ow-sp-6);}
+    .mgr-pfoot .btn{width:100%;}
+    /* A row with its actions in a second column has no second column at
+       390: the play's buttons drop under it, at a thumb's size, and the
+       "add your own" pair stops being two half-fields. */
+    .mgr-pb{grid-template-columns:minmax(0,1fr);}
+    .mgr-pb-n{flex-wrap:wrap;}
+    .mgr-pb-m{font-size:13px;}
+    /* The app's own phone rule already floors a .btn.ow-sm at half the
+       row less a 3px half-gap, which is exactly the two-up shape these
+       want -- so the gap has to be the 6px that rule assumes, or the
+       pair adds up to more than the row and the second one is clipped
+       off the card. Overriding the floor instead would have fought the
+       convention every other screen keeps. */
+    .mgr-pb-a{grid-column:1;grid-row:auto;margin-top:var(--ow-sp-10);gap:var(--ow-sp-6);}
+    /* The same three declarations .bp-ord-a and .ow-ot-acts already use.
+       .btn is `all:unset`, so it is content-box: the app's phone floor of
+       calc(50% - 3px) then measures the text alone and the padding pushes
+       the pair 40px past the card. box-sizing is the whole fix, and it is
+       the fix the other two rows made. */
+    .mgr-pb-a .btn{flex:1 1 calc(50% - 3px);min-height:var(--ow-tap);box-sizing:border-box;}
+    .mgr-pfoot .mgr-ask-row{flex-wrap:wrap;width:100%;}
+    .ow-pan .mgr-ask-row{flex-wrap:wrap;}
+    .ow-pan .mgr-ask-input{flex:1 1 100%;height:44px;font-size:15px;}
+    .ow-pan .mgr-ask-row .btn{width:100%;height:44px;}
+    .mgr-ask-q{font-size:15px;}
+    .mgr-emp{padding:var(--ow-sp-24) var(--ow-sp-16);}
+  }
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
     background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
@@ -12663,7 +12943,7 @@
              wears the shape of what it opens: a field. A button says a
              thing; a field asks for one, and this screen's whole
              argument is that the brain is something you TALK to. -->
-        <button type="button" class="btn btn-accent ow-sm" id="mgrTalkBtn">
+        <button type="button" class="btn btn-ghost ow-sm" id="mgrTalkBtn">
           <span class="mgr-talk-w">Talk to it</span>
           <!-- The face is NOT aria-hidden: whichever skin is showing, its
                words have to be part of the button's name, or the spoken
@@ -12677,26 +12957,33 @@
           </span>
         </button>
       </div>
-      <div class="ow-rec">
-        <div id="managerMemoryNote" class="ow-full"></div>
-        <div id="managerMeetingWrap" class="ow-full"></div>
-        <div id="managerAccountWrap" class="ow-full"></div>
-        <div id="managerPlanWrap" class="ow-full"></div>
-        <div id="managerScoreWrap" class="ow-full"></div>
-        <div id="managerQuestionsWrap" class="ow-half"></div>
-        <div id="managerReviewWrap" class="ow-half"></div>
-        <div id="managerHistoryWrap" class="ow-half"></div>
-        <!-- Advice skipped again and again: the manager is told to stop
-             proposing it, and the owner is told that it has. -->
-        <div id="managerPassedWrap" class="ow-half"></div>
-        <!-- The longest memory the Manager has: what it has advised on
-             again and again, and what the books say followed each time.
-             Beside the two advice sections because they are the same
-             question asked three ways — did you turn it down, is it not
-             reaching you, and does it ever actually work. -->
-        <div id="managerTrackWrap" class="ow-half"></div>
-        <div id="managerPlaysWrap" class="ow-full"></div>
-        <div id="managerPoliciesWrap" class="ow-half"></div>
+      <div id="managerMemoryNote"></div>
+      <div id="managerVerdictWrap"></div>
+      <div id="managerViewWrap"></div>
+      <!-- TWO BEDS, ONE SWITCH.
+
+           The twelve flat sections were twelve equal claims on the eye.
+           They sort into two questions and no more: what still wants an
+           answer from you (the plan, the plays, the targets, the
+           questions, the rules the app watches), and what it has
+           advised since the journal began and what the books say
+           followed (the journal, and every lever it has pulled).
+
+           Both beds are rendered from the one pass over the journal, so
+           the switch is a paint and never a second read. -->
+      <div class="ow-grid">
+        <div class="ow-stack">
+          <div id="managerPlanWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerPlaysWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerHistoryWrap" class="mgr-bed mgr-bed-r"></div>
+          <div id="managerTrackWrap" class="mgr-bed mgr-bed-r"></div>
+        </div>
+        <div class="ow-side">
+          <div id="managerScoreWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerQuestionsWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerPoliciesWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerAccountWrap" class="mgr-bed mgr-bed-r"></div>
+        </div>
       </div>
     </section>
 
@@ -66330,7 +66617,7 @@ async function managerTrackRecord(todayISO_){
     const sub = subjectId(b);
     if(!sub){ unnamed += 1; return; }
     const key = String(b.mkind || 'other') + '|' + String(sub.id);
-    const cur = by.get(key) || { kind: String(b.mkind || 'other'), field: sub.field,
+    const cur = by.get(key) || { key, kind: String(b.mkind || 'other'), field: sub.field,
       id: sub.id, title: b.title, occasions: [] };
     cur.occasions.push({ date: d, status: row.status, body: b, title: b.title });
     by.set(key, cur);
@@ -66357,7 +66644,7 @@ async function managerTrackRecord(todayISO_){
        every time it was advised. */
     const now = windowed ? null : deriveMoveOutcome({ date: occ[occ.length - 1].date,
       status: occ[occ.length - 1].status, body: occ[occ.length - 1].body });
-    return { kind: g.kind, field: g.field, id: g.id,
+    return { key: g.key, kind: g.kind, field: g.field, id: g.id,
       title: occ[occ.length - 1].title,
       times: occ.length,
       done: occ.filter(o=> o.status === 'done').length,
@@ -66431,7 +66718,8 @@ async function managerAdviceTally(todayISO_){
      the screen writes about these lists and the lists themselves are
      drawn from one reading and cannot come to disagree. */
   const days = 35, times = 2, repeats = 3;
-  const empty = { passedOn: [], notLanding: [], days, times, repeats };
+  const empty = { passedOn: [], notLanding: [],
+    counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days }, days, times, repeats };
   if(!managerNotesTable) return empty;
   const today = todayISO_ || todayISO();
   const r = await sb.from('manager_notes').select('date, body, status')
@@ -66453,7 +66741,7 @@ async function managerAdviceTally(todayISO_){
     const b = row.body || {};
     if(!String(b.title || '').trim()) return;
     const fp = fingerprint(b);
-    const cur = by.get(fp.key) || { title: b.title, byWording: fp.byWording,
+    const cur = by.get(fp.key) || { key: fp.key, title: b.title, byWording: fp.byWording,
       proposed: 0, skipped: 0, done: 0, reasons: [], lastOn: '' };
     /* HOW OFTEN IT HAS BEEN PUT, whatever became of it. The counter this
        tally never kept, and the only one that can see the manager
@@ -66489,12 +66777,22 @@ async function managerAdviceTally(todayISO_){
      Three, not two. Twice is a busy week. */
   const passedOn = all.filter(x=> x.skipped >= times && x.done === 0)
     .sort((a, b)=> (b.skipped - a.skipped) || String(b.lastOn).localeCompare(String(a.lastOn)))
-    .map(x=> ({ title: x.title, times: x.skipped, last_on: x.lastOn,
+    .map(x=> ({ key: x.key, title: x.title, times: x.skipped, last_on: x.lastOn,
       reasons: x.reasons.slice(0, 3), ...wording(x) }));
   const notLanding = all.filter(x=> x.proposed >= repeats && x.done === 0 && x.skipped === 0)
     .sort((a, b)=> (b.proposed - a.proposed) || String(b.lastOn).localeCompare(String(a.lastOn)))
-    .map(x=> ({ title: x.title, times: x.proposed, last_on: x.lastOn, ...wording(x) }));
-  return { passedOn, notLanding, days, times, repeats };
+    .map(x=> ({ key: x.key, title: x.title, times: x.proposed, last_on: x.lastOn, ...wording(x) }));
+  /* WHAT THE WHOLE WINDOW CAME TO. The screen's verdict strip asks one
+     question these two lists cannot answer between them -- how much of
+     what it advised actually got done -- and every row needed for it
+     was already read above. A second query for a number this reading
+     is holding would be a second chance to disagree with it. */
+  const counts = { proposed: 0, done: 0, skipped: 0, untouched: 0, days };
+  all.forEach(x=>{
+    counts.proposed += x.proposed; counts.done += x.done; counts.skipped += x.skipped;
+    counts.untouched += Math.max(0, x.proposed - x.done - x.skipped);
+  });
+  return { passedOn, notLanding, counts, days, times, repeats };
 }
 
 /* THE SHOP'S OWN STRATEGY BOOK, read once for the screen and the mind
@@ -67111,15 +67409,299 @@ function mgrMoveView(row, idx, all){
   </div>`;
 }
 
+/* ==================== THE MANAGER, AS A RECORD =======================
+
+   The screen had twelve sections of equal weight and no opinion about
+   which mattered: today's plan, the last meeting, the scoreboard, the
+   questions, the weekly review, earlier meetings, advice passed on,
+   advice not landing, what has worked, the playbook, the standing
+   rules. Every one of them wore the same grey heading and the same
+   rounded card, and the whole screen was about advice without ever
+   saying whether the advice had been worth anything.
+
+   Three changes, and everything else follows from them.
+
+   A VERDICT FIRST. Four figures across the top: how much of the advice
+   got done, how the targets it took on have gone, how many of its
+   levers actually move the shop, and how much of it is not reaching
+   you at all. Every one is counted from readings the screen was
+   already making.
+
+   TWO BEDS, ONE SWITCH. Standing is what still wants an answer. The
+   record is what it has advised and what followed.
+
+   ONE JOURNAL AND ONE TABLE. Three sections about meetings become one
+   list; three about advice become one table with a filter, because
+   passed on, not landing and never worked are the same question asked
+   three ways -- did you turn it down, is it not reaching you, and does
+   it ever actually work. */
+
+/* Which bed is showing. Not remembered between visits on purpose: the
+   screen opens on what still wants an answer, and the record is one
+   tap away. A remembered bed would open some mornings on an archive. */
+let mgrView = 'standing';
+/* Which slice of the levers table. Held here rather than in the DOM so
+   a re-render -- a move marked done, a question answered -- keeps the
+   owner where they were looking. */
+let mgrLeverFilter = 'all';
+
+/* WHAT KIND OF LEVER THIS MOVE PULLS. On Today the chip says "Manager",
+   because the queue there mixes the manager's advice with the app's own
+   watch and the owner is entitled to know which is talking. On this
+   screen every row is the manager's, so that chip says nothing; the
+   useful fact is which lever it pulls. */
+const MANAGER_KIND_CHIPS = { chase: 'Chase', buy: 'Buy', invoice: 'Invoice',
+  settle: 'Pay', policy: 'Rule' };
+
+const MGR_CARET = '<svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>';
+
+/* THE VERDICT STRIP.
+
+   Painted in its waiting state on the first pass and filled as each
+   reading answers. A strip that shows 0 while the journal is still
+   being read says the manager has done nothing, which is a different
+   claim from "not counted yet" and the wrong one. */
+function mgrVerdictHTML(cells){
+  const cell = (c)=> `<div class="ow-mt${c.tone ? ' ' + c.tone : ''}${c.wait ? ' mgr-wait' : ''}">
+      <p class="ow-mt-l">${esc(c.label)}</p>
+      <span class="ow-mt-v">${c.value}</span>
+      <p class="ow-mt-s">${c.sub}</p>
+    </div>`;
+  return `<div class="ow-strip mgr-verdict">${cells.map(cell).join('')}</div>`;
+}
+const MGR_WAIT_CELLS = [
+  { label: 'Advice done', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
+  { label: 'Targets met', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
+  { label: 'Levers that work', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
+  { label: 'Not landing', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
+];
+/* A count over a denominator, said the way the shop says it. */
+const mgrOf = (a, b)=> `${a}<span class="of">of</span>${b}`;
+
+function mgrPaintVerdict(state){
+  const el = document.getElementById('managerVerdictWrap');
+  if(!el) return;
+  const cells = MGR_WAIT_CELLS.map(c=> ({ ...c }));
+  const t = state.tally, tr = state.track, sc = state.score;
+  if(t && t.counts){
+    const c = t.counts;
+    cells[0] = { label: 'Advice done', value: mgrOf(c.done, c.proposed),
+      sub: c.proposed
+        ? `last ${c.days} days &middot; ${c.skipped} skipped, ${c.untouched} untouched`
+        : `nothing advised in ${c.days} days` };
+    cells[3] = { label: 'Not landing', value: String(t.notLanding.length),
+      tone: t.notLanding.length ? 'ow-warn' : '',
+      sub: t.notLanding.length
+        ? `put to you ${t.repeats}+ times, never done and never refused`
+        : 'everything it has put to you has had an answer' };
+  }
+  if(sc){
+    const fin = (sc.targets || []).filter(x=> x.finished);
+    const run = (sc.targets || []).filter(x=> !x.finished);
+    cells[1] = { label: 'Targets met',
+      value: fin.length ? mgrOf(fin.filter(x=> x.met).length, fin.length) : '&mdash;',
+      sub: fin.length
+        ? (run.length ? `${run.length} still running` : 'none running now')
+        : (run.length ? `${run.length} running &middot; none finished yet` : 'it has taken none on') };
+  }
+  if(tr){
+    /* Only levers the books can actually weigh. A kind nothing can
+       answer is not a lever that failed, it is a lever nobody scored,
+       and counting it either way would be an invention. */
+    const weighed = (tr.rows || []).filter(x=> x.windowed && x.scored > 0);
+    const works = weighed.filter(x=> x.worked > 0).length;
+    const dead = weighed.length - works;
+    cells[2] = { label: 'Levers that work',
+      value: weighed.length ? mgrOf(works, weighed.length) : '&mdash;',
+      sub: weighed.length
+        ? `advised ${tr.minTimes}+ times${dead ? ` &middot; ${dead} ${dead === 1 ? 'has' : 'have'} never once worked` : ''}`
+        : 'nothing advised often enough to judge yet' };
+  }
+  el.innerHTML = mgrVerdictHTML(cells);
+}
+
+/* THE SWITCH. Painted once per render and wired here, so the class that
+   decides which bed shows is written in exactly one place. */
+function mgrPaintSwitch(counts){
+  const el = document.getElementById('managerViewWrap');
+  const sec = document.getElementById('tab-manager');
+  if(!el || !sec) return;
+  const n = (v)=> v == null ? '' : ` <b class="n">${v}</b>`;
+  el.innerHTML = `<div class="mgr-sw-row">
+    <div class="mgr-sw" role="tablist">
+      <button type="button" role="tab" data-mgrview="standing"
+        aria-selected="${mgrView === 'standing'}"
+        class="${mgrView === 'standing' ? 'on' : ''}">Standing${n(counts.standing)}</button>
+      <button type="button" role="tab" data-mgrview="record"
+        aria-selected="${mgrView === 'record'}"
+        class="${mgrView === 'record' ? 'on' : ''}">The record${n(counts.record)}</button>
+    </div>
+    <p class="mgr-sw-w">Standing is what still wants an answer from you. The record is everything it has
+      advised${counts.since ? ' since ' + esc(fmtShortDate(counts.since)) : ''}, and what the books say followed.</p>
+  </div>`;
+  el.querySelectorAll('[data-mgrview]').forEach(b=> b.addEventListener('click', ()=>{
+    mgrView = b.dataset.mgrview;
+    mgrPaintSwitch(counts);
+    sec.classList.toggle('mgr-on-standing', mgrView === 'standing');
+    sec.classList.toggle('mgr-on-record', mgrView === 'record');
+  }));
+  sec.classList.toggle('mgr-on-standing', mgrView === 'standing');
+  sec.classList.toggle('mgr-on-record', mgrView === 'record');
+}
+
+/* One delegated listener for the journal's rows, bound at parse time for
+   the same reason the queue's is: a row the owner opens must not depend
+   on which render last finished wiring it. */
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest && e.target.closest('.mgr-jr-r');
+  if(t && t.parentElement) t.parentElement.classList.toggle('ow-open');
+});
+
+/* THE JOURNAL -- meetings and weekly reviews, newest first, one list.
+   They are the same kind of event on the same clock; three headings for
+   them was three shapes for one question. */
+function mgrJournalRowHTML(o){
+  return `<div class="mgr-jr">
+    <button type="button" class="mgr-jr-r">${MGR_CARET}
+      <span class="mgr-jr-d">${esc(fmtShortDate(o.date))}</span>
+      <span class="mgr-jr-t" title="${esc(o.title)}">${esc(o.title)}</span>
+      <span class="mgr-jr-v${o.zero ? ' ow-zero' : ''}">${esc(o.count)}</span>
+    </button>
+    <div class="mgr-jr-x">${o.body}</div>
+  </div>`;
+}
+
+function mgrReviewBody(rev){
+  const b = rev.body || {}, wk = b.week || {};
+  const lessons = (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> x);
+  return `<table class="mgr-week"><tbody>
+      <tr><td>Sales</td><td>${fmtUGX(wk.sales||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_sales||0)}</td></tr>
+      <tr><td>Gross profit</td><td>${fmtUGX(wk.gross_profit||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_gross_profit||0)}</td></tr>
+      <tr><td>Collected</td><td>${fmtUGX(wk.collected||0)}</td><td class="mgr-prior">${esc(reviewChaseLine(wk))}</td></tr>
+      <tr><td>Advice</td><td>${Number(wk.done)||0} of ${Number(wk.advised)||0} done</td>
+        <td class="mgr-prior">${Number(wk.skipped)||0} skipped &middot; ${Number(wk.not_acted_on)||0} untouched</td></tr>
+    </tbody></table>
+    ${lessons.length ? `<p class="mgr-why" style="margin:9px 0 0;"><b>For next week:</b></p>`
+      + lessons.map(l=> `<div class="mgr-lesson">&rarr; ${esc(l)}</div>`).join('') : ''}`;
+}
+
+/* EVERY LEVER IT HAS PULLED, in one table.
+
+   The track record knows what the books did after each occasion; the
+   advice tally knows what you turned down and what never reached you.
+   They fingerprint a move the same way -- kind plus subject id -- so
+   the join is by id, not by wording, and two customers' chases stay
+   two pieces of advice however alike the titles read. */
+function mgrLeverRows(track, tally){
+  const rows = [];
+  const passed = new Map(((tally && tally.passedOn) || []).map(x=> [x.key, x]));
+  const notLanding = new Map(((tally && tally.notLanding) || []).map(x=> [x.key, x]));
+  const seen = new Set();
+  ((track && track.rows) || []).forEach(x=>{
+    seen.add(x.key);
+    const p = passed.get(x.key), nl = notLanding.get(x.key);
+    const weighed = x.windowed && x.scored > 0;
+    rows.push({
+      key: x.key, name: trackRecordName(x), kind: x.kind,
+      line: trackRecordLine(x), times: x.times,
+      verdict: p ? 'passed' : nl ? 'notlanding' : weighed ? (x.worked ? 'works' : 'never') : 'unweighed',
+      scored: x.scored, worked: x.worked,
+      reasons: p ? (p.reasons || []) : [],
+    });
+  });
+  /* Advice the track record cannot see -- too few occasions to be a
+     lever, or a kind with no subject id -- still has a verdict, and
+     dropping it would hide the two lists the owner most needs. */
+  const spare = (m, verdict)=> m.forEach((x, key)=>{
+    if(seen.has(key)) return;
+    seen.add(key);
+    rows.push({ key, name: x.title, kind: '', line: '', times: x.times,
+      verdict, scored: 0, worked: 0, reasons: x.reasons || [] });
+  });
+  spare(passed, 'passed'); spare(notLanding, 'notlanding');
+  return rows.sort((a, b)=> b.times - a.times || String(a.name).localeCompare(String(b.name)));
+}
+
+const MGR_LEVER_FILTERS = [
+  { id: 'all', label: 'All', has: ()=> true },
+  { id: 'works', label: 'Works', has: (r)=> r.verdict === 'works' },
+  { id: 'never', label: 'Never worked', has: (r)=> r.verdict === 'never' },
+  { id: 'notlanding', label: 'Not landing', has: (r)=> r.verdict === 'notlanding' },
+  { id: 'passed', label: 'You passed on', has: (r)=> r.verdict === 'passed' },
+];
+
+function mgrLeverVerdictCell(r){
+  if(r.verdict === 'works' || r.verdict === 'never')
+    return `<td class="sc w">${r.worked} of ${r.scored}<span class="b">${
+      r.verdict === 'works' ? 'works' : 'never worked'}</span></td>`;
+  if(r.verdict === 'notlanding') return `<td class="cp"><span class="ow-cp ow-warn">not landing</span></td>`;
+  if(r.verdict === 'passed') return `<td class="cp"><span class="ow-cp">passed on</span></td>`;
+  return `<td class="cp"><span class="ow-cp">not weighed</span></td>`;
+}
+
+function mgrLeverLine(r){
+  if(r.line) return esc(r.line) + (r.reasons.length ? ` &mdash; <i>${esc(r.reasons.join('; '))}</i>` : '');
+  if(r.verdict === 'passed') return `Skipped ${r.times} times and never done${
+    r.reasons.length ? ` &mdash; <i>${esc(r.reasons.join('; '))}</i>` : ''}. Doing one is all it takes to bring it back.`;
+  return `Put to you <b>${r.times}</b> times, never done and never turned down. Do one, or skip one with a reason, and it stops.`;
+}
+
+function mgrPaintLevers(track, tally){
+  const el = document.getElementById('managerTrackWrap');
+  if(!el) return;
+  const all = mgrLeverRows(track, tally);
+  if(!all.length){ el.innerHTML = ''; return; }
+  const f = MGR_LEVER_FILTERS.find(x=> x.id === mgrLeverFilter) || MGR_LEVER_FILTERS[0];
+  const rows = all.filter(f.has);
+  const shown = rows.slice(0, 12);
+  el.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h mgr-h"><span class="ow-pan-t">Every lever it has pulled</span>
+      <div class="mgr-fp">${MGR_LEVER_FILTERS.map(x=>{
+        const n = all.filter(x.has).length;
+        return `<button type="button" data-mgrlv="${x.id}" class="${x.id === mgrLeverFilter ? 'on' : ''}"
+          >${esc(x.label)} <b class="n">${n}</b></button>`;
+      }).join('')}</div>
+    </div>
+    ${shown.length ? `<div class="mgr-lv-wrap"><table class="mgr-lv">
+      <colgroup><col style="width:230px"><col><col style="width:96px"><col style="width:112px"></colgroup>
+      <thead><tr><th>What it advised on</th><th>What followed</th><th class="r">Times</th><th class="r">Worked</th></tr></thead>
+      <tbody>${shown.map(r=> `<tr class="${r.verdict === 'works' ? 'mgr-works' : r.verdict === 'never' ? 'mgr-never' : ''}">
+        <td><div class="nm" title="${esc(r.name)}">${esc(r.name)}</div>${
+          r.kind ? `<div class="kd">${esc((MANAGER_KIND_CHIPS[r.kind] || r.kind).toLowerCase())}</div>` : ''}</td>
+        <td><div class="vd">${mgrLeverLine(r)}</div></td>
+        <td class="sc t">${r.times}</td>
+        ${mgrLeverVerdictCell(r)}
+      </tr>`).join('')}</tbody></table></div>`
+      : `<div class="ow-empty">Nothing under &ldquo;${esc(f.label)}&rdquo;.</div>`}
+    <p class="ow-mini">Counted once per occasion &mdash; each one closed at the next time the same thing was
+      advised &mdash; so the same payment is never counted twice.${
+      (track && track.unnamed) ? ` ${track.unnamed} older ${track.unnamed === 1 ? 'move names' : 'moves name'} nothing the books could follow, so ${
+        track.unnamed === 1 ? 'it is' : 'they are'} not here.` : ''}${
+      rows.length > shown.length ? ` Showing ${shown.length} of ${rows.length}.` : ''}</p>
+  </div>`;
+  el.querySelectorAll('[data-mgrlv]').forEach(b=> b.addEventListener('click', ()=>{
+    mgrLeverFilter = b.dataset.mgrlv; mgrPaintLevers(track, tally);
+  }));
+}
+
 function renderManager(){
   const memoryNote = document.getElementById('managerMemoryNote');
   if(!memoryNote) return;
   memoryNote.innerHTML = managerNotesTable ? '' : `<div class="cb-chain-break">
     <div><b>The manager cannot remember yet.</b> Meetings run, but nothing is kept — no advice,
-      no account of what it earned. One database update fixes it.</div>
+      no account of what it earned, no scoreboard and no record. One database update fixes it.</div>
     <div class="deb-drift-why">Paste <b>supabase/migrations/0081_manager_notes.sql</b> into the
       Supabase SQL editor and reload once. Until then, today's plan lives only until this page closes.</div>
   </div>`;
+
+  const acct = document.getElementById('managerAccountWrap');
+  const planWrap = document.getElementById('managerPlanWrap');
+  const scoreWrap = document.getElementById('managerScoreWrap');
+  const qWrap = document.getElementById('managerQuestionsWrap');
+  const hist = document.getElementById('managerHistoryWrap');
+  const playWrap = document.getElementById('managerPlaysWrap');
+  const polWrap = document.getElementById('managerPoliciesWrap');
+  const wire = mgrWirePlan;
 
   /* THE OFFER IS BORN IN ITS SETTLED STATE.
 
@@ -67137,58 +67719,135 @@ function renderManager(){
      meeting held on the owner's other device, or before this browser's
      storage was cleared. */
   const heldGuess = !!(managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO());
-  const meet = document.getElementById('managerMeetingWrap');
-  meet.innerHTML = managerMeetingRunning
-    ? `<div class="mgr-meet"><div class="mgr-meet-note"><b>The manager is reading the shop…</b>
-        The meeting is happening in the assistant panel — the tools being consulted are the same
-        screens you would read yourself.</div></div>`
-    : `<div class="mgr-meet">
-        <div class="mgr-meet-note" id="mgrMeetNote"><b>${heldGuess ? 'Today’s plan is below' : 'Hold the morning meeting'}.</b>
-          ${heldGuess
-            ? `The meeting has been held. Another one spends more AI credit to read a position that
-               has not moved since this morning, and adds a second plan to the day rather than
-               replacing the first — worth it only if something real has changed.`
-            : `It opens by accounting for its own last advice, reads the whole position, and brings
-               at most five moves ranked by the money on them. A meeting spends a little AI credit,
-               and it never runs itself.`}</div>
-        <button type="button" class="btn ${heldGuess ? 'btn-ghost' : 'btn-accent'}" id="mgrRunBtn">${
-          heldGuess ? 'Hold another anyway' : 'Hold the meeting'}</button>
-        <div class="mgr-review-offer">
-          <button type="button" class="btn btn-ghost" id="mgrReviewBtn">Hold the weekly review</button>
-          <span class="mgr-review-thin" id="mgrReviewThin">What the week did, what the advice earned,
-            what the skips cost — judged from the books alone.</span>
-        </div>
-      </div>`;
-  const runBtn = document.getElementById('mgrRunBtn');
-  if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
-  const revBtn = document.getElementById('mgrReviewBtn');
-  if(revBtn) revBtn.addEventListener('click', runManagerReview);
-  /* This screen is the RECORD -- what was advised, what came of it, what
-     never lands. The conversation lives in the panel, on all forty
-     screens, and this is the door to it from the one screen that is
-     about the mind having it. No second chat: one implementation, or
-     two that drift.
 
-     It opens the panel and nothing else. It does NOT set apMode:
-     'manager' is an OCCASION -- a meeting, a review -- and it makes the
-     run loop commit a plan to the journal when the turn ends and skip
-     seeding the day. Asking "what did Joan take" down that path would
-     write a plan out of a question. */
+  /* THE STANDING RULES need no journal, so they are painted first and
+     never wait on one. From standingPoliciesData and nowhere else --
+     the same reading the standing_policies tool answers with, so the
+     screen and the mind can never disagree about what stands. */
+  if(polWrap){
+    const pol = standingPoliciesData();
+    const stageBits = pol.stages.limits.map(l=>
+      `${esc(l.label.replace(/^Step \d+\. /, ''))} ${l.minutes}m`).join(' · ');
+    polWrap.innerHTML = `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">The standing rules</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Chasing debts</span><span class="mgr-rf-v">from ${
+        pol.chase.after_days}d, rest ${pol.chase.rest_days}d</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Restocking</span><span class="mgr-rf-v">${
+        pol.restock.rules_count ? `${pol.restock.rules_count} rule${pol.restock.rules_count === 1 ? '' : 's'} · ` : ''
+        }cover ${pol.restock.default_cover_days}d</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Order stages</span><span class="mgr-rf-v">${
+        pol.stages.limits.length ? stageBits + (pol.stages.alerts_on ? ' · on' : ' · off') : 'none set'}</span></div>
+      <p class="mgr-rl">The app watches these daily on its own. The manager may propose changing one —
+        a proposal becomes real only when you approve its card.</p>
+    </div>`;
+  }
+
+  /* THE DOOR to the conversation. It opens the panel and nothing else.
+     It does NOT set apMode: 'manager' is an OCCASION -- a meeting, a
+     review -- and it makes the run loop commit a plan to the journal
+     when the turn ends and skip seeding the day. Asking "what did Joan
+     take" down that path would write a plan out of a question. */
   const talkBtn = document.getElementById('mgrTalkBtn');
-  if(talkBtn) talkBtn.addEventListener('click', apOpenPanel);
+  if(talkBtn && !talkBtn.dataset.wired){
+    talkBtn.dataset.wired = '1';
+    talkBtn.addEventListener('click', apOpenPanel);
+  }
 
-  const acct = document.getElementById('managerAccountWrap');
-  const planWrap = document.getElementById('managerPlanWrap');
-  const scoreWrap = document.getElementById('managerScoreWrap');
-  const qWrap = document.getElementById('managerQuestionsWrap');
-  const revWrap = document.getElementById('managerReviewWrap');
-  const hist = document.getElementById('managerHistoryWrap');
-  const passed = document.getElementById('managerPassedWrap');
+  /* THE PLAN PANEL. One emitter for the row and the phone card --
+     mgrQueueRowHTML, the same one Today's queue uses -- so the two
+     screens can never describe the same move differently, and the
+     phone treatment comes from the queue's own rules rather than a
+     second layout to keep in step. */
+  const planPanel = (title, note, plan, rows, foot)=>{
+    const ordered = mgrMoveOrder(rows);
+    const done = rows.filter(r=> deriveMoveOutcome(r).status === 'done').length;
+    const obj = plan && MANAGER_OBJECTIVES[plan.objective];
+    return `<div class="ow-pan">
+      <div class="ow-pan-h">
+        <span class="ow-pan-t">${esc(title)}</span>
+        <span class="ow-pan-nt">${esc(note)}</span>
+        ${obj ? `<span class="ow-cp" title="${esc((plan && plan.objectiveWhy) || '')}">${esc(obj)}</span>` : ''}
+        <span class="ow-pan-n">${rows.length} move${rows.length === 1 ? '' : 's'}${
+          done ? ` · ${done} done` : ''}</span>
+      </div>
+      ${(plan && plan.keyline) ? `<div class="mgr-key"><span class="mgr-key-l">The one thing</span><span class="mgr-key-t">${
+        esc(plan.keyline)}</span></div>` : ''}
+      ${(()=>{ let opened = false;
+        return ordered.map(r=>{
+          /* THE FIRST MOVE STILL OPEN IS OPEN. The plan exists to name
+             the one thing to do next; five shut rows put the reasoning
+             and the action both a click away, and leave the screen with
+             no accent on it at all. Today's queue stays shut, because
+             there it is a list to scan rather than the work itself. */
+          const open = !opened && deriveMoveOutcome(r).status === 'open';
+          if(open) opened = true;
+          return mgrQueueRowHTML(r, rows, { kindChip: true, open });
+        }).join(''); })()}
+      ${(plan && plan.rejected) ? `<p class="ow-mini">Considered and rejected: ${esc(plan.rejected)}</p>` : ''}
+      ${(plan && plan.cutOff) ? `<p class="ow-mini">This meeting ran out of room mid-answer — there may have been more to it.</p>` : ''}
+      ${foot || ''}
+    </div>`;
+  };
 
-  /* THE PLAYBOOK -- the strategies the shop is actually working, beside
-     the standing rules because they are cousins: a rule the app watches
-     by itself, a play the shop works deliberately. */
-  const playWrap = document.getElementById('managerPlaysWrap');
+  /* The invitation to hold one, in the two shapes it has. Held: a quiet
+     footer under the plan, because the plan IS the answer and a second
+     meeting is the rare case. Not held: the empty state of the panel
+     itself, where the accent belongs. */
+  const heldFoot = (weekMeetings, elsewhere)=> `<div class="mgr-pfoot">
+    <p>The meeting has been held${elsewhere ? ' on another device' : ''}. Another one spends more AI credit
+      to read a position that has not moved since this morning, and adds a second plan to the day rather
+      than replacing the first.</p>
+    <button type="button" class="btn btn-ghost ow-sm" id="mgrRunBtn">Hold another anyway</button>
+  </div>`;
+  const notHeldHTML = (weekMeetings, last)=> `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s plan</span>
+      <span class="ow-pan-n">not held</span></div>
+    <div class="mgr-emp">
+      <svg class="mgr-emp-i" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+      <p class="mgr-emp-t">No meeting has been held today.</p>
+      <p class="mgr-emp-w">It opens by accounting for its own last advice, reads the whole position, and
+        brings at most five moves ranked by the money on them. A meeting spends a little AI credit,
+        and it never runs itself.</p>
+      <button type="button" class="btn btn-accent" id="mgrRunBtn">Hold the morning meeting</button>
+      <p class="mgr-emp-n">${last
+        ? `The last was ${esc(fmtShortDate(last.date))} — ${last.done} of ${last.total} done. `
+        : ''}Nothing else on this screen came from a meeting: every figure is counted from your books.</p>
+    </div>
+  </div>`;
+  const wireOffers = ()=>{
+    const runBtn = document.getElementById('mgrRunBtn');
+    if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
+    const revBtn = document.getElementById('mgrReviewBtn');
+    if(revBtn) revBtn.addEventListener('click', runManagerReview);
+  };
+
+  /* THE PANEL IS BORN IN ITS SETTLED SHAPE.
+
+     The old screen painted "Hold the meeting" in accent red on every
+     visit and then -- a moment later, when the journal answered --
+     rewrote the words and demoted the button to grey. The main action
+     of the screen changed under the owner's eyes every single time.
+
+     The stamp already knows: lsGet(MANAGER_MEETING_KEY) is written the
+     moment a meeting is held on THIS device. So the shell is painted
+     from it before any query goes out, and the journal only has to
+     correct the one case the stamp cannot know about -- a meeting held
+     on the owner's other device, or a browser whose storage was
+     cleared. On every ordinary morning nothing moves. */
+  const planShell = (body)=> `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s plan</span>
+        <span class="ow-pan-n">reading</span></div>${body}</div>`;
+  if(managerMeetingRunning){
+    planWrap.innerHTML = planShell(`<div class="mgr-emp">
+        <p class="mgr-emp-t">The manager is reading the shop&hellip;</p>
+        <p class="mgr-emp-w">The meeting is happening in the assistant panel — the tools being consulted
+          are the same screens you would read yourself.</p>
+      </div>`);
+  }
+
+  /* ---- THE PLAYBOOK. Live strategy, so it stands beside today's work
+     rather than in the record: each play has a span, and one running
+     past its own span is the manager's failure to answer for. ---- */
   if(playWrap){
     if(!managerNotesTable) playWrap.innerHTML = '';
     else if(playWrap.innerHTML) playWrap.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
@@ -67201,23 +67860,19 @@ function renderManager(){
         const g = p.progress;
         if(!g) return '';
         const num = (v)=> g.unit === 'pct' ? `${v}%` : fmtUGX(Math.round(v));
-        if(g.too_early) return `<div class="mgr-play-moved">Too new to judge — ${g.days_running} ${
-          g.days_running === 1 ? 'day' : 'days'} in. A week is the least that says anything.</div>`;
-        if(g.no_before) return `<div class="mgr-play-moved">Running ${g.days_running} days · ${
-          esc(g.measures)} now ${g.now != null ? num(g.now) : (g.since != null ? num(g.since) : '—')} · ${esc(g.no_before)}</div>`;
+        if(g.too_early) return `Too new to judge — ${g.days_running} ${
+          g.days_running === 1 ? 'day' : 'days'} in. A week is the least that says anything.`;
+        if(g.no_before) return `Running ${g.days_running} days · ${
+          esc(g.measures)} now ${g.now != null ? num(g.now) : (g.since != null ? num(g.since) : '—')} · ${esc(g.no_before)}`;
         if(g.moved == null) return '';
-        const good = g.direction === 'up' ? g.moved > 0 : g.moved < 0;
         const from = g.before, to = g.now != null ? g.now : g.since;
-        return `<div class="mgr-play-moved${g.moved === 0 ? '' : (good ? ' good' : ' bad')}">
-          Running ${g.days_running} days · ${esc(g.measures)} ${num(from)} → ${num(to)} alongside it${
-          g.also_running ? ` · so did ${esc(g.also_running.join(', '))}` : ''}</div>`;
+        return `Running ${g.days_running} days · ${esc(g.measures)} ${num(from)} → ${num(to)} alongside it${
+          g.also_running ? ` · so did ${esc(g.also_running.join(', '))}` : ''}`;
       };
       /* HOW FAR THROUGH ITS OWN SPAN. A play had a name, a treatment
          and a measure, and no clock: it sat in this list being argued
          from every Monday with nobody asking whether it had had its
-         chance. A span is the manager's own word, so running past it
-         is the manager's failure to answer for -- and the chip says so
-         where the owner will see it, not only in the meeting. */
+         chance. */
       const clock = (p)=>{
         const c = p.clock;
         if(!c) return '';
@@ -67226,43 +67881,41 @@ function renderManager(){
           c.daysOver === 1 ? 'day' : 'days'} past its ${c.weeks} weeks</span>`;
         return `<span class="mgr-play-clock">week ${c.weekOf} of ${c.weeks}</span>`;
       };
-      const card = (p, buttons)=> `<div class="mgr-play" data-pid="${esc(String(p.id))}">
-        <div class="mgr-play-top"><span class="mgr-play-name">${esc(p.name)}</span>
-          ${clock(p)}
+      const row = (p, buttons)=> `<div class="mgr-pb" data-pid="${esc(String(p.id))}">
+        <div class="mgr-pb-n"><span class="mgr-pb-nm" title="${esc(p.name)}">${esc(p.name)}</span>${clock(p)}
           <span class="mgr-play-tag">${esc(p.problem)}${p.source === 'owner' ? ' · yours' : ''}</span></div>
-        ${p.how ? `<div class="mgr-why" style="margin:3px 0 6px;">${esc(p.how)}</div>` : ''}
-        ${p.sized ? `<div class="mgr-play-sized">${esc(p.sized)}</div>` : ''}
-        ${moved(p)}
-        ${p.watch ? `<div class="mgr-why" style="margin:3px 0 6px;">Watch: ${esc(p.watch)}</div>` : ''}
-        <div class="mgr-acts">${buttons}</div>
+        <p class="mgr-pb-m">${p.how ? esc(p.how) : ''}${
+          p.sized ? `${p.how ? ' · ' : ''}${esc(p.sized)}` : ''}${
+          moved(p) ? `<br>${moved(p)}` : ''}${
+          p.watch ? `<br>Watch: ${esc(p.watch)}` : ''}</p>
+        <div class="mgr-pb-a">${buttons}</div>
       </div>`;
-      playWrap.innerHTML = `<div class="mgr-sec-title">The playbook</div>`
-        + `<div class="mgr-why" style="margin:0 0 10px;">The strategies this shop is working. A play is
-            judgement, not arithmetic — it becomes real only when you try it, and the manager never
-            proposes one you have set aside.</div>`
-        + (book.proposed.length ? book.proposed.map(p=> card(p,
-            `<button type="button" class="btn btn-accent mgr-play-run">Try it</button>
-             <button type="button" class="btn btn-ghost mgr-play-drop">Set aside</button>`)).join('') : '')
-        + (book.running.length ? `<div class="mgr-sec-title" style="margin-top:14px;">Running</div>`
-            + book.running.map(p=> card(p,
-            `<span class="mgr-state">since ${esc(fmtShortDate(p.started_on || p.proposed_on))}</span>
-             <button type="button" class="btn btn-ghost mgr-play-done">It worked</button>
-             <button type="button" class="btn btn-ghost mgr-play-drop">Stop it</button>`)).join('') : '')
-        + (book.dropped.length ? `<div class="mgr-hist-row" style="margin-top:12px;"><span>Tried and set aside: ${
-            book.dropped.map(p=> esc(p.name)).join(', ')}</span><span></span></div>` : '')
-        + `<div class="mgr-asks" style="margin-top:12px;">
-            <div class="mgr-ask-q">Add your own play</div>
-            <div class="mgr-why" style="margin:2px 0 7px;">Something you know works in this trade. The
-              manager treats your own plays as the shop's, above anything it suggests.</div>
-            <div class="mgr-ask-row">
-              <input type="text" class="mgr-ask-input" id="mgrPlayName" placeholder="Name it — e.g. Charge for cutting">
-            </div>
-            <div class="mgr-ask-row" style="margin-top:6px;">
-              <input type="text" class="mgr-ask-input" id="mgrPlayHow" placeholder="How it works — one line">
-              <button type="button" class="btn btn-accent" id="mgrPlayAdd">Add</button>
-            </div>
-          </div>`;
-      playWrap.querySelectorAll('.mgr-play').forEach(el=>{
+      const any = book.proposed.length || book.running.length;
+      playWrap.innerHTML = `<div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">The playbook</span>
+          <span class="ow-pan-nt">judgement, not arithmetic — it becomes real only when you try it</span>
+          <span class="ow-pan-n">${book.running.length} running${
+            book.proposed.length ? ` · ${book.proposed.length} proposed` : ''}</span></div>
+        ${any ? book.proposed.map(p=> row(p,
+            `<button type="button" class="btn btn-ghost ow-sm mgr-play-run">Try it</button>
+             <button type="button" class="btn btn-ghost ow-sm mgr-play-drop">Set aside</button>`)).join('')
+          + book.running.map(p=> row(p,
+            `<button type="button" class="btn btn-ghost ow-sm mgr-play-done">It worked</button>
+             <button type="button" class="btn btn-ghost ow-sm mgr-play-drop">Stop it</button>`)).join('')
+          : `<div class="ow-empty">No play is running and none is proposed. The manager brings one when
+              the books show a pattern arithmetic cannot fix.</div>`}
+        <div class="mgr-pfoot">
+          <p>The manager never proposes a play you have set aside, and it treats your own plays as the
+            shop&rsquo;s, above anything it suggests.${book.dropped.length
+              ? ` Tried and set aside: ${esc(book.dropped.map(p=> p.name).join(', '))}.` : ''}</p>
+          <div class="mgr-ask-row" style="flex:1 1 320px;">
+            <input type="text" class="mgr-ask-input" id="mgrPlayName" placeholder="Name your own play">
+            <input type="text" class="mgr-ask-input" id="mgrPlayHow" placeholder="How it works — one line">
+            <button type="button" class="btn btn-ghost ow-sm" id="mgrPlayAdd">Add</button>
+          </div>
+        </div>
+      </div>`;
+      playWrap.querySelectorAll('.mgr-pb').forEach(el=>{
         const id = Number(el.dataset.pid);
         const on = (sel, status)=>{ const b = el.querySelector(sel); if(b) b.addEventListener('click', ()=> managerPlayStatus(id, status)); };
         on('.mgr-play-run', 'running'); on('.mgr-play-drop', 'dropped'); on('.mgr-play-done', 'done');
@@ -67273,45 +67926,10 @@ function renderManager(){
     });
   }
 
-  /* The standing rules -- from the same standingPoliciesData reading
-     the standing_policies tool answers with, so the screen and the
-     mind can never disagree about what stands. Needs no journal. */
-  const polWrap = document.getElementById('managerPoliciesWrap');
-  const pol = standingPoliciesData();
-  const stageBits = pol.stages.limits.map(l=>
-    `${esc(l.label.replace(/^Step \d+\. /, ''))} ${l.minutes}m`).join(' · ');
-  polWrap.innerHTML = `<div class="mgr-sec-title">The standing rules</div>
-    <div class="mgr-policies">
-      <div class="mgr-pol-row"><span>Chasing debts</span><span>from ${pol.chase.after_days} ${pol.chase.after_days === 1 ? 'day' : 'days'} old,
-        resting ${pol.chase.rest_days} ${pol.chase.rest_days === 1 ? 'day' : 'days'} between chases</span></div>
-      <div class="mgr-pol-row"><span>Restocking</span><span>${pol.restock.rules_count
-        ? `${pol.restock.rules_count} standing rule${pol.restock.rules_count === 1 ? '' : 's'} · ` : ''}default cover ${pol.restock.default_cover_days} days</span></div>
-      <div class="mgr-pol-row"><span>Order stages</span><span>${pol.stages.limits.length
-        ? stageBits + (pol.stages.alerts_on ? ' · alerts on' : ' · alerts off') : 'no time limits set'}</span></div>
-      <div class="mgr-why" style="margin:6px 0 0;">The app watches these daily on its own. The manager may
-        propose changing one — a proposal becomes real only when you approve its card.</div>
-    </div>`;
-
-  const renderPlanCards = (title, plan, rows)=>{
-    /* `after` is a position in the plan, so every card is handed the
-       plan in ITS OWN order -- not the drawing order, which the
-       sequence pass may have changed. */
-    const cards = mgrMoveOrder(rows).map((r, i)=> mgrMoveView(r, i, rows)).join('');
-    return `<div class="mgr-sec-title">${esc(title)}</div>`
-      + (plan && MANAGER_OBJECTIVES[plan.objective]
-        ? `<div class="mgr-objective"><b>${esc(MANAGER_OBJECTIVES[plan.objective])}.</b> ${esc(plan.objectiveWhy || '')}</div>` : '')
-      + (plan && plan.keyline ? `<div class="mgr-keyline"><b>The one thing:</b> ${esc(plan.keyline)}</div>` : '')
-      + cards
-      + (plan && plan.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(plan.rejected)}</div>` : '')
-      /* Said out loud rather than left as a silent gap: a meeting that
-         ran out of room may have had more to propose than reached this
-         card, and the owner is the one who would otherwise wonder. */
-      + (plan && plan.cutOff ? `<div class="mgr-why" style="margin-top:2px;">This meeting ran out of room mid-answer — there may have been more to it.</div>` : '');
-  };
-  const wire = mgrWirePlan;
-
   if(!managerNotesTable){
-    /* Memoryless: today's plan from the session, no account, no history. */
+    /* Memoryless: today's plan from the session, no account, no history,
+       and no verdict -- an empty scoreboard would read as a manager
+       that has promised nothing rather than one that cannot remember. */
     if(managerToday && managerToday.plan){
       const rows = (managerToday.plan.moves||[]).map((m, i)=> ({
         id: 'mem:' + i, date: managerToday.date, status: m._status || 'open',
@@ -67324,130 +67942,139 @@ function renderManager(){
             && Number(m.after) <= (managerToday.plan.moves||[]).length
             && Number(m.after) - 1 !== i ? { after: Number(m.after) - 1 } : {}) },
       }));
-      planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
+      planWrap.innerHTML = planPanel("Today's plan", 'held this session — not kept',
+        managerToday.plan, rows, '');
       wire(planWrap);
-    } else planWrap.innerHTML = '';
-    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = '';
-    /* Nothing is remembered without the journal, so nothing can have
-       been passed on twice — the mirror stays empty rather than stale. */
-    if(passed) passed.innerHTML = '';
+    } else if(!managerMeetingRunning) planWrap.innerHTML = notHeldHTML(null, null);
+    wireOffers();
+    document.getElementById('managerVerdictWrap').innerHTML = '';
+    document.getElementById('managerViewWrap').innerHTML = '';
+    const sec = document.getElementById('tab-manager');
+    if(sec){ sec.classList.add('mgr-on-standing'); sec.classList.remove('mgr-on-record'); }
+    acct.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = '';
     return;
   }
 
   /* SAY IT IS READING, rather than leaving yesterday on the screen.
 
-     Four unawaited chains fill this page. Until each answers, whatever
-     the LAST render put there is still up -- so on a slow morning the
-     owner reads yesterday's plan as today's, with nothing on screen to
-     say otherwise. There is no visual difference between "this is your
-     plan" and "this is the plan from before you tapped Done", and the
-     second one is a lie the app tells silently.
+     Several unawaited chains fill this page. Until each answers,
+     whatever the LAST render put there is still up -- so on a slow
+     morning the owner reads yesterday's plan as today's, with nothing
+     on screen to say otherwise. There is no visual difference between
+     "this is your plan" and "this is the plan from before you tapped
+     Done", and the second one is a lie the app tells silently. */
+  mgrPaintVerdict({});
+  mgrPaintSwitch({ standing: null, record: null, since: null });
+  if(!managerMeetingRunning){
+    planWrap.innerHTML = heldGuess
+      ? planShell(`<p class="mgr-reading">Reading the journal…</p>`
+          + heldFoot(null, false))
+      : notHeldHTML(null, null);
+    wireOffers();
+  }
+  /* NOTHING STALE IS LEFT BEHIND. Several unawaited chains fill this
+     page, and until each answers whatever the LAST render put there is
+     still up -- so on a slow morning the owner reads yesterday's plan
+     as today's, with nothing on screen to say otherwise.
 
-     A line is enough. It costs one paint and it cannot be mistaken for
-     an answer. */
-  [acct, planWrap, scoreWrap, qWrap, revWrap, hist, passed,
-   document.getElementById('managerTrackWrap')].forEach((el, i)=>{
-    /* ONE line, not one per container. Saying it eight times over
-       stacks eight identical grey sentences down the page and the
-       screen reads as broken rather than as busy. The first container
-       speaks; the rest are simply emptied, which is the part that
-       actually matters -- nothing stale is left behind either way. */
-    if(el) el.innerHTML = i === 0 ? '<p class="mgr-reading">Reading the journal…</p>' : '';
-  });
+     ONE container says it is reading, and it is the plan above, where
+     the eye already is. The rest are emptied in silence: saying it in
+     every one of them stacked five identical grey lines down the page
+     and the screen read as broken rather than as busy. The clearing is
+     the part that matters; the announcement only has to happen once. */
+  [scoreWrap, qWrap, hist, acct,
+   document.getElementById('managerTrackWrap')].forEach(el=>{ if(el) el.innerHTML = ''; });
 
-  /* With memory: the shells now, the journal when it answers. */
+  /* The two readings the verdict and the levers table are built from.
+     Kept on one object so each can paint as it arrives without either
+     overwriting what the other already put up. */
+  const verdict = {};
+
   managerLoadState().then(st=>{
-    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; if(passed) passed.innerHTML = ''; hist.innerHTML =
-      `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
-    /* SAID BEFORE THE TAP, not only after it. The journal is the only
-       thing that knows a meeting was held today on another device or
-       before a reload, and it answers here -- so the invite stops
-       inviting and the button becomes the quiet second choice. */
-    if(!!st.today !== heldGuess){
-      /* Only when the journal DISAGREES with this device's stamp -- a
-         meeting held elsewhere, or a browser whose storage was cleared.
-         On every ordinary morning this branch does nothing, and the
-         button the owner is looking at never changes. */
-      const note = document.getElementById('mgrMeetNote');
-      if(note) note.innerHTML = st.today
-        ? `<b>Today’s plan is below.</b> The meeting was held on another device.
-           Another one spends more AI credit to read a position that has not moved since this
-           morning, and adds a second plan to the day rather than replacing the first.`
-        : `<b>Hold the morning meeting.</b> No meeting is on the journal for today, whatever this
-           device remembered.`;
-      const rb = document.getElementById('mgrRunBtn');
-      if(rb){
-        rb.textContent = st.today ? 'Hold another anyway' : 'Hold the meeting';
-        rb.classList.toggle('btn-accent', !st.today);
-        rb.classList.toggle('btn-ghost', !!st.today);
-      }
+    if(st.error){
+      planWrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">The journal could not be read — ${
+        esc(st.error)}</div></div>`;
+      scoreWrap.innerHTML = ''; qWrap.innerHTML = ''; acct.innerHTML = ''; hist.innerHTML = '';
+      return;
     }
-    /* The offer says how much evidence a review would stand on, before
-       the owner spends credit on one. */
-    const thinEl = document.getElementById('mgrReviewThin');
-    if(thinEl && st.weekMeetings < 3) thinEl.textContent =
-      `Only ${st.weekMeetings} meeting${st.weekMeetings === 1 ? '' : 's'} on record this week — the review will be as thin as that.`;
-    planWrap.innerHTML = st.today
-      ? renderPlanCards("Today's plan", st.today.meeting.body || {}, st.today.moves)
-      : '';
-    wire(planWrap);
-    /* The last meeting before today, answered by the books -- the
-       account the owner reads before holding the next one. */
-    const prev = st.prior[0];
-    acct.innerHTML = prev
-      ? `<div class="mgr-sec-title">The last meeting — ${esc(fmtShortDate(prev.meeting.date))}</div>`
-        + prev.moves.map((r,i)=> mgrMoveView(r,i)).join('')
-      : '';
-    wire(acct);
-    /* THE SCOREBOARD, first thing on the screen: what this manager said
-       it would do, and where the books say it stands. */
+    verdict.score = st.score;
+    mgrPaintVerdict(verdict);
+
+    /* ---- Standing: the plan ---- */
+    const prevMeeting = st.prior[0];
+    const last = prevMeeting ? { date: prevMeeting.meeting.date,
+      done: prevMeeting.moves.filter(x=> x.status === 'done').length,
+      total: prevMeeting.moves.length } : null;
+    /* THE CORRECTION, and only when there is one to make.
+
+       On every ordinary morning !!st.today and heldGuess agree, the
+       shell painted from the stamp was already right, and this branch
+       does nothing at all -- so the offer the owner is looking at never
+       changes shape or colour under their eyes. It fires only when the
+       journal DISAGREES: a meeting held on another device, or a
+       browser whose storage was cleared. Then it says which, rather
+       than silently swapping the button. */
+    let elsewhere = false;
+    if(!!st.today !== heldGuess){
+      elsewhere = !!st.today;
+      if(st.today) lsSet(MANAGER_MEETING_KEY, todayISO());
+    }
+    if(!managerMeetingRunning){
+      planWrap.innerHTML = st.today
+        ? planPanel("Today's plan", 'ranked by the money on them',
+            st.today.meeting.body || {}, st.today.moves, heldFoot(st.weekMeetings, elsewhere))
+        : notHeldHTML(st.weekMeetings, last);
+      wire(planWrap);
+      wireOffers();
+    }
+
+    /* ---- Standing: the scoreboard ---- */
     const sb2 = st.score || { targets: [], proposed: [] };
-    const bar = (p)=> `<div class="mgr-bar"><span style="width:${Math.max(0, Math.min(100, Number(p)||0))}%"></span></div>`;
+    const bar = (p)=> `<div class="mgr-tg-b"><i style="width:${Math.max(0, Math.min(100, Number(p)||0))}%"></i></div>`;
     scoreWrap.innerHTML = (sb2.targets.length || (sb2.proposed||[]).length)
-      ? `<div class="mgr-sec-title">The scoreboard</div>`
-        + (sb2.targets.length ? `<div class="mgr-score">` + sb2.targets.map(x=> `<div class="mgr-target ${x.met ? 'met' : (x.finished ? 'missed' : '')}">
-            <div class="mgr-target-top">
-              <span class="mgr-target-name">${esc(x.label)}</span>
-              <span class="mgr-target-fig">${fmtUGX(x.actual)} <span class="mgr-basis">of ${fmtUGX(x.aim)}${
-                x.measure_kind === 'level' ? ' — from ' + fmtUGX(x.baseline) : ''}</span></span>
+      ? `<div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">The scoreboard</span>
+            <span class="ow-pan-n">${sb2.targets.filter(x=> x.met).length} of ${sb2.targets.length} met</span></div>
+          ${sb2.targets.map(x=>{
+            const behind = !x.finished && x.pace && !x.pace.on_course;
+            return `<div class="mgr-tg${x.met ? ' mgr-met' : behind ? ' mgr-behind' : ''}">
+              <div class="mgr-tg-t"><span class="mgr-tg-n" title="${esc(x.label)}">${esc(x.label)}</span
+                ><span class="mgr-tg-v">${fmtUGX(x.actual)}</span></div>
+              ${bar(x.pct)}
+              <p class="mgr-tg-f${x.finished ? (x.met ? ' mgr-met' : '') : (behind ? ' mgr-behind' : '')}">of ${
+                fmtUGX(x.aim)} · ${
+                x.finished
+                  ? (x.met ? 'Met' : 'Missed') + ' — week ended ' + esc(fmtShortDate(x.to))
+                  : (x.pct == null ? '' : x.pct + '% there') + ' · ' + x.days_left + (x.days_left === 1 ? ' day left' : ' days left')}${
+                x.measure_kind === 'level' ? ' · from ' + fmtUGX(x.baseline) : ''}${
+                x.why ? ' · ' + esc(x.why) : ''}${
+                behind ? ` · level today would be ${fmtUGX(x.pace.expected)}, ${fmtUGX(x.pace.behind_by)} short; at this rate it ends at ${fmtUGX(x.pace.at_this_rate)}` : ''}</p>
+            </div>`; }).join('')}
+          ${(sb2.proposed||[]).map(x=> `<div class="mgr-ask" data-tid="${esc(String(x.id))}">
+            <p class="mgr-ask-q">${esc(x.label)} ${fmtUGX(x.aim)} this week</p>
+            <p class="mgr-ask-w">${esc(x.why)} A number becomes a commitment only when you take it on.</p>
+            <div class="mgr-ask-row">
+              <button type="button" class="btn btn-ghost ow-sm mgr-target-adopt">Take it on</button>
+              <button type="button" class="btn btn-ghost ow-sm mgr-target-decline">Set aside</button>
             </div>
-            ${bar(x.pct)}
-            <div class="mgr-target-foot">${x.finished
-              ? (x.met ? 'Met' : 'Missed') + ' — week ended ' + esc(fmtShortDate(x.to))
-              : (x.pct == null ? '' : x.pct + '% there') + ' · ' + x.days_left + (x.days_left === 1 ? ' day left' : ' days left')}${
-              x.why ? ' · ' + esc(x.why) : ''}</div>
-            ${(x.pace && !x.finished) ? `<div class="mgr-pace-foot ${x.pace.on_course ? 'ok' : 'behind'}">${
-              x.pace.on_course
-                ? 'On course — level today is ' + fmtUGX(x.pace.expected) + '.'
-                : 'Behind — level today would be ' + fmtUGX(x.pace.expected) + ', ' + fmtUGX(x.pace.behind_by) + ' short.'
-            } At this rate it ends at ${fmtUGX(x.pace.at_this_rate)}.</div>` : ''}
-          </div>`).join('') + `</div>` : '')
-        + ((sb2.proposed||[]).length ? `<div class="mgr-asks">
-            <div class="mgr-why" style="margin:0 0 9px;"><b>Targets it wants to be measured against.</b>
-              A number becomes a commitment only when you take it on.</div>`
-          + sb2.proposed.map(x=> `<div class="mgr-ask" data-tid="${esc(String(x.id))}">
-              <div class="mgr-ask-q">${esc(x.label)} ${fmtUGX(x.aim)} this week</div>
-              <div class="mgr-why" style="margin:2px 0 7px;">${esc(x.why)}</div>
-              <div class="mgr-ask-row">
-                <button type="button" class="btn btn-accent mgr-target-adopt">Take it on</button>
-                <button type="button" class="btn btn-ghost mgr-target-decline">Set aside</button>
-              </div>
-            </div>`).join('') + `</div>` : '')
+          </div>`).join('')}
+        </div>`
       : '';
     scoreWrap.querySelectorAll('.mgr-ask[data-tid]').forEach(card=>{
       const id = Number(card.dataset.tid);
       card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id));
       card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id));
     });
-    /* What the manager needs to know. The one place the shop's own eyes
-       reach past the database -- answered in a line, read back at the
-       top of the next meeting. */
+
+    /* ---- Standing: what it needs to know. The one place the shop's own
+       eyes reach past the database -- answered in a line, read back at
+       the top of the next meeting. ---- */
     const qs = st.questions || [];
     qWrap.innerHTML = qs.length
-      ? `<div class="mgr-sec-title">What the manager needs to know</div>`
-        + `<div class="mgr-asks"><div class="mgr-why" style="margin:0 0 9px;">It could not find these in your books.
-            Answer in a line and it argues from them tomorrow.</div>`
-        + qs.map(q=>{
+      ? `<div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What it needs to know</span>
+            <span class="ow-pan-n">${qs.length}</span></div>
+          ${qs.map(q=>{
             /* A question that named a line and a shop is asking for a
                FIGURE -- the shop is already known, so the answer is just
                the price and it lands in the market record. Our own price
@@ -67457,16 +68084,17 @@ function renderManager(){
             const parts = b.productId && b.rival ? buyKeyParts(stockKey(b.productId, b.variantIdx)) : null;
             const ours = parts ? ourPriceFor(parts.productId, parts.variantIdx) : null;
             return `<div class="mgr-ask" data-qid="${esc(String(q.id))}">
-            <div class="mgr-ask-q">${esc(b.question || '')}</div>
-            ${parts ? `<div class="mgr-ask-side">${esc(b.rival)}${
-              ours == null ? '' : ' · you charge ' + esc(fmtUGX(ours))}</div>` : ''}
-            <div class="mgr-ask-row">
-              <input type="text" class="mgr-ask-input"${parts ? ' inputmode="decimal"' : ''} placeholder="${
-                parts ? esc('What ' + b.rival + ' charges — just the figure') : 'What you found out — one line'}">
-              <button type="button" class="btn btn-accent mgr-ask-save">Answer</button>
-            </div>
-            <div class="mgr-ask-when">asked ${esc(fmtShortDate(q.date))}</div>
-          </div>`; }).join('') + `</div>`
+              <p class="mgr-ask-q">${esc(b.question || '')}</p>
+              ${parts ? `<p class="mgr-ask-side">${esc(b.rival)}${
+                ours == null ? '' : ' · you charge ' + esc(fmtUGX(ours))}</p>` : ''}
+              <div class="mgr-ask-row">
+                <input type="text" class="mgr-ask-input"${parts ? ' inputmode="decimal"' : ''} placeholder="${
+                  parts ? esc('What ' + b.rival + ' charges — just the figure') : 'What you found out — one line'}">
+                <button type="button" class="btn btn-ghost ow-sm mgr-ask-save">Answer</button>
+              </div>
+              <p class="mgr-ask-when">asked ${esc(fmtShortDate(q.date))}</p>
+            </div>`; }).join('')}
+        </div>`
       : '';
     /* Scoped by attribute, as the targets above are: the two kinds of
        card share a class and a bare selector would bind the wrong one. */
@@ -67477,106 +68105,105 @@ function renderManager(){
       card.querySelector('.mgr-ask-save').addEventListener('click', send);
       input.addEventListener('keydown', e=>{ if(e.key === 'Enter') send(); });
     });
-    /* The latest review: verdict and lessons from the model, the week
-       table from the stored derivation -- never from model text. */
-    const rev = st.reviews[0];
-    if(rev){
-      const b = rev.body || {}, wk = b.week || {};
-      const lessons = (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> x);
-      revWrap.innerHTML = `<div class="mgr-sec-title">The weekly review — ${esc(fmtShortDate(rev.date))}</div>
-        <div class="mgr-review">
-          <div class="mgr-keyline" style="margin:0;"><b>Verdict:</b> ${esc(b.verdict || '')}</div>
-          ${lessons.length ? `<div class="mgr-why" style="margin:9px 0 0;"><b>For next week:</b></div>`
-            + lessons.map(l=> `<div class="mgr-lesson">→ ${esc(l)}</div>`).join('') : ''}
-          <table class="mgr-week"><tbody>
-            <tr><td>Sales</td><td>${fmtUGX(wk.sales||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_sales||0)}</td></tr>
-            <tr><td>Gross profit</td><td>${fmtUGX(wk.gross_profit||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_gross_profit||0)}</td></tr>
-            <tr><td>Collected</td><td>${fmtUGX(wk.collected||0)}</td><td class="mgr-prior">${esc(reviewChaseLine(wk))}</td></tr>
-            <tr><td>Advice</td><td>${Number(wk.done)||0} of ${Number(wk.advised)||0} done</td>
-              <td class="mgr-prior">${Number(wk.skipped)||0} skipped · ${Number(wk.not_acted_on)||0} untouched</td></tr>
-          </tbody></table>
-        </div>`;
-    } else revWrap.innerHTML = '';
-    /* Meetings and earlier reviews share one history, newest first. */
-    const histRows = [
-      ...st.prior.slice(1).map(w=>{
-        const done = w.moves.filter(x=> x.status === 'done').length;
-        return { date: String(w.meeting.date), html: `<div class="mgr-hist-row"><span>${esc(fmtShortDate(w.meeting.date))} — ${esc((w.meeting.body||{}).keyline || '')}</span>
-          <span>${done} of ${w.moves.length} done</span></div>` };
-      }),
-      ...st.reviews.slice(1).map(r=> ({ date: String(r.date),
-        html: `<div class="mgr-hist-row"><span>${esc(fmtShortDate(r.date))} — Weekly review — ${esc((r.body||{}).verdict || '')}</span><span></span></div>` })),
-    ].sort((a,b)=> a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
-    hist.innerHTML = histRows.length
-      ? `<div class="mgr-sec-title">Earlier meetings</div>` + histRows.map(r=> r.html).join('')
-      : '';
-    /* WHAT THE MANAGER HAS STOPPED PROPOSING, said to the owner.
-       The mind is told to leave this advice alone; a shop where advice
-       quietly disappears and nobody is told is a shop where the app
-       decided something on its own. No buttons — it is a mirror, and
-       the way back is simply to do one of them. */
-    managerAdviceTally(todayISO()).then(pa=>{
-      if(!passed) return;
-      const declined = pa.passedOn.length
-        ? `<div class="mgr-sec-title">Advice you have passed on</div>
-          <div class="mgr-why" style="margin-bottom:6px;">Skipped ${pa.times} times or more in the last
-            ${pa.days} days and never done, so the manager has been told to stop proposing ${
-            pa.passedOn.length === 1 ? 'it' : 'them'} and think of something else. Doing one is all it takes to bring it back.</div>
-          ${pa.passedOn.map(p=> `<div class="mgr-hist-row">
-            <span>${esc(p.title)}${p.reasons.length ? ` — <i>${esc(p.reasons.join('; '))}</i>` : ''}</span>
-            <span>passed on ${p.times} times</span></div>`).join('')}`
-        : '';
-      /* A DIFFERENT FACT, AND A DIFFERENT REMEDY. Passed on means you
-         decided against it and said why. This means the manager has put
-         it to you again and again and you have neither done it nor
-         turned it down — which is not disagreement, it is advice that
-         is not reaching you. It is not silenced: the manager is told to
-         say so out loud and then spend the morning on something else. */
-      const ignored = pa.notLanding.length
-        ? `<div class="mgr-sec-title">Advice that is not landing</div>
-          <div class="mgr-why" style="margin-bottom:6px;">Put to you ${pa.repeats} times or more in the last
-            ${pa.days} days, never done and never turned down. The manager is told to say so rather than
-            give ${pa.notLanding.length === 1 ? 'it' : 'them'} again in different words. Do one, or skip
-            one with a reason, and it stops.</div>
-          ${pa.notLanding.map(p=> `<div class="mgr-hist-row">
-            <span>${esc(p.title)}</span>
-            <span>put to you ${p.times} times</span></div>`).join('')}`
-        : '';
-      passed.innerHTML = declined + ignored;
-    });
-    /* WHAT HAS ACTUALLY WORKED, over the whole journal.
 
-       The two sections above are about the ADVICE: passed on, or not
-       landing. This is about the SHOP -- which of these customers,
-       lines and suppliers move when the manager says to move them, and
-       which never have. It is the only reading in this app that looks
-       further back than five weeks, and it is the one that turns
-       repetition into evidence: "chased seven times, it worked five"
-       is a fact about Mulongo, not about the advice.
-
-       No buttons, like its neighbours. A mirror. */
-    managerTrackRecord(todayISO()).then(tr=>{
-      const el = document.getElementById('managerTrackWrap');
-      if(!el) return;
-      if(!tr.rows.length){ el.innerHTML = ''; return; }
-      const dead = trackRecordDeadLevers(tr);
-      el.innerHTML = `<div class="mgr-sec-title">What has worked, and what has not</div>
-        <div class="mgr-why" style="margin-bottom:6px;">Everything the manager has advised on ${
-          tr.minTimes} times or more since ${esc(fmtShortDate(tr.since))}, and what the books say
-          followed each time. Counted once per occasion — each one closed at the next time the same
-          thing was advised — so the same payment is never counted twice.${
-          tr.unnamed ? ` ${tr.unnamed} older ${tr.unnamed === 1 ? 'move names' : 'moves name'} nothing the books could follow, so ${
-            tr.unnamed === 1 ? 'it is' : 'they are'} not here.` : ''}</div>
-        ${tr.rows.slice(0, 8).map(x=> `<div class="mgr-hist-row${
-          x.windowed && x.scored >= tr.minTimes && !x.worked ? ' bad' : ''}">
-          <span>${esc(trackRecordName(x))} — <i>${esc(trackRecordLine(x))}</i></span>
-          <span>${x.windowed && x.scored ? `${x.worked} of ${x.scored}` : `${x.times} times`}</span></div>`).join('')}
-        ${dead.length ? `<div class="mgr-why" style="margin-top:6px;">${
-          dead.length === 1 ? 'One of these has' : dead.length + ' of these have'} never once worked.
-          The manager is told to say so and pull a different lever rather than advise
-          ${dead.length === 1 ? 'it' : 'them'} again.</div>` : ''}`;
+    /* ---- The record: one journal ----
+       Meetings and reviews interleaved, newest first. Today's meeting is
+       here too: it is part of the record the moment it is held, and
+       leaving it out would make the top of the list lie about the date
+       of the last one. ---- */
+    const meetingRows = [...(st.today ? [st.today] : []), ...st.prior].map(w=>{
+      const done = w.moves.filter(x=> x.status === 'done').length;
+      return { date: String(w.meeting.date), sort: String(w.meeting.date) + '|1',
+        title: (w.meeting.body || {}).keyline || (MANAGER_OBJECTIVES[(w.meeting.body||{}).objective] || 'A meeting'),
+        count: `${done} of ${w.moves.length} done`, zero: !done,
+        body: w.moves.length
+          ? mgrMoveOrder(w.moves).map((r, i)=> mgrMoveView(r, i, w.moves)).join('')
+          : '<p class="mgr-why">This meeting brought no moves.</p>' };
     });
+    const reviewRows = st.reviews.map(r=> ({ date: String(r.date), sort: String(r.date) + '|0',
+      title: 'Weekly review — ' + ((r.body || {}).verdict || ''),
+      count: `${((r.body||{}).lessons || []).filter(x=> x).length} lessons`,
+      zero: !((r.body||{}).lessons || []).filter(x=> x).length,
+      body: mgrReviewBody(r) }));
+    const journal = [...meetingRows, ...reviewRows].sort((a, b)=> b.sort.localeCompare(a.sort));
+    hist.innerHTML = journal.length
+      ? `<div class="ow-pan">
+          <div class="ow-pan-h mgr-h"><span class="ow-pan-t">The journal</span>
+            <span class="ow-pan-nt">meetings and reviews, newest first</span>
+            <button type="button" class="btn btn-accent ow-sm" id="mgrReviewBtn">Hold the weekly review</button>
+            <span class="ow-pan-n">${journal.length} kept</span></div>
+          ${journal.map(mgrJournalRowHTML).join('')}
+          <p class="ow-mini">The journal keeps the last few meetings and reviews, not every one ever held.
+            Opening a meeting shows the moves as they were put to you, and what the books say followed.${
+            st.weekMeetings < 3 ? ` A review judges the week from the books alone, and there ${
+              st.weekMeetings === 1 ? 'is' : 'are'} only ${st.weekMeetings} meeting${
+              st.weekMeetings === 1 ? '' : 's'} on record this week — the review will be as thin as that.`
+              : ' A review judges the week from the books alone.'}</p>
+        </div>`
+      : `<div class="ow-pan"><div class="ow-empty">Nothing is on the journal yet. Hold a meeting and it
+          starts keeping the record from today.</div></div>`;
+    wire(hist);
+    const revBtn = hist.querySelector('#mgrReviewBtn');
+    if(revBtn) revBtn.addEventListener('click', runManagerReview);
+
+    /* ---- The record: the account of the relationship ---- */
+    const meetings = journal.filter(r=> r.sort.endsWith('|1')).length;
+    verdict.meetings = meetings;
+    const t = verdict.tally;
+    acct.innerHTML = `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">The account</span>
+        <span class="ow-pan-n">${st.weekMeetings} this week</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Meetings kept</span><span class="mgr-rf-v">${meetings}</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Weekly reviews kept</span><span class="mgr-rf-v">${st.reviews.length}</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Targets taken on</span><span class="mgr-rf-v">${
+        (st.score && st.score.targets || []).length}</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Met</span><span class="mgr-rf-v ow-good">${
+        (st.score && st.score.targets || []).filter(x=> x.met).length}</span></div>
+      <div class="mgr-rf"><span class="mgr-rf-l">Missed</span><span class="mgr-rf-v ow-bad">${
+        (st.score && st.score.targets || []).filter(x=> x.finished && !x.met).length}</span></div>
+      <div id="mgrAcctAdvice"></div>
+      <p class="mgr-rl">Every figure here is counted from your own books and from what you did with the
+        advice. Nothing on this page is the manager&rsquo;s opinion of itself.</p>
+    </div>`;
+    mgrPaintAcctAdvice(verdict);
+    mgrPaintSwitch({
+      standing: (st.today ? st.today.moves.filter(x=> x.status === 'open').length : 0)
+        + (st.questions || []).length + ((st.score && st.score.proposed) || []).length,
+      record: journal.length, since: null });
   });
+
+  /* The two long readings. They fill the verdict and the levers table
+     when they answer, and neither waits on the other. */
+  managerAdviceTally(todayISO()).then(tally=>{
+    verdict.tally = tally;
+    mgrPaintVerdict(verdict);
+    mgrPaintAcctAdvice(verdict);
+    if(verdict.track) mgrPaintLevers(verdict.track, tally);
+  });
+  managerTrackRecord(todayISO()).then(track=>{
+    verdict.track = track;
+    mgrPaintVerdict(verdict);
+    mgrPaintLevers(track, verdict.tally);
+  });
+}
+
+/* The advice half of the account, painted separately because the tally
+   and the journal answer at their own speeds and neither should have to
+   wait for the other to say what it knows. */
+function mgrPaintAcctAdvice(verdict){
+  const el = document.getElementById('mgrAcctAdvice');
+  if(!el) return;
+  const t = verdict.tally;
+  if(!t || !t.counts){ el.innerHTML = ''; return; }
+  const c = t.counts;
+  el.innerHTML = `<div class="mgr-rf"><span class="mgr-rf-l">Moves put to you</span><span class="mgr-rf-v">${c.proposed}</span></div>
+    <div class="mgr-rf"><span class="mgr-rf-l">Done</span><span class="mgr-rf-v ow-good">${c.done}</span></div>
+    <div class="mgr-rf"><span class="mgr-rf-l">Skipped, with a reason</span><span class="mgr-rf-v">${c.skipped}</span></div>
+    <div class="mgr-rf"><span class="mgr-rf-l">Never touched</span><span class="mgr-rf-v${
+      c.untouched ? ' ow-bad' : ''}">${c.untouched}</span></div>
+    <p class="mgr-rl">Over the last <b>${c.days}</b> days.${c.untouched
+      ? ` ${c.untouched} moves neither done nor turned down is a fact about the meeting, not about you:
+        advice that reaches nobody was not worth the credit it cost.` : ''}</p>`;
 }
 
 /* ================== ONE DAY, AS IT HAPPENED =========================
@@ -68664,7 +69291,7 @@ document.addEventListener('click', (e)=>{
    -- deriveMoveOutcome for the status and for what the books can say
    about it, MANAGER_DOORS for where the move goes -- so the two screens
    cannot end up describing the same move differently. */
-function mgrQueueRowHTML(row, all){
+function mgrQueueRowHTML(row, all, opts){
   const b = row.body || {};
   const out = deriveMoveOutcome(row);
   const door = MANAGER_DOORS[b.door] || null;
@@ -68691,11 +69318,19 @@ function mgrQueueRowHTML(row, all){
   const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no figure on it';
   const state = out.status === 'done' ? '<span class="ow-cp ow-good">Done</span>'
     : out.status === 'skipped' ? '<span class="ow-cp">Not now</span>' : '';
-  const chips = `<span class="ow-cp ow-mg">Manager</span>${state}`;
+  /* WHICH TIER IS TALKING, on Today -- where the manager's advice and
+     the app's own watch share one list and the owner is entitled to
+     know which. On the Manager screen every row is the manager's, so
+     the chip says nothing there and carries the lever instead. */
+  const kind = (opts && opts.kindChip) ? (MANAGER_KIND_CHIPS[b.mkind] || '') : '';
+  const tier = (opts && opts.kindChip)
+    ? (kind ? `<span class="ow-cp">${esc(kind)}</span>` : '')
+    : '<span class="ow-cp ow-mg">Manager</span>';
+  const chips = `${tier}${state}`;
   const acts = `<div class="ow-q-a">${
     door ? `<button type="button" class="btn btn-accent ow-sm mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}${
     open ? `<button type="button" class="btn btn-ghost ow-sm mgr-done">Done</button><button type="button" class="btn btn-ghost ow-sm mgr-skip">Not now</button>` : ''}<button type="button" class="btn btn-ghost ow-sm mgr-discuss" data-title="${esc(b.title || '')}">Ask</button></div>`;
-  return `<div class="ow-q" data-mid="${esc(String(row.id))}">
+  return `<div class="ow-q${(opts && opts.open) ? ' ow-open' : ''}" data-mid="${esc(String(row.id))}">
     <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
       <span class="ow-q-t">${esc(b.title || '')}</span>
       <span class="ow-q-m">${chips}</span>
