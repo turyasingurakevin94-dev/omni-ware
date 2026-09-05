@@ -57,11 +57,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        came onto the 11/12/13/14/16/20 ramp when that screen was drawn
        as a console. */
     'font sizes': [31, /font-size:\s*([\d.]+)px/g],
-    /* 27, not 28: the WhatsApp desk's bespoke radii went with the
-       screen they clothed -- 11px stat cards, 12px picks and bubbles,
-       14px on the inbox shell and 21px on the round composer. What
-       replaced them is the layer's 4 / 6 / 8. */
-    'radii': [27, /border-radius:\s*([^;}]+)/g],
+    /* 26, not 27: Compare Prices went the same way. Its verdict slab and
+       phone cards carried 12px and 11px, its rival chips 20px, and its
+       notes 9px -- four bespoke radii on one screen, replaced by the
+       layer's 4 / 6 / 8 when it was drawn as a console.
+
+       27, not 28 before that: the WhatsApp desk's bespoke radii went
+       with the screen they clothed -- 11px stat cards, 12px picks and
+       bubbles, 14px on the inbox shell and 21px on the round composer. */
+    'radii': [26, /border-radius:\s*([^;}]+)/g],
     /* 56, not 62, and this number is MEASURED rather than argued from
        one side: two screens lost their bespoke depth in the same week
        and the merge had to be counted, not reasoned about.

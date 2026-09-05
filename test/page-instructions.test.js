@@ -100,13 +100,19 @@ const src = read('index.html');
      there is one fewer screen here to police rather than one that
      stopped being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 8, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 7, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
+  /* 7, not 8: Compare Prices was the eighth, and it is now an .ow-ph
+     console header whose long explanation sits in .ow-ph-help behind
+     the "i" -- the same fold, one layer further along. This floor moves
+     DOWN as screens are converted and must never move up: a screen that
+     loses its paragraph without gaining an .ow-ph-help has hidden its
+     own explanation rather than folded it. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 8,
+  t.check(paras.length >= 7,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
