@@ -248,24 +248,41 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
     'an unknown customer returns an empty picture rather than throwing');
 }
 
-/* ---------- 7. the card opens it, its buttons do not ----------------- */
+/* ---------- 7. the row opens the account, its buttons do not --------- */
+/*
+ * WHAT CHANGED AND WHY. This used to name wireCustomerCards and a grid
+ * of cards, each carrying edit, delete, "+ Charge" and "Payment" -- four
+ * controls on every one of forty-five cards. The screen is a register
+ * now: the row opens the account IN PLACE and the buttons live inside
+ * the one row that is open, so there are five or six of them on the
+ * screen rather than a hundred and eighty.
+ *
+ * Every guarantee this section was written for is unchanged and still
+ * checked: a click that lands on a control does not also toggle the
+ * row, the row is reachable by keyboard, Space does not scroll the page
+ * instead of opening, and the handler is delegated once on the wrapper
+ * because the register is rebuilt on every search keystroke.
+ *
+ * The one addition is that the guard now steps over `a, button` rather
+ * than `button`. The band above the register carries a tel: link -- the
+ * owner's own thumb on their own phone, which is the only kind of
+ * sending this app allows -- and a row that swallowed it would turn
+ * ringing somebody into opening their account.
+ */
 {
-  // The card carries edit, delete, charge and payment. If the delegated
-  // handler did not ignore clicks that landed on a button, editing a
-  // customer would also open their history behind the form.
-  const wiring = (/function wireCustomerCards\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
-  t.check(/e\.target\.closest\('button'\)/.test(wiring),
-    'a click on one of the card\'s own buttons does not also open the panel');
+  const wiring = (/function wireCustomerRegister\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
+  t.check(/e\.target\.closest\('a, button'\)/.test(wiring),
+    'a click on one of the open row\'s own controls does not also toggle the row');
   t.check(/role="button"/.test(src) && /tabindex="0"/.test(src),
-    'the card is reachable by keyboard, not only by pointer');
+    'the row is reachable by keyboard, not only by pointer');
   t.check(/e\.key !== 'Enter' && e\.key !== ' '/.test(wiring),
     'and opens on Enter or Space like any other control');
   t.check(/e\.preventDefault\(\)/.test(wiring),
     'with Space stopped from scrolling the page instead');
-  // Bound once on the wrapper: the grid is rebuilt on every search
-  // keystroke, so per-card binding would leak a listener per render.
-  t.check(/wrap\.addEventListener/.test(wiring) && !/card\.addEventListener/.test(wiring),
-    'the handler is delegated, so re-rendering the grid does not stack listeners');
+  // Bound once on the wrapper: the register is rebuilt on every search
+  // keystroke, so per-row binding would leak a listener per render.
+  t.check(/wrap\.addEventListener/.test(wiring) && !/row\.addEventListener/.test(wiring),
+    'the handler is delegated, so re-rendering the register does not stack listeners');
 }
 
 /* ---------- 8. owed once, not twice ----------------------------------

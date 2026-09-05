@@ -814,6 +814,40 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
                     'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
     },
+    /* Customers. The screen was a second debt book -- a grid of cards
+       whose largest figure was a debt balance, on a question Debtors
+       and Chase debts already answer better. .customer-grid and
+       .customer-card went for the layer's table, .dir-summary-row and
+       its three bordered tiles for the strip, and the four controls per
+       card -- edit, delete, "+ Charge", "Payment", ninety of them on a
+       45-customer screen -- for the existing .btn family inside the one
+       row that is open.
+
+       .cc-debt-btn was a fourteenth button family that existed nowhere
+       else in the app and posted to the debt ledger from a contact
+       list; it is gone from the FILE, not only from this screen.
+       .cc-history* stay in the file -- four payment modals wear them --
+       but this screen may not draw them again. .dir-summary-row and
+       .dir-summary-card stay too: the suppliers directory is still a
+       grid and still carries the strip.
+
+       Four renderers rather than one. The band and the row must never
+       disagree about a customer's standing, so both read their chip
+       from custAttentionReason, and listing them together is what keeps
+       a later session from hand-rolling a second one. */
+    customers: {
+      retired: ['panel', 'panel-head-row', 'search-bar', 'dir-summary-row', 'dir-summary-card',
+                'customer-grid', 'customer-card', 'cc-head', 'cc-avatar', 'cc-title', 'cc-name',
+                'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
+                'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
+                'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
+      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML', 'customerAccountHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why', 'ow-q-note'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
