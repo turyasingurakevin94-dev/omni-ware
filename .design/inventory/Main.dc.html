@@ -291,14 +291,14 @@
        44px, table-like, opens in place. Five columns and only one of
        them gives way: the name. Money and counts are sized to their
        content, because a clipped figure is a WRONG figure. */
-    .iv-h{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+    .iv-h{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
       align-items:center;gap:10px;padding:0 12px;height:28px;
       border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
     .iv-h span{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
       color:var(--ow-ink-600);white-space:nowrap;}
     .iv-h .r{text-align:right;}
     .iv-g.ow-open{box-shadow:inset 3px 0 0 var(--ow-steel-950);}
-    .iv-r{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+    .iv-r{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
       align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
       border-bottom:1px solid var(--ow-rule-soft);text-align:left;}
     .iv-g:last-child .iv-r{border-bottom:0;}
@@ -306,10 +306,10 @@
     .iv-cr{grid-column:1;grid-row:1 / span 2;width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;align-self:center;
       fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
     .iv-g.ow-open .iv-cr{transform:rotate(90deg);}
-    .iv-n{grid-column:2;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
+    .iv-n{grid-column:3;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
     .iv-nm{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .iv-m{grid-column:2;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+    .iv-m{grid-column:3;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .iv-f{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;
       font-size:13px;font-weight:600;letter-spacing:-.02em;}
@@ -318,9 +318,9 @@
     .iv-f .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
       color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .iv-f.q{grid-column:3;grid-row:1 / span 2;}
-    .iv-f.c{grid-column:4;grid-row:1 / span 2;}
-    .iv-f.v{grid-column:5;grid-row:1 / span 2;font-size:14px;}
+    .iv-f.q{grid-column:4;grid-row:1 / span 2;}
+    .iv-f.c{grid-column:5;grid-row:1 / span 2;}
+    .iv-f.v{grid-column:6;grid-row:1 / span 2;font-size:14px;}
     /* Out entirely against a floor somebody set: genuinely bad. Under
        the floor but not out: caution. Everything else is ink -- a count
        is a size, not a warning. */
@@ -439,9 +439,71 @@
     .st-hd{display:flex;align-items:center;gap:8px;padding:0 0 10px;margin-bottom:12px;
       border-bottom:1px solid var(--ow-rule);}
     .st-hd-t{font-family:'Archivo Black',sans-serif;font-size:19px;letter-spacing:-.015em;}
+
+    /* ---- THE PHOTO ----
+       .ow-thumb is the app's own 28px frame, used here exactly as
+       Sourcing uses it, and DELIBERATELY NOT ZOOMABLE for the reason
+       index.html already gives at .ow-sf-th: 28px is not a zoom target,
+       and the row's one job when you press it is to open -- a thumbnail
+       that stole that press would make the picture cost you the row.
+       It zooms in the OPEN panel, at 148px, where the press means only
+       itself, through the app's existing .lightbox-overlay. */
+    .ow-thumb{grid-column:2;grid-row:1 / span 2;width:28px;height:28px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden;}
+    .ow-th-i{width:100%;height:100%;display:block;}
+    /* No photo is not an empty box. Dashed, so it never reads as a
+       photo that failed to load, and it carries no zoom affordance
+       because there is nothing behind it to open. */
+    .ow-thumb.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
+      color:var(--ow-ink-600);}
+    .ow-thumb.none svg{width:15px;height:15px;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* In the open line: 148px, the size Sourcing settled on, and the one
+       element on the row that opens the lightbox. cursor:zoom-in is the
+       app's own .img-zoomable affordance. */
+    .iv-ph{display:flex;gap:14px;align-items:flex-start;margin:0 0 11px;}
+    .iv-ph-i{width:148px;height:148px;flex:none;display:block;object-fit:cover;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);cursor:zoom-in;}
+    .iv-ph-c{margin:6px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:148px;}
+    .iv-ph-b{min-width:0;flex:1;}
+    .iv-ph-none{width:148px;height:148px;flex:none;border-radius:var(--ow-r);
+      border:1px dashed var(--ow-rule);background:var(--ow-paper-2);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;}
+    .iv-ph-none svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- THE LIGHTBOX ----
+       Not a new component: this is index.html's own .lightbox-overlay,
+       at its own values -- rgba(15,20,26,.82), 40px of padding, radius
+       10, the 0 24px 64px shadow, and the close button at top 22 /
+       right 26 on rgba(255,255,255,.12). It is opened by the document
+       -level .img-zoomable handler that already ships, closed by Escape,
+       by the close button, or by pressing the backdrop.
+
+       Drawn absolute rather than fixed only because an artboard is not
+       a viewport; in the app it stays position:fixed.
+
+       ONE ADDITION, and it is the only thing here that is not already
+       shipping: the name under the picture. openImageLightbox already
+       takes the alt text and sets it on the img, so the name is present
+       and merely invisible -- and a shop that reuses one photo across
+       three lines needs to know which line it just opened. */
+    .lb{position:absolute;inset:0;z-index:300;display:flex;align-items:center;
+      justify-content:center;padding:40px;background:rgba(15,20,26,.82);}
+    .lb-in{display:flex;flex-direction:column;align-items:center;gap:14px;min-height:0;}
+    .lb-img{width:420px;height:420px;max-width:100%;max-height:100%;display:block;
+      border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.45);}
+    .lb-cap{margin:0;font-size:13px;font-weight:600;color:var(--ow-paper);}
+    .lb-x{position:absolute;top:22px;right:26px;display:flex;padding:8px;
+      border-radius:var(--ow-r-lg);background:rgba(255,255,255,.12);z-index:301;}
+    .lb-x svg{width:18px;height:18px;fill:none;stroke:var(--ow-paper);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:1372px">
+<div class="app" style="width:1440px;height:1536px">
   <div class="topbar">
     <div class="brand">
       <div class="brand-mark">OW</div>
@@ -516,12 +578,13 @@
             <span class="ow-pan-t">Stock on hand</span>
             <span class="ow-pan-n">166 lines &middot; 18,412,600 here</span>
           </div>
-          <div class="iv-h"><span></span><span>Line</span><span class="r">On shelf</span><span class="r">Cost each</span><span class="r">Value here</span></div>
+          <div class="iv-h"><span></span><span></span><span>Line</span><span class="r">On shelf</span><span class="r">Cost each</span><span class="r">Value here</span></div>
 
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Iron sheets &mdash; G28, 3m box profile</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g stroke="#8A939C" stroke-width="2" fill="#DCE0E4"><path d="M4 22h56v8H4zM4 34h56v8H4zM4 46h56v8H4z"/></g><path d="M4 22h56" stroke="#59626B" stroke-width="2"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Iron sheets &mdash; G28, 3m box profile">Iron sheets &mdash; G28, 3m box profile</span></span>
               <span class="iv-m">Roofing &middot; Charcoal &middot; IS-G28-3M-CH</span>
               <span class="iv-f q">88<span class="u">sheets</span><span class="b">3 bundles + 8</span></span>
               <span class="iv-f c">41,000</span>
@@ -532,7 +595,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Nails 4&Prime; &mdash; 25kg box</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 26h40v26H12z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M12 26l6-8h28l6 8" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><g stroke="#59626B" stroke-width="2"><path d="M22 34v12M32 34v12M42 34v12"/></g></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Nails 4&Prime; &mdash; 25kg box">Nails 4&Prime; &mdash; 25kg box</span></span>
               <span class="iv-m">Fasteners &middot; PRD-0092 &middot; keep 8</span>
               <span class="iv-f q">19<span class="u">boxes</span></span>
               <span class="iv-f c">148,000</span>
@@ -543,7 +607,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Padlocks 50mm &mdash; brass</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="16" y="30" width="32" height="24" rx="3" fill="#B0700A"/><path d="M23 30v-6a9 9 0 0 1 18 0v6" fill="none" stroke="#8A939C" stroke-width="4"/><circle cx="32" cy="41" r="3" fill="#FBEFD9"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Padlocks 50mm &mdash; brass">Padlocks 50mm &mdash; brass</span></span>
               <span class="iv-m">Hardware &middot; PRD-0203 &middot; quiet 214 days</span>
               <span class="iv-f q">82</span>
               <span class="iv-f c">23,800</span>
@@ -554,14 +619,21 @@
           <div class="iv-g ow-open">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Cement &mdash; Hima 50kg</span><span class="ow-cp ow-warn">6 short</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M18 16h28l4 8v28H14V24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M14 32h36" stroke="#8A939C" stroke-width="2"/><path d="M22 40h20M22 46h13" stroke="#59626B" stroke-width="2"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Cement &mdash; Hima 50kg">Cement &mdash; Hima 50kg</span><span class="ow-cp ow-warn">6 short</span></span>
               <span class="iv-m">Building &middot; PRD-0114 &middot; floor 40 &middot; 7 days cover</span>
               <span class="iv-f q thin">34<span class="u">bags</span></span>
               <span class="iv-f c">32,400</span>
               <span class="iv-f v">1,101,600</span>
             </div>
             <div class="iv-x">
-              <p class="iv-say"><b>34 bags on the shelf against a floor of 40 &mdash; six short.</b> You sold 145 bags in the last 30 days, so at that rate what is here lasts about <span class="fig">7 days</span>. Bought in at <span class="fig">32,400</span> a bag from Ssekitoleko Hardware; what is on the shelf is worth <span class="fig">1,101,600</span>.</p>
+              <div class="iv-ph">
+                <div>
+                  <svg class="iv-ph-i img-zoomable" viewBox="0 0 64 64" role="img" aria-label="Cement — Hima 50kg"><rect width="64" height="64" fill="#E9EBED"/><path d="M18 16h28l4 8v28H14V24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M14 32h36" stroke="#8A939C" stroke-width="2"/><path d="M22 40h20M22 46h13" stroke="#59626B" stroke-width="2"/></svg>
+                  <p class="iv-ph-c">Press it to see it full size. From the Media library, where 3 other lines use the same photo.</p>
+                </div>
+                <div class="iv-ph-b">
+                  <p class="iv-say"><b>34 bags on the shelf against a floor of 40 &mdash; six short.</b> You sold 145 bags in the last 30 days, so at that rate what is here lasts about <span class="fig">7 days</span>. Bought in at <span class="fig">32,400</span> a bag from Ssekitoleko Hardware; what is on the shelf is worth <span class="fig">1,101,600</span>.</p>
               <div class="iv-fs">
                 <div><p class="iv-fs-l">On the shelf</p><span class="iv-fs-v">34<span class="u">bags</span></span></div>
                 <div><p class="iv-fs-l">Your floor</p><span class="iv-fs-v warn">40</span></div>
@@ -569,6 +641,8 @@
                 <div><p class="iv-fs-l">Cost each</p><span class="iv-fs-v">32,400</span></div>
                 <div><p class="iv-fs-l">Worth here</p><span class="iv-fs-v">1,101,600</span></div>
                 <div><p class="iv-fs-l">Last counted</p><span class="iv-fs-v">18 Aug</span></div>
+                  </div>
+                </div>
               </div>
               <div class="ow-q-un" style="margin-bottom:11px;">
                 <svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
@@ -594,7 +668,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Paint &mdash; silk white 20L</span><span class="ow-cp ow-warn">4 short</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="18" y="22" width="28" height="30" rx="2" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><path d="M18 22h28" stroke="#59626B" stroke-width="3"/><path d="M24 16h16v6H24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M24 34h16v10H24z" fill="#DCE0E4"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Paint &mdash; silk white 20L">Paint &mdash; silk white 20L</span><span class="ow-cp ow-warn">4 short</span></span>
               <span class="iv-m">Finishes &middot; PRD-0330 &middot; floor 6</span>
               <span class="iv-f q thin">2<span class="u">tins</span></span>
               <span class="iv-f c">186,000</span>
@@ -605,7 +680,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Wheelbarrow &mdash; heavy duty</span><span class="ow-cp ow-warn">6 not ours</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 24h30l8 14H20z" fill="#B0700A"/><circle cx="22" cy="46" r="6" fill="none" stroke="#59626B" stroke-width="3"/><path d="M42 24l10-6M20 38v4" stroke="#8A939C" stroke-width="3"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Wheelbarrow &mdash; heavy duty">Wheelbarrow &mdash; heavy duty</span><span class="ow-cp ow-warn">6 not ours</span></span>
               <span class="iv-m">Tools &middot; PRD-0451 &middot; 624,000 held for Mulongo Hardware</span>
               <span class="iv-f q">8</span>
               <span class="iv-f c">104,000</span>
@@ -616,7 +692,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">Binding wire 16g &mdash; 20kg roll</span><span class="ow-cp ow-warn">no cost</span></span>
+              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g fill="none" stroke="#8A939C" stroke-width="2"><ellipse cx="32" cy="26" rx="18" ry="7"/><path d="M14 26v12a18 7 0 0 0 36 0V26"/><ellipse cx="32" cy="38" rx="18" ry="7"/></g><ellipse cx="32" cy="26" rx="7" ry="3" fill="#DCE0E4"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="Binding wire 16g &mdash; 20kg roll">Binding wire 16g &mdash; 20kg roll</span><span class="ow-cp ow-warn">no cost</span></span>
               <span class="iv-m">Building &middot; PRD-0271</span>
               <span class="iv-f q">41<span class="u">rolls</span></span>
               <span class="iv-f c none">&mdash;</span>
@@ -627,7 +704,8 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="iv-n"><span class="iv-nm">PVC conduit 20mm &mdash; 3m</span><span class="ow-cp ow-warn">no cost</span><span class="ow-cp ow-warn">all 25 not ours</span></span>
+              <span class="ow-thumb none"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span>
+              <span class="iv-n"><span class="iv-nm" title="PVC conduit 20mm &mdash; 3m">PVC conduit 20mm &mdash; 3m</span><span class="ow-cp ow-warn">no cost</span><span class="ow-cp ow-warn">all 25 not ours</span></span>
               <span class="iv-m">Electrical &middot; PRD-0388 &middot; held for Haidery Traders</span>
               <span class="iv-f q">25<span class="u">lengths</span></span>
               <span class="iv-f c none">&mdash;</span>
