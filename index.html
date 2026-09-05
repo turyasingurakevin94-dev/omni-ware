@@ -8601,6 +8601,19 @@
     background:rgba(255,255,255,.86);padding:3px 6px;border-radius:var(--ow-r-sm);}
   .mp-scale i{display:block;width:64px;height:5px;border:1px solid var(--ink-soft);border-top:0;}
 
+  /* A ground that will not load says so, over the map it failed to
+     draw. Amber: something wants doing, and it is not the shop's fault. */
+  /* BELOW the control row, not in it. Centred at top:12 it cleared the
+     basemap toggle and the compass at 1440 and would have run into both
+     on a narrower map -- and there is no width at which a notice about
+     the ground should sit on top of the buttons that change it. */
+  .mp-tiles{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:520;
+    max-width:min(420px, calc(100% - 24px));box-sizing:border-box;
+    background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r);
+    padding:8px 12px;font-size:11px;line-height:1.45;color:var(--ow-amber-ink);}
+  .mp-tiles b{display:block;font-weight:600;}
+  @media (max-width: 560px){ .mp-tiles{top:auto;bottom:44px;} }
+
   /* A MAP WITH NOTHING ON IT MUST SAY SO.
      An empty grey rectangle is not an empty state, and the figures above
      it are already correct -- they are counted from the invoices, not
@@ -13988,6 +14001,7 @@
                 </button>
               </div>
               <div class="mp-scale"><span>2 km</span><i></i></div>
+              <div class="mp-tiles" id="mp_tiles" hidden></div>
               <div class="mp-empty" id="mp_empty" hidden></div>
             </div>
             <div class="mp-legend" id="mp_legend"></div>
@@ -24487,9 +24501,17 @@ const MAP_BASEMAPS = {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19, maxNativeZoom: 19,
   },
+  /* REPORTED LIVE, with a screenshot: satellite drew the place names and
+     nothing under them -- a white rectangle with "Katwe" and "Kibuye"
+     floating on it. The two layers come from DIFFERENT Esri hosts, and
+     that is the whole tell: the labels (services.arcgisonline.com) drew
+     while the imagery (server.arcgisonline.com) did not, in one browser
+     at one moment. server. is a legacy alias; services. is the host Esri
+     documents and the one proven to answer here. Both layers now come
+     from it. */
   satellite: {
     label: 'Satellite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
     maxZoom: 19, maxNativeZoom: 18,
     labels: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
@@ -24651,9 +24673,29 @@ function mapSetBasemap(key){
   const cfg = MAP_BASEMAPS[k];
   if(mpBaseLayer) mpMap.removeLayer(mpBaseLayer);
   if(mpLabelLayer){ mpMap.removeLayer(mpLabelLayer); mpLabelLayer = null; }
+  mapTileTrouble(null);
   mpBaseLayer = L.tileLayer(cfg.url, {
     maxZoom: cfg.maxZoom, maxNativeZoom: cfg.maxNativeZoom, attribution: cfg.attribution,
-  }).addTo(mpMap);
+  });
+  /* One failed tile is the edge of the world or a gap in coverage. A
+     handful in a row is the source being down, and THAT the screen has
+     to say: a blank rectangle with place names floating on it reads as
+     "nothing is here", which is a lie about the ground rather than a
+     report about the network. Counted per layer, cleared by the first
+     tile that does arrive. */
+  /* Guarded because this is a third-party object and the whole screen is
+     downstream of it: a tile layer without the event would otherwise
+     throw inside the render and take the map, the figures and the list
+     with it, to lose a notice about tiles. */
+  if(mpBaseLayer.on){
+    let bad = 0;
+    mpBaseLayer.on('tileerror', ()=>{
+      bad += 1;
+      if(bad === 4) mapTileTrouble(cfg.label);
+    });
+    mpBaseLayer.on('tileload', ()=>{ if(bad){ bad = 0; mapTileTrouble(null); } });
+  }
+  mpBaseLayer.addTo(mpMap);
   // Names over the imagery: aerial photography with nothing labelled is
   // no help at all when you are looking for a place by name.
   if(cfg.labels){
@@ -24664,6 +24706,19 @@ function mapSetBasemap(key){
   // Under the markers, whatever order the layers were added in.
   if(mpBaseLayer.bringToBack) mpBaseLayer.bringToBack();
 }
+/* Says which ground failed, and what still works without it. Named
+   rather than left blank: the markers, the figures and the list are all
+   drawn from the shop's own books and do not need the tiles at all. */
+function mapTileTrouble(label){
+  const el = document.getElementById('mp_tiles');
+  if(!el) return;
+  if(!label){ el.hidden = true; el.innerHTML = ''; return; }
+  el.innerHTML = `<b>The ${esc(String(label).toLowerCase())} pictures are not loading.</b>`
+    + `<span>Your places and figures are unaffected — they come from your own books. `
+    + `Try the other basemap, or the same one again later.</span>`;
+  el.hidden = false;
+}
+
 /* Frames the pins, but only when mapShouldAutoFit says the map may take
    the view -- or when somebody presses Fit, which always may. */
 function mapFitTo(pins, layerKey, force){
@@ -24676,6 +24731,17 @@ function mapFitTo(pins, layerKey, force){
 let mpMap = null, mpMarkers = null, mpSelected = null;
 const MAP_HOME_PLACE_KEY = 'owMapHomePlace';
 
+/* Where distances are measured FROM, said in the words that are true.
+
+   mapHomePin() is the shop; when it has no pin the map falls back to the
+   median of everything placed, and the header already warns that it has.
+   The rail was still writing "2.6 km from the shop" off that fallback,
+   which names a point the shop is not at -- derived, but described as
+   something it is not. One helper, so the header and every distance on
+   the screen cannot drift apart again. */
+function mapHomeFrom(){
+  return mapHomePin() ? 'from the shop' : 'from the middle of your pins';
+}
 /* The shop's own pin: whichever place the shop itself sits in. Read from
    the printed shop location if it names a pinned place, so nothing extra
    has to be configured before the map is useful. */
@@ -25011,9 +25077,13 @@ function renderMap(){
   /* The key, under the map rather than on it, and honest: "nothing owed"
      is a hollow ring, not a second verdigris. */
   document.getElementById('mp_legend').innerHTML = mpLayer === 'customers'
+    /* AGING_BANDS already ends with the unknown band, short-labelled
+       "Age not known" -- so the legend is the bands themselves plus the
+       one state that is not a band. Adding an "Owed, but undated" row of
+       my own put the same band on the key twice in the same colour,
+       which is the exact fault this legend was rewritten to remove. */
     ? `<b>Oldest debt at the place</b>`
       + AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
-      + `<div><i style="background:${mapBandColour('unknown')}"></i>Owed, but undated</div>`
       + `<div><i class="mp-hollow"></i>Nothing owed</div>`
       + `<em>Circle size is how many are there · the square is your shop</em>`
     : `<b>Suppliers</b><div><i style="background:#B23A26"></i>You owe them</div>`
@@ -25101,7 +25171,7 @@ function renderDeliveryMap(){
           : mapTile('No driver yet', '0', 'orders', 'every drop is taken', 'ow-good'))
       + (furthest
           ? mapTile('Furthest stop', String(Math.round(furthest.km * 10) / 10), 'km',
-              `${esc(furthest.label)} — ${furthest.orders.length} drop${furthest.orders.length === 1 ? '' : 's'}`, '')
+              `${esc(furthest.label)} — ${furthest.orders.length} drop${furthest.orders.length === 1 ? '' : 's'}, ${mapHomeFrom()}`, '')
           : mapTile('Furthest stop', '—', '', 'no stop can be measured yet', ''))
       + `</div>`;
   }
@@ -25430,7 +25500,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
         : p.state === 'asking' ? 'Nothing is saved until you accept it.'
         : p.state === 'none' ? '<b>Nothing was placed.</b> A name that matched nothing is not put somewhere plausible — click the map where it is.'
         : '<b>Nothing was placed.</b> The lookup needs a connection; clicking the map does not.'}</p>
-      ${km != null ? `<div class="mp-rf"><span>From the shop</span><b>${Math.round(km * 10) / 10} km</b></div>` : ''}
+      ${km != null ? `<div class="mp-rf"><span>${esc(mapHomeFrom().replace(/^from /, 'From '))}</span><b>${Math.round(km * 10) / 10} km</b></div>` : ''}
       ${at ? `<div class="mp-rf"><span>${layer === 'suppliers' ? 'Suppliers' : 'Customers'} waiting there</span><b>${mapPeopleAt(at, layer)}</b></div>` : ''}
       ${at && mapMoneyAt(at, layer) > 0.5 ? `<div class="mp-rf"><span>${layer === 'suppliers' ? 'You owe there' : 'Owed at this place'}</span><b class="mp-warn">${esc(fmtUGX(Math.round(mapMoneyAt(at, layer))))}</b></div>` : ''}
       <div class="mp-acts">
@@ -25455,7 +25525,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
         <div style="min-width:0;">
           <h3>${esc(r.name)}</h3>
           <p>${r.customers.length} customer${r.customers.length === 1 ? '' : 's'} · ${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}${
-            km != null ? ` · ${Math.round(km * 10) / 10} km from the shop` : ' · not placed'}</p>
+            km != null ? ` · ${Math.round(km * 10) / 10} km ${mapHomeFrom()}` : ' · not placed'}</p>
         </div>
       </div>
       <div class="mp-rf"><span>They owe you</span><b>${esc(fmtUGX(Math.round(r.owed)))}</b></div>
