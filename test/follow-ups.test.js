@@ -547,7 +547,12 @@ const stockMove = (before, after, whenDays) => {
 
 /* ---------- 11. the three capture points ------------------------------ */
 {
-  t.check(/id="cstFollowBtn"/.test(code) && /openFollowUpListModal\(fup\.dataset\.id\)/.test(code),
+  /* The customer panel was a modal with its own button ids. It is a
+     screen now, and every control on it is delegated through one
+     listener -- so the capture point is the action rather than the id,
+     which is the same guarantee with one listener instead of forty. */
+  t.check(/data-cact="follow" data-cid=/.test(code)
+       && /if\(name === 'follow'\) return openFollowUpListModal\(id\);/.test(code),
     'a client’s own record opens their list');
   t.check(/id="sl_ask2_follow"/.test(code) && /addFollowUp\(asker\.customerId, \{leadId: l\.id\}/.test(code),
     'a sourcing ask can enrol the asker');

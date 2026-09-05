@@ -248,24 +248,41 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
     'an unknown customer returns an empty picture rather than throwing');
 }
 
-/* ---------- 7. the card opens it, its buttons do not ----------------- */
+/* ---------- 7. the row opens the account, its buttons do not --------- */
+/*
+ * WHAT CHANGED AND WHY. This used to name wireCustomerCards and a grid
+ * of cards, each carrying edit, delete, "+ Charge" and "Payment" -- four
+ * controls on every one of forty-five cards. The screen is a register
+ * now: the row opens the account IN PLACE and the buttons live inside
+ * the one row that is open, so there are five or six of them on the
+ * screen rather than a hundred and eighty.
+ *
+ * Every guarantee this section was written for is unchanged and still
+ * checked: a click that lands on a control does not also toggle the
+ * row, the row is reachable by keyboard, Space does not scroll the page
+ * instead of opening, and the handler is delegated once on the wrapper
+ * because the register is rebuilt on every search keystroke.
+ *
+ * The one addition is that the guard now steps over `a, button` rather
+ * than `button`. The band above the register carries a tel: link -- the
+ * owner's own thumb on their own phone, which is the only kind of
+ * sending this app allows -- and a row that swallowed it would turn
+ * ringing somebody into opening their account.
+ */
 {
-  // The card carries edit, delete, charge and payment. If the delegated
-  // handler did not ignore clicks that landed on a button, editing a
-  // customer would also open their history behind the form.
-  const wiring = (/function wireCustomerCards\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
-  t.check(/e\.target\.closest\('button'\)/.test(wiring),
-    'a click on one of the card\'s own buttons does not also open the panel');
+  const wiring = (/function wireCustomerRegister\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
+  t.check(/e\.target\.closest\('a, button'\)/.test(wiring),
+    'a click on one of the open row\'s own controls does not also toggle the row');
   t.check(/role="button"/.test(src) && /tabindex="0"/.test(src),
-    'the card is reachable by keyboard, not only by pointer');
+    'the row is reachable by keyboard, not only by pointer');
   t.check(/e\.key !== 'Enter' && e\.key !== ' '/.test(wiring),
     'and opens on Enter or Space like any other control');
   t.check(/e\.preventDefault\(\)/.test(wiring),
     'with Space stopped from scrolling the page instead');
-  // Bound once on the wrapper: the grid is rebuilt on every search
-  // keystroke, so per-card binding would leak a listener per render.
-  t.check(/wrap\.addEventListener/.test(wiring) && !/card\.addEventListener/.test(wiring),
-    'the handler is delegated, so re-rendering the grid does not stack listeners');
+  // Bound once on the wrapper: the register is rebuilt on every search
+  // keystroke, so per-row binding would leak a listener per render.
+  t.check(/wrap\.addEventListener/.test(wiring) && !/row\.addEventListener/.test(wiring),
+    'the handler is delegated, so re-rendering the register does not stack listeners');
 }
 
 /* ---------- 8. owed once, not twice ----------------------------------
@@ -280,27 +297,47 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
    c.debt is what the rest of the app means by owed: the map's "owed to
    you", the debtors list, and the closing line of the statement all
    total it. This panel was the only place doing its own arithmetic. */
+/*
+ * WHERE THESE TWO NOW LIVE. The panel was a modal drawing its own stat
+ * tiles; the account is a screen, and the four figures are drawn by
+ * customerFiguresHTML because the register's open row shows the same
+ * four -- a row and an account that disagreed about what somebody owes
+ * would be the exact drift the console was built to end. The
+ * disagreement note went to customerOffBookHTML for the same reason:
+ * one place that decides whether the two records are out of step.
+ *
+ * Every guarantee below is the one this section was written for. Only
+ * the function it is asked of has changed.
+ */
 {
-  const html = extractFunction(src, 'customerStatsHTML', 'index.html');
-  const owedAt = html.indexOf("csStat('Owed to you now'");
+  const figs = extractFunction(src, 'customerFiguresHTML', 'index.html');
+  const off = extractFunction(src, 'customerOffBookHTML', 'index.html');
+  const owedAt = figs.indexOf("Owed to you now");
   t.check(owedAt > -1, 'the panel has an owed figure');
-  const owed = html.slice(owedAt, owedAt + 240);
+  const owed = figs.slice(owedAt, owedAt + 260);
 
-  t.check(!/s\.outstanding \+ s\.debt/.test(html) && !/s\.debt \+ s\.outstanding/.test(html),
+  t.check(!/s\.outstanding \+ s\.debt/.test(figs) && !/s\.debt \+ s\.outstanding/.test(figs),
     'the owed figure is never the invoices PLUS the debt book — that sum double-counts every credit sale');
-  t.check(/fmtUGX\(Math\.round\(s\.debt\)\)/.test(owed),
+  /* r.debt is c.debt carried through customerBookRow, which is what the
+     map, the debtors list and the closing line of the statement all
+     total. */
+  t.check(/f\(r\.debt\)/.test(owed),
     'it is the debt book, which is what the map and the debtors list already total');
 
   /* Where the two records genuinely disagree -- an invoice still due
      whose money never reached the debt book -- neither figure is
      silently preferred. Seen live on one customer: 925,000 invoiced
      against a settled debt book. */
-  t.check(/s\.outstanding - s\.debt/.test(html),
+  t.check(/s\.outstanding - s\.debt/.test(off),
     'the gap between the two records is worked out');
-  t.check(/offBook > 0 \?/.test(html),
+  t.check(/offBook > 0/.test(off),
     'and only spoken about when the invoices are AHEAD — a debt book carrying more than the invoices is an ordinary manual charge, not a discrepancy');
-  t.check(/Invoices still show/.test(html) && /cs-flag/.test(html),
+  t.check(/Invoices still show/.test(off) && /cu-offbook/.test(off),
     'the disagreement is put on screen rather than resolved by a formula that cannot know which record is right');
+  /* And it is spoken about on the screen a shopkeeper actually reads,
+     not only inside a function nobody calls. */
+  t.check(/customerOffBookHTML\(s\)/.test(extractFunction(src, 'customerStatsHTML', 'index.html')),
+    'and the account draws it');
 }
 
 process.exit(t.done() ? 1 : 0);
