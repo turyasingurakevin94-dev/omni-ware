@@ -88,7 +88,14 @@ const INDEX = railIndex();
   const EVERY_TAB = [
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
     'compare', 'sourcing', 'suppliers', 'purchase-invoices',
-    'products', 'prices', 'inventory', 'media', 'fasteners',
+    'products', 'prices', 'inventory',
+    /* Stock movements. Split out of Inventory, which used to stack two
+       consoles on one screen: the shelf as it stands, and the log of
+       how it got that way, each with its own search and its own
+       filters. They are different questions, so they are two doors --
+       and the split only counts as done if the new one is on the rail,
+       which is what this line holds. */
+    'stock-movements', 'media', 'fasteners',
     /* 'assets' is Assets & loans: ONE destination since the two
        registers were merged. Loans is not missing from this list, it no
        longer exists as a screen -- a van and the loan that bought it were
@@ -441,6 +448,16 @@ const INDEX = railIndex();
   t.check(labels('who you owe').includes('Creditors'),
     `and the name IT used to carry still finds it (${labels('who you owe').join(', ')})`);
   t.check(first('stock') === 'Inventory', `a word the screen is not called finds it (${first('stock')})`);
+  /* And it still does now that a SECOND shelf screen exists. Movements
+     was split out of Inventory, and calling it "Stock movements" would
+     have given it a rank-0 label match on the app's most obvious search
+     -- taking "stock" off the shelf itself. The word lives in its
+     keywords instead, so both of these hold at once: the bare word goes
+     to the shelf, and the phrase goes to the log. */
+  t.check(first('stock movements') === 'Movements',
+    `and the phrase reaches the log it names (${first('stock movements')})`);
+  t.check(first('movements') === 'Movements',
+    `which is also findable by its own name (${first('movements')})`);
   t.check(first('photos') === 'Media', `and so does what is actually in it (${first('photos')})`);
 
   // Every term, in any order -- typing what you remember in the order

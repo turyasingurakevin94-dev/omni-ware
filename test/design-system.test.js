@@ -299,6 +299,59 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   t.check(!layerEmoji, 'and there is no emoji in the layer');
 }
 
+/* ---------- one component, one behaviour ---------- */
+{
+  /* .ow-thumb is the app's 28px picture frame and TWO screens now let you
+     press it to enlarge the picture. That is opt-in -- .ow-zoom -- and the
+     opt-in is the whole point: a frame that zooms on one screen and does
+     nothing on another is the same square teaching two different lessons,
+     which is worse than either rule applied twice.
+
+     So this holds the pair together. Adding .ow-zoom to a third screen is
+     fine; adding it without the guard, or letting one of these two drop
+     out, is what this catches. */
+  const src2 = src;
+  const zoomers = ['invRowThumbHTML', 'sourcingThumbHTML'];
+  zoomers.forEach((name) => {
+    const fn = new RegExp(`\\nfunction ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src2);
+    t.check(!!fn, `${name} is found`);
+    /* Resolve the named glyph constant, so a screen that keeps its mark in
+       one place reads the same as one that inlines it. */
+    let body = (fn || [''])[0];
+    [...src2.matchAll(/const (IV_ZOOM_GLYPH)\s*=\s*'([^']*)'/g)]
+      .forEach((m) => { body = body.split(m[1]).join(m[2]); });
+    t.check(/ow-thumb ow-zoom/.test(body),
+      `${name}: a line WITH a photo gets the enlarged target`);
+    /* And a line without one is not a target at all. There is nothing
+       behind it to open, so a press that appeared to do something and
+       then did nothing is worse than a frame that never invited it. */
+    t.check(/ow-thumb ow-none/.test(body),
+      `${name}: a line WITHOUT one is not a target`);
+    t.check(/ow-th-z/.test(body),
+      `${name}: and the zoomable one carries the glyph that says so at rest`);
+  });
+
+  /* The 44px extender takes the press, so the target is the FRAME and has
+     no .src of its own -- the document listener has to read the image out
+     of it, or an enlarged target silently opens nothing. */
+  t.check(/const frame = e\.target\.closest\('\.ow-thumb\.ow-zoom'\);/.test(src2)
+       && /const im = frame\.querySelector\('img'\);/.test(src2),
+    'the lightbox opens from the frame, not only from the image inside it');
+
+  /* And every row that carries one steps over it, or the row toggles
+     underneath the lightbox and the picture appears and vanishes.
+
+     Counted against the screens that actually emit a frame, not against
+     every .img-zoomable guard in the file: two other screens guard a
+     photo that is not in a pressable row, and there is nothing there for
+     .ow-zoom to cover. This is what keeps the two counts moving together
+     when a third screen opts in. */
+  const emitters = zoomers.length;
+  const zoomGuards = [...src2.matchAll(/if\(e\.target\.closest\('\.img-zoomable, \.ow-zoom'\)\) return;/g)].length;
+  t.check(zoomGuards === emitters,
+    `every screen that draws a pressable frame steps over it (${zoomGuards} guards for ${emitters} screens)`);
+}
+
 /* ---------- the converted screens ---------- */
 {
   /* THE RATCHET'S OTHER HALF. A screen joins this list when it has been
@@ -415,6 +468,43 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-note', 'ow-q-a',
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
+    },
+    /* INVENTORY. A grid of cards, four columns wide -- so no two figures
+       on the shelf ever lined up, and a column of money that does not
+       line up cannot be compared at a glance, which is the only way a
+       stock list is ever read. At 192 lines it also ranked nothing,
+       carried thirty-two unlabelled icon buttons and no accent at all,
+       and stacked two crimson repair banners over every figure on the
+       screen on an ordinary Tuesday.
+
+       So the private grid became the layer's queue -- .ow-q rows that
+       open in place and emit their own phone cards from the SAME call --
+       with the strip above it and the rail beside it. The two banners
+       became one amber line that is not there at all when there is
+       nothing in it. .pack-pill, .pc-icon-btn and the .cb-chain-break
+       banner are NOT retired from the FILE: the catalogue and the
+       product cards still wear the first two properly, and the cash
+       book's broken chain and the Manager's missing notes are genuinely
+       bad and still wear the third. Only this screen may not emit them
+       again.
+
+       The movements log that used to sit under this screen as a second
+       console with its own three filters is its own door now, so the
+       classes it took with it are not this screen's to answer for. */
+    inventory: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search',
+                'p-toolbar-filter', 'p-toolbar-checkbox', 'search-bar', 'field',
+                'inv-grid', 'inv-card', 'inv-card-head', 'inv-card-title', 'inv-card-name',
+                'inv-card-sub', 'inv-card-meta', 'inv-card-foot', 'inv-card-stats',
+                'inv-qty-wrap', 'inv-qty-label', 'inv-qty', 'inv-cost', 'pack-pill',
+                'pc-actions', 'pc-icon-btn', 'inv-action-btn', 'inv-reorder-btn', 'inv-price-rule-btn',
+                'sum-strip', 'sum-cell', 'sum-value', 'sum-label', 'cb-chain-break', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
+      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
+                'renderInvRail', 'renderInventoryFloors'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
+                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty'],
     },
     /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
        named the word the shop already uses. Two stacked .panel blocks
