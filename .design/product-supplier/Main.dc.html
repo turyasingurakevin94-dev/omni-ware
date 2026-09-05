@@ -1,0 +1,322 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    *{box-sizing:border-box;}
+    body{margin:0;background:#E9EBED;color:#14171B;
+      font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:13px;
+      -webkit-font-smoothing:antialiased;}
+    a{color:#14171B;} a:hover{color:#B23A26;}
+    .ic{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .pan{background:#FFFFFF;border:1px solid #CFD5DA;border-radius:8px;}
+    .pan-h{height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;
+      border-bottom:1px solid #E3E7EA;}
+    .pan-t{font-size:12px;font-weight:600;letter-spacing:.01em;}
+    .pan-n{font-size:11px;color:#8A939C;}
+    .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;color:#8A939C;}
+    .cap{font-size:11px;color:#8A939C;line-height:1.35;}
+    .note{font-size:12px;color:#59626B;line-height:1.5;}
+    .hd{font-family:'Archivo Black',sans-serif;letter-spacing:-.015em;line-height:1.1;margin:0;}
+  </style>
+</helmet>
+
+<!-- 1440 x 880. Desktop work console: 220px navy rail, 54px top bar,
+     24px page padding. Direction A - THE PRICE MATRIX. -->
+<div style="width:1440px;height:720px;background:#E9EBED;display:flex;overflow:hidden">
+  <!-- navy rail (chrome, shown for context) -->
+  <div style="width:220px;flex:none;background:#14171B;color:#C7CFD8;display:flex;flex-direction:column">
+    <div style="height:54px;display:flex;align-items:center;gap:10px;padding:0 14px;flex:none">
+      <div style="width:30px;height:30px;border-radius:6px;background:#B23A26;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;letter-spacing:.02em">OW</div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:14px;color:#fff;letter-spacing:-.01em">OMNI-WARE</div>
+    </div>
+    <div style="display:flex;flex-direction:column;padding:8px 0">
+      <div class="lbl" style="padding:12px 16px 6px;color:#7C8894">SELL</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3v5h5"/></svg>New quote</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><svg class="ic" viewBox="0 0 24 24"><path d="M17 20a5 5 0 0 0-10 0M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>Customers</div>
+      <div class="lbl" style="padding:16px 16px 6px;color:#7C8894">BUY</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><svg class="ic" viewBox="0 0 24 24"><path d="M3 5h2l2.6 11.3a1 1 0 0 0 1 .7h8.8a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>What to buy</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><svg class="ic" viewBox="0 0 24 24"><path d="M8 3.5h8a1 1 0 0 1 .8 1.6L14 9v7.5l-4 3V9L7.2 5.1A1 1 0 0 1 8 3.5z"/></svg>Sourcing</div>
+      <!-- current screen -->
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;font-weight:600;background:#B23A26;color:#fff">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18M9 3v18M15 3v18"/></svg>
+        <span style="flex:1">Products &amp; suppliers</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Suppliers</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <!-- top bar -->
+    <div style="height:54px;flex:none;background:#14171B;display:flex;align-items:center;gap:14px;padding:0 20px;color:#C7CFD8">
+      <div><span style="color:#7C8894">Buy /</span> <b style="color:#fff;font-weight:600">Products &amp; suppliers</b></div>
+      <div style="flex:1;max-width:430px;height:32px;border-radius:6px;background:#252A31;display:flex;align-items:center;gap:8px;padding:0 10px;color:#8A939C">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        Search screens, or ask the Manager
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:16px;font-size:12px">
+        <span style="color:#8A939C">Products <b class="mono" style="color:#fff">6</b></span>
+        <span style="color:#8A939C">Suppliers <b class="mono" style="color:#fff">4</b></span>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;padding:0 24px 24px;overflow:hidden">
+
+      <!-- page header -->
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+        padding:16px 0 12px;border-bottom:1px solid #CFD5DA;margin-bottom:14px">
+        <div style="min-width:0">
+          <h1 class="hd" style="font-size:19px">Products &amp; suppliers</h1>
+          <div style="font-size:12px;color:#59626B;margin-top:4px">Who quotes what, and who is cheapest. Wholesale, per unit.</div>
+        </div>
+        <div style="width:20px;height:20px;border-radius:999px;border:1px solid #CFD5DA;color:#59626B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;margin-bottom:3px">i</div>
+        <div style="flex:1"></div>
+        <!-- THE one accent on this screen -->
+        <button style="height:32px;padding:0 14px;border:0;border-radius:6px;background:#B23A26;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Ask for the 12 missing prices</button>
+      </div>
+
+      <!-- metric strip: one 64px row, hairline dividers, no per-tile borders -->
+      <div class="pan" style="display:flex;height:64px;margin-bottom:14px">
+        <div style="flex:1;padding:10px 14px;display:flex;flex-direction:column;justify-content:center">
+          <div class="lbl">PRODUCTS</div>
+          <div style="display:flex;align-items:baseline;gap:5px"><span class="mono" style="font-size:20px;font-weight:600">6</span><span class="cap">in the price book</span></div>
+        </div>
+        <div style="width:1px;background:#E3E7EA"></div>
+        <div style="flex:1;padding:10px 14px;display:flex;flex-direction:column;justify-content:center">
+          <div class="lbl">SUPPLIERS</div>
+          <div style="display:flex;align-items:baseline;gap:5px"><span class="mono" style="font-size:20px;font-weight:600">4</span><span class="cap">quoting</span></div>
+        </div>
+        <div style="width:1px;background:#E3E7EA"></div>
+        <div style="flex:1.3;padding:10px 14px;display:flex;flex-direction:column;justify-content:center">
+          <div class="lbl">PRICES YOU HOLD</div>
+          <div style="display:flex;align-items:baseline;gap:5px"><span class="mono" style="font-size:20px;font-weight:600">12</span><span class="cap">of 24 &mdash; half the grid is blank</span></div>
+        </div>
+        <div style="width:1px;background:#E3E7EA"></div>
+        <div style="flex:1.4;padding:10px 14px;display:flex;flex-direction:column;justify-content:center">
+          <div class="lbl">SINGLE-SOURCE</div>
+          <div style="display:flex;align-items:baseline;gap:5px"><span class="mono" style="font-size:20px;font-weight:600;color:#7F1D1A">1</span><span class="cap">Barbed Wire &mdash; Kirinya only</span></div>
+        </div>
+        <div style="width:1px;background:#E3E7EA"></div>
+        <div style="flex:1.4;padding:10px 14px;display:flex;flex-direction:column;justify-content:center">
+          <div class="lbl">OLDEST PRICE</div>
+          <div style="display:flex;align-items:baseline;gap:5px"><span class="mono" style="font-size:20px;font-weight:600;color:#B0700A">66</span><span class="cap">days &mdash; nothing here is fresh</span></div>
+        </div>
+      </div>
+
+      <!-- the matrix -->
+      <div class="pan" style="overflow:hidden">
+        <div class="pan-h">
+          <span class="pan-t">Price matrix</span>
+          <span class="pan-n">sorted by the gap as a share of the cheapest</span>
+          <div style="flex:1"></div>
+          <span class="cap" style="display:flex;align-items:center;gap:6px"><span style="width:2px;height:13px;background:#1C6B58;display:inline-block"></span>cheapest quote in the row</span>
+        </div>
+      <div style="display:flex;border-bottom:1px solid #CFD5DA;background:#F7F9FB">
+        <div style="width:280px;flex:none;padding:8px 12px" class="lbl">PRODUCT</div>
+        <div style="width:178px;flex:none;padding:8px 12px;border-left:1px solid #E3E7EA">
+          <div class="trunc" style="font-size:12px;font-weight:600" title="Kirinya Steel &amp; Hardware Ltd">Kirinya Steel</div>
+          <div class="cap trunc" title="Kampala Industrial Area">Kampala Industrial Area</div>
+        </div>
+        <div style="width:178px;flex:none;padding:8px 12px;border-left:1px solid #E3E7EA">
+          <div class="trunc" style="font-size:12px;font-weight:600" title="Mukwano Building Supplies">Mukwano Building</div>
+          <div class="cap trunc" title="Kampala &ndash; Ben Kiwanuka St">Kampala &ndash; Ben Kiwanuka St</div>
+        </div>
+        <div style="width:178px;flex:none;padding:8px 12px;border-left:1px solid #E3E7EA">
+          <div class="trunc" style="font-size:12px;font-weight:600" title="Nakawa Hardware Wholesalers">Nakawa Hardware</div>
+          <div class="cap trunc" title="Nakawa">Nakawa</div>
+        </div>
+        <div style="width:178px;flex:none;padding:8px 12px;border-left:1px solid #E3E7EA">
+          <div class="trunc" style="font-size:12px;font-weight:600" title="Bwaise Paints &amp; Fittings">Bwaise Paints</div>
+          <div class="cap trunc" title="Bwaise">Bwaise</div>
+        </div>
+        <div style="width:178px;flex:none;padding:8px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="lbl">GAP TO DEAREST</div>
+          <div class="cap">per unit</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="Cement (Tororo 50kg)">Cement (Tororo 50kg)</div>
+          <div class="cap">Cement &middot; per Bag &middot; 3 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">38,500</div>
+          <div class="cap">66d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;box-shadow:inset -2px 0 0 #1C6B58;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:600">37,000</div>
+          <div class="cap">cheapest &middot; 62d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">39,000</div>
+          <div class="cap">65d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px">2,000</div>
+          <div class="cap">5.4% of the cheapest</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="Steel Nails 3 inch">Steel Nails 3 inch</div>
+          <div class="cap">Nails &amp; Fasteners &middot; per Kg &middot; 2 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">6,200</div>
+          <div class="cap">63d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;box-shadow:inset -2px 0 0 #1C6B58;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:600">6,000</div>
+          <div class="cap">cheapest &middot; 61d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px">200</div>
+          <div class="cap">3.3% of the cheapest</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="PVC Pipe 1 inch">PVC Pipe 1 inch</div>
+          <div class="cap">Plumbing &middot; per Length (3m) &middot; 2 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;box-shadow:inset -2px 0 0 #1C6B58;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:600">15,500</div>
+          <div class="cap">cheapest &middot; 65d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">16,000</div>
+          <div class="cap">65d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px">500</div>
+          <div class="cap">3.2% of the cheapest</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="Iron Sheets (28 gauge, plain)">Iron Sheets (28 gauge, plain)</div>
+          <div class="cap">Roofing &middot; per Sheet &middot; 2 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">62,000</div>
+          <div class="cap">66d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;box-shadow:inset -2px 0 0 #1C6B58;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:600">60,500</div>
+          <div class="cap">cheapest &middot; 64d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px">1,500</div>
+          <div class="cap">2.5% of the cheapest</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="Gloss Paint - White">Gloss Paint - White</div>
+          <div class="cap">Paint &middot; per Litre &middot; 2 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;box-shadow:inset -2px 0 0 #1C6B58;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:600">11,125</div>
+          <div class="cap">cheapest &middot; 60d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">11,250</div>
+          <div class="cap">63d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px">125</div>
+          <div class="cap">1.1% of the cheapest</div>
+        </div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid #E3E7EA;align-items:stretch">
+        <div style="width:280px;flex:none;padding:9px 12px;min-width:0">
+          <div class="trunc" style="font-size:14px;font-weight:500" title="Barbed Wire">Barbed Wire</div>
+          <div class="cap">Fencing &middot; per Roll &middot; 1 of 4 quoting</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px 9px 10px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:14px;font-weight:400">21,000</div>
+          <div class="cap">66d old</div>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;background:#F7F9FB;display:flex;align-items:center;justify-content:flex-end">
+          <span class="mono" style="color:#8A939C;font-size:14px">&mdash;</span>
+        </div>
+        <div style="width:178px;flex:none;padding:9px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div style="font-size:12px;color:#7F1D1A;font-weight:600">no second price</div>
+          <div class="cap">nothing to compare against</div>
+        </div>
+      </div>
+      <div style="display:flex;background:#F7F9FB;border-top:1px solid #CFD5DA">
+        <div style="width:280px;flex:none;padding:10px 12px" class="lbl">EACH SUPPLIER</div>
+        <div style="width:178px;flex:none;padding:10px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:13px">3 of 6</div>
+          <div class="cap">quoted &middot; 1 unopposed</div>
+        </div>
+        <div style="width:178px;flex:none;padding:10px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:13px">3 of 6</div>
+          <div class="cap">quoted &middot; cheapest 2</div>
+        </div>
+        <div style="width:178px;flex:none;padding:10px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:13px">3 of 6</div>
+          <div class="cap">quoted &middot; cheapest 2</div>
+        </div>
+        <div style="width:178px;flex:none;padding:10px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:13px">3 of 6</div>
+          <div class="cap">quoted &middot; cheapest 1</div>
+        </div>
+        <div style="width:178px;flex:none;padding:10px 12px;border-left:1px solid #E3E7EA;text-align:right">
+          <div class="mono" style="font-size:13px">12 of 24</div>
+          <div class="cap">cells you have a price for</div>
+        </div>
+      </div>
+      </div>
+
+      <div class="note" style="margin-top:10px;max-width:76ch">The 12 blank cells are prices you have never asked for &mdash; not zero, and not &ldquo;they don&rsquo;t sell it&rdquo;. Barbed Wire has one quote, so its cheapest price is also its dearest.</div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
