@@ -204,14 +204,28 @@ const reset = () => {
     'the form says the balance is YOUR way when they owe you more');
   t.check(/owing-owed[\s\S]{0,60}?their way on balance/.test(hint),
     'and their way when you owe them more');
-  t.check(/both\.net > 0 \? fmtUGX\(Math\.round\(both\.net\)\) \+ ' your way'/.test(src),
-    'and the card agrees with it, rather than reading the sign the other way round');
+  /* The customer half of this used to read a card. Customers is a
+     register now and the netting moved into the account that opens
+     under the row -- same helper, same sign convention, same words.
+     What must not drift is the DIRECTION, which is what the live bug
+     was: the form said "400,000 their way" about a customer who owed
+     the shop 400,000, and the card on the same facts said "your way".
+     So the pin follows the code rather than the card. */
+  t.check(/r\.both\.net > 0 \? `<b>\$\{f\(r\.both\.net\)\}<\/b> your way`/.test(src),
+    'and the account agrees with it, rather than reading the sign the other way round');
 
-  // Visible without opening anything.
+  // Visible without opening anything: the supplier card's tag, and the
+  // customer register's own meta line under the name.
   t.check(/Also a supplier/.test(src) && /Also a customer/.test(src),
     'both lists say when somebody is on the other one too');
-  t.check(/const both = bothSidesPosition\(c\);/.test(src) && /if\(!both\) return '';/.test(src),
-    'and the card nets them only when there IS another side');
+  /* Only the customer side ever netted the two: bothSidesPosition is
+     called once in the whole file, and the supplier card carries the
+     tag alone. So the pin is on the customer account, which is where
+     the line lives now. */
+  t.check((src.match(/bothSidesPosition\(/g) || []).length === 2,
+    'the netting is worked out in one place and read in one place');
+  t.check(/both: bothSidesPosition\(c\),/.test(src) && /\$\{r\.both \? `<p class="ow-q-note">/.test(src),
+    'and the customer account draws the line only when the helper found one');
 
   /* Both foreign keys are gone: each was half of a cycle, and even the
      surviving single direction could still be violated, because the
@@ -245,54 +259,68 @@ const reset = () => {
  *
  * Measured in the running app before: name 61px. After: 210px, nothing
  * clipped on any of the 24 cards in either list.
+ *
+ * ONE OF THE TWO CARDS IS GONE. Customers is a register: the name is a
+ * grid cell that truncates with an ellipsis and carries the full value
+ * in a title, and the tag is a word on the meta line under it, so there
+ * is no row of unshrinkable buttons to squeeze it. The rule that was
+ * shared is therefore scoped to the card that still exists -- and
+ * scoped rather than left bare, because a second bare .sc-head rule
+ * later in the file would win on document order and reshape supplier
+ * cards, which is what order-draft-confirm.test.js pins.
  */
 {
   const phone = (/@media \(max-width:620px\)\{[\s\S]*?\n  \}/
     .exec(src.slice(src.indexOf('.sc-actions{'))) || [''])[0];
-  t.check(/\.sc-head, \.cc-head\{flex-wrap:wrap;\}/.test(phone),
-    'the card head may wrap on a phone');
-  t.check(/\.sc-actions, \.cc-actions\{flex:1 1 100%/.test(phone),
+  t.check(/\.supplier-card \.sc-head\{flex-wrap:wrap;\}/.test(phone),
+    'the supplier card head may wrap on a phone');
+  t.check(/\.supplier-card \.sc-actions\{flex:1 1 100%/.test(phone),
     'and the buttons take a line of their own rather than taking the name’s');
-  /* Both lists, in one rule, because they are the same card twice --
-     fixing one and leaving the other is exactly how these two drifted
-     apart in the first place. */
-  t.check(/\.sc-head, \.cc-head/.test(phone) && /\.sc-actions, \.cc-actions/.test(phone),
-    'suppliers and customers are fixed together, since they are the same card');
   // The name must still be allowed to break, or a long one just overflows
   // the wider box it has been given.
-  t.check(/\.sc-name\{[^}]*word-break:break-word/.test(src)
-    && /\.cc-name\{[^}]*word-break:break-word/.test(src),
+  t.check(/\.sc-name\{[^}]*word-break:break-word/.test(src),
     'and a single long name still breaks rather than running off the card');
+  /* The register's answer to the same question, and it is the stricter
+     one: three declarations, never two, and min-width:0 so the cell can
+     actually shrink instead of pushing its neighbours out of the box. */
+  t.check(/\.ow-tbl-p\{[\s\S]{0,200}?overflow:hidden;text-overflow:ellipsis;white-space:nowrap;/.test(src),
+    'and the register truncates its name properly rather than clipping it');
+  t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">/.test(src),
+    'with the whole name in a title, so a truncated one can still be read');
 }
 
 /* ---------- the tag sits with the code, not inside the name ----------
    Inline in the name it wrapped as though it were part of the name:
    "Feko" / "(Ambrose)" / "Also a customer" / "S114" -- a four-line head
-   where the neighbouring cards have two. Both lists again, because they
-   are the same card twice. */
+   where the neighbouring cards have two.
+
+   The customer half of this is now the register's meta line, which is
+   one truncating block -- place, code, the tag and "no number on file"
+   in one gapped sentence under the name. It cannot wrap into a
+   four-line head because it cannot wrap at all. */
 {
   const sup = (/function supplierCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
-  const cus = (/function customerCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const cus = (/function customerRegisterRowHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
 
   t.check(/<div class="sc-name">\$\{esc\(s\.name\)\}<\/div>/.test(sup),
     'the supplier name is the whole of its own element');
-  t.check(/<div class="cc-name">\$\{esc\(c\.name\)\}<\/div>/.test(cus),
+  t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">\$\{esc\(r\.name\)\}<\/span>/.test(cus),
     'and so is the customer name');
 
   const metaLine = (fn, cls, idExpr) =>
     new RegExp(`<div class="${cls}-meta">\\s*<span class="${cls}-id">\\$\\{esc\\(${idExpr}\\)\\}</span>\\s*\\$\\{[^]*?both-tag`).test(fn);
   t.check(metaLine(sup, 'sc', 's\\.id'), 'the tag follows the supplier code on one meta line');
-  t.check(metaLine(cus, 'cc', 'c\\.id'), 'and the customer code on its own');
+  t.check(/const meta = \[r\.place, r\.id, r\.both \? 'Also a supplier' : ''/.test(cus),
+    'and the customer code carries it on the register\'s own meta line, in that order');
 
   /* .both-tag carries margin-left for when it trails text inline. In a
      gapped flex row that margin is a second gap, so it is zeroed --
      otherwise the tag sits 14px off the code it belongs to. */
-  t.check(/\.sc-meta, \.cc-meta\{[^}]*display:flex/.test(src)
-    && /\.sc-meta, \.cc-meta\{[^}]*gap:7px/.test(src),
-    'the meta line is one gapped row for both cards');
-  t.check(/\.sc-meta \.both-tag, \.cc-meta \.both-tag\{margin-left:0;\}/.test(src),
+  t.check(/\.sc-meta\{[^}]*display:flex/.test(src) && /\.sc-meta\{[^}]*gap:7px/.test(src),
+    'the supplier meta line is one gapped row');
+  t.check(/\.sc-meta \.both-tag\{margin-left:0;\}/.test(src),
     'with the tag’s inline margin dropped, so the gap is not applied twice');
-  t.check(/\.sc-meta, \.cc-meta\{[^}]*flex-wrap:wrap/.test(src),
+  t.check(/\.sc-meta\{[^}]*flex-wrap:wrap/.test(src),
     'and it wraps rather than pushing the tag off a narrow card');
 }
 

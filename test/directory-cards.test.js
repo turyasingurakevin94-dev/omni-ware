@@ -83,8 +83,16 @@ const { nameInitials } = compileScope(
   });
   const calls = (src.match(/nameInitials\(/g) || []).length;
   t.check(calls >= 4, `all three grids go through the one function (${calls} references)`);
-  ['sc-avatar">${esc(nameInitials(s.name))}', 'cc-avatar">${esc(nameInitials(c.name))}']
+  /* The customer grid is a register now and a 13px table row has no
+     width for a 38px square, so the customer avatar went with the card.
+     Staff and suppliers still draw one, and the point of this section
+     -- ONE initials function, never three copies -- is unchanged: the
+     count above still has to clear four, and nothing may reintroduce a
+     private copy. */
+  ['sc-avatar">${esc(nameInitials(s.name))}']
     .forEach((frag) => t.check(src.includes(frag), `the avatar is rendered from it: ${frag.slice(0, 12)}…`));
+  t.check(!/cc-avatar/.test(src),
+    'and the customer card\'s avatar is gone with the card, not left styling nothing');
 
   /* This used to pin that waInitials stayed its OWN function, because
      it fell back to the last two DIGITS of a bare phone number -- a
@@ -115,17 +123,26 @@ const { nameInitials } = compileScope(
   t.check(/display:flex/.test(card) && /flex-direction:column/.test(card),
     'which requires the card to stay a column flex container');
 
-  /* The customer card has no figure strip -- it ends on the debt row,
-     which is the figure people opened the screen for and floated the
-     same way: 94px on one card, 115px on the one beside it, 3 of 12
-     rows out of step. Pinned identically, or the two grids look like
-     they were built by different people. */
-  const debt = rule('.cc-debt-row');
-  t.check(/margin-top:auto/.test(debt),
-    `the customer card's bottom line is pinned too (${debt})`);
-  const cCard = rule('.customer-card');
-  t.check(/display:flex/.test(cCard) && /flex-direction:column/.test(cCard),
-    'and that card is a column flex container as well');
+  /* THE CUSTOMER GRID SOLVED THIS BY NOT BEING A GRID.
+
+     Its balance floated the same way -- 94px from the card top on one,
+     115px on the one beside it, 3 of 12 rows out of step -- and
+     margin-top:auto pinned it, which fixed the symptom: the figures
+     lined up ACROSS a row and still could not be read DOWN one, because
+     a grid of cards has no columns. Customers is a table now, whose
+     tracks are declared once on the container and whose rows span them
+     with subgrid, so two figures cannot land on two lines. Alignment
+     stopped being something a rule has to defend, which is why the pin
+     is on the tracks instead.
+
+     The suppliers directory is still a grid, so the rule above still
+     matters and is still checked. */
+  t.check(!/\.customer-card\{/.test(src) && !/\.cc-debt-row\{/.test(src),
+    'the customer card and its pinned bottom line are gone from the file, not merely unused');
+  t.check(/\.ow-tbl\.cu-tbl\{--ow-tbl-cols:/.test(src),
+    'and the register declares its tracks once on the container');
+  t.check(/\.ow-tbl-n\{[\s\S]{0,300}?justify-self:end;text-align:right;white-space:nowrap/.test(src),
+    'with the figure cell that never gives way, so no money column can drift or be cut');
 }
 
 /* ---------- 5. a zero is not good news -------------------------------- */

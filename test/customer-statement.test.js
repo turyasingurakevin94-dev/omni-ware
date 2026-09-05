@@ -192,8 +192,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/Date\.UTC\(d\.getUTCFullYear\(\), d\.getUTCMonth\(\) - CUSTOMER_STATEMENT_MONTHS, 1\)/.test(range),
     'the six-month window is built from the year and month, not by subtracting from the day');
 
-  t.check(/id="cstPrintBtn"/.test(code) && /printCustomerStatement\(btn\.dataset\.id\)/.test(code),
-    'and the customer panel carries the button that prints it');
+  /* The panel was a modal with its own button ids; it is a screen now,
+     and every control on it goes through one delegated listener. Same
+     guarantee, one listener rather than one per render. */
+  t.check(/data-cact="print" data-cid=/.test(code)
+       && /if\(name === 'print'\) return printCustomerStatement\(id\);/.test(code),
+    'and the customer account carries the button that prints it');
 }
 
 /* ---------- 8. the same statement, on screen -------------------------
@@ -223,7 +227,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
   /* The three things asked for, each on screen. */
   t.check(/st\.rows\.map/.test(led), 'every entry in the period is listed');
-  t.check(/r\.charge \? money\(r\.charge\)/.test(led) && /r\.payment \? money\(r\.payment\)/.test(led),
+  /* The two columns are now passed into one row builder rather than
+     written inline twice -- which is what stops the charge column and
+     the payment column drifting apart, since they are the same code
+     with different arguments. The condition each still guards is
+     unchanged: a zero prints as a dash, not as 0. */
+  t.check(/r\.charge \? `<span class="ow-fig">\$\{money\(r\.charge\)\}<\/span>` : none/.test(led)
+       && /r\.payment \? `<span class="ow-fig">\$\{money\(r\.payment\)\}<\/span>` : none/.test(led),
     'with charges and payments in their own columns');
   t.check(/money\(r\.balance\)/.test(led), 'and the balance running down beside them');
   t.check(/money\(st\.opening\)/.test(led) && /Balance brought forward/.test(led),
@@ -244,7 +254,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   /* The ledger reads its own window off the statement it was handed
      rather than calling the range again. Two calls either side of
      midnight would date the header and the rows differently. */
-  t.check(/esc\(st\.from\)/.test(led) && !/customerStatementRange\(\)/.test(led),
+  /* Read through fmtShortDate now, because the ledger is on screen
+     beside every other date in the app and an ISO string beside them
+     reads as machine output. The pin is what it always was: the dates
+     come from the statement it was HANDED, never from a second reading
+     of the clock -- two calls either side of midnight would date the
+     header and the rows differently. */
+  t.check(/st\.from/.test(led) && /st\.to/.test(led) && !/customerStatementRange\(\)/.test(led),
     'the ledger dates itself from the statement it was given, not from a second reading of the clock');
 
   // Wired in, and guarded: the panel can be opened for a customer whose
@@ -261,7 +277,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      account: three customers in this shop have a charged-and-settled
      history in the log against invoices never linked back to their
      record, and were being told there was nothing to show. */
-  const empty = html.slice(0, html.indexOf('return `\n    <div class="cs-stats">'));
+  /* The marker moved with the markup. The tiles left this function for
+     customerFiguresHTML -- the register's open row and the account
+     screen draw the same four, and two copies is how they come to
+     disagree -- so what follows the branch is now the off-book flag and
+     the statement. Sliced at that, or the check reads the whole
+     function and passes on the strength of the branch it is meant to be
+     isolating. */
+  const empty = html.slice(0, html.indexOf('return customerOffBookHTML(s)'));
   t.check(empty.length > 0 && /if\(!s\.orderCount\)\{/.test(empty), 'the no-orders branch is found');
   t.check(/const hasLedger = !!\(c && Array\.isArray\(c\.debtLog\) && c\.debtLog\.length\);/.test(empty),
     'it checks whether there is a ledger at all');
@@ -311,7 +334,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   // how the counter and the paper come to disagree.
   const block = extractFunction(src, 'statementLedgerHTML', 'index.html');
   const print = extractFunction(src, 'printStatementSheet', 'index.html');
-  t.check(/esc\(statementRowDetail\(r, payWord\)\)/.test(block), 'the screen names rows through it');
+  t.check(/statementRowDetail\(r, payWord\)/.test(block), 'the screen names rows through it');
   t.check(/esc\(statementRowDetail\(r, side\.payWord\)\)/.test(print), 'and so does the paper');
   t.check(!/r\.note \|\| \(r\.type === 'charge'/.test(code),
     'with the duplicated fallback gone from both');
