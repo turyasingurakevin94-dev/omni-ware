@@ -258,6 +258,67 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'and the dropdown is built from that list rather than written out twice');
 }
 
+/* ---------- 5a. twenty to a page -------------------------------------- */
+{
+  /* A shelf of two hundred lines was two hundred rows. The answer to
+     "what is on the shelf" is not something you scroll past: you search
+     for a line, or you work down the ranking from the top, and both of
+     those want a first page rather than a whole one. */
+  const win = compileScope(
+    [extractFunction(src, 'invPageWindow', 'index.html')], {}, ['invPageWindow']
+  ).invPageWindow;
+
+  eq(win(1, 1).join(','), '1', 'one page is one number');
+  eq(win(3, 7).join(','), '1,2,3,4,5,6,7', 'seven or fewer are all drawn, with no gaps');
+
+  /* Beyond that the row must not grow with the shelf: first, last, and
+     where you are. A pager that draws three hundred numbers is the
+     problem it was added to solve, wearing different clothes. */
+  const far = win(10, 300);
+  t.check(far.length <= 9, `a 300-page shelf still draws a short row (${far.length})`);
+  t.check(far[0] === 1 && far[far.length - 1] === 300,
+    'with the first and last page always reachable in one press');
+  t.check(far.includes(9) && far.includes(10) && far.includes(11),
+    'and the pages either side of where you are');
+
+  /* The ends are where an off-by-one shows: at page 1 there is nothing
+     to the left to elide, and a gap drawn there would be a lie about
+     pages that do not exist. */
+  eq(win(1, 20).filter((x) => x === 'gap').length, 1, 'at the start there is one gap, on the right only');
+  eq(win(20, 20).filter((x) => x === 'gap').length, 1, 'and at the end, on the left only');
+  t.check(win(1, 20)[0] === 1 && win(20, 20)[0] === 1, 'page one is never elided');
+
+  [1, 2, 3, 8, 17, 18, 19, 20].forEach((n) => {
+    const w = win(n, 20);
+    t.check(w.includes(n), `page ${n} is always in its own window`);
+    t.check(!w.some((x, i) => x === 'gap' && w[i + 1] === 'gap'), `and ${n} never draws two gaps running`);
+    t.check(w[0] !== 'gap' && w[w.length - 1] !== 'gap', `nor a gap at either end (${n})`);
+    const nums = w.filter((x) => x !== 'gap');
+    t.check(nums.every((x, i) => i === 0 || x > nums[i - 1]), `and the numbers only ever count up (${n})`);
+  });
+
+  /* The three rules that make paging safe, read off the source. */
+  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(invPage > pageCount\) invPage = pageCount;/.test(render),
+    'the page is CLAMPED, because a filter can shrink the list under the page you are on');
+  t.check(/const pageLines = lines\.slice\(from, from \+ INVENTORY_PAGE\);/.test(render)
+       && /pageLines\.map\(invLineHTML\)/.test(render),
+    'only the page is drawn');
+  t.check(/listN\.textContent = lines\.length[\s\S]{0,120}fmtUGX\(Math\.round\(s\.value\)\)/.test(render),
+    'while the header still counts the whole filtered list and its whole value — money that moved as you paged would be the worst kind of wrong');
+
+  /* Every control that changes WHAT is listed goes back to page one.
+     Without it, narrowing 166 lines to 3 while on page 5 leaves an empty
+     list that is not empty, which reads as the search having failed. */
+  t.check(/function invRefilter\(\)\{ invPage = 1; renderInventory\(\); \}/.test(code),
+    'there is one way back to the first page');
+  ['inv_table_search', 'inv_category_filter', 'inv_hide_zero'].forEach((id) => {
+    t.check(new RegExp(`${id}[\\s\\S]{0,80}?addEventListener\\('(?:input|change)', invRefilter\\)`).test(code),
+      `${id} takes it`);
+  });
+  t.check(/sel\.addEventListener\('change', invRefilter\);/.test(code), 'and so does the sort');
+}
+
 /* ---------- 5b. the repair drawer ------------------------------------ */
 {
   /* Two crimson banners, about 470px of them, stood over every figure on
@@ -375,8 +436,13 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'and the difference is what the empty state reports');
   t.check(/hiddenByZero > 0/.test(code) && /nothing on the shelf/.test(code),
     'and an empty result names the filter that emptied it rather than denying the match');
-  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*renderInventory\(\);/.test(code),
-    'with one press to lift it');
+  /* Through invRefilter rather than renderInventory: lifting the shelf
+     filter changes WHAT is listed, and every such change returns to the
+     first page. Without that, lifting it while on page 5 of a 1-page
+     result shows an empty list that is not empty -- which reads as the
+     press having done nothing. */
+  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*invRefilter\(\);/.test(code),
+    'with one press to lift it, and that press goes back to the first page');
 }
 
 process.exit(t.done() ? 1 : 0);

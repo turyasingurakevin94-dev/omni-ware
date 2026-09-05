@@ -9380,6 +9380,37 @@
     color:var(--ow-paper);font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);letter-spacing:-.02em;}
   .ow-bk-a{display:flex;gap:var(--ow-sp-8);flex:0 0 auto;}
 
+  /* ---- THE PAGER ----
+     A long list cut into pages, and the cut SAID: "Showing 21-40 of 166"
+     is the whole point of the component. A list that silently shows
+     twenty of two hundred breaks the "named rather than dropped" rule --
+     the shop cannot tell a short shelf from a truncated view of a long
+     one.
+
+     It is not a new button family. The controls are the app's own .btn
+     .btn-ghost .ow-sm and everything here is a MODIFIER on them, for the
+     same reason there is no fourteenth family anywhere else -- and .btn
+     itself is never restyled from in here. */
+  .ow-pg{display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;
+    padding:var(--ow-sp-10) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pg-n{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;}
+  .ow-pg-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pg-a{display:flex;align-items:center;gap:var(--ow-sp-4);flex-wrap:wrap;margin-left:auto;}
+  /* A page number is a figure, so it is set like every other figure in
+     the app -- a row of numbers that jitters as it counts up reads as a
+     different control each time. */
+  .ow-pg-i{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .ow-pg-i.ow-pg-on{background:var(--ow-steel-950);color:var(--ow-paper);
+    border-color:var(--ow-steel-950);}
+  .ow-pg-i[disabled],.ow-pg-s[disabled]{opacity:.4;cursor:not-allowed;}
+  /* The step controls say where they go in words, so a mark is never the
+     only thing carrying it. */
+  .ow-pg-s{font-family:'Inter',system-ui,sans-serif;letter-spacing:0;}
+  .ow-pg-g{padding:0 var(--ow-sp-4);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
+
   /* ---- layout: the work column and its context rail ---- */
   .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;
     gap:var(--ow-sp-16);align-items:start;}
@@ -11640,6 +11671,9 @@
     .ow-q-why{font-size:14px;max-width:none;}
     .ow-q-note{font-size:13px;}
     .btn.ow-sm{min-height:var(--ow-tap);flex:1 1 auto;min-width:calc(50% - 3px);}
+    .ow-pg{gap:var(--ow-sp-8);}
+    .ow-pg-a{margin-left:0;flex:1 1 100%;}
+    .ow-pg-a .ow-pg-i,.ow-pg-a .ow-pg-s{min-width:var(--ow-tap);flex:0 0 auto;}
 
     /* SOURCING ON THE PHONE. The desk row is gone and .ow-q-card takes
        over as everywhere else, so the column heads have nothing left to
@@ -57161,7 +57195,7 @@ const INVENTORY_SORTS = [
   if(!sel) return;
   sel.innerHTML = INVENTORY_SORTS.map(s=>
     `<option value="${esc(s.key)}"${s.key==='value'?' selected':''}>${esc(s.label)}</option>`).join('');
-  sel.addEventListener('change', renderInventory);
+  sel.addEventListener('change', invRefilter);
 })();
 
 function inventoryLineFor(p, variantIdx){
@@ -57410,6 +57444,33 @@ function fixStockLotDrift(key){
    than with its siblings. */
 let invOpenKey = null;
 let invFixOpen = false;
+/* Twenty to a page. A shelf of two hundred lines was two hundred rows,
+   and the answer to "what is on the shelf" is not a thing you scroll
+   past -- you search for a line, or you work down the ranking from the
+   top. Both of those want a first page, not a whole one. */
+const INVENTORY_PAGE = 20;
+let invPage = 1;
+
+/* Which page numbers to draw. All of them up to seven; beyond that the
+   first, the last, and the ones either side of where you are, with a gap
+   mark for what is skipped -- so the row of controls stays the same size
+   whether the shelf has 3 pages or 300. */
+function invPageWindow(page, count){
+  if(count <= 7) return Array.from({length: count}, (_, i)=> i + 1);
+  const out = new Set([1, count, page, page - 1, page + 1]);
+  if(page <= 3) [2, 3, 4].forEach(n=> out.add(n));
+  if(page >= count - 2) [count - 1, count - 2, count - 3].forEach(n=> out.add(n));
+  const pages = [...out].filter(n=> n >= 1 && n <= count).sort((a,b)=> a - b);
+  const withGaps = [];
+  pages.forEach((n, i)=>{ if(i && n - pages[i-1] > 1) withGaps.push('gap'); withGaps.push(n); });
+  return withGaps;
+}
+
+/* Any change to WHAT is listed puts you back on the first page. Without
+   this a search that narrows 166 lines to 3 leaves you on page 5 of a
+   one-page result, looking at an empty list that is not empty -- which
+   reads as the search having failed. */
+function invRefilter(){ invPage = 1; renderInventory(); }
 
 /* Every line under a floor the shop itself set, ranked by HOW SOON it
    runs out at the rate it has actually been selling -- not by how far
@@ -57624,7 +57685,7 @@ function renderInventory(){
     const showBtn = document.getElementById('inv_show_zero');
     if(showBtn) showBtn.addEventListener('click', ()=>{
       document.getElementById('inv_hide_zero').checked = false;
-      renderInventory();
+      invRefilter();
     });
   }
   /* THE PHONE'S ONE ACT, in the thumb zone. Hidden on the desk, where the
@@ -57638,8 +57699,20 @@ function renderInventory(){
   </div>`;
   const dockBtn = document.getElementById('inv_dock_receive');
   if(dockBtn) dockBtn.addEventListener('click', ()=> openInventoryModal(null, null, 'purchase'));
+  /* The header counts the whole filtered list and its whole value, not
+     the page: what you are looking at is a slice, what you HAVE is the
+     total, and the pager below says which slice. Totalling the page
+     instead would make the money move as you clicked through it. */
   if(listN) listN.textContent = lines.length
     ? `${lines.length} line${lines.length===1?'':'s'} · ${fmtUGX(Math.round(s.value))} here` : '';
+
+  /* Clamped rather than trusted: the list can shrink under a page you
+     are already on -- a filter, or stock moving while the screen is up. */
+  const pageCount = Math.max(1, Math.ceil(lines.length / INVENTORY_PAGE));
+  if(invPage > pageCount) invPage = pageCount;
+  if(invPage < 1) invPage = 1;
+  const from = (invPage - 1) * INVENTORY_PAGE;
+  const pageLines = lines.slice(from, from + INVENTORY_PAGE);
 
   if(data.products.length===0){
     wrap.innerHTML = '<div class="ow-empty"><p class="iv-es">There is nothing to have stock of yet. Stock is counted against products, so a product has to exist before this screen has anything to say — add the lines you sell in Products, then receive your first delivery against them.</p></div>';
@@ -57651,11 +57724,12 @@ function renderInventory(){
     const showBtn2 = document.getElementById('inv_show_zero2');
     if(showBtn2) showBtn2.addEventListener('click', ()=>{
       document.getElementById('inv_hide_zero').checked = false;
-      renderInventory();
+      invRefilter();
     });
   } else {
     wrap.innerHTML = `<div class="iv-h"><span></span><span></span><span>Line</span><span class="iv-r">On shelf</span><span class="iv-r">Cost each</span><span class="iv-r">Value here</span></div>`
-      + `<div class="iv-q">${lines.map(invLineHTML).join('')}</div>`
+      + `<div class="iv-q">${pageLines.map(invLineHTML).join('')}</div>`
+      + invPagerHTML(lines.length, pageCount, from, pageLines.length)
       + `<p class="ow-mini">Every figure here is read from your own purchase invoices and stock movements — nothing is estimated.${
           all.uncosted ? ` The ${all.uncosted} line${all.uncosted===1?'':'s'} with no cost on file ${all.uncosted===1?'is':'are'} listed and counted, never valued at zero: your shelf is understated by whatever those goods really cost.` : ''}</p>`;
     wireInventoryRows(wrap);
@@ -57769,7 +57843,38 @@ function invOpenHTML(l, name, key){
   </div>`;
 }
 
+/* The pager, and what it is hiding. Drawn only when there IS more than
+   one page: a screen that keeps the furniture for a list it does not
+   have looks broken on a small shelf. */
+function invPagerHTML(total, pageCount, from, shown){
+  if(pageCount <= 1) return '';
+  const first = from + 1, last = from + shown;
+  const step = (to, label, on)=>
+    `<button type="button" class="btn btn-ghost ow-sm ow-pg-s" data-invpg="${to}"${on?'':' disabled'}>${label}</button>`;
+  const num = (n)=> n === 'gap'
+    ? '<span class="ow-pg-g" aria-hidden="true">&hellip;</span>'
+    : `<button type="button" class="btn btn-ghost ow-sm ow-pg-i${n===invPage?' ow-pg-on':''}" data-invpg="${n}"${
+        n===invPage?' aria-current="page"':''}>${n}</button>`;
+  return `<nav class="ow-pg" aria-label="Pages of the shelf">
+    <p class="ow-pg-n">Showing <span class="ow-pg-f">${first}&ndash;${last}</span> of <span class="ow-pg-f">${total}</span> line${total===1?'':'s'} &middot; page <span class="ow-pg-f">${invPage}</span> of <span class="ow-pg-f">${pageCount}</span></p>
+    <div class="ow-pg-a">
+      ${step(invPage - 1, 'Back', invPage > 1)}
+      ${invPageWindow(invPage, pageCount).map(num).join('')}
+      ${step(invPage + 1, 'Next', invPage < pageCount)}
+    </div>
+  </nav>`;
+}
+
 function wireInventoryRows(wrap){
+  /* Turning a page does not close the line you had open: the open key is
+     the line's own, so it stays open if you page back to it and is simply
+     not drawn while you are elsewhere. */
+  wrap.querySelectorAll('[data-invpg]').forEach(btn=> btn.addEventListener('click', ()=>{
+    invPage = Number(btn.dataset.invpg) || 1;
+    renderInventory();
+    const panel = document.getElementById('invTableWrap');
+    if(panel && panel.scrollIntoView) panel.scrollIntoView({block:'start', behavior:'smooth'});
+  }));
   wrap.querySelectorAll('[data-invopen]').forEach(btn=> btn.addEventListener('click', (e)=>{
     /* ANYTHING ZOOMABLE INSIDE THE ROW IS NOT THE ROW BEING PRESSED.
        The lightbox opens from a document-level listener; without this
@@ -57851,9 +57956,9 @@ const invCountBtn = document.getElementById('inv_count_btn');
 if(invCountBtn) invCountBtn.addEventListener('click', ()=> openInventoryModal(null, null, 'adjust'));
 
 const invTableSearchEl = document.getElementById('inv_table_search');
-if(invTableSearchEl) invTableSearchEl.addEventListener('input', renderInventory);
-document.getElementById('inv_category_filter').addEventListener('change', renderInventory);
-document.getElementById('inv_hide_zero').addEventListener('change', renderInventory);
+if(invTableSearchEl) invTableSearchEl.addEventListener('input', invRefilter);
+document.getElementById('inv_category_filter').addEventListener('change', invRefilter);
+document.getElementById('inv_hide_zero').addEventListener('change', invRefilter);
 
 const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'Damaged / lost', other:'Other', sale:'Sold (quote)', reversal:'Reversed'};
 /* Only a purchase made from this screen offers this. A sale, a stock count
