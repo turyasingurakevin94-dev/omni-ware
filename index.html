@@ -8526,15 +8526,34 @@
     .media-rail{flex-direction:row;flex-wrap:wrap;flex-basis:auto;width:100%;}
   }
 
-  /* ---------------- The map ---------------- */
+  /* ---------------- The map ----------------
+
+     The screen is not about a map. It is about PLACES: the map is one
+     view of them and the list below is the other, which is why "not
+     placed yet" is not a mode here -- it is a row in the same list that
+     happens to be missing a position, keeping its figures and its rank.
+
+     Everything below follows from that. */
   .mp-layers{display:flex;gap:6px;}
-  .mp-layer{all:unset;box-sizing:border-box;cursor:pointer;font-size:12.5px;font-weight:600;
-    padding:6px 13px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);}
-  .mp-layer.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .mp-summary{font-size:12.5px;color:var(--ink-soft);}
-  .mp-wrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,300px);gap:0;
-    border:1px solid var(--line);border-radius:11px;overflow:hidden;}
-  @media (max-width: 900px){ .mp-wrap{grid-template-columns:1fr;} }
+  /* Layer and filter used to be the same pill, 300px apart, meaning
+     different things: one changes what the screen is ABOUT, the other
+     which rows are listed. They are now one segmented control used
+     twice, each sitting on the thing it governs -- and neither spends
+     the accent, which belongs to the one thing to do next. */
+  .mp-seg{display:inline-flex;background:var(--ow-steel-050);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);padding:2px;gap:2px;
+    box-sizing:border-box;min-height:26px;align-items:center;flex-wrap:wrap;}
+  .mp-seg button{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;
+    align-items:center;gap:5px;height:20px;padding:0 9px;border-radius:var(--ow-r-sm);
+    font-size:11px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+  .mp-seg button:hover{color:var(--ow-ink-900);}
+  .mp-seg button.active{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .mp-seg .mp-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:10px;font-weight:600;color:var(--ow-ink-400);}
+  .mp-seg button.active .mp-seg-n{color:var(--ow-ink-600);}
+  .mp-seg svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
   /* z-index:0 is load-bearing, not decoration. Leaflet stacks its own
      panes and controls up to 1000, and the app's top bar sits at 60 --
      so without a stacking context here the map's zoom buttons paint
@@ -8542,104 +8561,251 @@
      one; it takes a z-index as well. With it, every Leaflet layer is
      confined inside this box however high it counts. */
   .mp-canvas{position:relative;z-index:0;min-width:0;}
-  #mp_map{height:460px;width:100%;background:var(--ow-steel-050);}
+  #mp_map{height:520px;width:100%;background:var(--ow-steel-050);}
   /* Clear of Leaflet's zoom control, which owns the same corner: both sat
      at left:10px/top:10px and the zoom painted over "Str", so the button
      read "eets". 54px is its 34px width plus its own 10px margin plus a
      10px gap -- beside it rather than below, so the top of the map stays
-     one row: zoom, basemap, then the compass at the far right.
-
-     No other corner was free to move to: the compass has top-right, the
-     legend bottom-left and Leaflet's attribution bottom-right. */
+     one row: zoom, basemap, then the compass at the far right. */
   .mp-bases{position:absolute;left:54px;top:10px;z-index:500;display:flex;gap:3px;
-    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;}
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;}
   /* Zoom, basemap and compass want 339px in one row and a phone's map is
-     about 290, so the basemap drops to its own line under the zoom. It
-     already ran into the compass by 14px at the old left:10px -- moving
-     clear of the zoom widened that rather than caused it. Below the zoom
-     (10 + 64 + 10) and well above the legend, which starts near the
-     bottom edge. */
+     about 290, so the basemap drops to its own line under the zoom. */
   @media (max-width: 560px){
     .mp-bases{left:10px;top:84px;}
   }
-  .mp-base{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;
-    padding:5px 10px;border-radius:6px;color:var(--ink-soft);}
+  .mp-base{all:unset;box-sizing:border-box;cursor:pointer;font-size:11px;font-weight:600;
+    padding:5px 10px;border-radius:var(--ow-r-sm);color:var(--ink-soft);}
   .mp-base:hover{background:var(--ow-steel-050);color:var(--ink);}
   .mp-base.active{background:var(--ow-steel-100);color:var(--ink);}
-  /* Sits opposite the legend, out of the way of the markers. */
-  .mp-compass{position:absolute;right:10px;top:10px;z-index:500;display:flex;gap:4px;
-    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:4px;}
+  /* Sits opposite nothing now: the legend came off the map, so the only
+     things on it are Leaflet's own zoom and attribution and these two. */
+  .mp-compass{position:absolute;right:10px;top:10px;z-index:500;display:flex;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;}
   .mp-compass button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;
-    flex-direction:column;align-items:center;justify-content:center;min-width:30px;height:30px;
-    border-radius:6px;font-size:14px;color:var(--ink-soft);}
+    flex-direction:column;align-items:center;justify-content:center;min-width:26px;height:26px;
+    border-radius:var(--ow-r-sm);color:var(--ink-soft);}
   .mp-compass button:hover{background:var(--ow-steel-050);color:var(--ink);}
-  #mp_rot_north{min-width:38px;gap:0;}
-  .mp-needle{display:block;font-size:11px;line-height:1;color:var(--ow-oxide);
-    transition:transform .18s ease;}
-  .mp-bearing{display:block;font-size:9.5px;line-height:1.2;font-weight:700;
-    font-variant-numeric:tabular-nums;}
-  .mp-legend{position:absolute;left:10px;bottom:10px;z-index:500;background:var(--panel);
-    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;
-    color:var(--ink-soft);line-height:1.7;}
-  .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
-  /* AFTER .mp-legend, not beside the .mp-bases override further up: a
-     media query adds no specificity, so the same selector written later
-     in the file wins whatever the width. Put above, this was overruled by
-     the rule it was meant to override and measured as bottom:10px.
+  .mp-compass svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  #mp_rot_north{min-width:34px;gap:1px;}
+  /* The needle points where north actually IS on screen, which is the
+     bearing itself -- see mapBearingLabel. Drawn, not a glyph. */
+  .mp-needle{display:block;width:13px;height:13px;fill:none;stroke:var(--ow-oxide);
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease;}
+  .mp-bearing{display:block;font-size:9px;line-height:1;font-weight:600;color:var(--ink);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .mp-scale{position:absolute;right:10px;bottom:26px;z-index:500;display:flex;
+    flex-direction:column;align-items:flex-end;gap:2px;font-size:10px;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    background:rgba(255,255,255,.86);padding:3px 6px;border-radius:var(--ow-r-sm);}
+  .mp-scale i{display:block;width:64px;height:5px;border:1px solid var(--ink-soft);border-top:0;}
 
-     On a 291px map Leaflet's attribution is wide enough to reach under
-     the legend -- and that credit is a licence condition of using OSM
-     tiles, so it has to stay readable. Its strip is 17px; 34 clears it
-     with room. Pre-existing, found while measuring the other corner. */
-  @media (max-width: 560px){
-    .mp-legend{bottom:34px;}
-  }
-  .mp-side{border-left:1px solid var(--line);padding:13px 15px;min-width:0;max-height:460px;overflow-y:auto;}
-  @media (max-width: 900px){ .mp-side{border-left:none;border-top:1px solid var(--line);max-height:none;} }
-  .mp-side-empty{font-size:13px;color:var(--ink-soft);line-height:1.6;}
-  .mp-side h3{font-size:15px;font-weight:700;margin:0;}
-  .mp-side-sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
-  .mp-money{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
-  .mp-money div{background:var(--ow-steel-050);border-radius:8px;padding:9px 10px;}
-  .mp-money span{display:block;font-size:11px;color:var(--ink-soft);}
-  .mp-money b{display:block;font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums;}
-  .mp-person{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;}
-  .mp-person:last-child{border-bottom:none;}
-  .mp-person-name{font-size:13px;}
-  .mp-person-sub{font-size:11px;color:var(--ink-soft);}
-  .mp-person-amt{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;}
-  .mp-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;
-    padding:9px 12px;border-radius:9px;font-size:12.5px;}
-  .mp-strip.far{background:var(--ow-steel-050);color:var(--ink-soft);}
-  .mp-strip.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .mp-chip{all:unset;box-sizing:border-box;cursor:pointer;font-size:12px;padding:3px 9px;
-    border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink);}
-  .mp-head-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  .mp-search{max-width:260px;}
-  .mp-results{display:flex;flex-direction:column;margin-top:12px;border:1px solid var(--line);
-    border-radius:9px;overflow:hidden;}
-  .mp-result{display:flex;align-items:center;gap:10px;padding:9px 12px;
-    border-bottom:1px solid var(--line);}
-  .mp-result:last-child{border-bottom:none;}
-  .mp-result-main{flex:1;min-width:0;}
-  .mp-result-name{font-size:13px;font-weight:600;}
-  .mp-result-sub{font-size:11.5px;color:var(--ink-soft);}
-  .mp-result-acts{display:flex;gap:6px;flex:0 0 auto;}
-  .mp-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
-  .mp-dot.on{background:var(--ow-verdigris);}
-  .mp-dot.off{background:var(--ow-amber);}
-  .mp-results-more{padding:8px 12px;font-size:11.5px;color:var(--ink-soft);}
+  /* A MAP WITH NOTHING ON IT MUST SAY SO.
+     An empty grey rectangle is not an empty state, and the figures above
+     it are already correct -- they are counted from the invoices, not
+     from the map -- so the words that go here say which of the two is
+     missing, and name the work rather than the absence. Over the canvas
+     rather than instead of it: the Leaflet instance stays alive, so the
+     first pin appears without a reload. */
+  .mp-empty{position:absolute;inset:0;z-index:450;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px;
+    background:rgba(233,235,237,0.94);}
+  .mp-empty svg{width:34px;height:34px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round;margin-bottom:4px;}
+  .mp-empty b{font-size:14px;font-weight:600;color:var(--ink);}
+  .mp-empty p{margin:0;font-size:12px;color:var(--ink-soft);line-height:1.5;max-width:46ch;}
+
+  /* THE LEGEND IS UNDER THE MAP, NOT ON IT.
+
+     Floated bottom-left it covered the corner of the picture it is a key
+     to, and at phone width it ran under Leaflet's attribution -- which is
+     a licence condition of using OSM tiles, so it could not stay there.
+     Below the map it is one readable row at every width, there is no
+     corner left to collide in, and it has room to carry the two things a
+     reader cannot deduce: that circle size is headcount, and that the
+     square is the shop. */
+  .mp-legend{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:8px 12px;
+    border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  .mp-legend b{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-ink-400);}
+  .mp-legend div{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-soft);}
+  .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}
+  /* Nothing owed is HOLLOW, not a second verdigris. The old legend had
+     two entries painted #1C6B58 and it signalled nothing at all. */
+  .mp-legend i.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
+  .mp-legend em{font-style:normal;margin-left:auto;font-size:11px;color:var(--ow-ink-400);}
+
+  /* ---- the rail: the selected place, and what is off the frame ---- */
+  .mp-side{min-width:0;}
+  .mp-side-empty{padding:14px 12px;font-size:12px;color:var(--ink-soft);line-height:1.55;}
+  .mp-rh{display:flex;align-items:flex-start;gap:8px;padding:11px 12px 9px;}
+  .mp-rh-dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:5px;}
+  .mp-rh-dot.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
+  .mp-rh h3{font-size:15px;font-weight:700;line-height:1.2;margin:0;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-rh p{font-size:11px;color:var(--ink-soft);margin:2px 0 0;line-height:1.4;}
+  .mp-rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .mp-rf span{font-size:11px;color:var(--ink-soft);min-width:0;}
+  .mp-rf b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;letter-spacing:-.02em;
+    white-space:nowrap;}
+  .mp-rf b.mp-warn{color:var(--ow-amber-ink);}
+  .mp-rf b.mp-bad{color:var(--ow-crimson);}
+  .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px;
+    border-top:1px solid var(--ow-rule-soft);}
+  /* A person or an order at the selected place. */
+  .mp-person{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+    column-gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+    border-top:1px solid var(--ow-rule-soft);cursor:pointer;background:none;text-align:left;}
+  .mp-person:hover{background:var(--ow-paper-2);}
+  .mp-person-name{font-size:13px;font-weight:500;line-height:1.3;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-person-sub{grid-column:1;font-size:11px;color:var(--ink-soft);line-height:1.35;
+    margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-person-amt{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:13px;font-weight:600;letter-spacing:-.02em;}
+  .mp-person-amt.mp-zero{color:var(--ow-ink-400);font-weight:400;}
+  .mp-person-amt small{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;
+    font-weight:400;color:var(--ink-soft);letter-spacing:0;margin-top:1px;}
+  .mp-note{margin:0;padding:9px 12px;font-size:11px;color:var(--ink-soft);line-height:1.5;
+    border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+  .mp-note b{color:var(--ink);font-weight:600;}
+  /* A row that has to say WHY it is not on the map cannot ellipsis the
+     reason away -- the sentence is the whole point of the row. */
+  .mp-wrapm .mp-person-sub{white-space:normal;overflow:visible;}
+
+  /* ---- the list: every place, and what to do about it ---- */
+  .mp-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:40px;
+    padding:6px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+  .mp-bar .mp-bar-sp{flex:1;}
+  .mp-search{max-width:230px;}
+  .mp-results{display:flex;flex-direction:column;}
   /* Scrolls rather than truncates: a row that is not rendered is a place
      that cannot be moved or removed. */
   .mp-results{max-height:320px;overflow-y:auto;}
-  .mp-filters{display:flex;gap:4px;}
-  .mp-filter{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;
-    padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);}
-  .mp-filter.active{background:var(--ow-steel-100);color:var(--ink);}
+  /* Two rows, and every cell says which one it is in. Left to
+     auto-placement the sub-line landed in a row of its own and read as
+     the sub-line of the place BELOW it. */
+  .mp-result{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px auto;
+    grid-template-rows:auto auto;align-items:center;column-gap:12px;
+    min-height:44px;padding:6px 12px;box-sizing:border-box;
+    border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
+  .mp-result:last-child{border-bottom:none;}
+  .mp-result.mp-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+  .mp-result-name{grid-column:2;grid-row:1;font-size:13px;font-weight:500;line-height:1.3;
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-result-sub{grid-column:2;grid-row:2;font-size:11px;color:var(--ink-soft);line-height:1.35;
+    margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Money is sized to its content and the NAME gives way, because a
+     clipped figure is not a shortened figure -- "1,240,00" is a tenth of
+     "1,240,000" and looks entirely plausible. */
+  .mp-result-v{grid-row:1 / span 2;text-align:right;white-space:nowrap;}
+  .mp-result-v b{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+  .mp-result-v small{display:block;font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .mp-result-v.mp-zero b{color:var(--ow-ink-400);font-weight:400;}
+  .mp-result-acts{grid-column:5;grid-row:1 / span 2;display:flex;gap:6px;flex-wrap:wrap;
+    align-items:center;justify-content:flex-end;flex:0 0 auto;}
+  .mp-result-hd{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px auto;
+    gap:12px;padding:7px 12px;border-bottom:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);}
+  .mp-result-hd span{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-ink-400);}
+  .mp-result-hd span.mp-r{text-align:right;}
+  .mp-dot{grid-column:1;grid-row:1 / span 2;width:10px;height:10px;border-radius:50%;
+    flex:0 0 auto;justify-self:center;}
+  /* The dot carries the aging BAND, the same colour as the marker -- not
+     a binary placed/unplaced, which told you the one thing the row
+     already said and none of what the map was coloured by. */
+  .mp-dot.off{background:var(--panel);border:1.5px dashed var(--ow-amber);}
+  .mp-dot.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
+  .mp-results-more{padding:14px 12px;font-size:12px;color:var(--ink-soft);line-height:1.55;}
+
+  /* A SUGGESTION, DRAWN SO IT CANNOT BE MISTAKEN FOR A FACT.
+     The app has looked the name up; it has written nothing. */
+  .mp-sg{padding:2px 12px 12px 43px;background:var(--ow-paper-2);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .mp-sg-b{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);
+    border-radius:var(--ow-r);background:var(--panel);padding:9px 12px;}
+  .mp-sg-b svg{width:17px;height:17px;fill:none;stroke:var(--ow-oxide);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .mp-sg-t{font-size:12px;color:var(--ink);line-height:1.45;min-width:0;flex:1;}
+  .mp-sg-t b{font-weight:600;}
+  .mp-sg-t small{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .mp-sg-a{display:flex;gap:6px;flex:none;flex-wrap:wrap;}
+
+  /* the markers themselves */
+  /* The one thing on this screen that genuinely floats: a marker sits
+     above the tiles, and without the lift it reads as printed on them.
+     One declaration, shared by every shape a marker takes -- the count
+     circle, the hollow one, and the shop's square. */
+  .mp-marker, .mp-marker-home{box-shadow:0 1px 3px rgba(20,26,33,0.35);}
   .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;
-    color:#fff;font-weight:700;font-family:'Inter',sans-serif;border:2px solid #fff;
-    box-shadow:0 1px 3px rgba(20,26,33,0.35);}
+    color:#fff;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;
+    border:2px solid rgba(255,255,255,0.92);}
+  .mp-marker.mp-none{background:var(--panel);color:var(--ink-soft);border-color:var(--ow-steel-400);}
+  .mp-marker-sel{border-radius:50%;border:2px solid var(--ow-steel-950);box-sizing:border-box;}
+  /* The shop is a SQUARE. It is not a place that owes anything; it is
+     where everything else is measured from. */
+  .mp-marker-home{width:16px;height:16px;border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-950);border:2px solid #fff;}
+  /* The ghost pin: dashed and hollow, so a proposal can never read as a
+     pin that has been set. */
+  .mp-marker-ghost{width:38px;height:38px;border-radius:50%;border:2px dashed var(--ow-oxide);
+    background:rgba(178,58,38,.10);display:flex;align-items:center;justify-content:center;}
+  .mp-marker-ghost svg{width:17px;height:17px;fill:none;stroke:var(--ow-oxide);stroke-width:1.9;
+    stroke-linecap:round;stroke-linejoin:round;}
+
+  /* ---- the phone is its own design, not this one reflowed ---- */
+  @media (max-width: 820px){
+    #mp_map{height:210px;}
+    /* The panel head is a 34px single row by design, which is right for a
+       title and a count and wrong for a three-way switch plus a summary:
+       at 390 the switch alone is wider than the head, so "Customers" and
+       "Deliveries" were simply cut off the ends. Only the map's own head
+       wraps, and only here -- the shared component is untouched. */
+    .ow-pan-h.mp-headbar{height:auto;min-height:34px;flex-wrap:wrap;
+      align-items:flex-start;padding:8px 12px;gap:8px;}
+    .ow-pan-h.mp-headbar .ow-pan-n{margin-left:0;white-space:normal;}
+    .mp-seg{width:100%;}
+    .mp-seg button{flex:1;justify-content:center;height:30px;font-size:12px;}
+    .mp-search{max-width:none;flex:1 1 100%;}
+    .mp-result{grid-template-columns:14px minmax(0,1fr) auto;
+      grid-template-rows:auto auto auto;row-gap:2px;padding:12px;min-height:60px;}
+    .mp-result-name{font-size:15px;font-weight:600;}
+    .mp-result-sub{font-size:12px;}
+    .mp-result-v{grid-column:3;grid-row:1 / span 2;}
+    .mp-result-v b{font-size:15px;}
+    /* The oldest-age column is dropped rather than squeezed: it is in the
+       row's own sub-line already, and a third figure at this width makes
+       all three unreadable. */
+    .mp-result > .mp-result-age{display:none;}
+    /* ONE action per row on a phone. Three of them stacked to 150px a row
+       and turned a scannable list into a wall of buttons -- which is the
+       desktop reflowed, exactly what the two-designs rule forbids. The
+       row keeps its primary action; moving and removing a pin live in the
+       place's own panel, where you are already reading that place.
+       Nothing becomes unreachable, which is the rule that matters here:
+       a pin that cannot be removed because its button is not drawn is a
+       bug this screen has already shipped once. */
+    /* .btn.ow-sm is declared in the OW layer, which is LATER in this file
+       and carries the same (0,2,0) specificity -- so a tie goes to it and
+       ".mp-result-acts .mp-second{display:none}" silently lost. Naming
+       the button class as well takes the rule to (0,3,0) and it wins on
+       merit rather than on ordering. Measured, not assumed: the buttons
+       stayed on screen until this changed. */
+    .mp-result-acts{grid-column:1 / -1;grid-row:3;justify-content:flex-start;padding-top:6px;}
+    .mp-result-acts .btn.mp-second{display:none;}
+    .mp-result-acts .btn.ow-sm{min-height:var(--ow-tap);padding:0 14px;}
+    .mp-result-hd{display:none;}
+    .mp-results{max-height:none;}
+    .mp-sg{padding:2px 12px 12px;}
+    .mp-legend em{margin-left:0;flex:1 1 100%;}
+  }
 
   /* ---------------- WhatsApp: the front desk ----------------
 
@@ -13770,49 +13936,82 @@
     </section>
 
     <section id="tab-map" style="display:none;">
-      <div class="page-head">
-        <h1>Map</h1>
-        <p>Where your customers and suppliers are, and what is owed at each place.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Map</h1>
+        <p class="ow-ph-sub" id="mp_sub">Where your money is, and what is going out today.</p>
+        <p class="ow-ph-help">One marker per PLACE, not per person: forty-five customers in sixteen places is sixteen markers, because &ldquo;Bwaise: 3 customers, 1.2m owed&rdquo; is the sentence somebody actually wants. Every figure is counted from the invoices themselves at the moment the screen was drawn &mdash; nothing about money is stored on a place, so this and the Debtors list cannot drift apart. Markers are coloured by the oldest unpaid thing at the place, on the same bands Debtors uses, and sized by how many people are there; a place where money is owed but nothing carries a date is grey, never &ldquo;under 30 days&rdquo;. The shop itself is the black square everything else is measured from. Places further than 40km out are listed beside the map rather than drawn with it, because fitting Lira and Bwaise on one screen makes the twenty places that matter a single dot. Nothing on this screen chases anybody or hands out an order: those are taps of yours, on Debtors and on Order tracking.</p>
+        <span class="ow-ph-sp"></span>
+        <span id="mp_home_note"></span>
+        <span id="mp_place_all"></span>
       </div>
-      <div class="panel">
-        <div class="panel-head-row">
-          <div class="mp-layers" id="mp_layers">
-            <button type="button" class="mp-layer active" data-layer="customers">Customers</button>
-            <button type="button" class="mp-layer" data-layer="suppliers">Suppliers</button>
-            <button type="button" class="mp-layer" data-layer="deliveries">Deliveries</button>
-          </div>
-          <div class="mp-head-right">
-            <div class="mp-filters" id="mp_filters">
-              <button type="button" class="mp-filter active" data-filter="all">All</button>
-              <button type="button" class="mp-filter" data-filter="todo">To place</button>
-              <button type="button" class="mp-filter" data-filter="placed">On the map</button>
+
+      <div class="ow-stack">
+        <div id="mp_strip"></div>
+
+        <div class="ow-grid">
+          <div class="ow-pan">
+            <div class="ow-pan-h mp-headbar">
+              <div class="mp-seg" id="mp_layers">
+                <button type="button" class="active" data-layer="customers">
+                  <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 19c0-3.1 2.7-5.2 6-5.2s6 2.1 6 5.2"></path><path d="M16.5 6.2a3 3 0 0 1 0 5.6"></path></svg>
+                  <span>Customers</span><b class="mp-seg-n" id="mp_n_cust"></b>
+                </button>
+                <button type="button" data-layer="suppliers">
+                  <svg viewBox="0 0 24 24"><path d="M3 9h18"></path><path d="M5 9V6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path></svg>
+                  <span>Suppliers</span><b class="mp-seg-n" id="mp_n_supp"></b>
+                </button>
+                <button type="button" data-layer="deliveries">
+                  <svg viewBox="0 0 24 24"><rect x="2" y="7" width="12" height="9" rx="1.4"></rect><path d="M14 10h3l3 3v3h-6z"></path><circle cx="7" cy="18" r="1.8"></circle><circle cx="17" cy="18" r="1.8"></circle></svg>
+                  <span>Deliveries</span><b class="mp-seg-n" id="mp_n_del"></b>
+                </button>
+              </div>
+              <span class="ow-pan-n" id="mp_summary"></span>
             </div>
-            <div class="search-bar mp-search"><input id="mp_search" placeholder="Search places to place or find..."></div>
-            <span id="mp_summary" class="mp-summary"></span>
-          </div>
-        </div>
-        <div class="mp-wrap">
-          <div class="mp-canvas"><div id="mp_map"></div>
-            <div class="mp-bases" id="mp_bases">
-              <button type="button" class="mp-base active" data-base="streets">Streets</button>
-              <button type="button" class="mp-base" data-base="satellite">Satellite</button>
+            <div class="mp-canvas"><div id="mp_map"></div>
+              <div class="mp-bases" id="mp_bases">
+                <button type="button" class="mp-base active" data-base="streets">Streets</button>
+                <button type="button" class="mp-base" data-base="satellite">Satellite</button>
+              </div>
+              <div class="mp-compass" id="mp_compass">
+                <button type="button" id="mp_rot_left" title="Turn the map left">
+                  <svg viewBox="0 0 24 24"><path d="M20 8a9 9 0 1 0 1.5 6"></path><path d="M20 3v5h-5"></path></svg>
+                </button>
+                <button type="button" id="mp_rot_north" title="Put north back at the top">
+                  <svg class="mp-needle" id="mp_needle" viewBox="0 0 24 24"><path d="M12 4 17 19 12 15 7 19 Z"></path></svg>
+                  <span class="mp-bearing" id="mp_bearing">N</span>
+                </button>
+                <button type="button" id="mp_rot_right" title="Turn the map right">
+                  <svg viewBox="0 0 24 24"><path d="M4 8a9 9 0 1 1-1.5 6"></path><path d="M4 3v5h5"></path></svg>
+                </button>
+                <button type="button" id="mp_fit" title="Frame everything on this layer">
+                  <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
+                </button>
+              </div>
+              <div class="mp-scale"><span>2 km</span><i></i></div>
+              <div class="mp-empty" id="mp_empty" hidden></div>
             </div>
             <div class="mp-legend" id="mp_legend"></div>
-            <div class="mp-compass" id="mp_compass">
-              <button type="button" id="mp_rot_left" title="Turn the map left">&#8630;</button>
-              <button type="button" id="mp_rot_north" title="Put north back at the top">
-                <span class="mp-needle" id="mp_needle">&#9650;</span>
-                <span class="mp-bearing" id="mp_bearing">N</span>
-              </button>
-              <button type="button" id="mp_rot_right" title="Turn the map right">&#8631;</button>
-              <button type="button" id="mp_fit" title="Frame everything on this layer">&#9974;</button>
-            </div>
           </div>
-          <aside class="mp-side" id="mp_side"></aside>
+          <aside class="ow-side" id="mp_side"></aside>
         </div>
-        <div id="mp_results"></div>
-        <div id="mp_far"></div>
-        <div id="mp_unpinned"></div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t" id="mp_list_t">Places</span>
+            <span class="ow-pan-nt" id="mp_list_nt">most owed first</span>
+            <span class="ow-pan-n" id="mp_list_n"></span>
+          </div>
+          <div class="mp-bar">
+            <div class="mp-seg" id="mp_filters">
+              <button type="button" class="active" data-filter="all"><span>All</span><b class="mp-seg-n" id="mp_n_all"></b></button>
+              <button type="button" data-filter="todo"><span>Not placed</span><b class="mp-seg-n" id="mp_n_todo"></b></button>
+              <button type="button" data-filter="placed"><span>On the map</span><b class="mp-seg-n" id="mp_n_placed"></b></button>
+            </div>
+            <span class="mp-bar-sp"></span>
+            <div class="search-bar mp-search"><input id="mp_place_search" placeholder="Find a place, or a customer"></div>
+          </div>
+          <div id="mp_results"></div>
+        </div>
       </div>
     </section>
 
@@ -24352,29 +24551,45 @@ function mapBearingLabel(deg){
   return Math.abs(b - i * 45) < 1 ? MAP_COMPASS_POINTS[i] : b + '\u00B0';
 }
 
-/* The place list, searched.
+/* The place list, searched and ranked.
 
-   Unplaced FIRST, whatever the query: this list exists to make pinning
-   twenty places quick, and the ones still to do are the work. Within
-   each half, busiest first -- pinning the place holding thirteen
-   customers is worth more than the one holding one. */
-function mapPlaceSearch(rows, query, filter){
+   IT USED TO PUT THE UNPLACED FIRST, whatever the query, and that was
+   right while pinning twenty places by hand was the job this list
+   existed for: the ones still to do were the work, so they went to the
+   top. That job has moved. Placing is now a run started from one button
+   in the header -- suggested, confirmed one at a time -- so nobody hunts
+   this list to find something to pin any more.
+
+   What is left is the other job: finding a place, and reading what is
+   owed there. So the rank is the money at the place, which is the only
+   ordering that answers "where do I start" without being read
+   end-to-end. An unplaced place keeps its figures and therefore keeps
+   its rank -- it is not exiled to the bottom for missing a position, and
+   it carries its own action on the row.
+
+   Two things that protected the old order still matter, and matter MORE
+   under this one: every match is rendered and the box scrolls, and the
+   halves can be asked for by name. A place with nothing owed now sorts
+   last whether or not it is placed, so any cap at all would bury it. */
+function mapPlaceSearch(rows, query, filter, layer){
   const tokens = searchTokens(query);
+  /* The figure the current layer is about. Defaulting to the customer
+     side keeps a three-argument call -- and the rank stable -- for
+     anything that does not care which way the money runs. */
+  const money = (r)=> Math.max(0, Number(
+    layer === 'suppliers' ? (r && r.owing) : (r && r.owed)) || 0);
   /* No .slice() and no empty-query branch: filter() already returns a
      fresh array, so sort() cannot reach the caller's rows, and
      matchesAllTokens against no tokens is vacuously true, so an empty
-     box already shows everything. Both were belt on top of braces. */
+     box already shows everything. */
   return (rows||[])
     .filter(r=> matchesAllTokens(String(r.name||'').toLowerCase(), tokens))
-    /* Unplaced sorts first, which is right for the job of pinning twenty
-       places -- and wrong the moment somebody wants to change a pin they
-       already set, because the placed ones sort LAST and fall off the end
-       of the list. Found live: two pins that existed, could not be seen,
-       and so could not be removed. The filter is how you ask for the
-       other half. */
+    /* Found live, and still true: two pins that existed, could not be
+       seen, and so could not be removed. The filter is how you ask for
+       either half outright. */
     .filter(r=> filter === 'todo' ? !r.pin : filter === 'placed' ? !!r.pin : true)
     .sort((a,b)=>
-      (a.pin ? 1 : 0) - (b.pin ? 1 : 0)
+      money(b) - money(a)
       || b.count - a.count
       || String(a.name).localeCompare(String(b.name)));
 }
@@ -24469,6 +24684,313 @@ function mapHomePin(){
   return placePin(named) || placePin(lsGet(MAP_HOME_PLACE_KEY) || '') || null;
 }
 
+/* ---- WHERE A PLACE PROBABLY IS ------------------------------------ *
+ * Twenty places used to be pinned by hand, one map-click each. They are
+ * real place names -- Bwaise, Nakawa, Kireka -- so something can be
+ * asked where they are, and the owner's answer to "how much should the
+ * app do without you" was: suggest, and I confirm each one.
+ *
+ * SO THIS SUGGESTS AND NEVER WRITES. Nominatim is the gazetteer behind
+ * OpenStreetMap: free, no key, and it will answer a bare place name,
+ * which no address-shaped geocoder will do for a shop with no addresses
+ * on file. Its usage policy asks for at most one request a second, so
+ * the queue below is serialised with a gap and every answer is cached
+ * for the session -- twenty places is twenty requests, once.
+ *
+ * THREE OUTCOMES, KEPT APART, because they need different words and
+ * different next actions: found (a dashed pin, waiting to be accepted),
+ * asked-and-nothing-matched (place it by hand), and could-not-ask (the
+ * lookup needs a connection; placing by hand does not). Collapsing the
+ * last two into "no match" would blame the shop's data for the
+ * network. */
+const MAP_GEOCODE_URL = 'https://nominatim.openstreetmap.org/search';
+/* Uganda, so "Nakawa" cannot come back as a street in another country.
+   Bounded rather than merely preferred: a wrong continent is worse than
+   no answer, because a wrong answer gets accepted. */
+const MAP_GEOCODE_VIEWBOX = '29.5,-1.5,35.1,4.3';
+const MAP_GEOCODE_GAP_MS = 1100;
+const mpGeocodeCache = new Map();
+let mpGeocodeLast = 0;
+/* Resolves to {lat,lng,label} when a place was found, null when the
+   gazetteer answered with nothing, and undefined when it could not be
+   asked at all. The three are the caller's whole vocabulary. */
+async function mapGeocodePlace(name){
+  const key = canonicalLocation(name);
+  if(!key) return null;
+  if(mpGeocodeCache.has(key)) return mpGeocodeCache.get(key);
+  const wait = MAP_GEOCODE_GAP_MS - (Date.now() - mpGeocodeLast);
+  if(wait > 0) await new Promise(r=> setTimeout(r, wait));
+  mpGeocodeLast = Date.now();
+  let out;
+  try {
+    const url = MAP_GEOCODE_URL + '?format=jsonv2&limit=1&countrycodes=ug&bounded=1'
+      + '&viewbox=' + encodeURIComponent(MAP_GEOCODE_VIEWBOX)
+      + '&q=' + encodeURIComponent(key);
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const hits = await res.json();
+    const hit = Array.isArray(hits) ? hits[0] : null;
+    const lat = hit ? Number(hit.lat) : NaN, lng = hit ? Number(hit.lon) : NaN;
+    out = (isFinite(lat) && isFinite(lng))
+      ? { lat, lng, label: String(hit.display_name || key) }
+      : null;
+  } catch(e){
+    /* Not cached: a lookup that failed because the connection did should
+       be retried the next time somebody asks, unlike a genuine no-match
+       which will not change. */
+    return undefined;
+  }
+  mpGeocodeCache.set(key, out);
+  return out;
+}
+
+/* The placing run: a queue of places and where we are in it. Never more
+   than one place is being asked about, for the same reason only one can
+   be armed for a click -- two questions about one pin is two chances to
+   answer differently. */
+let mpPlacing = null;      // { queue: [name], i, name, state, lat, lng, label }
+function mapPlacingActive(){ return !!(mpPlacing && mpPlacing.name); }
+function mapStopPlacing(){
+  mpPlacing = null;
+  mapCancelPin();
+  renderMap();
+}
+async function mapPlacingAsk(){
+  if(!mapPlacingActive()) return;
+  const name = mpPlacing.name;
+  mpPlacing.state = 'asking';
+  renderMap();
+  const hit = await mapGeocodePlace(name);
+  /* The run may have been stopped, or moved on, while the answer was in
+     flight. An answer to a question nobody is asking any more is thrown
+     away rather than drawn over whatever is on screen now. */
+  if(!mapPlacingActive() || mpPlacing.name !== name) return;
+  if(hit){ Object.assign(mpPlacing, { state: 'found', lat: hit.lat, lng: hit.lng, label: hit.label }); }
+  else { mpPlacing.state = (hit === null) ? 'none' : 'offline'; }
+  renderMap();
+}
+function mapPlacingStart(names){
+  const queue = (names || []).filter(Boolean);
+  if(!queue.length) return;
+  mpPlacing = { queue, i: 0, name: queue[0], state: 'asking' };
+  mpSelected = queue[0];
+  mapPlacingAsk();
+}
+function mapPlacingNext(){
+  if(!mpPlacing) return;
+  mpPlacing.i += 1;
+  if(mpPlacing.i >= mpPlacing.queue.length){
+    const n = mpPlacing.queue.length;
+    mpPlacing = null;
+    toast(n === 1 ? 'Done' : `Done — ${n} places offered`);
+    renderMap();
+    return;
+  }
+  mpPlacing.name = mpPlacing.queue[mpPlacing.i];
+  mpSelected = mpPlacing.name;
+  mapPlacingAsk();
+}
+/* The only place a suggestion becomes a pin, and it takes a tap. */
+function mapPlacingAccept(){
+  if(!mapPlacingActive() || mpPlacing.state !== 'found') return;
+  const name = mpPlacing.name;
+  mapSetPin(name, mpPlacing.lat, mpPlacing.lng);
+  saveData();
+  toast(`${name} placed`);
+  mapPlacingNext();
+}
+function mapPlacingByHand(){
+  if(!mapPlacingActive()) return;
+  const name = mpPlacing.name;
+  mpPlacing = null;
+  mapBeginPin(name);
+  renderMap();
+}
+
+/* ---- the figures at the top ---------------------------------------- */
+/* What the strip says depends on what the screen is being asked, which
+   is what the layer means -- so the tiles are built per layer rather
+   than being one fixed set with different numbers poured in. */
+function mapPeopleAt(r, layer){
+  return layer === 'suppliers' ? r.suppliers.length : r.customers.length;
+}
+function mapMoneyAt(r, layer){
+  return layer === 'suppliers' ? r.owing : r.owed;
+}
+/* The bare figure, for the places that carry their own unit label. The
+   app's formatter suffixes "UGX", so a tile printing the unit itself
+   has to take it off -- stripping a PREFIX left "250,000 UGX UGX" on
+   every tile, which is how this was found. */
+function mapFigure(n){
+  return String(fmtUGX(Math.round(n))).replace(/\s*UGX\s*$/, '');
+}
+function mapTile(label, value, unit, sub, tone){
+  return `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${esc(label)}</p>
+    <span class="ow-mt-v">${esc(value)}${unit ? `<span class="ow-u">${esc(unit)}</span>` : ''}</span>
+    <p class="ow-mt-s">${sub}</p></div>`;
+}
+function renderMapStrip(rows, unpinned, layer){
+  const el = document.getElementById('mp_strip');
+  if(!el) return;
+  const money = rows.reduce((n,r)=> n + mapMoneyAt(r, layer), 0);
+  const people = rows.reduce((n,r)=> n + mapPeopleAt(r, layer), 0);
+  const withMoney = rows.filter(r=> mapMoneyAt(r, layer) > 0.5);
+  const owedWord = layer === 'suppliers' ? 'You owe' : 'Owed to you';
+  /* The concentration figure the old screen could never say: one place
+     holding a third of everything owed is where a collection round
+     starts, and no list sorted by name will ever tell you that. */
+  const top = withMoney.slice().sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer))[0];
+  const share = (top && money > 0.5) ? Math.round(mapMoneyAt(top, layer) / money * 100) : 0;
+  /* Oldest is a customer-side idea: nothing dates what the shop owes. */
+  let oldest = null, oldestAt = null;
+  if(layer === 'customers'){
+    rows.forEach(r=>{ if(r.oldestDays != null && (oldest == null || r.oldestDays > oldest)){
+      oldest = r.oldestDays; oldestAt = r; } });
+  }
+  const undrawnMoney = unpinned.reduce((n,r)=> n + mapMoneyAt(r, layer), 0);
+  const tiles = [
+    mapTile(owedWord, mapFigure(money), 'UGX',
+      `${people} ${layer === 'suppliers' ? 'supplier' : 'customer'}${people === 1 ? '' : 's'}, across ${withMoney.length} place${withMoney.length === 1 ? '' : 's'}`,
+      money > 0.5 ? '' : 'ow-good'),
+  ];
+  if(layer === 'customers'){
+    tiles.push(oldest == null
+      ? mapTile('Oldest debt', '—', '', 'no unpaid invoice carries a date', '')
+      : mapTile('Oldest debt', String(oldest), oldest === 1 ? 'day' : 'days',
+          `at ${esc(oldestAt.name)}`, oldest >= 90 ? 'ow-bad' : oldest >= 30 ? 'ow-warn' : 'ow-good'));
+  } else {
+    tiles.push(mapTile('Places you buy from', String(rows.filter(r=> r.suppliers.length).length), 'places',
+      'holding at least one supplier', ''));
+  }
+  tiles.push(top
+    ? mapTile('Most in one place', mapFigure(mapMoneyAt(top, layer)), 'UGX',
+        `${esc(top.name)} — ${share}% of the total`, '')
+    : mapTile('Most in one place', '—', '', 'nothing is owed anywhere', 'ow-good'));
+  tiles.push(unpinned.length
+    ? mapTile('Not on the map yet', String(unpinned.length), unpinned.length === 1 ? 'place' : 'places',
+        undrawnMoney > 0.5
+          ? `${esc(fmtUGX(Math.round(undrawnMoney)))} at them, undrawn`
+          : 'nothing owed at them', 'ow-warn')
+    : mapTile('Not on the map yet', '0', 'places', `all ${rows.length} placed`, 'ow-good'));
+  el.innerHTML = `<div class="ow-strip">${tiles.join('')}</div>`;
+}
+
+/* ---- the header: the counts, and the one thing to do next ---------- */
+function renderMapHead(rows, unpinned){
+  const cust = rows.reduce((n,r)=> n + r.customers.length, 0);
+  const supp = rows.reduce((n,r)=> n + r.suppliers.length, 0);
+  const { runs } = deliveryMapRuns();
+  const drops = runs.reduce((n,r)=> n + r.orders.length, 0);
+  const set = (id, txt)=>{ const e = document.getElementById(id); if(e) e.textContent = txt; };
+  set('mp_n_cust', String(cust));
+  set('mp_n_supp', String(supp));
+  set('mp_n_del', String(drops));
+  set('mp_n_all', String(rows.length));
+  set('mp_n_todo', String(unpinned.length));
+  set('mp_n_placed', String(rows.length - unpinned.length));
+  set('mp_sub', mpLayer === 'deliveries'
+    ? (drops ? `${drops} order${drops === 1 ? '' : 's'} going out today, to ${runs.length} place${runs.length === 1 ? '' : 's'}.`
+             : 'Nothing is waiting for delivery today.')
+    : mapPlacingActive() ? `Placing the ${mpPlacing.queue.length} place${mpPlacing.queue.length === 1 ? '' : 's'} that are not on the map yet.`
+    : 'Where your money is, and what is going out today.');
+
+  /* Where everything is measured from, said out loud rather than left
+     for somebody to infer from a black square. */
+  const homeEl = document.getElementById('mp_home_note');
+  if(homeEl){
+    const named = canonicalLocation(data.presetShopLocation || data.presetShopAddress || '');
+    const pin = mapHomePin();
+    homeEl.innerHTML = (named && pin)
+      ? `<span class="ow-cp" title="Everything is measured from here">The shop is in ${esc(named)}</span>`
+      : `<span class="ow-cp ow-warn" title="Set the shop's location in Presets">Shop not placed — distances are from the middle of your pins</span>`;
+  }
+
+  /* THE ACCENT, AND THE ONLY ONE. It is the next thing to do, so when
+     there is nothing to do it is not there at all and the screen carries
+     no accent -- which is correct, not a gap. */
+  const act = document.getElementById('mp_place_all');
+  if(!act) return;
+  if(mapPlacingActive()){
+    act.innerHTML = `<button class="btn btn-ghost ow-sm" id="mp_stop_placing">Stop placing</button>`;
+    document.getElementById('mp_stop_placing').addEventListener('click', mapStopPlacing);
+  } else if(unpinned.length && mpLayer !== 'deliveries'){
+    act.innerHTML = `<button class="btn btn-accent ow-sm" id="mp_place_go">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><path d="M9.6 10.2 11.4 12l3.2-3.4"></path></svg>
+      Place ${unpinned.length} remaining</button>`;
+    document.getElementById('mp_place_go').addEventListener('click', ()=>{
+      if(!mpMap){ toast('The map needs to load before places can be put on it'); return; }
+      mapPlacingStart(unpinned.map(r=> r.name));
+    });
+  } else {
+    act.innerHTML = '';
+  }
+}
+
+/* ---- the markers ---------------------------------------------------- */
+/* One place, drawn: the count in the band's colour, a ring if it is the
+   one being read, and the name under it so the picture can be read
+   without clicking every circle. */
+function mapMarkerHtml(count, colour, hollow){
+  const d = mapMarkerRadius(count) * 2;
+  return { d, html: `<div class="mp-marker${hollow ? ' mp-none' : ''}" style="width:${d}px;height:${d}px;`
+    + `${hollow ? '' : `background:${colour};`}font-size:${d > 32 ? 13 : 11}px;">${count}</div>` };
+}
+function mapAddMarker(r, count, colour, hollow, label, onClick){
+  const { d, html } = mapMarkerHtml(count, colour, hollow);
+  const sel = mpSelected === label;
+  const size = sel ? d + 14 : d;
+  const inner = sel
+    ? `<div class="mp-marker-sel" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;">${html}</div>`
+    : html;
+  const icon = L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size/2, size/2], html: inner });
+  L.marker([r.pin.lat, r.pin.lng], { icon, title: label })
+    .on('click', onClick).addTo(mpMarkers);
+}
+function mapAddHome(home){
+  if(!home) return;
+  const icon = L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8],
+    html: '<div class="mp-marker-home" title="Your shop"></div>' });
+  L.marker([home.lat, home.lng], { icon, title: 'Your shop' }).addTo(mpMarkers);
+}
+/* The suggestion, on the map: dashed, hollow, and never written. */
+function mapAddGhost(){
+  if(!mapPlacingActive() || mpPlacing.state !== 'found') return;
+  const icon = L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+    html: `<div class="mp-marker-ghost" title="Suggested — not saved">`
+      + `<svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path>`
+      + `<circle cx="12" cy="10" r="2.4"></circle></svg></div>` });
+  L.marker([mpPlacing.lat, mpPlacing.lng], { icon, title: mpPlacing.name + ' — suggested' })
+    .addTo(mpMarkers);
+}
+
+/* What an empty canvas says, which depends on WHY it is empty: no places
+   on file at all, places that nobody has placed, or a layer with nobody
+   on it. Three different problems with three different next actions. */
+function mapEmptyState(rows, shown, unpinned, layer){
+  const el = document.getElementById('mp_empty');
+  if(!el) return;
+  if(shown.length){ el.hidden = true; el.innerHTML = ''; return; }
+  const icon = '<svg viewBox="0 0 24 24"><path d="M9 3 3 5.4v15L9 18l6 3 6-2.4v-15L15 6z"></path><path d="M9 3v15M15 6v15"></path></svg>';
+  let head, body;
+  if(!rows.length){
+    head = 'No places on file yet';
+    body = 'A place appears here as soon as a customer or supplier names one. Nothing to place until then.';
+  } else if(unpinned.length >= rows.length){
+    head = 'Nothing is on the map yet';
+    body = `The figures above are already right — they are counted from your invoices, not from the map. `
+      + `Placing your ${rows.length} place${rows.length === 1 ? '' : 's'} is what turns them into a picture `
+      + `you can plan a round from.`;
+  } else {
+    head = `No ${layer === 'suppliers' ? 'suppliers' : 'customers'} at any placed place`;
+    body = `${rows.length - unpinned.length} place${rows.length - unpinned.length === 1 ? ' is' : 's are'} on the map, `
+      + `but nobody on this layer is at ${rows.length - unpinned.length === 1 ? 'it' : 'any of them'}. `
+      + `The other layer may have somebody.`;
+  }
+  el.innerHTML = `${icon}<b>${esc(head)}</b><p>${esc(body)}</p>`;
+  el.hidden = false;
+}
+
 function renderMap(){
   if(mpLayer === 'deliveries') return renderDeliveryMap();
   const rows = mapPlaceRows();
@@ -24479,20 +25001,30 @@ function renderMap(){
   const { core, far, unpinned } = mapPlaceSplit(rows, home);
   const shown = core.filter(r=> mpLayer === 'customers' ? r.customers.length : r.suppliers.length);
 
-  const totalPeople = rows.reduce((n,r)=> n + (mpLayer==='customers' ? r.customers.length : r.suppliers.length), 0);
-  const totalMoney = rows.reduce((n,r)=> n + (mpLayer==='customers' ? r.owed : r.owing), 0);
-  document.getElementById('mp_summary').textContent =
-    `${totalPeople} ${mpLayer === 'customers' ? 'customers' : 'suppliers'} · `
-    + `${mpLayer === 'customers' ? 'owed to you' : 'you owe'} ${fmtUGX(Math.round(totalMoney))}`;
+  renderMapHead(rows, unpinned);
+  renderMapStrip(rows, unpinned, mpLayer);
 
+  const totalPeople = rows.reduce((n,r)=> n + mapPeopleAt(r, mpLayer), 0);
+  document.getElementById('mp_summary').textContent =
+    `${shown.length} of ${rows.length} places drawn · ${totalPeople} ${mpLayer === 'customers' ? 'customers' : 'suppliers'}`;
+
+  /* The key, under the map rather than on it, and honest: "nothing owed"
+     is a hollow ring, not a second verdigris. */
   document.getElementById('mp_legend').innerHTML = mpLayer === 'customers'
-    ? AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
-      + `<div><i style="background:#1C6B58"></i>Nothing owed</div>`
-    : `<div><i style="background:#1C6B58"></i>Suppliers</div>`;
+    ? `<b>Oldest debt at the place</b>`
+      + AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
+      + `<div><i style="background:${mapBandColour('unknown')}"></i>Owed, but undated</div>`
+      + `<div><i class="mp-hollow"></i>Nothing owed</div>`
+      + `<em>Circle size is how many are there · the square is your shop</em>`
+    : `<b>Suppliers</b><div><i style="background:#B23A26"></i>You owe them</div>`
+      + `<div><i class="mp-hollow"></i>Nothing owed</div>`
+      + `<em>Circle size is how many are there · the square is your shop</em>`;
 
   if(typeof L === 'undefined'){
     document.getElementById('mp_map').innerHTML =
-      '<div class="mp-side-empty" style="padding:18px;">The map could not load — it needs a connection the first time. Your places and figures below are unaffected.</div>';
+      '<div class="mp-results-more" style="padding:24px 18px;">The picture needs a connection; the figures do not. '
+      + 'Map tiles are drawn by OpenStreetMap and have to be fetched — every place and every figure on this screen '
+      + 'is counted from your own books and is correct below.</div>';
   } else {
     if(!mpMap){
       /* rotate/touchRotate/shiftKeyRotate come from leaflet-rotate.
@@ -24520,127 +25052,173 @@ function renderMap(){
     }
     mpMarkers.clearLayers();
     shown.forEach(r=>{
-      const n = mpLayer === 'customers' ? r.customers.length : r.suppliers.length;
-      const d = mapMarkerRadius(n) * 2;
-      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#1C6B58';
-      const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
-        html: `<div class="mp-marker" style="width:${d}px;height:${d}px;background:${colour};font-size:${d>32?13:11}px;">${n}</div>` });
-      L.marker([r.pin.lat, r.pin.lng], { icon, title: r.name })
-        .on('click', ()=>{ mpSelected = r.name; renderMapSide(); })
-        .addTo(mpMarkers);
+      const n = mapPeopleAt(r, mpLayer);
+      const owed = mapMoneyAt(r, mpLayer);
+      const hollow = owed <= 0.5;
+      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#B23A26';
+      mapAddMarker(r, n, colour, hollow, r.name, ()=>{ mpSelected = r.name; renderMapSide(); });
     });
+    mapAddHome(home);
+    mapAddGhost();
     mapFitTo(shown.map(r=> [r.pin.lat, r.pin.lng]), mpLayer, false);
     setTimeout(()=> mpMap.invalidateSize(), 0);
   }
+  mapEmptyState(rows, shown, unpinned, mpLayer);
 
-  renderMapSide();
+  renderMapSide(rows, far, home);
   renderMapResults();
-
-  const farEl = document.getElementById('mp_far');
-  farEl.innerHTML = far.length
-    ? `<div class="mp-strip far"><span>Too far to draw with the rest:</span>${far.map(r=>
-        `<button type="button" class="mp-chip mp-fly" data-name="${esc(r.name)}">${esc(r.name)} · ${Math.round(r.km)}km</button>`).join('')}</div>`
-    : '';
-  farEl.querySelectorAll('.mp-fly').forEach(b=> b.addEventListener('click', ()=>{
-    const r = rows.find(x=> x.name === b.dataset.name);
-    if(r && r.pin && mpMap){ mpMap.setView([r.pin.lat, r.pin.lng], 12); }
-    mpSelected = b.dataset.name; renderMapSide();
-  }));
-
-  /* Named, never guessed at. A place with no pin is not drawn somewhere
-     approximate -- it is listed until somebody says where it is. */
-  const todo = document.getElementById('mp_unpinned');
-  todo.innerHTML = unpinned.length
-    ? `<div class="mp-strip todo"><span><b>${unpinned.length}</b> place${unpinned.length===1?'':'s'} not on the map yet — ${
-        esc(unpinned.slice(0,5).map(r=> r.name).join(', '))}${unpinned.length>5?'…':''}. Find them in the list below and press Place.</span>
-        </div>`
-    : '';
 }
 
 /* The delivery board, drawn. One marker per destination, sized by how
    many drops are there, and coloured by whether anybody is taking them:
    a stop with no driver is the thing an owner can act on before the van
-   leaves, which is why it is the colour that stands out. */
+   leaves, which is why it is the colour that means "look at this". */
 function renderDeliveryMap(){
   const { runs, collected, unknown } = deliveryMapRuns();
+  const rows = mapPlaceRows();
+  const home = mapHomePin() || mapCentrePin(rows);
   const drawable = runs.filter(r=> r.pin);
   const drops = runs.reduce((n,r)=> n + r.orders.length, 0);
   const money = runs.reduce((n,r)=> n + r.toCollect, 0);
+  const noDriver = runs.reduce((n,r)=> n + (r.unassigned || 0), 0);
+  const { unpinned } = mapPlaceSplit(rows, home);
+
+  renderMapHead(rows, unpinned);
+
+  /* The layer changes the question, so it changes the figures. */
+  const stripEl = document.getElementById('mp_strip');
+  if(stripEl){
+    const furthest = drawable.map(r=> Object.assign({ km: home ? pinDistanceKm(home, r.pin) : null }, r))
+      .filter(r=> r.km != null).sort((a,b)=> b.km - a.km)[0];
+    stripEl.innerHTML = `<div class="ow-strip">`
+      + mapTile('Going out today', String(drops), drops === 1 ? 'order' : 'orders',
+          drops ? `to ${runs.length} place${runs.length === 1 ? '' : 's'}` : 'nothing waiting', drops ? '' : 'ow-good')
+      + mapTile('To collect on delivery', mapFigure(money), 'UGX',
+          'balances still unpaid, not order value', '')
+      + (noDriver
+          ? mapTile('No driver yet', String(noDriver), noDriver === 1 ? 'order' : 'orders',
+              'hand these out before the van leaves', 'ow-warn')
+          : mapTile('No driver yet', '0', 'orders', 'every drop is taken', 'ow-good'))
+      + (furthest
+          ? mapTile('Furthest stop', String(Math.round(furthest.km * 10) / 10), 'km',
+              `${esc(furthest.label)} — ${furthest.orders.length} drop${furthest.orders.length === 1 ? '' : 's'}`, '')
+          : mapTile('Furthest stop', '—', '', 'no stop can be measured yet', ''))
+      + `</div>`;
+  }
 
   document.getElementById('mp_summary').textContent = drops
-    ? `${drops} to deliver · ${fmtUGX(Math.round(money))} to collect`
+    ? `${drawable.length} of ${runs.length} stops drawn · ${fmtUGX(Math.round(money))} to collect`
     : 'Nothing waiting for delivery';
   document.getElementById('mp_legend').innerHTML =
-    '<div><i style="background:#B0700A"></i>No driver yet</div>'
-    + '<div><i style="background:#2F7FBF"></i>Driver assigned</div>';
+    '<b>Today\'s round</b>'
+    + '<div><i style="background:#B0700A"></i>No driver yet</div>'
+    + '<div><i style="background:#1C6B58"></i>Driver assigned</div>'
+    + '<em>Circle size is how many drops · the square is your shop</em>';
 
   if(mpMap){
     mpMarkers.clearLayers();
     drawable.forEach(r=>{
-      const n = r.orders.length;
-      const d = mapMarkerRadius(n) * 2;
-      const colour = r.unassigned > 0 ? '#B0700A' : '#2F7FBF';
-      const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
-        html: `<div class="mp-marker" style="width:${d}px;height:${d}px;background:${colour};font-size:${d>32?13:11}px;">${n}</div>` });
-      L.marker([r.pin.lat, r.pin.lng], { icon, title: r.label })
-        .on('click', ()=>{ mpSelected = r.label; renderDeliverySide(); })
-        .addTo(mpMarkers);
+      /* Amber is the one that wants doing; verdigris is the one that is
+         handled. Both are the app's own state colours -- the blue this
+         used to draw was not one of the palette's values and meant
+         nothing anywhere else in the app. */
+      const colour = r.unassigned > 0 ? '#B0700A' : '#1C6B58';
+      mapAddMarker(r, r.orders.length, colour, false, r.label,
+        ()=>{ mpSelected = r.label; renderDeliverySide(); });
     });
+    mapAddHome(home);
     mapFitTo(drawable.map(r=> [r.pin.lat, r.pin.lng]), 'deliveries', false);
     setTimeout(()=> mpMap.invalidateSize(), 0);
+  }
+  const emptyEl = document.getElementById('mp_empty');
+  if(emptyEl){
+    if(drawable.length){ emptyEl.hidden = true; emptyEl.innerHTML = ''; }
+    else {
+      emptyEl.innerHTML = '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="12" height="9" rx="1.4"></rect>'
+        + '<path d="M14 10h3l3 3v3h-6z"></path><circle cx="7" cy="18" r="1.8"></circle>'
+        + '<circle cx="17" cy="18" r="1.8"></circle></svg>'
+        + (drops
+          ? `<b>Today&rsquo;s stops cannot be drawn yet</b><p>${runs.length} stop${runs.length === 1 ? '' : 's'} `
+            + `going out, and none of their places has a pin. They are listed beside the map, with what to collect.</p>`
+          : '<b>Nothing is waiting for delivery</b><p>An order joins the round once it is invoiced and marked '
+            + 'for delivery rather than collection.</p>');
+      emptyEl.hidden = false;
+    }
   }
 
   renderDeliverySide();
   renderMapResults();
-  document.getElementById('mp_far').innerHTML = '';
-
-  /* Everything the map cannot show, said out loud. A run whose place has
-     no pin is not missing from today -- it is missing from the MAP, and
-     the difference matters when somebody is counting the van's stops. */
-  const bits = [];
-  const noPin = runs.filter(r=> !r.pin);
-  if(noPin.length) bits.push(`<div class="mp-strip todo"><span><b>${noPin.length}</b> stop${noPin.length===1?'':'s'} not on the map — ${
-    esc(noPin.map(r=> `${r.label} (${r.orders.length})`).join(', '))}. Place them from the Customers layer.</span></div>`);
-  if(unknown.length) bits.push(`<div class="mp-strip todo"><span><b>${unknown.length}</b> order${unknown.length===1?'':'s'} with no destination on file — nobody can plan a drop for them.</span></div>`);
-  if(collected.length) bits.push(`<div class="mp-strip far"><span>${collected.length} being collected in person — no drop needed.</span></div>`);
-  document.getElementById('mp_unpinned').innerHTML = bits.join('');
 }
 
+/* Everything the map cannot show, said out loud. A run whose place has
+   no pin is not missing from today -- it is missing from the MAP, and
+   the difference matters when somebody is counting the van's stops. */
 function renderDeliverySide(){
   const el = document.getElementById('mp_side');
-  const { runs } = deliveryMapRuns();
+  const { runs, collected, unknown } = deliveryMapRuns();
   const r = mpSelected ? runs.find(x=> x.label === mpSelected) : null;
+  const noPin = runs.filter(x=> !x.pin);
+
+  const panels = [];
   if(!r){
-    el.innerHTML = runs.length
-      ? '<div class="mp-side-empty">Click a stop to see the orders going there.</div>'
-      : '<div class="mp-side-empty">Nothing is waiting for delivery today.</div>';
-    return;
+    panels.push(`<div class="ow-pan"><div class="mp-side-empty">${runs.length
+      ? 'Click a stop to see the orders going there.'
+      : 'Nothing is waiting for delivery today. An order joins the round once it is invoiced and marked for delivery rather than collection.'}</div></div>`);
+  } else {
+    panels.push(`<div class="ow-pan">
+      <div class="mp-rh">
+        <span class="mp-rh-dot" style="background:${r.unassigned > 0 ? '#B0700A' : '#1C6B58'};"></span>
+        <div style="min-width:0;">
+          <h3>${esc(r.label)}</h3>
+          <p>${r.orders.length} order${r.orders.length === 1 ? '' : 's'}${
+            r.unassigned ? ` · ${r.unassigned} with no driver` : ' · all taken'}</p>
+        </div>
+      </div>
+      <div class="mp-rf"><span>Order value</span><b>${esc(fmtUGX(Math.round(r.value)))}</b></div>
+      <div class="mp-rf"><span>To collect on delivery</span><b>${esc(fmtUGX(Math.round(r.toCollect)))}</b></div>
+      ${r.orders.map(q=>{
+        const due = Math.max(0, invoiceBalanceDue(q));
+        const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : null;
+        return `<button type="button" class="mp-person" data-order="${esc(String(q.id))}">
+          <span class="mp-person-name">${esc((q.client && q.client.name) || 'Order')}</span>
+          <span class="mp-person-sub">${esc(invoiceNumberLabel(q))}${driver ? ` · ${esc(driver)}` : ' · no driver yet'}</span>
+          <span class="mp-person-amt${due > 0.5 ? '' : ' mp-zero'}">${due > 0.5 ? esc(fmtUGX(Math.round(due))) : 'paid'}<small>${
+            due > 0.5 ? 'to collect' : 'nothing to collect'}</small></span>
+        </button>`;
+      }).join('')}
+      <p class="mp-note">Handing an order to a driver happens on Order tracking, and it is
+        always a tap of yours. <b>Nothing here dispatches anybody.</b></p>
+    </div>`);
   }
-  el.innerHTML = `<h3>${esc(r.label)}</h3>
-    <div class="mp-side-sub">${r.orders.length} order${r.orders.length===1?'':'s'}${
-      r.unassigned ? ` · ${r.unassigned} with no driver` : ''}</div>
-    <div class="mp-money">
-      <div><span>Order value</span><b>${fmtUGX(Math.round(r.value))}</b></div>
-      <div><span>To collect</span><b>${fmtUGX(Math.round(r.toCollect))}</b></div>
-    </div>
-    ${r.orders.map(q=>{
-      const due = Math.max(0, invoiceBalanceDue(q));
-      const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : null;
-      return `<div class="mp-person" data-order="${esc(String(q.id))}">
-        <div><div class="mp-person-name">${esc((q.client && q.client.name) || 'Order')}</div>
-          <div class="mp-person-sub">${esc(invoiceNumberLabel(q))}${driver ? ` · ${esc(driver)}` : ' · no driver yet'}</div></div>
-        <div class="mp-person-amt">${due > 0.5 ? fmtUGX(Math.round(due)) : 'paid'}</div>
-      </div>`;
-    }).join('')}`;
-  el.querySelectorAll('.mp-person').forEach(row=> row.addEventListener('click', ()=>{
+
+  if(noPin.length || unknown.length || collected.length){
+    panels.push(`<div class="ow-pan mp-wrapm">
+      <div class="ow-pan-h"><span class="ow-pan-t">Not on the round</span>
+        <span class="ow-pan-n">${noPin.length + unknown.length + collected.length}</span></div>
+      ${noPin.map(x=> `<div class="mp-person" style="cursor:default;">
+        <span class="mp-person-name">${esc(x.label)} <span class="ow-cp ow-warn">Not placed</span></span>
+        <span class="mp-person-sub">${x.orders.length} order${x.orders.length === 1 ? '' : 's'} — the stop exists, the pin does not</span>
+        <span class="mp-person-amt">${esc(fmtUGX(Math.round(x.toCollect)))}</span></div>`).join('')}
+      ${unknown.length ? `<div class="mp-person" style="cursor:default;">
+        <span class="mp-person-name">${unknown.length} order${unknown.length === 1 ? '' : 's'} <span class="ow-cp ow-warn">No destination</span></span>
+        <span class="mp-person-sub">nothing on file says where these go — nobody can plan a drop for them</span>
+        <span class="mp-person-amt mp-zero">—</span></div>` : ''}
+      ${collected.length ? `<div class="mp-person" style="cursor:default;">
+        <span class="mp-person-name">${collected.length} being collected in person</span>
+        <span class="mp-person-sub">no drop needed — these were never a stop on a run</span>
+        <span class="mp-person-amt mp-zero">—</span></div>` : ''}
+    </div>`);
+  }
+  el.innerHTML = panels.join('');
+  el.querySelectorAll('.mp-person[data-order]').forEach(row=> row.addEventListener('click', ()=>{
     goToTab('quote-saved');
     loadSavedQuote(Number(row.dataset.order));
   }));
 }
 
-/* Dropping a pin: the next click on the map is the place's position. No
-   typing coordinates, and no geocoder -- there are no addresses here to
-   give one. */
+/* Dropping a pin by hand: the next click on the map is the place's
+   position. Still here, and still the answer when the lookup is wrong or
+   cannot be reached. */
 let mpPinning = null;
 function mapCancelPin(){
   if(!mpPinning) return;
@@ -24712,14 +25290,23 @@ function mapRemovePin(name){
 }
 
 /* The list under the map: every place, searchable, with what to do to it.
-   One control for both jobs -- finding a place you have, and placing one
-   you have not. */
+   ONE list doing both jobs -- finding a place you have, and placing one
+   you have not. An unplaced place is not exiled to a strip at the
+   bottom; it keeps its figures and its rank and carries one action. */
 function renderMapResults(){
   const el = document.getElementById('mp_results');
   if(!el) return;
-  const q = document.getElementById('mp_search').value;
-  const all = mapPlaceSearch(mapPlaceRows(), q, mpFilter);
+  const q = document.getElementById('mp_place_search').value;
+  const rows = mapPlaceRows();
+  const layer = mpLayer === 'deliveries' ? 'customers' : mpLayer;
+  const all = mapPlaceSearch(rows, q, mpFilter, layer);
   const tokens = searchTokens(q);
+  const tEl = document.getElementById('mp_list_t');
+  const ntEl = document.getElementById('mp_list_nt');
+  const nEl = document.getElementById('mp_list_n');
+  if(tEl) tEl.textContent = 'Places';
+  if(ntEl) ntEl.textContent = mpFilter === 'todo' ? 'still to place' : 'most owed first';
+  if(nEl) nEl.textContent = `${all.length} of ${rows.length}`;
   // Every match is rendered; the box scrolls. Cutting the list at twelve
   // hid the placed ones entirely, since they sort last by design.
   const shown = all;
@@ -24728,65 +25315,232 @@ function renderMapResults(){
       q.trim() ? 'No place matches that.'
         : mpFilter === 'placed' ? 'Nothing is on the map yet.'
         : mpFilter === 'todo' ? 'Every place is on the map.'
-        : 'No places on file yet.'}</div></div>`;
+        : 'No places on file yet. A place appears here as soon as a customer or supplier names one.'}</div></div>`;
     return;
   }
-  el.innerHTML = `<div class="mp-results">${shown.map(r=>`
-    <div class="mp-result">
-      <span class="mp-dot ${r.pin ? 'on' : 'off'}" title="${r.pin ? 'On the map' : 'Not placed yet'}"></span>
-      <div class="mp-result-main">
+  el.innerHTML = `<div class="mp-result-hd">
+      <span></span><span>Place</span><span class="mp-r">${layer === 'suppliers' ? 'You owe' : 'Owed to you'}</span>
+      <span class="mp-r">Oldest</span><span></span>
+    </div>
+    <div class="mp-results">${shown.map(r=>{
+      const money = mapMoneyAt(r, layer);
+      const dot = !r.pin ? 'off' : (money > 0.5 ? '' : 'mp-hollow');
+      const colour = (r.pin && money > 0.5)
+        ? (layer === 'customers' ? mapBandColour(r.band) : '#B23A26') : '';
+      const age = layer === 'customers' ? r.oldestDays : null;
+      const ageColour = age == null ? '' : age >= 90 ? '#7F1D1A' : age >= 60 ? '#B23A26'
+        : age >= 30 ? '#7A4A02' : '#1C6B58';
+      const bits = [];
+      if(r.customers.length) bits.push(`${r.customers.length} customer${r.customers.length === 1 ? '' : 's'}`);
+      if(r.suppliers.length) bits.push(`${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}`);
+      if(!bits.length) bits.push('nobody here yet');
+      bits.push(r.pin ? 'on the map' : 'not placed');
+      return `<div class="mp-result${mpSelected === r.name ? ' mp-on' : ''}">
+        <span class="mp-dot ${dot}"${colour ? ` style="background:${colour};"` : ''} title="${r.pin ? 'On the map' : 'Not placed yet'}"></span>
         <div class="mp-result-name">${highlightTokens(r.name, tokens)}</div>
-        <div class="mp-result-sub">${r.customers.length} customer${r.customers.length===1?'':'s'} · ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}${
-          r.owed > 0.5 ? ` · ${esc(fmtUGX(Math.round(r.owed)))} owed` : ''}</div>
-      </div>
-      <div class="mp-result-acts">
-        ${r.pin ? `<button type="button" class="mp-chip mp-go" data-name="${esc(r.name)}">Show</button>` : ''}
-        <button type="button" class="mp-chip mp-place" data-name="${esc(r.name)}">${
-          mpPinning === r.name ? 'Click the map…' : (r.pin ? 'Move' : 'Place')}</button>
-        ${r.pin ? `<button type="button" class="mp-chip mp-clear" data-name="${esc(r.name)}">Remove</button>` : ''}
-      </div>
-    </div>`).join('')}</div>`;
+        <div class="mp-result-sub">${esc(bits.join(' · '))}</div>
+        <div class="mp-result-v${money > 0.5 ? '' : ' mp-zero'}">
+          <b>${money > 0.5 ? esc(mapFigure(money)) : '—'}</b>
+          <small>${money > 0.5 ? 'UGX' : 'nothing owed'}</small></div>
+        <div class="mp-result-v mp-result-age${age == null ? ' mp-zero' : ''}">
+          <b${ageColour ? ` style="color:${ageColour};"` : ''}>${age == null ? '—' : age}</b>
+          <small>${age == null ? '' : age === 1 ? 'day' : 'days'}</small></div>
+        <div class="mp-result-acts">
+          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm mp-go" data-name="${esc(r.name)}">Show</button>` : ''}
+          <button type="button" class="btn btn-ghost ow-sm mp-place${r.pin ? ' mp-second' : ''}" data-name="${esc(r.name)}">${
+            mpPinning === r.name ? 'Click the map…' : (r.pin ? 'Move' : 'Place')}</button>
+          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm mp-clear mp-second" data-name="${esc(r.name)}">Remove</button>` : ''}
+        </div>
+      </div>${mapSuggestionRow(r.name)}`;
+    }).join('')}</div>`;
 
-  el.querySelectorAll('.mp-place').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
+  el.querySelectorAll('.mp-place').forEach(b=> b.addEventListener('click', ()=> mapPlaceOne(b.dataset.name)));
   el.querySelectorAll('.mp-clear').forEach(b=> b.addEventListener('click', ()=> mapRemovePin(b.dataset.name)));
   el.querySelectorAll('.mp-go').forEach(b=> b.addEventListener('click', ()=>{
     const r = mapPlaceRows().find(x=> x.name === b.dataset.name);
     if(r && r.pin && mpMap) mpMap.setView([r.pin.lat, r.pin.lng], 15);
     mpSelected = b.dataset.name;
-    if(mpLayer !== 'deliveries') renderMapSide();
+    if(mpLayer !== 'deliveries') renderMap(); else renderDeliverySide();
   }));
+  mapWireSuggestion(el);
+}
+/* Pressing Place or Move on one row starts a run of exactly one, so the
+   suggestion path and the whole-list path are the same path. */
+function mapPlaceOne(name){
+  if(!mpMap){ toast('The map needs to load before a place can be put on it'); return; }
+  mapPlacingStart([name]);
 }
 
-function renderMapSide(){
+/* The row reports the suggestion; it does not ask the question a second
+   time. The accept lives beside the map, where the dashed pin it is
+   about can actually be seen. */
+function mapSuggestionRow(name){
+  if(!mapPlacingActive() || mpPlacing.name !== name) return '';
+  const say = mpPlacing.state === 'asking'
+      ? '<b>Looking this name up…</b><small>Nothing is saved until you accept.</small>'
+    : mpPlacing.state === 'found'
+      ? `<b>${esc(mpPlacing.label)}</b><small>Drawn as a dashed pin on the map. Accept or move it in the panel beside it.</small>`
+    : mpPlacing.state === 'none'
+      ? '<b>No match found for this name.</b><small>Nothing was placed. Click the map where it is instead.</small>'
+      : '<b>The lookup could not be reached.</b><small>It needs a connection; clicking the map does not.</small>';
+  return `<div class="mp-sg"><div class="mp-sg-b">
+    <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
+    <div class="mp-sg-t">${say}</div>
+    ${mpPlacing.state === 'found' ? '' : `<div class="mp-sg-a">
+      <button type="button" class="btn btn-ghost ow-sm mp-sg-hand">Click the map instead</button>
+      <button type="button" class="btn btn-ghost ow-sm mp-sg-skip">Skip</button></div>`}
+  </div></div>`;
+}
+function mapWireSuggestion(el){
+  el.querySelectorAll('.mp-sg-hand').forEach(b=> b.addEventListener('click', mapPlacingByHand));
+  el.querySelectorAll('.mp-sg-skip').forEach(b=> b.addEventListener('click', mapPlacingNext));
+}
+
+/* The rail. It does NOT open empty: with nothing selected it answers the
+   screen's own question -- where the money is -- so a quarter of the
+   console is worth its width before anybody clicks anything. */
+function renderMapSide(rowsIn, farIn, homeIn){
   const el = document.getElementById('mp_side');
-  const rows = mapPlaceRows();
+  if(!el) return;
+  const rows = rowsIn || mapPlaceRows();
+  const home = homeIn || mapHomePin() || mapCentrePin(rows);
+  const far = farIn || mapPlaceSplit(rows, home).far;
+  const layer = mpLayer === 'suppliers' ? 'suppliers' : 'customers';
   const r = mpSelected ? rows.find(x=> x.name === mpSelected) : null;
-  if(!r){
-    el.innerHTML = '<div class="mp-side-empty">Click a marker to see who is there and what is owed.</div>';
-    return;
+  const panels = [];
+
+  /* The placing question, beside the pin it is about. This is where the
+     accent lives while a run is on, and it is the only accept there is. */
+  if(mapPlacingActive()){
+    const p = mpPlacing;
+    const km = (p.state === 'found' && home) ? pinDistanceKm(home, { lat: p.lat, lng: p.lng }) : null;
+    const at = rows.find(x=> x.name === p.name);
+    panels.push(`<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Is this ${esc(p.name)}?</span>
+        <span class="ow-pan-n">${p.i + 1} of ${p.queue.length}</span></div>
+      <div class="mp-rh"><div style="min-width:0;">
+        <h3>${esc(p.name)}</h3>
+        <p>${p.state === 'found' ? esc(p.label)
+          : p.state === 'asking' ? 'Looking this name up…'
+          : p.state === 'none' ? 'Nothing on the map matches this name.'
+          : 'The lookup could not be reached.'}</p>
+      </div></div>
+      <p class="mp-note" style="border-top:0;">${p.state === 'found'
+        ? 'Found by name on OpenStreetMap. <b>A suggestion, not a fact</b> — nothing is saved until you accept it.'
+        : p.state === 'asking' ? 'Nothing is saved until you accept it.'
+        : p.state === 'none' ? '<b>Nothing was placed.</b> A name that matched nothing is not put somewhere plausible — click the map where it is.'
+        : '<b>Nothing was placed.</b> The lookup needs a connection; clicking the map does not.'}</p>
+      ${km != null ? `<div class="mp-rf"><span>From the shop</span><b>${Math.round(km * 10) / 10} km</b></div>` : ''}
+      ${at ? `<div class="mp-rf"><span>${layer === 'suppliers' ? 'Suppliers' : 'Customers'} waiting there</span><b>${mapPeopleAt(at, layer)}</b></div>` : ''}
+      ${at && mapMoneyAt(at, layer) > 0.5 ? `<div class="mp-rf"><span>${layer === 'suppliers' ? 'You owe there' : 'Owed at this place'}</span><b class="mp-warn">${esc(fmtUGX(Math.round(mapMoneyAt(at, layer))))}</b></div>` : ''}
+      <div class="mp-acts">
+        ${p.state === 'found' ? `<button type="button" class="btn btn-accent ow-sm" id="mp_sg_yes" style="flex:1 1 100%;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19.5 7"></path></svg>
+          Yes, put ${esc(p.name)} here</button>` : ''}
+        <button type="button" class="btn btn-ghost ow-sm" id="mp_sg_hand">${
+          p.state === 'found' ? 'Not there — I&rsquo;ll click it' : 'Click the map instead'}</button>
+        <button type="button" class="btn btn-ghost ow-sm" id="mp_sg_skip">Skip</button>
+      </div>
+    </div>`);
   }
-  const people = mpLayer === 'customers' ? r.customers : r.suppliers;
-  el.innerHTML = `<h3>${esc(r.name)}</h3>
-    <div class="mp-side-sub">${r.customers.length} customer${r.customers.length===1?'':'s'} · ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}</div>
-    <div class="mp-money">
-      <div><span>They owe you</span><b>${fmtUGX(Math.round(r.owed))}</b></div>
-      <div><span>You owe them</span><b>${fmtUGX(Math.round(r.owing))}</b></div>
-    </div>
-    ${people.length ? people.map(pp=>{
-      const isCust = mpLayer === 'customers';
-      const amt = isCust ? Math.max(0, Number(pp.debt)||0) : Math.max(0, creditorTotalOwed(pp.id));
-      const age = isCust ? customerOldestDebtDays(pp) : null;
-      return `<div class="mp-person" data-open="${esc(pp.id)}">
-        <div><div class="mp-person-name">${esc(pp.name || pp.id)}</div>
-          <div class="mp-person-sub">${esc(pp.id)}${age != null ? ` · ${age} days` : ''}${
-            isCust && pp.linkedSupplierId ? ' · also a supplier' : ''}</div></div>
-        <div class="mp-person-amt">${amt > 0.5 ? fmtUGX(Math.round(amt)) : '—'}</div>
-      </div>`;
-    }).join('') : '<div class="mp-side-empty">Nobody on this layer is here.</div>'}`;
-  el.querySelectorAll('.mp-person').forEach(row2=> row2.addEventListener('click', ()=>{
+
+  if(r){
+    const people = layer === 'customers' ? r.customers : r.suppliers;
+    const money = mapMoneyAt(r, layer);
+    const km = (home && r.pin) ? pinDistanceKm(home, r.pin) : null;
+    panels.push(`<div class="ow-pan">
+      <div class="mp-rh">
+        <span class="mp-rh-dot${money > 0.5 ? '' : ' mp-hollow'}"${money > 0.5
+          ? ` style="background:${layer === 'customers' ? mapBandColour(r.band) : '#B23A26'};"` : ''}></span>
+        <div style="min-width:0;">
+          <h3>${esc(r.name)}</h3>
+          <p>${r.customers.length} customer${r.customers.length === 1 ? '' : 's'} · ${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}${
+            km != null ? ` · ${Math.round(km * 10) / 10} km from the shop` : ' · not placed'}</p>
+        </div>
+      </div>
+      <div class="mp-rf"><span>They owe you</span><b>${esc(fmtUGX(Math.round(r.owed)))}</b></div>
+      <div class="mp-rf"><span>You owe them</span><b>${esc(fmtUGX(Math.round(r.owing)))}</b></div>
+      ${r.oldestDays != null ? `<div class="mp-rf"><span>Oldest unpaid</span><b class="${
+        r.oldestDays >= 90 ? 'mp-bad' : r.oldestDays >= 30 ? 'mp-warn' : ''}">${r.oldestDays} days</b></div>` : ''}
+      <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
+        <span class="ow-pan-t">Who is here</span><span class="ow-pan-n">${people.length}</span></div>
+      ${people.length ? people.map(pp=>{
+        const isCust = layer === 'customers';
+        const amt = isCust ? Math.max(0, Number(pp.debt)||0) : Math.max(0, creditorTotalOwed(pp.id));
+        const age = isCust ? customerOldestDebtDays(pp) : null;
+        return `<button type="button" class="mp-person" data-open="${esc(pp.id)}">
+          <span class="mp-person-name">${esc(pp.name || pp.id)}</span>
+          <span class="mp-person-sub">${esc(pp.id)}${age != null ? ` · ${age} days` : ''}${
+            isCust && pp.linkedSupplierId ? ' · also a supplier' : ''}</span>
+          <span class="mp-person-amt${amt > 0.5 ? '' : ' mp-zero'}">${amt > 0.5 ? esc(fmtUGX(Math.round(amt))) : '—'}</span>
+        </button>`;
+      }).join('') : `<div class="mp-side-empty">Nobody on this layer is here.</div>`}
+      <div class="mp-acts">
+        <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
+        ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm" id="mp_rail_clear">Take off the map</button>` : ''}
+      </div>
+    </div>`);
+  } else if(!mapPlacingActive()){
+    /* The answer to the screen's own question, without a click. */
+    const top = rows.filter(x=> mapMoneyAt(x, layer) > 0.5)
+      .sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer)).slice(0, 5);
+    panels.push(`<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Where the money is</span>
+        <span class="ow-pan-n">${top.length ? 'top ' + top.length : ''}</span></div>
+      ${top.length ? top.map(x=> `<button type="button" class="mp-person" data-place="${esc(x.name)}">
+        <span class="mp-person-name">${esc(x.name)}${x.pin ? '' : ' <span class="ow-cp ow-warn">Not placed</span>'}</span>
+        <span class="mp-person-sub">${mapPeopleAt(x, layer)} ${layer === 'suppliers' ? 'supplier' : 'customer'}${mapPeopleAt(x, layer) === 1 ? '' : 's'}${
+          x.oldestDays != null ? ` · ${x.oldestDays} days` : ''}</span>
+        <span class="mp-person-amt">${esc(fmtUGX(Math.round(mapMoneyAt(x, layer))))}</span>
+      </button>`).join('')
+        : `<div class="mp-side-empty">Nobody owes anything on this layer — and that is the good news, not an empty screen.</div>`}
+      <p class="mp-note">Click a marker or a row to open the place. Every figure is counted
+        from the invoices themselves; nothing about money is stored on a place.</p>
+    </div>`);
+  }
+
+  if(far.length){
+    panels.push(`<div class="ow-pan mp-wrapm">
+      <div class="ow-pan-h"><span class="ow-pan-t">Outside the frame</span>
+        <span class="ow-pan-n">${far.length}</span></div>
+      ${far.map(x=> `<button type="button" class="mp-person" data-fly="${esc(x.name)}">
+        <span class="mp-person-name">${esc(x.name)}</span>
+        <span class="mp-person-sub">${mapPeopleAt(x, layer)} ${layer === 'suppliers' ? 'supplier' : 'customer'}${mapPeopleAt(x, layer) === 1 ? '' : 's'} · ${Math.round(x.km)} km away</span>
+        <span class="mp-person-amt${mapMoneyAt(x, layer) > 0.5 ? '' : ' mp-zero'}">${
+          mapMoneyAt(x, layer) > 0.5 ? esc(fmtUGX(Math.round(mapMoneyAt(x, layer)))) : '—'}</span>
+      </button>`).join('')}
+      <p class="mp-note">Further than ${MAP_CORE_RADIUS_KM} km from the shop. Drawn with the rest they
+        would make the town a single dot, so they are counted in the figures above and listed here.</p>
+    </div>`);
+  }
+
+  el.innerHTML = panels.join('');
+  const yes = document.getElementById('mp_sg_yes');
+  if(yes) yes.addEventListener('click', mapPlacingAccept);
+  const hand = document.getElementById('mp_sg_hand');
+  if(hand) hand.addEventListener('click', mapPlacingByHand);
+  const skip = document.getElementById('mp_sg_skip');
+  if(skip) skip.addEventListener('click', mapPlacingNext);
+  const railPlace = document.getElementById('mp_rail_place');
+  if(railPlace && r) railPlace.addEventListener('click', ()=> mapPlaceOne(r.name));
+  const railClear = document.getElementById('mp_rail_clear');
+  if(railClear && r) railClear.addEventListener('click', ()=> mapRemovePin(r.name));
+  el.querySelectorAll('.mp-person[data-open]').forEach(row2=> row2.addEventListener('click', ()=>{
     const id = row2.dataset.open;
-    if(mpLayer === 'customers'){ goToTab('customers'); editCustomer(id); }
+    if(layer === 'customers'){ goToTab('customers'); editCustomer(id); }
     else { goToTab('suppliers'); editSupplier(id); }
+  }));
+  el.querySelectorAll('.mp-person[data-place]').forEach(row2=> row2.addEventListener('click', ()=>{
+    const x = rows.find(y=> y.name === row2.dataset.place);
+    if(x && x.pin && mpMap) mpMap.setView([x.pin.lat, x.pin.lng], 14);
+    mpSelected = row2.dataset.place;
+    renderMap();
+  }));
+  el.querySelectorAll('.mp-person[data-fly]').forEach(row2=> row2.addEventListener('click', ()=>{
+    const x = rows.find(y=> y.name === row2.dataset.fly);
+    if(x && x.pin && mpMap) mpMap.setView([x.pin.lat, x.pin.lng], 12);
+    mpSelected = row2.dataset.fly;
+    renderMap();
   }));
 }
 
@@ -24812,17 +25566,21 @@ document.getElementById('mp_rot_left').addEventListener('click', ()=> mapNudgeBe
 document.getElementById('mp_rot_right').addEventListener('click', ()=> mapNudgeBearing(15));
 // One press puts north back at the top, from wherever it has got to.
 document.getElementById('mp_rot_north').addEventListener('click', ()=> mapSetBearing(0));
-document.getElementById('mp_search').addEventListener('input', renderMapResults);
+document.getElementById('mp_place_search').addEventListener('input', renderMapResults);
 document.getElementById('mp_filters').addEventListener('click', (e)=>{
-  const b = e.target.closest('.mp-filter'); if(!b) return;
+  const b = e.target.closest('button[data-filter]'); if(!b) return;
   mpFilter = b.dataset.filter;
-  document.querySelectorAll('.mp-filter').forEach(x=> x.classList.toggle('active', x === b));
+  document.querySelectorAll('#mp_filters button').forEach(x=> x.classList.toggle('active', x === b));
   renderMapResults();
 });
 document.getElementById('mp_layers').addEventListener('click', (e)=>{
-  const b = e.target.closest('.mp-layer'); if(!b) return;
+  const b = e.target.closest('button[data-layer]'); if(!b) return;
   mpLayer = b.dataset.layer;
-  document.querySelectorAll('.mp-layer').forEach(x=> x.classList.toggle('active', x === b));
+  document.querySelectorAll('#mp_layers button').forEach(x=> x.classList.toggle('active', x === b));
+  /* The selection belongs to the layer that made it: a place selected on
+     Customers is not a stop on the delivery round, and carrying the name
+     across opens a panel about something that is not there. */
+  mpSelected = null;
   renderMap();
 });
 

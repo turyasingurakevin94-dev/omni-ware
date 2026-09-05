@@ -111,8 +111,13 @@ const src = read('index.html');
      left the number one HIGHER than the truth -- the failure that
      caught it is the whole reason the floor is asserted rather than
      assumed. Six is the count with both screens folded. */
+  /* 6 -> 5. Map converted: its name and its one-line sub are .ow-ph, and
+     the paragraph about what a marker means, what is derived and what
+     the screen will never do is .ow-ph-help behind the "i", where the
+     seven console screens before it put theirs. One fewer screen to
+     police, not one that stopped being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 6, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 5, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
@@ -123,8 +128,11 @@ const src = read('index.html');
      along. This floor moves DOWN as screens are converted and must never
      move up: a screen that loses its paragraph without gaining an
      .ow-ph-help has hidden its own explanation rather than folded it. */
+  /* 6 -> 5, for the same conversion, and the floor still only moves
+     down. Map did not lose its explanation: it gained an .ow-ph-help,
+     which is the fold this file exists to police. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 6,
+  t.check(paras.length >= 5,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
