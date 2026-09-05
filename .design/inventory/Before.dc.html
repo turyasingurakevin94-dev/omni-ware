@@ -1,0 +1,775 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE INVENTORY CONSOLE ==========================
+       Built only from what index.html already ships: the 23-colour
+       palette, the 11/12/13/14/19 ramp, Inter + Archivo Black + IBM Plex
+       Mono, the .ow-* components, radius 4/6/8, space in even steps,
+       hairlines instead of shadows. No new colour, no new weight, no new
+       size, no fourteenth button family.
+       ================================================================= */
+
+    /* ---- THE FIND BAR: the screen leads with it ----
+       Three of the four jobs -- look one line up, receive against a
+       line, correct a count -- start by naming a product. So the widest,
+       tallest, first thing under the page name is the box you type into,
+       and the filters sit on its own row rather than above the money. */
+    .iv-find{display:flex;align-items:stretch;gap:8px;margin-bottom:8px;}
+    .iv-fb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      box-sizing:border-box;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);}
+    .iv-fb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fb-v{font-size:15px;color:var(--ow-ink-900);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fb-v.ph{color:var(--ow-ink-400);}
+    .iv-fb-x{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-fb-x svg{width:11px;height:11px;stroke:var(--ow-ink-600);stroke-width:2.2;}
+    .iv-sel{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-sel .l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);}
+    .iv-sel .cv{width:7px;height:7px;border-right:1.6px solid var(--ow-ink-400);
+      border-bottom:1.6px solid var(--ow-ink-400);transform:rotate(45deg) translate(-1px,-1px);flex:none;}
+    .iv-tog{display:flex;align-items:center;gap:8px;height:44px;padding:0 13px 0 11px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-tog .bx{width:16px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-tog .bx svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* What the search actually did, said in one line, before the money.
+       "Nothing matches" is never allowed to stand for "it matched and a
+       filter hid it" -- so the line names the filter and offers it back. */
+    .iv-fr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 16px;
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-fr b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fr .lk{color:var(--ow-oxide);font-weight:600;text-decoration:underline;
+      text-underline-offset:2px;}
+
+    /* ---- THE REPAIR BAR ----
+       Two full-width crimson banners became one 38px line. It appears
+       only when something is wrong and takes the space back entirely
+       when nothing is -- a screen that reserves room for problems it
+       does not have is a screen that always looks slightly broken. */
+    .iv-fix{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 12px;
+      box-sizing:border-box;background:var(--ow-amber-faint);border:1px solid #EBD9B4;
+      border-radius:var(--ow-r-lg);margin-bottom:16px;}
+    .iv-fix > svg{width:16px;height:16px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fix-t{font-size:12px;font-weight:600;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+    .iv-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1px solid #EBD9B4;
+      font-size:11px;font-weight:500;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-chip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;}
+    .iv-chip.on{background:var(--ow-amber-soft);border-color:var(--ow-amber);font-weight:600;}
+    .iv-fix-sp{flex:1;}
+    .iv-fix-o{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-o .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);}
+
+    /* ---- THE SHELF ROW ----
+       44px, table-like, opens in place. Five columns and only one of
+       them gives way: the name. Money and counts are sized to their
+       content, because a clipped figure is a WRONG figure. */
+    .iv-h{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+      align-items:center;gap:10px;padding:0 12px;height:28px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .iv-h span{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);white-space:nowrap;}
+    .iv-h .r{text-align:right;}
+    .iv-g.ow-open{box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+    .iv-r{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+      align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);text-align:left;}
+    .iv-g:last-child .iv-r{border-bottom:0;}
+    .iv-g.ow-open .iv-r{background:var(--ow-paper-2);}
+    .iv-cr{grid-column:1;grid-row:1 / span 2;width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;align-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .iv-g.ow-open .iv-cr{transform:rotate(90deg);}
+    .iv-n{grid-column:2;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
+    .iv-nm{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-m{grid-column:2;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .iv-f .u{font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-left:3px;}
+    .iv-f .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f.q{grid-column:3;grid-row:1 / span 2;}
+    .iv-f.c{grid-column:4;grid-row:1 / span 2;}
+    .iv-f.v{grid-column:5;grid-row:1 / span 2;font-size:14px;}
+    .iv-x{grid-column:1 / -1;}
+    /* Out entirely against a floor somebody set: genuinely bad. Under
+       the floor but not out: caution. Everything else is ink -- a count
+       is a size, not a warning. */
+    .iv-f.out{color:var(--ow-crimson);}
+    .iv-f.thin{color:var(--ow-amber-ink);}
+    .iv-f.none{color:var(--ow-ink-400);font-weight:500;}
+    .iv-f.notours{color:var(--ow-amber-ink);}
+
+    /* ---- THE OPEN LINE: the whole of one line's business ---- */
+    .iv-x{padding:4px 12px 14px 40px;}
+    .iv-say{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 11px;}
+    .iv-say b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-say .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fs{display:flex;align-items:stretch;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);
+      width:max-content;max-width:100%;margin:0 0 11px;}
+    .iv-fs > div{padding:7px 14px;border-left:1px solid var(--ow-rule-soft);}
+    .iv-fs > div:first-child{border-left:0;}
+    .iv-fs-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .iv-fs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;white-space:nowrap;}
+    .iv-fs-v .u{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:var(--ow-ink-600);margin-left:3px;}
+    .iv-fs-v.warn{color:var(--ow-amber-ink);}
+    .iv-fs-v.bad{color:var(--ow-crimson);}
+    .iv-mv{margin:0 0 11px;}
+    .iv-mv-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 6px;}
+    .iv-mv-r{display:flex;align-items:baseline;gap:10px;padding:5px 0;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .iv-mv-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);white-space:nowrap;
+      width:66px;flex:none;}
+    .iv-mv-w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-600);}
+    .iv-mv-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .iv-mv-q.up{color:var(--ow-verdigris);}
+    .iv-mv-q.down{color:var(--ow-crimson);}
+    .iv-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* ---- rail ---- */
+    .rr{display:flex;align-items:baseline;gap:10px;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .rr:first-child{border-top:0;}
+    .rr-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+    .rr-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .rr-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rr-q.up{color:var(--ow-verdigris);}
+    .rr-q.down{color:var(--ow-crimson);}
+    .ow-pan-a{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-pan-a .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(-45deg);}
+    .ow-mt-v.sm{font-size:19px;}
+
+    /* The page header's help bubble and the two buttons */
+    .ow-ph-h{display:flex;align-items:center;gap:8px;}
+
+    /* ---- the repair drawer ----
+       What used to be two crimson banners standing above every figure on
+       the screen, on every visit. It is one 38px line until you open it,
+       and the order of the three sections is a rule rather than a
+       ranking -- said on screen, because a shop that fixes them in the
+       other order makes more work for itself. */
+    .iv-fx{background:var(--ow-paper);border:1px solid #EBD9B4;border-top:1px solid #EBD9B4;
+      border-bottom-left-radius:var(--ow-r-lg);border-bottom-right-radius:var(--ow-r-lg);
+      margin-bottom:16px;overflow:hidden;}
+    .iv-fx-o{margin:0;padding:11px 14px;background:var(--ow-amber-faint);
+      border-bottom:1px solid var(--ow-rule-soft);
+      font-size:12px;line-height:1.5;color:var(--ow-amber-ink);max-width:none;}
+    .iv-fx-o b{font-weight:600;}
+    .iv-fx-s{padding:13px 14px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-s:first-of-type{border-top:0;}
+    .iv-fx-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 6px;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-n{font-size:11px;font-weight:400;color:var(--ow-ink-400);}
+    .iv-fx-w{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .iv-fx-w b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-fx-r{display:flex;align-items:center;gap:12px;padding:7px 0;
+      border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-nm{font-size:13px;font-weight:500;min-width:0;flex:0 1 260px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fx-f{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-fx-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-f .warn{color:var(--ow-amber-ink);font-weight:500;}
+    .iv-fx-f .bad{color:var(--ow-crimson);font-weight:500;}
+    .iv-fx-a{padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-m{margin:9px 0 0;padding-top:9px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .iv-fx-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the states sheet ---- */
+    .st-l{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:12px;font-weight:600;
+      letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-l:not(:first-child){margin-top:26px;}
+    .st-n{width:19px;height:19px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);
+      font-size:11px;letter-spacing:0;flex:none;}
+    .st{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:14px;background:rgba(255,255,255,.5);}
+    .st-w{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .st-w b{color:var(--ow-ink-900);font-weight:600;}
+    .st-fail{display:flex;gap:12px;padding:14px;background:var(--ow-crimson-soft);
+      border:1px solid var(--ow-crimson);border-radius:var(--ow-r-lg);}
+    .st-fail > svg{width:20px;height:20px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .st-fail-t{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-crimson);}
+    .st-fail-w{margin:0 0 11px;font-size:12px;line-height:1.55;color:var(--ow-ink-900);max-width:var(--ow-measure);}
+    .st-fail-w b{font-weight:600;}
+    .st-fail-a{display:flex;gap:6px;}
+    /* ================= THE SCREEN AS IT STANDS =========================
+       Legacy classes lifted from index.html at their real values --
+       .page-head (24px Archivo, 14px sub), .panel (radius 12, 22/24
+       padding, a drop shadow), .p-toolbar, .sum-strip (21px mono, 700),
+       .inv-grid / .inv-card (radius 11, 14px padding), .cb-chain-break
+       (crimson 4px left border), .pack-pill (radius 20 on #F3F0E6),
+       .pc-icon-btn (28px, radius 7). Nothing here is invented; this is
+       what the shop opens today.
+       ================================================================= */
+    .lg{--line:#DCE0E4;--ink:#14171B;--ink-soft:#59626B;--panel:#fff;
+      --accent:#B23A26;--danger:#7F1D1A;--good:#1C6B58;--navy:#14171B;}
+    .page-head{margin-bottom:24px;}
+    .page-head h1{font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;
+      color:var(--ink);letter-spacing:0.2px;}
+    .page-head p{margin:0;color:var(--ink-soft);font-size:14px;line-height:1.5;}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+      padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,30,40,0.04);}
+    .panel h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:0.6px;
+      color:var(--ink-soft);font-weight:700;}
+    .panel-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .p-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:14px 0 18px;}
+    .p-toolbar-search{margin:0;flex:1 1 240px;min-width:200px;}
+    .p-toolbar-search .fake-in{width:100%;padding:9px 12px;border:1px solid var(--line);
+      border-radius:7px;font-size:13.5px;background:#fff;color:#8A939C;box-sizing:border-box;}
+    .p-toolbar-filter{display:flex;flex-direction:column;gap:4px;flex:0 1 190px;min-width:150px;}
+    .p-toolbar-filter label{font-size:11px;color:var(--ink-soft);font-weight:600;}
+    .p-toolbar-filter .fake-sel{padding:9px 10px;border:1px solid var(--line);border-radius:7px;
+      font-size:13px;background:#fff;width:100%;box-sizing:border-box;display:flex;align-items:center;}
+    .p-toolbar-filter .fake-sel::after{content:'';margin-left:auto;width:7px;height:7px;
+      border-right:1.6px solid #8A939C;border-bottom:1.6px solid #8A939C;transform:rotate(45deg) translateY(-2px);}
+    .p-toolbar-checkbox{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);
+      padding-bottom:9px;}
+    .p-toolbar-checkbox .bx{width:15px;height:15px;border-radius:3px;background:var(--accent);
+      display:flex;align-items:center;justify-content:center;}
+    .p-toolbar-checkbox .bx svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    .sum-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);
+      border-radius:12px;overflow:hidden;margin-bottom:16px;}
+    .sum-cell{flex:1 1 130px;background:var(--panel);padding:12px 14px;}
+    .sum-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;
+      font-variant-numeric:tabular-nums;line-height:1.1;}
+    .sum-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+      color:var(--ink-soft);margin-top:4px;}
+    .sum-cell.warn .sum-value{color:#7A4A02;}
+
+    .cb-chain-break{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:12px 14px;
+      border:1px solid var(--danger);border-left-width:4px;border-radius:10px;
+      background:rgba(192,57,43,.06);font-size:13px;line-height:1.5;}
+    .cb-chain-break b{color:var(--danger);}
+    .deb-drift-why{opacity:.85;}
+    .inv-lot-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      margin-top:8px;padding-top:8px;border-top:1px solid rgba(192,57,43,.25);}
+    .inv-lot-name{font-weight:600;color:var(--ink);}
+    .inv-lot-figs{flex:1 1 auto;opacity:.85;font-family:'IBM Plex Mono',monospace;
+      font-variant-numeric:tabular-nums;font-size:12px;}
+    .lg .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);
+      padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:600;}
+
+    .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+    .inv-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 14px 12px;
+      display:flex;flex-direction:column;gap:10px;}
+    .inv-card-head{display:flex;gap:10px;align-items:flex-start;}
+    .inv-thumb{width:44px;height:44px;border-radius:8px;background:#F3F5F7;border:1px solid var(--line);
+      flex:none;display:flex;align-items:center;justify-content:center;}
+    .inv-thumb svg{width:20px;height:20px;fill:none;stroke:#B6BEC6;stroke-width:1.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .inv-card-title{display:flex;flex-direction:column;gap:3px;min-width:0;}
+    .inv-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
+    .inv-card-sub{font-size:11.5px;color:var(--ink-soft);}
+    .inv-card-meta{display:flex;flex-wrap:wrap;gap:6px;}
+    .pack-pill{font-size:12px;font-weight:600;color:var(--ink);background:#F3F0E6;padding:3px 9px;
+      border-radius:20px;white-space:nowrap;}
+    .pack-pill.inv-low-pill{background:#F6E7E3;color:var(--accent);font-weight:700;}
+    .inv-card-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;
+      gap:10px;padding-top:10px;border-top:1px solid var(--line);}
+    .inv-card-stats{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;
+      font-variant-numeric:tabular-nums;}
+    .inv-qty-wrap{display:flex;flex-direction:column;gap:1px;}
+    .inv-qty-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
+    .inv-qty{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:19px;color:var(--ink);}
+    .inv-qty.zero{color:var(--danger);}
+    .inv-cost{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:var(--ink);}
+    .inv-cost-none{color:#8A939C;}
+    .inv-cost-consign{color:#7A4A02;}
+    .pc-actions{display:flex;gap:6px;}
+    .pc-icon-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+      border-radius:7px;color:var(--ink-soft);border:1px solid var(--line);flex:none;}
+    .pc-icon-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .log-count{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:11.5px;color:var(--ink-soft);}
+    .log-net{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+    .lgt{width:100%;border-collapse:collapse;font-size:13px;}
+    .lgt th{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft);
+      text-align:left;padding:0 10px 8px 0;border-bottom:1px solid var(--line);}
+    .lgt th.r,.lgt td.r{text-align:right;padding-right:22px;}
+    .lgt td{padding:10px 10px 10px 0;border-bottom:1px solid #E9EBED;}
+    .lgt td.m{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+    .lgt .up{color:var(--good);font-weight:700;}
+    .lgt .down{color:var(--danger);font-weight:700;}
+
+    /* The callouts that mark what is wrong, drawn on top of the artboard */
+    .flag{position:absolute;z-index:6;display:flex;align-items:center;gap:7px;
+      background:var(--ow-steel-950);color:#fff;font-size:11px;font-weight:600;
+      padding:5px 9px;border-radius:var(--ow-r-sm);box-shadow:var(--ow-lift);white-space:nowrap;}
+    .flag .n{font-family:var(--mono);background:var(--ow-oxide);border-radius:3px;
+      padding:0 5px;font-size:10px;line-height:15px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1992px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Catalogue</span><span>/</span><span>Inventory</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buying</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"></path></svg><span>Sourcing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-section-label">Catalogue</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg><span>Products</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Price registry</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg><span>Media</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span><span class="nav-badge">36</span></div>
+  </div>
+  <div class="main lg">
+    <div class="page-head">
+      <h1>Inventory</h1>
+      <p>Stock you already have on the shelf. When it&rsquo;s here, a quote can be filled straight from it instead of ordering from a supplier &mdash; restock, count, or write off items as they move.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head-row"><h2>Stock on hand</h2></div>
+      <div class="p-toolbar">
+        <div class="p-toolbar-search"><div class="fake-in">Search products&hellip;</div></div>
+        <div class="p-toolbar-filter"><label>Category</label><div class="fake-sel">All categories</div></div>
+        <div class="p-toolbar-filter"><label>Sort by</label><div class="fake-sel">Product name</div></div>
+        <label class="p-toolbar-checkbox"><span class="bx"><svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Hide no stock</label>
+      </div>
+
+      <div class="cb-chain-break">
+        <div><b>3 products&rsquo; cost records do not match the shelf.</b></div>
+        <div><b>Is the shelf count right?</b> If it is, press the button beside it &mdash; that is all this needs. If one looks wrong, count that product and correct it in the list below first, then come back.</div>
+        <div class="deb-drift-why">This changes no stock count, no money, and no figure on your statements. It clears out old cost entries left behind by goods that have gone, which would otherwise give the wrong cost &mdash; and the wrong profit &mdash; to your next sales of these products.</div>
+        <div class="inv-lot-row"><span class="inv-lot-name">Cement &mdash; Hima 50kg</span><span class="inv-lot-figs"><b>34</b> on the shelf &middot; cost record says <b>61</b></span><span class="btn-ghost">Fix</span></div>
+        <div class="inv-lot-row"><span class="inv-lot-name">Roofing nails 2.5&Prime; &mdash; 5kg</span><span class="inv-lot-figs"><b>12</b> on the shelf &middot; cost record says <b>27</b></span><span class="btn-ghost">Fix</span></div>
+        <div class="inv-lot-row"><span class="inv-lot-name">Hoop iron 1&Prime; &mdash; 25m roll</span><span class="inv-lot-figs"><b>6</b> on the shelf &middot; cost record says <b>9</b></span><span class="btn-ghost">Fix</span></div>
+        <div style="margin-top:10px;"><span class="btn-ghost">Fix all 3</span></div>
+      </div>
+
+      <div class="cb-chain-break">
+        <div><b>146 units have no cost on file, across 12 products.</b></div>
+        <div><b>What did they cost you, each?</b> Press the button beside a product and say. If you genuinely do not know, leave it &mdash; this is a real state, not a mistake, and it is better said than guessed.</div>
+        <div class="deb-drift-why">Until then they are valued at nothing, so your stock is understated by whatever they really cost, and their whole sale value shows as profit when they sell. This moves no stock and no money &mdash; it only records what goods already on your shelf cost.</div>
+        <div class="inv-lot-row"><span class="inv-lot-name">Binding wire 16g &mdash; 20kg roll</span><span class="inv-lot-figs"><b>41</b> with no cost</span><span class="btn-ghost">Put a cost on these</span></div>
+        <div class="inv-lot-row"><span class="inv-lot-name">Sandpaper 80 grit &mdash; sheet</span><span class="inv-lot-figs"><b>38</b> with no cost</span><span class="btn-ghost">Put a cost on these</span></div>
+        <div class="inv-lot-row"><span class="inv-lot-name">PVC conduit 20mm &mdash; 3m</span><span class="inv-lot-figs"><b>25</b> with no cost &middot; 25 held on consignment</span><span class="btn-ghost">Put a cost on these</span></div>
+      </div>
+
+      <div class="sum-strip">
+        <div class="sum-cell"><div class="sum-value">18,412,600</div><div class="sum-label">ours on the shelf</div></div>
+        <div class="sum-cell warn"><div class="sum-value">1,244,000</div><div class="sum-label">held for others</div></div>
+        <div class="sum-cell"><div class="sum-value">192</div><div class="sum-label">lines</div></div>
+        <div class="sum-cell warn"><div class="sum-value">0</div><div class="sum-label">nothing left</div></div>
+        <div class="sum-cell warn"><div class="sum-value">12</div><div class="sum-label">with no cost on file</div></div>
+      </div>
+
+      <div class="inv-grid">
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 11h16"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Cement &mdash; Hima 50kg</div><div class="inv-card-sub">PRD-0114</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Building</span><span class="pack-pill inv-low-pill">below 40</span><span class="pack-pill">14 days cover</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">34 bags</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">32,400</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">1,101,600</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 13h18M3 18h18"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Iron sheets &mdash; G28, 3m box profile</div><div class="inv-card-sub">Charcoal &middot; IS-G28-3M-CH</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Roofing</span><span class="pack-pill">keep 25</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">88 sheets</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Packs available</span><span class="inv-cost">3 bundles + 8 sheets</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">41,000</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">3,608,000</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><path d="M12 3v18M8 6h8"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Binding wire 16g &mdash; 20kg roll</div><div class="inv-card-sub">PRD-0271</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Building</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">41 rolls</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">&mdash;</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">No cost on file</span><span class="inv-cost inv-cost-none">&mdash;</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">PVC conduit 20mm &mdash; 3m</div><div class="inv-card-sub">PRD-0388</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Electrical</span><span class="pack-pill">25 not ours</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">25 lengths</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">&mdash;</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">No cost on file</span><span class="inv-cost inv-cost-none">&mdash;</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Not ours</span><span class="inv-cost inv-cost-consign">212,500</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9 8h6"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Nails 4&Prime; &mdash; 25kg box</div><div class="inv-card-sub">PRD-0092</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Fasteners</span><span class="pack-pill">keep 8</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">19 boxes</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">148,000</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">2,812,000</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M4 6h4l7 8h4"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Wheelbarrow &mdash; heavy duty</div><div class="inv-card-sub">PRD-0451</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Tools</span><span class="pack-pill">6 not ours</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">8</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">104,000</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">208,000</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Not ours</span><span class="inv-cost inv-cost-consign">624,000</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><rect x="5" y="9" width="14" height="10" rx="2"/><path d="M8 9V6.5a4 4 0 0 1 8 0V9"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Padlocks 50mm &mdash; brass</div><div class="inv-card-sub">PRD-0203</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Hardware</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">82</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">23,800</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">1,951,600</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-card-head"><div class="inv-thumb"><svg viewBox="0 0 24 24"><path d="M7 3h10v6H7z"/><path d="M9 9v12h6V9"/></svg></div>
+            <div class="inv-card-title"><div class="inv-card-name">Paint &mdash; silk white 20L</div><div class="inv-card-sub">PRD-0330</div></div></div>
+          <div class="inv-card-meta"><span class="pack-pill">Finishes</span><span class="pack-pill inv-low-pill">below 6</span></div>
+          <div class="inv-card-foot"><div class="inv-card-stats">
+            <div class="inv-qty-wrap"><span class="inv-qty-label">In stock</span><span class="inv-qty">2 tins</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Cost/unit</span><span class="inv-cost">186,000</span></div>
+            <div class="inv-qty-wrap"><span class="inv-qty-label">Value here</span><span class="inv-cost">372,000</span></div>
+          </div>
+          <div class="pc-actions">
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 11H6.2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="pc-icon-btn"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head-row"><h2>Recent stock movements</h2>
+        <span class="log-count">50 of 418 movements &middot; <span class="log-net">net <b>+212</b> units</span></span></div>
+      <div class="p-toolbar">
+        <div class="p-toolbar-search"><div class="fake-in">Track one item &mdash; search by product, variant or n</div></div>
+        <div class="p-toolbar-filter"><label>Category</label><div class="fake-sel">All categories</div></div>
+        <div class="p-toolbar-filter"><label>Movement</label><div class="fake-sel">All movements</div></div>
+      </div>
+      <table class="lgt">
+        <tr><th>Date</th><th>Product</th><th>Movement</th><th class="r">Change</th><th class="r">Left</th><th>Note</th></tr>
+        <tr><td class="m">2026-09-04</td><td>Cement &mdash; Hima 50kg</td><td>Restock</td><td class="r m up">+60</td><td class="r m">94</td><td>Ssekitoleko Hardware &mdash; PINV-214</td></tr>
+        <tr><td class="m">2026-09-04</td><td>Cement &mdash; Hima 50kg</td><td>Sold (quote)</td><td class="r m down">&minus;60</td><td class="r m">34</td><td>Kato Construction Ltd</td></tr>
+        <tr><td class="m">2026-09-03</td><td>Iron sheets &mdash; G28, 3m box profile</td><td>Restock</td><td class="r m up">+120</td><td class="r m">88</td><td>Mulongo Hardware</td></tr>
+        <tr><td class="m">2026-09-02</td><td>Paint &mdash; silk white 20L</td><td>Sold (quote)</td><td class="r m down">&minus;4</td><td class="r m">2</td><td>Counter sale</td></tr>
+        <tr><td class="m">2026-09-02</td><td>Nails 4&Prime; &mdash; 25kg box</td><td>Correction</td><td class="r m down">&minus;3</td><td class="r m">19</td><td>Counted 19, record said 22</td></tr>
+      </table>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE INVENTORY CONSOLE ==========================
+       Built only from what index.html already ships: the 23-colour
+       palette, the 11/12/13/14/19 ramp, Inter + Archivo Black + IBM Plex
+       Mono, the .ow-* components, radius 4/6/8, space in even steps,
+       hairlines instead of shadows. No new colour, no new weight, no new
+       size, no fourteenth button family.
+       ================================================================= */
+
+    /* ---- THE FIND BAR: the screen leads with it ----
+       Three of the four jobs -- look one line up, receive against a
+       line, correct a count -- start by naming a product. So the widest,
+       tallest, first thing under the page name is the box you type into,
+       and the filters sit on its own row rather than above the money. */
+    .iv-find{display:flex;align-items:stretch;gap:8px;margin-bottom:8px;}
+    .iv-fb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      box-sizing:border-box;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);}
+    .iv-fb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fb-v{font-size:15px;color:var(--ow-ink-900);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fb-v.ph{color:var(--ow-ink-400);}
+    .iv-fb-x{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-fb-x svg{width:11px;height:11px;stroke:var(--ow-ink-600);stroke-width:2.2;}
+    .iv-sel{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-sel .l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);}
+    .iv-sel .cv{width:7px;height:7px;border-right:1.6px solid var(--ow-ink-400);
+      border-bottom:1.6px solid var(--ow-ink-400);transform:rotate(45deg) translate(-1px,-1px);flex:none;}
+    .iv-tog{display:flex;align-items:center;gap:8px;height:44px;padding:0 13px 0 11px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-tog .bx{width:16px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-tog .bx svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* What the search actually did, said in one line, before the money.
+       "Nothing matches" is never allowed to stand for "it matched and a
+       filter hid it" -- so the line names the filter and offers it back. */
+    .iv-fr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 16px;
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-fr b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fr .lk{color:var(--ow-oxide);font-weight:600;text-decoration:underline;
+      text-underline-offset:2px;}
+
+    /* ---- THE REPAIR BAR ----
+       Two full-width crimson banners became one 38px line. It appears
+       only when something is wrong and takes the space back entirely
+       when nothing is -- a screen that reserves room for problems it
+       does not have is a screen that always looks slightly broken. */
+    .iv-fix{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 12px;
+      box-sizing:border-box;background:var(--ow-amber-faint);border:1px solid #EBD9B4;
+      border-radius:var(--ow-r-lg);margin-bottom:16px;}
+    .iv-fix > svg{width:16px;height:16px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fix-t{font-size:12px;font-weight:600;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+    .iv-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1px solid #EBD9B4;
+      font-size:11px;font-weight:500;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-chip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;}
+    .iv-chip.on{background:var(--ow-amber-soft);border-color:var(--ow-amber);font-weight:600;}
+    .iv-fix-sp{flex:1;}
+    .iv-fix-o{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-o .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);}
+
+    /* ---- THE SHELF ROW ----
+       44px, table-like, opens in place. Five columns and only one of
+       them gives way: the name. Money and counts are sized to their
+       content, because a clipped figure is a WRONG figure. */
+    .iv-h{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+      align-items:center;gap:10px;padding:0 12px;height:28px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .iv-h span{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);white-space:nowrap;}
+    .iv-h .r{text-align:right;}
+    .iv-g.ow-open{box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+    .iv-r{display:grid;grid-template-columns:18px minmax(0,1fr) 116px 116px 152px;
+      align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);text-align:left;}
+    .iv-g:last-child .iv-r{border-bottom:0;}
+    .iv-g.ow-open .iv-r{background:var(--ow-paper-2);}
+    .iv-cr{grid-column:1;grid-row:1 / span 2;width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;align-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .iv-g.ow-open .iv-cr{transform:rotate(90deg);}
+    .iv-n{grid-column:2;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
+    .iv-nm{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-m{grid-column:2;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .iv-f .u{font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-left:3px;}
+    .iv-f .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f.q{grid-column:3;grid-row:1 / span 2;}
+    .iv-f.c{grid-column:4;grid-row:1 / span 2;}
+    .iv-f.v{grid-column:5;grid-row:1 / span 2;font-size:14px;}
+    .iv-x{grid-column:1 / -1;}
+    /* Out entirely against a floor somebody set: genuinely bad. Under
+       the floor but not out: caution. Everything else is ink -- a count
+       is a size, not a warning. */
+    .iv-f.out{color:var(--ow-crimson);}
+    .iv-f.thin{color:var(--ow-amber-ink);}
+    .iv-f.none{color:var(--ow-ink-400);font-weight:500;}
+    .iv-f.notours{color:var(--ow-amber-ink);}
+
+    /* ---- THE OPEN LINE: the whole of one line's business ---- */
+    .iv-x{padding:4px 12px 14px 40px;}
+    .iv-say{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 11px;}
+    .iv-say b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-say .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fs{display:flex;align-items:stretch;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);
+      width:max-content;max-width:100%;margin:0 0 11px;}
+    .iv-fs > div{padding:7px 14px;border-left:1px solid var(--ow-rule-soft);}
+    .iv-fs > div:first-child{border-left:0;}
+    .iv-fs-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .iv-fs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;white-space:nowrap;}
+    .iv-fs-v .u{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:var(--ow-ink-600);margin-left:3px;}
+    .iv-fs-v.warn{color:var(--ow-amber-ink);}
+    .iv-fs-v.bad{color:var(--ow-crimson);}
+    .iv-mv{margin:0 0 11px;}
+    .iv-mv-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 6px;}
+    .iv-mv-r{display:flex;align-items:baseline;gap:10px;padding:5px 0;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .iv-mv-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);white-space:nowrap;
+      width:66px;flex:none;}
+    .iv-mv-w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-600);}
+    .iv-mv-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .iv-mv-q.up{color:var(--ow-verdigris);}
+    .iv-mv-q.down{color:var(--ow-crimson);}
+    .iv-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* ---- rail ---- */
+    .rr{display:flex;align-items:baseline;gap:10px;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .rr:first-child{border-top:0;}
+    .rr-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+    .rr-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .rr-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rr-q.up{color:var(--ow-verdigris);}
+    .rr-q.down{color:var(--ow-crimson);}
+    .ow-pan-a{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-pan-a .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(-45deg);}
+    .ow-mt-v.sm{font-size:19px;}
+
+    /* The page header's help bubble and the two buttons */
+    .ow-ph-h{display:flex;align-items:center;gap:8px;}
+
+    /* ---- the repair drawer ----
+       What used to be two crimson banners standing above every figure on
+       the screen, on every visit. It is one 38px line until you open it,
+       and the order of the three sections is a rule rather than a
+       ranking -- said on screen, because a shop that fixes them in the
+       other order makes more work for itself. */
+    .iv-fx{background:var(--ow-paper);border:1px solid #EBD9B4;border-top:1px solid #EBD9B4;
+      border-bottom-left-radius:var(--ow-r-lg);border-bottom-right-radius:var(--ow-r-lg);
+      margin-bottom:16px;overflow:hidden;}
+    .iv-fx-o{margin:0;padding:11px 14px;background:var(--ow-amber-faint);
+      border-bottom:1px solid var(--ow-rule-soft);
+      font-size:12px;line-height:1.5;color:var(--ow-amber-ink);max-width:none;}
+    .iv-fx-o b{font-weight:600;}
+    .iv-fx-s{padding:13px 14px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-s:first-of-type{border-top:0;}
+    .iv-fx-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 6px;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-n{font-size:11px;font-weight:400;color:var(--ow-ink-400);}
+    .iv-fx-w{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .iv-fx-w b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-fx-r{display:flex;align-items:center;gap:12px;padding:7px 0;
+      border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-nm{font-size:13px;font-weight:500;min-width:0;flex:0 1 260px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fx-f{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-fx-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-f .warn{color:var(--ow-amber-ink);font-weight:500;}
+    .iv-fx-f .bad{color:var(--ow-crimson);font-weight:500;}
+    .iv-fx-a{padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-m{margin:9px 0 0;padding-top:9px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .iv-fx-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the states sheet ---- */
+    .st-l{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:12px;font-weight:600;
+      letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-l:not(:first-child){margin-top:26px;}
+    .st-n{width:19px;height:19px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);
+      font-size:11px;letter-spacing:0;flex:none;}
+    .st{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:14px;background:rgba(255,255,255,.5);}
+    .st-w{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .st-w b{color:var(--ow-ink-900);font-weight:600;}
+    .st-fail{display:flex;gap:12px;padding:14px;background:var(--ow-crimson-soft);
+      border:1px solid var(--ow-crimson);border-radius:var(--ow-r-lg);}
+    .st-fail > svg{width:20px;height:20px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .st-fail-t{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-crimson);}
+    .st-fail-w{margin:0 0 11px;font-size:12px;line-height:1.55;color:var(--ow-ink-900);max-width:var(--ow-measure);}
+    .st-fail-w b{font-weight:600;}
+    .st-fail-a{display:flex;gap:6px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1580px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Catalogue</span><span>/</span><span>Inventory</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buying</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"></path></svg><span>Sourcing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-section-label">Catalogue</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg><span>Products</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Price registry</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span><span class="nav-badge">19</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7h13l-3-3"></path><path d="M21 17H8l3 3"></path></svg><span>Stock movements</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg><span>Media</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span><span class="nav-badge">36</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <div>
+        <h1 class="ow-ph-t">Inventory</h1>
+        <p class="ow-ph-sub">What is on the shelf right now, what it cost, and what it is worth.</p>
+      </div>
+      <span class="ow-ph-i">i</span>
+      <span class="ow-ph-sp"></span>
+      <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg>Count the shelf</span>
+      <span class="btn btn-accent ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Receive a delivery</span>
+    </div>
+
+    <div class="iv-find">
+      <div class="iv-fb">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <span class="iv-fb-v ph">Name a line &mdash; cement, iron, sndppr, or a code</span>
+      </div>
+      <span class="iv-sel"><span class="l">Category</span>All<span class="cv"></span></span>
+      <span class="iv-sel"><span class="l">Sort</span>Most money tied up<span class="cv"></span></span>
+      <span class="iv-tog"><span class="bx"><svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Hide no stock</span>
+    </div>
+    <p class="iv-fr"><b>166</b> lines listed of <b>192</b> on file &middot; <b>26</b> are hidden because they have nothing on the shelf <span class="lk">show them</span></p>
+
+    <div class="ow-strip">
+      <div class="ow-mt"><p class="ow-mt-l">Ours on the shelf</p><span class="ow-mt-v">18,412,600<span class="ow-u">UGX</span></span><p class="ow-mt-s">192 lines, at what you paid</p></div>
+      <div class="ow-mt ow-warn"><p class="ow-mt-l">Held for others</p><span class="ow-mt-v">1,244,000<span class="ow-u">UGX</span></span><p class="ow-mt-s">31 lines on consignment</p></div>
+      <div class="ow-mt"><p class="ow-mt-l">Moved in 30 days</p><span class="ow-mt-v">6,940,000<span class="ow-u">UGX</span></span><p class="ow-mt-s">at cost, off the shelf</p></div>
+      <div class="ow-mt ow-warn"><p class="ow-mt-l">Below their floor</p><span class="ow-mt-v sm">7<span class="ow-u">lines</span></span><p class="ow-mt-s">of 46 with a floor set</p></div>
+      <div class="ow-mt ow-warn"><p class="ow-mt-l">Valued by nothing</p><span class="ow-mt-v sm">12<span class="ow-u">lines</span></span><p class="ow-mt-s">146 units, no cost on file</p></div>
+    </div>
+
+    <div class="iv-fix" style="margin-top:16px;border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:0;">
+      <svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span class="iv-fix-t">3 things to put right</span>
+      <span class="iv-fix-c">
+        <span class="iv-chip on"><b>3</b> cost records adrift</span>
+        <span class="iv-chip"><b>12</b> with no cost on file</span>
+        <span class="iv-chip"><b>7</b> below their floor</span>
+      </span>
+      <span class="iv-fix-sp"></span>
+      <span class="iv-fix-o">Close<span class="cv" style="transform:rotate(-135deg) translate(-1px,-1px)"></span></span>
+    </div>
+    <div class="iv-fx">
+      <p class="iv-fx-o">In this order, and the order matters: <b>matching a cost record can leave new units with no cost behind it</b>, so pricing before matching would only make more blanks. Nothing below moves stock or money except where it says so.</p>
+
+      <div class="iv-fx-s">
+        <p class="iv-fx-t">1 &mdash; Three cost records do not match the shelf <span class="iv-fx-n">changes no count, no money, no statement</span></p>
+        <p class="iv-fx-w"><b>Is the shelf count right?</b> If it is, match the record and that is all this needs. If a count looks wrong, correct it in the list first and come back. Where the record carries more than the shelf, the oldest entries go &mdash; what is still on the shelf is the newest stock. Entries for goods held on consignment are left alone.</p>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Cement &mdash; Hima 50kg</span><span class="iv-fx-f"><b>34</b> on the shelf &middot; record says <b>61</b></span><span class="btn btn-ghost ow-sm">Match it to 34</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Roofing nails 2.5&Prime; &mdash; 5kg</span><span class="iv-fx-f"><b>12</b> on the shelf &middot; record says <b>27</b></span><span class="btn btn-ghost ow-sm">Match it to 12</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Hoop iron 1&Prime; &mdash; 25m roll</span><span class="iv-fx-f"><b>6</b> on the shelf &middot; record says <b>9</b></span><span class="btn btn-ghost ow-sm">Match it to 6</span></div>
+        <div class="iv-fx-a"><span class="btn btn-ghost ow-sm">Match all three to their shelves</span></div>
+      </div>
+
+      <div class="iv-fx-s">
+        <p class="iv-fx-t">2 &mdash; 146 units have no cost on file, across 12 lines <span class="iv-fx-n">records what goods already on your shelf cost</span></p>
+        <p class="iv-fx-w"><b>What did they cost you, each?</b> If you genuinely do not know, leave it &mdash; that is a real state, not a mistake, and better said than guessed. Until then they are valued at nothing, your shelf is understated by whatever they really cost, and their whole sale value shows as profit when they sell.</p>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Binding wire 16g &mdash; 20kg roll</span><span class="iv-fx-f"><b>41</b> with no cost &middot; replaced today at <b>78,000</b></span><span class="btn btn-ghost ow-sm">Say what they cost</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Sandpaper 80 grit &mdash; sheet</span><span class="iv-fx-f"><b>38</b> with no cost &middot; replaced today at <b>1,200</b></span><span class="btn btn-ghost ow-sm">Say what they cost</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">PVC conduit 20mm &mdash; 3m</span><span class="iv-fx-f"><b>25</b> with no cost &mdash; <span class="warn">all 25 held for Haidery Traders</span></span><span class="btn btn-ghost ow-sm" style="opacity:.5">Settled on Consignment</span></div>
+        <p class="iv-fx-m">9 more, worth about <b>412,000</b> to replace between them. There is no fix-all here: every one of these is a figure only you know.</p>
+      </div>
+
+      <div class="iv-fx-s">
+        <p class="iv-fx-t">3 &mdash; Seven lines are under the floor you set <span class="iv-fx-n">nothing here is ordered until you order it</span></p>
+        <p class="iv-fx-w">A floor is the count you said you never want to be under. Ranked by how soon each runs out at the rate it has actually been selling &mdash; not by how far under it is, because two bags short of a line that sells twice a year is not a problem.</p>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Paint &mdash; silk white 20L</span><span class="iv-fx-f"><b>2</b> of a floor of <b>6</b> &middot; <span class="bad">about 2 days left</span></span><span class="btn btn-ghost ow-sm">Receive more</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Cement &mdash; Hima 50kg</span><span class="iv-fx-f"><b>34</b> of a floor of <b>40</b> &middot; <span class="warn">about 7 days left</span></span><span class="btn btn-ghost ow-sm">Receive more</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Wire nails 2&Prime; &mdash; 25kg box</span><span class="iv-fx-f"><b>3</b> of a floor of <b>10</b> &middot; <span class="warn">about 9 days left</span></span><span class="btn btn-ghost ow-sm">Receive more</span></div>
+        <div class="iv-fx-r"><span class="iv-fx-nm">Hinges 4&Prime; &mdash; steel pair</span><span class="iv-fx-f"><b>14</b> of a floor of <b>20</b> &middot; sold 3 in 90 days</span><span class="btn btn-ghost ow-sm">Receive more</span></div>
+        <p class="iv-fx-m">3 more, none of them due inside a month. Four of these seven come from the same supplier &mdash; <b>Ssekitoleko Hardware</b>, who you already owe <b>1,840,000</b>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
