@@ -32719,6 +32719,38 @@ function purchaseInvoiceReceiptState(pi, floor){
   return got ? 'received' : 'none';
 }
 
+/* A PAYMENT WITH NOTHING BEHIND IT IN THE CASH BOOK.
+
+   Every payment recorded against a bill writes a Cash Book entry and
+   keeps its id. Two ways that link can be empty, and only one of them
+   is a fault:
+
+     - "Already settled — before this system" deliberately writes no
+       entry, because no cash moves today. Its payment carries the flag
+       and a null id. That is declared, not broken, and it is reported
+       on the bill itself rather than here.
+
+     - An id that no longer resolves. The entry existed and is gone —
+       until now the Cash Book screen would delete one without knowing
+       a bill was standing on it — so the bill says money left the
+       drawer and the drawer has no record of it. That is the two
+       halves of the books disagreeing about a real payment.
+
+   A payment with no id AND no flag is not asked about: those were
+   recorded before the id was kept, and a finding nobody can check is
+   worse than none. */
+function purchaseInvoiceOrphanPayments(pi){
+  if(pi.voided) return [];
+  const ids = new Set((data.cashTxns||[]).map(t=> t.id));
+  return (pi.payments||[]).filter(p=> p && p.cashTxnId != null && !ids.has(p.cashTxnId));
+}
+/* What of a bill was settled without any cash moving. Not a fault — the
+   bill just has to say so, or "settled" reads as money out of the till. */
+function purchaseInvoiceNoCashPaid(pi){
+  return ((pi && pi.payments)||[]).reduce((sum,p)=>
+    piPaymentIsSettledBefore(p) ? sum + (Number(p.amount)||0) : sum, 0);
+}
+
 /* Money that left the drawer beyond what was asked for. The old screen
    drew this as Balance due -180,000 under a green "Settled" chip: the
    one reading of it that says nothing is wrong. */
@@ -32742,6 +32774,12 @@ function purchaseInvoiceFindings(invoices){
      with the mistake. */
   const dups = duplicatePurchaseInvoiceGroups().filter(g=> g.some(pi=> inRange.has(pi.id)));
   const overpaid = live.filter(pi=> purchaseInvoiceOverpaid(pi) > 0);
+  const orphans = [];
+  live.forEach(pi=>{
+    const ps = purchaseInvoiceOrphanPayments(pi);
+    if(ps.length) orphans.push({pi, payments: ps,
+      amount: ps.reduce((sum,p)=> sum + (Number(p.amount)||0), 0)});
+  });
   const unreceived = live.filter(pi=> purchaseInvoiceReceiptState(pi, floor) === 'none');
   const rises = [];
   live.forEach(pi=>{
@@ -32756,6 +32794,8 @@ function purchaseInvoiceFindings(invoices){
   /* A figure, not a figure-plus-unit: the currency is said once per
      screen, in the strip. */
   const fig = (n)=> Number(Math.round(n) || 0).toLocaleString('en-UG');
+  orphans.forEach(o=> mark(o.pi, 'bad', 'Paid, but not in the cash book',
+    fig(o.amount) + ' with no entry behind it'));
   overpaid.forEach(pi=> mark(pi, 'bad', 'Paid ' + fig(purchaseInvoiceOverpaid(pi)) + ' over',
     fig(Number(pi.amountPaid)||0) + ' out on a ' + fig(purchaseInvoiceTotal(pi)) + ' bill'));
   unreceived.forEach(pi=> mark(pi, 'warn', 'Nothing received', 'no delivery on the stock record'));
@@ -32763,12 +32803,14 @@ function purchaseInvoiceFindings(invoices){
     r.lines.length === 1 ? 'One line priced up' : r.lines.length + ' lines priced up',
     'against what you last paid'));
   const count = new Set([...dups.flat().filter(pi=> inRange.has(pi.id)).map(pi=>pi.id),
+    ...orphans.map(o=>o.pi.id),
     ...overpaid.map(pi=>pi.id), ...unreceived.map(pi=>pi.id), ...rises.map(r=>r.pi.id)]).size;
   const money = dups.reduce((s,g)=> s + purchaseInvoiceTotal(g[0]) * (g.length - 1), 0)
+    + orphans.reduce((s,o)=> s + o.amount, 0)
     + overpaid.reduce((s,pi)=> s + purchaseInvoiceOverpaid(pi), 0)
     + unreceived.reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0)
     + rises.reduce((s,r)=> s + r.extra, 0);
-  return {dups, overpaid, unreceived, rises, ids, count, money,
+  return {dups, orphans, overpaid, unreceived, rises, ids, count, money,
     checked: live.length, floor};
 }
 
@@ -32881,6 +32923,17 @@ function renderPurchaseInvoiceChecks(found){
 
   const rows = [];
   rows.push(renderPurchaseInvoiceDuplicates(found.dups));
+  (found.orphans||[]).forEach(o=>{
+    rows.push(`<div class="ow-ck ow-sev">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M18 14h.01"/><path d="M8 16l8-8"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t">A payment the cash book has no entry for</p>
+        <p class="ow-ck-w" title="${esc(o.pi.supplierName||'')}"><b>${esc(purchaseInvoiceNumberLabel(o.pi))}</b> &middot; ${esc(o.pi.supplierName || 'Unknown supplier')} &middot; ${o.payments.length === 1 ? 'a payment' : o.payments.length + ' payments'} of <b>${money(o.amount)}</b> ${o.payments.length === 1 ? 'is' : 'are'} recorded on this bill, and the entry behind ${o.payments.length === 1 ? 'it' : 'them'} is no longer in the cash book</p>
+      </div>
+      <span class="ow-ck-v ow-bad">${money(o.amount)}<span class="ow-ck-u">paid with nothing behind it</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${o.pi.id}">Open the bill</button></span>
+    </div>`);
+  });
   found.overpaid.forEach(pi=>{
     const over = purchaseInvoiceOverpaid(pi);
     rows.push(`<div class="ow-ck ow-sev">
@@ -33170,10 +33223,15 @@ function piRowHTML(pi, found){
         ? '<span class="ow-pi-mk ow-none"><b class="ow-pi-mk-t">An order</b>no longer on file</span>'
         : '<span class="ow-pi-mk ow-none"><b class="ow-pi-mk-t">For the shelf</b>a restock, not an order</span>';
 
+  /* "SETTLED" MUST NOT READ AS MONEY OUT OF THE TILL WHEN NONE LEFT IT.
+     A bill marked settled before this system moves no cash on purpose,
+     and the screen saying only "settled" is how a bill with no cash
+     book entry behind it looks exactly like one that was paid. */
+  const noCash = purchaseInvoiceNoCashPaid(pi);
   const basis = pi.voided ? 'voided'
     : over > 0 ? `${money(paid)} paid`
     : paid <= 0.5 ? 'nothing paid yet'
-    : due <= 0.5 ? 'settled'
+    : due <= 0.5 ? (noCash >= paid - 0.5 ? 'settled — no cash moved' : 'settled')
     : `${money(due)} still owed`;
 
   const days = pi.date ? daysSinceDate(pi.date) : -1;
@@ -33261,6 +33319,20 @@ function piOpenBodyHTML(pi){
           ? `Bought for the shelf, and counted in against this bill on the stock record.`
           : 'Bought for the shelf.';
 
+  /* WHERE THE MONEY WENT, OR DID NOT. Two states the bill has to be able
+     to say out loud, because "settled" alone is indistinguishable
+     between them and one of the two means the cash book is wrong. */
+  const noCash = purchaseInvoiceNoCashPaid(pi);
+  const orphans = purchaseInvoiceOrphanPayments(pi);
+  const cashNote = orphans.length
+    ? `<div class="ow-q-un"><b>${money(orphans.reduce((sum,p)=> sum + (Number(p.amount)||0), 0))}</b> is recorded as paid on this bill, and the cash book has no entry behind it.
+        The entry was made when the payment was recorded and has since been removed, so the bill and the drawer no longer agree.
+        Reverse the payment here and record it again against the right day, or put the cash book entry back.</div>`
+    : noCash > 0.5
+      ? `<div class="ow-q-un"><b>${money(noCash)}</b> of this was marked <b>settled before this system</b>, so no cash moved and there is no cash book entry &mdash; deliberately.
+        The bill was already paid before the shop began recording; paying it out of today's till would spend money the shop still has on goods it bought long ago.</div>`
+      : '';
+
   const acts = [];
   acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-print" data-id="${pi.id}">Print (A5)</button>`);
   if(linkedOrder) acts.push(`<button type="button" class="btn btn-ghost ow-sm" data-order-pi="${pi.id}">Open ${esc(invoiceNumberLabel(linkedOrder))}</button>`);
@@ -33299,10 +33371,12 @@ function piOpenBodyHTML(pi){
       </tr></tfoot>
     </table>
     ${note}
+    ${cashNote}
     <div class="ow-pi-bs">
       <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">Billed</span><span class="ow-pi-bs-v">${money(total)}</span><span class="ow-pi-bs-s">${esc(fmtShortDate(pi.date) || pi.date || 'no date on record')}</span></div>
       <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">Paid</span><span class="ow-pi-bs-v${over > 0 ? ' ow-bad' : ''}">${money(paid)}</span><span class="ow-pi-bs-s">${
-        (pi.payments||[]).length ? `${(pi.payments||[]).length} payment${(pi.payments||[]).length===1?'':'s'}` : paid > 0.5 ? 'recorded' : 'nothing yet'}</span></div>
+        (pi.payments||[]).length ? `${(pi.payments||[]).length} payment${(pi.payments||[]).length===1?'':'s'}` : paid > 0.5 ? 'recorded' : 'nothing yet'}${
+        noCash > 0.5 ? (noCash >= paid - 0.5 ? ' &middot; no cash moved' : ` &middot; ${money(noCash)} of it moved no cash`) : ''}</span></div>
       <div class="ow-pi-bs-c"><span class="ow-pi-bs-l">${over > 0 ? 'Paid over' : 'Still owed'}</span><span class="ow-pi-bs-v${over > 0 ? ' ow-bad' : ''}">${money(over > 0 ? over : due)}</span><span class="ow-pi-bs-s">${
         over > 0 ? 'more than was asked for' : due > 0.5 ? 'Creditors decides who is paid first' : 'settled'}</span></div>
     </div>
@@ -53905,6 +53979,44 @@ function transferBetweenAccounts(from, to, amount, note, date){
   saveData();
   return { outId, inId, amount: amt };
 }
+/* WHAT IS STANDING ON A CASH ENTRY.
+
+   A payment recorded against a document -- a supplier's bill, a
+   customer's invoice, a wage or a rent -- writes a Cash Book entry and
+   keeps its id, so that reversing the payment can take the entry with
+   it. The link only ever ran one way: the Cash Book knew nothing about
+   what was leaning on its rows, and deleting one from the Cash Book
+   screen left the document still saying it had been paid, with nothing
+   behind it. A supplier bill would read "settled" while the drawer had
+   no record of the money leaving -- which is the two halves of the
+   books disagreeing about a real payment, and the shop finding out
+   only when somebody adds up a month by hand.
+
+   So the entry names what is on it, and the delete is refused. This is
+   not a warning that can be clicked through on purpose: the reversal
+   exists on the document, it removes BOTH sides, and it is one tap
+   away. Deleting from this side can only ever half-do it. */
+function cashTxnDependents(ids){
+  const set = new Set((ids||[]).filter(x=> x !== undefined && x !== null));
+  const found = [];
+  if(!set.size) return found;
+  (data.purchaseInvoices||[]).forEach(pi=> (pi.payments||[]).forEach(p=>{
+    if(set.has(p.cashTxnId)) found.push({
+      what: `${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName || 'a supplier'}`,
+      where: 'Purchase invoices', amount: Number(p.amount)||0 });
+  }));
+  (data.savedQuotes||[]).forEach(q=> (q.payments||[]).forEach(p=>{
+    if(set.has(p.cashTxnId)) found.push({
+      what: `${invoiceNumberLabel(q)} — ${(q.client && q.client.name) || 'a customer'}`,
+      where: 'Invoices', amount: Number(p.amount)||0 });
+  }));
+  (data.dues||[]).forEach(d=> (d.payments||[]).forEach(p=>{
+    if(set.has(p.cashTxnId)) found.push({
+      what: `${dueName(d)} — ${periodLabel(d.period)}`,
+      where: 'Payroll and rent', amount: Number(p.amount)||0 });
+  }));
+  return found;
+}
 function deleteCashTxn(id){
   const t = data.cashTxns.find(x=> x.id === id);
   /* The other half of a transfer, if this is one. Deleting a single leg
@@ -53913,12 +54025,21 @@ function deleteCashTxn(id){
      or neither does, and the question says which it is. */
   const twin = t && t.transferId != null
     ? data.cashTxns.find(x=> x.id === t.transferId) : null;
+  const gone = new Set([id]);
+  if(twin) gone.add(twin.id);
+  const held = cashTxnDependents([...gone]);
+  if(held.length){
+    const one = held[0];
+    toast(`This entry is the record of a payment on ${one.what}. `
+      + `Deleting it here would leave ${held.length > 1 ? 'those documents' : 'that document'} saying `
+      + `${fmtUGX(Math.round(one.amount))} was paid with nothing behind it. `
+      + `Reverse the payment on ${one.where} instead — that removes this entry too.`, 11000);
+    return;
+  }
   const ask = twin
     ? `Delete this transfer? Both sides go — ${fmtUGX(Math.round(t.amount))} out of ${accountLabel(t.account)} and into ${accountLabel(twin.account)}.`
     : 'Delete this transaction?';
   if(!confirm(ask)) return;
-  const gone = new Set([id]);
-  if(twin) gone.add(twin.id);
   data.cashTxns = data.cashTxns.filter(x=> !gone.has(x.id));
   saveData(); renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   toast(twin ? 'Transfer deleted — both sides' : 'Transaction deleted');
