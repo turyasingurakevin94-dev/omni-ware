@@ -318,8 +318,15 @@ if (scope) {
   t.check(/ip-consign/.test(fn('invPaymentSummaryHTML')),
     'the receive-payment modal carries the note');
 
-  const inv = fn('renderInventory');
-  t.check(/consignTagHTML\(l\.consign, false\)/.test(inv), 'the inventory card carries the marker');
+  /* The shelf is a queue now rather than a grid of cards, so the row
+     that carries this marker is built by invLineHTML and the figure that
+     names the money is in invOpenHTML -- both split out of
+     renderInventory when it was rebuilt on the layer. The rule is
+     unchanged and so is the marker: it is the app's own consignTagHTML,
+     the same tag the order board, the preview and the payment modal
+     wear, rather than a private chip that could drift from them. */
+  const inv = fn('invLineHTML') + fn('invOpenHTML');
+  t.check(/consignTagHTML\(l\.consign, false\)/.test(inv), 'the inventory row carries the marker');
   t.check(/Not ours/.test(inv), 'and names the money that left its value');
 
   /* One template now: the quote's row is the layer's table row, and

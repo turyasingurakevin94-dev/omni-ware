@@ -412,6 +412,43 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
     },
+    /* INVENTORY. A grid of cards, four columns wide -- so no two figures
+       on the shelf ever lined up, and a column of money that does not
+       line up cannot be compared at a glance, which is the only way a
+       stock list is ever read. At 192 lines it also ranked nothing,
+       carried thirty-two unlabelled icon buttons and no accent at all,
+       and stacked two crimson repair banners over every figure on the
+       screen on an ordinary Tuesday.
+
+       So the private grid became the layer's queue -- .ow-q rows that
+       open in place and emit their own phone cards from the SAME call --
+       with the strip above it and the rail beside it. The two banners
+       became one amber line that is not there at all when there is
+       nothing in it. .pack-pill, .pc-icon-btn and the .cb-chain-break
+       banner are NOT retired from the FILE: the catalogue and the
+       product cards still wear the first two properly, and the cash
+       book's broken chain and the Manager's missing notes are genuinely
+       bad and still wear the third. Only this screen may not emit them
+       again.
+
+       The movements log that used to sit under this screen as a second
+       console with its own three filters is its own door now, so the
+       classes it took with it are not this screen's to answer for. */
+    inventory: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search',
+                'p-toolbar-filter', 'p-toolbar-checkbox', 'search-bar', 'field',
+                'inv-grid', 'inv-card', 'inv-card-head', 'inv-card-title', 'inv-card-name',
+                'inv-card-sub', 'inv-card-meta', 'inv-card-foot', 'inv-card-stats',
+                'inv-qty-wrap', 'inv-qty-label', 'inv-qty', 'inv-cost', 'pack-pill',
+                'pc-actions', 'pc-icon-btn', 'inv-action-btn', 'inv-reorder-btn', 'inv-price-rule-btn',
+                'sum-strip', 'sum-cell', 'sum-value', 'sum-label', 'cb-chain-break', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
+      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
+                'renderInvRail', 'renderInventoryFloors'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
+                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty'],
+    },
     /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
        named the word the shop already uses. Two stacked .panel blocks
        became a strip, one age bar with a legend where there had been a

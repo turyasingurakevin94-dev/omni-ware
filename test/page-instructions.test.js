@@ -99,14 +99,20 @@ const src = read('index.html');
      which the page never said at all before. Folded by construction, so
      there is one fewer screen here to police rather than one that
      stopped being policed. */
+  /* 8 -> 7. Inventory converted: .page-head became .ow-ph and the
+     paragraph about filling a quote from the shelf is .ow-ph-help behind
+     the "i", where the six console screens before it put theirs. Its
+     .ow-ph-sub says what the screen IS in one line, which is the part
+     that must never fold. One fewer screen to police, not one that
+     stopped being policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 8, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 7, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 8,
+  t.check(paras.length >= 7,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
