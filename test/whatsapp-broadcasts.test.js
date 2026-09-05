@@ -126,7 +126,11 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'the button ensures the template, then sends');
   t.check(/\.eq\('payload->>broadcast', String\(c\.id\)\)/.test(src),
     'campaign stats are read back through the payload marker');
-  t.check(/\$\{c\.opt_out \? ' · no promos' : ''\}/.test(src),
+  /* The marker moved with the list: it used to ride the chat row's
+     timestamp in the old inbox pane, and now rides the queue row's chip
+     rail. Same fact, still per person, and still where the shop reads
+     the names it is about to pay to reach. */
+  t.check(/\$\{c\.opt_out \? '<span class="ow-cp">No promos<\/span>' : ''\}/.test(src),
     'an opted-out conversation says so in the list');
   t.check(/Estimate only — Meta bills per delivered marketing message/.test(src),
     'the estimate is labelled as one');

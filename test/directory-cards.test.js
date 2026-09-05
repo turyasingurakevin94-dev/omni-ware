@@ -86,11 +86,16 @@ const { nameInitials } = compileScope(
   ['sc-avatar">${esc(nameInitials(s.name))}', 'cc-avatar">${esc(nameInitials(c.name))}']
     .forEach((frag) => t.check(src.includes(frag), `the avatar is rendered from it: ${frag.slice(0, 12)}…`));
 
-  /* waInitials stays its own function: it falls back to the last two
-     DIGITS of a bare phone number, which is a WhatsApp thread's problem
-     and not a directory card's. */
-  t.check(/function waInitials\(/.test(src),
-    'the WhatsApp one is left alone — it reads phone numbers, which these do not');
+  /* This used to pin that waInitials stayed its OWN function, because
+     it fell back to the last two DIGITS of a bare phone number -- a
+     WhatsApp thread's problem, not a directory card's. The pin has
+     nothing left to protect: the WhatsApp screen stopped drawing
+     avatars altogether when its imitation of a chat app became a work
+     queue, and waInitials went with the hue it was drawn in. What this
+     section still guards is the thing that mattered -- one initials
+     function for the three directory grids, never three copies. */
+  t.check(!/function waInitials\(/.test(src),
+    'and the WhatsApp copy is gone too, with the avatars it lettered');
 }
 
 /* ---------- 4. the figure strip sits on the card's bottom edge -------- */

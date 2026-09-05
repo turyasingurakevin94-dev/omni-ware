@@ -202,11 +202,26 @@ const reset = () => { data.cashDays = {}; data.cashTxns = []; };
   t.check(/if\(next <= todayISO\(\)\) cbGoToDay\(next\)/.test(code),
     'guarded as well as disabled, so a keyboard cannot get past it either');
 
-  // A day never opened has no opening figure, so it still needs the
-  // wizard -- stepping onto it must not show a book built on nothing.
+  /* THE GATE IS GONE, and this assertion moves with it.
+     It used to say a day never opened still gets the form, so that
+     stepping onto it could not show a book built on nothing. But the
+     book was never built on nothing: on every morning but the first the
+     app had already carried all three figures forward itself, and
+     replacing the whole screen with a form asking somebody to confirm
+     its own arithmetic hid yesterday, hid today's movements, and made a
+     seven-in-the-morning sale wait. What has to hold now is the honest
+     version of the same worry -- an unconfirmed opening must never pass
+     as a confirmed one -- so the day is shown, MARKED unconfirmed, and
+     one press stands behind it. */
   const go = (/function cbGoToDay[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/if\(rec\.openingSet\)\{ showCbMain\(\); \}/.test(go) && /showCbWizard\(true\)/.test(go),
-    'a day that was never opened still gets the wizard');
+  t.check(/showCbMain\(\)/.test(go) && !/showCbWizard/.test(go),
+    'stepping onto any day shows the book rather than a form');
+  const banner = (/function renderCbOpenBanner[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/has not been opened yet/.test(banner) && /unconfirmed/.test(banner),
+    'and an unopened day says so, in words, above the figures it is carrying');
+  const head = (/function renderCbDayHeader[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/rec\.openingSet \? '' : ' <span class="cb-unc">unconfirmed<\/span> ·'/.test(head),
+    'and the position itself carries the mark, not just the banner above it');
 }
 
 /* ---------- 7. one arithmetic, and no invented zeroes ---------------- */
@@ -223,9 +238,16 @@ const reset = () => { data.cashDays = {}; data.cashTxns = []; };
      a day where only money went out it puts a green "+0" beside the
      loss. The statements and the stock log were fixed for the same
      thing. */
-  const header = (/function renderCbDayHeader[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/if\(a\.in\) bits\.push/.test(header) && /if\(a\.out\) bits\.push/.test(header),
-    'a side that did not move is left out rather than shown as zero');
+  /* The tile now carries the day's NET move as one figure rather than a
+     gross pair -- the gross pair is in the two rings and in the table's
+     footer, and printing it a third time wrapped the strip onto three
+     rows. The rule this assertion protects is unchanged and is what is
+     checked: a side that did not move is never dressed as one. */
+  const header = (/function renderCbDayHeader[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/if\(!n\) return '<span class="qt">nothing moved today<\/span>'/.test(header),
+    'a day that did not move says so in words rather than showing a zero');
+  t.check(!/\+0/.test(header) && !/-0/.test(header),
+    'and no zero is ever dressed as a movement');
   t.check(/nothing moved today/.test(header),
     'and an account that did nothing says so in words');
 }
