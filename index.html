@@ -3138,6 +3138,18 @@
      .ow-card; what is here is the registry's own: the age chip, the
      supplier row, the marks, the key, the rail, the phone's acts. ===== */
   .pr-tb{margin-bottom:var(--ow-sp-12);}
+  /* display:contents dissolves this wrapper so the filters lay out as
+     direct children of the toolbar -- and that DELIBERATELY neutralises
+     the hidden attribute the markup carries, because there is no fold at
+     this width: the Filters button is display:none and the filters are
+     always shown. The phone rule below turns it into a real flex box and
+     gives it the [hidden] companion that makes the fold work.
+
+     So the attribute being inert here is the design, not the bug that
+     bit .mp-empty and .ap-photo-chip. Left as it is on purpose; measured
+     at both widths. Anyone changing this line has to move the fold's
+     initial state into JS or a class first, or the filters vanish from
+     every desktop. */
   .pr-tb-more{display:contents;}
   /* .btn.ow-sm in the layer outranks a lone class, so the fold button is hidden and shown at the same weight. */
   .pr-tb .btn.pr-filters-btn{display:none;}
@@ -7787,6 +7799,12 @@
   .ap-photo-chip{display:flex;align-items:center;gap:8px;margin:0 10px 6px;padding:6px 10px;
     border:1px solid var(--line);border-radius:10px;background:var(--panel);
     font-size:12.5px;color:var(--ink-soft);}
+  /* apShowPhotoChip sets chip.hidden, and display:flex above beats the
+     browser's own [hidden]{display:none} -- so the attribute did nothing
+     and the assistant panel said "Photo ready to send", over an empty
+     thumbnail, whether or not one had been attached. A screen must never
+     look like it is already carrying something it is not. */
+  .ap-photo-chip[hidden]{display:none;}
   .ap-photo-chip img{width:34px;height:34px;object-fit:cover;border-radius:6px;}
   .ap-photo-chip button{all:unset;cursor:pointer;margin-left:auto;padding:2px 8px;
     font-size:16px;line-height:1;color:var(--ink-soft);}
