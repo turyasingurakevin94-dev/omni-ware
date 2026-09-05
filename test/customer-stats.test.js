@@ -297,27 +297,47 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
    c.debt is what the rest of the app means by owed: the map's "owed to
    you", the debtors list, and the closing line of the statement all
    total it. This panel was the only place doing its own arithmetic. */
+/*
+ * WHERE THESE TWO NOW LIVE. The panel was a modal drawing its own stat
+ * tiles; the account is a screen, and the four figures are drawn by
+ * customerFiguresHTML because the register's open row shows the same
+ * four -- a row and an account that disagreed about what somebody owes
+ * would be the exact drift the console was built to end. The
+ * disagreement note went to customerOffBookHTML for the same reason:
+ * one place that decides whether the two records are out of step.
+ *
+ * Every guarantee below is the one this section was written for. Only
+ * the function it is asked of has changed.
+ */
 {
-  const html = extractFunction(src, 'customerStatsHTML', 'index.html');
-  const owedAt = html.indexOf("csStat('Owed to you now'");
+  const figs = extractFunction(src, 'customerFiguresHTML', 'index.html');
+  const off = extractFunction(src, 'customerOffBookHTML', 'index.html');
+  const owedAt = figs.indexOf("Owed to you now");
   t.check(owedAt > -1, 'the panel has an owed figure');
-  const owed = html.slice(owedAt, owedAt + 240);
+  const owed = figs.slice(owedAt, owedAt + 260);
 
-  t.check(!/s\.outstanding \+ s\.debt/.test(html) && !/s\.debt \+ s\.outstanding/.test(html),
+  t.check(!/s\.outstanding \+ s\.debt/.test(figs) && !/s\.debt \+ s\.outstanding/.test(figs),
     'the owed figure is never the invoices PLUS the debt book — that sum double-counts every credit sale');
-  t.check(/fmtUGX\(Math\.round\(s\.debt\)\)/.test(owed),
+  /* r.debt is c.debt carried through customerBookRow, which is what the
+     map, the debtors list and the closing line of the statement all
+     total. */
+  t.check(/f\(r\.debt\)/.test(owed),
     'it is the debt book, which is what the map and the debtors list already total');
 
   /* Where the two records genuinely disagree -- an invoice still due
      whose money never reached the debt book -- neither figure is
      silently preferred. Seen live on one customer: 925,000 invoiced
      against a settled debt book. */
-  t.check(/s\.outstanding - s\.debt/.test(html),
+  t.check(/s\.outstanding - s\.debt/.test(off),
     'the gap between the two records is worked out');
-  t.check(/offBook > 0 \?/.test(html),
+  t.check(/offBook > 0/.test(off),
     'and only spoken about when the invoices are AHEAD — a debt book carrying more than the invoices is an ordinary manual charge, not a discrepancy');
-  t.check(/Invoices still show/.test(html) && /cs-flag/.test(html),
+  t.check(/Invoices still show/.test(off) && /cu-offbook/.test(off),
     'the disagreement is put on screen rather than resolved by a formula that cannot know which record is right');
+  /* And it is spoken about on the screen a shopkeeper actually reads,
+     not only inside a function nobody calls. */
+  t.check(/customerOffBookHTML\(s\)/.test(extractFunction(src, 'customerStatsHTML', 'index.html')),
+    'and the account draws it');
 }
 
 process.exit(t.done() ? 1 : 0);

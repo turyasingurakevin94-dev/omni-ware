@@ -831,10 +831,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .dir-summary-card stay too: the suppliers directory is still a
        grid and still carries the strip.
 
-       Four renderers rather than one. The band and the row must never
-       disagree about a customer's standing, so both read their chip
-       from custAttentionReason, and listing them together is what keeps
-       a later session from hand-rolling a second one. */
+       Six renderers rather than one, and they are listed together for
+       one reason: this screen draws the same customer three times over
+       -- as a row in the register, as the account that opens under that
+       row, and as the account screen behind it. The band and the row
+       read their chip from custAttentionReason; the open row and the
+       account screen read their four figures from customerFiguresHTML.
+       Anything that drew a second copy of either would be free to
+       disagree with the first, which is the drift this list exists to
+       stop. */
     customers: {
       retired: ['panel', 'panel-head-row', 'search-bar', 'dir-summary-row', 'dir-summary-card',
                 'customer-grid', 'customer-card', 'cc-head', 'cc-avatar', 'cc-title', 'cc-name',
@@ -843,10 +848,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
              'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML', 'customerAccountHTML'],
+      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
+                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
+                'customerAccountRailHTML', 'customerStatsHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
                     'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
-                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why', 'ow-q-note'],
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
+                    'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
+                    'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
+                    'ow-sr-k', 'ow-sr-v'],
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so

@@ -78,7 +78,12 @@ const sectionOf = (tab) => {
 {
   SELL.forEach(tab => {
     const sec = sectionOf(tab);
-    t.check(/<div class="ow-ph">/.test(sec), `${tab} has the console header`);
+    /* An id on the header itself is allowed, on the same grounds the
+       sub's id is two lines below: Customers renders two views into one
+       section -- the book and one customer's account -- and the book's
+       header is hidden by id while the account is open. What matters is
+       that the screen wears .ow-ph, not that nothing else is on the tag. */
+    t.check(/<div class="ow-ph"[ >]/.test(sec), `${tab} has the console header`);
     t.check(!/<div class="page-head"/.test(sec), `${tab} has no old header left behind`);
     t.check(/<h1 class="ow-ph-t">/.test(sec), `${tab} names itself in it`);
     /* An id on the sub is allowed, and on two screens it is required:
