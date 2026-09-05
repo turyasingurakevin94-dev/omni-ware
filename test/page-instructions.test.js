@@ -105,20 +105,26 @@ const src = read('index.html');
      .ow-ph-sub says what the screen IS in one line, which is the part
      that must never fold. One fewer screen to police, not one that
      stopped being policed. */
+  /* 7 -> 6. Compare Prices converted the same way, in the same week and
+     on a branch that did not know about Inventory. Both sides lowered
+     this floor to 7 and git merged both edits without a conflict, which
+     left the number one HIGHER than the truth -- the failure that
+     caught it is the whole reason the floor is asserted rather than
+     assumed. Six is the count with both screens folded. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 7, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 6, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
   // sentence would leave the original behind, unreachable and wrong.
-  /* 7, not 8: Compare Prices was the eighth, and it is now an .ow-ph
-     console header whose long explanation sits in .ow-ph-help behind
-     the "i" -- the same fold, one layer further along. This floor moves
-     DOWN as screens are converted and must never move up: a screen that
-     loses its paragraph without gaining an .ow-ph-help has hidden its
-     own explanation rather than folded it. */
+  /* 6, not 8: Inventory and Compare Prices were the seventh and eighth,
+     and each is now an .ow-ph console header whose long explanation sits
+     in .ow-ph-help behind the "i" -- the same fold, one layer further
+     along. This floor moves DOWN as screens are converted and must never
+     move up: a screen that loses its paragraph without gaining an
+     .ow-ph-help has hidden its own explanation rather than folded it. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 7,
+  t.check(paras.length >= 6,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
