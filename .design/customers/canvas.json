@@ -1,0 +1,121 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The redesign"
+    },
+    {
+      "id": "page-2",
+      "name": "The account, the states and the phone"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Before.dc.html",
+      "title": "As it stands today \u2014 fifteen faults, twelve of them on the drawing",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 920,
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Proposed \u2014 the value register, with the row you would open already open",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1740,
+      "page": "page-1"
+    },
+    {
+      "file": "Account.dc.html",
+      "title": "Proposed \u2014 one customer's account, which used to be a modal",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1220,
+      "page": "page-2"
+    },
+    {
+      "file": "States.dc.html",
+      "title": "Proposed \u2014 empty, never invoiced, and a read that failed",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "page": "page-2"
+    },
+    {
+      "file": "Phone.dc.html",
+      "title": "Proposed \u2014 the phone, drawn from scratch at 390",
+      "x": 1560,
+      "y": 1400,
+      "w": 390,
+      "h": 844,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": -820,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT THIS SCREEN IS FOR\n\nYou settled four things when I asked, and everything on the drawing follows from them.\n\n1. CUSTOMERS IS THE VALUE REGISTER, NOT A SECOND DEBT BOOK. Debtors already owns who owes what and how old it is; Chase debts owns the asking. Today's Customers sub-line says \"Everyone you sell to, and what each still owes\" -- so the screen declares itself a worse copy of a screen you already have. It now says what only it can say: WHAT EACH CUSTOMER IS WORTH TO YOU, AND WHO HAS GONE QUIET. Debt is one column of seven, not the headline.\n\n2. THE FIRST 200px ANSWERS \"WHO NEEDS ME TODAY\". A ranked band of the customers something has CHANGED about -- gone quiet past their own buying gap, a balance aged past your terms, a big buyer shrinking. Under it, the whole book.\n\n3. THE ACCENT STAYS ON \"ADD CUSTOMER\". One oxide element on the screen, where you asked for it. That is why every action in the attention band and every action inside an open row is a ghost button: four oxide buttons on a screen allowed one accent is no accent.\n\n4. THE PHONE ANSWERS \"WHO IS THIS, BEFORE I QUOTE THEM\". Search first, then one deep card. Drawn from scratch at 390 -- 820px is a switch between two designs, not a reflow of one.\n\nTHE THING THE OLD SCREEN THREW AWAY. customerStats() already computes spend, profit, margin, typical order, biggest order, how often they buy, whether they are overdue BY THEIR OWN GAP, what they buy ranked by value, their recent orders and a full statement of account. All of it. And every bit of it was locked behind a modal, one customer at a time, with nothing on the card even hinting it existed. The card showed a debt balance and four buttons. This design does not add a single new figure -- it takes what the app already knows and puts it on the surface where it can be compared.\n\nEverything is drawn from index.html's own values: the 23-colour palette, the 11/12/13/14 ramp, Inter + Archivo Black + IBM Plex Mono, and the .ow-* console components already shipping on Today, Debtors, Chase debts, Follow-ups, Consignment, Creditors, Pricing, Inventory and Compare Prices. No new colour, no new weight, no new type size, no fourteenth button family."
+    },
+    {
+      "id": "faults",
+      "x": -820,
+      "y": 1180,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT IS WRONG WITH IT AS IT STANDS >\n\n1. THE SUB-LINE MAKES IT A SECOND DEBT BOOK. \"Everyone you sell to, and what each still owes.\" Debtors does that better, with ageing bands, a search, a print and a payment posting. Two screens answering one question means neither is the real one.\n\n2. A SECOND PAGE TITLE, 22px LOWER. The console header says \"Customers\"; then a .panel-head-row says \"ALL CUSTOMERS\". One screen, two headings, and the second one carries no information at all.\n\n3. TOTAL OWED IS PAINTED CRIMSON. .dir-summary-card.owed sets color:var(--danger) on 8,265,000 of ordinary trade credit. Crimson means BAD in this app -- behind target, overdue, a loss. Trade debt is how a hardware shop sells to contractors. A figure is a size, not a warning.\n\n4. THE THIRD TILE REPEATS THE SECOND. \"Total owed to you\" and \"Customers with a balance\" are the same news twice. Neither says the thing you would actually want: how many of the forty-five bought anything at all this quarter.\n\n5. THE SEARCH CANNOT FIND HALF YOUR NUMBERS. The placeholder promises \"name, phone or location\", but renderCustomers builds its haystack from c.name + c.location + c.phone + c.id -- PHONE2 IS NOT IN IT. The app knows about second numbers (contactPhones reads both, the duplicate check tests every number against every number, the WhatsApp match uses both). This one search does not. A customer saved under their second line cannot be found by it. That is a bug, not a design opinion, and it is worth fixing whatever you decide about the rest.\n\n6. THE \"HAS DEBT\" BORDER IS A 24TH COLOUR. .customer-card.has-debt sets border-color:#EAC7C1, which is in no palette. It marks eleven of forty-five cards, so it signals nothing -- and a device that marks a quarter of the screen marks none of it.\n\n7. TWENTY-EIGHT PIXEL EDIT AND DELETE, SIDE BY SIDE, NINETY OF THEM. .pc-icon-btn is 28x28 against a 44px tap floor, delete sits immediately beside edit, and at 45 customers the screen carries 180 controls. Nothing on the card is 44px.\n\n8. A FOURTEENTH BUTTON FAMILY, POSTING MONEY FROM A DIRECTORY. .cc-debt-btn exists nowhere else in the app. \"+ Charge\" writes to the debt ledger, which is what ages a balance on Debtors and what a statement of account closes on -- launched from a card in a contact list.\n\n9. UGX 0 IN VERDIGRIS. .cc-debt-value is coloured --good until there is a debt. So a customer who has never bought anything is painted green, as if that were good news, and at 17px/700 it is the LARGEST thing on the card -- larger than their name at 14.5px.\n\n10. A CARD THAT KNOWS NOTHING SAYS NOTHING. Nalongo owes 1,240,000 since February and has no number on file. The card has room for that and does not say it.\n\n11. NOTHING LINES UP, SO NOTHING CAN BE COMPARED. The dashed line is drawn at the height of the first card's balance; the two beside it miss it by 14px, because .cc-debt-row is pushed by margin-top:auto and every card's details are a different height. A column of money that does not line up is unreadable at a glance, which is the only way it is read -- and this is a grid, so there is no column at all. Your biggest customer and somebody who bought once in 2024 are the same size on screen.\n\n12. TWENTY-ONE CUSTOMERS ARE BEHIND A BUTTON. listPageSlice pages at 24 and the order is ALPHABETICAL. Nothing is ranked by anything. Whoever most needs you today is wherever the alphabet put them.\n\nAND OFF THE DRAWING:\n\n13. EVERYTHING VALUABLE IS INSIDE A MODAL. customerStats() computes fourteen figures and the whole statement of account. You cannot see two customers' figures at once, and nothing on the list tells you they exist.\n\n14. \"OVERDUE\" IS COMPUTED AND NEVER SHOWN. customerStats sets overdue when a customer has passed twice their own buying gap. The one genuinely proactive thing the app knows about your customers is calculated on every open and displayed nowhere on this screen.\n\n15. THE PHONE IS THE GRID REFLOWED. One column of 45 cards at ~230px is about ten thousand pixels of scrolling, with the search at the top and no way to rank."
+    },
+    {
+      "id": "proposal",
+      "x": 3120,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "THE PROPOSAL -- what changed, and why\n\nTHE STRIP SAYS WHETHER THE BOOK IS HEALTHY, IN FOUR FIGURES. 31 of 45 bought in 90 days, 6 of them for the first time; they paid 84,320,000; you kept 17,110,000, which is 20.3%; 8,265,000 is still out with 3 accounts past terms. Figure, then unit, then basis -- the house rule. Not one of them is coloured: they are sizes, not warnings.\n\n\"NEEDS YOU TODAY\" IS THE SCREEN'S REASON TO EXIST. Seven of forty-five, worst first, each with the ARITHMETIC in the line rather than a label. Kato \"buys about every 18 days and has not been in for 41\" is a fact you can argue with; a chip reading \"At risk\" is not. Late is measured against each customer's OWN gap -- twice 18 is 36, and they are on 41 -- so a monthly buyer is never chased on day 32 and a daily buyer is not left three weeks. That rule is already in customerStats; it has simply never been visible.\n\nTHE THREE-PIXEL KEY IS THE ONLY COLOUR IN THE BAND. Crimson where money is genuinely late, amber where the relationship is drifting, nothing at all for the new customer who has not come back. Every action is a ghost button, because the accent is spent on Add customer.\n\nTHE FOOT OF THE BAND IS THE PART THAT LETS YOU TRUST IT. \"3 past your terms, 3 quiet past twice their own gap, 1 whose spend has fallen by more than a third.\" That sentence is what makes a ranked list readable -- it tells you what the ranking is NOT saying. Margin already does this and it is the best thing on that screen.\n\nTHE BOOK IS A TABLE, AND THAT IS THE WHOLE POINT. Seven columns, money right-aligned and tabular, sorted by what they paid you. Now Kato at 9,840,000 and Peter Ssebowa at 940,000 are visibly different sizes, which in a grid of equal cards they were not. The name column is the one that gives way when space runs short; no money column ever truncates, because \"1,240,00\" is a tenth of \"1,240,000\" and looks entirely plausible.\n\nDASHES, NOT ZEROS. Nalongo has never been invoiced, so four of her columns are dashes and one is 1,240,000 owed. A zero would claim the shop earned nothing from her; a dash says the app cannot know yet. Same rule at the foot: 4 never invoiced, 2 with no way to reach them, named rather than dropped.\n\nTHE ROW OPENS IN PLACE AND IS THE WHOLE WORKING ACCOUNT. Four figures, the rhythm in a sentence, what they buy ranked by value with each item's share, the last five orders with what is still due on each, and five ghost actions. The modal is gone. You can open two customers and read them against each other, which was impossible before.\n\nTHE SEARCH SAYS WHAT IT SEARCHES: \"Name, either phone number, place or ID\". The word EITHER is doing real work -- it is the promise that fixes fault 5.\n\nFIVE FILTERS, EACH A REAL QUESTION. All 45 / Buying 31 / Quiet 7 / Owing 11 / Also suppliers 4. Every count is derived, and every one of them is a question a shopkeeper actually asks out loud.\n\nHEIGHT: the old screen spent its first 300px on a duplicate title, three tiles saying two things and a search. This one spends the same 300px on four figures about the book and the two customers most likely to cost you money this week."
+    },
+    {
+      "id": "open",
+      "x": 3120,
+      "y": 1180,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT I HAVE NOT DECIDED FOR YOU\n\n1. THE FIFTH ATTENTION RULE. I have drawn four kinds: past terms, quiet past twice their own gap, spend fallen by more than a third, and a first-time buyer who has not come back. The third one -- \"spend halved\" -- is the one I invented; the other three are already computable from code you have. Where the threshold sits (a third? a half?) and whether it should fire at all is a real decision, and too loose means it fires on everybody every quarter.\n\n2. WHETHER \"RING THEM\" SHOULD DIAL. I have drawn it as a plain control. On the phone it would be a tel: link, which is the owner tapping, so it does not break \"nothing sends itself\". On the desktop it is probably just showing you the number. If you would rather it opened a WhatsApp draft instead, that is one button.\n\n3. THE ATTENTION BAND'S CEILING. It shows five and says seven. What happens at twenty? My instinct is that it stays at five and the count in the header tells the truth -- a queue that is always full stops being a queue -- but you may want \"show the rest\".\n\n4. THE ACCOUNT SCREEN'S ONE ACCENT. You settled the register's accent as Add customer. On a single customer's account I have drawn \"Quote them something\", on the reasoning that selling to them is what the shop is for and this one has gone quiet. \"Record a payment\" and \"Print a statement\" are both defensible instead. One button.\n\n5. WHETHER THE REGISTER SHOULD PAGE AT ALL. I have removed listPageSlice from this screen so all 45 are in one scrolling list. At 45 that is plainly right. At 600 it is not, and you would want the list virtualised rather than paged -- but that is a code decision, not a design one.\n\n6. WHAT I HAVE NOT TOUCHED. customerStats, customerStatementRows, printCustomerStatement, bothSidesPosition, cfFindDuplicate, the opening-balance dating, or any figure anywhere. This is the same data, computed the same way, drawn differently -- with one exception: the search haystack has to gain phone2, and that is a bug fix rather than a redesign.\n\n7. TWO THINGS THAT ARE BUGS WHATEVER YOU DECIDE HERE: the search that ignores phone2 (fault 5), and UGX 0 rendered in verdigris on customers who have never owed anything (fault 9)."
+    },
+    {
+      "id": "account-note",
+      "x": -820,
+      "y": 0,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE ACCOUNT -- what used to be a modal\n\nClicking a name opens this. It is a screen, not a dialog, so it can be printed, linked to and read beside something else, and it does not trap you the way #customerStatsModal does.\n\nTHE STATEMENT OF ACCOUNT IS THE SUBJECT, because it is the one thing on this screen that gets handed to another human being. Every charge and every payment since 1 January, oldest first, with the balance running down the right. The closing row is not styled as a total -- it is styled as TODAY, and it says how old the oldest open charge is, because that is what decides whether you chase.\n\nIT CLOSES ON THE SAME FIGURE AS EVERYTHING ELSE, AND THE SCREEN SAYS SO. Built from the debt book, not from the invoices: invoicing on credit already writes a charge here, so adding the two would count every credit sale twice. Your app has been bitten by exactly this -- one customer showed 1,530,000 owed against a 765,000 debt, and across the shop the old panel claimed 17,455,000 where the books hold 8,265,000. The note is there so nobody ever \"fixes\" it back.\n\nTHE RAIL CARRIES THE THREE THINGS THE LEDGER CANNOT SAY. How to reach them, with the note about Moses -- who brings the money and does not sign for goods -- which is the kind of thing a shop keeps in its head and loses when the person who knew it is out. Whether they still come, with the arithmetic of \"late\" spelled out. What they buy, by value, with the sentence that matters: four fifths of this account is cement and roofing, so if either runs out, this account feels it first.\n\nFOLLOW-UPS ARE ON THE ACCOUNT, not two screens away. Two open, both with a date and what was promised. The old modal had a \"Follow-up list (2)\" button; a count behind a button is not the same as reading them.\n\nWHAT IS DELIBERATELY NOT HERE: a chase button. Asking for money is Chase debts' job, it has the words already written, and duplicating it here would mean two places that must never disagree."
+    },
+    {
+      "id": "states-note",
+      "x": 3120,
+      "y": 0,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE THREE STATES\n\n1. NOTHING ON THE BOOK. The old screen says \"No customers yet. Add one above.\" -- and above it sits a strip reading 45... no: reading 0, UGX 0, 0. Four figures of zero are four figures that mean nothing, so there is no strip at all. Instead the empty screen explains the one thing a new shop needs to know: the book fills ITSELF as you sell, because invoicing a name that is not on file offers to add them. And it names the one thing that goes wrong when you move an existing shop in -- an opening balance carries the date of its oldest charge, which is why the ageing on Debtors is right from day one instead of showing every old balance as new. That is a real trap your code already handles; the empty state is where to say so.\n\n2. ON THE BOOK, NEVER INVOICED. Your code already handles this branch and handles it well -- it knows that \"no invoiced orders\" does not mean \"nothing passed between you\", because three customers in this shop carry a charged-and-settled history against invoices that were never linked back. So: dashes in the four derived columns, the debt book stated plainly, and the ageing explained. A zero here would be a lie about money.\n\n3. THE INVOICE HISTORY DID NOT LOAD. This state does not exist today. If the read fails, the screen shows zeros and a shop reads them as facts. Your app's own law is that a failure must name itself: so it says what loaded and what did not, states that the missing figures are MISSING RATHER THAN ZERO, switches \"Needs you today\" off rather than showing it short -- a ranked list that quietly leaves people out is worse than no list -- and offers the two things you can actually do. Note that the names, numbers and balances ARE current and are shown, because they read fine; only what failed is withheld."
+    },
+    {
+      "id": "phone-note",
+      "x": 2060,
+      "y": 1400,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE PHONE -- its own design at 390\n\n820px is a switch, so this is drawn from scratch: 44px navy bar, 26px Archivo page name, 15px body, 48px targets, no fake status bar and no fake keyboard.\n\nTHE PHONE JOB IS NOT THE DESK JOB. At the desk you are working through the book deciding who needs you. On a phone, somebody is standing in front of you and about to ask for a price. So the screen is SEARCH FIRST -- a 48px field, the whole width, at the top -- and everything below it is one person.\n\nTHE FOUR FIGURES ARE THE FOUR THINGS YOU NEED BEFORE YOU QUOTE. What they owe, what they have spent with you, how often they buy, and how long since. 2x2 in one card with hairline dividers, which is the house phone pattern. The only colour is on \"41 days\", because that is the one figure that is off.\n\nTHE SENTENCE AT THE FOOT OF THE CARD IS WORTH MORE THAN ANY OF THEM. \"Pays -- 13 of 14 orders settled in full, never over 21 days. Moses brings the money.\" That is what you actually want to know when deciding whether to let somebody take goods on credit, and no figure says it.\n\nTHE ACCENT IS IN THE THUMB ZONE, ONCE. A docked bar carrying Ring and Quote them, with the line that keeps the app honest: nothing is sent, a quote is drafted for you to check. The cards carry no buttons at all -- four oxide buttons on a screen allowed one accent is no accent.\n\nTHE SEARCH SAYS WHAT IT SEARCHES, HERE TOO: \"matched on name, either number, place or ID\". Same promise, same fix.\n\nONE THING TO DECIDE: whether the phone should be able to record a payment. Somebody handing you money in the yard is a real moment and this screen is where you would be. I have left it off because posting to the debt book and the cash book from a search result is the same mistake the old desktop card made with \"+ Charge\". If you want it, it belongs behind \"The whole account & statement\", not on this card."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}
