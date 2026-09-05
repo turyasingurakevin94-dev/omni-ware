@@ -11532,10 +11532,25 @@
      is new is only the fit, because .pc-thumb is drawn at 44 and would
      be cropped rather than scaled inside it.
 
-     Deliberately NOT zoomable. 28px is not a zoom target, and the row's
-     one job when you press it is to open -- a thumbnail that stole that
-     press would make the picture cost you the row. It zooms in the open
-     panel, where it is 148px and the press means only itself.
+     IT ZOOMS NOW, and this paragraph used to say the opposite: "28px is
+     not a zoom target, and the row's one job when you press it is to
+     open -- a thumbnail that stole that press would make the picture
+     cost you the row." Both halves of that were true, and both are
+     answered rather than dropped.
+
+     28px is not a zoom target, so it is no longer 28px of target: the
+     frame still LOOKS 28 and keeps the row's density, while .ow-zoom's
+     ::after makes the pressable area --ow-tap. And the press is no
+     longer stolen, because the row handler steps over .ow-zoom exactly
+     as it already stepped over .img-zoomable for the open panel's
+     photo. What is left is a glyph on the frame at rest -- on without
+     hover, because this app is used on a phone in a yard where there is
+     nothing to hover with.
+
+     It still zooms in the open panel too, at 148px, where the press
+     means only itself. Inventory carries the same pair, and the two
+     screens agree: the same 28px frame behaving two different ways is
+     worse than either rule applied twice.
 
      The name loses 38px to this column. That is the right trade on this
      screen and only this one: here the picture IS the identifier, the
@@ -19001,6 +19016,20 @@ function closeImageLightbox(){
   document.getElementById('imgLightboxImg').src = '';
 }
 document.addEventListener('click', (e)=>{
+  /* THE FRAME, not only the image. .ow-thumb.ow-zoom carries a 44px
+     ::after so a 28px picture is a real target, and that extender takes
+     the press -- so e.target is the frame and has no .src of its own.
+     Reading the image out of the frame is what makes the enlarged
+     target actually open anything; without it a press that lands
+     outside the 28px picture silently does nothing, which is worse than
+     not enlarging it at all. Screens opt in by adding .ow-zoom, and
+     their row handlers step over it so the row does not toggle
+     underneath the lightbox. */
+  const frame = e.target.closest('.ow-thumb.ow-zoom');
+  if(frame){
+    const im = frame.querySelector('img');
+    if(im){ openImageLightbox(im.src, im.alt); return; }
+  }
   const zoomEl = e.target.closest('.img-zoomable');
   if(zoomEl) openImageLightbox(zoomEl.src, zoomEl.alt);
 });
@@ -57741,26 +57770,14 @@ function invOpenHTML(l, name, key){
 }
 
 function wireInventoryRows(wrap){
-  /* THE ROW THUMB IS ITS OWN TARGET, and it has to be wired explicitly.
-
-     The 44px hit area is an ::after on the frame, which means a press
-     aimed at the middle of the picture lands on the FRAME, not on the
-     <img> -- so the document-level .img-zoomable handler never fires
-     (a span has no .src to open) and the row's toggle does, which is
-     the picture appearing and vanishing all over again. Caught by
-     driving it rather than by reading it.
-
-     So the frame opens the lightbox itself, from the image it wraps,
-     and stops the press there so the row underneath never sees it. */
-  wrap.querySelectorAll('.ow-thumb.ow-zoom').forEach(t=> t.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    const im = t.querySelector('img');
-    if(im) openImageLightbox(im.src, im.alt);
-  }));
   wrap.querySelectorAll('[data-invopen]').forEach(btn=> btn.addEventListener('click', (e)=>{
-    /* And the belt to that pair of braces: anything zoomable inside the
-       row is not the row being pressed. This is the same guard Sourcing
-       puts over its open-row photo. */
+    /* ANYTHING ZOOMABLE INSIDE THE ROW IS NOT THE ROW BEING PRESSED.
+       The lightbox opens from a document-level listener; without this
+       step-over the row's toggle fires as well and shuts the row
+       underneath the picture, so it appears and vanishes. .ow-zoom is
+       here as well as .img-zoomable because the thumb's 44px extender
+       takes the press, which makes the FRAME the target rather than the
+       image inside it -- the bug this screen was driven to find. */
     if(e.target.closest('.img-zoomable, .ow-zoom')) return;
     const k = btn.dataset.invopen;
     invOpenKey = invOpenKey === k ? null : k;
@@ -73592,9 +73609,13 @@ function sourcingOpenBodyHTML(l){
    neither the room for one nor a press to spare. */
 function sourcingThumbHTML(l){
   const src = (l && l.image) || null;
-  return `<span class="ow-thumb">${src
-    ? `<img class="ow-sf-th" src="${esc(src)}" alt="">`
-    : `<svg class="ow-sf-th-n" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`}</span>`;
+  /* The row thumb zooms here too. It did not, and the comment at
+     .ow-sf-th argued why; that argument is answered rather than
+     dropped -- see the layer. A lead with no photo keeps the dashed
+     frame and stays untouchable: there is nothing behind it to open. */
+  return src
+    ? `<span class="ow-thumb ow-zoom"><img class="ow-sf-th" src="${esc(src)}" alt="${esc((l && l.name) || 'Lead photo')}"><span class="ow-th-z"><svg class="ow-th-zi" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>`
+    : `<span class="ow-thumb ow-none"><svg class="ow-sf-th-n" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span>`;
 }
 /* What it looks like. A lead's own photo -- the same one the product
    keeps when this graduates -- shown at a size a fitting can be told
@@ -74690,8 +74711,11 @@ document.getElementById('tab-sourcing').addEventListener('click', (e)=>{
      record is one press further in, from inside. */
   /* The photo in an open row opens the lightbox on a document-level
      handler. Without this the row's own toggle would fire too and shut
-     the row underneath it, so the picture appeared and vanished. */
-  if(e.target.closest('.img-zoomable')) return;
+     the row underneath it, so the picture appeared and vanished.
+     .ow-zoom joins it now that the ROW thumb zooms as well: its 44px
+     extender takes the press, so the target is the frame rather than
+     the image inside it. */
+  if(e.target.closest('.img-zoomable, .ow-zoom')) return;
   const row = e.target.closest('[data-sf-open]');
   if(row){
     const id = row.dataset.sfOpen;

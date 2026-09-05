@@ -295,6 +295,59 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   t.check(!layerEmoji, 'and there is no emoji in the layer');
 }
 
+/* ---------- one component, one behaviour ---------- */
+{
+  /* .ow-thumb is the app's 28px picture frame and TWO screens now let you
+     press it to enlarge the picture. That is opt-in -- .ow-zoom -- and the
+     opt-in is the whole point: a frame that zooms on one screen and does
+     nothing on another is the same square teaching two different lessons,
+     which is worse than either rule applied twice.
+
+     So this holds the pair together. Adding .ow-zoom to a third screen is
+     fine; adding it without the guard, or letting one of these two drop
+     out, is what this catches. */
+  const src2 = src;
+  const zoomers = ['invRowThumbHTML', 'sourcingThumbHTML'];
+  zoomers.forEach((name) => {
+    const fn = new RegExp(`\\nfunction ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src2);
+    t.check(!!fn, `${name} is found`);
+    /* Resolve the named glyph constant, so a screen that keeps its mark in
+       one place reads the same as one that inlines it. */
+    let body = (fn || [''])[0];
+    [...src2.matchAll(/const (IV_ZOOM_GLYPH)\s*=\s*'([^']*)'/g)]
+      .forEach((m) => { body = body.split(m[1]).join(m[2]); });
+    t.check(/ow-thumb ow-zoom/.test(body),
+      `${name}: a line WITH a photo gets the enlarged target`);
+    /* And a line without one is not a target at all. There is nothing
+       behind it to open, so a press that appeared to do something and
+       then did nothing is worse than a frame that never invited it. */
+    t.check(/ow-thumb ow-none/.test(body),
+      `${name}: a line WITHOUT one is not a target`);
+    t.check(/ow-th-z/.test(body),
+      `${name}: and the zoomable one carries the glyph that says so at rest`);
+  });
+
+  /* The 44px extender takes the press, so the target is the FRAME and has
+     no .src of its own -- the document listener has to read the image out
+     of it, or an enlarged target silently opens nothing. */
+  t.check(/const frame = e\.target\.closest\('\.ow-thumb\.ow-zoom'\);/.test(src2)
+       && /const im = frame\.querySelector\('img'\);/.test(src2),
+    'the lightbox opens from the frame, not only from the image inside it');
+
+  /* And every row that carries one steps over it, or the row toggles
+     underneath the lightbox and the picture appears and vanishes.
+
+     Counted against the screens that actually emit a frame, not against
+     every .img-zoomable guard in the file: two other screens guard a
+     photo that is not in a pressable row, and there is nothing there for
+     .ow-zoom to cover. This is what keeps the two counts moving together
+     when a third screen opts in. */
+  const emitters = zoomers.length;
+  const zoomGuards = [...src2.matchAll(/if\(e\.target\.closest\('\.img-zoomable, \.ow-zoom'\)\) return;/g)].length;
+  t.check(zoomGuards === emitters,
+    `every screen that draws a pressable frame steps over it (${zoomGuards} guards for ${emitters} screens)`);
+}
+
 /* ---------- the converted screens ---------- */
 {
   /* THE RATCHET'S OTHER HALF. A screen joins this list when it has been
