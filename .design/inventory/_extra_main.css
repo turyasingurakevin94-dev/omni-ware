@@ -225,23 +225,67 @@
       border-bottom:1px solid var(--ow-rule);}
     .st-hd-t{font-family:'Archivo Black',sans-serif;font-size:19px;letter-spacing:-.015em;}
 
-    /* ---- THE PHOTO ----
-       .ow-thumb is the app's own 28px frame, used here exactly as
-       Sourcing uses it, and DELIBERATELY NOT ZOOMABLE for the reason
-       index.html already gives at .ow-sf-th: 28px is not a zoom target,
-       and the row's one job when you press it is to open -- a thumbnail
-       that stole that press would make the picture cost you the row.
-       It zooms in the OPEN panel, at 148px, where the press means only
-       itself, through the app's existing .lightbox-overlay. */
-    .ow-thumb{grid-column:2;grid-row:1 / span 2;width:28px;height:28px;
+    /* ---- THE PHOTO ON THE ROW, AS A ZOOM TARGET ----
+
+       index.html argues at .ow-sf-th that a 28px row thumb must NOT be
+       zoomable: "28px is not a zoom target, and the row's one job when
+       you press it is to open -- a thumbnail that stole that press would
+       make the picture cost you the row." That objection is right about
+       28px and right about the stolen press. It is answered here rather
+       than ignored, and it takes three things, not a class.
+
+       1. IT IS A 44px TARGET THAT LOOKS 28px. The frame stays 28 so the
+          row keeps its density and matches .ow-thumb everywhere else;
+          an ::after extends the pressable area to 44x44. inset:-8px
+          stays inside the row's own height (rows run ~50px), so it
+          never steals a press from the row above or below.
+
+       2. IT SAYS SO WITHOUT HOVER. A corner glyph is on at REST, not
+          only on hover -- this app is used on a phone and a tablet,
+          where there is no hover to discover anything with, and a
+          control that only announces itself to a mouse is a control
+          half the shop cannot find. Hover deepens it to a full scrim.
+
+       3. THE ROW HANDLER MUST STEP OVER IT. Without
+          `if(e.target.closest(".img-zoomable")) return;` at the top of
+          the row's click handler, the row toggle fires too and shuts
+          the row underneath the lightbox -- the picture appears and
+          vanishes. index.html:74072 already does exactly this for
+          Sourcing's open-row photo; the inventory row needs the same
+          line. This is the whole of the "stolen press" objection, and
+          it is one line.
+
+       What it still costs, honestly: the row is now two targets, and a
+       press aimed at the row that lands in the left 44px opens a
+       picture instead of the line. That is the trade, and it is why the
+       glyph is always on. */
+    .ow-thumb{grid-column:2;grid-row:1 / span 2;position:relative;width:28px;height:28px;
       border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
-      display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden;}
-    .ow-th-i{width:100%;height:100%;display:block;}
-    /* No photo is not an empty box. Dashed, so it never reads as a
-       photo that failed to load, and it carries no zoom affordance
-       because there is nothing behind it to open. */
+      display:flex;align-items:center;justify-content:center;flex:none;overflow:visible;
+      cursor:zoom-in;}
+    .ow-th-i{width:100%;height:100%;display:block;border-radius:var(--ow-r-sm);}
+    /* the 44px target, invisible, inside the row's own height */
+    .ow-thumb::after{content:'';position:absolute;inset:-8px;border-radius:var(--ow-r);}
+    /* the resting affordance: on without hover, because touch has none */
+    .ow-th-z{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:var(--ow-paper);
+      display:flex;align-items:center;justify-content:center;}
+    .ow-th-z svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* hover: the whole frame says it, not just the corner */
+    .ow-thumb.hov .ow-th-sc{position:absolute;inset:0;border-radius:var(--ow-r-sm);
+      background:rgba(20,23,27,.55);display:flex;align-items:center;justify-content:center;}
+    .ow-thumb.hov .ow-th-sc svg{width:14px;height:14px;fill:none;stroke:var(--ow-paper);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* the console's own focus ring, so the picture is reachable by keyboard --
+       the app's .img-zoomable is a bare <img> today and is not */
+    .ow-thumb.foc{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+    /* No photo is not a target. Dashed so it never reads as a photo that
+       failed to load, no zoom cursor, no glyph, no 44px area -- there is
+       nothing behind it to open. */
     .ow-thumb.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
-      color:var(--ow-ink-600);}
+      color:var(--ow-ink-600);cursor:default;}
+    .ow-thumb.none::after{content:none;}
     .ow-thumb.none svg{width:15px;height:15px;fill:none;stroke:currentColor;
       stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
@@ -286,3 +330,15 @@
       border-radius:var(--ow-r-lg);background:rgba(255,255,255,.12);z-index:301;}
     .lb-x svg{width:18px;height:18px;fill:none;stroke:var(--ow-paper);stroke-width:1.8;
       stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the thumbnail's states, drawn ---- */
+    .th-st{display:flex;gap:34px;align-items:flex-start;padding:6px 2px 2px;}
+    .th-st-c{display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+    .th-st-l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0;}
+    .th-st-w{position:relative;width:44px;height:44px;display:flex;align-items:center;
+      justify-content:center;flex:none;}
+    .th-st-w .ow-thumb{grid-column:auto;grid-row:auto;}
+    .th-st-hit{position:absolute;inset:0;border:1px dashed var(--ow-oxide);
+      border-radius:var(--ow-r);}
+    .th-st-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:150px;}

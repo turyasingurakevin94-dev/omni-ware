@@ -440,23 +440,67 @@
       border-bottom:1px solid var(--ow-rule);}
     .st-hd-t{font-family:'Archivo Black',sans-serif;font-size:19px;letter-spacing:-.015em;}
 
-    /* ---- THE PHOTO ----
-       .ow-thumb is the app's own 28px frame, used here exactly as
-       Sourcing uses it, and DELIBERATELY NOT ZOOMABLE for the reason
-       index.html already gives at .ow-sf-th: 28px is not a zoom target,
-       and the row's one job when you press it is to open -- a thumbnail
-       that stole that press would make the picture cost you the row.
-       It zooms in the OPEN panel, at 148px, where the press means only
-       itself, through the app's existing .lightbox-overlay. */
-    .ow-thumb{grid-column:2;grid-row:1 / span 2;width:28px;height:28px;
+    /* ---- THE PHOTO ON THE ROW, AS A ZOOM TARGET ----
+
+       index.html argues at .ow-sf-th that a 28px row thumb must NOT be
+       zoomable: "28px is not a zoom target, and the row's one job when
+       you press it is to open -- a thumbnail that stole that press would
+       make the picture cost you the row." That objection is right about
+       28px and right about the stolen press. It is answered here rather
+       than ignored, and it takes three things, not a class.
+
+       1. IT IS A 44px TARGET THAT LOOKS 28px. The frame stays 28 so the
+          row keeps its density and matches .ow-thumb everywhere else;
+          an ::after extends the pressable area to 44x44. inset:-8px
+          stays inside the row's own height (rows run ~50px), so it
+          never steals a press from the row above or below.
+
+       2. IT SAYS SO WITHOUT HOVER. A corner glyph is on at REST, not
+          only on hover -- this app is used on a phone and a tablet,
+          where there is no hover to discover anything with, and a
+          control that only announces itself to a mouse is a control
+          half the shop cannot find. Hover deepens it to a full scrim.
+
+       3. THE ROW HANDLER MUST STEP OVER IT. Without
+          `if(e.target.closest(".img-zoomable")) return;` at the top of
+          the row's click handler, the row toggle fires too and shuts
+          the row underneath the lightbox -- the picture appears and
+          vanishes. index.html:74072 already does exactly this for
+          Sourcing's open-row photo; the inventory row needs the same
+          line. This is the whole of the "stolen press" objection, and
+          it is one line.
+
+       What it still costs, honestly: the row is now two targets, and a
+       press aimed at the row that lands in the left 44px opens a
+       picture instead of the line. That is the trade, and it is why the
+       glyph is always on. */
+    .ow-thumb{grid-column:2;grid-row:1 / span 2;position:relative;width:28px;height:28px;
       border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
-      display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden;}
-    .ow-th-i{width:100%;height:100%;display:block;}
-    /* No photo is not an empty box. Dashed, so it never reads as a
-       photo that failed to load, and it carries no zoom affordance
-       because there is nothing behind it to open. */
+      display:flex;align-items:center;justify-content:center;flex:none;overflow:visible;
+      cursor:zoom-in;}
+    .ow-th-i{width:100%;height:100%;display:block;border-radius:var(--ow-r-sm);}
+    /* the 44px target, invisible, inside the row's own height */
+    .ow-thumb::after{content:'';position:absolute;inset:-8px;border-radius:var(--ow-r);}
+    /* the resting affordance: on without hover, because touch has none */
+    .ow-th-z{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:var(--ow-paper);
+      display:flex;align-items:center;justify-content:center;}
+    .ow-th-z svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* hover: the whole frame says it, not just the corner */
+    .ow-thumb.hov .ow-th-sc{position:absolute;inset:0;border-radius:var(--ow-r-sm);
+      background:rgba(20,23,27,.55);display:flex;align-items:center;justify-content:center;}
+    .ow-thumb.hov .ow-th-sc svg{width:14px;height:14px;fill:none;stroke:var(--ow-paper);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* the console's own focus ring, so the picture is reachable by keyboard --
+       the app's .img-zoomable is a bare <img> today and is not */
+    .ow-thumb.foc{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+    /* No photo is not a target. Dashed so it never reads as a photo that
+       failed to load, no zoom cursor, no glyph, no 44px area -- there is
+       nothing behind it to open. */
     .ow-thumb.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
-      color:var(--ow-ink-600);}
+      color:var(--ow-ink-600);cursor:default;}
+    .ow-thumb.none::after{content:none;}
     .ow-thumb.none svg{width:15px;height:15px;fill:none;stroke:currentColor;
       stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
@@ -501,6 +545,18 @@
       border-radius:var(--ow-r-lg);background:rgba(255,255,255,.12);z-index:301;}
     .lb-x svg{width:18px;height:18px;fill:none;stroke:var(--ow-paper);stroke-width:1.8;
       stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the thumbnail's states, drawn ---- */
+    .th-st{display:flex;gap:34px;align-items:flex-start;padding:6px 2px 2px;}
+    .th-st-c{display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+    .th-st-l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0;}
+    .th-st-w{position:relative;width:44px;height:44px;display:flex;align-items:center;
+      justify-content:center;flex:none;}
+    .th-st-w .ow-thumb{grid-column:auto;grid-row:auto;}
+    .th-st-hit{position:absolute;inset:0;border:1px dashed var(--ow-oxide);
+      border-radius:var(--ow-r);}
+    .th-st-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:150px;}
   </style>
 </helmet>
 <div class="app" style="width:1440px;height:1536px">
@@ -583,7 +639,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g stroke="#8A939C" stroke-width="2" fill="#DCE0E4"><path d="M4 22h56v8H4zM4 34h56v8H4zM4 46h56v8H4z"/></g><path d="M4 22h56" stroke="#59626B" stroke-width="2"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g stroke="#8A939C" stroke-width="2" fill="#DCE0E4"><path d="M4 22h56v8H4zM4 34h56v8H4zM4 46h56v8H4z"/></g><path d="M4 22h56" stroke="#59626B" stroke-width="2"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Iron sheets &mdash; G28, 3m box profile">Iron sheets &mdash; G28, 3m box profile</span></span>
               <span class="iv-m">Roofing &middot; Charcoal &middot; IS-G28-3M-CH</span>
               <span class="iv-f q">88<span class="u">sheets</span><span class="b">3 bundles + 8</span></span>
@@ -595,7 +651,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 26h40v26H12z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M12 26l6-8h28l6 8" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><g stroke="#59626B" stroke-width="2"><path d="M22 34v12M32 34v12M42 34v12"/></g></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 26h40v26H12z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M12 26l6-8h28l6 8" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><g stroke="#59626B" stroke-width="2"><path d="M22 34v12M32 34v12M42 34v12"/></g></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Nails 4&Prime; &mdash; 25kg box">Nails 4&Prime; &mdash; 25kg box</span></span>
               <span class="iv-m">Fasteners &middot; PRD-0092 &middot; keep 8</span>
               <span class="iv-f q">19<span class="u">boxes</span></span>
@@ -607,7 +663,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="16" y="30" width="32" height="24" rx="3" fill="#B0700A"/><path d="M23 30v-6a9 9 0 0 1 18 0v6" fill="none" stroke="#8A939C" stroke-width="4"/><circle cx="32" cy="41" r="3" fill="#FBEFD9"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="16" y="30" width="32" height="24" rx="3" fill="#B0700A"/><path d="M23 30v-6a9 9 0 0 1 18 0v6" fill="none" stroke="#8A939C" stroke-width="4"/><circle cx="32" cy="41" r="3" fill="#FBEFD9"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Padlocks 50mm &mdash; brass">Padlocks 50mm &mdash; brass</span></span>
               <span class="iv-m">Hardware &middot; PRD-0203 &middot; quiet 214 days</span>
               <span class="iv-f q">82</span>
@@ -619,7 +675,7 @@
           <div class="iv-g ow-open">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M18 16h28l4 8v28H14V24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M14 32h36" stroke="#8A939C" stroke-width="2"/><path d="M22 40h20M22 46h13" stroke="#59626B" stroke-width="2"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M18 16h28l4 8v28H14V24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M14 32h36" stroke="#8A939C" stroke-width="2"/><path d="M22 40h20M22 46h13" stroke="#59626B" stroke-width="2"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Cement &mdash; Hima 50kg">Cement &mdash; Hima 50kg</span><span class="ow-cp ow-warn">6 short</span></span>
               <span class="iv-m">Building &middot; PRD-0114 &middot; floor 40 &middot; 7 days cover</span>
               <span class="iv-f q thin">34<span class="u">bags</span></span>
@@ -668,7 +724,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="18" y="22" width="28" height="30" rx="2" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><path d="M18 22h28" stroke="#59626B" stroke-width="3"/><path d="M24 16h16v6H24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M24 34h16v10H24z" fill="#DCE0E4"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><rect x="18" y="22" width="28" height="30" rx="2" fill="#F7F9FB" stroke="#8A939C" stroke-width="2"/><path d="M18 22h28" stroke="#59626B" stroke-width="3"/><path d="M24 16h16v6H24z" fill="#DCE0E4" stroke="#8A939C" stroke-width="2"/><path d="M24 34h16v10H24z" fill="#DCE0E4"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Paint &mdash; silk white 20L">Paint &mdash; silk white 20L</span><span class="ow-cp ow-warn">4 short</span></span>
               <span class="iv-m">Finishes &middot; PRD-0330 &middot; floor 6</span>
               <span class="iv-f q thin">2<span class="u">tins</span></span>
@@ -680,7 +736,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 24h30l8 14H20z" fill="#B0700A"/><circle cx="22" cy="46" r="6" fill="none" stroke="#59626B" stroke-width="3"/><path d="M42 24l10-6M20 38v4" stroke="#8A939C" stroke-width="3"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><path d="M12 24h30l8 14H20z" fill="#B0700A"/><circle cx="22" cy="46" r="6" fill="none" stroke="#59626B" stroke-width="3"/><path d="M42 24l10-6M20 38v4" stroke="#8A939C" stroke-width="3"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Wheelbarrow &mdash; heavy duty">Wheelbarrow &mdash; heavy duty</span><span class="ow-cp ow-warn">6 not ours</span></span>
               <span class="iv-m">Tools &middot; PRD-0451 &middot; 624,000 held for Mulongo Hardware</span>
               <span class="iv-f q">8</span>
@@ -692,7 +748,7 @@
           <div class="iv-g">
             <div class="iv-r">
               <svg class="iv-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-              <span class="ow-thumb"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g fill="none" stroke="#8A939C" stroke-width="2"><ellipse cx="32" cy="26" rx="18" ry="7"/><path d="M14 26v12a18 7 0 0 0 36 0V26"/><ellipse cx="32" cy="38" rx="18" ry="7"/></g><ellipse cx="32" cy="26" rx="7" ry="3" fill="#DCE0E4"/></svg></span>
+              <span class="ow-thumb img-zoomable"><svg class="ow-th-i" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E9EBED"/><g fill="none" stroke="#8A939C" stroke-width="2"><ellipse cx="32" cy="26" rx="18" ry="7"/><path d="M14 26v12a18 7 0 0 0 36 0V26"/><ellipse cx="32" cy="38" rx="18" ry="7"/></g><ellipse cx="32" cy="26" rx="7" ry="3" fill="#DCE0E4"/></svg><span class="ow-th-z"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span></span>
               <span class="iv-n"><span class="iv-nm" title="Binding wire 16g &mdash; 20kg roll">Binding wire 16g &mdash; 20kg roll</span><span class="ow-cp ow-warn">no cost</span></span>
               <span class="iv-m">Building &middot; PRD-0271</span>
               <span class="iv-f q">41<span class="u">rolls</span></span>

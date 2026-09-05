@@ -35,6 +35,6 @@ build Before.dc.html  body_before.html  "$X _extra_before.css" 1440 1992 1 'Inve
 build Main.dc.html    body_main.html    "$X"                   1440 1536 1 'Inventory' _nav_inv_after.html  _nav_mov.html
 build Lightbox.dc.html body_lightbox.html "$X"           1440 1536 1 'Inventory' _nav_inv_after.html  _nav_mov.html
 build Repairs.dc.html body_repairs.html "$X"                   1440 1500 1 'Inventory' _nav_inv_after.html  _nav_mov.html
-build States.dc.html  body_states.html  "$X"                   1440 1626 1 'Inventory' _nav_inv_after.html  _nav_mov.html
+build States.dc.html  body_states.html  "$X"                   1440 2044 1 'Inventory' _nav_inv_after.html  _nav_mov.html
 build Phone.dc.html   body_phone.html   "$X _extra_phone.css"   390  844 0
 exit 0
