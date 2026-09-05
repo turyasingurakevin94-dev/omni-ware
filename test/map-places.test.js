@@ -824,6 +824,24 @@ const reset = () => {
   t.check(canvasStart > -1 && canvasEnd > canvasStart,
     'and it is written after the canvas in the markup, not inside it');
 
+  /* REPORTED LIVE: "why is the map blurry, it's whitish". The empty-state
+     overlay is marked hidden when there is something to draw -- but its
+     own rule sets display:flex, and an author rule beats the browser's
+     [hidden]{display:none}, so el.hidden did nothing and a 94% white
+     sheet sat over the map permanently. The tiles were loading the whole
+     time; they were being read through it.
+
+     Any class in this file that sets display AND is toggled by the
+     hidden attribute needs its own companion rule. Six others are
+     written out longhand for exactly this reason, which is the clue this
+     was always going to happen again. */
+  t.check(/\.mp-empty\[hidden\]\{display:none;\}/.test(src),
+    'the empty-state overlay actually hides when it is hidden');
+  const meIdx = src.indexOf('.mp-empty{');
+  const meHidden = src.indexOf('.mp-empty[hidden]{');
+  t.check(meHidden > meIdx,
+    'and the companion is written after the rule it has to beat');
+
   /* The key must not paint two entries the same colour. "Under 30 days"
      and "Nothing owed" were both #1C6B58, which is a key that lies about
      the thing it is a key to. */

@@ -8624,6 +8624,15 @@
   .mp-empty{position:absolute;inset:0;z-index:450;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px;
     background:rgba(233,235,237,0.94);}
+  /* WITHOUT THIS THE OVERLAY NEVER HIDES. The browser's own
+     [hidden]{display:none} is an author-overridable UA rule, so the
+     display:flex above beats it and el.hidden does nothing at all.
+     Reported live as "the map is blurry, it's whitish": the tiles were
+     loading the whole time and were being read through a 94% white
+     sheet. Every class in this file that sets display and is toggled by
+     the hidden attribute needs its own companion -- there are six others
+     written out longhand for exactly this reason. */
+  .mp-empty[hidden]{display:none;}
   .mp-empty svg{width:34px;height:34px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.6;
     stroke-linecap:round;stroke-linejoin:round;margin-bottom:4px;}
   .mp-empty b{font-size:14px;font-weight:600;color:var(--ink);}
@@ -24501,17 +24510,15 @@ const MAP_BASEMAPS = {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19, maxNativeZoom: 19,
   },
-  /* REPORTED LIVE, with a screenshot: satellite drew the place names and
-     nothing under them -- a white rectangle with "Katwe" and "Kibuye"
-     floating on it. The two layers come from DIFFERENT Esri hosts, and
-     that is the whole tell: the labels (services.arcgisonline.com) drew
-     while the imagery (server.arcgisonline.com) did not, in one browser
-     at one moment. server. is a legacy alias; services. is the host Esri
-     documents and the one proven to answer here. Both layers now come
-     from it. */
+  /* This host is deliberately left alone. It was briefly changed to
+     services.arcgisonline.com on the theory that satellite was drawing
+     labels and no imagery -- but the imagery was loading all along and
+     was being read through the .mp-empty overlay, which never hid. The
+     diagnosis was wrong, so the change goes back: a tile URL that serves
+     the shop's map is not worth moving for a reason that did not hold. */
   satellite: {
     label: 'Satellite',
-    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
     maxZoom: 19, maxNativeZoom: 18,
     labels: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
