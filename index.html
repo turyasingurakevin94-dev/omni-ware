@@ -9941,6 +9941,199 @@
   }
 
   /* ==================================================================
+     WORTH TELLING, AND WHAT GOES WITH WHAT.
+
+     Both screens are the layer's: .ow-ph for the head, .ow-strip for
+     whether any of it is working, .ow-pan for the regions and .ow-tbl
+     for the register, with the row opening in place the way every other
+     console register in this app opens one.
+
+     The only thing here the layer has no component for is the filmstrip
+     -- four frames of a picture, shown at the shape they will be seen
+     in. It is not a card, a chip or a tile; it is a preview of a file
+     about to leave the building, and it earns its own rules. */
+
+  .tl-grid{grid-template-columns:minmax(0,1fr) 304px;align-items:start;}
+  .tl-sc{padding:var(--ow-sp-6) var(--ow-sp-12) var(--ow-sp-8);border-bottom:1px solid var(--ow-rule-soft);}
+  .tl-sc:last-of-type{border-bottom:0;}
+  .tl-sc-l{display:flex;justify-content:space-between;gap:var(--ow-sp-10);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .tl-sc-l b{color:var(--ow-ink-900);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .tl-bar{height:6px;border-radius:3px;background:var(--ow-steel-050);overflow:hidden;margin-top:var(--ow-sp-4);}
+  .tl-bar i{display:block;height:100%;background:var(--ow-verdigris);}
+
+  /* the queue */
+  .ow-tbl.tl-tbl{--ow-tbl-cols:minmax(0,1fr) 140px minmax(0,1fr) 108px 104px 18px;}
+  .tl-tbl .ow-tbl-h,.tl-tbl .ow-tbl-r{gap:var(--ow-sp-10);}
+  .tl-tbl .ow-tbl-r{align-items:center;}
+  .tl-c-r{min-width:0;}
+  /* The open row keeps the steel edge every console register marks its
+     open row with. The accent on these screens is spent elsewhere. */
+  .tl-tbl .ow-tbl-r.tl-on,.pr-tbl .ow-tbl-r.tl-on{background:var(--ow-paper-2);
+    box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+  .tl-x{grid-column:1/-1;padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-16);
+    background:var(--ow-paper-2);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+  .tl-why{font-size:var(--ow-t-13);line-height:1.5;color:var(--ow-ink-900);
+    margin:0 0 var(--ow-sp-8);max-width:var(--ow-measure);}
+  .tl-why b{font-weight:var(--ow-fw-600);}
+  /* Two classes, because the layer's own `.ow-tbl-a{justify-self:end}`
+     comes later in the file and a single class would lose the tie on
+     document order -- leaving the row shrunk to its buttons and pinned
+     to the right of an open panel that is not a table row. */
+  .ow-tbl-a.tl-acts{flex-wrap:wrap;justify-self:stretch;justify-content:flex-start;
+    padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+
+  /* THE FILMSTRIP. Four frames at 3:4, which is the shape a phone shows
+     a picture in a chat -- so what the owner approves is what the
+     customer will see, at the size they will see it. */
+  .bf-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:var(--ow-sp-8);margin:var(--ow-sp-8) 0 var(--ow-sp-12);max-width:560px;}
+  .bf{position:relative;aspect-ratio:3/4;border-radius:var(--ow-r);overflow:hidden;
+    border:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;
+    justify-content:flex-end;padding:var(--ow-sp-8);box-sizing:border-box;}
+  .bf b{font-family:'Archivo Black',sans-serif;font-size:12px;line-height:1.1;
+    display:block;letter-spacing:-.01em;}
+  .bf .bf-w{font-family:'Archivo Black',sans-serif;font-size:11px;line-height:1.1;
+    display:block;margin-top:2px;color:var(--ow-oxide-light);}
+  .bf .bf-q{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:22px;font-weight:var(--ow-fw-600);
+    letter-spacing:-.03em;line-height:1;display:block;}
+  .bf .bf-s{font-size:9.5px;color:var(--ow-ink-600);display:block;margin-top:3px;line-height:1.3;}
+  .bf-im{position:absolute;left:var(--ow-sp-8);right:var(--ow-sp-8);top:var(--ow-sp-8);
+    height:44%;border-radius:var(--ow-r-sm);background-size:cover;background-position:center;}
+  /* No photo is not a grey box: the frame gives the words the room
+     instead, exactly as the picture itself does. */
+  .bf-none{display:none;}
+  .bf-1{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .bf-2{background:var(--ow-paper);}
+  .bf-3{background:var(--ow-paper-2);}
+  .bf-4{background:var(--ow-oxide);color:var(--ow-paper);justify-content:center;text-align:center;}
+  .bf-4 .bf-s{color:var(--ow-oxide-soft);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;}
+  .bf-st{position:absolute;right:var(--ow-sp-8);bottom:var(--ow-sp-8);
+    background:var(--ow-verdigris);color:var(--ow-paper);border-radius:var(--ow-r-pill);
+    font-size:9.5px;font-weight:var(--ow-fw-700);letter-spacing:.04em;padding:2px var(--ow-sp-6);}
+
+  /* the pairings register */
+  .ow-tbl.pr-tbl{--ow-tbl-cols:minmax(0,1fr) 112px 152px 92px 18px;}
+  .pr-tbl .ow-tbl-h,.pr-tbl .ow-tbl-r{gap:var(--ow-sp-10);}
+  /* A PAIRING IS A SENTENCE, so it gets one cell and is read as one --
+     product, verb, product -- rather than cut into three columns that
+     each truncate to nothing beside a 304px rail. */
+  .pr-sent{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .pr-sent .pr-p{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-sent svg{width:13px;height:13px;flex:none;fill:none;stroke:var(--ow-ink-400);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* The verb is the grammar of the pairing, so it is the one word set
+     apart -- and the one that changes what a picture may say. */
+  .pr-vb{flex:none;font-family:'Archivo Black',sans-serif;font-size:var(--ow-t-11);
+    letter-spacing:.03em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .pr-vb.pr-needs{color:var(--ow-oxide-deep);}
+  .pr-vb.pr-with{color:var(--ow-ink-900);}
+  .pr-vb.pr-after{color:var(--ow-verdigris);}
+  .pr-nofig{font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+
+  /* the sentence, being written */
+  .pr-lbl{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);margin:var(--ow-sp-8) 0 var(--ow-sp-6);}
+  .pr-sb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+    padding:var(--ow-sp-12);background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);}
+  .pr-w{font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .pr-pick{display:inline-flex;align-items:center;height:34px;box-sizing:border-box;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+    max-width:280px;min-width:0;}
+  .pr-pick.pr-verb{background:var(--ow-oxide-soft);}
+  .pr-pick.pr-num{width:82px;}
+  .pr-sel,.pr-in{all:unset;box-sizing:border-box;height:32px;padding:0 var(--ow-sp-10);
+    min-width:0;max-width:100%;font-family:'Inter',system-ui,sans-serif;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
+  .pr-pick.pr-verb .pr-sel{color:var(--ow-oxide-deep);}
+  .pr-pick.pr-num .pr-in{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;text-align:right;cursor:text;}
+  .pr-sel:focus-visible,.pr-in:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pr-note{margin-bottom:var(--ow-sp-12);}
+  .pr-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:var(--ow-sp-20);align-items:start;margin-bottom:var(--ow-sp-12);}
+  .pr-chk{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
+    background:var(--ow-paper);overflow:hidden;}
+  .pr-chk-h{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  /* The books answering the shopkeeper back. Verdigris where they
+     agree, amber where they cannot see it, crimson where they argue --
+     and the rule stands either way, which the words say. */
+  .pr-verdict{margin:0;padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-12);
+    line-height:1.5;border-top:1px solid var(--ow-rule-soft);}
+  .pr-v-agree{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .pr-v-argue{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .pr-v-unseen{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pr-v-nothing,.pr-v-self{color:var(--ow-ink-600);}
+  .pr-verbs{padding-left:0;padding-right:0;}
+  .pr-obs{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--ow-sp-10);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);align-items:center;}
+  .pr-obs .p{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-obs .s{grid-column:1;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-obs .a{grid-column:2;grid-row:1 / span 2;display:flex;gap:var(--ow-sp-4);}
+
+  /* the site stage, on the customer form */
+  .cf-stage{display:flex;gap:var(--ow-sp-8);align-items:center;}
+  .cf-stage select,.cf-stage input{flex:1 1 0;min-width:0;}
+
+  @media (max-width:820px){
+    /* Both registers become one card a row, as every other console
+       register does at this width. */
+    .tl-tbl .ow-tbl-h,.pr-tbl .ow-tbl-h{display:none;}
+    .ow-tbl.tl-tbl,.ow-tbl.pr-tbl{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .tl-tbl .ow-tbl-r,.pr-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);
+      align-items:baseline;min-height:var(--ow-tap);}
+    .tl-tbl .ow-tbl-r > .ow-tbl-c,.tl-tbl .tl-c-r{grid-column:1/-1;}
+    .tl-tbl .ow-tbl-p{font-size:16px;white-space:normal;}
+    .tl-tbl .ow-tbl-s{font-size:var(--ow-t-13);white-space:normal;}
+    /* What an order is worth and when they were last told are desk
+       questions; in the yard the reason and the thing are what decide. */
+    .ow-tbl.tl-tbl .ow-tbl-n.tl-c-t{display:none;}
+    /* What an order is worth and the chevron share the last line of the
+       card. Left to place themselves they take a line each, and a
+       chevron alone on a line reads as a control rather than as the
+       hint that the card opens. */
+    .tl-tbl .ow-tbl-r > .ow-tbl-n:not(.tl-c-t){grid-column:1;justify-self:start;text-align:left;}
+    .tl-tbl .ow-tbl-r > .cu-cr{grid-column:2;justify-self:end;align-self:center;}
+    .tl-tbl .ow-tbl-r > .ow-tbl-n .ow-fig,
+    .tl-tbl .ow-tbl-r > .ow-tbl-n .ow-fig-b{display:inline;}
+    .tl-tbl .ow-tbl-r > .ow-tbl-n .ow-fig-b{margin-left:4px;}
+    .tl-grid{grid-template-columns:minmax(0,1fr);}
+    .pr-sent{grid-column:1/-1;flex-wrap:wrap;}
+    .pr-sent .pr-p{white-space:normal;}
+    /* Five desk columns cannot each take a line of a 390 card. The
+       sentence keeps the top, and the three things that judge it --
+       the figure, where it came from, what the orders show -- are
+       placed onto two lines rather than left to stack one per row. */
+    .pr-tbl .ow-tbl-r > *:nth-child(2){grid-area:2 / 2;}
+    .pr-tbl .ow-tbl-r > *:nth-child(3){grid-area:2 / 1;justify-self:start;}
+    .pr-tbl .ow-tbl-r > *:nth-child(4){grid-area:3 / 1;justify-self:start;text-align:left;}
+    .pr-tbl .ow-tbl-r > *:nth-child(5){grid-area:3 / 2;align-self:center;}
+    /* On one line the label reads as a caption, not a second row. */
+    .pr-tbl .ow-tbl-r > .ow-tbl-n .ow-fig,
+    .pr-tbl .ow-tbl-r > .ow-tbl-n .ow-fig-b{display:inline;}
+    .pr-tbl .ow-tbl-r > .ow-tbl-n .ow-fig-b{margin-left:4px;}
+    .tl-x{padding:0 var(--ow-sp-12) var(--ow-sp-12);}
+    /* Two frames a row rather than four: at 390 a quarter of the width
+       is 88px, and a preview nobody can see is not a preview. */
+    .bf-strip{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none;}
+    .pr-two{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);}
+    .pr-sb{padding:var(--ow-sp-10);}
+    .pr-pick{max-width:100%;flex:1 1 100%;height:var(--ow-tap);}
+    .pr-pick.pr-num{flex:0 0 92px;}
+    .pr-sel,.pr-in{height:calc(var(--ow-tap) - 2px);font-size:16px;}
+    .tl-acts .btn.ow-sm,.pr-obs .a .btn.ow-sm{min-height:var(--ow-tap);}
+    .ow-tbl-a.tl-acts{justify-content:flex-start;}
+    .tl-acts .btn.ow-sm{flex:1 1 calc(50% - 3px);min-width:0;box-sizing:border-box;}
+  }
+
+  /* ==================================================================
      THE OW LAYER — tokens and components for the console.
 
      Everything above this line is the app as it grew, screen by screen,
@@ -13207,6 +13400,11 @@
           <span class="nav-label">Follow-ups</span>
           <b class="nav-badge" id="navBadgeFollowUps" hidden></b>
         </button>
+        <button data-tab="telling" title="Worth telling" data-keywords="marketing recommend recommendation brief picture gif promote tell offer suggest campaign broadcast">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 11h4l7-5v12l-7-5H4z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg>
+          <span class="nav-label">Worth telling</span>
+          <b class="nav-badge" id="navBadgeTelling" hidden></b>
+        </button>
         <button data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="nav-label">Sales agents</span>
@@ -13250,6 +13448,10 @@
         <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Products</span>
+        </button>
+        <button data-tab="pairings" title="What goes with what" data-keywords="pairing pairings goes with needs companion together ratio relationship accessory">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="17" r="3.2"/><path d="M9.6 9.6l4.8 4.8"/></svg>
+          <span class="nav-label">What goes with what</span>
         </button>
         <button data-tab="prices" title="Price Registry (press R)" data-keywords="cost wholesale retail tiers registry paid supplier prices rise increase creeping history trend charged watch out of date rival competitor competition market street other shop charges research haidery undercut">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
@@ -14417,6 +14619,48 @@
       <!-- One customer's account. Drawn in place of everything above
            it, never over it. -->
       <div id="custAccountWrap" style="display:none;"></div>
+    </section>
+
+    <!-- WORTH TELLING — who to tell what this fortnight.
+
+         Marketing that is not marketing: every line is read from the
+         shop's own invoices, stock book and follow-ups, so what a
+         customer is shown is a fact about their own dealings rather than
+         a campaign. One picture per customer per fortnight, and nothing
+         sends itself. -->
+    <section id="tab-telling" style="display:none;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Worth telling</h1>
+        <p class="ow-ph-sub">Who to tell what this fortnight, and why &mdash; one picture each, sent by your own thumb.</p>
+        <p class="ow-ph-help">Every customer has a picture built from their own dealings with the shop: what they buy, how many they take, what they pay. This screen only decides who is worth telling. A customer appears when one thing is true about them &mdash; something is due by their OWN buying rhythm, a follow-up they asked for has come in, a price they pay has fallen, their site has moved to a stage they have not bought for, or they came once and never came back &mdash; and the dearest reason wins, so nobody is listed twice. Anyone told inside the last fortnight, chased in the last week, past your terms or with no number on file is held back and named rather than dropped. The picture itself carries about twenty words: their name, a photograph, the quantity they take, the price, and one thing to do. The whole reasoning stays on this side of the screen. Nothing is sent by the app &mdash; Share opens WhatsApp with the picture attached and their chat chosen, you press send, and only then is it written down as told.</p>
+        <span class="ow-ph-sp"></span>
+        <div class="ow-f">
+          <label class="ow-f-l" for="tell_every">One picture every</label>
+          <div class="ow-f-in"><input class="ow-f-v" type="number" id="tell_every" min="1" step="1" value="14" disabled><span class="ow-f-u">days</span></div>
+        </div>
+      </div>
+      <div id="tellStripWrap"></div>
+      <div id="tellingWrap"></div>
+    </section>
+
+    <!-- WHAT GOES WITH WHAT — the shop's own knowledge of its goods.
+
+         The books can see what lands on the same invoice and can never
+         know why. This is where the person at the counter says so, and
+         where the books answer back. -->
+    <section id="tab-pairings" style="display:none;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">What goes with what</h1>
+        <p class="ow-ph-sub">The pairings you know and the ones your orders found &mdash; and what a picture may say because of them.</p>
+        <p class="ow-ph-help">A pairing is one sentence: this product needs that one, so many per one. Five verbs and no sixth &mdash; needs, goes with, instead of, runs out after, part of &mdash; because each one changes what a customer&rsquo;s picture is allowed to say. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named and shown with no quantity, because an invented one is worse than none. Underneath, your own invoices check every pairing you write and offer the pairs they keep seeing; saying no to one is as useful as keeping it. A pairing never changes a price, moves stock or places an order.</p>
+        <span class="ow-ph-sp"></span>
+        <button type="button" class="btn btn-accent ow-sm" id="pair_add_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Write a pairing
+        </button>
+      </div>
+      <div id="pairStripWrap"></div>
+      <div id="pairingsWrap"></div>
     </section>
 
     <!-- STAFF -->
@@ -16112,6 +16356,23 @@
         <div class="cf-block" id="c_owes_block" style="display:none;">
           <span class="cf-label">What they owe you</span>
           <div id="c_owes"></div>
+        </div>
+
+        <!-- WHERE THEIR BUILD HAS REACHED. One question, and the one
+             thing that says what a customer will need NEXT rather than
+             more of what they bought last. A rhythm can only ever say
+             "more of the same"; a site at walling says cement, and the
+             same site at roofing says sheets weeks before the first one
+             appears on an invoice. The date beside it is not decoration:
+             a stage nobody has confirmed for two months stops counting,
+             or a site that finished in July is offered sheets forever. -->
+        <div class="cf-block">
+          <span class="cf-label">Where their build has reached</span>
+          <div class="cf-stage">
+            <select id="c_site_stage"></select>
+            <input id="c_site_stage_at" type="date" aria-label="When they said so">
+          </div>
+          <div class="cf-consequence" id="c_stage_hint"></div>
         </div>
 
         <div class="cf-block">
@@ -18608,6 +18869,14 @@ function seedData(){
       {name:'Color', values:['Red','White','Blue','Black','Green','Grey']},
       {name:'Size', values:['Small','Medium','Large']},
     ],
+    productLinks: [
+      {id:1, fromId:'P002', verb:'needs',   toId:'P003', qty:0.4, per:'sheet', note:'Every sheet is fixed with eight nails. Anybody who takes sheets and no nails is coming back tomorrow.', active:true},
+      {id:2, fromId:'P001', verb:'with',    toId:'P003', qty:0.6, per:'bag',   note:'', active:true},
+      {id:3, fromId:'P005', verb:'after',   toId:'P005', qty:26,  per:'day',   note:'Eight litres lasts about a month on a normal job.', active:true},
+      {id:4, fromId:'P004', verb:'with',    toId:'P006', qty:null, per:'',     note:'', active:true},
+    ],
+    nextProductLinkId: 5,
+    briefsSent: [], nextBriefSentId: 1,
     seeded: true
   };
 }
@@ -18705,7 +18974,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, managerNotesR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -18715,12 +18984,14 @@ async function loadData(shopId){
     sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
     sel('follow_ups'), sel('rival_prices'), sel('payment_promises'),
+    sel('product_links'), sel('briefs_sent'),
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
     sb.from('sourcing_leads').select('image').limit(1),
     sb.from('prices').select('last_asked_at').limit(1),
     sb.from('cash_txns').select('transfer_id').limit(1),
     sb.from('stock_lots').select('consign').limit(1),
     sb.from('rival_prices').select('side').limit(1),
+    sb.from('customers').select('site_stage').limit(1),
     sb.from('manager_notes').select('id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
@@ -18802,6 +19073,17 @@ async function loadData(shopId){
      to open over a feature nothing else depends on. */
   const rivalPriceRows = (rivalPricesR && !rivalPricesR.error && rivalPricesR.data) || [];
   rivalPricesTable = !(rivalPricesR && rivalPricesR.error);
+  /* And the two the briefs run on (0090, 0091), plus the two columns
+     0092 adds to customers. Same tolerance as every hand-applied table
+     before them: a shop whose migration has not landed knows no pairings
+     and has told nobody anything -- which is exactly what it knew
+     yesterday -- rather than refusing to open. The screens say so out
+     loud rather than rendering an empty list that looks like an answer. */
+  const productLinkRows = (productLinksR && !productLinksR.error && productLinksR.data) || [];
+  productLinksTable = !(productLinksR && productLinksR.error);
+  const briefSentRows = (briefsSentR && !briefsSentR.error && briefsSentR.data) || [];
+  briefsSentTable = !(briefsSentR && briefsSentR.error);
+  siteStageColumn = !(stageColR && stageColR.error);
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -18840,7 +19122,14 @@ async function loadData(shopId){
       payBasis: s.pay_basis || null,
       payRate: s.pay_rate==null ? null : Number(s.pay_rate)})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
-    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||'', location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null, debtLog: debtByCustomer[c.id]||[]})),
+    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||'', location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null,
+      /* Where their build has reached, and WHEN they said so. The date
+         is not decoration: a stage with no date rots silently, and a
+         site that finished roofing in July would be offered sheets
+         forever. Absent on a shop that has not applied 0092, which
+         reads as no stage rather than as a wrong one. */
+      siteStage:c.site_stage||'', siteStageAt:c.site_stage_at||'',
+      debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
       id:p.id, name:p.name, type:p.type||'simple', category:p.category, subcategory:p.subcategory||'',
@@ -19030,6 +19319,21 @@ async function loadData(shopId){
       note:r.note||'', createdAt:r.created_at,
     })),
     nextPaymentPromiseId: promiseRows.length ? Math.max(0,...promiseRows.map(r=>Number(r.id)||0))+1 : 1,
+    productLinks: productLinkRows.map(r=>({
+      id:r.id, fromId:r.from_id, verb:r.verb, toId:r.to_id,
+      // Null, not 0: "no figure given" and "a quantity of none" are
+      // different answers, and a brief renders them differently.
+      qty: r.qty==null ? null : Number(r.qty),
+      per:r.per||'', note:r.note||'', active: r.active !== false,
+      createdAt:r.created_at,
+    })),
+    nextProductLinkId: productLinkRows.length ? Math.max(0,...productLinkRows.map(r=>Number(r.id)||0))+1 : 1,
+    briefsSent: briefSentRows.map(r=>({
+      id:r.id, customerId:r.customer_id, sentOn:r.sent_on, reason:r.reason||'',
+      productId:r.product_id||'', qty: r.qty==null ? null : Number(r.qty),
+      createdAt:r.created_at,
+    })),
+    nextBriefSentId: briefSentRows.length ? Math.max(0,...briefSentRows.map(r=>Number(r.id)||0))+1 : 1,
     waPosts: (waPostsR.data||[]).map(w=>({
       id:w.id, date:w.date, productId:w.product_id,
       variantIdx: w.variant_idx==null ? null : Number(w.variant_idx),
@@ -19169,6 +19473,14 @@ let managerNotesTable = false;
 let rivalPricesTable = false;
 let rivalPriceSideColumn = false;
 let paymentPromisesTable = false;
+/* Whether the three things the customer briefs run on are actually on
+   the server yet. Each screen says so in words rather than drawing an
+   empty list, because "no pairings on file" and "the table this reads
+   does not exist" are different news and only one of them is the
+   shop's to fix. */
+let productLinksTable = false;
+let briefsSentTable = false;
+let siteStageColumn = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -19217,7 +19529,12 @@ function buildSyncRows(d, shopId){
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
     agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||null, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
-    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||null, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null})),
+    /* The two site-stage columns ride only where 0092 has landed. Sent
+       to a shop without them, every customer write would fail on an
+       unknown column -- so the whole customers table would stop syncing
+       over a field nothing else depends on. */
+    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||null, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null,
+      ...(siteStageColumn ? {site_stage:c.siteStage||null, site_stage_at:dateOrNull(c.siteStageAt)} : {})})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
       shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
@@ -19375,6 +19692,16 @@ function buildSyncRows(d, shopId){
       ...(sourcingImageColumn ? {image: l.image||null} : {}),
       voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
     })),
+    productLinks: (d.productLinks||[]).map(x=>({
+      id:x.id, shop_id:shopId, from_id:x.fromId, verb:x.verb, to_id:x.toId,
+      qty: x.qty==null ? null : Number(x.qty), per: x.per||null,
+      note: x.note||null, active: x.active !== false, created_at: x.createdAt||null,
+    })),
+    briefsSent: (d.briefsSent||[]).map(x=>({
+      id:x.id, shop_id:shopId, customer_id:x.customerId, sent_on: dateOrNull(x.sentOn),
+      reason: x.reason||null, product_id: x.productId||null,
+      qty: x.qty==null ? null : Number(x.qty), created_at: x.createdAt||null,
+    })),
     paymentPromises: (d.paymentPromises||[]).map(x=>({
       id:x.id, shop_id:shopId, customer_id:x.customerId,
       promised_on: dateOrNull(x.promisedOn), made_on: dateOrNull(x.madeOn),
@@ -19468,6 +19795,8 @@ function buildLastSynced(d, shopId){
     sourcingLeads: keyRowsById(rows.sourcingLeads, 'id'),
     followUps: keyRowsById(rows.followUps, 'id'),
     paymentPromises: keyRowsById(rows.paymentPromises, 'id'),
+    productLinks: keyRowsById(rows.productLinks, 'id'),
+    briefsSent: keyRowsById(rows.briefsSent, 'id'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -19598,7 +19927,7 @@ async function syncDataToServer(){
 
      The test derives this list from the addDiffOps calls now rather
      than trusting it to be complete. */
-  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','places','collectionTrips','savedQuotes','sourcingLeads','followUps','paymentPromises','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
+  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','places','collectionTrips','savedQuotes','sourcingLeads','followUps','paymentPromises','productLinks','briefsSent','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
   if(absent.includes('customers')) absent.push('debtLog');
   syncAbsentCollections = absent.length ? new Set(absent) : null;
   if(absent.length) console.error(`REFUSING to sync ${absent.length} absent collection(s) — a partial data object is not an instruction to empty the shop: ${absent.join(', ')}`);
@@ -19634,6 +19963,8 @@ async function syncDataToServer(){
   addDiffOps(ops, 'sourcingLeads', 'sourcing_leads', 'id', shopId, rows.sourcingLeads);
   addDiffOps(ops, 'followUps', 'follow_ups', 'id', shopId, rows.followUps);
   addDiffOps(ops, 'paymentPromises', 'payment_promises', 'id', shopId, rows.paymentPromises);
+  addDiffOps(ops, 'productLinks', 'product_links', 'id', shopId, rows.productLinks);
+  addDiffOps(ops, 'briefsSent', 'briefs_sent', 'id', shopId, rows.briefsSent);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return true;
@@ -23106,6 +23437,8 @@ function goToTab(tab){
   if(tab==='stock-movements') renderStockLog();
   /* Arriving from the rail is a request for the book, not for whoever
      was open last time. */
+  if(tab==='telling') renderTelling();
+  if(tab==='pairings') renderPairings();
   if(tab==='customers' && !custEntering){ custViewId = null; }
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
   if(tab==='suppliers' && !supEntering){ supViewId = null; }
@@ -43280,6 +43613,7 @@ function renderCustomerAccount(id){
     ${s.orderCount ? customerFiguresHTML(r) : ''}
     <div class="ow-grid cu-acct-grid">
       <div class="ow-stack">
+        ${customerBriefPanelHTML(r.id)}
         ${customerStatsHTML(s)}
         <div class="cu-acct-bar">
           <button type="button" class="btn btn-ghost ow-sm" data-cact="charge" data-cid="${esc(r.id)}">Record a charge</button>
@@ -43761,6 +44095,1580 @@ function printSupplierStatement(supplierId){
     rerender();
   });
 })();
+/* ================= WHAT GOES WITH WHAT, AND WHO TO TELL =============
+
+   Two halves of one idea, written together because they only make sense
+   together.
+
+   THE PAIRINGS are the shop's own knowledge of its goods, written down:
+   sheets NEED nails, eight per sheet. The app can already see WHAT lands
+   on the same invoice and has never known WHY -- it cannot tell a rule
+   from a coincidence, and only the person at the counter can. So the
+   owner writes pairings, the books check them, and neither is trusted
+   alone.
+
+   THE BRIEF is one picture per customer, built from THEIR OWN dealings
+   with the shop -- what they buy, how many, what they pay -- with the
+   pairings supplying the one extra thing worth adding. Every customer
+   has one, always; the queue only decides who is worth telling this
+   fortnight.
+
+   THE SPLIT THAT RUNS THROUGH ALL OF IT: the customer sees four
+   pictures, five numbers and about twenty words. The shop sees the whole
+   reasoning, the evidence behind it, and what was rejected. Nothing that
+   reads as reasoning ever reaches the picture, and nothing on the
+   picture is unexplained on the shop's side. */
+
+/* ---- the rules, and they are the whole algorithm --------------------
+   There is no model here. At forty-five customers a trained one has
+   nothing to learn from and could not say why it picked anything; these,
+   read off the shop's own invoices, stock book and follow-ups, are both
+   more accurate and answerable -- which matters, because the owner is
+   the one pressing send. */
+const TELL_EVERY_DAYS = 14;        // one picture per customer per fortnight
+const TELL_AFTER_CHASE_DAYS = 7;   // never inside a chase
+const TELL_RHYTHM_WITHIN = 3;      // "due" when their own gap lands this close
+const TELL_MIN_ORDERS = 3;         // a rhythm needs this many to be a rhythm
+const TELL_PRICE_DROP_PCT = 5;     // a price story needs a real fall
+const TELL_FIRST_SILENCE = 21;     // one order, then this long of nothing
+const TELL_SHOWN = 5;              // the queue shows this many, and says how many it did not
+const TELL_WORKED_DAYS = 14;       // "did it work" window
+/* A price they last paid a year ago is not "their price" any more, and
+   a picture that says SAME PRICE about it is technically true and
+   practically strange. */
+const TELL_PRICE_MEMORY_DAYS = 90;
+
+/* A stage with no date rots silently: a site that finished roofing in
+   July would be offered sheets in December, confidently, forever. */
+const SITE_STAGE_STALE_DAYS = 60;
+
+/* The seven, in the order a build actually goes. `not` is a retailer or
+   a walk-in -- somebody with no site at all, which is a real answer and
+   not a missing one. */
+const SITE_STAGES = [
+  { id:'not',        label:'Not a site',            buys:[] },
+  { id:'foundation', label:'Foundation',            buys:['Cement'] },
+  { id:'walling',    label:'Walling',               buys:['Cement','Nails & Fasteners'] },
+  { id:'roofing',    label:'Roofing',               buys:['Roofing','Nails & Fasteners'] },
+  { id:'services',   label:'Plumbing & electrical', buys:['Plumbing'] },
+  { id:'finishing',  label:'Finishing',             buys:['Paint'] },
+  { id:'done',       label:'Done',                  buys:[] },
+];
+function siteStageById(id){ return SITE_STAGES.find(s=> s.id === id) || null; }
+/* What the shop knows about a customer's site, and how much of it can
+   still be believed. Returned whole rather than as a bare string, so no
+   caller can read the stage and forget the date. */
+function customerSiteStage(c){
+  const stage = siteStageById(c && c.siteStage);
+  if(!stage) return { stage:null, at:'', ageDays:null, fresh:false };
+  const at = String((c && c.siteStageAt) || '');
+  const ageDays = at ? daysSinceDate(at) : null;
+  return { stage, at, ageDays,
+    fresh: ageDays !== null && ageDays >= 0 && ageDays <= SITE_STAGE_STALE_DAYS };
+}
+
+/* ---- the five verbs, and there is no sixth --------------------------
+   The list is closed on purpose: every verb changes what a brief is
+   allowed to say, so a free-text verb would be a rule nothing can read.
+   `self` marks the one that points a product back at itself -- paint
+   runs out after paint -- which is a rhythm rather than a companion and
+   never draws a second product. */
+const PAIR_VERBS = [
+  { id:'needs',   label:'Needs',          say:'needs',          brief:'ALSO NEED' },
+  { id:'with',    label:'Goes with',      say:'goes with',      brief:'ALSO TAKE' },
+  { id:'instead', label:'Instead of',     say:'instead of',     brief:'OR TAKE' },
+  { id:'after',   label:'Runs out after', say:'runs out after', brief:'', self:true },
+  { id:'part',    label:'Part of',        say:'part of',        brief:'FOR THE JOB' },
+];
+function pairVerb(id){ return PAIR_VERBS.find(v=> v.id === id) || null; }
+function productLinksAll(){ return data.productLinks || (data.productLinks = []); }
+function productById(id){ return (data.products||[]).find(p=> p.id === id) || null; }
+/* A pairing names two products by id and neither has to still exist. A
+   shop pairs cement with sand it does not sell, and that is still true
+   at the counter -- it simply never reaches a brief, because a brief
+   cannot offer what the shelf has not got. */
+function productLinkName(id){
+  const p = productById(id);
+  if(p) return p.name;
+  return id ? `${id} \u2014 gone from the catalogue` : 'nothing';
+}
+
+function addProductLink(fromId, verb, toId, qty, per, note){
+  if(!productLinksTable) return { ok:false, why:'Pairings need one update — paste supabase/migrations/0090_product_links.sql into the Supabase SQL editor and reload.' };
+  if(!fromId || !toId) return { ok:false, why:'A pairing needs both products.' };
+  if(!pairVerb(verb)) return { ok:false, why:'Pick one of the five verbs.' };
+  const n = Number(qty);
+  productLinksAll().push({ id: allocRowId('productLink'), fromId:String(fromId), verb,
+    toId:String(toId), qty: n > 0 ? n : null, per: String(per||'').slice(0,24),
+    note: String(note||'').slice(0,400), active:true, createdAt: new Date().toISOString() });
+  saveData();
+  return { ok:true };
+}
+function updateProductLink(id, patch){
+  const l = productLinksAll().find(x=> x.id === id);
+  if(!l) return { ok:false, why:'That pairing is no longer on file.' };
+  if(patch.verb && !pairVerb(patch.verb)) return { ok:false, why:'Pick one of the five verbs.' };
+  Object.assign(l, patch);
+  if('qty' in patch){ const n = Number(patch.qty); l.qty = n > 0 ? n : null; }
+  saveData();
+  return { ok:true };
+}
+function deleteProductLink(id){
+  data.productLinks = productLinksAll().filter(x=> x.id !== id);
+  saveData();
+}
+
+/* ---- what the books say about a pairing -----------------------------
+   Worked out at read time, every time, and never stamped onto the row.
+   A stored "the books agree" and a ledger that has since moved on is the
+   drift this app has already had to write a repair banner for once. */
+function invoicedOrders(){
+  return (data.savedQuotes||[]).filter(q=> q.invoiced && !q.voided);
+}
+function pairEvidence(fromId, toId){
+  let withFrom = 0, andTo = 0, fromQty = 0, toQty = 0;
+  invoicedOrders().forEach(q=>{
+    const items = q.items || [];
+    const a = items.filter(it=> it.productId === fromId);
+    if(!a.length) return;
+    withFrom++;
+    const b = items.filter(it=> it.productId === toId);
+    if(!b.length) return;
+    andTo++;
+    a.forEach(it=> fromQty += Number(it.qty)||0);
+    b.forEach(it=> toQty += Number(it.qty)||0);
+  });
+  return { withFrom, andTo,
+    share: withFrom ? andTo / withFrom : null,
+    /* Averaged over the orders that carried BOTH, or every order that
+       never bought the second thing at all drags the figure to nothing. */
+    perUnit: fromQty > 0 ? toQty / fromQty : null };
+}
+/* Where a pairing stands between the shop and its own books. Five
+   answers, and the strongest is the one where they agree. */
+function pairStanding(link){
+  const ev = pairEvidence(link.fromId, link.toId);
+  if((pairVerb(link.verb) || {}).self) return { key:'self', label:'Yours', tone:'ow-mg', ev };
+  if(!productById(link.toId)) return { key:'unseen', label:'Books cannot see it', tone:'ow-warn', ev };
+  if(!ev.withFrom) return { key:'nothing', label:'Yours only', tone:'ow-mg', ev };
+  if(ev.share >= 0.5) return { key:'agree', label:'Yours · books agree', tone:'ow-good', ev };
+  return { key:'argue', label:'Books argue', tone:'ow-bad', ev };
+}
+
+/* Pairs that keep landing on the same invoice and that the owner has not
+   ruled on. The books can see WHAT happens together; only the counter
+   knows WHY, and whether it is a rule or a coincidence. */
+const PAIR_OBSERVED_MIN = 4;      // fewer than this is an anecdote
+const PAIR_OBSERVED_SHARE = 0.5;  // and it has to be the majority habit
+function observedPairs(){
+  const seen = new Map();
+  invoicedOrders().forEach(q=>{
+    const ids = [...new Set((q.items||[]).map(it=> it.productId).filter(Boolean))];
+    ids.forEach(a=> ids.forEach(b=>{
+      if(a === b) return;
+      const k = a + ' ' + b;
+      seen.set(k, (seen.get(k) || 0) + 1);
+    }));
+  });
+  /* Both directions of an already-judged pair count as judged: saying no
+     to "cement goes with wheelbarrow" must not leave the shop asked the
+     same question backwards a week later. */
+  const known = new Set();
+  productLinksAll().forEach(l=>{
+    known.add(l.fromId + ' ' + l.toId);
+    known.add(l.toId + ' ' + l.fromId);
+  });
+  const out = [];
+  seen.forEach((n, k)=>{
+    if(n < PAIR_OBSERVED_MIN || known.has(k)) return;
+    const [fromId, toId] = k.split(' ');
+    if(!productById(fromId) || !productById(toId)) return;
+    const ev = pairEvidence(fromId, toId);
+    if(!ev.share || ev.share < PAIR_OBSERVED_SHARE) return;
+    out.push({ fromId, toId, ev });
+  });
+  return out.sort((a, b)=> (b.ev.andTo - a.ev.andTo) || (b.ev.share - a.ev.share));
+}
+/* Said no to, so it stops being offered. Kept as a switched-off pairing
+   rather than in a list of its own: it is the same decision either way,
+   and a decision is worth keeping. */
+function dismissObservedPair(fromId, toId){
+  if(!productLinksTable) return { ok:false, why:'Pairings need one update — paste supabase/migrations/0090_product_links.sql into the Supabase SQL editor and reload.' };
+  productLinksAll().push({ id: allocRowId('productLink'), fromId, verb:'with', toId,
+    qty:null, per:'', note:'', active:false, createdAt: new Date().toISOString() });
+  saveData();
+  return { ok:true };
+}
+
+/* ---- what this customer buys, and how often --------------------------
+   Per PRODUCT, not per customer. A contractor's cement rhythm and their
+   nails rhythm are different facts, and a customer-level "buys every 18
+   days" cannot say which shelf is due. Read from invoiced orders only:
+   a quote on the board is not a purchase and must not set a rhythm. */
+function customerProductHabits(customerId){
+  const today = todayISO();
+  const byProduct = new Map();
+  customerOrdersFor(customerId).filter(q=> q.invoiced).forEach(q=>{
+    const when = q.invoicedAt || q.date || '';
+    if(!when) return;
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      const h = byProduct.get(it.productId) || { productId: it.productId, dates: [], qty: [], price: [] };
+      h.dates.push(when);
+      h.qty.push(Number(it.qty)||0);
+      h.price.push(quoteItemSellPrice(it));
+      byProduct.set(it.productId, h);
+    });
+  });
+  return [...byProduct.values()].map(h=>{
+    const order = h.dates.map((d, i)=> ({ d, q: h.qty[i], p: h.price[i] }))
+      .sort((a, b)=> a.d.localeCompare(b.d));
+    const last = order[order.length - 1];
+    let everyDays = null;
+    if(order.length >= TELL_MIN_ORDERS){
+      const first = order[0].d;
+      const span = daysBetweenISO(first, last.d);
+      /* Over the gaps, not over the orders: four orders make three
+         gaps, and dividing by four reports a customer as more frequent
+         than they are. */
+      if(span > 0) everyDays = Math.round(span / (order.length - 1));
+    }
+    const sinceLast = daysBetweenISO(last.d, today);
+    return {
+      productId: h.productId, orders: order.length, everyDays,
+      lastAt: last.d, lastQty: last.q, lastPrice: last.p, sinceLast,
+      /* Negative means it is already overdue, which is still "due". */
+      dueIn: everyDays === null ? null : everyDays - sinceLast,
+      typicalQty: Math.round(order.reduce((s, o)=> s + o.q, 0) / order.length),
+    };
+  }).filter(h=> h.orders > 0);
+}
+
+/* What the shop charges for this line today: the retail figure on the
+   newest price entry the registry holds for it. The registry is where
+   every other screen reads a selling price from, so a picture and the
+   counter cannot name two different figures for the same thing on the
+   same morning -- and a line with no price on file has none here
+   either, which is why a picture can show a quantity and no price. */
+function briefPriceNow(productId){
+  const rows = (data.prices||[]).filter(p=> p.productId === productId && Number(p.retail) > 0)
+    .sort((a, b)=> String(b.date||'').localeCompare(String(a.date||'')));
+  return rows.length ? Math.round(Number(rows[0].retail)) : null;
+}
+function briefInStock(productId){
+  const q = (data.stock || {})[productId];
+  return q == null ? null : Number(q) || 0;
+}
+
+/* ---- why this customer, this fortnight ------------------------------
+   One reason each, the dearest, so nobody is listed twice and the
+   ranking is money rather than alphabet. Every rule is derived; none is
+   a guess. `weight` is what doing nothing costs, and severity does not
+   enter into it here -- unlike the debt band on Customers, everything on
+   this list is an opportunity rather than a problem. */
+function briefReasonFor(r, habits){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const inStock = (id)=> { const s = briefInStock(id); return s === null || s > 0; };
+
+  /* 1. THEY ASKED. A follow-up they took out themselves, for something
+        that has since come in. The highest priority there is: it is a
+        recommendation the customer requested. */
+  const asked = followUpsForCustomer(r.id).filter(followUpIsOpen).map(fu=>{
+    const s = followUpSubject(fu);
+    return s.product && inStock(s.product.id) ? { fu, product: s.product } : null;
+  }).find(Boolean);
+  if(asked){
+    const stock = briefInStock(asked.product.id);
+    return { key:'asked', chip:'They asked', tone:'ow-mg',
+      productId: asked.product.id, qty: null,
+      weight: r.stats.average || 1,
+      why: `Asked to be told about <b>${esc(asked.product.name)}</b>, and it is ${stock === null ? 'back on the shelf' : `on the shelf &mdash; <b>${f(stock)}</b>`}.` };
+  }
+
+  /* 2. DUE BY RHYTHM, and by THEIR OWN gap rather than the calendar. */
+  const due = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN && inStock(h.productId))
+    .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0];
+  if(due){
+    const p = productById(due.productId);
+    return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
+      productId: due.productId, qty: due.typicalQty,
+      weight: due.typicalQty * (due.lastPrice || 0),
+      why: `Takes <b>${f(due.typicalQty)}</b> ${esc(p ? p.name : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
+  }
+
+  /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
+        and the only one measured against what THEY paid rather than
+        against what the shop used to charge. */
+  const cheaper = habits.map(h=>{
+    const now = briefPriceNow(h.productId);
+    if(now === null || !h.lastPrice || !inStock(h.productId)) return null;
+    const drop = (h.lastPrice - now) / h.lastPrice * 100;
+    return drop >= TELL_PRICE_DROP_PCT ? { h, now, drop } : null;
+  }).filter(Boolean).sort((a, b)=> b.drop - a.drop)[0];
+  if(cheaper){
+    const p = productById(cheaper.h.productId);
+    return { key:'price', chip:`Price down ${Math.round(cheaper.drop)}%`, tone:'ow-good',
+      productId: cheaper.h.productId, qty: cheaper.h.typicalQty,
+      weight: cheaper.h.typicalQty * cheaper.now,
+      why: `${esc(p ? p.name : '')} is <b>${f(cheaper.h.lastPrice - cheaper.now)}</b> cheaper than the <b>${f(cheaper.h.lastPrice)}</b> they paid on ${esc(fmtShortDate(cheaper.h.lastAt))} &mdash; and they take <b>${f(cheaper.h.typicalQty)}</b> at a time.` };
+  }
+
+  /* 4. THEIR SITE MOVED. The one thing no figure in the books can do:
+        say what comes NEXT, before they have bought any of it. Only
+        while the stage is fresh enough to believe. */
+  const site = customerSiteStage(r.c);
+  if(site.fresh && site.stage.buys.length){
+    const bought = new Set(habits.filter(h=> h.lastAt >= site.at).map(h=> h.productId));
+    const want = (data.products||[]).filter(p=> site.stage.buys.includes(p.category)
+      && !bought.has(p.id) && inStock(p.id));
+    if(want.length){
+      /* Sized from what they took last time rather than from a number
+         this screen invented. Where there is nothing to size from, the
+         picture names the thing and shows no quantity. */
+      const sized = habits.length ? Math.max(...habits.map(h=> h.typicalQty)) : null;
+      const p = want[0];
+      const price = briefPriceNow(p.id);
+      return { key:'stage', chip:`Site: ${site.stage.label.toLowerCase()}`, tone:'ow-warn',
+        productId: p.id, qty: sized,
+        weight: (sized || 1) * (price || 0),
+        why: `Their site moved to <b>${esc(site.stage.label)}</b> ${site.ageDays} days ago, and they have bought nothing from ${esc(site.stage.buys.join(' or '))} since.` };
+    }
+  }
+
+  /* 5. ONE ORDER, THEN NOTHING. The cheapest customer a shop will ever
+        keep is the one who has already bought once. */
+  if(r.stats.orderCount === 1 && r.stats.daysSinceLast !== null
+     && r.stats.daysSinceLast > TELL_FIRST_SILENCE && habits.length){
+    const h = habits[0];
+    if(inStock(h.productId)){
+      const p = productById(h.productId);
+      return { key:'return', chip:'Came once', tone:'', productId: h.productId, qty: h.lastQty,
+        weight: r.stats.sales,
+        why: `Bought once, ${r.stats.daysSinceLast} days ago &mdash; <b>${f(h.lastQty)}</b> ${esc(p ? p.name : '')} &mdash; and nothing since.` };
+    }
+  }
+  return null;
+}
+
+/* Why a customer is NOT being told, which is as much a part of the rule
+   as why they are. Named rather than dropped: a queue that silently
+   leaves people out cannot be trusted about the ones it shows. */
+function briefHeldBack(r){
+  const told = briefLastTold(r.id);
+  if(told && told.daysAgo < TELL_EVERY_DAYS)
+    return { key:'told', label:`Told ${told.daysAgo}d ago` };
+  const chased = (data.presetDebtChases || {})[r.id];
+  if(chased){
+    const d = daysSinceDate(chased);
+    if(d >= 0 && d < TELL_AFTER_CHASE_DAYS) return { key:'chased', label:`Chased ${d}d ago` };
+  }
+  /* Somebody being asked for money does not also get a picture of
+     cement. They get the statement. */
+  const terms = custTermsDays();
+  if(r.debt > 0 && r.ageDays >= 0 && r.ageDays > terms)
+    return { key:'terms', label:'Past terms' };
+  if(!r.phones.length) return { key:'nophone', label:'No number' };
+  return null;
+}
+
+function briefsSentAll(){ return data.briefsSent || (data.briefsSent = []); }
+function briefLastTold(customerId){
+  const rows = briefsSentAll().filter(b=> String(b.customerId) === String(customerId))
+    .sort((a, b)=> String(b.sentOn||'').localeCompare(String(a.sentOn||'')));
+  if(!rows.length) return null;
+  const last = rows[0];
+  /* Did they buy after being told? Read from the invoices at the moment
+     somebody looks, never stored -- so it can never disagree with them.
+     It is not proof the picture did it, and the screen says so. */
+  const bought = customerOrdersFor(customerId).some(q=> q.invoiced
+    && (q.invoicedAt || q.date || '') >= last.sentOn
+    && daysBetweenISO(last.sentOn, q.invoicedAt || q.date || '') <= TELL_WORKED_DAYS);
+  return { ...last, daysAgo: daysSinceDate(last.sentOn), boughtAfter: bought, times: rows.length };
+}
+function recordBriefSent(customerId, reason, productId, qty){
+  if(!briefsSentTable) return { ok:false, why:'The record of what was told needs one update — paste supabase/migrations/0091_briefs_sent.sql into the Supabase SQL editor and reload.' };
+  briefsSentAll().push({ id: allocRowId('briefSent'), customerId: String(customerId),
+    sentOn: todayISO(), reason: String(reason||''), productId: String(productId||''),
+    qty: qty == null ? null : Number(qty), createdAt: new Date().toISOString() });
+  saveData();
+  return { ok:true };
+}
+
+/* ---- THE BRIEF ------------------------------------------------------
+   Every customer has one, whether or not they are on this fortnight's
+   list. It is built from THEIR OWN dealings with the shop: what they
+   buy, how many they take, what they paid. A customer with one order
+   still has a brief -- their one quantity and their one price -- which
+   is the whole promise, and a customer with none gets the truth instead
+   of an invented figure. */
+function customerBrief(customerId){
+  const c = (data.customers||[]).find(x=> String(x.id) === String(customerId));
+  if(!c) return null;
+  const r = customerBookRow(c);
+  const habits = customerProductHabits(customerId);
+  const reason = briefReasonFor(r, habits);
+  const held = briefHeldBack(r);
+  const told = briefLastTold(customerId);
+
+  /* What to show them. The reason picks it where there is one; where
+     there is not, it is simply what they buy most, because a brief
+     exists for everybody and "nothing to say" is not the same as
+     "nothing they buy". */
+  const pick = reason ? reason.productId
+    : (habits.slice().sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0] || {}).productId;
+  const product = pick ? productById(pick) : null;
+  const habit = habits.find(h=> h.productId === pick) || null;
+  const priceNow = pick ? briefPriceNow(pick) : null;
+  const qty = (reason && reason.qty) || (habit && habit.typicalQty) || null;
+  /* "Your price" is a claim about THEM, so it is only made where the
+     figure has not moved AND the memory of it is recent enough to mean
+     something. A price they last paid a year ago is not their price. */
+  const sameAsTheirs = !!(habit && priceNow !== null && habit.lastPrice === priceNow
+    && habit.sinceLast <= TELL_PRICE_MEMORY_DAYS);
+  const cheaperThanTheirs = !!(habit && priceNow !== null && priceNow < habit.lastPrice
+    && habit.sinceLast <= TELL_PRICE_MEMORY_DAYS);
+
+  /* What goes with it. Only active pairings, only to something the shelf
+     can actually give, and a quantity only where the owner wrote a
+     ratio -- an invented figure is worse than none. */
+  const also = pick ? productLinksAll().filter(l=> l.active !== false && l.fromId === pick
+      && !(pairVerb(l.verb) || {}).self)
+    .map(l=>{
+      const p = productById(l.toId);
+      if(!p) return null;
+      const stock = briefInStock(p.id);
+      if(stock !== null && stock <= 0) return null;
+      const st = pairStanding(l);
+      return { link: l, product: p, standing: st,
+        qty: (l.qty && qty) ? Math.max(1, Math.round(l.qty * qty)) : null,
+        verb: pairVerb(l.verb) };
+    }).filter(Boolean)
+    /* Where the owner and the books agree goes first: it is the
+       strongest thing this shop knows about its own goods. */
+    .sort((a, b)=> (b.standing.key === 'agree') - (a.standing.key === 'agree'))
+    .slice(0, 2) : [];
+
+  return { customer: c, row: r, habits, habit, reason, held, told,
+    product, qty, price: priceNow, sameAsTheirs, cheaperThanTheirs,
+    lastPrice: habit ? habit.lastPrice : null, also,
+    /* What was left out, and why. The shop sees this; the customer
+       never does. */
+    dropped: pick ? productLinksAll().filter(l=> l.active !== false && l.fromId === pick
+        && !(pairVerb(l.verb) || {}).self)
+      .map(l=>{
+        const p = productById(l.toId);
+        if(!p) return { name: productLinkName(l.toId), why:'not a product you sell' };
+        const stock = briefInStock(p.id);
+        if(stock !== null && stock <= 0) return { name: p.name, why:'out of stock' };
+        return null;
+      }).filter(Boolean) : [] };
+}
+
+/* The queue: everybody with a reason and nothing holding them back,
+   dearest first. */
+function briefQueue(){
+  const rows = (data.customers||[]).map(c=>{
+    const b = customerBrief(c.id);
+    return b && b.reason && !b.held ? b : null;
+  }).filter(Boolean);
+  return rows.sort((a, b)=> (b.reason.weight - a.reason.weight)
+    || a.customer.name.localeCompare(b.customer.name));
+}
+function briefHeldList(){
+  return (data.customers||[]).map(c=>{
+    const b = customerBrief(c.id);
+    return b && b.reason && b.held ? b : null;
+  }).filter(Boolean);
+}
+/* Did any of it work. Bought within a fortnight of being told, per
+   reason. Not proof -- Kato would have bought cement anyway -- but it is
+   what the books can honestly say, and a reason that never converts
+   sinks down the ranking on its own. */
+function briefScoreboard(){
+  const byReason = {};
+  let told = 0, worked = 0, worth = 0;
+  briefsSentAll().forEach(b=>{
+    told++;
+    const hit = customerOrdersFor(b.customerId).find(q=> q.invoiced
+      && (q.invoicedAt || q.date || '') >= b.sentOn
+      && daysBetweenISO(b.sentOn, q.invoicedAt || q.date || '') <= TELL_WORKED_DAYS);
+    const k = b.reason || 'none';
+    byReason[k] = byReason[k] || { told:0, worked:0 };
+    byReason[k].told++;
+    if(hit){ worked++; byReason[k].worked++; worth += savedQuoteTotal(hit); }
+  });
+  return { told, worked, worth, byReason };
+}
+
+/* ---- THE PICTURE ITSELF ---------------------------------------------
+   Four frames, and about twenty words across all of them. Most people
+   this shop sells to do not read much English, and a paragraph on a
+   phone is a paragraph nobody reads. What everybody in this trade DOES
+   read is a photograph, a quantity, a price and a phone number -- so
+   those are enormous and the prose is gone.
+
+   ONE DESCRIPTION, TWO SKINS. The frames are described once, here, and
+   drawn twice: as HTML on the shop's screen so the owner can see what
+   they are about to send, and onto a canvas so the same thing can be
+   encoded into a GIF. Two templates would drift, and the one that
+   drifted would be the one that left the building. */
+const BRIEF_W = 600, BRIEF_H = 800;
+function briefFrames(b){
+  if(!b) return [];
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const unit = (b.product && b.product.unit) || '';
+  const frames = [];
+  /* 1. WHO, AND WHAT. Their own name is the one word everybody reads. */
+  frames.push({ kind:'name', ms:1500, who: b.customer.name,
+    what: b.product ? briefShortName(b.product.name) : '', photo: b.product ? b.product.image : null });
+  /* 2. HOW MANY, HOW MUCH. The stamp is the whole reassurance: a price
+        that has not moved is the strongest thing you can say to somebody
+        who buys on credit. It is only claimed where it is true. */
+  if(b.product){
+    frames.push({ kind:'what', ms:2000, name: b.product.name, photo: b.product.image,
+      qty: b.qty, unit, price: b.price,
+      stamp: b.cheaperThanTheirs ? { text:'PRICE DOWN', tone:'good', was: b.lastPrice }
+        : b.sameAsTheirs ? { text:'SAME PRICE', tone:'good' } : null });
+  }
+  /* 3. WHAT GOES WITH IT. Quantities only where the owner wrote a ratio;
+        otherwise the thing is named and shown, and no number appears. */
+  if(b.also.length){
+    frames.push({ kind:'also', ms:2000,
+      head: (b.also[0].verb && b.also[0].verb.brief) || 'ALSO TAKE',
+      items: b.also.map(a=> ({ name: briefShortName(a.product.name), qty: a.qty,
+        unit: a.product.unit || '', photo: a.product.image })),
+      ratio: (b.also[0].qty && b.qty) ? { from:`${f(b.qty)} ${unit}`.trim(),
+        to:`${f(b.also[0].qty)} ${b.also[0].product.unit || ''}`.trim() } : null });
+  }
+  /* 4. ONE THING TO DO, AND ONE NUMBER TO DO IT ON. */
+  frames.push({ kind:'act', ms:1500, tel: (data.presetShopPhone || '').trim() || (contactPhones(b.customer)[0] || ''),
+    shop: printedShopName() });
+  return frames;
+}
+/* A product name on a phone at 40px has room for about two words. The
+   bracketed qualifier is what a shopkeeper drops when they say it out
+   loud, so it is what drops here. */
+function briefShortName(name){
+  return String(name || '').replace(/\s*[({].*$/, '').trim() || String(name || '');
+}
+function briefWordCount(frames){
+  let n = 0;
+  const count = (s)=> { n += String(s || '').trim().split(/\s+/).filter(Boolean).length; };
+  frames.forEach(fr=>{
+    if(fr.kind === 'name'){ count(fr.who); count(fr.what); }
+    if(fr.kind === 'what'){ count(fr.unit); if(fr.stamp) count(fr.stamp.text); count('each'); }
+    if(fr.kind === 'also'){ count(fr.head); fr.items.forEach(i=> count(i.unit)); }
+    if(fr.kind === 'act'){ n += 5; }   // REPLY YES / WE KEEP IT FOR YOU
+  });
+  return n;
+}
+
+/* ---- a GIF, written here rather than fetched -------------------------
+   The app runs in a yard on a phone that may have no signal, so a
+   library from a CDN is a picture that sometimes does not exist. It is
+   a hundred lines: a palette, a nearest-colour cache and the LZW the
+   format has used since 1989.
+
+   ONE GLOBAL PALETTE over all four frames, built by median cut. The
+   frames are mostly flat brand colour with one photograph, which is the
+   easy case for 256 colours -- and one palette means the frames can
+   share it rather than carrying four copies. */
+function gifPalette(samples, want){
+  const n = samples.length / 3;
+  const order = new Uint32Array(n);
+  for(let i = 0; i < n; i++) order[i] = i;
+  const chOf = (b)=>{
+    let lo = [255,255,255], hi = [0,0,0];
+    for(let i = b.s; i < b.e; i++){
+      const p = order[i] * 3;
+      for(let c = 0; c < 3; c++){
+        const v = samples[p + c];
+        if(v < lo[c]) lo[c] = v;
+        if(v > hi[c]) hi[c] = v;
+      }
+    }
+    const r = [hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]];
+    const w = r[0] >= r[1] && r[0] >= r[2] ? 0 : (r[1] >= r[2] ? 1 : 2);
+    return { widest: w, range: r[w] };
+  };
+  let boxes = [{ s:0, e:n }];
+  while(boxes.length < want){
+    let pick = -1, score = 0, ch = 0;
+    boxes.forEach((b, i)=>{
+      if(b.e - b.s < 2) return;
+      const m = chOf(b);
+      const sc = m.range * (b.e - b.s);
+      if(sc > score){ score = sc; pick = i; ch = m.widest; }
+    });
+    if(pick < 0) break;
+    const b = boxes[pick];
+    const slice = Array.from(order.subarray(b.s, b.e))
+      .sort((x, y)=> samples[x*3+ch] - samples[y*3+ch]);
+    order.set(slice, b.s);
+    const mid = (b.s + b.e) >> 1;
+    boxes.splice(pick, 1, { s:b.s, e:mid }, { s:mid, e:b.e });
+  }
+  const pal = [];
+  boxes.forEach(b=>{
+    let r = 0, g = 0, bl = 0;
+    for(let i = b.s; i < b.e; i++){ const p = order[i]*3; r += samples[p]; g += samples[p+1]; bl += samples[p+2]; }
+    const k = Math.max(1, b.e - b.s);
+    pal.push([Math.round(r/k), Math.round(g/k), Math.round(bl/k)]);
+  });
+  while(pal.length < 2) pal.push([0,0,0]);
+  return pal;
+}
+/* 600x800 is 480,000 pixels a frame and a linear search over 256
+   colours would be 123 million comparisons per frame. The answer is
+   cached against the top five bits of each channel: 32,768 buckets,
+   filled once, then O(1) a pixel. */
+function gifIndexer(pal){
+  const cache = new Int16Array(32768).fill(-1);
+  return (r, g, b)=>{
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    let hit = cache[key];
+    if(hit >= 0) return hit;
+    let best = 0, bestD = Infinity;
+    for(let i = 0; i < pal.length; i++){
+      const dr = r - pal[i][0], dg = g - pal[i][1], db = b - pal[i][2];
+      const d = dr*dr + dg*dg + db*db;
+      if(d < bestD){ bestD = d; best = i; }
+    }
+    cache[key] = best;
+    return best;
+  };
+}
+function gifLZW(minCodeSize, indices){
+  const out = [];
+  const clear = 1 << minCodeSize, eoi = clear + 1;
+  let dict = new Map(), next = eoi + 1, size = minCodeSize + 1;
+  let cur = 0, bits = 0;
+  const push = (code)=>{
+    cur |= code << bits; bits += size;
+    while(bits >= 8){ out.push(cur & 255); cur >>>= 8; bits -= 8; }
+  };
+  push(clear);
+  let prefix = indices[0];
+  for(let i = 1; i < indices.length; i++){
+    const k = indices[i], key = prefix * 4096 + k;
+    const found = dict.get(key);
+    if(found !== undefined){ prefix = found; continue; }
+    push(prefix);
+    if(next < 4096){
+      dict.set(key, next);
+      next++;
+      /* THE DECODER IS ALWAYS ONE ENTRY BEHIND. It cannot add a row to
+         its table until it has seen the code that follows, so at the
+         moment this side has just assigned entry 512 the other side has
+         only 511 and is still reading nine bits. Widening here on
+         `next === 1 << size` writes a ten-bit code the decoder cannot
+         name, and every frame dies a few thousand pixels in. The extra
+         one is what lets it catch up first. */
+      if(next === (1 << size) + 1 && size < 12) size++;
+    } else {
+      push(clear);
+      dict = new Map(); next = eoi + 1; size = minCodeSize + 1;
+    }
+    prefix = k;
+  }
+  push(prefix);
+  push(eoi);
+  if(bits > 0) out.push(cur & 255);
+  return out;
+}
+/* frames: [{data: Uint8ClampedArray RGBA, ms}] all the same size. */
+function gifEncode(frames, w, h){
+  const step = Math.max(1, Math.floor((w * h) / 20000)) * 4;   // ~20k samples a frame
+  const samples = [];
+  frames.forEach(fr=>{
+    for(let i = 0; i < fr.data.length; i += step){
+      samples.push(fr.data[i], fr.data[i+1], fr.data[i+2]);
+    }
+  });
+  const pal = gifPalette(Uint8Array.from(samples), 256);
+  const index = gifIndexer(pal);
+  let bits = 1;
+  while((1 << bits) < pal.length) bits++;
+  bits = Math.max(2, Math.min(8, bits));
+  const size = 1 << bits;
+
+  const out = [];
+  const put = (...xs)=> xs.forEach(x=> out.push(x & 255));
+  const putShort = (v)=> { out.push(v & 255, (v >> 8) & 255); };
+  const putStr = (s)=> { for(const ch of s) out.push(ch.charCodeAt(0)); };
+  const blocks = (bytes)=>{
+    for(let i = 0; i < bytes.length; i += 255){
+      const chunk = bytes.slice(i, i + 255);
+      out.push(chunk.length);
+      chunk.forEach(b=> out.push(b));
+    }
+    out.push(0);
+  };
+
+  putStr('GIF89a');
+  putShort(w); putShort(h);
+  put(0x80 | (bits - 1), 0, 0);                 // global table, its size
+  for(let i = 0; i < size; i++){
+    const c = pal[i] || [0,0,0];
+    put(c[0], c[1], c[2]);
+  }
+  /* Loops for ever. A picture in a WhatsApp thread is scrolled past
+     twice before it is read once. */
+  put(0x21, 0xFF, 11); putStr('NETSCAPE2.0'); put(3, 1); putShort(0); put(0);
+
+  frames.forEach(fr=>{
+    put(0x21, 0xF9, 4, 0);                       // graphic control, no transparency
+    putShort(Math.max(2, Math.round(fr.ms / 10)));
+    put(0, 0);
+    put(0x2C); putShort(0); putShort(0); putShort(w); putShort(h); put(0);
+    const px = new Uint8Array(w * h);
+    for(let i = 0, p = 0; i < px.length; i++, p += 4){
+      px[i] = index(fr.data[p], fr.data[p+1], fr.data[p+2]);
+    }
+    put(bits);
+    blocks(gifLZW(bits, px));
+  });
+  put(0x3B);
+  return new Uint8Array(out);
+}
+
+/* ---- painting a frame ------------------------------------------------
+   The same palette and the same faces the app is built in, because the
+   picture is the shop turning up in somebody's phone and it should look
+   like the shop. */
+const BRIEF_INK = { navy:'#14171B', oxide:'#B23A26', oxideLight:'#C9573F', paper:'#FFFFFF',
+  paper2:'#F7F9FB', verdigris:'#1C6B58', verdigrisSoft:'#E2EFEB', ink600:'#59626B',
+  ink400:'#8A939C', rule:'#E3E7EA', oxideSoft:'#F6E7E3', amber:'#B0700A' };
+const BRIEF_DISPLAY = "'Archivo Black', system-ui, sans-serif";
+const BRIEF_BODY = "'Inter', system-ui, sans-serif";
+const BRIEF_MONO = "'IBM Plex Mono', ui-monospace, monospace";
+
+function briefRoundRect(x, y, w, h, r){
+  const p = new Path2D();
+  p.moveTo(x + r, y);
+  p.arcTo(x + w, y, x + w, y + h, r);
+  p.arcTo(x + w, y + h, x, y + h, r);
+  p.arcTo(x, y + h, x, y, r);
+  p.arcTo(x, y, x + w, y, r);
+  p.closePath();
+  return p;
+}
+/* A product photo is whatever shape somebody took it in, so it is
+   covered into the box rather than squashed to fit. Where there is no
+   photo the box is not drawn at all -- an empty grey rectangle is worse
+   than none, and the frame simply gives the words the room. */
+function briefDrawPhoto(ctx, img, x, y, w, h, r){
+  ctx.save();
+  ctx.clip(briefRoundRect(x, y, w, h, r));
+  if(img){
+    const s = Math.max(w / img.width, h / img.height);
+    const dw = img.width * s, dh = img.height * s;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  } else {
+    const g = ctx.createLinearGradient(x, y, x + w, y + h);
+    g.addColorStop(0, '#59626B'); g.addColorStop(1, '#252A31');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+}
+/* Shrinks until it fits rather than wrapping mid-word: a name is read
+   as one thing or not at all. */
+function briefFit(ctx, text, font, px, maxW){
+  let size = px;
+  for(;;){
+    ctx.font = `${size}px ${font}`;
+    if(ctx.measureText(text).width <= maxW || size <= 14) return size;
+    size -= 2;
+  }
+}
+function briefMark(ctx, dark){
+  ctx.save();
+  ctx.fillStyle = dark ? BRIEF_INK.paper : BRIEF_INK.oxide;
+  ctx.fill(briefRoundRect(34, 30, 34, 34, 9));
+  ctx.fillStyle = dark ? BRIEF_INK.oxide : BRIEF_INK.paper;
+  ctx.font = `13px ${BRIEF_DISPLAY}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('OW', 51, 48);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = dark ? BRIEF_INK.paper : BRIEF_INK.navy;
+  ctx.font = `15px ${BRIEF_DISPLAY}`;
+  ctx.fillText('OMNI-WARE', 78, 48);
+  ctx.restore();
+}
+function briefPaint(ctx, fr, imgs){
+  const W = BRIEF_W, H = BRIEF_H, f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  if(fr.kind === 'name'){
+    ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, 0, W, H);
+    briefMark(ctx, true);
+    briefDrawPhoto(ctx, imgs[fr.photo], 150, 140, 300, 300, 24);
+    ctx.fillStyle = BRIEF_INK.paper;
+    ctx.textAlign = 'center';
+    const s1 = briefFit(ctx, fr.who.toUpperCase(), BRIEF_DISPLAY, 78, W - 68);
+    ctx.font = `${s1}px ${BRIEF_DISPLAY}`;
+    ctx.fillText(fr.who.toUpperCase(), W / 2, 540);
+    if(fr.what){
+      ctx.fillStyle = BRIEF_INK.oxideLight;
+      const s2 = briefFit(ctx, fr.what.toUpperCase(), BRIEF_DISPLAY, 42, W - 68);
+      ctx.font = `${s2}px ${BRIEF_DISPLAY}`;
+      ctx.fillText(fr.what.toUpperCase(), W / 2, 540 + s1 * 0.62 + 26);
+    }
+    ctx.textAlign = 'left';
+    return;
+  }
+  if(fr.kind === 'what'){
+    ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(0, 0, W, H);
+    briefMark(ctx, false);
+    briefDrawPhoto(ctx, imgs[fr.photo], 0, 82, W, 376, 0);
+    let y = 560;
+    ctx.fillStyle = BRIEF_INK.navy;
+    if(fr.qty != null){
+      ctx.font = `600 104px ${BRIEF_MONO}`;
+      ctx.fillText(f(fr.qty), 34, y);
+      const w = ctx.measureText(f(fr.qty)).width;
+      ctx.font = `38px ${BRIEF_DISPLAY}`;
+      ctx.fillText(String(fr.unit || '').toUpperCase(), 34 + w + 14, y);
+    } else {
+      const s = briefFit(ctx, briefShortName(fr.name).toUpperCase(), BRIEF_DISPLAY, 54, W - 68);
+      ctx.font = `${s}px ${BRIEF_DISPLAY}`;
+      ctx.fillText(briefShortName(fr.name).toUpperCase(), 34, y);
+    }
+    y += 74;
+    if(fr.price != null){
+      ctx.fillStyle = BRIEF_INK.navy;
+      ctx.font = `500 52px ${BRIEF_MONO}`;
+      ctx.fillText(f(fr.price), 34, y);
+      const w = ctx.measureText(f(fr.price)).width;
+      ctx.fillStyle = BRIEF_INK.ink600;
+      ctx.font = `22px ${BRIEF_DISPLAY}`;
+      ctx.fillText('EACH', 34 + w + 12, y);
+    }
+    if(fr.stamp){
+      ctx.font = `22px ${BRIEF_DISPLAY}`;
+      const tw = ctx.measureText(fr.stamp.text).width;
+      const bw = tw + 74, bx = W - 34 - bw, by = H - 122;
+      ctx.fillStyle = BRIEF_INK.verdigris;
+      ctx.fill(briefRoundRect(bx, by, bw, 52, 26));
+      ctx.strokeStyle = BRIEF_INK.paper; ctx.lineWidth = 4;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(bx + 22, by + 27); ctx.lineTo(bx + 30, by + 35); ctx.lineTo(bx + 44, by + 18);
+      ctx.stroke();
+      ctx.fillStyle = BRIEF_INK.paper;
+      ctx.fillText(fr.stamp.text, bx + 56, by + 35);
+    }
+    return;
+  }
+  if(fr.kind === 'also'){
+    ctx.fillStyle = BRIEF_INK.paper2; ctx.fillRect(0, 0, W, H);
+    briefMark(ctx, false);
+    ctx.fillStyle = BRIEF_INK.navy;
+    const s = briefFit(ctx, fr.head, BRIEF_DISPLAY, 44, W - 68);
+    ctx.font = `${s}px ${BRIEF_DISPLAY}`;
+    ctx.fillText(fr.head, 34, 150);
+    const n = Math.min(2, fr.items.length);
+    const cw = (W - 68 - (n - 1) * 18) / n;
+    fr.items.slice(0, 2).forEach((it, i)=>{
+      const x = 34 + i * (cw + 18), y = 190;
+      ctx.fillStyle = BRIEF_INK.paper;
+      ctx.fill(briefRoundRect(x, y, cw, 300, 16));
+      briefDrawPhoto(ctx, imgs[it.photo], x, y, cw, 196, 16);
+      ctx.fillStyle = BRIEF_INK.navy;
+      if(it.qty != null){
+        ctx.font = `600 42px ${BRIEF_MONO}`;
+        ctx.fillText(f(it.qty), x + 16, y + 250);
+      }
+      const label = String(it.qty != null ? (it.unit || '') : '').toUpperCase() || it.name.toUpperCase();
+      const ls = briefFit(ctx, label, BRIEF_DISPLAY, 19, cw - 32);
+      ctx.font = `${ls}px ${BRIEF_DISPLAY}`;
+      ctx.fillText(label, x + 16, y + (it.qty != null ? 284 : 250));
+    });
+    if(fr.ratio){
+      const y = 530;
+      ctx.fillStyle = BRIEF_INK.paper;
+      ctx.fill(briefRoundRect(34, y, W - 68, 84, 14));
+      ctx.strokeStyle = BRIEF_INK.rule; ctx.lineWidth = 1;
+      ctx.stroke(briefRoundRect(34, y, W - 68, 84, 14));
+      ctx.fillStyle = BRIEF_INK.navy;
+      ctx.font = `600 30px ${BRIEF_MONO}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(fr.ratio.from, W / 2 - 110, y + 52);
+      ctx.fillText(fr.ratio.to, W / 2 + 110, y + 52);
+      ctx.strokeStyle = BRIEF_INK.ink400; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(W / 2 - 18, y + 42); ctx.lineTo(W / 2 + 16, y + 42);
+      ctx.moveTo(W / 2 + 5, y + 33); ctx.lineTo(W / 2 + 16, y + 42);
+      ctx.lineTo(W / 2 + 5, y + 51);
+      ctx.stroke();
+      ctx.textAlign = 'left';
+    }
+    return;
+  }
+  // act
+  ctx.fillStyle = BRIEF_INK.oxide; ctx.fillRect(0, 0, W, H);
+  briefMark(ctx, true);
+  ctx.fillStyle = BRIEF_INK.paper;
+  ctx.textAlign = 'center';
+  ctx.font = `96px ${BRIEF_DISPLAY}`;
+  ctx.fillText('REPLY', W / 2, 330);
+  ctx.fillText('YES', W / 2, 420);
+  ctx.fillStyle = BRIEF_INK.oxideSoft;
+  ctx.font = `28px ${BRIEF_DISPLAY}`;
+  ctx.fillText('WE KEEP IT FOR YOU', W / 2, 480);
+  if(fr.tel){
+    ctx.font = `600 44px ${BRIEF_MONO}`;
+    const tw = ctx.measureText(fr.tel).width;
+    const bw = tw + 64, bx = (W - bw) / 2, by = 540;
+    ctx.fillStyle = BRIEF_INK.paper;
+    ctx.fill(briefRoundRect(bx, by, bw, 76, 38));
+    ctx.fillStyle = BRIEF_INK.oxide;
+    ctx.fillText(fr.tel, W / 2, by + 52);
+  }
+  ctx.fillStyle = BRIEF_INK.oxideSoft;
+  ctx.font = `18px ${BRIEF_BODY}`;
+  ctx.fillText(fr.shop || '', W / 2, 700);
+  ctx.textAlign = 'left';
+}
+
+/* Every photo the frames name, loaded once. A photo that will not load
+   is not an error: the frame draws without it. */
+function briefLoadImages(frames){
+  const urls = [...new Set(frames.flatMap(fr=>
+    fr.kind === 'also' ? fr.items.map(i=> i.photo) : [fr.photo]).filter(Boolean))];
+  return Promise.all(urls.map(u=> new Promise(res=>{
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = ()=> res([u, im]);
+    im.onerror = ()=> res([u, null]);
+    im.src = u;
+  }))).then(pairs=> Object.fromEntries(pairs.filter(p=> p[1])));
+}
+
+/* The whole picture, as bytes. Nothing is sent by this: it hands back a
+   file for the owner to look at and share with their own thumb. */
+async function buildBriefGif(customerId){
+  const b = customerBrief(customerId);
+  if(!b || !b.product) return { ok:false, why:'There is nothing on file to build a picture from yet.' };
+  const frames = briefFrames(b);
+  /* The faces have to be there before anything is measured, or the
+     first picture of a session is laid out in Times New Roman. */
+  if(document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(e){} }
+  const imgs = await briefLoadImages(frames);
+  const cv = document.createElement('canvas');
+  cv.width = BRIEF_W; cv.height = BRIEF_H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const painted = frames.map(fr=>{
+    ctx.clearRect(0, 0, BRIEF_W, BRIEF_H);
+    briefPaint(ctx, fr, imgs);
+    return { data: ctx.getImageData(0, 0, BRIEF_W, BRIEF_H).data, ms: fr.ms };
+  });
+  const bytes = gifEncode(painted, BRIEF_W, BRIEF_H);
+  return { ok:true, brief:b, frames,
+    blob: new Blob([bytes], { type:'image/gif' }),
+    name: `${String(b.customer.name).replace(/[^\w]+/g, '-').toLowerCase()}.gif` };
+}
+
+/* Share opens WhatsApp with the picture attached and the owner presses
+   send. The record of having told them is written at that moment and
+   not a second before -- the fortnight has to start from the send, not
+   from the look. */
+async function shareBrief(customerId){
+  const built = await buildBriefGif(customerId);
+  if(!built.ok){ toast(built.why); return; }
+  const b = built.brief;
+  const file = new File([built.blob], built.name, { type:'image/gif' });
+  const text = briefMessageText(b);
+  let shared = false;
+  try{
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], text });
+      shared = true;
+    }
+  }catch(e){
+    /* A share the owner backed out of is not a failure and must not be
+       written down as told. */
+    if(e && e.name === 'AbortError') return;
+  }
+  if(!shared){
+    const url = URL.createObjectURL(built.blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = built.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+    toast('Saved the picture — attach it in WhatsApp and send it yourself.', 5000);
+  }
+  const rec = recordBriefSent(customerId, b.reason ? b.reason.key : 'hand',
+    b.product ? b.product.id : '', b.qty);
+  if(!rec.ok) toast(rec.why, 6000);
+  if(typeof renderTelling === 'function') renderTelling();
+  if(typeof renderCustomers === 'function' && custViewId) renderCustomers('');
+}
+/* One line for the notification preview. The picture is the message;
+   this is what shows on a locked screen before it is opened. */
+function briefMessageText(b){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  if(!b.product) return `${b.customer.name} — from ${printedShopName()}`;
+  const bits = [b.customer.name.split(/\s+/)[0], briefShortName(b.product.name)];
+  if(b.qty != null) bits.push(`${f(b.qty)} ${b.product.unit || ''}`.trim());
+  if(b.price != null) bits.push(`${f(b.price)} each`);
+  return bits.join(' — ') + '. Reply YES and we keep it for you.';
+}
+
+/* ---- the filmstrip, on the shop's screen -----------------------------
+   The same four frames the GIF carries, drawn as HTML so the owner can
+   see what they are about to send without waiting for an encoder. Read
+   from briefFrames() -- the one description both skins share. */
+function briefStripHTML(b){
+  const frames = briefFrames(b);
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const pic = (url)=> url
+    ? `<span class="bf-im" style="background-image:url('${esc(url)}')"></span>`
+    : '<span class="bf-im bf-none"></span>';
+  return `<div class="bf-strip">${frames.map(fr=>{
+    if(fr.kind === 'name') return `<div class="bf bf-1">${pic(fr.photo)}
+      <b>${esc(String(fr.who).toUpperCase())}</b><span class="bf-w">${esc(String(fr.what || '').toUpperCase())}</span></div>`;
+    if(fr.kind === 'what') return `<div class="bf bf-2">${pic(fr.photo)}
+      ${fr.qty != null ? `<span class="bf-q">${f(fr.qty)}</span><b>${esc(String(fr.unit || '').toUpperCase())}</b>`
+        : `<b>${esc(briefShortName(fr.name).toUpperCase())}</b>`}
+      ${fr.price != null ? `<span class="bf-s">${f(fr.price)} each</span>` : ''}
+      ${fr.stamp ? `<span class="bf-st">${esc(fr.stamp.text)}</span>` : ''}</div>`;
+    if(fr.kind === 'also') return `<div class="bf bf-3">${pic(fr.items[0] && fr.items[0].photo)}
+      <b>${esc(fr.head)}</b><span class="bf-s">${fr.items.map(i=>
+        (i.qty != null ? f(i.qty) + ' ' : '') + esc(i.unit || i.name)).join(' &middot; ')}</span></div>`;
+    return `<div class="bf bf-4"><b>REPLY<br>YES</b><span class="bf-s">${esc(fr.tel || '')}</span></div>`;
+  }).join('')}</div>`;
+}
+
+/* Everything the shop is allowed to know about why. It never leaves this
+   side of the screen. */
+function briefWhyHTML(b){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const words = briefWordCount(briefFrames(b));
+  const bits = [];
+  if(b.reason) bits.push(b.reason.why);
+  if(b.sameAsTheirs) bits.push(`The price has not moved since they last paid, so the picture may say <b>same price</b>.`);
+  if(b.cheaperThanTheirs) bits.push(`It is <b>${f(b.lastPrice - b.price)}</b> below what they last paid, so the picture says the price is down.`);
+  b.also.forEach(a=>{
+    const ev = a.standing.ev;
+    bits.push(a.qty != null
+      ? `The second frame is your own pairing &mdash; <b>${a.link.qty}</b> ${esc(a.product.unit || '')} per ${esc(a.link.per || 'one')}${
+          ev.withFrom ? `, which your orders agree with in ${ev.andTo} of ${ev.withFrom} cases` : ''}.`
+      : `<b>${esc(a.product.name)}</b> is named with no quantity: you have not given a figure for that pairing, and an invented one is worse than none.`);
+  });
+  return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The picture is still theirs &mdash; what they buy, how many, at what price &mdash; it is simply not urgent.'}</p>
+    ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
+      `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
+    <p class="ow-q-note">The customer sees <b>${words}</b> words and ${briefFrames(b).length} pictures. You see this.</p>`;
+}
+
+/* ---- WORTH TELLING --------------------------------------------------- */
+let tellOpenId = null;
+function renderTelling(){
+  const wrap = document.getElementById('tellingWrap');
+  if(!wrap) return;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const all = (data.customers||[]).length;
+  const queue = briefQueue();
+  const held = briefHeldList();
+  const score = briefScoreboard();
+  const staged = (data.customers||[]).filter(c=> customerSiteStage(c).stage).length;
+  const toAsk = (data.customers||[]).filter(c=> !customerSiteStage(c).fresh);
+
+  const strip = document.getElementById('tellStripWrap');
+  if(strip) strip.innerHTML = `<div class="ow-strip">
+    <div class="ow-mt"><p class="ow-mt-l">Worth telling now</p><span class="ow-mt-v">${queue.length}</span>
+      <p class="ow-mt-s">of ${all} on the book &middot; each with one true reason</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Held back</p><span class="ow-mt-v">${held.length}</span>
+      <p class="ow-mt-s">${held.length ? Object.entries(held.reduce((m, b)=>{ m[b.held.key] = (m[b.held.key]||0)+1; return m; }, {}))
+        .map(([k, n])=> `${n} ${k === 'told' ? 'told inside the fortnight' : k === 'chased' ? 'being chased' : k === 'terms' ? 'past terms' : 'with no number'}`).join(' &middot; ')
+        : 'nobody is being kept back'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Bought after being told</p><span class="ow-mt-v">${score.worked} <span class="ow-u">of ${score.told}</span></span>
+      <p class="ow-mt-s">${score.told ? `within ${TELL_WORKED_DAYS} days &middot; ${f(score.worth)} UGX` : 'nothing told yet'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Site stage on file</p><span class="ow-mt-v">${staged} <span class="ow-u">of ${all}</span></span>
+      <p class="ow-mt-s">${toAsk.length} to ask &mdash; the one thing that says what comes next</p></div>
+  </div>`;
+
+  if(!briefsSentTable || !productLinksTable){
+    wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">
+      <b>This screen needs one update before it can work.</b>
+      <span>Paste ${!productLinksTable ? '<b>supabase/migrations/0090_product_links.sql</b>' : ''}${!productLinksTable && !briefsSentTable ? ' and ' : ''}${!briefsSentTable ? '<b>supabase/migrations/0091_briefs_sent.sql</b>' : ''} into the Supabase SQL editor and reload. Until then nothing here can be written down &mdash; and a picture the app cannot remember sending would be sent to the same customer every day.</span>
+    </div></div>`;
+    return;
+  }
+  if(!queue.length){
+    wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">
+      <b>Nobody is worth telling anything this fortnight.</b>
+      <span>${all ? `Nothing is due by anybody&rsquo;s own buying rhythm, no follow-up has come in, no price they pay has fallen by ${TELL_PRICE_DROP_PCT}% or more, and no site has moved on. ${held.length ? `${held.length} ${held.length === 1 ? 'customer is' : 'customers are'} held back for the reasons in the rail. ` : ''}Every customer still has a picture on their own account if you want to send one by hand.`
+        : 'There is nobody on the book yet. Add a customer and this fills itself as they buy.'}</span>
+    </div></div>`;
+    return;
+  }
+  const shown = queue.slice(0, TELL_SHOWN);
+  wrap.innerHTML = `<div class="ow-grid tl-grid"><div class="ow-stack"><div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">This fortnight</span>
+      <span class="ow-pan-n">${queue.length} &middot; ranked by what an order is worth</span></div>
+    <div class="ow-tbl tl-tbl">
+      <div class="ow-tbl-h"><span>Customer</span><span>Reason</span><span>What to show them</span>
+        <span class="ow-tbl-n">Typical order</span><span class="ow-tbl-n">Last told</span><span></span></div>
+      ${shown.map(b=> tellingRowHTML(b)).join('')}
+    </div>
+    <p class="ow-mini">${shown.length < queue.length
+      ? `The ${shown.length} dearest of <b>${queue.length}</b> are listed; the rest keep until one of these is sent or a fortnight passes. ` : ''}Every reason is read from your invoices, the stock book and the follow-ups. Nothing here sends itself: Share opens WhatsApp with the picture attached and you press send, and only then is it written down as told.</p>
+  </div></div>${tellingRailHTML(queue, held, score, toAsk)}</div>`;
+}
+/* The rail carries the three things the queue cannot say about itself:
+   the rules it ran on, who it left out, and whether any of it has ever
+   worked. A ranked list is only trustworthy about what it shows if it
+   is also honest about what it does not. */
+function tellingRailHTML(queue, held, score, toAsk){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const pct = (a, b)=> b ? Math.round(a / b * 100) : 0;
+  const names = { rhythm:'Due by rhythm', asked:'They asked', price:'Price fell',
+    stage:'Site stage', return:'Came once', hand:'Sent by hand' };
+  const bar = (label, a, b)=> `<div class="tl-sc">
+    <div class="tl-sc-l"><span>${esc(label)}</span><b>${a} of ${b}</b></div>
+    <div class="tl-bar"><i style="width:${pct(a, b)}%"></i></div></div>`;
+  return `<div class="ow-side">
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">The rules</span></div>
+      <div class="ow-sr"><span class="ow-sr-k">One picture per customer every</span><span class="ow-sr-v">${TELL_EVERY_DAYS} <span class="ow-u">days</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Never inside a chase by</span><span class="ow-sr-v">${TELL_AFTER_CHASE_DAYS} <span class="ow-u">days</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">Due when a rhythm is within</span><span class="ow-sr-v">${TELL_RHYTHM_WITHIN} <span class="ow-u">days</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">A rhythm needs at least</span><span class="ow-sr-v">${TELL_MIN_ORDERS} <span class="ow-u">orders</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">A price story needs a fall of</span><span class="ow-sr-v">${TELL_PRICE_DROP_PCT}<span class="ow-u">%</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">A stage stops counting after</span><span class="ow-sr-v">${SITE_STAGE_STALE_DAYS} <span class="ow-u">days</span></span></div>
+      <p class="ow-mini">These are the whole algorithm. There is no model behind them &mdash; at ${(data.customers||[]).length} customers the rules are more accurate than anything trained, and you can read why every row is here.</p>
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${held.length}</span></div>
+      ${held.length ? held.slice(0, 6).map(b=> `<div class="ow-sr">
+        <span class="ow-sr-k">${esc(b.customer.name)}</span>
+        <span class="ow-sr-v${b.held.key === 'terms' || b.held.key === 'chased' ? ' ow-warn' : ''}">${esc(b.held.label)}</span></div>`).join('')
+        : '<p class="ow-mini">Nobody is being kept back.</p>'}
+      <p class="ow-mini">Somebody you are chasing for money does not also get a picture of cement. They get the statement.</p>
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Did it work?</span><span class="ow-pan-n">all time</span></div>
+      ${score.told ? `<div class="ow-sr"><span class="ow-sr-k">Told</span><span class="ow-sr-v">${score.told}</span></div>
+        ${bar(`Bought within ${TELL_WORKED_DAYS} days`, score.worked, score.told)}
+        <div class="ow-sr"><span class="ow-sr-k">Worth, those orders</span><span class="ow-sr-v">${f(score.worth)}</span></div>
+        ${Object.entries(score.byReason).map(([k, v])=> bar(names[k] || k, v.worked, v.told)).join('')}
+        <p class="ow-mini">&ldquo;Bought within ${TELL_WORKED_DAYS} days&rdquo; is not proof the picture did it &mdash; somebody due cement would have bought cement anyway. It is the only honest measure the books allow, and the reasons that never convert drop down the ranking on their own.</p>`
+        : '<p class="ow-mini">Nothing told yet. Once a picture has been shared this counts, per reason, whether an order followed inside a fortnight &mdash; which is the only measure the books can honestly give.</p>'}
+    </div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Site stage to ask</span><span class="ow-pan-n">${toAsk.length}</span></div>
+      ${toAsk.slice(0, 6).map(c=>{
+        const st = customerSiteStage(c);
+        return `<div class="ow-sr"><span class="ow-sr-k">${esc(c.name)}</span>
+          <span class="ow-sr-v">${st.stage ? `${esc(st.stage.label)} &middot; ${st.ageDays}d` : '&mdash;'}</span></div>`;
+      }).join('') || '<p class="ow-mini">Every customer has a fresh one.</p>'}
+      <p class="ow-mini">A stage is asked once and goes stale by itself: it carries the day it was set, and one older than ${SITE_STAGE_STALE_DAYS} days stops counting until somebody confirms it.</p>
+    </div>
+  </div>`;
+}
+
+function tellingRowHTML(b){
+  const open = b.customer.id === tellOpenId;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const told = b.told;
+  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}" role="button" tabindex="0"
+      data-tellopen="${esc(b.customer.id)}" aria-expanded="${open}">
+    <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(b.customer.name)}">${esc(b.customer.name)}</span>
+      <span class="ow-tbl-s">${b.reason.why.replace(/<[^>]+>/g, '')}</span></div>
+    <span class="tl-c-r"><span class="ow-cp ${b.reason.tone}"><span class="ow-cp-d"></span>${esc(b.reason.chip)}</span></span>
+    <div class="ow-tbl-c"><span class="ow-tbl-p">${esc(b.product ? b.product.name : '—')}</span>
+      <span class="ow-tbl-s">${b.qty != null ? `${f(b.qty)} ${esc(b.product && b.product.unit || '')}` : 'no quantity on file'}${
+        b.price != null ? ` &middot; ${f(b.price)}${b.sameAsTheirs ? ' &mdash; their price' : ''}` : ''}</span></div>
+    <span class="ow-tbl-n">${b.row.stats.average ? `<span class="ow-fig">${f(b.row.stats.average)}</span><span class="ow-fig-b">UGX</span>` : '<span class="cu-dash">&mdash;</span>'}</span>
+    <span class="ow-tbl-n tl-c-t">${told
+      ? `<span class="ow-fig-b" style="font-size:var(--ow-t-12);">${told.daysAgo} days ago</span><span class="ow-fig-b">${told.boughtAfter ? 'bought after' : 'no order after'}</span>`
+      : '<span class="ow-fig-b" style="font-size:var(--ow-t-12);">never</span>'}</span>
+    <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  ${open ? `<div class="tl-x">
+    ${briefStripHTML(b)}
+    ${briefWhyHTML(b)}
+    <div class="ow-tbl-a tl-acts">
+      <button type="button" class="btn btn-accent ow-sm" data-tell="share" data-cid="${esc(b.customer.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Share on WhatsApp</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-tell="save" data-cid="${esc(b.customer.id)}">Save the picture</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-tell="account" data-cid="${esc(b.customer.id)}">Open the account</button>
+      <span class="cu-sp"></span>
+      <p class="cu-note">Nothing is sent by the app. Share opens WhatsApp with the picture attached and their chat chosen; you press send, and the fortnight starts from then.</p>
+    </div>
+  </div>` : ''}`;
+}
+
+/* ---- WHAT GOES WITH WHAT --------------------------------------------- */
+let pairOpenId = null;
+let pairDraft = null;   // the row being written, before it has an id
+function renderPairings(){
+  const wrap = document.getElementById('pairingsWrap');
+  if(!wrap) return;
+  const links = productLinksAll().filter(l=> l.active !== false);
+  const off = productLinksAll().filter(l=> l.active === false);
+  const observed = observedPairs();
+  const products = data.products || [];
+  const withAny = new Set(links.flatMap(l=> [l.fromId, l.toId]));
+  const stands = links.map(l=> ({ l, st: pairStanding(l) }));
+  const counts = stands.reduce((m, x)=> { m[x.st.key] = (m[x.st.key]||0)+1; return m; }, {});
+  const usable = links.filter(l=> l.qty != null).length;
+
+  const strip = document.getElementById('pairStripWrap');
+  if(strip) strip.innerHTML = `<div class="ow-strip">
+    <div class="ow-mt"><p class="ow-mt-l">Pairings you wrote</p><span class="ow-mt-v">${links.length}</span>
+      <p class="ow-mt-s">${counts.agree || 0} the books agree with &middot; ${counts.nothing || 0} they have not seen &middot; ${counts.argue || 0} they argue with</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Found in the orders</p><span class="ow-mt-v">${observed.length}</span>
+      <p class="ow-mt-s">seen often enough to ask about, not yet judged${off.length ? ` &middot; ${off.length} said no to` : ''}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Carry a figure</p><span class="ow-mt-v">${usable} <span class="ow-u">of ${links.length}</span></span>
+      <p class="ow-mt-s">only these can put a quantity on a picture</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Lines with nothing</p><span class="ow-mt-v">${products.filter(p=> !withAny.has(p.id)).length} <span class="ow-u">of ${products.length}</span></span>
+      <p class="ow-mt-s">no pairing either way &mdash; their pictures carry no second frame</p></div>
+  </div>`;
+
+  if(!productLinksTable){
+    wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">
+      <b>Pairings need one update before they can be written down.</b>
+      <span>Paste <b>supabase/migrations/0090_product_links.sql</b> into the Supabase SQL editor and reload. What the orders already show is below either way &mdash; that is read from your own invoices and needs nothing.</span></div>
+      ${observed.length ? pairObservedHTML(observed) : ''}</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Pairings</span>
+      <span class="ow-pan-n">${links.length} &middot; strongest first</span></div>
+    ${links.length ? `<div class="ow-tbl pr-tbl">
+      <div class="ow-tbl-h"><span>The pairing</span><span class="ow-tbl-n">How many</span>
+        <span>Where it came from</span><span class="ow-tbl-n">In orders</span><span></span></div>
+      ${stands.sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree')
+          || String(productLinkName(a.l.fromId)).localeCompare(productLinkName(b.l.fromId)))
+        .map(x=> pairRowHTML(x.l, x.st)).join('')}
+    </div>` : `<div class="ow-empty"><b>Nothing written down yet.</b>
+      <span>A pairing is one sentence: this product needs that one, so many per one. Write the first, or take one of the pairs your own orders keep showing.</span></div>`}
+    <p class="ow-mini">A pairing changes nothing about prices, stock or orders. It only lets a picture say a second thing, and it only ever says a quantity where you gave one &mdash; where you did not, the thing is named and shown and no number appears.</p>
+  </div>
+  ${observed.length ? pairObservedHTML(observed) : ''}
+  ${off.length ? pairOffHTML(off) : ''}`;
+}
+/* Turned off rather than deleted: the sentence is still true at the
+   counter, it simply stopped reaching pictures. Kept visible so that
+   nothing quietly disappears the moment it is switched off. */
+function pairOffHTML(off){
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Not used in pictures</span><span class="ow-pan-n">${off.length}</span></div>
+    ${off.map(l=> `<div class="pr-obs">
+      <span class="p">${esc(productLinkName(l.fromId))} &rarr; ${esc(productLinkName(l.toId))}</span>
+      <span class="s">${esc((pairVerb(l.verb)||{say:l.verb}).say)}${l.qty != null ? ` &middot; ${l.qty} per ${esc(l.per || 'one')}` : ''}</span>
+      <span class="a">
+        <button type="button" class="btn btn-ghost ow-sm" data-pair="on" data-id="${esc(String(l.id))}">Use it again</button>
+        <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(l.id))}">Delete</button>
+      </span></div>`).join('')}
+  </div>`;
+}
+function pairRowHTML(l, st){
+  const open = l.id === pairOpenId;
+  const v = pairVerb(l.verb) || { label:l.verb, say:l.verb };
+  const ev = st.ev;
+  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}" role="button" tabindex="0"
+      data-pairopen="${esc(String(l.id))}" aria-expanded="${open}">
+    <div class="pr-sent">
+      <span class="pr-p" title="${esc(productLinkName(l.fromId))}">${esc(productLinkName(l.fromId))}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
+      <span class="pr-vb pr-${esc(l.verb)}">${esc(v.label)}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
+      <span class="pr-p" title="${esc(productLinkName(l.toId))}">${esc(productLinkName(l.toId))}</span>
+    </div>
+    <span class="ow-tbl-n">${l.qty != null
+      ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">per ${esc(l.per || 'one')}</span>`
+      : '<span class="pr-nofig">no figure</span>'}</span>
+    <span><span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span></span>
+    <span class="ow-tbl-n">${ev.withFrom
+      ? `<span class="ow-fig">${ev.andTo}</span><span class="ow-fig-b">of ${ev.withFrom} orders</span>`
+      : '<span class="cu-dash">&mdash;</span>'}</span>
+    <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  ${open ? pairEditorHTML(l, st) : ''}`;
+}
+function pairProductOptions(sel){
+  const ps = data.products || [];
+  const gone = sel && !ps.some(p=> p.id === sel)
+    ? `<option value="${esc(sel)}" selected>${esc(productLinkName(sel))}</option>` : '';
+  return gone + ps.map(p=>
+    `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+}
+function pairEditorHTML(l, st){
+  const ev = st.ev;
+  const per = (productById(l.fromId) || {}).unit || 'one';
+  return `<div class="tl-x">
+    <p class="pr-lbl">The pairing, as you would say it</p>
+    <div class="pr-sb">
+      <div class="pr-pick"><select class="pr-sel" data-pf="from" data-id="${esc(String(l.id))}">${pairProductOptions(l.fromId)}</select></div>
+      <div class="pr-pick pr-verb"><select class="pr-sel" data-pf="verb" data-id="${esc(String(l.id))}">${
+        PAIR_VERBS.map(v=> `<option value="${v.id}"${v.id === l.verb ? ' selected' : ''}>${esc(v.say)}</option>`).join('')}</select></div>
+      <div class="pr-pick"><select class="pr-sel" data-pf="to" data-id="${esc(String(l.id))}">${pairProductOptions(l.toId)}</select></div>
+      <span class="pr-w">&mdash;</span>
+      <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-pf="qty" data-id="${esc(String(l.id))}" value="${l.qty == null ? '' : l.qty}" placeholder="—"></div>
+      <span class="pr-w">per</span>
+      <div class="pr-pick"><input class="pr-in" data-pf="per" data-id="${esc(String(l.id))}" value="${esc(l.per || '')}" placeholder="${esc(per)}"></div>
+    </div>
+    <p class="pr-lbl">Why, for whoever reads this next</p>
+    <textarea class="ow-msg pr-note" rows="2" data-pf="note" data-id="${esc(String(l.id))}"
+      placeholder="What you know that the orders cannot show.">${esc(l.note || '')}</textarea>
+    <div class="pr-two">
+      <div class="pr-chk">
+        <div class="pr-chk-h">What your own orders say</div>
+        <div class="ow-sr"><span class="ow-sr-k">Orders with ${esc(briefShortName(productLinkName(l.fromId)))}</span><span class="ow-sr-v">${ev.withFrom}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">&hellip; that also had it</span><span class="ow-sr-v">${ev.andTo}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Per one, on average</span><span class="ow-sr-v">${ev.perUnit == null ? '&mdash;' : ev.perUnit.toFixed(1)}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Your figure</span><span class="ow-sr-v">${l.qty == null ? 'none given' : Number(l.qty).toFixed(1)}</span></div>
+        <p class="pr-verdict pr-v-${esc(st.key)}">${pairVerdictWords(l, st)}</p>
+      </div>
+      <p class="ow-mini pr-verbs"><b>The five verbs, and they are the whole vocabulary.</b>
+        <b>Needs</b> &mdash; it cannot be used without it, and the picture says so.
+        <b>Goes with</b> &mdash; usually bought together, offered but not insisted on.
+        <b>Instead of</b> &mdash; a swap when the first is out of stock.
+        <b>Runs out after</b> &mdash; it will be finished in about so many days, and the picture comes back then.
+        <b>Part of</b> &mdash; both belong to one job.</p>
+    </div>
+    <div class="ow-tbl-a tl-acts">
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="save" data-id="${esc(String(l.id))}">Save the pairing</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="off" data-id="${esc(String(l.id))}">Stop using it in pictures</button>
+      <span class="cu-sp"></span>
+      <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(l.id))}">Delete</button>
+      <p class="cu-note">A pairing only ever adds a frame to a picture. It never changes a price, moves stock or places an order.</p>
+    </div>
+  </div>`;
+}
+function pairVerdictWords(l, st){
+  const ev = st.ev;
+  if(st.key === 'self') return 'This one points the product back at itself, so there is nothing to compare it against — it is a rhythm rather than a companion.';
+  if(st.key === 'unseen') return 'You do not sell the second thing, so your orders can never show it. The pairing still stands at the counter; it simply never reaches a picture.';
+  if(st.key === 'nothing') return 'Nothing on file has carried the first thing yet, so there is nothing to check this against. It stands until there is.';
+  if(st.key === 'argue') return `Your orders show these together in only ${ev.andTo} of ${ev.withFrom}. The pairing still stands — you have stood at the counter and the books have not — but you are told, once, here.`;
+  const close = (l.qty != null && ev.perUnit != null && Math.abs(ev.perUnit - l.qty) <= Math.max(0.2, l.qty * 0.25));
+  return `The books agree with you${close ? ', and closely' : ''}. A picture built on this pairing is on firm ground.`;
+}
+function pairObservedHTML(list){
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Found in your orders</span><span class="ow-pan-n">${list.length} waiting</span></div>
+    ${list.slice(0, 8).map(o=> `<div class="pr-obs">
+      <span class="p">${esc(productLinkName(o.fromId))} &rarr; ${esc(productLinkName(o.toId))}</span>
+      <span class="s">${o.ev.andTo} of ${o.ev.withFrom} orders${o.ev.perUnit != null ? ` &middot; ${o.ev.perUnit.toFixed(1)} per one` : ''}</span>
+      <span class="a">
+        <button type="button" class="btn btn-ghost ow-sm" data-obs="keep" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">Keep</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-obs="no" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">No</button>
+      </span></div>`).join('')}
+    <p class="ow-mini">These are pairs that keep turning up on the same invoice. The books can see WHAT happens together; only you know WHY, and whether it is a rule or a coincidence. Saying no is as useful as saying keep &mdash; it stops being offered.</p>
+  </div>`;
+}
+
+
+/* ---- the site-stage field on the customer form ------------------------
+   The stage is a choice from a closed list; the date is when somebody
+   said so, and it is filled in for you the moment the stage changes,
+   because a stage nobody dated is a stage nothing can age. */
+function cfFillStages(stage, at){
+  const sel = document.getElementById('c_site_stage');
+  const day = document.getElementById('c_site_stage_at');
+  if(!sel || !day) return;
+  sel.innerHTML = `<option value="">Not asked yet</option>` + SITE_STAGES.map(s=>
+    `<option value="${esc(s.id)}"${s.id === stage ? ' selected' : ''}>${esc(s.label)}</option>`).join('');
+  day.value = at || '';
+  cfStageHint();
+}
+function cfStageHint(){
+  const sel = document.getElementById('c_site_stage');
+  const day = document.getElementById('c_site_stage_at');
+  const hint = document.getElementById('c_stage_hint');
+  if(!sel || !hint) return;
+  const stage = siteStageById(sel.value);
+  if(!stage){ hint.textContent = 'Optional. Without it the app can only say what they buy already, never what they will need next.'; return; }
+  if(!stage.buys.length){ hint.textContent = `${stage.label}: nothing is suggested from the stage — what they buy is all this reads.`; return; }
+  const age = day && day.value ? daysSinceDate(day.value) : null;
+  const stale = age !== null && age > SITE_STAGE_STALE_DAYS;
+  hint.innerHTML = `${esc(stage.label)} buys <b>${esc(stage.buys.join(', '))}</b>.${
+    stale ? ` This was set ${age} days ago, so it has stopped counting until somebody confirms it.` : ''}`;
+}
+/* The date is written when the STAGE changes, not when the form is
+   saved: re-saving a customer to fix a phone number must not make a
+   four-month-old stage look like today's news. */
+function cfReadStage(prev){
+  const sel = document.getElementById('c_site_stage');
+  const day = document.getElementById('c_site_stage_at');
+  if(!sel) return {};
+  const stage = sel.value || '';
+  if(!stage) return { siteStage:'', siteStageAt:'' };
+  const typed = (day && day.value) || '';
+  const same = prev && prev.siteStage === stage;
+  return { siteStage: stage, siteStageAt: typed || (same ? (prev.siteStageAt || todayISO()) : todayISO()) };
+}
+(function wireStageField(){
+  const sel = document.getElementById('c_site_stage');
+  const day = document.getElementById('c_site_stage_at');
+  if(!sel || !day) return;
+  sel.addEventListener('change', ()=>{
+    if(sel.value && !day.value) day.value = todayISO();
+    if(!sel.value) day.value = '';
+    cfStageHint();
+  });
+  day.addEventListener('change', cfStageHint);
+})();
+
+/* ---- the brief, on a customer's own account --------------------------
+   Every customer has one, whether or not the queue has anything to say
+   about them this fortnight. The queue decides who is worth telling; the
+   picture is always there to look at and to send by hand. */
+function customerBriefPanelHTML(customerId){
+  const b = customerBrief(customerId);
+  if(!b) return '';
+  if(!b.product){
+    return `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Their picture</span><span class="ow-pan-n">nothing to build one from yet</span></div>
+      <div class="ow-empty"><b>There is nothing on file to make a picture from.</b>
+        <span>A picture is built from their own dealings with the shop &mdash; what they buy, how many they take, what they pay. One invoiced order is enough. Until then anything shown here would be about the shop rather than about them.</span></div>
+    </div>`;
+  }
+  const held = b.held;
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Their picture</span>
+      <span class="ow-pan-n">built from their own dealings${b.told ? ` &middot; told ${b.told.daysAgo} days ago` : ' &middot; never told'}</span></div>
+    ${briefStripHTML(b)}
+    <div class="ow-tbl-a tl-acts">
+      <button type="button" class="btn btn-ghost ow-sm" data-tell="share" data-cid="${esc(b.customer.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Share on WhatsApp</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-tell="save" data-cid="${esc(b.customer.id)}">Save the picture</button>
+      <span class="cu-sp"></span>
+      ${held ? `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${esc(held.label)}</span>` : ''}
+    </div>
+    ${briefWhyHTML(b)}
+  </div>`;
+}
+
+/* ---- wiring ---------------------------------------------------------- */
+(function wireTelling(){
+  const wrap = document.getElementById('tellingWrap');
+  if(!wrap) return;
+  const act = (name, id)=>{
+    if(name === 'open'){ tellOpenId = tellOpenId === id ? null : id; renderTelling(); return; }
+    if(name === 'share') return shareBrief(id);
+    if(name === 'save') return saveBriefGif(id);
+    if(name === 'account') return openCustomerStats(id);
+  };
+  wrap.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-tell]');
+    if(b){ act(b.dataset.tell, b.dataset.cid); return; }
+    if(e.target.closest('a, button')) return;
+    const row = e.target.closest('[data-tellopen]');
+    if(row) act('open', row.dataset.tellopen);
+  });
+  wrap.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    if(!e.target.closest || e.target.closest('a, button')) return;
+    const row = e.target.closest('[data-tellopen]');
+    if(!row) return;
+    e.preventDefault();
+    act('open', row.dataset.tellopen);
+  });
+})();
+/* Saving is the same picture without the sharing: for a desk with no
+   share sheet, and for looking at one before deciding. It is NOT
+   recorded as told -- nothing left for the customer. */
+async function saveBriefGif(customerId){
+  const built = await buildBriefGif(customerId);
+  if(!built.ok){ toast(built.why); return; }
+  const url = URL.createObjectURL(built.blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = built.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  toast('Saved. Nothing has been written down as told — that only happens when you share it.', 5000);
+}
+
+(function wirePairings(){
+  const wrap = document.getElementById('pairingsWrap');
+  if(!wrap) return;
+  const idOf = (el)=> Number(el.dataset.id);
+  wrap.addEventListener('click', (e)=>{
+    const obs = e.target.closest('[data-obs]');
+    if(obs){
+      const { from, to } = obs.dataset;
+      if(obs.dataset.obs === 'no'){
+        const r = dismissObservedPair(from, to);
+        if(!r.ok){ toast(r.why, 6000); return; }
+      } else {
+        /* Kept as a pairing with no figure: the books found THAT they go
+           together, never how many, and only the owner can say. */
+        const r = addProductLink(from, 'with', to, null, '', '');
+        if(!r.ok){ toast(r.why, 6000); return; }
+        pairOpenId = productLinksAll()[productLinksAll().length - 1].id;
+      }
+      renderPairings();
+      return;
+    }
+    const b = e.target.closest('[data-pair]');
+    if(b){
+      const id = idOf(b);
+      if(b.dataset.pair === 'delete'){
+        if(!confirm('Delete this pairing? What the orders show about the two is not affected.')) return;
+        deleteProductLink(id); pairOpenId = null;
+      }
+      if(b.dataset.pair === 'off'){ updateProductLink(id, { active:false }); pairOpenId = null; }
+      if(b.dataset.pair === 'on'){ updateProductLink(id, { active:true }); }
+      if(b.dataset.pair === 'save'){ pairOpenId = null; toast('Saved.'); }
+      renderPairings();
+      return;
+    }
+    if(e.target.closest('a, button, select, input, textarea')) return;
+    const row = e.target.closest('[data-pairopen]');
+    if(row){
+      const id = Number(row.dataset.pairopen);
+      pairOpenId = pairOpenId === id ? null : id;
+      renderPairings();
+    }
+  });
+  /* Selects redraw the row, because the sentence at the top of it is
+     what they change. Typed fields do not: a redraw on every keystroke
+     takes the cursor with it. */
+  wrap.addEventListener('change', (e)=>{
+    const el = e.target.closest('[data-pf]');
+    if(!el) return;
+    const id = idOf(el), field = el.dataset.pf;
+    const patch = field === 'from' ? { fromId: el.value }
+      : field === 'to' ? { toId: el.value }
+      : field === 'verb' ? { verb: el.value }
+      : field === 'qty' ? { qty: el.value }
+      : field === 'per' ? { per: el.value }
+      : { note: el.value };
+    const r = updateProductLink(id, patch);
+    if(!r.ok){ toast(r.why, 6000); return; }
+    if(['from','to','verb','qty'].includes(field)) renderPairings();
+  });
+  const add = document.getElementById('pair_add_btn');
+  if(add) add.addEventListener('click', ()=>{
+    const ps = data.products || [];
+    if(ps.length < 2){ toast('Two products are needed before anything can be paired.'); return; }
+    const r = addProductLink(ps[0].id, 'with', ps[1].id, null, '', '');
+    if(!r.ok){ toast(r.why, 6000); return; }
+    pairOpenId = productLinksAll()[productLinksAll().length - 1].id;
+    renderPairings();
+  });
+})();
+/* The account screen carries a picture too, and its buttons are the
+   same two. Delegated on the wrapper the account is drawn into. */
+(function wireAccountBrief(){
+  const acct = document.getElementById('custAccountWrap');
+  if(!acct) return;
+  acct.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-tell]');
+    if(!b) return;
+    if(b.dataset.tell === 'share') return shareBrief(b.dataset.cid);
+    if(b.dataset.tell === 'save') return saveBriefGif(b.dataset.cid);
+  });
+})();
+
 /* ---- Who this is, and whether the shop already has them --------------
    Worse here than on the supplier form. resolveInvoiceCustomer() matches
    an invoice to a customer by lowercased name and takes the FIRST hit, so
@@ -43860,6 +45768,7 @@ function editCustomer(id){
   document.getElementById('c_phone2').value = c.phone2 || '';
   document.getElementById('c_location').value = c.location || '';
   document.getElementById('c_notes').value = c.notes || '';
+  cfFillStages(c.siteStage || '', c.siteStageAt || '');
   document.getElementById('c_debt').value = '';
   document.getElementById('c_debt_since').value = '';
   document.getElementById('c_debt_undated').checked = false;
@@ -43874,6 +45783,7 @@ function editCustomer(id){
 function resetCustomerForm(){
   editingCustomerId = null;
   ['c_id','c_name','c_phone','c_phone2','c_location','c_debt','c_debt_since','c_notes'].forEach(id=>document.getElementById(id).value='');
+  cfFillStages('', '');
   document.getElementById('c_debt_undated').checked = false;
   fillIssuedId('c_id', 'customer', 'C', 3, data.customers);
   cfFillLinkPicker(null);
@@ -44179,6 +46089,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
     data.customers[idx] = {
       ...data.customers[idx], id, name, location, phone, phone2,
       notes: document.getElementById('c_notes').value.trim(),
+      ...cfReadStage(data.customers[idx]),
     };
     // Through linkCustomerSupplier so BOTH records are written and any
     // previous partner on either side is released.
@@ -44218,6 +46129,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
       id, name, location, phone, phone2,
       debt: openingDebt,
       notes: document.getElementById('c_notes').value.trim(),
+      ...cfReadStage(null),
       debtLog: openingDebt > 0
         ? [{id: allocRowId('debtLog'), date: document.getElementById('c_debt_undated').checked ? '' : document.getElementById('c_debt_since').value,
             type:'charge', amount: openingDebt, note:'Opening balance', cashTxnId:null}]
@@ -51597,6 +53509,10 @@ const ROW_ID_KINDS = {
   followUp:        {kind:'row:follow_up',        counter:'nextFollowUpId'},
   // Nor does anybody quote a promise number.
   paymentPromise:  {kind:'row:payment_promise',  counter:'nextPaymentPromiseId'},
+  // Neither a pairing nor a record of something told has a number
+  // anybody quotes, so a gap in the sequence costs nothing.
+  productLink:     {kind:'row:product_link',     counter:'nextProductLinkId'},
+  briefSent:       {kind:'row:brief_sent',       counter:'nextBriefSentId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
@@ -60199,6 +62115,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
     fixedAssets:[], loans:[], rentAgreements:[], dues:[], media:[], mediaFolders:[], waPosts:[],
     places:[], collectionTrips:[], sourcingLeads:[], followUps:[], nextFollowUpId:1,
     paymentPromises:[], nextPaymentPromiseId:1,
+    productLinks:[], nextProductLinkId:1, briefsSent:[], nextBriefSentId:1,
     presetCategories: seedData().presetCategories, presetUnits: seedData().presetUnits,
     presetIncomeCategories: seedData().presetIncomeCategories, presetExpenseCategories: seedData().presetExpenseCategories,
     presetAttributes: seedData().presetAttributes, seeded:false};

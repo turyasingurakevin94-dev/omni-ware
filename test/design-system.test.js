@@ -858,6 +858,90 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
                     'ow-sr-k', 'ow-sr-v'],
     },
+    /* Suppliers. The last Buy screen on the legacy shell, and the shell
+       was the smaller half of it: the headline was an instruction about
+       an ID field, the three tiles were Creditors' three figures with
+       one of them painting ordinary trade credit crimson, and the list
+       was alphabetical and paged at 24 -- so twenty of forty-four sat
+       behind a button and the best one's place on screen was decided by
+       the alphabet.
+
+       .supplier-card and .supplier-grid went for the layer's table.
+       They stay in the FILE, because the agent roster and the staff
+       list wear them; this screen may not draw them again.
+       .dir-summary-row and .dir-summary-card do NOT stay: Customers
+       stopped drawing them on conversion and this was the last screen
+       carrying them, so they are gone from the file along with
+       .dir-summary-card.owed, which painted trade credit in --danger.
+       .sc-matches went with the card that held it.
+
+       Six renderers rather than one, listed together for the reason the
+       customers entry gives: this screen draws the same supplier three
+       times over -- as a row in the register, as the band's reason for
+       listing them, and as the account that replaces the register. The
+       row and the band both read their chip from supAttentionReason;
+       the account reads its figures from supplierFiguresHTML. Anything
+       drawing a second copy of either would be free to disagree with
+       the first, which is the drift this list exists to stop. */
+    suppliers: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'search-bar', 'dir-summary-row',
+                'dir-summary-card', 'supplier-grid', 'supplier-card', 'sc-head', 'sc-avatar',
+                'sc-title', 'sc-name', 'sc-id', 'sc-meta', 'sc-actions', 'sc-details', 'sc-row',
+                'sc-notes', 'sc-stats', 'sc-stat', 'sc-matches', 'sc-match-row', 'sc-match-name',
+                'sc-match-price', 'both-tag', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
+      renders: ['renderSuppliers', 'supplierRegisterRowHTML', 'supplierAttentionHTML',
+                'supplierFiguresHTML', 'renderSupplierAccount', 'supplierAccountRailHTML',
+                'supplierAskBlockHTML', 'supplierBuysHTML', 'supplierBillsHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini',
+                    'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid', 'ow-stack',
+                    'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
+                    'ow-sr-k', 'ow-sr-v'],
+    },
+    /* Worth telling. A new screen rather than a converted one, so it
+       retires nothing -- but it is ratcheted from its first day, which
+       is the only moment a screen is ever free of its own history.
+
+       Six renderers, and the reason they are listed together is the
+       same as the customers list above: the SAME brief is drawn three
+       times -- as a row in the fortnight's queue, as the reasoning that
+       opens under that row, and as a panel on the customer's own
+       account screen. A second copy of briefStripHTML would be free to
+       show the owner a filmstrip that the picture does not match, and
+       the picture is the thing being approved. */
+    telling: {
+      retired: [],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
+      renders: ['renderTelling', 'tellingRowHTML', 'tellingRailHTML',
+                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
+                    'ow-empty', 'ow-mini', 'ow-q-note', 'ow-grid', 'ow-side'],
+    },
+    /* What goes with what. New as well, and the one screen in the app
+       whose register is a SENTENCE -- product, verb, product, in one
+       cell, because three columns of truncated product names say
+       nothing. The editor is listed beside the row for the reason the
+       whole file exists: the row states the pairing and the editor
+       changes it, and a second opinion about what the five verbs are
+       would be a second grammar. */
+    pairings: {
+      retired: [],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-sm'],
+      renders: ['renderPairings', 'pairRowHTML', 'pairEditorHTML',
+                'pairObservedHTML', 'pairOffHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-fig-b',
+                    'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-msg',
+                    'ow-empty', 'ow-mini'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
