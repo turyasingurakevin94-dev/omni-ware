@@ -159,10 +159,37 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
     'and warns before you sign yourself out');
   t.check(/revoked_at: new Date\(\)\.toISOString\(\)/.test(render),
     'revoking stamps the row rather than deleting it, so the record survives');
-  t.check(/r\.revoked_at \? '' :/.test(render),
-    'an already-revoked device is not offered again');
-  t.check(/ls-tag you/.test(render) && /ls-tag live/.test(render) && /ls-tag out/.test(render),
-    'this device, online and signed out each read at a glance');
+  /* A SIGNED-OUT RECORD IS NOT A DEVICE THAT IS SIGNED IN, and the two
+     were being drawn as one list and counted as one number. On a real
+     shop that read "58 devices" with 32 signed in and 26 tombstones
+     kept -- an 81% overstatement, on the only figure anybody reads, on
+     a security panel. The tombstones are now a count in the
+     housekeeping line and never a row, so there is no revoked row left
+     to guard against offering a Sign out on. */
+  t.check(/const signedIn = lsRows\.filter\(r=> !r\.revoked_at\);/.test(render)
+    && /const kept = lsRows\.filter\(r=> r\.revoked_at\);/.test(render),
+    'signed in and signed out are counted apart, not summed into one figure');
+  t.check(/const devices = \(typeof lsRows === 'undefined' \|\| lsRows === null\)\s*\n\s*\? null : lsRows\.filter\(r=> !r\.revoked_at\)\.length;/.test(src),
+    'and the header counts what is signed in rather than how many rows exist');
+  t.check(/ls-tag you/.test(render) && /ls-tag live/.test(render),
+    'this device and online each read at a glance');
+  t.check(/signed-out record/.test(src),
+    'while a signed-out one is reported as a count rather than drawn as a row you could sign out twice');
+
+  /* THE QUESTION THE PANEL ANSWERS is "is there a key to my shop I do
+     not recognise?" -- so it leads with whoever is NOT you, groups by
+     PERSON rather than by browser, and collapses your own devices to one
+     line however many there are. Thirty-two of the fifty-eight were the
+     owner's own browser sessions, sorted to the top by recency, which
+     put the noise where the answer belongs. */
+  t.check(/Nobody but you is signed in/.test(render),
+    'and when nobody else is in, that sentence IS the answer rather than a list to read');
+  t.check(/byPerson/.test(render) && /data-ls-group=/.test(render),
+    'people are rows, not devices — because "somebody has left" is a question about a person');
+  t.check(/ls-signout-person/.test(render),
+    'so everything one person holds ends in one act');
+  t.check(/data-ls-group="you"/.test(render),
+    'and your own devices collapse to one line however many there are');
 }
 
 /* ---------- 6. all of it is REACHED ----------------------------------- */
@@ -355,9 +382,13 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
   t.check(/removing one would let that device register again/.test(code),
     'and the screen says why the signed-out records are kept');
 
-  // The list is paged like every other long list in the app.
-  t.check(/sessions: 6/.test(code) && /listPageSlice\('sessions', rows\)/.test(code),
-    'the list shows a page, with live devices sorted first so the page is the useful end');
+  /* The paging moved inside your own group, which is the only one that
+     can run long -- the other people are one row each. Live devices
+     still sort first, so the page you get is the useful end. */
+  t.check(/sessions: 6/.test(src) && /listPageSlice\('sessions', mineRows\)/.test(src),
+    'your own devices are paged, since they are the ones that reach thirty-two');
+  t.check(/lsSortRows\(signedIn\.filter\(isMine\), now\)/.test(src),
+    'and sorted live-first, so the page shown is the useful end');
 }
 
 process.exit(t.done() ? 1 : 0);

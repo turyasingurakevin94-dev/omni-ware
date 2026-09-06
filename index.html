@@ -7150,6 +7150,45 @@
   .ls-tag.live{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
   .ls-tag.you{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
   .ls-tag.out{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+
+  /* ---- Signed in, grouped by PERSON -------------------------------
+     Fifty-eight rows of which thirty-two were the owner's own browser
+     buried the one question the panel exists for. A person is one row
+     however many devices they hold, and yours collapse to one line
+     however many there are. ------------------------------------------ */
+  .ls-answer{margin:0;padding:10px 12px;font-size:12.5px;color:var(--ink-soft);
+    line-height:1.5;max-width:var(--ow-measure);}
+  .ls-answer b{color:var(--ink);font-weight:600;}
+  .ls-grp{display:flex;align-items:baseline;gap:8px;font-size:11px;font-weight:600;
+    letter-spacing:0.09em;text-transform:uppercase;color:var(--ow-ink-400);
+    padding:12px 12px 4px;background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule-soft);}
+  .ls-grp-n{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:0;}
+  .ls-p{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    gap:10px;width:100%;min-height:52px;padding:7px 12px;
+    border-top:1px solid var(--ow-rule-soft);}
+  .ls-p:hover{background:var(--ow-paper-2);}
+  .ls-p:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .ls-p.is-open{background:var(--ow-paper-2);}
+  .ls-p-cv{width:11px;height:11px;flex:none;color:var(--ow-ink-400);fill:none;
+    stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ls-p.is-open .ls-p-cv{transform:rotate(90deg);}
+  .ls-p-b{flex:1;min-width:0;}
+  .ls-p-n{display:block;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3;}
+  .ls-p-m{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ls-x{padding:2px 12px 12px 33px;background:var(--ow-paper-2);}
+  .ls-x .ls-row{padding:9px 0;}
+  .ls-x-a{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;
+    border-top:1px solid var(--ow-rule-soft);}
+  /* The two bulk sign-outs and the purge, below the answer rather than
+     above it, and quiet: they are housekeeping, not the point. */
+  .ls-tidy:not(:empty){border-top:1px solid var(--ow-rule-soft);}
+  .ls-tidy .ls-tidy-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:10px 12px;}
+  .ls-tidy .ls-tidy-note{font-size:11px;color:var(--ink-soft);line-height:1.45;
+    max-width:var(--ow-measure);}
   .ln-addpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .ln-addpay input{flex:1 1 130px;min-width:0;}
   .ln-addpay .btn{flex:0 0 auto;}
@@ -17008,8 +17047,11 @@
                   Refresh
                 </button>
               </div>
-              <div class="ls-tidy" id="ls_tidy"></div>
               <div id="ls_list"></div>
+              <!-- Two bulk sign-outs and a purge used to lead this panel,
+                   so the first thing read on a security screen was the
+                   biggest commitment on it. They follow the answer now. -->
+              <div class="ls-tidy" id="ls_tidy"></div>
               <div id="ls_more"></div>
               <p class="ow-mini">Every phone and computer signed in to this shop, and when it was last heard from. Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
             </div>
@@ -42306,60 +42348,147 @@ async function loadLoginSessions(){
   renderLoginSessions();
 }
 
+/* Which group is open. One at a time, and closed by default: the panel
+   answers its question without opening anything. */
+let lsOpenGroup = null;
+
+/* THE QUESTION THIS PANEL ANSWERS is "is there a key to my shop I do
+   not recognise?" -- so it leads with whoever is NOT you, and your own
+   devices collapse to one line however many there are.
+
+   It said "58 devices" when 32 were signed in and 26 were signed-out
+   records kept as tombstones. A security panel that overstates by 81%
+   is worse than one that says nothing, and the number it overstated was
+   the only one anybody reads. */
 function renderLoginSessions(){
   const wrap = document.getElementById('ls_list');
   if(!wrap) return;
+  const tidy = document.getElementById('ls_tidy');
+  const more = document.getElementById('ls_more');
   if(lsRows === null){
     wrap.innerHTML = '<div class="ow-empty">Could not read the signed-in devices. Only an owner or admin can see them.</div>';
+    if(tidy) tidy.innerHTML = '';
+    if(more) more.innerHTML = '';
     if(typeof renderPresetIndex === 'function') renderPresetIndex();
     return;
   }
   const now = Date.now();
   const mine = typeof owDeviceId === 'function' ? owDeviceId() : null;
   const myUser = currentUser ? currentUser.id : null;
-  const rows = lsSortRows(lsRows, now);
-  const tidy = document.getElementById('ls_tidy');
-  const more = document.getElementById('ls_more');
-  if(!rows.length){
+
+  /* A signed-out record is not a device that is signed in, and the two
+     were being counted as one thing. */
+  const signedIn = lsRows.filter(r=> !r.revoked_at);
+  const kept = lsRows.filter(r=> r.revoked_at);
+  const isMine = (r)=> String(r.user_id) === String(myUser);
+  const mineRows = lsSortRows(signedIn.filter(isMine), now);
+  const otherRows = signedIn.filter(r=> !isMine(r));
+  const liveOf = (rows)=> rows.filter(r=> lsIsLive(r, now)).length;
+
+  if(!lsRows.length){
     wrap.innerHTML = '<div class="ow-empty">Nothing signed in yet. Devices appear here the moment somebody signs in.</div>';
     if(tidy) tidy.innerHTML = '';
     if(more) more.innerHTML = '';
     if(typeof renderPresetIndex === 'function') renderPresetIndex();
     return;
   }
-  if(tidy) tidy.innerHTML = lsTidyBarHTML(rows, now);
-  if(more) more.innerHTML = listMoreButtonHTML('sessions', rows.length, 'devices');
-  // The Shop's index counts devices off the same read this list draws.
-  if(typeof renderPresetIndex === 'function') renderPresetIndex();
-  // Live devices sort first, so the page always shows what is online now.
-  wrap.innerHTML = listPageSlice('sessions', rows).map(r=>{
-    const isMe = mine && r.device_id === mine && String(r.user_id) === String(myUser);
+
+  /* ---- the answer, before the list ---- */
+  const byPerson = new Map();
+  otherRows.forEach(r=>{
+    const k = String(r.user_id);
+    if(!byPerson.has(k)) byPerson.set(k, []);
+    byPerson.get(k).push(r);
+  });
+  const people = [...byPerson.entries()].map(([k, rows])=> ({
+    key: k, rows: lsSortRows(rows, now), name: lsWhoName(rows[0], data.staff, myUser),
+    live: liveOf(rows), last: rows.map(r=> r.last_seen_at||'').sort().pop()
+  })).sort((a,b)=> b.live - a.live || String(b.last).localeCompare(String(a.last)));
+
+  const answer = people.length
+    ? `<p class="ls-answer"><b>${people.length} other ${people.length===1?'person is':'people are'} signed in</b>
+        on ${otherRows.length} device${otherRows.length===1?'':'s'}. Anyone you do not recognise is worth
+        signing out today &mdash; it keeps working until you do.</p>`
+    : `<p class="ls-answer"><b>Nobody but you is signed in.</b> All ${signedIn.length}
+        signed-in device${signedIn.length===1?' is yours':'s are yours'}${
+        liveOf(mineRows) ? `, ${liveOf(mineRows)} of them online now` : ''}.</p>`;
+
+  /* ---- a device inside an opened group ---- */
+  const deviceRow = (r)=>{
+    const me = mine && r.device_id === mine && isMine(r);
     const live = lsIsLive(r, now);
-    const seen = lsAgo(r.last_seen_at, now);
-    const since = lsAgo(r.started_at, now);
     return `<div class="ls-row">
       <div class="ls-main">
-        <div class="ls-who">${esc(lsWhoName(r, data.staff, myUser))}${
-          isMe ? '<span class="ls-tag you">This device</span>' : ''}${
-          r.revoked_at ? '<span class="ls-tag out">Signed out</span>'
-          : live ? '<span class="ls-tag live">Online</span>' : ''}</div>
-        <div class="ls-what">${esc(LS_APP_LABELS[r.app] || r.app)} · ${esc(r.label || 'Unknown device')}${
-          since ? ` · first seen ${esc(since)}` : ''}</div>
+        <div class="ls-who">${esc(LS_APP_LABELS[r.app] || r.app)} &middot; ${esc(r.label || 'Unknown device')}${
+          me ? '<span class="ls-tag you">This device</span>' : ''}${
+          live ? '<span class="ls-tag live">Online</span>' : ''}</div>
+        <div class="ls-what">${r.started_at
+          ? `first seen ${esc(fmtShortDate(String(r.started_at).slice(0,10)))}` : 'first seen — unknown'}</div>
       </div>
-      <div class="ls-when">${esc(seen || 'never')}</div>
-      ${r.revoked_at ? '' : `<button type="button" class="btn btn-ghost ls-revoke" data-id="${r.id}">Sign out</button>`}
+      <div class="ls-when">${esc(lsAgo(r.last_seen_at, now) || 'never')}</div>
+      <button type="button" class="btn btn-ghost ow-sm ls-revoke" data-id="${r.id}">Sign out</button>
     </div>`;
-  }).join('');
+  };
+
+  /* ---- one row per PERSON, because "cut off someone who has left" is
+     a question about a person and not about a browser ---- */
+  const personRow = (p)=>{
+    const open = lsOpenGroup === p.key;
+    const apps = [...new Set(p.rows.map(r=> LS_APP_LABELS[r.app] || r.app))].join(', ');
+    return `<button type="button" class="ls-p${open?' is-open':''}" data-ls-group="${esc(p.key)}">
+        <svg class="ls-p-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="ls-p-b">
+          <span class="ls-p-n">${esc(p.name)}${p.live ? '<span class="ls-tag live">Online</span>' : ''}</span>
+          <span class="ls-p-m">${p.rows.length} device${p.rows.length===1?'':'s'} &middot; ${esc(apps)} &middot; last heard from ${esc(lsAgo(p.last, now) || 'never')}</span>
+        </span>
+      </button>`
+      + (open ? `<div class="ls-x">${p.rows.map(deviceRow).join('')}
+        <div class="ls-x-a"><button type="button" class="btn btn-ghost ow-sm ls-signout-person" data-key="${esc(p.key)}">Sign ${esc(p.name)} out of all ${p.rows.length}</button></div>
+      </div>` : '');
+  };
+
+  /* ---- yours, collapsed however many there are ---- */
+  const youOpen = lsOpenGroup === 'you';
+  const myLive = liveOf(mineRows);
+  const myOthers = lsMyOtherRows(lsRows, myUser, mine).length;
+  const youRow = mineRows.length ? `<button type="button" class="ls-p${youOpen?' is-open':''}" data-ls-group="you">
+      <svg class="ls-p-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      <span class="ls-p-b">
+        <span class="ls-p-n">You${myLive ? '<span class="ls-tag live">Online</span>' : ''}</span>
+        <span class="ls-p-m">${mineRows.length} device${mineRows.length===1?'':'s'} signed in${
+          myLive ? `, ${myLive} online now` : ''} &middot; including the one you are using</span>
+      </span>
+    </button>`
+    + (youOpen ? `<div class="ls-x">${listPageSlice('sessions', mineRows).map(deviceRow).join('')}
+      ${listMoreButtonHTML('sessions', mineRows.length, 'of your devices')}
+      ${myOthers ? `<div class="ls-x-a"><button type="button" class="btn btn-ghost ow-sm" id="ls_signout_mine">Sign out my other ${myOthers} device${myOthers===1?'':'s'}</button></div>` : ''}
+    </div>` : '') : '';
+
+  wrap.innerHTML = answer
+    + (people.length ? `<div class="ls-grp">Who else is in<span class="ls-grp-n">${people.length}</span></div>`
+        + people.map(personRow).join('') : '')
+    + (mineRows.length ? `<div class="ls-grp">You<span class="ls-grp-n">${mineRows.length}</span></div>` + youRow : '');
+
+  /* ---- housekeeping, after the answer rather than before it ---- */
+  if(tidy) tidy.innerHTML = lsTidyBarHTML(lsRows, now);
+  if(more) more.innerHTML = '';
+  if(typeof renderPresetIndex === 'function') renderPresetIndex();
+
+  wrap.querySelectorAll('[data-ls-group]').forEach(btn=> btn.addEventListener('click', ()=>{
+    const k = btn.dataset.lsGroup;
+    lsOpenGroup = lsOpenGroup === k ? null : k;
+    renderLoginSessions();
+  }));
 
   wrap.querySelectorAll('.ls-revoke').forEach(btn=> btn.addEventListener('click', async ()=>{
     const row = lsRows.find(x=> String(x.id) === String(btn.dataset.id));
     if(!row) return;
-    const isMe = mine && row.device_id === mine && String(row.user_id) === String(myUser);
+    const me = mine && row.device_id === mine && isMine(row);
     /* Signing a device out is not the same as taking somebody's access
        away, and saying so is the difference between a shopkeeper who is
        protected and one who thinks they are. */
     if(!confirm(`Sign out ${lsWhoName(row, data.staff, myUser)} on ${row.label || 'this device'}?`
-      + (isMe ? '\n\nTHIS IS THE DEVICE YOU ARE USING. You will be signed out.' : '')
+      + (me ? '\n\nTHIS IS THE DEVICE YOU ARE USING. You will be signed out.' : '')
       + '\n\nIt stops within a minute. If they know the password they can sign in again — remove them from Staff to stop that.')) return;
     try {
       const { error } = await sb.from('login_sessions')
@@ -42370,6 +42499,22 @@ function renderLoginSessions(){
     } catch(e){
       toast('Could not sign that device out: ' + ((e && e.message) || e));
     }
+  }));
+
+  /* Everything one person holds, ended in one act -- which is what
+     "somebody has left" actually asks for. */
+  wrap.querySelectorAll('.ls-signout-person').forEach(btn=> btn.addEventListener('click', async ()=>{
+    const p = people.find(x=> x.key === btn.dataset.key);
+    if(!p) return;
+    if(!confirm(`Sign ${p.name} out of all ${p.rows.length} device${p.rows.length===1?'':'s'}?`
+      + '\n\nEach stops within a minute. If they know the password they can sign in again — remove them from Staff to stop that.')) return;
+    try {
+      const { error } = await sb.from('login_sessions')
+        .update({ revoked_at: new Date().toISOString() }).in('id', p.rows.map(r=> r.id));
+      if(error) throw error;
+      toast(`Signed ${p.name} out of ${p.rows.length} device${p.rows.length===1?'':'s'}`);
+      await loadLoginSessions();
+    } catch(e){ toast('Could not sign those out: ' + ((e && e.message) || e)); }
   }));
 
   const mineOut = document.getElementById('ls_signout_mine');
@@ -64366,11 +64511,15 @@ function renderPresetIndex(){
   if(momoEl) momoEl.textContent = momoState;
 
   /* null is "could not read", which is not "nothing signed in" -- the
-     same distinction renderLoginSessions draws, said the same way. */
+     same distinction renderLoginSessions draws, said the same way.
+
+     And a signed-OUT record is not a device that is signed in. Counting
+     the rows said "58 devices" on a shop with 32 signed in and 26
+     tombstones kept, on the one figure anybody actually reads. */
   const devices = (typeof lsRows === 'undefined' || lsRows === null)
-    ? null : lsRows.length;
+    ? null : lsRows.filter(r=> !r.revoked_at).length;
   const devWord = devices === null ? 'not read'
-    : `${devices} ${devices===1?'device':'devices'}`;
+    : `${devices} signed in`;
   const devEl = document.getElementById('pset_devices_n');
   if(devEl) devEl.textContent = devWord;
 
