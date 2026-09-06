@@ -46661,6 +46661,19 @@ const TELL_AFTER_CHASE_DAYS = 7;   // never inside a chase
 const TELL_RHYTHM_WITHIN = 3;      // "due" when their own gap lands this close
 const TELL_MIN_ORDERS = 3;         // a rhythm needs this many to be a rhythm
 const TELL_PRICE_DROP_PCT = 5;     // a price story needs a real fall
+/* AND A CEILING, because a fall can also be a lie.
+   The base under every derived price is the CHEAPEST supplier row on
+   file for that variant, and nothing on the way to the picture asks
+   whether that row is believable. One row typed per piece where the
+   rest are per carton, or a figure short a digit, becomes the lowest
+   and therefore becomes the price -- and the block that exists to say
+   "cheaper than you last paid" is the one place a wrong row is
+   guaranteed to surface, headline first, with the customer's own
+   receipt struck through beside it.
+   Hardware does not halve in a season. A price under this share of
+   what they paid days ago is not news about the market, it is news
+   about the row, so it goes to the shop by name and never to them. */
+const TELL_PRICE_FALL_CEILING_PCT = 40;
 const TELL_FIRST_SILENCE = 21;     // one order, then this long of nothing
 const TELL_SHOWN = 5;              // the queue shows this many, and says how many it did not
 const TELL_WORKED_DAYS = 14;       // "did it work" window
@@ -47315,7 +47328,11 @@ function briefPackText(pr){
   const packQty = pr ? Number(pr.packQty) || 0 : 0;
   const packUnit = pr ? String(pr.packUnit || '').trim() : '';
   const unit = pr ? String(pr.unit || '').trim() : '';
-  if(packQty > 0 && packUnit) return `${packQty} ${briefPlural(unit, packQty) || 'per'}/${packUnit}`;
+  /* A pack the shop counted but never named is still a pack. Saying
+     "Sold loose" of it contradicted the very star this picture prints
+     beside the unit to mark a trade quantity, and that contradiction
+     was the visible tell of a half-filled row. */
+  if(packQty > 0) return `${packQty} ${briefPlural(unit, packQty) || 'per'}/${packUnit || 'Pack'}`;
   return 'Sold loose';
 }
 
@@ -47331,18 +47348,28 @@ function briefGroups(c, habits){
      the trade the figure comes from is theirs and not the shop's
      default. Where nothing can be derived the line is left off rather
      than shown at a made-up figure. */
-  const rowFor = (productId, extra, variantIdx, qty)=>{
+  const leaveOff = (productId, variantIdx, name, why)=>{
+    dropped[why === 'noRule' ? 'noRule' : 'noPrice']++;
+    if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
+      dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
+        name, why });
+    return null;
+  };
+  const rowFor = (productId, extra, variantIdx, qty, lastPaid)=>{
     const p = productById(productId);
     if(!p) return null;
     if(!inStock(productId, variantIdx)) return null;
     const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
-    if(!px || px.price == null){
-      const why = (px && px.why) || 'noRow';
-      dropped[why === 'noRule' ? 'noRule' : 'noPrice']++;
-      if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
-        dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
-          name: productVariantLabel(p, variantIdx), why });
-      return null;
+    if(!px || px.price == null)
+      return leaveOff(productId, variantIdx, productVariantLabel(p, variantIdx),
+        (px && px.why) || 'noRow');
+    /* Against their own receipt, wherever there is one. A derived price
+       this far under what they actually paid is not a price. */
+    if(lastPaid > 0 && px.price < lastPaid * (1 - TELL_PRICE_FALL_CEILING_PCT / 100)){
+      const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+      return leaveOff(productId, variantIdx,
+        `${productVariantLabel(p, variantIdx)} (${f(px.price)} against ${f(lastPaid)} paid)`,
+        'checkRow');
     }
     const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
       ? variantLabel(p.variants[variantIdx].combo) : '';
@@ -47380,14 +47407,15 @@ function briefGroups(c, habits){
     if(h.sinceLast > TELL_PRICE_MEMORY_DAYS) return null;
     if((h.lastPrice - px.price) / h.lastPrice * 100 < TELL_PRICE_DROP_PCT) return null;
     return rowFor(h.productId, { was: Math.round(h.lastPrice), fall: h.lastPrice - px.price,
-      theirQty: h.typicalQty }, h.variantIdx, h.typicalQty);
+      theirQty: h.typicalQty }, h.variantIdx, h.typicalQty, h.lastPrice);
   }).filter(Boolean).sort((a, b)=> b.fall - a.fall));
 
   /* 2. WHAT THEY ALWAYS TAKE, biggest by what an order is worth. */
   take('usual', 'YOU USUALLY TAKE', habits.slice()
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))
     .map(h=>{
-      const row = rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty);
+      const row = rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty,
+        h.sinceLast <= TELL_PRICE_MEMORY_DAYS ? h.lastPrice : null);
       if(row && h.lastPrice && h.sinceLast <= TELL_PRICE_MEMORY_DAYS){
         /* Below what they paid: shown, whatever the size of the fall.
            Above it: recorded for the SHOP only -- a price list that
@@ -47533,6 +47561,7 @@ const BRIEF_LEFT_OFF = {
   outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   noRule: { head: 'no markup rule', fix: 'Set a markup on the product, or a shop default, under Pricing. A buying price is never shown to a customer.' },
+  checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
   belowCost: { head: 'the rule prices them UNDER what they cost you', fix: 'Raise the markup, or the price you are holding them at, before these go on anyone\u2019s list. Nothing is sent at a loss by accident.' },
 };
 function briefLeftOffHTML(pricing){
@@ -48284,6 +48313,7 @@ function tellingRailHTML(queue, held, score, toAsk){
       <div class="ow-sr"><span class="ow-sr-k">Due when a rhythm is within</span><span class="ow-sr-v">${TELL_RHYTHM_WITHIN} <span class="ow-u">days</span></span></div>
       <div class="ow-sr"><span class="ow-sr-k">A rhythm needs at least</span><span class="ow-sr-v">${TELL_MIN_ORDERS} <span class="ow-u">orders</span></span></div>
       <div class="ow-sr"><span class="ow-sr-k">A price story needs a fall of</span><span class="ow-sr-v">${TELL_PRICE_DROP_PCT}<span class="ow-u">%</span></span></div>
+      <div class="ow-sr"><span class="ow-sr-k">A fall past this is a bad row, not news</span><span class="ow-sr-v">${TELL_PRICE_FALL_CEILING_PCT}<span class="ow-u">%</span></span></div>
       <div class="ow-sr"><span class="ow-sr-k">A stage stops counting after</span><span class="ow-sr-v">${SITE_STAGE_STALE_DAYS} <span class="ow-u">days</span></span></div>
       <p class="ow-mini">These are the whole algorithm. There is no model behind them &mdash; at ${(data.customers||[]).length} customers the rules are more accurate than anything trained, and you can read why every row is here.</p>
     </div>
