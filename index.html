@@ -59359,19 +59359,6 @@ function cmpRenderViews(subjectId){
   }));
 }
 
-/* Products a buyer would actually weigh against this one: the same
-   category and subcategory, priced, and not the subject itself. Offered
-   rather than imposed -- a shop knows better than a category field which
-   two brands really compete. */
-function cmpRivalCandidates(subjectId){
-  const subject = data.products.find(p=> p.id === subjectId);
-  if(!subject) return [];
-  const pricedIds = new Set((data.prices||[]).map(r=> r.productId));
-  return (data.products||[]).filter(p=>
-    p.id !== subjectId && pricedIds.has(p.id)
-    && (p.category||'') === (subject.category||'')
-    && (p.subcategory||'') === (subject.subcategory||''));
-}
 function cmpRivalChipsHTML(subjectId){
   const subject = data.products.find(p=> p.id === subjectId);
   const candidates = cmpRivalCandidates(subjectId);
@@ -59540,7 +59527,7 @@ function renderCompare(){
           <p class="cmp-ans-l">Sell at</p>
           ${bestSell != null
             ? `<span class="cmp-ans-v">${esc(fmtUGX(Math.round(bestSell)))}<span class="cmp-ans-u">/ ${esc(unitWord)}</span></span>
-               <p class="cmp-ans-s">Cost <span class="cmp-f">${esc(fmtUGX(Math.round(best.purchasePrice)))}</span> plus this line’s ${esc(bestKind)} rule of <span class="cmp-f">${esc(markupRuleLabel(bestRule, bestKind, best.packQty))}</span>. You keep <span class="cmp-f">${esc(fmtUGX(Math.round(bestSell - best.purchasePrice)))}</span> a ${esc(unitWord)} — <b>${esc(String(keptPct))}%</b> of what the customer pays.</p>`
+               <p class="cmp-ans-s">Cost <span class="cmp-f">${esc(fmtUGX(Math.round(best.purchasePrice)))}</span> plus this line’s ${esc(bestKind)} rule of <span class="cmp-f">${esc(markupRuleLabelWithBasis(bestRule, bestKind, best.packQty))}</span>. You keep <span class="cmp-f">${esc(fmtUGX(Math.round(bestSell - best.purchasePrice)))}</span> a ${esc(unitWord)} — <b>${esc(String(keptPct))}%</b> of what the customer pays.</p>`
             : `<span class="cmp-ans-v cmp-ans-none">—</span>
                <p class="cmp-ans-s">No ${esc(bestKind)} markup rule on this line, so nothing here can suggest a price. Set one in Products and this figure fills itself in.</p>`}
         </div>
@@ -59721,7 +59708,20 @@ function cmpBindOpen(wrap){
 /* How a markup rule reads in a sentence. A rule is either a percentage
    of cost or a fixed amount added to it, and saying which is the
    difference between a price the owner can check and one they obey. */
-function markupRuleLabel(rule, kind, packQty){
+/* Named apart from markupRuleLabel(type, value, kind) above, and the
+   reason is not tidiness. Two top-level functions with one name is one
+   function: this one was declared second, so it won every call in the
+   file, and the six callers of the (type, value) form were handed a
+   TYPE STRING as their `rule`. 'percent'.type is undefined, so every one
+   of them rendered "+undefined%" -- on every product card, on the item
+   picker's price-rule line, on each variant caption and in both markup
+   placeholders. It shipped that way and no test saw it, because the test
+   that exercises markupRuleLabel extracts it by name from the source and
+   the extractor takes the FIRST match: it has been proving the function
+   the browser never ran.
+   This one takes a rule OBJECT and says what a fixed amount is added to,
+   which the other cannot do. Both are wanted; only the name was shared. */
+function markupRuleLabelWithBasis(rule, kind, packQty){
   if(!rule) return 'no rule';
   if(rule.type !== 'fixed') return '+' + rule.value + '%';
   /* A fixed wholesale rule is added to the PACK, which
