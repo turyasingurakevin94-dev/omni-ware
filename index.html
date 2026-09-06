@@ -3398,6 +3398,17 @@
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     font-size:11px;color:var(--ow-ink-600);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-tiers .icon{width:13px;height:13px;color:var(--ow-ink-400);flex:none;}
+  /* A statement ABOUT the two figures above it, so it sits between them
+     and the rest of the card rather than in the signal row, which is
+     for readings. Crimson because a figure that cannot be right is the
+     genuinely bad kind, not the cautionary kind: a shop quoting off it
+     is losing money on every unit while it stands. */
+  .pr-odd{display:flex;align-items:flex-start;gap:8px;margin:8px 12px 0;padding:8px 10px;
+    border-radius:var(--ow-r);background:var(--ow-crimson-soft);color:var(--ow-crimson);
+    font-size:11px;line-height:var(--ow-lh-snug);}
+  .pr-odd .icon{width:14px;height:14px;flex:none;margin-top:1px;}
+  .pr-odd-t{min-width:0;}
+  .pr-odd-t b{font-weight:600;}
   .pr-neq{display:inline-flex;align-items:center;gap:3px;color:var(--ow-amber-ink);font-weight:600;flex:none;}
   .pr-neq .icon{width:11px;height:11px;}
   .pr-act-t{display:none;}
@@ -3476,6 +3487,7 @@
     .pr-sup-n{white-space:normal;overflow:visible;flex:1 1 auto;}
     .pr-age{height:22px;font-size:12px;padding:0 8px;}
     .pr-tiers{font-size:12px;white-space:normal;}
+    .pr-odd{font-size:12px;padding:10px;}
     /* The acts: the two used on a call as full buttons on one line,
        the four marks as thumb-wide squares on the next. One template,
        ordered here. */
@@ -60108,6 +60120,132 @@ function priceNeedsReview(f){
   const past = f.ageDays === null || f.ageDays > f.limit;
   return past && f.volume > 0;
 }
+
+/* ---- A FIGURE THAT CANNOT BE RIGHT ----------------------------------
+   Everything this shop derives is built on the CHEAPEST row on file for
+   a line: rankedPriceRows sorts by it, the buying plan walks to it, a
+   quote is marked up from it, and a customer's picture prints it. So a
+   single mistyped row does not sit quietly being wrong -- it WINS, and
+   every screen downstream inherits it without a word.
+
+   It is always typing, and it always leaves evidence in the shop's own
+   books that the row can be held against:
+
+     - the row prices the line in a unit nothing else uses, so
+       "cheapest" is comparing a piece against a carton;
+     - the row is a fraction of what the shop ACTUALLY PAID for that
+       line, off its own purchase invoices -- money that moved, which is
+       stronger evidence than any quote;
+     - the row is a fraction of what every other supplier quotes for it.
+
+   NONE OF THIS IS A RULE ABOUT THE MARKET, and none of it deletes or
+   refuses anything. A supplier can genuinely be far cheaper, and a shop
+   that cannot record that has a worse registry than one that can. So
+   the row is NAMED -- on its card, in the rail, and at the moment it is
+   typed -- and the owner decides. The one thing that is not allowed is
+   silence. */
+const PRICE_ODD_SHARE_PCT = 40;
+const priceUnitKey = (s)=> String(s || '').trim().toLowerCase();
+/* The figure the ranking would actually use: the smaller of the two
+   sides, because that is the one that wins and therefore the one whose
+   being wrong costs something. */
+function priceRowRate(r){
+  const vals = [Number(r.wholesale), Number(r.retail)].filter(v=> Number.isFinite(v) && v > 0);
+  return vals.length ? Math.min(...vals) : null;
+}
+/* The middle figure, not the average: with two rows on a line and one
+   of them wrong, an average is dragged halfway to the fault and the
+   fault stops looking like one. */
+function priceMedian(nums){
+  const a = (nums || []).filter(n=> Number.isFinite(n) && n > 0).sort((x, y)=> x - y);
+  if(!a.length) return 0;
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+/* Two heads, because there are two different fixes: correct the unit,
+   or correct the figure. Four notes, because there are four different
+   pieces of evidence and the owner should be told which one caught it. */
+const PRICE_ODD_HEADS = {
+  unitSplitPaid: 'priced in a different unit from the invoices',
+  unitSplitPeers: 'priced in a different unit from every other quote',
+  underPaid: 'far below what you actually paid',
+  underPeers: 'far below every other quote',
+};
+/* The note is PLAIN TEXT. It is read in three places -- a card, a rail
+   and a toast at the moment of typing -- and only two of those are
+   HTML, so escaping is the caller's job wherever it is one. */
+function priceRowOddity(r, peersAll, paid){
+  const rate = priceRowRate(r);
+  if(rate == null) return null;   // no figure at all is a different fault
+  const uk = priceUnitKey(r.unit);
+  const share = PRICE_ODD_SHARE_PCT / 100;
+  const f = (n)=> fmtUGX(Math.round(n));
+  const per = r.unit ? ' a ' + r.unit : '';
+  const mine = (paid || []).find(p=> String(p.supplierId) === String(r.supplierId));
+
+  /* Their own invoices are in another unit. Nothing here can be
+     compared with anything -- not their history, not their peers -- and
+     the ranking is sorting the row anyway. */
+  if(mine && mine.unitSplit)
+    return { why: 'unitSplitPaid', rate,
+      note: `This quote is ${f(rate)}${per}, but ${mine.sname}’s own invoices bill it by the ${mine.unit || 'unknown unit'}. The two figures are not the same measurement, so nothing on this line can be ranked honestly until one of them is corrected.` };
+
+  /* Against money that actually moved. The only evidence a
+     single-supplier line has, and the strongest evidence any line has. */
+  const bills = (paid || []).filter(p=> !p.unitSplit && p.price > 0 && (!uk || !p.unit || p.unit === uk));
+  if(bills.length){
+    const mid = priceMedian(bills.map(p=> p.price));
+    if(mid > 0 && rate < mid * share){
+      const last = bills.slice().sort((a, b)=> String(b.date).localeCompare(String(a.date)))[0];
+      return { why: 'underPaid', rate, against: mid, pct: Math.round(rate / mid * 100),
+        note: `${f(rate)}${per} against the ${f(mid)} your own purchase invoices show — ${last.sname} billed ${f(last.price)} on ${fmtShortDate(last.date)}. This quote is ${Math.round(rate / mid * 100)}% of what money actually moved at.` };
+    }
+  }
+
+  const peers = (peersAll || []).filter(x=> x.id !== r.id && priceRowRate(x) != null);
+  const sameUnit = peers.filter(x=> priceUnitKey(x.unit) === uk);
+  if(sameUnit.length){
+    const mid = priceMedian(sameUnit.map(x=> priceRowRate(x)));
+    if(mid > 0 && rate < mid * share)
+      return { why: 'underPeers', rate, against: mid, pct: Math.round(rate / mid * 100),
+        note: `${f(rate)}${per} where the other ${sameUnit.length} quote${sameUnit.length === 1 ? '' : 's'} on this line sit${sameUnit.length === 1 ? 's' : ''} around ${f(mid)} — ${Math.round(rate / mid * 100)}% of them. Being the cheapest is the point of a registry; being a fifth of everybody is a keystroke.` };
+  }
+  /* Priced by something none of its peers price by. */
+  const otherUnits = [...new Set(peers.map(x=> priceUnitKey(x.unit)).filter(Boolean))];
+  if(uk && otherUnits.length && !otherUnits.includes(uk))
+    return { why: 'unitSplitPeers', rate,
+      note: `This quote is by the ${r.unit}; every other quote on this line is by the ${otherUnits.join(' or the ')}. The cheapest-wins ranking cannot tell those apart, so whichever unit is smaller wins on nothing but its name.` };
+  return null;
+}
+/* Every row on file, checked once. Built here rather than per card so
+   the purchase invoices are walked once a render instead of once a row. */
+function priceOddities(){
+  const byLine = new Map(), paidBy = new Map();
+  (data.prices || []).forEach(r=>{
+    const k = priceLineKey(r.productId, r.variantIdx);
+    if(!byLine.has(k)) byLine.set(k, []);
+    byLine.get(k).push(r);
+  });
+  (typeof supplierPriceSeries === 'function' ? supplierPriceSeries(todayISO()) : []).forEach(sr=>{
+    if(!sr.last) return;
+    const k = priceLineKey(sr.productId, sr.variantIdx);
+    if(!paidBy.has(k)) paidBy.set(k, []);
+    paidBy.get(k).push({ supplierId: sr.supplierId, price: sr.last.price, date: sr.last.date,
+      /* Already lower-cased by supplierPriceSeries, which is how two
+         spellings of one unit are told to be the same unit. Printed as
+         it is stored rather than title-cased back: inventing the casing
+         would be claiming to know how the shop wrote it. */
+      unit: priceUnitKey(sr.last.unit), unitSplit: !!sr.fileUnitSplit,
+      sname: sr.supplierName || supplierName(sr.supplierId) });
+  });
+  const out = new Map();
+  byLine.forEach((rows, k)=> rows.forEach(r=>{
+    const o = priceRowOddity(r, rows, paidBy.get(k) || []);
+    if(o) out.set(r.id, o);
+  }));
+  return out;
+}
+
 function priceReviewCandidates(){
   return data.prices
     .map(r=> priceReviewFacts({...r, pname: productVariantLabel(
@@ -60326,6 +60464,10 @@ const PRICE_AGE_BUCKETS = [
      ones matter", which is a different and much shorter list -- see
      priceNeedsReview. */
   { key:'review',  label:'Needs checking' },
+  /* Not an age either, and next to it because it leads to the same
+     desk. "Needs checking" is about a figure going stale; this is about
+     a figure that was never right. */
+  { key:'odd',     label:'Priced oddly \u2014 check these' },
   { key:'30',      label:'Over 30 days old' },
   { key:'90',      label:'Over 90 days old' },
   { key:'180',     label:'Over 6 months old' },
@@ -60339,7 +60481,7 @@ const PRICE_AGE_BUCKETS = [
    untestable. getFilteredPriceRows applies that one, where the data is
    already open. */
 function priceRowMatchesAge(r, ageFilter){
-  if(!ageFilter || ageFilter === 'review') return true;
+  if(!ageFilter || ageFilter === 'review' || ageFilter === 'odd') return true;
   const age = priceAgeDays(r.date);
   if(ageFilter === 'undated') return age === null;
   // An undated quote is never "older than N": it has no age to compare.
@@ -60385,6 +60527,16 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', a
   if(ageFilter === 'review'){
     const order = new Map(priceReviewCandidates().map((f,i)=> [f.row.id, i]));
     return rows.filter(r=> order.has(r.id)).sort((a,b)=> order.get(a.id) - order.get(b.id));
+  }
+  /* The same shape, for the same reason: deciding it needs the other
+     quotes on the line and the purchase invoices behind them, which is
+     more than a predicate over one row can see. Ordered by how far
+     under the evidence each one sits -- the worst keystroke first. */
+  if(ageFilter === 'odd'){
+    const odd = priceOddities();
+    return rows.filter(r=> odd.has(r.id))
+      .sort((a,b)=> (odd.get(a).pct == null ? -1 : odd.get(a).pct)
+                  - (odd.get(b).pct == null ? -1 : odd.get(b).pct));
   }
   rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id-a.id));
   return rows;
@@ -60694,7 +60846,7 @@ function buildPriceSignalIndex(groups){
       if(!cur || rank(x) < rank(cur) || (rank(x) === rank(cur) && x.theirs < cur.theirs)) rivals.set(k, x);
     });
   }
-  return { groups: byRow, paid, rivals };
+  return { groups: byRow, paid, rivals, odd: priceOddities() };
 }
 function priceCardHTML(r, tokens){
   const sig = prSignalIndex || { groups: new Map(), paid: new Map(), rivals: new Map() };
@@ -60747,6 +60899,14 @@ function priceCardHTML(r, tokens){
   if(askedDays != null && (!r.date || Date.parse(r.date + 'T00:00:00Z') < Date.parse(r.lastAskedAt))){
     sigs.push(`<span class="ow-sig" title="Asked on WhatsApp ${askedDays === 0 ? 'today' : askedDays + ' days ago'}; no reply recorded since">${mark(ICON_SEND)}<span class="ow-sig-m">asked ${askedDays === 0 ? 'today' : askedDays + ' d ago'} · no answer</span></span>`);
   }
+  /* Beside the two figures rather than in the signal row, because it is
+     a statement ABOUT those figures and not another reading alongside
+     them. It says the whole reason on the card: a chip the owner has to
+     hover to understand is a chip they will learn to ignore. */
+  const odd = sig.odd ? sig.odd.get(r.id) : null;
+  const oddNote = odd
+    ? `<div class="pr-odd">${ICON_WARN}<span class="pr-odd-t"><b>Check this — ${esc(PRICE_ODD_HEADS[odd.why] || 'this figure does not fit its evidence')}.</b> ${esc(odd.note)}</span></div>`
+    : '';
   const tiers = priceTierSummaryPart(r.tiers, r.unit, r.packUnit, r.packQty);
   const sku = r.supplierSku ? `<span class="prc-sku" title="This supplier's own code for it">${highlightTokens(r.supplierSku, tokens)}</span>` : '';
   const provMark = prov ? `<span class="pr-prov" title="${prov[1]}">${prov[0]}</span>` : '';
@@ -60765,6 +60925,7 @@ function priceCardHTML(r, tokens){
       <div><div class="ow-fig-l">Retail</div><div class="ow-fig ow-fig-lg${noRetail ? ' ow-fig-none' : ''}"${noRetail ? ' title="Retail never recorded"' : ''}>${fmtPriceCompact(r.retail, r.unit)}</div></div>
       ${standing ? `<div class="ow-figs-st">${standing}</div>` : ''}
     </div>
+    ${oddNote}
     ${tiers ? `<div class="pr-tiers" title="Volume pricing: ${esc(tiers)}">${ICON_LAYERS}${esc(tiers)}</div>` : ''}
     <div class="ow-sigs">${sigs.join('')}</div>
     <div class="ow-card-f">
@@ -60782,6 +60943,29 @@ function priceCardHTML(r, tokens){
    would use, the quotes that have gone longest unrepriced, and where
    every figure on the page came from. */
 function priceRailHTML(groups, rows){
+  /* WHICH LINES ARE WRONG TODAY, by name, first in the rail. A count
+     says something is wrong; only a list says where to go. Read from
+     the whole registry rather than from the filtered page, because a
+     search for "cement" must not report the shop as clean -- and said
+     so in as many words, so the number is never mistaken for a total. */
+  const oddAll = priceOddities();
+  const oddRows = (data.prices || []).filter(r=> oddAll.has(r.id))
+    .map(r=> ({ r, o: oddAll.get(r.id),
+      pname: productVariantLabel(data.products.find(p=> p.id === r.productId)
+        || { name: productName(r.productId) }, r.variantIdx),
+      sname: supplierName(r.supplierId) }))
+    .sort((a, b)=> (a.o.pct == null ? -1 : a.o.pct) - (b.o.pct == null ? -1 : b.o.pct));
+  const oddLines = new Set(oddRows.map(x=> priceLineKey(x.r.productId, x.r.variantIdx))).size;
+  const oddTop = oddRows.slice(0, 6).map(({ r, o, pname, sname })=>
+    /* The REASON on the second line, not the supplier: this line has
+       room for one truncating string and the owner already knows who
+       they buy from. Both names are in the title either way. */
+    `<div class="ow-sr ow-sr-2" title="${esc(sname)} — ${esc(o.note)}"><span class="ow-sr-k2"><b class="ow-sr-k2-t">${esc(pname)}</b><span class="ow-sr-k2-s">${esc(PRICE_ODD_HEADS[o.why] || 'does not fit its evidence')}</span></span><span class="ow-sr-v ow-bad">${o.pct != null ? esc(o.pct + '%') : esc(String(r.unit || '—'))}</span></div>`).join('')
+    + (oddRows.length > 6 ? `<div class="ow-sr"><span class="ow-sr-k">and ${oddRows.length - 6} more</span></div>` : '')
+    + (oddRows.length
+      ? `<p class="ow-mini">Across the whole registry, not just this page. Filter the list to <b>Priced oddly</b> to work through them. Nothing here is removed or refused — a supplier really can be much cheaper, and only you know which.</p>`
+      : `<p class="ow-mini">Every quote on file sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.</p>`);
+  const oddPan = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Prices to check</span><span class="ow-pan-n">${oddRows.length ? esc(`${oddRows.length} quote${oddRows.length === 1 ? '' : 's'} on ${oddLines} line${oddLines === 1 ? '' : 's'}`) : 'none today'}</span></div>${oddTop}</div>`;
   const priced = (groups || []).filter(g=> g.cheapestId != null);
   const top = priced.slice(0, 8);
   const cheapest = top.map(g=>{
@@ -60806,6 +60990,7 @@ function priceRailHTML(groups, rows){
       return `<div class="ow-sr">${icon}<span class="ow-sr-k">${label}</span><span class="ow-sr-v">${counts[k]}</span></div>`;
     }).join('');
   return `<div class="ow-side pr-rail">
+    ${oddPan}
     <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Cheapest in stock</span><span class="ow-pan-n">to buy one</span></div>${cheapest}<p class="ow-mini">In-stock quotes only, at one unit. Volume tiers can change the answer.</p></div>
     <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Longest unrepriced</span><span class="ow-pan-n">${aged.length} over ${PRICE_STALE_DAYS} days</span></div>${oldest}</div>
     <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Where the figures came from</span></div>${sources}</div>
@@ -61227,6 +61412,32 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     supplierSku: document.getElementById('pr_supplier_sku').value.trim(),
     tiers: prTiers.slice()
   };
+  /* CAUGHT AT THE KEYSTROKE, where it is one correction rather than a
+     week of quotes built on it. Asked, not refused: a supplier really
+     can be far cheaper, and a registry that cannot record that is worse
+     than one that can. But it is asked with the whole reason on screen,
+     so "yes" is a decision and not a reflex.
+
+     Checked against the row as it WOULD BE saved, and against the line
+     with this row's old version taken out of it, so an entry cannot be
+     measured against the very figure it is replacing. */
+  const peersNow = data.prices.filter(p=> p.productId === productId
+    && (p.variantIdx == null ? null : p.variantIdx) === variantIdx
+    && p.id !== editingPriceId && p.supplierId !== supplierId);
+  const paidNow = supplierPriceSeries(todayISO())
+    .filter(sr=> sr.productId === productId
+      && (sr.variantIdx == null ? null : sr.variantIdx) === variantIdx && sr.last)
+    .map(sr=> ({ supplierId: sr.supplierId, price: sr.last.price, date: sr.last.date,
+      unit: priceUnitKey(sr.last.unit),
+      /* This row's own unit is the one being typed, not the one on
+         file, so the split is recomputed against what is on screen. */
+      unitSplit: String(sr.supplierId) === String(supplierId)
+        ? priceUnitKey(record.unit) !== priceUnitKey(sr.last.unit) : !!sr.fileUnitSplit,
+      sname: sr.supplierName || supplierName(sr.supplierId) }));
+  const odd = priceRowOddity({ ...record, id: editingPriceId || -1 },
+    peersNow.concat([{ ...record, id: editingPriceId || -1 }]), paidNow);
+  if(odd && !confirm(`Check this figure before saving.\n\n${PRICE_ODD_HEADS[odd.why] || 'This figure does not fit its evidence'}: ${odd.note}\n\nEverything this shop quotes is built on the cheapest price on file, so this one would set the price on the buying plan, on quotes and on customers' price lists.\n\nSave it anyway?`)) return;
+
   if(editingPriceId){
     // Editing an entry through this form only touches the fields above --
     // its out-of-stock flag (toggled separately, on the price card) is

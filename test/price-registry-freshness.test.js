@@ -452,8 +452,21 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const pred = extractFunction(src, 'priceRowMatchesAge', 'index.html');
   t.check(!/priceNeedsReview|priceReviewFacts/.test(pred),
     'the age predicate reads only the row it was handed, never the shop around it');
-  t.check(/if\(!ageFilter \|\| ageFilter === 'review'\) return true;/.test(pred),
-    'and passes the worklist key through untouched rather than pretending to apply it');
+  /* Was pinned to the single literal `ageFilter === 'review'`. There is
+     a second non-age key now -- `odd`, the rows whose figure does not
+     fit the evidence around it -- and it is decided the same way, in
+     getFilteredPriceRows where the other quotes on the line and the
+     purchase invoices are already open. The assertion's MEANING is
+     unchanged and is what is pinned here instead: every key this
+     predicate cannot decide from one row alone passes straight through
+     rather than being half-applied. */
+  const worklistKeys = ['review', 'odd'];
+  worklistKeys.forEach(k=>{
+    t.check(new RegExp(`ageFilter === '${k}'`).test(pred),
+      `and passes the ${k} worklist key through untouched rather than pretending to apply it`);
+    t.check(new RegExp(`ageFilter === '${k}'[^\\n]*return true;`).test(pred),
+      `— through the same early return, so ${k} is never measured as an age`);
+  });
 }
 
 /* ---------- 10. asking one supplier ----------------------------------
