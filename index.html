@@ -22967,7 +22967,12 @@ function goToTab(tab){
   const railRow = document.querySelector(`#sidebar nav button[data-tab="${tab}"]`);
   if(railRow) railRow.scrollIntoView({block:'nearest'});
   document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
-  document.getElementById('tab-'+tab).style.display='block';
+  const shownSection = document.getElementById('tab-'+tab);
+  shownSection.style.display='block';
+  /* After the renders below, not before them: a header's "i" moves when
+     the row it sits in is filled, and a bubble clamped against the badge
+     the section booted with lands in the wrong place. */
+  requestAnimationFrame(()=> clampPageBubbles(shownSection));
   updateMobileTopbarTitle(tab);
   if(tab==='dashboard') renderDashboard();
   if(tab==='analysis') renderAnalysis();
@@ -23224,6 +23229,34 @@ function foldInstruction(title, notes, label){
    visibility rather than display and so still has a box -- the same
    reason .page-info-bubble is written that way in the first place. */
 const TIP_EDGE_GAP = 8;
+/* THE RESTING POSITION HAS TO FIT TOO.
+
+   placeInfoBubble clamps a bubble into the viewport as it OPENS, and
+   that was enough to make it readable. It was not enough for the page.
+   A closed bubble is visibility:hidden rather than display:none -- on
+   purpose, so it keeps a measurable box and does not jump on first
+   open -- and an absolutely positioned box still adds to the document's
+   scrollable width wherever it is left lying. So the resting position,
+   `left:-6px` from a badge that on a phone sits well right of centre,
+   pushed the document up to 135px wider than the screen: every converted
+   screen scrolled sideways into empty grey, with nothing out there to
+   explain why. Measured at 390 on Customers, Sales agents and Presets.
+
+   Same clamp, run when a screen appears and when the window changes
+   size, so the bubble is already inside the viewport before anybody
+   touches it. Bubbles inside a modal are skipped: those are placed
+   against the viewport on open, and a closed modal lays nothing out.
+
+   The check for a laid-out box is what keeps it honest -- a badge in a
+   hidden section measures zero and would be given a meaningless offset
+   that survives until the next open. */
+function clampPageBubbles(root){
+  (root || document).querySelectorAll('.page-info').forEach(info=>{
+    if(info.closest('.modal-body')) return;
+    if(!info.getClientRects().length) return;
+    placeInfoBubble(info);
+  });
+}
 function placeInfoBubble(info){
   const bubble = info.querySelector('.page-info-bubble');
   if(!bubble) return;
@@ -23721,6 +23754,15 @@ document.addEventListener('keydown', (e)=>{
 // The list is anchored to a control on the screen; if the screen moves
 // out from under it, it is pointing at nothing.
 window.addEventListener('resize', ()=>{ if(owSel.menu) owSelClose(); });
+/* A rotation or a dragged window edge changes the only figure the clamp
+   is computed from. Trailing, because the browser fires this per frame
+   while a window is being dragged and re-measuring every bubble on the
+   screen at that rate is work nobody asked for. */
+let bubbleClampTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(bubbleClampTimer);
+  bubbleClampTimer = setTimeout(()=> clampPageBubbles(), 120);
+});
 window.addEventListener('scroll', ()=>{ if(owSel.menu) owSelPlace(); }, true);
 
 /* ---------------- THE CALENDAR, DRAWN BY THE APP ----------------
