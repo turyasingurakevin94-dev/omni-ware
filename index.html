@@ -9721,6 +9721,14 @@
      comes later in the file and a single class would lose the tie on
      document order -- leaving the row shrunk to its buttons and pinned
      to the right of an open panel that is not a table row. */
+  /* Small enough to sit inside the value it qualifies, and never
+     mistaken for the figure itself. */
+  .tl-undo{all:unset;cursor:pointer;margin-left:var(--ow-sp-6);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);color:var(--ow-oxide-deep);
+    text-decoration:underline;text-underline-offset:2px;}
+  .tl-undo:hover{color:var(--ow-crimson);}
+  .tl-undo:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
   .ow-tbl-a.tl-acts{flex-wrap:wrap;justify-self:stretch;justify-content:flex-start;
     padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
 
@@ -43647,6 +43655,23 @@ function recordBriefSent(customerId, reason, productId, qty){
    still has a brief -- their one quantity and their one price -- which
    is the whole promise, and a customer with none gets the truth instead
    of an invented figure. */
+/* Takes back the most recent telling of a customer, and only if it was
+   written today. The fortnight rule is the whole reason the row exists,
+   so an owner who pressed Share and then never sent the thing has to be
+   able to say so -- but a record of what was told last month is not
+   theirs to rewrite, and the score that reads these rows would quietly
+   change if it were. */
+function undoBriefSent(customerId){
+  if(!briefsSentTable) return { ok:false, why:'The record of what was told needs one update — paste supabase/migrations/0091_briefs_sent.sql into the Supabase SQL editor and reload.' };
+  const rows = briefsSentAll();
+  const today = todayISO();
+  let at = -1;
+  rows.forEach((r, i)=> { if(String(r.customerId) === String(customerId) && r.sentOn === today) at = i; });
+  if(at < 0) return { ok:false, why:'Nothing was told today, so there is nothing to take back. A telling older than today stands.' };
+  rows.splice(at, 1);
+  saveData();
+  return { ok:true };
+}
 function customerBrief(customerId){
   const c = (data.customers||[]).find(x=> String(x.id) === String(customerId));
   if(!c) return null;
@@ -44315,11 +44340,19 @@ async function shareBrief(customerId){
     a.href = url; a.download = built.name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=> URL.revokeObjectURL(url), 4000);
-    toast('Saved the picture — attach it in WhatsApp and send it yourself.', 5000);
   }
   const rec = recordBriefSent(customerId, b.reason ? b.reason.key : 'hand',
     b.product ? b.product.id : '', b.qty);
-  if(!rec.ok) toast(rec.why, 6000);
+  if(!rec.ok){ toast(rec.why, 6000); }
+  else if(!shared){
+    /* Said plainly, because it is a claim about something the app did
+       not witness. The undo is NOT offered here: a toast is gone in
+       seconds and this one is read by somebody with a customer at the
+       counter. It lives in Held back, where they are now listed, for
+       as long as it is true. */
+    toast(`Saved the picture — attach it in WhatsApp and send it. ${
+      b.customer.name.split(/\s+/)[0]} is written down as told; undo that under Held back if it does not go.`, 9000);
+  }
   if(typeof renderTelling === 'function') renderTelling();
   if(typeof renderCustomers === 'function' && custViewId) renderCustomers('');
 }
@@ -44463,7 +44496,9 @@ function tellingRailHTML(queue, held, score, toAsk){
       <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${held.length}</span></div>
       ${held.length ? held.slice(0, 6).map(b=> `<div class="ow-sr">
         <span class="ow-sr-k">${esc(b.customer.name)}</span>
-        <span class="ow-sr-v${b.held.key === 'terms' || b.held.key === 'chased' ? ' ow-warn' : ''}">${esc(b.held.label)}</span></div>`).join('')
+        <span class="ow-sr-v${b.held.key === 'terms' || b.held.key === 'chased' ? ' ow-warn' : ''}">${esc(b.held.label)}${
+          b.held.key === 'told' && b.told && b.told.daysAgo === 0
+            ? ` <button type="button" class="tl-undo" data-tell="undo" data-cid="${esc(b.customer.id)}">Undo</button>` : ''}</span></div>`).join('')
         : '<p class="ow-mini">Nobody is being kept back.</p>'}
       <p class="ow-mini">Somebody you are chasing for money does not also get a picture of cement. They get the statement.</p>
     </div>
@@ -44773,6 +44808,12 @@ function customerBriefPanelHTML(customerId){
   const act = (name, id)=>{
     if(name === 'open'){ tellOpenId = tellOpenId === id ? null : id; renderTelling(); return; }
     if(name === 'share') return shareBrief(id);
+    if(name === 'undo'){
+      const r = undoBriefSent(id);
+      toast(r.ok ? 'Taken back. They are worth telling again.' : r.why, 6000);
+      renderTelling();
+      return;
+    }
     if(name === 'save') return saveBriefGif(id);
     if(name === 'account') return openCustomerStats(id);
   };
