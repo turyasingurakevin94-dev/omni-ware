@@ -43879,10 +43879,18 @@ function briefGroups(c, habits){
   /* 1. CHEAPER THAN THEY LAST PAID. Measured against what THEY paid,
         never against what the shop used to charge, and only while the
         memory of that price is recent enough to mean anything. */
+  /* THE SAME FLOOR THE QUEUE USES. A fall of a few hundred on sixty
+     thousand is true and it is not news; a block headed PRICE DOWN that
+     leads on one teaches the customer to stop reading the heading. The
+     constant is shared with briefReasonFor deliberately -- two
+     thresholds for the same word would drift apart within a month, and
+     a product that misses the floor is not dropped, it simply falls
+     through to the block below it. */
   take('price', 'PRICE DOWN', habits.map(h=>{
     const now = briefPriceNow(h.productId);
     if(now === null || !h.lastPrice || now >= h.lastPrice) return null;
     if(h.sinceLast > TELL_PRICE_MEMORY_DAYS) return null;
+    if((h.lastPrice - now) / h.lastPrice * 100 < TELL_PRICE_DROP_PCT) return null;
     return rowFor(h.productId, { was: Math.round(h.lastPrice), fall: h.lastPrice - now });
   }).filter(Boolean).sort((a, b)=> b.fall - a.fall));
 
