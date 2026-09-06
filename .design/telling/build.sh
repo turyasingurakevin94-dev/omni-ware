@@ -10,8 +10,11 @@ build(){ # out body extracss w h rail
     cat "$2"; echo '</div>'; echo '</x-dc>'; echo '</body>'; echo '</html>'; } > "$1"; echo "built $1"; }
 build Main.dc.html   body_main.html  "_extra_main.css _extra_tell.css" 1440 1560 1
 build SiteStage.dc.html body_stage.html "_extra_main.css _extra_tell.css" 660 440 0
-build Frame1.dc.html body_g1.html "_gif.css" 600 800 0
-build Frame2.dc.html body_g2.html "_gif.css" 600 800 0
-build Frame3.dc.html body_g3.html "_gif.css" 600 800 0
-build Frame4.dc.html body_g4.html "_gif.css" 600 800 0
+build Brief1.dc.html body_b1.html "_brief.css" 600 800 0
+build Brief2.dc.html body_b2.html "_brief.css" 600 800 0
+build Brief3.dc.html body_b3.html "_brief.css" 600 800 0
+build Brief4.dc.html body_b4.html "_brief.css" 600 800 0
+build BriefThin.dc.html body_bthin.html "_brief.css" 600 800 0
+build Relations.dc.html body_rel.html "_extra_main.css _extra_tell.css _rel.css" 1440 1240 1
+build Account.dc.html body_acct.html "_extra_main.css _extra_tell.css _rel.css" 1440 840 1
 build Phone.dc.html  body_phone.html "_phone.css _extra_main.css _extra_tell.css" 390 844 0
