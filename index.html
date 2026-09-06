@@ -9758,6 +9758,9 @@
     border-top:1px solid var(--ow-rule-soft);}
   .bf-n{grid-area:1/1;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bf-vr{display:block;font-style:normal;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bf-p{grid-area:1/2;font-size:var(--ow-t-11);color:var(--ow-ink-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bf-pu{grid-area:1/3;font-size:var(--ow-t-11);color:var(--ow-ink-600);
@@ -43959,7 +43962,9 @@ function briefGroups(c, habits){
       else dropped.noPrice++;
       return null;
     }
-    return Object.assign({ productId, name: briefShortName(p.name),
+    const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
+      ? variantLabel(p.variants[variantIdx].combo) : '';
+    return Object.assign({ productId, name: p.name, variant: vv,
       packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind }, extra || {});
   };
   const take = (key, head, rows)=>{
@@ -44405,7 +44410,7 @@ function briefFitNum(ctx, text, weight, px, maxW){
   let size = px;
   for(;;){
     ctx.font = `${weight} ${size}px ${BRIEF_MONO}`;
-    if(ctx.measureText(text).width <= maxW || size <= 18) return size;
+    if(ctx.measureText(text).width <= maxW || size <= 15) return size;
     size -= 1;
   }
 }
@@ -44424,7 +44429,7 @@ const BRIEF_MAST_H = 150, BRIEF_FOOT_H = 96;
 const BRIEF_GRP_H = 46, BRIEF_THEAD_H = 34;
 /* Column edges, left to right, inside the 34px margins. Money gets the
    two right-hand columns and never gives up its width. */
-const BRIEF_COLS = [34, 186, 286, 378, 478, 566], BRIEF_PAD = 10;
+const BRIEF_COLS = [34, 214, 306, 380, 484, 566], BRIEF_PAD = 10;
 
 function briefPaintList(ctx, fr){
   const W = BRIEF_W, H = BRIEF_H, f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
@@ -44490,9 +44495,16 @@ function briefPaintList(ctx, fr){
 
     ctx.textAlign = 'left';
     ctx.fillStyle = BRIEF_INK.navy;
-    const nm = briefClip(ctx, it.name, BRIEF_BODY, 15, C[1] - C[0] - BRIEF_PAD * 2, 12);
+    const nmW = C[1] - C[0] - BRIEF_PAD * 2;
+    const nm = briefClip(ctx, it.name, BRIEF_BODY, 15, nmW, 12);
     ctx.font = `600 ${nm.size}px ${BRIEF_BODY}`;
-    ctx.fillText(nm.text, cellL(0), mid + 5);
+    ctx.fillText(nm.text, cellL(0), it.variant ? mid - 2 : mid + 5);
+    if(it.variant){
+      ctx.fillStyle = BRIEF_INK.ink600;
+      const vt = briefClip(ctx, it.variant, BRIEF_BODY, 13, nmW, 11);
+      ctx.font = `${vt.size}px ${BRIEF_BODY}`;
+      ctx.fillText(vt.text, cellL(0), mid + 16);
+    }
 
     ctx.fillStyle = BRIEF_INK.ink600;
     const pk = briefClip(ctx, it.packing, BRIEF_BODY, 14, C[2] - C[1] - BRIEF_PAD * 2, 11);
@@ -44719,7 +44731,8 @@ function briefStripHTML(b){
         ? `<div class="bf-g${it.key === 'price' ? ' bf-g-good' : ''}">${esc(it.text)}
              <span class="bf-gh">${it.key === 'price' ? 'you save' : 'you take'}</span></div>`
         : `<div class="bf-r">
-            <span class="bf-n" title="${esc(it.name)}">${esc(it.name)}</span>
+            <span class="bf-n" title="${esc(it.name)}${it.variant ? ' — ' + esc(it.variant) : ''}">${
+              esc(it.name)}${it.variant ? `<i class="bf-vr">${esc(it.variant)}</i>` : ''}</span>
             <span class="bf-p">${esc(it.packing)}</span>
             <span class="bf-pu${it.side === 'wholesale' ? ' bf-tr' : ''}">${
               esc(it.unit || '—')}${it.side === 'wholesale' ? '*' : ''}</span>
@@ -58270,7 +58283,7 @@ function renderCompare(){
           <p class="cmp-ans-l">Sell at</p>
           ${bestSell != null
             ? `<span class="cmp-ans-v">${esc(fmtUGX(Math.round(bestSell)))}<span class="cmp-ans-u">/ ${esc(unitWord)}</span></span>
-               <p class="cmp-ans-s">Cost <span class="cmp-f">${esc(fmtUGX(Math.round(best.purchasePrice)))}</span> plus this line’s ${esc(bestKind)} rule of <span class="cmp-f">${esc(markupRuleLabel(bestRule, bestKind, best.packQty))}</span>. You keep <span class="cmp-f">${esc(fmtUGX(Math.round(bestSell - best.purchasePrice)))}</span> a ${esc(unitWord)} — <b>${esc(String(keptPct))}%</b> of what the customer pays.</p>`
+               <p class="cmp-ans-s">Cost <span class="cmp-f">${esc(fmtUGX(Math.round(best.purchasePrice)))}</span> plus this line’s ${esc(bestKind)} rule of <span class="cmp-f">${esc(markupRuleWords(bestRule, bestKind, best.packQty))}</span>. You keep <span class="cmp-f">${esc(fmtUGX(Math.round(bestSell - best.purchasePrice)))}</span> a ${esc(unitWord)} — <b>${esc(String(keptPct))}%</b> of what the customer pays.</p>`
             : `<span class="cmp-ans-v cmp-ans-none">—</span>
                <p class="cmp-ans-s">No ${esc(bestKind)} markup rule on this line, so nothing here can suggest a price. Set one in Products and this figure fills itself in.</p>`}
         </div>
@@ -58451,7 +58464,12 @@ function cmpBindOpen(wrap){
 /* How a markup rule reads in a sentence. A rule is either a percentage
    of cost or a fixed amount added to it, and saying which is the
    difference between a price the owner can check and one they obey. */
-function markupRuleLabel(rule, kind, packQty){
+/* Named apart from markupRuleLabel above deliberately: that one takes
+   the two raw fields off a product and falls back to the shop default;
+   this takes a resolved rule object and says what a fixed wholesale
+   figure is charged ON. They are different questions, and sharing a
+   name meant the later declaration answered both -- wrongly. */
+function markupRuleWords(rule, kind, packQty){
   if(!rule) return 'no rule';
   if(rule.type !== 'fixed') return '+' + rule.value + '%';
   /* A fixed wholesale rule is added to the PACK, which
