@@ -134,4 +134,86 @@ eq(unexpected.length, 0,
     'every one of them wraps an svg that carries the class which sizes it');
 }
 
+/* ---------- the hidden attribute, and the rule that outranks it ------ *
+ * [hidden]{display:none} lives in the BROWSER's stylesheet, which every
+ * author rule outranks. So a class that sets display and is toggled by
+ * the hidden attribute never hides, and nothing warns: the markup says
+ * hidden, the JS sets .hidden = true, and the element paints anyway.
+ *
+ * This file has been bitten three times.
+ *   .mp-empty      a 94% white sheet over the whole map, permanently --
+ *                  reported live as "the map is blurry, it's whitish".
+ *                  The tiles were loading; they were being read through
+ *                  it, and it cost a wrong diagnosis before the right
+ *                  one.
+ *   .ap-photo-chip the assistant panel saying "Photo ready to send" over
+ *                  an empty thumbnail whether or not one was attached --
+ *                  a screen looking like it was already carrying
+ *                  something it was not.
+ * Six other classes carry the companion rule longhand, which is the clue
+ * that this was always going to keep happening.
+ *
+ * THE RULE, and it is narrower than "sets display". What matters is what
+ * the class does when nothing else applies. A base rule of display:none
+ * -- .ow-q-x, which the queue component shows only via
+ * .ow-q.ow-open .ow-q-x -- hides the element on its own, so the
+ * attribute being inert costs nothing and the two mechanisms agree in
+ * both states (measured: a Compare Prices row opens to 193px and closes
+ * to none). The bug is a class whose base rule makes the element
+ * VISIBLE: then hidden is the only thing asked to hide it, and it
+ * cannot.
+ *
+ * So: a class that appears in the markup with a hidden attribute, and
+ * whose own rule sets display to anything other than none, needs its own
+ * [hidden] companion.
+ */
+{
+  /* Deliberate, and measured at both widths: .pr-tb-more is
+     display:contents on a desktop, which dissolves the wrapper so the
+     filters lay out as children of the toolbar -- there is no fold at
+     that width, so the attribute is inert BY DESIGN. Its real companion
+     lives in the phone media query, where the fold exists. Named here
+     rather than silently skipped, so the exemption has to be argued
+     again if anyone adds a second one. */
+  const DELIBERATE = new Set(['pr-tb-more']);
+
+  const unguarded = [];
+  let seen = 0;
+  APPS.forEach((app) => {
+    let text;
+    try { text = read(app); } catch (e) { return; }
+    /* Only the classes that PAINT by default. A base rule of
+       display:none needs no companion -- it is already hiding. */
+    const setsDisplay = new Set([...text.matchAll(/\n\s*\.([a-zA-Z0-9_-]+)\{([^}]*)\}/g)]
+      .filter((m) => {
+        const d = /(?:^|;)\s*display\s*:\s*([a-z-]+)/.exec(m[2]);
+        return d && d[1] !== 'none';
+      })
+      .map((m) => m[1]));
+    const guarded = new Set([...text.matchAll(/\.([a-zA-Z0-9_-]+)\[hidden\]/g)].map((m) => m[1]));
+    /* Every element in the static markup carrying a hidden attribute. */
+    [...text.matchAll(/<[a-z]+\b[^>]*\shidden(?=[\s>])[^>]*>/g)].map((m) => m[0]).forEach((tag) => {
+      const cls = /class="([^"]+)"/.exec(tag);
+      if (!cls) return;
+      seen += 1;
+      cls[1].split(/\s+/).forEach((c) => {
+        if (setsDisplay.has(c) && !guarded.has(c) && !DELIBERATE.has(c)) unguarded.push(`${app} → ${c}`);
+      });
+    });
+  });
+  t.check(seen >= 3, `elements written with a hidden attribute were found (${seen})`);
+  eq([...new Set(unguarded)].join(', '), '',
+    'every class that sets display and is toggled by the hidden attribute has its own [hidden] companion');
+
+  /* The companion has to come AFTER the rule it beats: equal specificity
+     means the later one wins, so written above it does nothing at all. */
+  const idx = read('index.html');
+  ['mp-empty', 'ap-photo-chip'].forEach((c) => {
+    const base = idx.indexOf(`.${c}{`);
+    const comp = idx.indexOf(`.${c}[hidden]{`);
+    t.check(base > -1 && comp > base,
+      `.${c}'s [hidden] companion is written after the rule it has to outrank`);
+  });
+}
+
 process.exit(t.done() ? 1 : 0);

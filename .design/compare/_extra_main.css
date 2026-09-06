@@ -1,0 +1,166 @@
+
+    /* ================= COMPARE PRICES — the console =================
+       Three moments open this screen: a buying decision at the desk, a
+       customer at the counter asking a price, and a rival product being
+       weighed. All three start with the same two facts — WHAT IT COSTS
+       and WHAT TO CHARGE — so those two are the answer band, and the
+       supplier ranking is the working underneath it. */
+
+    /* ---- the ask: one control, the width of the screen ----
+       This search IS the page. At 360px (today) it clips a product name
+       mid-glyph, and an <input> cannot ellipsis. It runs the full width
+       and the quantity sits beside it, because quantity CHANGES the
+       answer — a volume tier is exactly that. */
+    .ask{display:grid;grid-template-columns:minmax(0,1fr) 152px 172px;gap:10px;
+      align-items:end;margin-bottom:16px;}
+    .ask-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ask-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .ask-in{display:flex;align-items:center;gap:9px;height:44px;padding:0 12px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:14px;min-width:0;}
+    .ask-in svg{width:17px;height:17px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ask-in .val{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+    .ask-in .var{color:var(--ow-ink-600);font-weight:400;}
+    .ask-in .ph{color:var(--ow-ink-400);}
+    .ask-in .x{margin-left:auto;color:var(--ow-ink-400);flex:none;}
+    .ask-in.qty{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;}
+    .ask-in.qty .u{margin-left:auto;font-family:'Inter',sans-serif;font-size:12px;font-weight:400;
+      letter-spacing:0;color:var(--ow-ink-600);}
+    /* The unit is NOT decoration: 100 what. It is read off the priced
+       rows, so before a product is chosen it says so rather than sitting
+       blank. */
+    .ask-in.qty .u.none{color:var(--ow-ink-400);font-style:italic;}
+
+    /* ---- the two views, named ----
+       Ranking SUPPLIERS of one product and ranking PRODUCTS against each
+       other are different questions. Today ticking a chip silently swaps
+       one table for the other. Here they are two named tabs and the
+       chips live inside the second, where they belong. */
+    .vw{display:flex;align-items:center;gap:2px;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);padding:3px;
+      width:max-content;margin-bottom:14px;}
+    .vw span{display:flex;align-items:center;gap:7px;height:30px;padding:0 14px;
+      border-radius:var(--ow-r);font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .vw span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.10);}
+    .vw span .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-400);}
+    .vw span.on .n{color:var(--ow-ink-600);}
+    .vw svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the answer band ----
+       What to charge is first and largest, because two of the three
+       moments that open this screen are pricing moments and the sell
+       price is the sixth column of a six-column table today. Both
+       figures are INK: a price is a size, not a warning. */
+    .ans{display:grid;grid-template-columns:1.15fr 1fr 1fr;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;
+      margin-bottom:14px;}
+    .ans > div{padding:12px 18px 13px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ans > div:first-child{border-left:0;background:var(--ow-paper-2);}
+    .ans-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 5px;display:flex;align-items:center;gap:7px;}
+    .ans-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+      font-size:28px;font-weight:500;line-height:1.1;display:block;white-space:nowrap;}
+    .ans > div:not(:first-child) .ans-v{font-size:22px;}
+    .ans-v .ow-u{font-size:.46em;color:var(--ow-ink-400);margin-left:.4em;letter-spacing:0;font-weight:400;}
+    .ans-s{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.42;}
+    .ans-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ans-s .f{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    /* the one place a colour is earned: the price you keep against the
+       rule you set. Verdigris at or over, amber under. */
+    .ans-k{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .ans-k.good{color:var(--ow-verdigris);}
+    .ans-k.warn{color:var(--ow-amber-ink);}
+
+    /* ---- the supplier queue ---- */
+    .sq .ow-q-r{grid-template-columns:18px minmax(0,1.3fr) minmax(0,1fr) 112px 128px 84px;}
+    .sq-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      font-size:13px;font-weight:600;}
+    .sq-n2{display:flex;align-items:center;gap:7px;min-width:0;}
+    .sq-why{font-size:11px;color:var(--ow-ink-600);line-height:1.35;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sq-why b{font-weight:600;color:var(--ow-ink-900);}
+    .sq-v{text-align:right;white-space:nowrap;}
+    .sq-f{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;display:block;}
+    .sq-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;}
+    .sq-v.none .sq-f{color:var(--ow-ink-400);font-weight:500;}
+    .sq-age{text-align:right;font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+    .sq-age.stale{color:var(--ow-amber-ink);font-weight:600;}
+    .sq-age.nodate{color:var(--ow-ink-400);font-style:italic;}
+    .sq-hd{display:grid;grid-template-columns:18px minmax(0,1.3fr) minmax(0,1fr) 112px 128px 84px;
+      gap:10px;padding:7px 12px;border-bottom:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);}
+    .sq-hd span{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);white-space:nowrap;}
+    .sq-hd span.r{text-align:right;}
+
+    /* ---- the ladder, inside an open row ----
+       Today a supplier with four tiers shows ONE of them, as "40 more →
+       26,800". The ladder is what a wholesaler actually negotiates on,
+       so the whole of it is drawn, with the rung you are standing on
+       marked and the rungs above it reachable. */
+    .lad{margin:0 0 12px;}
+    .lad-h{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 7px;}
+    .lad-r{display:grid;grid-template-columns:112px 118px minmax(0,1fr);align-items:center;
+      gap:12px;padding:6px 10px;border-bottom:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);}
+    .lad-r:last-child{border-bottom:0;}
+    .lad-r.here{background:var(--ow-paper-2);box-shadow:inset 2px 0 0 var(--ow-steel-950);}
+    .lad-q,.lad-p{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:12px;font-weight:600;white-space:nowrap;}
+    .lad-p{text-align:right;}
+    .lad-n{font-size:11px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lad-n b{color:var(--ow-ink-900);font-weight:600;}
+    .lad-r.here .lad-n{color:var(--ow-ink-900);}
+
+    /* the three supporting figures inside an open row */
+    .ev{display:flex;align-items:stretch;margin:0 0 12px;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ev > div{padding:8px 16px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ev > div:first-child{border-left:0;}
+    .ev-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .ev-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;white-space:nowrap;display:block;}
+    .ev-v.warn{color:var(--ow-amber-ink);}
+    .ev-v.none{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--ow-ink-400);}
+
+    /* ---- the rail ---- */
+    .rl-h{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);padding:8px 12px 0;margin:0;}
+    .rk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;
+      gap:4px 10px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rk-n{font-size:12px;font-weight:500;min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .rk-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:12px;font-weight:600;white-space:nowrap;}
+    .rk-m{grid-column:1 / -1;font-size:11px;color:var(--ow-ink-600);line-height:1.4;margin:0;}
+    .rk-m .up{color:var(--ow-crimson);font-weight:600;}
+    .rk-m .dn{color:var(--ow-verdigris);font-weight:600;}
+
+    /* the account: what the screen read and what it could not judge */
+    .acct{padding:9px 12px 11px;font-size:11px;color:var(--ow-ink-600);line-height:1.55;
+      border-top:1px solid var(--ow-rule-soft);margin:0;}
+    .acct b{color:var(--ow-ink-900);font-weight:600;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* one caution, ranked, ABOVE the ranking rather than four stacked
+       notes between the verdict and the money */
+    .cau{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;
+      background:var(--ow-amber-faint);border-bottom:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-amber-ink);line-height:1.45;}
+    .cau svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .cau b{font-weight:600;}
+    .cau .sp{flex:1;}
+    .cau a{color:var(--ow-amber-ink);text-decoration:underline;white-space:nowrap;font-weight:600;}
+
+    .ow-q-x .cf-a{display:flex;gap:6px;flex-wrap:wrap;}
+    .cf{align-items:flex-start;}

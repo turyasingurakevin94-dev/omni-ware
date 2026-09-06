@@ -311,17 +311,27 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
     'so the strip cannot drift from the creditors list it summarises');
   t.check(/v > 0\.5/.test(sum),
     'and it counts a supplier as owing on the same 0.5 threshold the creditors list uses');
+  /* These were "the customers page's three, asked of the other side".
+     Customers is a console now and its strip asks four different
+     questions -- who bought in ninety days, what they paid, what the
+     shop kept, what is still owed -- so the suppliers strip is on its
+     own until that screen is converted too. The three figures are
+     pinned here because they are what this screen promises, not
+     because another screen happens to match. */
   t.check(/Total suppliers/.test(sum) && /Total you owe/.test(sum) && /Suppliers with a balance/.test(sum),
-    'the three figures are the customers page’s three, asked of the other side');
+    'the three figures are named for what they count');
   t.check(/renderSupplierSummary\(\);/.test(extractFunction(src, 'renderSuppliers', 'index.html')),
     'and it is rebuilt with the grid');
 
-  /* Named for what it is, not for the first screen that had one: both
-     directories carry this strip now. */
+  /* Named for what it is rather than for the first screen that had one
+     -- which was Customers, and Customers no longer draws it. The name
+     is left alone deliberately: renaming it to .sup-summary now would
+     be the same mistake in the other direction, and the suppliers
+     directory is the next screen due for the console anyway. */
   t.check(/\.dir-summary-row\{/.test(src) && !/cust-summary/.test(src),
-    'the strip’s classes are shared rather than prefixed for one of the two pages');
-  t.check(/id="supSummaryRow"/.test(src) && /id="custSummaryRow"/.test(src),
-    'with a row on each page');
+    'the strip’s classes stay unprefixed rather than being claimed by the one page left using them');
+  t.check(/id="supSummaryRow"/.test(src) && !/id="custSummaryRow"/.test(src),
+    'and only the suppliers page still carries a row — the customers strip is the layer’s now');
 }
 
 process.exit(t.done() ? 1 : 0);
