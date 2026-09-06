@@ -60446,7 +60446,26 @@ function priceRowOddity(r, peersAll, paid){
     }
   }
 
-  const peers = (peersAll || []).filter(x=> x.id !== r.id && priceRowRate(x) != null);
+  /* PEERS ARE THE ROWS IN THE RUNNING, and an out-of-stock row is not
+     one. rankedPriceRows has always left those out -- the buying plan
+     will not walk to a supplier who has none, and the registry card
+     says "not counted as cheapest" on its face -- but this check read
+     the whole line, so a quote nothing prices from was used as the
+     yardstick to accuse a quote everything prices from.
+
+     On this shop's books that named Shafik Katwe's sofa legs at 2,150 a
+     piece as the fault, measured against a Roto quote of 190,000 that
+     had been marked out of stock and was doing nothing at all. The
+     accusation ran the wrong way round AND rested on a row the app had
+     already agreed to ignore.
+
+     Both directions: an out-of-stock row is not judged either. It wins
+     nothing and misprices nothing while it is out, so a verdict on it
+     is noise -- and it returns to this check the moment it returns to
+     stock. What it IS still held to is its own supplier's invoices,
+     above: money that moved is true whatever the shelf says. */
+  if(r.outOfStock) return null;
+  const peers = (peersAll || []).filter(x=> x.id !== r.id && !x.outOfStock && priceRowRate(x) != null);
   const sameUnit = peers.filter(x=> priceUnitKey(x.unit) === uk);
   /* TWO QUOTES, AND NO WAY TO SAY WHICH IS WRONG.
      A median needs a middle. With one quote on either side there is no
@@ -60566,10 +60585,11 @@ function priceOddityReport(){
   const rows = (data.prices || []).filter(r=> odd.has(r.id))
     .map(r=> ({ r, o: odd.get(r.id) }))
     .sort((a, b)=> (a.o.pct == null ? -1 : a.o.pct) - (b.o.pct == null ? -1 : b.o.pct));
-  if(!rows.length) return `Prices to check — ${todayISO()}\nNothing. Every quote on file sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.`;
+  if(!rows.length) return `Prices to check — ${todayISO()}\nNothing. Every quote in stock sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.`;
   const by = {};
   rows.forEach(x=> { (by[x.o.why] = by[x.o.why] || []).push(x); });
   const out = [`Prices to check — ${todayISO()}`,
+    'Quotes marked out of stock are left out, the same as they are left out of the ranking.',
     `${rows.length} quote${rows.length === 1 ? '' : 's'} on ${new Set(rows.map(x=> priceLineKey(x.r.productId, x.r.variantIdx))).size} line${
       new Set(rows.map(x=> priceLineKey(x.r.productId, x.r.variantIdx))).size === 1 ? '' : 's'}, out of ${(data.prices || []).length} on file.`];
   Object.entries(by).forEach(([why, list])=>{
@@ -61371,7 +61391,7 @@ function priceRailHTML(groups, rows){
       ? `<p class="ow-mini">Across the whole registry, not just this page. Filter the list to <b>Priced oddly</b> to work through them.${
           fixable ? ` <b>${fixable}</b> of them ${fixable === 1 ? 'is' : 'are'} missing only a pack size your own books already record elsewhere — each of those is one tap on its card.` : ''
         } Nothing here is removed or refused — a supplier really can be much cheaper, and only you know which.</p>`
-      : `<p class="ow-mini">Every quote on file sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.</p>`);
+      : `<p class="ow-mini">Every quote in stock sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit. Quotes marked out of stock are left out of the comparison, the same as they are left out of the ranking.</p>`);
   const oddPan = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Prices to check</span><span class="ow-pan-n">${oddRows.length ? esc(`${oddRows.length} quote${oddRows.length === 1 ? '' : 's'} on ${oddLines} line${oddLines === 1 ? '' : 's'}`) : 'none today'}</span></div>${oddTop}${
     oddRows.length ? `<div class="pr-rail-act"><button type="button" class="btn btn-ghost ow-sm" onclick="copyPriceOddityReport()">${ICON_COPY}Copy the list</button></div>` : ''}</div>`;
   const priced = (groups || []).filter(g=> g.cheapestId != null);
