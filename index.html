@@ -43558,7 +43558,7 @@ function briefReasonFor(r, habits){
   if(asked){
     const stock = briefInStock(asked.product.id);
     return { key:'asked', chip:'They asked', tone:'ow-mg',
-      productId: asked.product.id, qty: null,
+      productId: asked.product.id, variantIdx: null, qty: null,
       weight: r.stats.average || 1,
       why: `Asked to be told about <b>${esc(asked.product.name)}</b>, and it is ${stock === null ? 'back on the shelf' : `on the shelf &mdash; <b>${f(stock)}</b>`}.` };
   }
@@ -43569,9 +43569,9 @@ function briefReasonFor(r, habits){
   if(due){
     const p = productById(due.productId);
     return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
-      productId: due.productId, qty: due.typicalQty,
+      productId: due.productId, variantIdx: due.variantIdx, qty: due.typicalQty,
       weight: due.typicalQty * (due.lastPrice || 0),
-      why: `Takes <b>${f(due.typicalQty)}</b> ${esc(p ? p.name : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
+      why: `Takes <b>${f(due.typicalQty)}</b> ${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
   }
 
   /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
@@ -43586,9 +43586,9 @@ function briefReasonFor(r, habits){
   if(cheaper){
     const p = productById(cheaper.h.productId);
     return { key:'price', chip:`Price down ${Math.round(cheaper.drop)}%`, tone:'ow-good',
-      productId: cheaper.h.productId, qty: cheaper.h.typicalQty,
+      productId: cheaper.h.productId, variantIdx: cheaper.h.variantIdx, qty: cheaper.h.typicalQty,
       weight: cheaper.h.typicalQty * cheaper.now,
-      why: `${esc(p ? p.name : '')} is <b>${f(cheaper.h.lastPrice - cheaper.now)}</b> cheaper than the <b>${f(cheaper.h.lastPrice)}</b> they paid on ${esc(fmtShortDate(cheaper.h.lastAt))} &mdash; and they take <b>${f(cheaper.h.typicalQty)}</b> at a time.` };
+      why: `${esc(p ? productVariantLabel(p, cheaper.h.variantIdx) : '')} is <b>${f(cheaper.h.lastPrice - cheaper.now)}</b> cheaper than the <b>${f(cheaper.h.lastPrice)}</b> they paid on ${esc(fmtShortDate(cheaper.h.lastAt))} &mdash; and they take <b>${f(cheaper.h.typicalQty)}</b> at a time.` };
   }
 
   /* 4. THEIR SITE MOVED. The one thing no figure in the books can do:
@@ -43607,7 +43607,7 @@ function briefReasonFor(r, habits){
       const p = want[0];
       const price = briefPriceNow(p.id, null, sized);
       return { key:'stage', chip:`Site: ${site.stage.label.toLowerCase()}`, tone:'ow-warn',
-        productId: p.id, qty: sized,
+        productId: p.id, variantIdx: null, qty: sized,
         weight: (sized || 1) * (price || 0),
         why: `Their site moved to <b>${esc(site.stage.label)}</b> ${site.ageDays} days ago, and they have bought nothing from ${esc(site.stage.buys.join(' or '))} since.` };
     }
@@ -43620,9 +43620,10 @@ function briefReasonFor(r, habits){
     const h = habits[0];
     if(inStock(h.productId)){
       const p = productById(h.productId);
-      return { key:'return', chip:'Came once', tone:'', productId: h.productId, qty: h.lastQty,
+      return { key:'return', chip:'Came once', tone:'', productId: h.productId,
+        variantIdx: h.variantIdx, qty: h.lastQty,
         weight: r.stats.sales,
-        why: `Bought once, ${r.stats.daysSinceLast} days ago &mdash; <b>${f(h.lastQty)}</b> ${esc(p ? p.name : '')} &mdash; and nothing since.` };
+        why: `Bought once, ${r.stats.daysSinceLast} days ago &mdash; <b>${f(h.lastQty)}</b> ${esc(p ? productVariantLabel(p, h.variantIdx) : '')} &mdash; and nothing since.` };
     }
   }
   return null;
@@ -43712,11 +43713,17 @@ function customerBrief(customerId){
      there is not, it is simply what they buy most, because a brief
      exists for everybody and "nothing to say" is not the same as
      "nothing they buy". */
-  const pick = reason ? reason.productId
-    : (habits.slice().sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0] || {}).productId;
+  const best = habits.slice().sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0];
+  const pick = reason ? reason.productId : (best || {}).productId;
+  const pickVar = reason ? (reason.variantIdx == null ? null : reason.variantIdx)
+    : (best ? best.variantIdx : null);
   const product = pick ? productById(pick) : null;
-  const habit = habits.find(h=> h.productId === pick) || null;
-  const priceNow = pick ? briefPriceNow(pick) : null;
+  /* Matched on BOTH, because a customer who buys two sizes of one thing
+     has two habits under one productId and the first is not necessarily
+     the one this reason is about. */
+  const habit = habits.find(h=> h.productId === pick
+    && (h.variantIdx == null ? null : h.variantIdx) === pickVar) || null;
+  const priceNow = pick ? briefPriceNow(pick, pickVar, (habit && habit.typicalQty) || null) : null;
   const qty = (reason && reason.qty) || (habit && habit.typicalQty) || null;
   /* "Your price" is a claim about THEM, so it is only made where the
      figure has not moved AND the memory of it is recent enough to mean
@@ -43746,7 +43753,7 @@ function customerBrief(customerId){
     .sort((a, b)=> (b.standing.key === 'agree') - (a.standing.key === 'agree'))
     .slice(0, 2) : [];
 
-  return { customer: c, row: r, habits, habit, reason, held, told,
+  return { customer: c, row: r, habits, habit, reason, held, told, pickVariant: pickVar,
     /* What the PICTURE carries: the whole list, in blocks. The single
        pick above stays because the queue row, the message and the
        reasoning are all about the one thing that put them on the list. */
@@ -44927,7 +44934,7 @@ function tellingRowHTML(b){
     <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(b.customer.name)}">${esc(b.customer.name)}</span>
       <span class="ow-tbl-s">${b.reason.why.replace(/<[^>]+>/g, '')}</span></div>
     <span class="tl-c-r"><span class="ow-cp ${b.reason.tone}"><span class="ow-cp-d"></span>${esc(b.reason.chip)}</span></span>
-    <div class="ow-tbl-c"><span class="ow-tbl-p">${esc(b.product ? b.product.name : '—')}</span>
+    <div class="ow-tbl-c"><span class="ow-tbl-p">${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '—')}</span>
       <span class="ow-tbl-s">${b.qty != null ? `${f(b.qty)} ${esc(b.product && b.product.unit || '')}` : 'no quantity on file'}${
         b.price != null ? ` &middot; ${f(b.price)}${b.sameAsTheirs ? ' &mdash; their price' : ''}` : ''}</span></div>
     <span class="ow-tbl-n">${b.row.stats.average ? `<span class="ow-fig">${f(b.row.stats.average)}</span><span class="ow-fig-b">UGX</span>` : '<span class="cu-dash">&mdash;</span>'}</span>
