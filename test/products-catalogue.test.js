@@ -17,6 +17,22 @@
  * So: one row per line, with the two missing facts -- what it costs to
  * buy, and how many are on the shelf -- in columns that line up.
  *
+ * ONE OF THOSE TWO HAS SINCE BEEN GIVEN BACK, deliberately and with the
+ * owner's decision behind it. Stock is Inventory's question, and
+ * Inventory answers it far better than a column here ever could: by lot,
+ * at what each lot cost, with what the shelf is worth and what has moved.
+ * A column on the register could only repeat the number and none of the
+ * reasoning, and it was taking width from the one column that must never
+ * be the thing that shrinks -- the name, since a clipped figure is a
+ * wrong figure and a clipped name is only a shorter one.
+ *
+ * What has NOT changed is the half that was the register's own: what a
+ * line costs to buy is still on every row, and the markup rules that
+ * turn it into a price are beside it. Nor is the removal silent -- the
+ * checks below pin the panel foot that names where stock went, because a
+ * figure that vanishes without a word is how somebody concludes the app
+ * has stopped counting.
+ *
  * The judgements pinned below:
  *
  *   the cheapest, not      a product with three suppliers has one price
@@ -180,11 +196,15 @@ const reset = () => {
 {
   const render = (/function renderProducts[\s\S]*?\n\}/.exec(code) || [''])[0];
 
-  t.check(/getStockQty/.test(code) && /productBestBuy/.test(code),
-    'the on-screen row carries stock and a buying price');
   const rowFn = (/function productLineHTML[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/getStockQty\(p\.id, idx\)/.test(rowFn), 'stock is read per line, variant included');
-  t.check(/productBestBuy\(p\.id, idx\)/.test(rowFn), 'and so is the price');
+  t.check(/productBestBuy\(p\.id, idx\)/.test(rowFn),
+    'the buying price is read per line, variant included');
+  /* And stock is NOT, which is the change: the row used to call
+     getStockQty(p.id, idx) beside it. Pinned as an absence so the column
+     cannot creep back without somebody reading the note at the top of
+     this file and deciding again. */
+  t.check(!/getStockQty/.test(rowFn),
+    'and stock is not read here at all — that is Inventory\'s question, answered there by lot');
 
   // The card grid is gone, and so are its builders.
   t.check(!/simpleCardHTML|variantCardHTML|variableEmptyCardHTML/.test(code),
@@ -244,13 +264,27 @@ const reset = () => {
   t.check(/class="pg-cols pg-r/.test(line) && /class="pg-c"/.test(line),
     'the row is a row and the card is a card, built side by side from the same figures');
 
-  // The two facts the rows were added for, still on both surfaces.
+  /* Of the two facts the rows were added for, the register keeps its own
+     and hands the other back to the screen that owns it. */
   t.check(/productBestBuy\(p\.id, idx\)/.test(line),
     'it still says what the thing costs to buy');
-  t.check(/getStockQty\(p\.id, idx\)/.test(line),
-    'and how many are on the shelf');
   t.check(/pgBuyBasis/.test(line) && /supplierName\(buy\.supplierId\)/.test(code),
     'and names the cheapest supplier, which the printed list has always carried');
+
+  /* NAMED RATHER THAN DROPPED. A column that disappears without a word
+     reads as an app that has stopped counting, so the foot of the panel
+     says where the figure lives now. This is the check that makes the
+     removal a decision rather than a loss. */
+  const render = (/function renderProducts[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/What is on the shelf is not here/.test(render) && /Inventory/.test(render),
+    'and the panel foot says where stock went, rather than letting a column vanish in silence');
+
+  /* Three money columns and one elastic name column: six grid tracks,
+     not seven. Pinned with the widths because the whole argument for the
+     row is that the figures line up, which stops being true the moment a
+     money column is allowed to be the flexible one. */
+  t.check(/\.pg-cols\{display:grid;grid-template-columns:34px minmax\(0,1fr\) 126px 112px 112px 22px;/.test(src),
+    'the register is three money columns wide, each fixed, with the name the only one that gives way');
 
   /* The figures line up, which is the whole argument for the row. Money
      is tabular and right-aligned, and the money columns are fixed while

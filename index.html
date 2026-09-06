@@ -3616,7 +3616,7 @@
   /* THE REGISTER. Seven columns; the four money ones are sized to their
      content and the name column is the one that gives way, because a
      clipped figure is not a shortened figure, it is a wrong one. */
-  .pg-cols{display:grid;grid-template-columns:34px minmax(0,1fr) 126px 112px 112px 64px 22px;
+  .pg-cols{display:grid;grid-template-columns:34px minmax(0,1fr) 126px 112px 112px 22px;
     column-gap:var(--ow-sp-12);align-items:center;
     padding:0 var(--ow-sp-12);box-sizing:border-box;width:100%;text-align:left;}
   .pg-th{height:28px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
@@ -54168,10 +54168,6 @@ function pgMoneyHTML(value, unit, basis){
     unit ? `<span class="pg-u">${esc(unit)}</span>` : ''}</span>${
     basis ? `<span class="pg-b" title="${esc(basis)}">${esc(basis)}</span>` : ''}</span>`;
 }
-function pgCountHTML(n, unit){
-  return `<span class="pg-v"><span class="pg-f${n > 0 ? '' : ' pg-dash'}">${esc(String(n))}</span>${
-    unit ? `<span class="pg-b" title="${esc(unit)}">${esc(unit)}</span>` : ''}</span>`;
-}
 function pgRuleBasis(f){
   if(!f.rule) return 'no rule';
   const label = markupRuleLabel(f.rule.type, f.rule.value).replace(/<[^>]+>/g, '');
@@ -54187,7 +54183,19 @@ function pgBuyBasis(buy){
 
 /* One line of the register. Desktop row and phone card come out of the
    SAME call, exactly as the work queue does, so the two can never end up
-   saying different things about the same product. */
+   saying different things about the same product.
+
+   WHY THERE IS NO STOCK COLUMN, since one was here and the rows were
+   originally introduced partly to carry it. Three of the four figures on
+   a line are this screen's own arithmetic -- what one costs to buy, and
+   what each markup rule makes of that. How many are on the shelf is
+   Inventory's, and Inventory answers it far better: by lot, at what each
+   lot cost, with what the shelf is worth and what has moved. A column
+   here could only ever repeat the number and none of the reasoning, and
+   it was competing for width with the one column that must never be the
+   thing that shrinks -- the name. The foot of the panel says where it
+   went, because a figure that disappears without a word is how somebody
+   concludes the app has stopped counting. */
 /* WHETHER THE ROW MARKS ARE WORTH DRAWING AT ALL.
 
    The house rule is that colour appears only where it means something,
@@ -54213,7 +54221,6 @@ function productLineHTML(r, tokens, marks=true){
   const buy = kind === 'variable-empty' ? {price:null, suppliers:0, supplierId:null}
                                         : productBestBuy(p.id, idx);
   const sell = productSellFigures(r, buy.price);
-  const qty = kind === 'variable-empty' ? null : getStockQty(p.id, idx);
   const variant = kind === 'variant' ? variantLabel(v.combo) : '';
   const unit = kind === 'variable-empty' ? '' : (productUnitLabel(p.id, idx) || '').toLowerCase();
   const where = [p.category, p.subcategory].filter(Boolean).join(' › ');
@@ -54227,10 +54234,11 @@ function productLineHTML(r, tokens, marks=true){
     where ? `<span class="pg-dot" aria-hidden="true">&middot;</span><span class="pg-t" title="${esc(where)}">${
       highlightTokens(where, tokens)}</span>` : ''}</span>`;
 
+  /* Three money columns, and all three are the register's own arithmetic:
+     what one costs to buy, and what each markup rule makes of that. */
   const money = pgMoneyHTML(buy.price, unit ? '/'+unit : '', pgBuyBasis(buy))
     + pgMoneyHTML(sell.wholesale.price, '', sell.wholesale.price == null ? '' : pgRuleBasis(sell.wholesale))
-    + pgMoneyHTML(sell.retail.price, '', sell.retail.price == null ? '' : pgRuleBasis(sell.retail))
-    + (qty == null ? pgMoneyHTML(null, '', '') : pgCountHTML(qty, unit ? esc(unit) : ''));
+    + pgMoneyHTML(sell.retail.price, '', sell.retail.price == null ? '' : pgRuleBasis(sell.retail));
 
   const row = kind === 'variant'
     ? `<button ${openAttrs} class="pg-cols pg-r pg-var">
@@ -54515,7 +54523,7 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
     + `<div class="pg-cols pg-th" aria-hidden="true">
         <span></span><span>Line</span><span class="r">Costs you <i>UGX</i></span>
         <span class="r">Wholesale <i>UGX</i></span><span class="r">Retail <i>UGX</i></span>
-        <span class="r">Shelf</span><span></span>
+        <span></span>
       </div>`
     + desktop.join('')
     + `<div class="pg-phone">${built.map(b=> b.card).join('')}</div>`
@@ -54524,7 +54532,9 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
         variants sit under the product they belong to. <b>Costs you</b> is what buying one costs at
         today&rsquo;s cheapest supplier; wholesale and retail are that cost with the markup rule
         applied, and each says which rule made it. A line missing either shows a dash and says
-        which &mdash; never a zero. Clicking a line opens its record, where it is also deleted.</p>`;
+        which &mdash; never a zero. Clicking a line opens its record, where it is also deleted.
+        What is on the shelf is not here: <b>Inventory</b> holds it, by lot and at what each lot
+        cost.</p>`;
 }
 // Prints exactly what the screen is listing, filters and all.
 //
