@@ -3569,6 +3569,224 @@
     .ow-q-cm .ow-thumb.ow-zoom{margin-right:var(--ow-sp-4);}
   }
 
+  /* ================= PRODUCTS, AS THE REGISTER ========================
+     The card grid is gone here for the same reason it went from
+     Inventory: 270px cards of unequal height meant no two figures ever
+     lined up, and a column of money that does not line up is unreadable
+     at a glance, which is the only way a catalogue is ever read. This
+     screen was converted to rows once for exactly that reason and then
+     converted back to cards to match the registry's look; the figures
+     lost the argument twice and win it here.
+
+     What the screen is FOR decided the rest. It is the register of
+     record -- you come to add a line, name it, categorise it,
+     photograph it, give it a markup rule -- so the first thing it says
+     is what is still unfinished, and every row opens its own record.
+     Reading the catalogue is what the printed catalogue and the item
+     picker are for.
+
+     Photographs stay, at 34px, because two boxes of nails look
+     identical in a list. They just stop leading: six empty photo frames
+     were the most prominent thing on the old screen.
+     ================================================================= */
+
+  .pg-acts{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  /* The basis and the catalogue button are one control, because the two
+     bases produce different money on the same paper: a wholesale sheet
+     handed to a walk-in undercharges every customer who reads it. */
+  .pg-basis{display:flex;align-items:stretch;height:28px;border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r);background:var(--ow-paper);}
+  .pg-basis select{border:0;background:none;font-family:inherit;font-size:var(--ow-t-12);
+    font-weight:600;color:var(--ow-ink-900);padding:0 var(--ow-sp-8);
+    border-right:1px solid var(--ow-rule-soft);min-width:0;}
+  .pg-basis .btn{border:0;border-radius:0;height:26px;}
+
+  /* THE SET-UP LINE. One line, present only when something is actually
+     unfinished. Not a banner over every figure: six card classes here
+     once carried the same red rail and signalled precisely nothing. */
+  .pg-fix{display:flex;align-items:center;gap:var(--ow-sp-10);margin-bottom:var(--ow-sp-12);
+    padding:var(--ow-sp-8) var(--ow-sp-12);background:var(--ow-amber-faint);
+    border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-lg);}
+  .pg-fix > svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--ow-amber-ink);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .pg-fix-t{font-size:var(--ow-t-12);color:var(--ow-amber-ink);line-height:var(--ow-lh-snug);min-width:0;}
+  .pg-fix-t b{font-weight:600;}
+  .pg-fix .btn{margin-left:auto;flex:none;}
+
+  /* THE REGISTER. Seven columns; the four money ones are sized to their
+     content and the name column is the one that gives way, because a
+     clipped figure is not a shortened figure, it is a wrong one. */
+  .pg-cols{display:grid;grid-template-columns:34px minmax(0,1fr) 126px 112px 112px 64px 22px;
+    column-gap:var(--ow-sp-12);align-items:center;
+    padding:0 var(--ow-sp-12);box-sizing:border-box;width:100%;text-align:left;}
+  .pg-th{height:28px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+  /* .04em, not the layer's .09em: a heading that carries its unit is
+     longer than one that does not, and a clipped COLUMN HEADING is the
+     one truncation this screen cannot afford -- "WHOLESALE U…" leaves
+     the reader guessing what the figures under it are denominated in. */
+  .pg-th span{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* The currency, said once per column instead of ninety-three times. */
+  .pg-th i{font-style:normal;font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+  .pg-th .r{text-align:right;}
+
+  /* The row IS the way in. One 52px target, no 28px pencil beside a 28px
+     bin: deleting a product happens inside its own record, which takes
+     every destructive control off a list you thumb through in a yard. */
+  .pg-r{min-height:52px;padding-top:7px;padding-bottom:7px;border:0;background:none;
+    font:inherit;color:inherit;cursor:pointer;
+    border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
+  .pg-r:last-of-type{border-bottom:0;}
+  .pg-r:hover{background:var(--ow-paper-2);}
+  .pg-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+
+  .pg-thumb{width:34px;height:34px;border-radius:var(--ow-r);overflow:hidden;flex:none;
+    background:var(--ow-steel-100);}
+  .pg-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* A line with no photograph says so with a mark, rather than drawing an
+     empty frame the size of a photograph. */
+  .pg-thumb.pg-none{background:var(--ow-paper);border:1px dashed var(--ow-rule);
+    display:flex;align-items:center;justify-content:center;}
+  .pg-thumb.pg-none svg{width:14px;height:14px;fill:none;stroke:var(--ow-steel-400);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* display:block is load-bearing, not tidiness: overflow and
+     text-overflow do nothing on an inline box, so without it the three
+     truncation declarations are decoration and a long name runs off the
+     card. Everything else that truncates here is a flex or grid child,
+     which the layout blockifies for free; this one is not. */
+  .pg-nm{display:block;min-width:0;font-size:var(--ow-t-13);font-weight:500;
+    line-height:var(--ow-lh-tight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pg-meta{display:flex;align-items:center;gap:6px;min-width:0;margin-top:3px;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pg-meta .pg-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pg-id{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
+    font-weight:500;color:var(--ow-ink-600);background:var(--ow-steel-050);
+    border-radius:var(--ow-r-sm);padding:1px 5px;flex:none;white-space:nowrap;}
+  .pg-dot{color:var(--ow-rule);flex:none;}
+
+  /* A variable product's own line carries no figures -- it is not
+     sellable itself. It says its name, ID, category and photograph once,
+     so the three variants under it need only say what differs. */
+  .pg-g{display:flex;align-items:center;gap:var(--ow-sp-12);padding:7px var(--ow-sp-12);
+    min-height:40px;box-sizing:border-box;background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);}
+  .pg-gn{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0;flex:none;max-width:40%;}
+  .pg-r.pg-var .pg-c1{padding-left:17px;position:relative;}
+  .pg-branch{position:absolute;left:3px;top:-9px;width:9px;height:22px;
+    border-left:1px solid var(--ow-rule);border-bottom:1px solid var(--ow-rule);
+    border-bottom-left-radius:4px;}
+  .pg-vlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
+    font-weight:500;color:var(--ow-ink-900);background:var(--ow-steel-050);
+    border-radius:var(--ow-r-sm);padding:1px 5px;flex:none;}
+
+  /* Figure, then unit, then basis, in that fixed relationship. */
+  .pg-v{text-align:right;white-space:nowrap;min-width:0;}
+  .pg-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:600;letter-spacing:-.02em;display:block;
+    line-height:var(--ow-lh-tight);white-space:nowrap;}
+  .pg-f .pg-u{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:400;
+    color:var(--ow-ink-600);margin-left:2px;letter-spacing:0;}
+  .pg-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:400;color:var(--ow-ink-600);line-height:var(--ow-lh-snug);margin-top:2px;
+    letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* A dash is not a zero. A zero would claim the line is free. */
+  .pg-f.pg-dash{color:var(--ow-ink-400);font-weight:500;}
+  .pg-go{width:16px;height:16px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;justify-self:end;}
+  .pg-r:hover .pg-go{stroke:var(--ow-ink-900);}
+
+  /* The rail: the shape of the catalogue, which the screen that owns the
+     category field has never once shown. Each row filters the register. */
+  .pg-cat{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;
+    column-gap:var(--ow-sp-8);padding:6px var(--ow-sp-12);width:100%;text-align:left;
+    border:0;border-bottom:1px solid var(--ow-rule-soft);background:none;font:inherit;
+    color:inherit;min-height:32px;cursor:pointer;}
+  .pg-cat:last-of-type{border-bottom:0;}
+  .pg-cat:hover{background:var(--ow-paper-2);}
+  .pg-cat.ow-on{background:var(--ow-paper-2);font-weight:600;}
+  .pg-cat-n{min-width:0;font-size:var(--ow-t-12);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pg-cat-n .pg-s{color:var(--ow-ink-600);font-size:var(--ow-t-11);font-weight:400;}
+  .pg-cat-c{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-600);}
+  /* Doors, not duplicates: each is a screen that already owns its half
+     of the set-up, named with how full it is and nothing copied. */
+  .pg-door{display:flex;align-items:center;gap:9px;padding:var(--ow-sp-8) var(--ow-sp-12);
+    width:100%;text-align:left;border:0;border-bottom:1px solid var(--ow-rule-soft);
+    background:none;font:inherit;color:inherit;font-size:var(--ow-t-12);min-height:36px;cursor:pointer;}
+  .pg-door:last-of-type{border-bottom:0;}
+  .pg-door:hover{background:var(--ow-paper-2);}
+  .pg-door > svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--ow-ink-600);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .pg-door-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pg-door-c{margin-left:auto;flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
+  .pg-phone{display:none;}
+  /* On the desk the five controls are one row. `display:contents` keeps
+     the wrapper out of the layout entirely, so folding on the phone is
+     the only thing it ever does. */
+  .pg-tb-more{display:contents;}
+  .ow-tb .btn.pg-filters-btn{display:none;}
+  .ow-bk.pg-dock{display:none;}
+
+  /* ---- 820px is a SWITCH, not a reflow -----------------------------
+     The desk job is working down the register deciding what still needs
+     setting up. The phone job is standing in front of the goods: WHICH
+     LINE IS THIS. So search leads, photographs lead again -- at 390px a
+     picture beats a column for telling 3 inch nails from 4 inch -- the
+     four selects fold behind one control, and the accent sits in the
+     thumb. No card carries a button; the card itself opens the record. */
+  @media (max-width:820px){
+    .pg-cols,.pg-g,.pg-th{display:none;}
+    .pg-phone{display:block;}
+    /* The header's three controls go; the phone carries its act in the
+       thumb instead, and the accent appears once per screen. */
+    .ow-ph .btn.pg-act{display:none;}
+    .pg-basis{display:none;}
+    .ow-bk.pg-dock{display:flex;}
+    /* Four selects stacked is 200px of chrome before the first product.
+       Search stays out, because naming a line IS the phone's job. */
+    .ow-tb .btn.pg-filters-btn{display:inline-flex;flex:0 0 auto;min-height:var(--ow-tap);}
+    .pg-tb-more{display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);flex:1 1 100%;}
+    .pg-tb-more[hidden]{display:none;}
+    .ow-tb .ow-f-in{min-height:var(--ow-tap);}
+    .ow-tb .ow-f-t{font-size:16px;}
+    .pg-fix{min-height:var(--ow-tap);font-size:var(--ow-t-13);}
+    .pg-fix-t{font-size:var(--ow-t-13);}
+    .pg-fix .btn{min-height:var(--ow-tap);}
+
+    .pg-c{display:flex;gap:var(--ow-sp-12);width:100%;text-align:left;padding:var(--ow-sp-12);
+      background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      font:inherit;color:inherit;margin-bottom:var(--ow-sp-10);cursor:pointer;}
+    .pg-c .pg-thumb{width:56px;height:56px;}
+    .pg-c .pg-thumb svg{width:20px;height:20px;}
+    .pg-cb{flex:1;min-width:0;}
+    .pg-c .pg-nm{font-size:15px;font-weight:600;}
+    .pg-c .pg-meta{font-size:var(--ow-t-12);margin-top:4px;}
+    .pg-cf{display:flex;margin-top:9px;padding-top:var(--ow-sp-8);
+      border-top:1px solid var(--ow-rule-soft);}
+    .pg-cg{flex:1;min-width:0;}
+    .pg-cg + .pg-cg{border-left:1px solid var(--ow-rule-soft);padding-left:var(--ow-sp-12);}
+    .pg-cl{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 2px;}
+    .pg-c .pg-f{font-size:15px;}
+    .pg-c .pg-b{font-size:var(--ow-t-12);}
+    .pg-cn{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:var(--ow-sp-8) 0 0;
+      line-height:var(--ow-lh-snug);}
+    /* The accent, once, in the thumb zone. Printing stays: the control
+       opens the sheet that asks retail or wholesale and which document,
+       rather than spending three controls of a 390px header on it. */
+    .pg-dock .ow-bk-a{min-width:0;}
+    /* .btn is content-box across the app, so flex sizes it 20px short of
+       what it paints and the accent runs off a 390px screen. Corrected
+       here rather than in the button, which forty other screens share. */
+    .pg-dock .btn{box-sizing:border-box;min-height:var(--ow-tap);font-size:15px;min-width:0;}
+    .pg-dock .btn-accent{flex:1 1 auto;}
+    .pg-dock .btn-ghost{flex:0 1 auto;border-color:var(--ow-steel-400);color:var(--ow-paper);}
+  }
+
   /* Movements: the count and the net effect of whatever is filtered, so
      the fifty-row cap is never mistaken for the whole answer. */
   .log-count{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
@@ -15178,72 +15396,87 @@
     </section>
 
     <!-- PRODUCTS -->
+    <!-- PRODUCTS -->
+    <!-- The register of record. It is where a line is set up and kept
+         right, so the first thing it says is what is still unfinished
+         and every row opens its own record. The card grid is gone: 270px
+         cards of unequal height meant no two figures ever lined up, and
+         a column of money that does not line up is unreadable at a
+         glance, which is the only way a catalogue is read. -->
     <section id="tab-products" style="display:none;">
-      <div class="page-head">
-        <h1>Products</h1>
-        <p>Your item catalog. Give each one a short ID — it's used to link prices to it.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Products</h1>
+        <p class="ow-ph-sub">Everything the shop sells, and whether each line is ready to sell.</p>
+        <p class="ow-ph-help">Your register of what you sell. A line is ready to sell when a supplier has priced it and a markup rule &mdash; its own, or the shop default &mdash; can turn that price into yours; anything missing either is counted and marked rather than left looking finished. Search takes the letters you would actually type. &ldquo;Costs you&rdquo; is what buying ONE costs at today&rsquo;s cheapest supplier, read from your own price book; the wholesale and retail figures beside it are that cost with the markup rule applied, and each says which rule made it. Clicking a line opens its record, where it is also deleted. Print this list prints exactly what is on screen, filters and all; the customer catalogue is a separate document with photographs and volume breaks, priced at whichever of your two markup rules you choose beside the button.</p>
+        <span class="ow-ph-sp"></span>
+        <button type="button" class="btn btn-ghost ow-sm pg-act" id="p_print_btn" title="Print the products currently listed">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>Print this list
+        </button>
+        <!-- The price basis is a choice, not a default, because the two
+             produce different money on the same paper: a wholesale
+             markup is normally the smaller one, so a shop that meant
+             retail and got wholesale undercharges every customer who
+             reads the sheet. Sits with the button so it is decided at
+             the moment of printing. -->
+        <div class="pg-basis">
+          <select id="p_catalogue_basis" title="Which of your markup rules sets the printed price">
+            <option value="retail" selected>Retail prices</option>
+            <option value="wholesale">Wholesale prices</option>
+          </select>
+          <button type="button" class="btn btn-ghost ow-sm" id="p_catalogue_btn" title="Print a customer catalogue — photos by category, then a price list, with volume breaks">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Catalogue
+          </button>
+        </div>
+        <button type="button" class="btn btn-accent ow-sm pg-act" id="p_add_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a product
+        </button>
       </div>
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">All products</h2>
-          <div class="btn-row" style="margin-top:0;">
-            <button class="btn btn-ghost btn-icon" id="p_print_btn" title="Print the products currently listed">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-              Print list
-            </button>
-            <!-- The price basis is a choice, not a default, because the
-                 two produce different money on the same paper: a
-                 wholesale markup is normally the smaller one, so a shop
-                 that meant retail and got wholesale undercharges every
-                 customer who reads the sheet. Sits with the button so it
-                 is decided at the moment of printing. -->
-            <div class="cat-basis">
-              <select id="p_catalogue_basis" title="Which of your markup rules sets the printed price">
-                <option value="retail" selected>Retail prices</option>
-                <option value="wholesale">Wholesale prices</option>
-              </select>
-              <button class="btn btn-ghost btn-icon" id="p_catalogue_btn" title="Print a customer catalogue — photos by category, then a price list, with volume breaks">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>
-                Catalogue
-              </button>
+
+      <div class="ow-tb">
+        <label class="ow-f ow-f-grow"><span class="ow-f-l">Search</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="p_search" placeholder="Name, variant, ID, code or the note on it" autocomplete="off"></span></label>
+        <button type="button" class="btn btn-ghost ow-sm pg-filters-btn" id="p_filters_btn" aria-expanded="false" aria-controls="p_tb_more">Filters</button>
+        <div class="pg-tb-more" id="p_tb_more" hidden>
+        <div class="ow-f"><span class="ow-f-l">Category</span><span class="ow-f-in"><select class="ow-f-sel" id="p_category_filter"><option value="">All categories</option></select></span></div>
+        <div class="ow-f searchable-select"><span class="ow-f-l">Supplier</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="p_supplier_filter_search" placeholder="All suppliers" autocomplete="off"></span>
+          <input type="hidden" id="p_supplier_filter">
+          <div class="suggestions" id="p_supplier_filter_suggestions"></div>
+        </div>
+        <!-- Was "Pricing", offering priced and not. There are three ways
+             a line can be unfinished and no price is only one of them,
+             so the filter asks the question the screen is actually for. -->
+        <div class="ow-f"><span class="ow-f-l">Set-up</span><span class="ow-f-in"><select class="ow-f-sel" id="p_priced_filter">
+          <option value="">Finished and not</option>
+          <option value="unready">Not ready to sell</option>
+          <option value="unpriced">No supplier price</option>
+          <option value="unruled">No markup rule</option>
+          <option value="unbuilt">No variants built</option>
+          <option value="nophoto">No photograph</option>
+          <option value="ready">Ready to sell</option>
+        </select></span></div>
+        <div class="ow-f"><span class="ow-f-l">Added</span><span class="ow-f-in">
+          <!-- Options are built in populateProductFilterDropdowns: the
+               "date not recorded" band is only offered when something
+               is actually in it. -->
+          <select class="ow-f-sel" id="p_added_filter"></select></span></div>
+        </div>
+      </div>
+
+      <div id="productsSummary"></div>
+      <div id="productsFix"></div>
+
+      <div class="ow-grid">
+        <div class="ow-stack">
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">The register</span>
+              <span class="ow-pan-n" id="productsListN"></span>
             </div>
-            <button class="btn btn-accent btn-icon" id="p_add_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Add product
-            </button>
+            <div id="productsTableWrap"></div>
           </div>
         </div>
-        <div class="p-toolbar">
-          <div class="search-bar p-toolbar-search"><input id="p_search" placeholder="Search products..."></div>
-          <div class="field p-toolbar-filter">
-            <label>Category</label>
-            <select id="p_category_filter"><option value="">All categories</option></select>
-          </div>
-          <div class="field p-toolbar-filter searchable-select">
-            <label>Supplier</label>
-            <input type="text" id="p_supplier_filter_search" placeholder="All suppliers" autocomplete="off">
-            <input type="hidden" id="p_supplier_filter">
-            <div class="suggestions" id="p_supplier_filter_suggestions"></div>
-          </div>
-          <div class="field p-toolbar-filter">
-            <label>Pricing</label>
-            <select id="p_priced_filter">
-              <option value="">Priced and not</option>
-              <option value="priced">Priced</option>
-              <option value="unpriced">Not priced yet</option>
-            </select>
-          </div>
-          <div class="field p-toolbar-filter">
-            <label>Date added</label>
-            <!-- Options are built in populateProductFilterDropdowns: the
-                 "date not recorded" band is only offered when something
-                 is actually in it. -->
-            <select id="p_added_filter"></select>
-          </div>
-        </div>
-        <div id="productsSummary"></div>
-        <div id="productsTableWrap"></div>
+        <aside class="ow-side" id="productsRail"></aside>
       </div>
+      <div id="productsDock"></div>
     </section>
 
     <!-- INVENTORY -->
@@ -53584,9 +53817,21 @@ function productRowsForList(filter='', categoryFilter='', supplierFilter='', pri
   /* Applied last, over the rows the other filters left, so "not priced
      in Roofing" means what it says. A line that cannot be priced yet
      falls out of BOTH sides rather than being quietly counted as
-     unpriced -- see productLineIsPriced. */
+     unpriced -- see productLineIsPriced; renderProducts says how many it
+     is holding back, because a row dropped silently is how somebody
+     concludes a product has gone missing.
+
+     The three unfinished states and the photograph are asked for by
+     name. "Ready to sell" is the whole of finished -- priced AND
+     ruleable -- which is not the same as the old "priced", so the two
+     original values keep their original meaning and stand beside it. */
   if(pricedFilter === 'priced')   return rows.filter(r=> productLineIsPriced(r) === true);
   if(pricedFilter === 'unpriced') return rows.filter(r=> productLineIsPriced(r) === false);
+  if(pricedFilter === 'ready')    return rows.filter(r=> productSetupFault(r) === null);
+  if(pricedFilter === 'unready')  return rows.filter(r=> productSetupFault(r) !== null);
+  if(pricedFilter === 'unruled')  return rows.filter(r=> productSetupFault(r) === 'unruled');
+  if(pricedFilter === 'unbuilt')  return rows.filter(r=> productSetupFault(r) === 'unbuilt');
+  if(pricedFilter === 'nophoto')  return rows.filter(r=> !productHasPhoto(r));
   return rows;
 }
 // How many lines the pricing filter is holding back, so a list narrowed
@@ -53612,24 +53857,6 @@ function productLinesNotPriceable(filter='', categoryFilter='', supplierFilter='
    One row per line, with the two facts that were missing -- what it
    costs to buy and how many are on the shelf -- in columns that line up
    down the page. */
-function productLineStats(rows){
-  let variants = 0, unpriced = 0, noStock = 0, unbuilt = 0;
-  rows.forEach(r=>{
-    // A variable product with no variants yet cannot be priced or
-    // stocked, so counting it as unpriced would report a setup step as a
-    // pricing gap.
-    if(r.kind === 'variable-empty'){ unbuilt++; return; }
-    if(r.kind === 'variant') variants++;
-    if(!productPriceRows(r.p.id, r.idx).length) unpriced++;
-    if(getStockQty(r.p.id, r.idx) <= 0) noStock++;
-  });
-  return {
-    lines: rows.length,
-    products: new Set(rows.map(r=> r.p.id)).size,
-    variants, unpriced, noStock, unbuilt,
-  };
-}
-
 // What it costs to buy one, from the same ranking the buying list uses,
 // so the catalogue and the buying trip cannot name different suppliers.
 function productBestBuy(productId, variantIdx){
@@ -53650,109 +53877,448 @@ function productBestBuy(productId, variantIdx){
   };
 }
 
-function productLineHTML(r, tokens){
+/* WHAT IS STOPPING THIS LINE FROM BEING SOLD, in one word or none.
+
+   Three faults, and they are ordered because clearing an earlier one
+   can reveal a later: a line with no variants has nothing to price, and
+   a line with no price has nothing to apply a rule to. A screen that
+   named the second fault first would send somebody to set a markup rule
+   on a product that cannot carry one.
+
+   A MISSING PHOTOGRAPH IS NOT ONE OF THEM, and that is the load-bearing
+   decision on this screen. It sells perfectly well without one -- only
+   the printed catalogue and the item picker are poorer for it. Most
+   shops have photographs on a minority of lines, so counting it as a
+   fault would mark most of the register amber and the mark would stop
+   being worth reading. It is counted in the strip and offered as a
+   filter; it is never chipped on a row. */
+function productSetupFault(row){
+  if(row.kind === 'variable-empty') return 'unbuilt';
+  if(!productPriceRows(row.p.id, row.idx).length) return 'unpriced';
+  /* Both rules, because a line priced on one side and not the other is
+     half-sellable and the screen should say so. effectiveMarkupRule
+     already falls back to the shop default, so this fires only when the
+     line has no rule AND the shop has set none -- which is exactly when
+     suggestedSellingPrice returns null and nothing can be quoted. */
+  if(!effectiveMarkupRule(row.p, row.idx, 'wholesale')
+     && !effectiveMarkupRule(row.p, row.idx, 'retail')) return 'unruled';
+  return null;
+}
+const PRODUCT_FAULTS = {
+  unpriced: 'no supplier price',
+  unruled:  'no markup rule',
+  unbuilt:  'no variants built',
+};
+function productHasPhoto(row){ return !!resolveProductImage(row.p, row.idx); }
+
+/* The two selling prices for a line, each with the rule that made it.
+
+   Derived, never invented: the cost is what productBestBuy already
+   ranked, and the rule is the one effectiveMarkupRule would apply --
+   the same pair the item picker and the catalogue price from, so this
+   screen cannot name a figure they would disagree with. Either missing
+   gives null, which the row draws as a dash. A zero here would claim
+   the line sells for nothing. */
+function productSellFigures(row, buyPrice){
+  const out = {};
+  ['wholesale','retail'].forEach(kind=>{
+    const rule = effectiveMarkupRule(row.p, row.idx, kind);
+    out[kind] = {
+      price: buyPrice == null ? null : suggestedSellingPrice(row.p, buyPrice, kind, row.idx, 0),
+      rule,
+      /* Whether the line sets this rule itself or falls through to the
+         shop's. The distinction has been computed on every quote since
+         effectiveMarkupRule was written and has never been on screen. */
+      own: !!rule && rule.source !== 'default',
+    };
+  });
+  return out;
+}
+
+const PG_ICON_PHOTO = '<svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>';
+const PG_ICON_OPEN = '<svg class="pg-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+function pgThumbHTML(p, variantIdx){
+  const src = resolveProductImage(p, variantIdx);
+  return src
+    ? `<span class="pg-thumb"><img src="${src}" alt=""></span>`
+    : `<span class="pg-thumb pg-none" title="No photograph on file">${PG_ICON_PHOTO}</span>`;
+}
+
+/* Figure, then unit, then basis, in that fixed relationship. The whole
+   value goes in a title as well, because the basis line truncates and a
+   supplier's name is what makes the figure checkable. */
+function pgMoneyHTML(value, unit, basis){
+  if(value == null){
+    return `<span class="pg-v"><span class="pg-f pg-dash">&mdash;</span>${
+      basis ? `<span class="pg-b" title="${esc(basis)}">${esc(basis)}</span>` : ''}</span>`;
+  }
+  /* fmtUGX carries the currency, which is right in a sentence and wrong
+     in a column: the heading says UGX once and the figure gets the room
+     back for its unit. Money never truncates, so the unit is what gives
+     way -- it is repeated in the heading and the basis, the figure is
+     not repeated anywhere. */
+  return `<span class="pg-v"><span class="pg-f">${esc(fmtUGX(Math.round(value)).replace(/\s*UGX$/, ''))}${
+    unit ? `<span class="pg-u">${esc(unit)}</span>` : ''}</span>${
+    basis ? `<span class="pg-b" title="${esc(basis)}">${esc(basis)}</span>` : ''}</span>`;
+}
+function pgCountHTML(n, unit){
+  return `<span class="pg-v"><span class="pg-f${n > 0 ? '' : ' pg-dash'}">${esc(String(n))}</span>${
+    unit ? `<span class="pg-b" title="${esc(unit)}">${esc(unit)}</span>` : ''}</span>`;
+}
+function pgRuleBasis(f){
+  if(!f.rule) return 'no rule';
+  const label = markupRuleLabel(f.rule.type, f.rule.value).replace(/<[^>]+>/g, '');
+  return f.own ? `${label} its own` : `default ${label}`;
+}
+/* How the cost was arrived at, short enough for a 126px column and
+   carrying the supplier because that is what makes it checkable. */
+function pgBuyBasis(buy){
+  if(buy.price == null) return '';
+  const who = supplierName(buy.supplierId) || 'unnamed supplier';
+  return `${buy.suppliers} ${buy.suppliers === 1 ? 'quote' : 'quotes'} · ${who}`;
+}
+
+/* One line of the register. Desktop row and phone card come out of the
+   SAME call, exactly as the work queue does, so the two can never end up
+   saying different things about the same product. */
+/* WHETHER THE ROW MARKS ARE WORTH DRAWING AT ALL.
+
+   The house rule is that colour appears only where it means something,
+   and a device that marks everything marks nothing -- six card classes
+   on this very screen once carried the same red rail and signalled
+   precisely nothing. A chip on a row is a DIFFERENTIATOR: it earns its
+   amber by saying "this line, not that one".
+
+   So when every listed line carries the identical single fault -- which
+   is exactly what a shop that has never set a markup rule sees, and what
+   the seeded book shows -- the chips say nothing the set-up line above
+   has not already said in a sentence, and thirty-one of them say it
+   thirty-one times. They stand down, and the line carries it alone. The
+   moment one line differs, they are all worth reading again. */
+function productMarksWorthDrawing(rows){
+  const faults = new Set(rows.map(productSetupFault));
+  return !(faults.size === 1 && [...faults][0] !== null);
+}
+
+function productLineHTML(r, tokens, marks=true){
   const { p, v, idx, kind } = r;
-  const unbuilt = kind === 'variable-empty';
-  const buy = unbuilt ? null : productBestBuy(p.id, idx);
-  const qty = unbuilt ? null : getStockQty(p.id, idx);
+  const fault = marks ? productSetupFault(r) : null;
+  const buy = kind === 'variable-empty' ? {price:null, suppliers:0, supplierId:null}
+                                        : productBestBuy(p.id, idx);
+  const sell = productSellFigures(r, buy.price);
+  const qty = kind === 'variable-empty' ? null : getStockQty(p.id, idx);
   const variant = kind === 'variant' ? variantLabel(v.combo) : '';
+  const unit = kind === 'variable-empty' ? '' : (productUnitLabel(p.id, idx) || '').toLowerCase();
+  const where = [p.category, p.subcategory].filter(Boolean).join(' › ');
+  const openAttrs = `type="button" data-product-open="${esc(p.id)}"${
+    idx == null ? '' : ` data-variant-idx="${idx}"`}`;
 
-  /* The old product card, on the same .price-card shell the registry
-     uses, so the two screens match.
+  const chip = fault
+    ? ` <span class="ow-cp ow-warn">${esc(PRODUCT_FAULTS[fault])}</span>`
+    : '';
+  const meta = `<span class="pg-meta"><span class="pg-id">${highlightTokens(p.id, tokens)}</span>${chip}${
+    where ? `<span class="pg-dot" aria-hidden="true">&middot;</span><span class="pg-t" title="${esc(where)}">${
+      highlightTokens(where, tokens)}</span>` : ''}</span>`;
 
-     It keeps the buy price and the stock count. Those were the reason
-     the cards became rows in the first place -- the note on the list
-     said the grid "showed neither what a thing costs to buy nor how
-     many are on the shelf" -- and dropping them again to match a look
-     was not what was asked for. */
-  return `<div class="price-card${unbuilt ? ' price-card-oos' : ''}">
-    <div class="prc-head">
-      <div class="prc-head-main">
-        ${productThumbHTML(p, idx)}
-        <div class="prc-title">
-          <div class="prc-name">${highlightTokens(p.name, tokens)}${
-            variant ? ` <span class="cat-variant">${highlightTokens(variant, tokens)}</span>` : ''}</div>
-          <div class="prc-meta">
-            <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
-            ${kind === 'variant' && v.sku ? `<span class="cat-sku">${highlightTokens(v.sku, tokens)}</span>` : ''}
-            ${p.category ? `<span class="pack-pill">${highlightTokens(p.category, tokens)}</span>` : ''}
-            ${p.subcategory ? `<span class="pack-pill">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
-          </div>
-        </div>
-      </div>
-      <div class="pc-actions">
-        <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${esc(p.id)}')">${ICON_EDIT}</button>
-        <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${esc(p.id)}')">${ICON_TRASH}</button>
-      </div>
-    </div>
+  const money = pgMoneyHTML(buy.price, unit ? '/'+unit : '', pgBuyBasis(buy))
+    + pgMoneyHTML(sell.wholesale.price, '', sell.wholesale.price == null ? '' : pgRuleBasis(sell.wholesale))
+    + pgMoneyHTML(sell.retail.price, '', sell.retail.price == null ? '' : pgRuleBasis(sell.retail))
+    + (qty == null ? pgMoneyHTML(null, '', '') : pgCountHTML(qty, unit ? esc(unit) : ''));
 
-    ${unbuilt
-      ? '<div class="prc-supplier"><span class="cat-flag">No variants set up yet</span></div>'
-      : `<div class="prc-prices">
-      <div class="prc-price-box">
-        <span>Costs you</span>
-        ${buy.price != null
-          ? `<b>${fmtUGX(Math.round(buy.price))}</b>`
-          : '<b class="cat-fig none">&mdash;</b>'}
-      </div>
-      <div class="prc-price-box">
-        <span>On the shelf</span>
-        <b class="${qty > 0 ? '' : 'cat-fig none'}">${qty}</b>
-      </div>
-    </div>
-    <div class="prc-summary">
-      ${buy.price != null
-        ? `${buy.suppliers} supplier${buy.suppliers===1?'':'s'} &middot; cheapest ${esc(supplierName(buy.supplierId))}`
-        : 'No price on file'}
-    </div>
-    <div class="cat-markup">
-      <div><span>W</span> <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue, 'wholesale')}</b></div>
-      <div><span>R</span> <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue, 'retail')}</b></div>
-    </div>`}
+  const row = kind === 'variant'
+    ? `<button ${openAttrs} class="pg-cols pg-r pg-var">
+        <span></span>
+        <span class="pg-c1"><span class="pg-branch" aria-hidden="true"></span>
+          <span class="pg-nm"><span class="pg-vlab">${highlightTokens(variant, tokens)}</span></span>
+          ${v.sku ? `<span class="pg-meta"><span class="pg-id">${highlightTokens(v.sku, tokens)}</span>${chip}</span>`
+                  : (chip ? `<span class="pg-meta">${chip}</span>` : '')}
+        </span>${money}${PG_ICON_OPEN}</button>`
+    : `<button ${openAttrs} class="pg-cols pg-r">
+        ${pgThumbHTML(p, idx)}
+        <span class="pg-c1">
+          <span class="pg-nm" title="${esc(p.name)}">${highlightTokens(p.name, tokens)}</span>
+          ${meta}
+        </span>${money}${PG_ICON_OPEN}</button>`;
+
+  // The phone card. Photograph leading again: at 390px a picture is the
+  // fastest way to tell 3 inch nails from 4 inch, which is the one place
+  // it beats a column. No button on it -- the card opens the record.
+  /* The variant goes in the meta line as its own chip, never appended to
+     the product name: three cards reading "Iron Sheets (28 gauge, plain)
+     — 2…" are three cards you cannot tell apart, and the length is the
+     only thing that distinguishes them. The name still truncates; the
+     variant never does. */
+  const cardMeta = kind === 'variant'
+    ? `<span class="pg-meta"><span class="pg-vlab">${highlightTokens(variant, tokens)}</span>${
+        v.sku ? `<span class="pg-id">${highlightTokens(v.sku, tokens)}</span>` : ''}${chip}${
+        where ? `<span class="pg-dot" aria-hidden="true">&middot;</span><span class="pg-t">${esc(where)}</span>` : ''}</span>`
+    : meta;
+  const card = `<button ${openAttrs} class="pg-c">
+    ${pgThumbHTML(p, idx)}
+    <span class="pg-cb">
+      <span class="pg-nm" title="${esc(p.name)}">${highlightTokens(p.name, tokens)}</span>
+      ${cardMeta}
+      ${(marks ? fault : productSetupFault(r))
+        ? `<p class="pg-cn">${esc(productFaultSentence(marks ? fault : productSetupFault(r)))}</p>`
+        : `<span class="pg-cf">
+            <span class="pg-cg"><span class="pg-cl">Costs you</span>${
+              pgMoneyHTML(buy.price, unit ? '/'+unit : '', '')}</span>
+            <span class="pg-cg"><span class="pg-cl">Retail</span>${
+              pgMoneyHTML(sell.retail.price, unit ? '/'+unit : '', '')}</span>
+          </span>
+          <p class="pg-cn">${esc(pgBuyBasis(buy))}${
+            sell.retail.price == null ? '' : ` · retail is ${pgRuleBasis(sell.retail)}`}</p>`}
+    </span></button>`;
+
+  return { row, card };
+}
+/* Said in a sentence on the phone, where there is room for it and no
+   column heading to lean on. */
+function productFaultSentence(fault){
+  return fault === 'unpriced' ? 'No supplier has priced it yet, so it cannot be quoted or catalogued.'
+    : fault === 'unruled' ? 'It has a cost but no markup rule — its own or the shop’s — so nothing can turn that cost into a price.'
+    : 'Sold in variants that have not been built yet, so there is nothing to price, stock or sell.';
+}
+
+/* Counts of what is LISTED, not of the whole catalogue: a strip that
+   ignored the filters would contradict the rows underneath it. */
+function productLineStats(rows){
+  const s = { lines: rows.length, products: new Set(rows.map(r=> r.p.id)).size,
+              variants: 0, unbuilt: 0, unpriced: 0, unruled: 0, photos: 0, notReady: 0 };
+  rows.forEach(r=>{
+    if(r.kind === 'variant') s.variants++;
+    if(productHasPhoto(r)) s.photos++;
+    const fault = productSetupFault(r);
+    if(fault){ s.notReady++; s[fault]++; }
+  });
+  return s;
+}
+
+/* The one thing this screen exists to tell you, decomposed so it can be
+   argued with: three causes, how many of each, and nothing at all on
+   screen when there is nothing in it. A count you cannot break down is a
+   badge, and a badge is not worth a line of a console. */
+function productFixLineHTML(s){
+  if(!s.notReady) return '';
+  const parts = [];
+  if(s.unpriced) parts.push(`${s.unpriced} ${s.unpriced===1?'has':'have'} no supplier price on file`);
+  if(s.unruled)  parts.push(`${s.unruled} ${s.unruled===1?'has':'have'} no markup rule, and no shop default to fall back on`);
+  if(s.unbuilt)  parts.push(`${s.unbuilt} ${s.unbuilt===1?'is':'are'} sold in variants that have not been built yet`);
+  const said = parts.length > 1
+    ? parts.slice(0,-1).join(', ') + ' and ' + parts[parts.length-1]
+    : parts[0];
+  return `<div class="pg-fix">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <span class="pg-fix-t"><b>${s.notReady} of ${s.lines} ${s.lines===1?'line is':'lines are'} not ready to sell.</b> ${esc(said)}.${
+      s.notReady === s.lines && parts.length === 1
+        ? ' Every line listed is in the same state, so this is said here rather than marked on each of them.'
+        : ''}</span>
+    <button type="button" class="btn btn-ghost ow-sm" id="p_show_unready">Show only these</button>
   </div>`;
 }
 
+/* The shape of the catalogue, which the screen that owns the category
+   field has never shown. Counts and a filter -- nothing here is a figure
+   copied from another screen. */
+function productCategoryRailHTML(rows, categoryFilter, marks=true){
+  const by = new Map();
+  rows.forEach(r=>{
+    const name = r.p.category || '';
+    if(!by.has(name)) by.set(name, { lines:0, notReady:0, subs:new Set() });
+    const e = by.get(name);
+    e.lines++;
+    if(productSetupFault(r)) e.notReady++;
+    if(r.p.subcategory) e.subs.add(r.p.subcategory);
+  });
+  if(!by.size) return '';
+  const list = [...by].sort((a,b)=> b[1].lines - a[1].lines || a[0].localeCompare(b[0]));
+  const body = list.map(([name, e])=> `<button type="button" class="pg-cat${
+      categoryFilter && categoryFilter === name ? ' ow-on' : ''}" data-product-cat="${esc(name)}">
+    <span class="pg-cat-n" title="${esc(name || 'Uncategorised')}">${esc(name || 'Uncategorised')}${
+      e.subs.size ? ` <span class="pg-s">&middot; ${e.subs.size} sub</span>` : ''}</span>
+    ${marks && e.notReady ? `<span class="ow-cp ow-warn">${e.notReady} to finish</span>` : '<span></span>'}
+    <span class="pg-cat-c">${e.lines}</span>
+  </button>`).join('');
+  const total = list.reduce((n,[,e])=> n + e.lines, 0);
+  const uncat = by.has('') ? by.get('').lines : 0;
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Categories</span><span class="ow-pan-n">${list.length}</span></div>
+    ${body}
+    <p class="ow-mini">The ${list.length === 1 ? 'one category' : `${list.length} categories`} add to
+      <b>${total}</b>, which is every line listed.${uncat
+        ? ` ${uncat} ${uncat===1?'has':'have'} no category and ${uncat===1?'is':'are'} named here as
+          <b>Uncategorised</b> rather than left out.`
+        : ''}</p>
+  </div>`;
+}
+
+/* Doors, not duplicates. Each of these is a screen that already owns its
+   half of the set-up; the rail says where it is and how full it is, and
+   copies not one figure from it. */
+function productSetupRailHTML(rows, s){
+  const quotes = new Set();
+  rows.forEach(r=> productPriceRows(r.p.id, r.idx).forEach(pr=> quotes.add(pr.id)));
+  const links = (data.productLinks || []).filter(l=> l.active !== false).length;
+  const units = (data.presetUnits || []).length;
+  const dW = shopDefaultMarkupRule('wholesale');
+  const dR = shopDefaultMarkupRule('retail');
+  const strip = (r)=> r ? markupRuleLabel(r.type, r.value).replace(/<[^>]+>/g, '') : null;
+  const own = rows.filter(r=> r.kind !== 'variable-empty'
+    && (effectiveMarkupRule(r.p, r.idx, 'wholesale') || {}).source
+       && (effectiveMarkupRule(r.p, r.idx, 'wholesale') || {}).source !== 'default').length;
+  const door = (tab, icon, label, count)=> `<button type="button" class="pg-door" data-product-door="${esc(tab)}">
+    ${icon}<span class="pg-door-n">${esc(label)}</span><span class="pg-door-c">${esc(String(count))}</span></button>`;
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">The rest of the set-up</span></div>
+    ${door('media', '<svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>', 'Photographs', s.photos)}
+    ${door('prices', '<svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>', 'Supplier quotes', quotes.size)}
+    ${door('pairings', '<svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="17" r="3.2"/><path d="M9.6 9.6l4.8 4.8"/></svg>', 'What goes with what', links)}
+    ${door('presets', '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h9"/></svg>', 'Units on file', units)}
+    <p class="ow-mini">${(dW || dR)
+      ? `The shop&rsquo;s default markup is <b>${esc(strip(dW) || 'none')} wholesale</b> and
+         <b>${esc(strip(dR) || 'none')} retail</b>. ${own
+           ? `${own} ${own===1?'line sets':'lines set'} a rule of its own instead.`
+           : 'Every line listed uses it.'}`
+      : `<b>No shop default markup is set.</b> Every line has to carry its own rule, and a line
+         with neither cannot be priced &mdash; which is what &ldquo;no markup rule&rdquo; marks below.`}</p>
+  </div>`;
+}
+
+/* AN EMPTY LIST HAS TO SAY WHICH EMPTINESS IT IS, because they mean
+   opposite things: nothing left to price is good news and nothing priced
+   yet is not, and "No products match your filters" said neither. One
+   sentence per set-up value, so adding a value to the filter without
+   adding its sentence here shows up as a generic message rather than
+   passing silently. */
+const PRODUCT_EMPTY_SAYS = {
+  priced:   'Nothing that matches has been priced yet.',
+  unpriced: 'Every line that matches has a price on file.',
+  ready:    'Nothing that matches is ready to sell yet.',
+  unready:  'Every line that matches is ready to sell.',
+  unruled:  'Every line that matches has a markup rule — its own, or the shop default.',
+  unbuilt:  'Every line that matches has its variants built.',
+  nophoto:  'Every line that matches has a photograph on file.',
+};
 function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
   populateProductFilterDropdowns(categoryFilter, supplierFilter, addedFilter);
   const wrap = document.getElementById('productsTableWrap');
   const strip = document.getElementById('productsSummary');
+  const fix = document.getElementById('productsFix');
+  const rail = document.getElementById('productsRail');
+  const listN = document.getElementById('productsListN');
   const tokens = searchTokens(filter);
   const rows = productRowsForList(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter);
+  /* The rail and the strip describe the register, so they are computed
+     over everything the OTHER filters left -- narrowing to "no supplier
+     price" must not make the categories claim the shop sells nothing
+     else. The set-up filter is the only one held back. */
+  const wide = pricedFilter
+    ? productRowsForList(filter, categoryFilter, supplierFilter, '', addedFilter)
+    : rows;
 
-  const s = productLineStats(rows);
-  const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
-    <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
-  // Counts of what is LISTED, not of the whole catalogue: a strip that
-  // ignored the filters would contradict the rows underneath it.
-  strip.innerHTML = rows.length ? `<div class="sum-strip">
-    ${cell(s.products, s.products===1?'product':'products')}
-    ${s.variants ? cell(s.variants, 'variants') : ''}
-    ${cell(s.lines, s.lines===1?'sellable line':'sellable lines')}
-    ${cell(s.unpriced, 'without a price', s.unpriced ? 'warn' : '')}
-    ${cell(s.noStock, 'not on the shelf', s.noStock ? 'warn' : '')}
-    ${s.unbuilt ? cell(s.unbuilt, 'with no variants yet', 'warn') : ''}
+  const s = productLineStats(wide);
+  const tile = (value, label, sub, cls)=> `<div class="ow-mt${cls ? ' '+cls : ''}">
+    <p class="ow-mt-l">${esc(label)}</p><span class="ow-mt-v">${value}</span>
+    <p class="ow-mt-s">${sub}</p></div>`;
+  strip.innerHTML = s.lines ? `<div class="ow-strip">
+    ${tile(s.products, s.products === 1 ? 'Product' : 'Products',
+      `${s.lines} sellable ${s.lines===1?'line':'lines'}`)}
+    ${tile(s.variants || '&mdash;', 'Variants',
+      s.variants ? `under ${new Set(wide.filter(r=>r.kind==='variant').map(r=>r.p.id)).size} products`
+                 : 'nothing here is sold in options')}
+    ${tile(s.notReady, 'Not ready to sell',
+      s.notReady ? 'named on the line below, and marked' : 'every line can be quoted',
+      s.notReady ? 'ow-warn' : '')}
+    ${tile(`${s.photos}<span class="ow-u">of ${s.lines}</span>`, 'Photographs',
+      'the fastest way to tell two lines apart')}
   </div>` : '';
+
+  fix.innerHTML = pricedFilter ? '' : productFixLineHTML(s);
+
+  /* THE PHONE'S ONE ACT, in the thumb zone, hidden on the desk where the
+     header carries it. Printing stays, as it does on the desk -- the
+     control opens the same basis choice rather than spending three of a
+     390px header's controls on it. */
+  const dockEl = document.getElementById('productsDock');
+  if(dockEl) dockEl.innerHTML = `<div class="ow-bk pg-dock">
+    <span class="ow-bk-say"><b class="ow-bk-b">${s.lines} sellable ${s.lines===1?'line':'lines'}</b>${
+      s.notReady ? `, <span class="ow-bk-m">${s.notReady}</span> not ready to sell` : ', every one ready to sell'}</span>
+    <span class="ow-bk-a">
+      <button type="button" class="btn btn-ghost ow-sm" id="p_dock_print">Print</button>
+      <button type="button" class="btn btn-accent ow-sm" id="p_dock_add">Add a product</button>
+    </span></div>`;
+  const marksInRail = productMarksWorthDrawing(wide);
+  rail.innerHTML = s.lines
+    ? productCategoryRailHTML(wide, categoryFilter, marksInRail) + productSetupRailHTML(wide, s)
+    : '';
+  if(listN) listN.textContent = rows.length
+    ? `${rows.length} ${rows.length===1?'line':'lines'} · ${new Set(rows.map(r=>r.p.id)).size} products`
+    : '';
 
   /* A line that cannot be priced yet is in neither half, so a list
      narrowed to one of them has to say what it is holding back. Dropping
      rows silently is how somebody concludes a product has gone missing. */
-  const held = pricedFilter ? productLinesNotPriceable(filter, categoryFilter, supplierFilter) : 0;
+  const held = (pricedFilter === 'priced' || pricedFilter === 'unpriced')
+    ? productLinesNotPriceable(filter, categoryFilter, supplierFilter) : 0;
   const heldNote = held
-    ? `<div class="p-filter-note">${held} ${held===1?'line has':'lines have'} no variants set up yet,
-       so ${held===1?'it is':'they are'} in neither list — ${held===1?'it':'they'} cannot be priced until
-       the variants exist.</div>`
+    ? `<p class="ow-mini">${held} ${held===1?'line has':'lines have'} no variants set up yet,
+       so ${held===1?'it is':'they are'} in neither list &mdash; ${held===1?'it':'they'} cannot be
+       priced until the variants exist.</p>`
     : '';
 
-  // No column heading: a card labels each figure where it stands, and a
-  // heading strip over a grid of cards would point at nothing.
-  wrap.innerHTML = rows.length
-    ? heldNote + `<div class="price-grid">${
-        listPageSlice('products', rows).map(r=> productLineHTML(r, tokens)).join('')}</div>`
-      + listMoreButtonHTML('products', rows.length, 'product lines')
-    : heldNote + `<div class="empty">${
-        pricedFilter === 'unpriced' ? 'Every line that matches has a price on file.'
-        : pricedFilter === 'priced' ? 'Nothing that matches has been priced yet.'
-        : 'No products match your filters.'}</div>`;
+  if(!rows.length){
+    wrap.innerHTML = `<div class="ow-empty">${esc(
+      PRODUCT_EMPTY_SAYS[pricedFilter]
+      || ((filter || categoryFilter || supplierFilter || addedFilter)
+        ? 'No products match your filters.'
+        : 'Nothing in the register yet. A product is a name, a category and the markup rule that turns a supplier’s price into yours — add the first one above.')
+    )}</div>` + heldNote;
+    return;
+  }
+
+  /* ONE call per line, emitting the desktop row and the phone card
+     together, so the two surfaces can never come to say different things
+     about the same product -- the same rule the work queue follows. */
+  const shown = listPageSlice('products', rows);
+  const marks = productMarksWorthDrawing(rows);
+  const built = shown.map(r=> productLineHTML(r, tokens, marks));
+  /* Variants are drawn under a band carrying their product's name, ID,
+     category and photograph once, instead of repeating the full product
+     name on all three rows. Presentation only: the line count is the
+     same either way, because the band is not a line. */
+  const desktop = [];
+  let lastGroup = null;
+  shown.forEach((r, i)=>{
+    if(r.kind === 'variant'){
+      if(lastGroup !== r.p.id){
+        const n = shown.filter(x=> x.kind === 'variant' && x.p.id === r.p.id).length;
+        const attrs = (r.p.variantAttrs || []).map(a=> a.name).filter(Boolean).join(', ');
+        desktop.push(`<div class="pg-g">${pgThumbHTML(r.p, null)}
+          <span class="pg-c1"><span class="pg-nm" title="${esc(r.p.name)}">${highlightTokens(r.p.name, tokens)}</span>
+            <span class="pg-meta"><span class="pg-id">${highlightTokens(r.p.id, tokens)}</span>${
+              r.p.category ? `<span class="pg-dot" aria-hidden="true">&middot;</span><span class="pg-t">${esc(r.p.category)}</span>` : ''}</span></span>
+          <span class="pg-gn">${n} ${n===1?'variant':'variants'}${attrs ? ' · '+esc(attrs) : ''}</span></div>`);
+        lastGroup = r.p.id;
+      }
+    } else lastGroup = null;
+    desktop.push(built[i].row);
+  });
+
+  wrap.innerHTML = heldNote
+    + `<div class="pg-cols pg-th" aria-hidden="true">
+        <span></span><span>Line</span><span class="r">Costs you <i>UGX</i></span>
+        <span class="r">Wholesale <i>UGX</i></span><span class="r">Retail <i>UGX</i></span>
+        <span class="r">Shelf</span><span></span>
+      </div>`
+    + desktop.join('')
+    + `<div class="pg-phone">${built.map(b=> b.card).join('')}</div>`
+    + listMoreButtonHTML('products', rows.length, 'product lines')
+    + `<p class="ow-mini">Newest first, so a line you started and have not finished is at the top;
+        variants sit under the product they belong to. <b>Costs you</b> is what buying one costs at
+        today&rsquo;s cheapest supplier; wholesale and retail are that cost with the markup rule
+        applied, and each says which rule made it. A line missing either shows a dash and says
+        which &mdash; never a zero. Clicking a line opens its record, where it is also deleted.</p>`;
 }
 // Prints exactly what the screen is listing, filters and all.
 //
@@ -54067,6 +54633,14 @@ document.getElementById('p_print_btn').addEventListener('click', ()=>{
   if(supplierFilter) applied.push(`priced by ${supplierName(supplierFilter)}`);
   if(pricedFilter==='priced') applied.push('with a price on file');
   if(pricedFilter==='unpriced') applied.push('with no price on file');
+  /* Every set-up value gets a phrase. A printed sheet is read away from
+     the screen, so a filter the header cannot name turns a partial list
+     into one that looks like the whole shop. */
+  if(pricedFilter==='ready') applied.push('ready to sell');
+  if(pricedFilter==='unready') applied.push('not ready to sell');
+  if(pricedFilter==='unruled') applied.push('with no markup rule');
+  if(pricedFilter==='unbuilt') applied.push('with no variants built');
+  if(pricedFilter==='nophoto') applied.push('with no photograph');
   // A printed sheet is read away from the screen, so a narrowed list has
   // to carry the reason it is short.
   if(addedFilter) applied.push(productAddedBandLabel(addedFilter).toLowerCase());
@@ -55698,6 +56272,54 @@ document.getElementById('p_category_filter').addEventListener('change', triggerP
 document.getElementById('p_priced_filter').addEventListener('change', triggerProductsRender);
 document.getElementById('p_added_filter').addEventListener('change', triggerProductsRender);
 wireSupplierFilterSearch('p_supplier_filter_search', 'p_supplier_filter', 'p_supplier_filter_suggestions', triggerProductsRender);
+
+/* THE ROW IS THE WAY IN. Delegated from the section rather than bound
+   per row, because the register redraws on every keystroke of the search
+   and 31 lines used to mean 62 inline onclick attributes rebuilt each
+   time. It also removes the 28px delete that sat immediately beside the
+   28px edit on every card -- deleting a product is done inside its own
+   record now, where the confirm can say what else the deletion touches,
+   rather than one mis-tap away on a list you thumb through in a yard. */
+document.getElementById('tab-products').addEventListener('click', (e)=>{
+  const open = e.target.closest('[data-product-open]');
+  if(open){ editProduct(open.dataset.productOpen); return; }
+
+  /* A category row is a filter, and clicking the one already on clears
+     it -- otherwise the only way back to the whole register is the
+     select above, which is not where the eye is. */
+  const cat = e.target.closest('[data-product-cat]');
+  if(cat){
+    const sel = document.getElementById('p_category_filter');
+    const want = cat.dataset.productCat;
+    sel.value = sel.value === want ? '' : want;
+    triggerProductsRender();
+    return;
+  }
+
+  const door = e.target.closest('[data-product-door]');
+  if(door){ goToTab(door.dataset.productDoor); return; }
+
+  if(e.target.closest('#p_show_unready')){
+    document.getElementById('p_priced_filter').value = 'unready';
+    triggerProductsRender();
+  }
+});
+
+/* The dock's two buttons hand straight to the header's, so the phone and
+   the desk can never come to do different things under the same words. */
+document.getElementById('tab-products').addEventListener('click', (e)=>{
+  if(e.target.closest('#p_dock_add')){ document.getElementById('p_add_btn').click(); return; }
+  if(e.target.closest('#p_dock_print')){ document.getElementById('p_print_btn').click(); }
+});
+(function wireProductFilterFold(){
+  const btn = document.getElementById('p_filters_btn'), more = document.getElementById('p_tb_more');
+  if(!btn || !more) return;
+  btn.addEventListener('click', ()=>{
+    const open = more.hasAttribute('hidden');
+    if(open) more.removeAttribute('hidden'); else more.setAttribute('hidden', '');
+    btn.setAttribute('aria-expanded', String(open));
+  });
+})();
 
 /* ================= PRICE LIST ================= */
 let editingPriceId = null;

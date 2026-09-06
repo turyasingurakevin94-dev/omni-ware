@@ -122,8 +122,14 @@ const src = read('index.html');
      .ow-ph-help behind the "i", where every console screen before it
      put theirs. One fewer screen to police, not one that stopped being
      policed. */
+  /* 4 -> 3. Products converted: its name and its one-line sub are
+     .ow-ph, and the paragraph about what "ready to sell" means, where
+     "costs you" comes from and what the two print buttons do is
+     .ow-ph-help behind the "i", where every console screen before it
+     put theirs. One fewer screen to police, not one that stopped being
+     policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 4, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 3, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
@@ -141,8 +147,14 @@ const src = read('index.html');
      down. Suppliers did not lose its explanation: what was one
      instruction about an ID field is now a full .ow-ph-help behind the
      "i", which is the fold this file exists to police. */
+  /* 4 -> 3, for the same conversion. Products did not lose its
+     explanation: the old page-head carried one sentence about product
+     IDs, and the .ow-ph-help that replaced it says what makes a line
+     ready to sell, that "costs you" is the price of buying ONE, and
+     what each of the two print buttons produces. The fold this file
+     polices is intact; there is simply one fewer screen left to fold. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 4,
+  t.check(paras.length >= 3,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

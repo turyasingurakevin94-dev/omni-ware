@@ -147,7 +147,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const trigger = extractFunction(src, 'triggerProductsRender', 'index.html');
   t.check(/document\.getElementById\('p_added_filter'\)\.value/.test(trigger),
     'and the value actually reaches the render');
-  t.check(/id="p_added_filter"/.test(src) && /<label>Date added<\/label>/.test(src),
+  /* The label moved from <label>Date added</label> to the console's
+     .ow-f-l span when Products converted, and shortened to "Added"
+     because the field sits in a labelled strip where "Date" is what the
+     band options say ("Added today", "In the last 7 days"). What is
+     pinned is unchanged: the control exists and is LABELLED, so it can
+     never become an unnamed select the shop has to open to identify. */
+  t.check(/id="p_added_filter"/.test(src) && /<span class="ow-f-l">Added<\/span>/.test(src),
     'the toolbar has the control, labelled for what it filters');
 
   /* A printed sheet is read away from the screen, so a list narrowed to
