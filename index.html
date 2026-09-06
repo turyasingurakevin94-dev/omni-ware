@@ -43870,17 +43870,13 @@ const BRIEF_ROWS_PER_GROUP = 5, BRIEF_MAX_ROWS = 16, BRIEF_MAX_LIST_FRAMES = 4;
 function briefPriceKind(packQty, qty){
   return (Number(packQty) > 0 && Number(qty) >= Number(packQty)) ? 'wholesale' : 'retail';
 }
-/* The rows the shop holds for one product AND ONE VARIANT. Variant
-   matters everywhere in this app -- a price is keyed
-   product::variant::supplier -- and reading across variants is how a
-   4-inch runner's price ended up beside a 2-inch runner's history. */
+/* The rows the shop holds for one product AND ONE VARIANT, read
+   through the app's own reader so the picture and the counter can never
+   disagree about which rows exist. Variant matters everywhere here -- a
+   price is keyed product::variant::supplier -- and reading across
+   variants is how one size's price lands beside another's history. */
 function briefPriceRows(productId, variantIdx){
-  const want = variantIdx == null ? null : Number(variantIdx);
-  return (data.prices || []).filter(p=>{
-    if(p.productId !== productId) return false;
-    const v = p.variantIdx == null ? null : Number(p.variantIdx);
-    return v === want;
-  }).filter(p=> !p.outOfStock);
+  return rankedPriceRows(productId, variantIdx == null ? null : Number(variantIdx));
 }
 /* What the shop would charge them for one, at the quantity they take.
    Returns null rather than a guess: with no markup rule on file there
@@ -43890,7 +43886,13 @@ function briefPriceFor(productId, variantIdx, qty){
   const product = productById(productId);
   if(!product) return null;
   const rows = briefPriceRows(productId, variantIdx);
-  if(!rows.length) return null;
+  if(!rows.length){
+    /* A row that exists but is marked out of stock is a different
+       problem from no row at all, and the owner fixes it somewhere
+       else. */
+    const any = productPriceRows(productId, variantIdx == null ? null : Number(variantIdx));
+    return { why: any.length ? 'outOfStock' : 'noRow' };
+  }
   const n = Number(qty) > 0 ? Number(qty) : 1;
   /* The cheapest way the shop can actually buy it at that quantity --
      the same reading the buying plan takes of the registry. */
@@ -43900,11 +43902,11 @@ function briefPriceFor(productId, variantIdx, qty){
     if(base == null || !(base > 0)) return;
     if(!best || base < best.base) best = { row: r, base };
   });
-  if(!best) return null;
+  if(!best) return { why: 'noBase' };
   const packQty = Number(best.row.packQty) || 0;
   const kind = briefPriceKind(packQty, n);
   const sell = suggestedSellingPrice(product, best.base, kind, variantIdx, packQty);
-  if(sell == null || !(sell > 0)) return null;
+  if(sell == null || !(sell > 0)) return { why: 'noRule' };
   return { price: Math.round(sell), kind, packQty,
     packUnit: String(best.row.packUnit || '').trim(),
     unit: String(best.row.unit || product.unit || '').trim() };
@@ -43913,7 +43915,7 @@ function briefPriceFor(productId, variantIdx, qty){
    figure moved", and now asks it of a selling price. */
 function briefPriceNow(productId, variantIdx, qty){
   const p = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
-  return p ? p.price : null;
+  return (p && p.price != null) ? p.price : null;
 }
 /* Packing, with its noun. "20/Ctn" counted nothing: the number needs
    the thing it counts, and the reader should not have to join it to a
@@ -43940,7 +43942,7 @@ function briefGroups(c, habits){
   const inStock = (id)=> { const s = briefInStock(id); return s === null || s > 0; };
   const seen = new Set();
   const groups = [];
-  const dropped = { noPrice: 0, noRule: 0 };
+  const dropped = { noPrice: 0, noRule: 0, rows: [] };
   let total = 0;
   groups.dropped = dropped;
 
@@ -43953,13 +43955,12 @@ function briefGroups(c, habits){
     if(!p) return null;
     if(!inStock(productId)) return null;
     const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
-    if(!px){
-      /* Two different silences, and the shop needs to tell them apart:
-         nothing the shop can buy it at, or nothing to mark it up by. */
-      const n = Number(qty) > 0 ? Number(qty) : 1;
-      const rows = briefPriceRows(productId, variantIdx == null ? null : variantIdx);
-      if(rows.some(r=> purchasePriceAtQty(r, n) > 0)) dropped.noRule++;
-      else dropped.noPrice++;
+    if(!px || px.price == null){
+      const why = (px && px.why) || 'noRow';
+      dropped[why === 'noRule' ? 'noRule' : 'noPrice']++;
+      if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
+        dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
+          name: productVariantLabel(p, variantIdx), why });
       return null;
     }
     const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
@@ -44038,6 +44039,16 @@ function briefGroups(c, habits){
       (data.products||[]).filter(p=> site.stage.buys.includes(p.category))
         .map(p=> rowFor(p.id, {}, null, sized)).filter(Boolean));
   }
+  /* A product can be tried by more than one block -- ALSO BUY prices a
+     companion at the pairing's quantity, which may fall on the other
+     side of the trade and fail where the habit's quantity succeeded.
+     Recording that as "left off" while the thing sits on the list two
+     rows above is worse than silence: it sends the owner to fix what is
+     not broken. Anything that reached the list is struck from the
+     report, and the counts are taken from what survives. */
+  dropped.rows = dropped.rows.filter(r=> !seen.has(r.id));
+  dropped.noPrice = dropped.rows.filter(r=> r.why !== 'noRule').length;
+  dropped.noRule = dropped.rows.filter(r=> r.why === 'noRule').length;
   return groups;
 }
 
@@ -44120,6 +44131,27 @@ function briefWordCount(frames){
     if(fr.kind === 'act'){ n += 11; }              // the question, and the promise under it
   });
   return n;
+}
+/* What could not be priced, said by NAME and by cause. A count tells
+   the owner something is wrong; a list tells them where to go. The three
+   causes land in three different places -- the registry, the stock
+   marker, the markup rule -- so they are never merged into one line. */
+const BRIEF_LEFT_OFF = {
+  noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
+  outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
+  noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
+  noRule: { head: 'no markup rule', fix: 'Set a markup on the product, or a shop default, under Pricing. A buying price is never shown to a customer.' },
+};
+function briefLeftOffHTML(pricing){
+  const rows = (pricing && pricing.rows) || [];
+  if(!rows.length) return '';
+  const by = {};
+  rows.forEach(r=> { (by[r.why] = by[r.why] || []).push(r.name); });
+  return Object.entries(by).map(([why, names])=>{
+    const w = BRIEF_LEFT_OFF[why] || BRIEF_LEFT_OFF.noRow;
+    return `<p class="ow-q-note"><b>${names.length}</b> left off &mdash; ${esc(w.head)}:
+      ${names.map(n=> `<b>${esc(n)}</b>`).join(', ')}. ${esc(w.fix)}</p>`;
+  }).join('');
 }
 function briefRowCount(b){
   return (b.groups || []).reduce((s, g)=> s + g.rows.length, 0);
@@ -44634,8 +44666,9 @@ async function buildBriefGif(customerId){
   const b = customerBrief(customerId);
   if(!b || !(b.groups || []).length){
     const d = (b && b.pricing) || {};
-    return { ok:false, why: d.noRule
-      ? `${d.noRule} of their lines have a buying price but no markup rule, so no selling price can be worked out. Set a markup under Pricing — on the product or as the shop default — and this builds itself.`
+    const named = (d.rows || []).map(r=> r.name).join(', ');
+    return { ok:false, why: named
+      ? `Nothing of theirs can be priced yet: ${named}. Their account says what each one is waiting on.`
       : 'There is nothing on file to build a price list from yet — their own dealings with the shop are what fills it, and a product with no price recorded cannot go on one.' };
   }
   const frames = briefFrames(b);
@@ -44770,8 +44803,7 @@ function briefWhyHTML(b){
   const cut = briefRowCount(b) - shown;
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
-    ${(b.pricing && b.pricing.noRule) ? `<p class="ow-q-note"><b>${b.pricing.noRule}</b> line${b.pricing.noRule === 1 ? '' : 's'} left off: you buy ${b.pricing.noRule === 1 ? 'it' : 'them'}, but no markup rule says what to charge, and a buying price is never shown to a customer. Set one under Pricing.</p>` : ''}
-    ${(b.pricing && b.pricing.noPrice) ? `<p class="ow-q-note"><b>${b.pricing.noPrice}</b> line${b.pricing.noPrice === 1 ? '' : 's'} left off: nothing in the price registry says what you pay for ${b.pricing.noPrice === 1 ? 'it' : 'them'}.</p>` : ''}
+${briefLeftOffHTML(b.pricing)}
     ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
       `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
     <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
@@ -45146,15 +45178,16 @@ function customerBriefPanelHTML(customerId){
        know them yet"; the other is "we know them, and the shop has not
        said what it charges" -- which is a setting away from working
        and must never be reported as the first. */
-    const why = d.noRule
-      ? `<b>${d.noRule} line${d.noRule === 1 ? '' : 's'} of theirs cannot be priced.</b>
-         <span>The registry holds what your suppliers charge you, and a selling price is that plus your markup &mdash; but no markup rule is set for these, so there is nothing to work one out from. Set one under <b>Pricing</b>, on the product or as the shop default, and their list fills itself. Nothing here will ever show a buying price to a customer.</span>`
+    const why = (d.rows && d.rows.length)
+      ? `<b>${d.rows.length} line${d.rows.length === 1 ? '' : 's'} of theirs cannot be priced.</b>
+         <span>They buy from you; the shop just cannot work out what to charge for these yet. Each one is named below with what it is waiting on.</span>`
       : `<b>There is nothing on file to make a price list from.</b>
          <span>The list is built from their own dealings with the shop &mdash; what they buy, how it is packed, what they pay. One invoiced order for a product that carries a price is enough. Until then anything shown here would be about the shop rather than about them.</span>`;
     return `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span><span class="ow-pan-n">${
-        d.noRule ? 'no selling rule on file' : 'nothing to build one from yet'}</span></div>
+        (d.rows && d.rows.length) ? 'nothing here can be priced yet' : 'nothing to build one from yet'}</span></div>
       <div class="ow-empty">${why}</div>
+      ${briefLeftOffHTML(d)}
     </div>`;
   }
   const held = b.held;
