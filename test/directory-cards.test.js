@@ -162,8 +162,17 @@ const { nameInitials } = compileScope(
     "the agent app's client initials go through it");
   t.check(/return nameInitials\(myAgent && myAgent\.name\);/.test(agent),
     "and so do the agent's own");
-  t.check(/const initials = nameInitials\(a\.name\);/.test(src),
-    "and the admin app's agent card, which is where this was found");
+  /* The admin app's agent screen, which is where this was found. It was
+     agentCardHTML with the copy inline; the screen has since been
+     rebuilt as a console register and brought a NEW private copy with
+     it, under a new name -- agentInitials(name) -- which is precisely
+     why the check above is on the shape rather than on any call site.
+     There is no wrapper left: the one place that letters an agent goes
+     straight to the shared function. */
+  t.check(!/function agentInitials\(/.test(src),
+    'the admin app keeps no private initials function of its own');
+  t.check(/<span class="ow-av">\$\{esc\(nameInitials\(r\.who\)\)\}<\/span>/.test(src),
+    'and its agent avatar is lettered by the shared one');
 }
 
 /* ---------- 4. the figure strip sits on the card's bottom edge -------- */
