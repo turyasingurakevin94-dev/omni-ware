@@ -43765,8 +43765,10 @@ function briefFrames(b){
   const unit = (b.product && b.product.unit) || '';
   const frames = [];
   /* 1. WHO, AND WHAT. Their own name is the one word everybody reads. */
-  frames.push({ kind:'name', ms:1500, who: b.customer.name,
-    what: b.product ? briefShortName(b.product.name) : '', photo: b.product ? b.product.image : null });
+  frames.push({ kind:'name', ms:2500, who: b.customer.name,
+    what: b.product ? briefShortName(b.product.name) : '', photo: b.product ? b.product.image : null,
+    qty: b.qty, unit, price: b.price,
+    stamp: b.cheaperThanTheirs ? { text:'PRICE DOWN' } : b.sameAsTheirs ? { text:'SAME PRICE' } : null });
   /* 2. HOW MANY, HOW MUCH. The stamp is the whole reassurance: a price
         that has not moved is the strongest thing you can say to somebody
         who buys on credit. It is only claimed where it is true. */
@@ -44011,11 +44013,53 @@ function briefDrawPhoto(ctx, img, x, y, w, h, r){
     const dw = img.width * s, dh = img.height * s;
     ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
   } else {
-    const g = ctx.createLinearGradient(x, y, x + w, y + h);
-    g.addColorStop(0, '#59626B'); g.addColorStop(1, '#252A31');
-    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    /* Nothing. A grey rectangle where a photograph should be reads as
+       a picture that failed to load, and the customer stops there. The
+       frame gives the space to the words instead -- every caller asks
+       whether this drew and lays itself out accordingly. */
+    ctx.restore();
+    return false;
   }
   ctx.restore();
+  return true;
+}
+/* The stamp, drawn from one place so the poster frame and the price
+   frame can never disagree about what it looks like. */
+function briefStampWidth(ctx, text){
+  ctx.font = `22px ${BRIEF_DISPLAY}`;
+  return ctx.measureText(text).width + 74;
+}
+function briefStampPill(ctx, text, bx, by){
+  const bw = briefStampWidth(ctx, text);
+  ctx.fillStyle = BRIEF_INK.verdigris;
+  ctx.fill(briefRoundRect(bx, by, bw, 52, 26));
+  ctx.strokeStyle = BRIEF_INK.paper; ctx.lineWidth = 4;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(bx + 22, by + 27); ctx.lineTo(bx + 30, by + 35); ctx.lineTo(bx + 44, by + 18);
+  ctx.stroke();
+  ctx.fillStyle = BRIEF_INK.paper;
+  ctx.font = `22px ${BRIEF_DISPLAY}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(text, bx + 56, by + 35);
+  return bw;
+}
+/* A number and its word, centred as one thing. Measured rather than
+   guessed, because the number is monospaced and the word is not. */
+function briefPair(ctx, big, bigPx, bigFont, bigFill, small, smallPx, smallFill, cx, y){
+  ctx.textAlign = 'left';
+  ctx.font = `${bigPx} ${bigFont}`;
+  const bw = ctx.measureText(big).width;
+  ctx.font = `${smallPx}px ${BRIEF_DISPLAY}`;
+  const sw = small ? ctx.measureText(small).width : 0;
+  const gap = small ? 14 : 0;
+  let x = cx - (bw + gap + sw) / 2;
+  ctx.font = `${bigPx} ${bigFont}`; ctx.fillStyle = bigFill;
+  ctx.fillText(big, x, y);
+  if(small){
+    ctx.font = `${smallPx}px ${BRIEF_DISPLAY}`; ctx.fillStyle = smallFill;
+    ctx.fillText(small, x + bw + gap, y);
+  }
 }
 /* Shrinks until it fits rather than wrapping mid-word: a name is read
    as one thing or not at all. */
@@ -44048,26 +44092,50 @@ function briefPaint(ctx, fr, imgs){
   if(fr.kind === 'name'){
     ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, 0, W, H);
     briefMark(ctx, true);
-    briefDrawPhoto(ctx, imgs[fr.photo], 150, 140, 300, 300, 24);
-    ctx.fillStyle = BRIEF_INK.paper;
+    const shot = briefDrawPhoto(ctx, imgs[fr.photo], 150, 96, 300, 300, 24);
+    /* Two layouts, one for a frame with a photograph and one for a
+       frame whose words inherit its space. Nothing is stretched to
+       fill a gap; the block simply starts higher and is set larger. */
+    const L = shot
+      ? { name:470, nameMax:72, what:524, whatMax:38, qty:614, qtyPx:60, price:672, stamp:706 }
+      : { name:300, nameMax:84, what:372, whatMax:46, qty:498, qtyPx:80, price:578, stamp:626 };
     ctx.textAlign = 'center';
-    const s1 = briefFit(ctx, fr.who.toUpperCase(), BRIEF_DISPLAY, 78, W - 68);
+    ctx.fillStyle = BRIEF_INK.paper;
+    const s1 = briefFit(ctx, fr.who.toUpperCase(), BRIEF_DISPLAY, L.nameMax, W - 68);
     ctx.font = `${s1}px ${BRIEF_DISPLAY}`;
-    ctx.fillText(fr.who.toUpperCase(), W / 2, 540);
+    ctx.fillText(fr.who.toUpperCase(), W / 2, L.name);
     if(fr.what){
       ctx.fillStyle = BRIEF_INK.oxideLight;
-      const s2 = briefFit(ctx, fr.what.toUpperCase(), BRIEF_DISPLAY, 42, W - 68);
+      const s2 = briefFit(ctx, fr.what.toUpperCase(), BRIEF_DISPLAY, L.whatMax, W - 68);
       ctx.font = `${s2}px ${BRIEF_DISPLAY}`;
-      ctx.fillText(fr.what.toUpperCase(), W / 2, 540 + s1 * 0.62 + 26);
+      ctx.fillText(fr.what.toUpperCase(), W / 2, L.what);
     }
+    /* THE OFFER, on the frame that gets looked at. How many, what it
+       costs, and whether the price has moved -- the three things that
+       decide whether any of the frames after this one are seen. */
+    if(fr.qty != null){
+      briefPair(ctx, f(fr.qty), `600 ${L.qtyPx}px`, BRIEF_MONO, BRIEF_INK.paper,
+        String(fr.unit || '').toUpperCase(), Math.round(L.qtyPx * 0.42), BRIEF_INK.ink400, W / 2, L.qty);
+    }
+    if(fr.price != null){
+      briefPair(ctx, f(fr.price), '500 46px', BRIEF_MONO, BRIEF_INK.paper,
+        'EACH', 22, BRIEF_INK.ink400, W / 2, L.price);
+    }
+    if(fr.stamp) briefStampPill(ctx, fr.stamp.text, (W - briefStampWidth(ctx, fr.stamp.text)) / 2, L.stamp);
     ctx.textAlign = 'left';
     return;
   }
   if(fr.kind === 'what'){
     ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(0, 0, W, H);
     briefMark(ctx, false);
-    briefDrawPhoto(ctx, imgs[fr.photo], 0, 82, W, 376, 0);
-    let y = 560;
+    const shot = briefDrawPhoto(ctx, imgs[fr.photo], 0, 82, W, 376, 0);
+    if(!shot){
+      ctx.fillStyle = BRIEF_INK.navy;
+      const sn = briefFit(ctx, fr.name.toUpperCase(), BRIEF_DISPLAY, 62, W - 68);
+      ctx.font = `${sn}px ${BRIEF_DISPLAY}`;
+      ctx.fillText(fr.name.toUpperCase(), 34, 250);
+    }
+    let y = shot ? 560 : 430;
     ctx.fillStyle = BRIEF_INK.navy;
     if(fr.qty != null){
       ctx.font = `600 104px ${BRIEF_MONO}`;
@@ -44075,7 +44143,7 @@ function briefPaint(ctx, fr, imgs){
       const w = ctx.measureText(f(fr.qty)).width;
       ctx.font = `38px ${BRIEF_DISPLAY}`;
       ctx.fillText(String(fr.unit || '').toUpperCase(), 34 + w + 14, y);
-    } else {
+    } else if(shot){
       const s = briefFit(ctx, briefShortName(fr.name).toUpperCase(), BRIEF_DISPLAY, 54, W - 68);
       ctx.font = `${s}px ${BRIEF_DISPLAY}`;
       ctx.fillText(briefShortName(fr.name).toUpperCase(), 34, y);
@@ -44090,20 +44158,7 @@ function briefPaint(ctx, fr, imgs){
       ctx.font = `22px ${BRIEF_DISPLAY}`;
       ctx.fillText('EACH', 34 + w + 12, y);
     }
-    if(fr.stamp){
-      ctx.font = `22px ${BRIEF_DISPLAY}`;
-      const tw = ctx.measureText(fr.stamp.text).width;
-      const bw = tw + 74, bx = W - 34 - bw, by = H - 122;
-      ctx.fillStyle = BRIEF_INK.verdigris;
-      ctx.fill(briefRoundRect(bx, by, bw, 52, 26));
-      ctx.strokeStyle = BRIEF_INK.paper; ctx.lineWidth = 4;
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(bx + 22, by + 27); ctx.lineTo(bx + 30, by + 35); ctx.lineTo(bx + 44, by + 18);
-      ctx.stroke();
-      ctx.fillStyle = BRIEF_INK.paper;
-      ctx.fillText(fr.stamp.text, bx + 56, by + 35);
-    }
+    if(fr.stamp) briefStampPill(ctx, fr.stamp.text, W - 34 - briefStampWidth(ctx, fr.stamp.text), H - 122);
     return;
   }
   if(fr.kind === 'also'){
@@ -44117,18 +44172,36 @@ function briefPaint(ctx, fr, imgs){
     const cw = (W - 68 - (n - 1) * 18) / n;
     fr.items.slice(0, 2).forEach((it, i)=>{
       const x = 34 + i * (cw + 18), y = 190;
+      /* The card is the height of what is in it. Keeping the taller
+         one when there is no photograph just moves the empty box from
+         the top of the card to the bottom of it. */
+      const has = !!imgs[it.photo];
       ctx.fillStyle = BRIEF_INK.paper;
-      ctx.fill(briefRoundRect(x, y, cw, 300, 16));
-      briefDrawPhoto(ctx, imgs[it.photo], x, y, cw, 196, 16);
+      ctx.fill(briefRoundRect(x, y, cw, has ? 300 : 208, 16));
+      const shot = briefDrawPhoto(ctx, imgs[it.photo], x, y, cw, 196, 16);
       ctx.fillStyle = BRIEF_INK.navy;
       if(it.qty != null){
-        ctx.font = `600 42px ${BRIEF_MONO}`;
-        ctx.fillText(f(it.qty), x + 16, y + 250);
+        ctx.font = `600 ${shot ? 42 : 60}px ${BRIEF_MONO}`;
+        ctx.fillText(f(it.qty), x + 16, y + (shot ? 250 : 120));
       }
-      const label = String(it.qty != null ? (it.unit || '') : '').toUpperCase() || it.name.toUpperCase();
-      const ls = briefFit(ctx, label, BRIEF_DISPLAY, 19, cw - 32);
-      ctx.font = `${ls}px ${BRIEF_DISPLAY}`;
-      ctx.fillText(label, x + 16, y + (it.qty != null ? 284 : 250));
+      if(shot){
+        const label = String(it.qty != null ? (it.unit || '') : '').toUpperCase() || it.name.toUpperCase();
+        const ls = briefFit(ctx, label, BRIEF_DISPLAY, 19, cw - 32);
+        ctx.font = `${ls}px ${BRIEF_DISPLAY}`;
+        ctx.fillText(label, x + 16, y + (it.qty != null ? 284 : 250));
+      } else {
+        /* No photograph, so the name carries the card and is set as
+           large as it fits -- with the unit under it where there is a
+           quantity for it to belong to. */
+        const ns = briefFit(ctx, it.name.toUpperCase(), BRIEF_DISPLAY, 30, cw - 32);
+        ctx.font = `${ns}px ${BRIEF_DISPLAY}`;
+        ctx.fillText(it.name.toUpperCase(), x + 16, y + (it.qty != null ? 180 : 130));
+        if(it.qty != null && it.unit){
+          ctx.fillStyle = BRIEF_INK.ink600;
+          ctx.font = `20px ${BRIEF_DISPLAY}`;
+          ctx.fillText(String(it.unit).toUpperCase(), x + 16, y + 220);
+        }
+      }
     });
     if(fr.ratio){
       const y = 530;
