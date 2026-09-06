@@ -479,8 +479,15 @@ const INDEX = railIndex();
   t.check(navSearchMatches('').length === 0, 'and an empty box is not a search');
   t.check(navSearchMatches('e').length <= 8, 'a single letter is capped rather than listing the whole map');
 
-  t.check(labels('pres').length === 1 && labels('pres')[0] === 'Presets',
-    `"pres" finds Presets and nothing else, the shortcuts being out of the index (${labels('pres').join(', ')})`);
+  /* Presets was renamed The shop: a preset is a value that pre-fills a
+     field, which described six of its twelve settings and none of the
+     ones that matter. The old name is kept as a KEYWORD, so a shop that
+     has typed "pres" for a year still lands on it -- which is the whole
+     reason keywords exist and the reason renaming a screen is cheap. */
+  t.check(labels('pres').length === 1 && labels('pres')[0] === 'The shop',
+    `"pres" still finds it under its new name, and nothing else (${labels('pres').join(', ')})`);
+  t.check(labels('settings').length === 1 && labels('settings')[0] === 'The shop',
+    `and so does the word people actually reach for (${labels('settings').join(', ')})`);
 
   /* Worker view is on the rail but hidden unless this login is staff.
      Search offering it would be search offering a screen the rail is

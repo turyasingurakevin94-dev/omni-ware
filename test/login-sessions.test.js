@@ -179,10 +179,22 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
      So the check is the same check, against the tab that now opens it. */
   t.check(/id="ls_list"/.test(src) && /id="ls_refresh"/.test(src),
     'the panel exists, under Presets');
-  t.check(/id="ppane-devices"/.test(src) && /data-ptab="devices"/.test(src),
-    'as a pane with a way in');
-  t.check(/if\(tab==='presets'\) loadLoginSessions\(\);/.test(src),
+  /* It was a pane behind the eleventh of twelve doors. The Shop has no
+     doors, so it is a panel on the page: nothing to click to find out
+     whether anything is signed in, and the count is on the page's index
+     as well. What the old check was really asking -- that there is a way
+     in to it -- is answered by there being nothing in the way. */
+  t.check(/id="ppane-devices"/.test(src) === false && /data-ptab="devices"/.test(src) === false,
+    'with no door in front of it any more');
+  t.check(/<span class="ow-pan-t">Signed in to this shop<\/span>/.test(src),
+    'as a panel that names itself on the page');
+  t.check(/if\(tab==='presets'\)\{\s*\n\s*loadLoginSessions\(\);/.test(src),
     'and loads when that tab is opened');
+  /* null is "could not read", which is not "nothing signed in". The
+     page's index has to draw that same distinction or it reports a
+     refused read as an empty shop. */
+  t.check(/lsRows === null[\s\S]{0,200}'not read'/.test(src),
+    'and a read it was not allowed to make says so on the index, rather than counting zero');
   t.check(!/id="ls_list"/.test(src.slice(src.indexOf('id="tab-staff"'), src.indexOf('id="tab-agents"'))),
     'and is no longer a panel in the middle of the staff screen');
   t.check(/getElementById\('ls_refresh'\)\.addEventListener\('click', loadLoginSessions\);/.test(src),

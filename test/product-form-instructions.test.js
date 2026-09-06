@@ -125,8 +125,17 @@ const fn = extractFunction(src, 'foldProductFormInstructions', 'index.html');
      it cannot reach them by accident. */
   t.check(/const pane = \(id\)=> document\.getElementById\('pfpane-'\+id\);/.test(fn),
     'the fold reaches panels by id, so it cannot wander into the Presets page');
-  const presets = (/<div class="preset-pane" id="ppane-[\s\S]*?<header class="pset-head">/.exec(src) || [''])[0];
-  t.check(presets.length > 0, "whose own headers are still plain, since nobody asked for those");
+  /* The Presets page used to carry eight headers of exactly this shape,
+     and the scope above existed so this fold could not wander into them.
+     The Shop has none: its lists carry a one-line sentence saying where
+     their words appear, which is the point of the list rather than an
+     instruction about it, and every longer paragraph moved BELOW its
+     control as .ow-mini. So the fold now has nothing to wander into --
+     but the scope stays, because the next .pset-head somebody adds to
+     that page should not be silently swallowed either. */
+  const presetSection = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) || [''])[0];
+  t.check(presetSection.length > 0 && !/class="pset-head"/.test(presetSection),
+    'and there is no longer a Presets header for it to reach, scope or no scope');
 
   // The two radio options describe the choice they are; they are the
   // control, not a paragraph sitting above it.
