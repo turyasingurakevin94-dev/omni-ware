@@ -3435,6 +3435,10 @@
   .pr-acts-sp{flex:1;}
   .pr-rail-blank{width:14px;flex:none;display:inline-block;}
   .pr-rail .ow-sr .icon{width:14px;height:14px;color:var(--ow-ink-400);flex:none;}
+  /* The one act a rail panel carries. Inside the panel, under the prose
+     that explains what would be copied. */
+  .pr-rail-act{padding:0 12px 12px;}
+  .pr-rail-act .btn{width:100%;justify-content:center;}
   /* The lens row: the layer's switch, and a line on what the open side
      reads. A side's body is hidden outright, never squeezed. */
   .pr-lens{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;}
@@ -21564,6 +21568,8 @@ const ICON_TREND_FLAT = '<svg class="icon pr-fill" viewBox="0 0 24 24"><rect x="
 const ICON_NEQ = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 9h12M6 15h12M15 4 9 20"/></svg>';
 const ICON_BUBBLE = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>';
 const ICON_SEND = '<svg class="icon" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg>';
+// One sheet lifted off another: the shop's own mark for taking a copy away.
+const ICON_COPY = '<svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_CHECK2 = '<svg class="icon" viewBox="0 0 24 24"><path d="m2 12.5 5 5L17 7.5"/><path d="m9 17.5 1 1L22 7.5"/></svg>';
 const ICON_BOLT = '<svg class="icon" viewBox="0 0 24 24"><path d="M13 3 4 14h7l-1 7 9-11h-7l1-7z"/></svg>';
 const ICON_LAYERS = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
@@ -60509,6 +60515,36 @@ function applyPackBridge(id){
   saveData(); triggerPricesRender();
   toast(`Recorded ${b.packQty} ${r.unit || 'units'} in a ${b.packUnit} \u2014 this quote and your invoices can be compared now`);
 }
+/* THE WHOLE LIST AS TEXT, because the ones the books cannot close are
+   a conversation: a figure is wrong and only somebody who was there
+   knows which way. Every finding carries its own evidence already —
+   what the row says, what it is being held against, and where that came
+   from — so this is the same sentences the cards carry, in an order and
+   a shape that survives being pasted into a message. */
+function priceOddityReport(){
+  const odd = priceOddities();
+  const rows = (data.prices || []).filter(r=> odd.has(r.id))
+    .map(r=> ({ r, o: odd.get(r.id) }))
+    .sort((a, b)=> (a.o.pct == null ? -1 : a.o.pct) - (b.o.pct == null ? -1 : b.o.pct));
+  if(!rows.length) return `Prices to check — ${todayISO()}\nNothing. Every quote on file sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.`;
+  const by = {};
+  rows.forEach(x=> { (by[x.o.why] = by[x.o.why] || []).push(x); });
+  const out = [`Prices to check — ${todayISO()}`,
+    `${rows.length} quote${rows.length === 1 ? '' : 's'} on ${new Set(rows.map(x=> priceLineKey(x.r.productId, x.r.variantIdx))).size} line${
+      new Set(rows.map(x=> priceLineKey(x.r.productId, x.r.variantIdx))).size === 1 ? '' : 's'}, out of ${(data.prices || []).length} on file.`];
+  Object.entries(by).forEach(([why, list])=>{
+    out.push('', `${(PRICE_ODD_HEADS[why] || why).toUpperCase()} — ${list.length}`);
+    list.forEach(({ r, o })=>{
+      const p = data.products.find(x=> x.id === r.productId) || { name: productName(r.productId) };
+      const bridge = o.wantUnit ? packBridgeFor(r, o.wantUnit) : null;
+      out.push(`- ${productVariantLabel(p, r.variantIdx)} · ${supplierName(r.supplierId)}`
+        + `\n  ${o.note}`
+        + (bridge && bridge.packQty ? `\n  Your books say ${bridge.packQty} ${r.unit || 'units'} in a ${bridge.packUnit} (${bridge.where}) — one tap on its card.` : '')
+        + (bridge && bridge.disagree ? `\n  Your books say ${bridge.disagree.join(' and ')} — they disagree, so nothing is proposed.` : ''));
+    });
+  });
+  return out.join('\n');
+}
 /* Every row on file, checked once. Built here rather than per card so
    the purchase invoices are walked once a render instead of once a row. */
 function priceOddities(){
@@ -61296,7 +61332,8 @@ function priceRailHTML(groups, rows){
           fixable ? ` <b>${fixable}</b> of them ${fixable === 1 ? 'is' : 'are'} missing only a pack size your own books already record elsewhere — each of those is one tap on its card.` : ''
         } Nothing here is removed or refused — a supplier really can be much cheaper, and only you know which.</p>`
       : `<p class="ow-mini">Every quote on file sits within ${PRICE_ODD_SHARE_PCT}% of the other quotes on its line and of what your purchase invoices show you paid, and none is priced in a stray unit.</p>`);
-  const oddPan = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Prices to check</span><span class="ow-pan-n">${oddRows.length ? esc(`${oddRows.length} quote${oddRows.length === 1 ? '' : 's'} on ${oddLines} line${oddLines === 1 ? '' : 's'}`) : 'none today'}</span></div>${oddTop}</div>`;
+  const oddPan = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Prices to check</span><span class="ow-pan-n">${oddRows.length ? esc(`${oddRows.length} quote${oddRows.length === 1 ? '' : 's'} on ${oddLines} line${oddLines === 1 ? '' : 's'}`) : 'none today'}</span></div>${oddTop}${
+    oddRows.length ? `<div class="pr-rail-act"><button type="button" class="btn btn-ghost ow-sm" onclick="copyPriceOddityReport()">${ICON_COPY}Copy the list</button></div>` : ''}</div>`;
   const priced = (groups || []).filter(g=> g.cheapestId != null);
   const top = priced.slice(0, 8);
   const cheapest = top.map(g=>{
@@ -61563,6 +61600,20 @@ function confirmSupplierUnchanged(supplierId){
   if(document.getElementById('tab-dashboard')
     && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
   toast(`${rows.length} ${rows.length===1?'price':'prices'} from ${name} marked checked today — the figures are untouched`, 5000);
+}
+/* Copied rather than sent: nothing in this app sends itself, and a list
+   of the shop's own weak spots is the last thing that should. */
+async function copyPriceOddityReport(){
+  const text = priceOddityReport();
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('Copied — paste it wherever you are working through them');
+  }catch(e){
+    /* A clipboard the browser will not open is not a failure to report
+       nothing: the list still exists, and it goes on screen to be read
+       or selected by hand. */
+    alert(text);
+  }
 }
 function toggleOutOfStock(id){
   const r = data.prices.find(p=>p.id===id); if(!r) return;
