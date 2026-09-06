@@ -1,0 +1,601 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE SHOP — proposed =================
+       Every value below is lifted from index.html: the 23-colour
+       palette, the 11/12/13/14 ramp, Inter + Archivo Black + IBM Plex
+       Mono, and the .ow-* console components already shipping on
+       Inventory, Products, Debtors and Today. No new colour, no new
+       weight, no new type size, no fourteenth button family. */
+
+    .main{overflow:visible;}
+    .ow-ph-t .ow-ph-i{margin-left:6px;}
+
+    /* ---- the search, in the page header --------------------------
+       Forty-one settings behind one field. It is the header's only
+       control because the page has no single action -- and a page
+       whose action is "find the one you meant" should say so. */
+    .sf{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:268px;
+      box-sizing:border-box;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);}
+    .sf svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sf input{border:0;outline:0;background:none;font-family:'Inter',sans-serif;font-size:12px;
+      color:var(--ow-ink-900);width:100%;min-width:0;padding:0;}
+    .sf input::placeholder{color:var(--ow-ink-400);}
+    .sf-x{font-size:11px;color:var(--ow-ink-600);font-family:var(--mono);white-space:nowrap;}
+
+    /* ---- the standing band ---------------------------------------
+       Not a badge and not a banner: a decomposition. It names each
+       unset setting, what depends on it, and how many things that is,
+       so the sentence can be argued with. It is absent -- not empty,
+       not a green tick -- when there is nothing unset. */
+    .sb{display:flex;align-items:flex-start;gap:12px;background:var(--ow-amber-faint);
+      border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .sb-ic{width:18px;height:18px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .sb-b{min-width:0;flex:1;}
+    .sb-t{font-size:13px;font-weight:600;color:var(--ow-amber-ink);margin:0 0 5px;line-height:1.35;}
+    .sb-l{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;}
+    .sb-l li{font-size:12px;color:var(--ow-ink-600);line-height:1.45;max-width:88ch;}
+    .sb-l b{color:var(--ow-ink-900);font-weight:600;}
+    .sb-a{flex:none;align-self:center;}
+
+    /* ---- region heading — three regions, not twelve doors --------- */
+    .rg{display:flex;align-items:baseline;gap:12px;margin:6px 0 10px;
+      padding-bottom:7px;border-bottom:1px solid var(--ow-rule);}
+    .rg-t{font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:-.01em;
+      margin:0;white-space:nowrap;flex:none;}
+    .rg-s{flex:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;}
+
+    /* ---- the words: six lists on one screen, not six doors -------- */
+    .wd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;}
+    .wd-b{padding:12px 14px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .wd-b:nth-child(2n+1){border-left:0;}
+    /* Five lists into two columns leaves a hole; the longest list takes
+       the width instead, which is also where its eleven words fit on one
+       line. */
+    .wd-b:nth-child(5){grid-column:1 / -1;border-left:0;}
+    .wd-h{display:flex;align-items:baseline;gap:7px;margin-bottom:2px;}
+    .wd-n{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ow-ink-900);}
+    .wd-c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;color:var(--ow-ink-400);}
+    .wd-u{font-size:11px;color:var(--ow-ink-600);line-height:1.4;margin:0 0 8px;}
+    .wd-f{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+    .wc{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 3px 0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      font-size:11.5px;font-weight:500;color:var(--ow-ink-900);white-space:nowrap;max-width:100%;}
+    .wc-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .wc-x{display:flex;align-items:center;justify-content:center;width:15px;height:15px;
+      border-radius:3px;color:var(--ow-ink-400);cursor:pointer;flex:none;}
+    .wc-x:hover{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .wc-x svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;}
+    .wd-add{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;
+      border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);background:none;
+      font-family:'Inter',sans-serif;font-size:11.5px;font-weight:500;color:var(--ow-ink-600);cursor:pointer;}
+    .wd-add svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;}
+    .wd-in{height:22px;padding:0 7px;border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);font-family:'Inter',sans-serif;font-size:11.5px;font-weight:500;
+      color:var(--ow-ink-900);width:112px;outline:none;box-sizing:border-box;}
+    .wd-in:focus{border-style:solid;border-color:var(--ow-steel-950);}
+    .wd-in::placeholder{color:var(--ow-ink-400);}
+    .wd-at{padding:12px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .at-r{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;align-items:start;
+      padding:7px 0;border-top:1px solid var(--ow-rule-soft);}
+    .at-r:first-of-type{border-top:0;}
+    .at-n{font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the rules: one row each, with what it drives ------------- */
+    .rr{display:grid;grid-template-columns:minmax(0,1fr) 196px;column-gap:16px;align-items:center;
+      padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .rr:first-of-type{border-top:0;}
+    .rr-n{font-size:13px;font-weight:500;color:var(--ow-ink-900);line-height:1.3;}
+    .rr-d{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.4;margin-top:2px;max-width:64ch;}
+    .rr-d b{color:var(--ow-ink-900);font-weight:600;}
+    .rr-v{grid-column:2;grid-row:1 / span 2;justify-self:end;display:flex;align-items:center;gap:6px;}
+    .rr.rr-unset{background:var(--ow-amber-faint);}
+    .rr-w{grid-column:1;margin-top:5px;font-size:11px;color:var(--ow-amber-ink);line-height:1.45;max-width:64ch;}
+    .rr-w b{font-weight:600;}
+    .num{height:28px;width:74px;box-sizing:border-box;padding:0 8px;text-align:right;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      letter-spacing:-.02em;color:var(--ow-ink-900);outline:none;}
+    .num:focus{border-color:var(--ow-steel-950);}
+    .num.wide{width:94px;}
+    .sel{height:28px;box-sizing:border-box;padding:0 6px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-family:'Inter',sans-serif;
+      font-size:12px;color:var(--ow-ink-900);outline:none;}
+    .unit{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+    .door{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+      color:var(--ow-ink-600);white-space:nowrap;cursor:pointer;}
+    .door svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .door:hover{color:var(--ow-ink-900);}
+    .ro{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+
+    /* the six order steps, inside the rule row that owns them */
+    .st{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;
+      padding:10px 14px 12px;border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .st-f{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .st-l{font-size:11.5px;color:var(--ow-ink-600);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+
+    /* ---- switches ------------------------------------------------ */
+    .sw{display:flex;align-items:flex-start;gap:9px;padding:10px 14px;
+      border-top:1px solid var(--ow-rule-soft);cursor:pointer;}
+    .sw input{margin:1px 0 0;width:15px;height:15px;flex:none;accent-color:var(--ow-steel-950);}
+    .sw-b{min-width:0;}
+    .sw-t{font-size:12.5px;font-weight:600;color:var(--ow-ink-900);line-height:1.35;}
+    .sw-n{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:2px 0 0;max-width:76ch;}
+
+    /* ---- forms in the console vocabulary -------------------------- */
+    .fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;padding:12px 14px;}
+    .fg .w2{grid-column:1 / -1;}
+    .fl{display:block;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:4px;}
+    .fl .opt{font-weight:500;letter-spacing:0;text-transform:none;color:var(--ow-ink-400);}
+    .txt{height:30px;width:100%;box-sizing:border-box;padding:0 9px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-family:'Inter',sans-serif;
+      font-size:12.5px;color:var(--ow-ink-900);outline:none;}
+    .txt:focus{border-color:var(--ow-steel-950);}
+    .txt::placeholder{color:var(--ow-ink-400);}
+    .mono{font-family:var(--mono);letter-spacing:-.02em;}
+
+    /* ---- the locked panel ---------------------------------------- */
+    .lk{display:flex;align-items:flex-start;gap:9px;padding:12px 14px;}
+    .lk svg{width:16px;height:16px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .lk p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.5;max-width:72ch;}
+
+    /* ---- the receipt, drawn beside the fields that print it ------- */
+    .rcp{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:12px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.55;
+      color:var(--ow-ink-900);white-space:pre-wrap;}
+    .rcp .g{color:var(--ow-ink-400);}
+
+    /* ---- the index rail ------------------------------------------ */
+    .ix{display:flex;align-items:center;gap:8px;padding:7px 12px;width:100%;box-sizing:border-box;
+      border-top:1px solid var(--ow-rule-soft);cursor:pointer;background:none;text-align:left;}
+    .ix:hover{background:var(--ow-paper-2);}
+    .ix-n{flex:1;min-width:0;font-size:12px;color:var(--ow-ink-900);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ix-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ix-v.warn{color:var(--ow-amber-ink);}
+    .ix-v.good{color:var(--ow-verdigris);}
+    .ix-g{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:10px 12px 4px;border-top:1px solid var(--ow-rule-soft);}
+    .ix-g:first-child{border-top:0;padding-top:8px;}
+
+    /* .ow-mini ships with max-width:76ch, which also cuts its own
+       hairline short inside an 820px panel. The measure moves to the
+       padding so the rule can run the full width of the region. */
+    .ow-pan > .ow-mini{max-width:none;padding-right:210px;}
+    .sthd{display:flex;align-items:baseline;gap:12px;margin:0 0 10px;max-width:1060px;}
+    .sthd b{flex:none;max-width:180px;}
+    .sthd span{flex:1;min-width:0;}
+    .sthd b{font-family:'Archivo Black',sans-serif;font-size:12px;letter-spacing:-.01em;}
+    .sthd span{font-size:11px;color:var(--ow-ink-600);line-height:1.45;}
+    .stsec{margin-bottom:26px;}
+    .stsec:last-child{margin-bottom:0;}
+    .ok{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--ow-verdigris-soft);
+      border:1px solid #C9E0D8;border-radius:var(--ow-r-lg);margin-bottom:12px;}
+    .ok svg{width:16px;height:16px;fill:none;stroke:var(--ow-verdigris);stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ok p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .ok b{color:var(--ow-verdigris);font-weight:600;}
+    .bad{display:flex;align-items:flex-start;gap:11px;background:var(--ow-crimson-soft);
+      border:1px solid #E9C9C6;border-radius:var(--ow-r-lg);padding:12px 14px;}
+    .bad svg{width:18px;height:18px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .bad-t{font-size:13px;font-weight:600;color:var(--ow-crimson);margin:0 0 4px;}
+    .bad p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.5;max-width:88ch;}
+    .cols{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1620px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Setup</span><span>/</span><span data-where>The shop</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-section-label">Catalogue</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg><span>Products</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Price registry</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 6h18v12H3z"></path><circle cx="12" cy="12" r="2.6"></circle></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16v11H7l-3 3z"></path><path d="M9 9h6"></path></svg><span>Chase debts</span><span class="nav-badge">4</span></div>
+    <div class="nav-section-label">Sell</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v7l9 9 7-7-9-9z"></path><circle cx="8" cy="8" r="1.3"></circle></svg><span>Counter</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path><path d="M7 15h5"></path></svg><span>Order tracking</span><span class="nav-badge">9</span></div>
+    <div class="nav-section-label">Insight</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3"></path></svg><span>The day</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg><span>Manager</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Analysis</span></div>
+    <div class="nav-section-label">Setup</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"></path><circle cx="14" cy="8" r="3.5"></circle><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"></path><circle cx="6" cy="8.5" r="2.3"></circle></svg><span>Staff</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path><path d="M11 11h2"></path></svg><span data-navtext>The shop</span></div>
+  </div>
+  <div class="main">
+
+    <!-- ============ 1. NOTHING LEFT UNSET ============ -->
+    <div class="stsec">
+      <div class="sthd"><b>1 &middot; Nothing left unset</b><span>The band is <b>gone</b>, not empty and not a green tick. A settings page that congratulates you for filling it in is a page you learn to scroll past &mdash; and the day it has something to say, you scroll past that too. What replaces it is the page itself, starting at the work.</span></div>
+      <div class="cols">
+        <div>
+          <div class="rg"><h2 class="rg-t">The rules it works by</h2><span class="rg-s">Every number the app assumes, and the screen each one drives.</span></div>
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">Set here</span><span class="ow-pan-n">6 rules</span></div>
+            <div class="rr">
+              <div class="rr-n">Default price rule</div>
+              <p class="rr-d">The selling rule for a product that has none of its own. A rule on the product always wins.</p>
+              <p class="rr-d" style="color:var(--ow-verdigris);margin-top:5px;"><b style="color:var(--ow-verdigris);">Wholesale +12% on cost, retail +18% on cost</b> &mdash; 23 lines now price off this.</p>
+              <div class="rr-v" style="flex-direction:column;align-items:flex-end;gap:5px;">
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Wholesale</span><select class="sel"><option>+&thinsp;%</option></select><input class="num" style="width:62px;" type="text" value="12"></div>
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Retail</span><select class="sel"><option>+&thinsp;%</option></select><input class="num" style="width:62px;" type="text" value="18"></div>
+              </div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Order step limits</div>
+              <p class="rr-d">If an order sits in a step longer than its limit, its card raises a flag. Blank or 0 turns that step&rsquo;s warning off.</p>
+              <div class="rr-v"><span class="ro">4</span><span class="unit">of 6 set</span></div>
+            </div>
+            <div class="st">
+              <div class="st-f"><span class="st-l">Quoted</span><input class="num" style="width:62px;" type="text" value="240"></div>
+              <div class="st-f"><span class="st-l">Confirmed</span><input class="num" style="width:62px;" type="text" value="120"></div>
+              <div class="st-f"><span class="st-l">Picking</span><input class="num" style="width:62px;" type="text" value="45"></div>
+              <div class="st-f"><span class="st-l">Packed</span><input class="num" style="width:62px;" type="text" value="30"></div>
+              <div class="st-f"><span class="st-l">Loaded</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+              <div class="st-f"><span class="st-l">Delivered</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+            </div>
+            <p class="ow-mini">Two steps are deliberately without a limit and the page does not argue: <b>Loaded</b> and <b>Delivered</b> wait on a lorry and a customer, not on this shop. Blank is an answer, so it is never counted as a fault.</p>
+          </div>
+        </div>
+        <div class="ow-side">
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-n">41 settings</span></div>
+            <div class="ix-g">The rules</div>
+            <div class="ix"><span class="ix-n">Default price rule</span><span class="ix-v good">set</span></div>
+            <div class="ix"><span class="ix-n">Agent share of margin</span><span class="ix-v">40 / 30%</span></div>
+            <div class="ix"><span class="ix-n">Order step limits</span><span class="ix-v">4 of 6</span></div>
+            <div class="ix-g">The shop itself</div>
+            <div class="ix"><span class="ix-n">On paper</span><span class="ix-v good">named</span></div>
+            <div class="ix"><span class="ix-n">Mobile money</span><span class="ix-v good">MTN live</span></div>
+            <div class="ix"><span class="ix-n">Signed-in devices</span><span class="ix-v">4</span></div>
+            <p class="rl">Only two marks are coloured, and both are the answer to a question something else on the app asks. <b>4 of 6</b> is ink, because four is not a shortfall &mdash; it is a decision.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 2. A COUNTER LOGIN ============ -->
+    <div class="stsec">
+      <div class="sthd"><b>2 &middot; A counter login opens the same page</b><span>Locked regions are shown <b>locked and named</b>, never hidden. A picker who cannot find mobile money concludes the shop does not take it, tells a customer so, and the shop loses the sale to its own permissions.</span></div>
+      <div class="cols">
+        <div>
+          <div class="rg"><h2 class="rg-t">The shop itself</h2><span class="rg-s">Who this shop is on paper, how it takes money, and what is signed in to it.</span></div>
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">Taking mobile money</span><span class="ow-cp">Owners only</span><span class="ow-pan-n">MTN live</span></div>
+            <div class="lk">
+              <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7.5a4 4 0 0 1 8 0V11"></path></svg>
+              <p><b>This shop takes MTN Mobile Money, and it is live.</b> An agent can pay for their order from the Agent app. The merchant keys behind it are readable by owners only &mdash; ask Kevin to change anything here. Airtel Money is off.</p>
+            </div>
+          </div>
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h"><span class="ow-pan-t">On paper</span><span class="ow-cp">Owners only</span><span class="ow-pan-n">prints on every receipt</span></div>
+            <div class="lk">
+              <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7.5a4 4 0 0 1 8 0V11"></path></svg>
+              <p><b>Telagon Hardware, Jesco House Room JHB08, 0754&thinsp;333419</b> prints at the top of every receipt, and paper comes out automatically when a payment is recorded. What prints is shown because you hand it to customers all day; changing it is the owner&rsquo;s.</p>
+            </div>
+          </div>
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h"><span class="ow-pan-t">Signed in to this shop</span><span class="ow-cp">Owners only</span></div>
+            <div class="lk">
+              <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7.5a4 4 0 0 1 8 0V11"></path></svg>
+              <p>Which phones and computers are signed in is an owner&rsquo;s question. <b>Your own device is on the list</b> &mdash; Chrome on Windows, the counter machine &mdash; and signing yourself out is on the sidebar where it always was.</p>
+            </div>
+          </div>
+        </div>
+        <div class="ow-side">
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-n">14 you can change</span></div>
+            <div class="ix-g">The words</div>
+            <div class="ix"><span class="ix-n">Categories</span><span class="ix-v">7</span></div>
+            <div class="ix"><span class="ix-n">Units</span><span class="ix-v">9</span></div>
+            <div class="ix"><span class="ix-n">Locations</span><span class="ix-v">12</span></div>
+            <div class="ix-g">The rules</div>
+            <div class="ix"><span class="ix-n">Read only, 11 rules</span><span class="ix-v">&mdash;</span></div>
+            <div class="ix-g">The shop itself</div>
+            <div class="ix"><span class="ix-n">Locked, 3 panels</span><span class="ix-v">&mdash;</span></div>
+            <p class="rl">The index still lists everything. A map that hides the rooms you cannot enter is a map you stop trusting &mdash; and the count in the header says how many of the 41 are yours.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 3. SEARCH, AND A SAVE THAT DID NOT LAND ============ -->
+    <div class="stsec">
+      <div class="sthd"><b>3 &middot; One word typed, and a save that did not land</b><span>&ldquo;receipt&rdquo; matches what a setting <b>does</b>, not what the app calls it &mdash; nothing on this page is named &ldquo;receipt&rdquo;. And a write that fails says so where the change was made, with the value still in the field.</span></div>
+      <div class="cols">
+        <div>
+          <div class="ow-ph" style="margin-bottom:12px;">
+            <div><h1 class="ow-ph-t">The shop</h1><p class="ow-ph-sub">Everything the app assumes about this shop until you tell it otherwise.</p></div>
+            <span class="ow-ph-sp"></span>
+            <div class="sf" style="border-color:var(--ow-steel-950);">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+              <input type="text" value="receipt">
+              <span class="sf-x">1 of 3</span>
+            </div>
+          </div>
+          <div class="bad" style="margin-bottom:12px;">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5"></path><path d="M12 16h.01"></path></svg>
+            <div>
+              <p class="bad-t">The address did not save. It is still only on this screen.</p>
+              <p>The shop database refused the write &mdash; the connection dropped at 14:22. Nothing else on the page is affected and the value below is exactly what you typed; it will go up on its own the moment the connection is back. <b>Receipts printed until then carry the old address.</b></p>
+            </div>
+          </div>
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">On paper</span><span class="ow-pan-n">prints on every receipt</span></div>
+            <div class="fg" style="grid-template-columns:minmax(0,1fr) 230px;">
+              <div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;">
+                  <div style="grid-column:1/-1;"><label class="fl">Shop name</label><input class="txt" type="text" value="Telagon Hardware"></div>
+                  <div style="grid-column:1/-1;"><label class="fl">Address</label><input class="txt" type="text" value="Jesco House Room JHB08, Kampala Road" style="border-color:var(--ow-crimson);"></div>
+                  <div><label class="fl">Phone</label><input class="txt mono" type="text" value="0754 333419"></div>
+                  <div><label class="fl">TIN <span class="opt">optional</span></label><input class="txt mono" type="text" value="1002348871"></div>
+                </div>
+              </div>
+              <div>
+                <label class="fl">What prints</label>
+                <div class="rcp">Telagon Hardware
+<span class="g">Jesco House Room JHB08</span>
+<span class="g">0754 333419 · TIN 1002348871</span>
+<span class="g">─────────────────</span>
+<span class="g">2× Iron sheet G28 3m   84,000</span>
+<span class="g">1× Cement 50kg         41,000</span>
+<span class="g">─────────────────</span>
+<span class="g">TOTAL             125,000</span></div>
+              </div>
+            </div>
+            <p class="ow-mini">The preview shows what is <b>on file</b>, not what is in the field &mdash; so the one line that did not save is visibly the old one. A preview that echoed the box would have told you the change had landed.</p>
+          </div>
+          <p class="ow-mini" style="border:0;padding-left:0;">Two more matches are folded away: <b>Print a receipt on payment</b> in the same panel, and <b>Receipt footer</b>. Nothing in the words or the rules matched, so neither region is drawn &mdash; and the page does not say &ldquo;0 results&rdquo; about regions nobody asked for.</p>
+        </div>
+        <div class="ow-side">
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">Matching &ldquo;receipt&rdquo;</span><span class="ow-pan-n">3</span></div>
+            <div class="ix"><span class="ix-n">Shop name, address, TIN</span><span class="ix-v">on paper</span></div>
+            <div class="ix"><span class="ix-n">Receipt footer</span><span class="ix-v">on paper</span></div>
+            <div class="ix"><span class="ix-n">Print on payment</span><span class="ix-v good">on</span></div>
+            <p class="rl">The index becomes the result list. Clearing the field puts all 41 back &mdash; there is no separate search screen to come back from.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

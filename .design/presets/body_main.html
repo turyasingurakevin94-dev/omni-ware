@@ -1,0 +1,397 @@
+  <div class="main">
+
+    <div class="ow-ph">
+      <div>
+        <h1 class="ow-ph-t">The shop<span class="ow-ph-i">i</span></h1>
+        <p class="ow-ph-sub">Everything the app assumes about this shop until you tell it otherwise.</p>
+      </div>
+      <span class="ow-ph-sp"></span>
+      <div class="sf">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <input type="text" placeholder="Search 41 settings" value="{{ q }}" onInput="{{ onSearch }}">
+        <span class="sf-x">{{ hits }}</span>
+      </div>
+    </div>
+
+    <!-- THE STANDING BAND. Not a badge: a decomposition. It names each
+         unset setting, what depends on it, and how many things that is.
+         Absent entirely -- not empty, not a green tick -- once there is
+         nothing unset. The accent lives here and nowhere else on the
+         page, because this is the one thing to do next. -->
+    <sc-if value="{{ unset.any }}" hint-placeholder-val="{{ true }}">
+    <div class="sb">
+      <svg class="sb-ic" viewBox="0 0 24 24"><path d="M12 9v4.5"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+      <div class="sb-b">
+        <p class="sb-t">{{ unset.headline }}</p>
+        <ul class="sb-l">
+          <sc-if value="{{ unset.markup }}" hint-placeholder-val="{{ true }}">
+          <li><b>No default price rule.</b> 23 of 31 sellable lines have no rule of their own and nothing behind them, so they cannot be quoted, sold at the counter, or put on a catalogue.</li>
+          </sc-if>
+          <sc-if value="{{ unset.identity }}" hint-placeholder-val="{{ true }}">
+          <li><b>No shop name or address on file.</b> Every receipt printed since March has gone across the counter anonymous &mdash; 1,204 of them.</li>
+          </sc-if>
+          <sc-if value="{{ unset.limits }}" hint-placeholder-val="{{ true }}">
+          <li><b>No order step limits, and the alert is on.</b> Nothing can go past a limit that does not exist, so the alert has never fired.</li>
+          </sc-if>
+        </ul>
+      </div>
+      <div class="sb-a"><button class="btn btn-accent ow-sm" onClick="{{ fixNow }}">{{ unset.action }}</button></div>
+    </div>
+    </sc-if>
+
+    <div class="ow-grid">
+      <div class="ow-stack">
+
+        <!-- ============ REGION 1 — THE WORDS ============ -->
+        <sc-if value="{{ show.words }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The words the shop uses</h2>
+            <span class="rg-s">Typed into this shop&rsquo;s own forms. Nothing here moves a figure &mdash; a list only decides what a field suggests, and keeps one thing spelled one way.</span>
+          </div>
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Six lists</span>
+              <span class="ow-pan-n">{{ wordCount }} entries</span>
+            </div>
+            <div class="wd">
+              <sc-for list="{{ lists }}" as="l" hint-placeholder-count="6">
+                <div class="wd-b">
+                  <div class="wd-h"><span class="wd-n">{{ l.title }}</span><span class="wd-c">{{ l.n }}</span></div>
+                  <p class="wd-u">{{ l.used }}</p>
+                  <div class="wd-f">
+                    <sc-for list="{{ l.items }}" as="it" hint-placeholder-count="6">
+                      <span class="wc"><span class="wc-n">{{ it.name }}</span><span class="wc-x" onClick="{{ it.del }}"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"></path></svg></span></span>
+                    </sc-for>
+                    <input class="wd-in" type="text" placeholder="Add&hellip;" value="{{ l.draft }}" onInput="{{ l.onInput }}" onKeyDown="{{ l.onKey }}">
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div class="wd-at">
+              <div class="wd-h"><span class="wd-n">Attributes</span><span class="wd-c">3</span></div>
+              <p class="wd-u">Suggested when a product is built in variants. Values auto-fill when the name matches one on file.</p>
+              <div class="at-r">
+                <span class="at-n">Length</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">2 m</span></span><span class="wc"><span class="wc-n">2.5 m</span></span><span class="wc"><span class="wc-n">3 m</span></span><span class="wc"><span class="wc-n">3.5 m</span></span><span class="wc"><span class="wc-n">4 m</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <div class="at-r">
+                <span class="at-n">Gauge</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">G28</span></span><span class="wc"><span class="wc-n">G30</span></span><span class="wc"><span class="wc-n">G32</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <div class="at-r">
+                <span class="at-n">Colour</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">Red oxide</span></span><span class="wc"><span class="wc-n">Charcoal</span></span><span class="wc"><span class="wc-n">Green</span></span><span class="wc"><span class="wc-n">Blue</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <button class="wd-add" style="margin-top:8px;"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Attribute</button>
+            </div>
+            <p class="ow-mini">A word is renamed by clicking it, and renaming carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ============ REGION 2 — THE RULES ============ -->
+        <sc-if value="{{ show.rules }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The rules it works by</h2>
+            <span class="rg-s">Every number the app assumes, and the screen each one drives. Five of them are set on the screen that uses them; they are listed here so this page is the whole answer.</span>
+          </div>
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Set here</span>
+              <span class="ow-pan-n">6 rules</span>
+            </div>
+
+            <div class="rr {{ mk.cls }}">
+              <div class="rr-n">Default price rule</div>
+              <p class="rr-d">The selling rule for a product that has none of its own. Percent adds on top of the item&rsquo;s cheapest supplier cost; fixed adds a flat amount, per <b>pack</b> wholesale and per <b>piece</b> retail. A rule on the product always wins.</p>
+              <sc-if value="{{ mk.unset }}" hint-placeholder-val="{{ true }}">
+              <p class="rr-w"><b>Unset.</b> 23 lines fall through to this and find nothing. They cannot be quoted, sold, or catalogued until either they get a rule of their own or this one is set.</p>
+              </sc-if>
+              <sc-if value="{{ mk.set }}" hint-placeholder-val="{{ false }}">
+              <p class="rr-d" style="color:var(--ow-verdigris);margin-top:5px;"><b style="color:var(--ow-verdigris);">{{ mk.words }}</b> &mdash; 23 lines now price off this.</p>
+              </sc-if>
+              <div class="rr-v" style="flex-direction:column;align-items:flex-end;gap:5px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="unit">Wholesale</span>
+                  <select class="sel" value="{{ mk.wt }}" onChange="{{ mk.onWt }}"><option value="percent">+&thinsp;%</option><option value="fixed">+&thinsp;UGX</option></select>
+                  <input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ mk.w }}" onInput="{{ mk.onW }}">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="unit">Retail</span>
+                  <select class="sel" value="{{ mk.rt }}" onChange="{{ mk.onRt }}"><option value="percent">+&thinsp;%</option><option value="fixed">+&thinsp;UGX</option></select>
+                  <input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ mk.r }}" onInput="{{ mk.onR }}">
+                </div>
+              </div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Agent share of margin</div>
+              <p class="rr-d">A share of what you make on an item, not off its price. 50% gives an agent half your margin; 100% gives all of it and they pay your cost exactly. Below cost is not reachable whatever is set here. Any product can override it.</p>
+              <div class="rr-v" style="flex-direction:column;align-items:flex-end;gap:5px;">
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Wholesale</span><input class="num" type="text" value="40"><span class="unit">%</span></div>
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Retail</span><input class="num" type="text" value="30"><span class="unit">%</span></div>
+              </div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Cluster bonus wait</div>
+              <p class="rr-d">How long a product must already have sat in an agent&rsquo;s cluster before a sale of it earns the bonus. Stops an agent starring a high-bonus item right before checkout just to collect on it.</p>
+              <div class="rr-v"><input class="num" type="text" value="7"><span class="unit">days</span></div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Trust a price for</div>
+              <p class="rr-d">Drives <b>Prices to check</b> on Analysis. Where an item has enough dated invoices to show how fast its own price moves, that is used instead and this is ignored.</p>
+              <div class="rr-v"><input class="num" type="text" value="90"><span class="unit">days</span></div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Prices to check each month</div>
+              <p class="rr-d">How many the check list is allowed to hold before it stops being read. <b>41 prices</b> are currently older than the window above.</p>
+              <div class="rr-v"><input class="num" type="text" value="20"><span class="unit">prices</span></div>
+            </div>
+
+            <div class="rr {{ lim.cls }}">
+              <div class="rr-n">Order step limits</div>
+              <p class="rr-d">If an order sits in a step on the Order tracking board longer than its limit, its card raises a flag. Blank or 0 turns that step&rsquo;s warning off.</p>
+              <sc-if value="{{ lim.unset }}" hint-placeholder-val="{{ true }}">
+              <p class="rr-w"><b>No limit set on any step.</b> The alert below is on and has nothing to fire on.</p>
+              </sc-if>
+              <div class="rr-v"><span class="ro">{{ lim.n }}</span><span class="unit">of 6 set</span></div>
+            </div>
+            <div class="st">
+              <div class="st-f"><span class="st-l">Quoted</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.a }}" onInput="{{ lim.onA }}"></div>
+              <div class="st-f"><span class="st-l">Confirmed</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.b }}" onInput="{{ lim.onB }}"></div>
+              <div class="st-f"><span class="st-l">Picking</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.c }}" onInput="{{ lim.onC }}"></div>
+              <div class="st-f"><span class="st-l">Packed</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+              <div class="st-f"><span class="st-l">Loaded</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+              <div class="st-f"><span class="st-l">Delivered</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+            </div>
+            <label class="sw">
+              <input type="checkbox" checked>
+              <span class="sw-b">
+                <span class="sw-t">Tell me the moment an order goes past its limit</span>
+                <span class="sw-n">A notification instead of a flag only whoever is looking at the board can see. Each order is mentioned once per step. <b>It reaches this browser only while the app is open</b> &mdash; there is no other channel to an owner &mdash; so a closed browser cannot be told.</span>
+              </span>
+            </label>
+            <p class="ow-mini">Minutes, on every step. A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
+          </div>
+
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Set on the screen that uses them</span>
+              <span class="ow-pan-n">5 rules</span>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Restock cover</div>
+              <p class="rr-d">How many days of demand the buying plan refills to.</p>
+              <div class="rr-v"><span class="ro">14 days</span><span class="door">What to buy<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Target margin</div>
+              <p class="rr-d">The margin a line is judged thin against on the pricing console.</p>
+              <div class="rr-v"><span class="ro">10%</span><span class="door">Pricing<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Dead after</div>
+              <p class="rr-d">How long a line sits unsold before the pricing console calls it dead.</p>
+              <div class="rr-v"><span class="ro">60 days</span><span class="door">Pricing<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Chase a debt after</div>
+              <p class="rr-d">The grace period before a debtor joins the chase list.</p>
+              <div class="rr-v"><span class="ro">7 days</span><span class="door">Chase debts<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Watch a supplier price for</div>
+              <p class="rr-d">How long a quoted price is watched before it is dropped from the registry&rsquo;s watch list.</p>
+              <div class="rr-v"><span class="ro">180 days</span><span class="door">Price registry<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <p class="ow-mini">These five are read here and set there, beside the figures they change &mdash; so a number is never altered without its consequence on screen. Listing them here is what makes this page the whole answer to &ldquo;what does the app assume?&rdquo;</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ============ REGION 3 — THE SHOP ITSELF ============ -->
+        <sc-if value="{{ show.shop }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The shop itself</h2>
+            <span class="rg-s">Who this shop is on paper, how it takes money, and what is signed in to it. Owners and admins only &mdash; a counter login sees this region locked, and says so.</span>
+          </div>
+
+          <sc-if value="{{ show.identity }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">On paper</span>
+              <span class="ow-pan-n">prints on every receipt</span>
+            </div>
+            <div class="fg" style="grid-template-columns:minmax(0,1fr) 230px;">
+              <div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;">
+                  <div class="w2" style="grid-column:1/-1;"><label class="fl">Shop name</label><input class="txt" type="text" placeholder="e.g. Telagon Hardware" value="{{ id.name }}" onInput="{{ id.onName }}"></div>
+                  <div style="grid-column:1/-1;"><label class="fl">Address</label><input class="txt" type="text" placeholder="e.g. Jesco House, Room JHB08" value="{{ id.addr }}" onInput="{{ id.onAddr }}"></div>
+                  <div><label class="fl">Phone</label><input class="txt mono" type="text" value="0754 333419"></div>
+                  <div><label class="fl">TIN <span class="opt">optional</span></label><input class="txt mono" type="text" placeholder="blank omits the line"></div>
+                  <div style="grid-column:1/-1;"><label class="fl">Receipt footer</label><input class="txt" type="text" value="Goods once sold are not returnable."></div>
+                </div>
+              </div>
+              <div>
+                <label class="fl">What prints</label>
+                <div class="rcp">{{ id.line1 }}
+{{ id.line2 }}
+<span class="g">0754 333419</span>
+<span class="g">─────────────────</span>
+<span class="g">2× Iron sheet G28 3m   84,000</span>
+<span class="g">1× Cement 50kg         41,000</span>
+<span class="g">─────────────────</span>
+<span class="g">TOTAL             125,000</span>
+
+<span class="g">Goods once sold are not
+returnable.</span></div>
+              </div>
+            </div>
+            <label class="sw">
+              <input type="checkbox" checked>
+              <span class="sw-b">
+                <span class="sw-t">Print a receipt the moment a payment is recorded</span>
+                <span class="sw-n">Paper comes out the way a till does. Turn it off on a day spent reconciling rather than trading.</span>
+              </span>
+            </label>
+            <p class="ow-mini">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents. To print with no dialog, open the app from a Chrome shortcut carrying <b>--kiosk-printing</b>, with the thermal printer set as the Windows default.</p>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ show.momo }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Taking mobile money</span>
+              <span class="ow-cp">Owners only</span>
+              <span class="ow-pan-n">{{ momo.state }}</span>
+            </div>
+            <p class="ow-mini" style="border-top:0;">Lets an agent pay for their order from the Agent app through a real MTN or Airtel prompt to their phone, instead of you confirming cash by hand. Credentials are readable by owners only and are never sent to the Agent app.</p>
+            <label class="sw">
+              <input type="checkbox" checked="{{ momo.on }}" onChange="{{ momo.onToggle }}">
+              <span class="sw-b">
+                <span class="sw-t">MTN Mobile Money</span>
+                <span class="sw-n">A subscription key from MTN&rsquo;s developer portal, then one button here creates the API user and wires the payment callback.</span>
+              </span>
+            </label>
+            <sc-if value="{{ momo.on }}" hint-placeholder-val="{{ true }}">
+            <div class="fg">
+              <div><label class="fl">Environment</label>
+                <select class="sel" style="width:100%;height:30px;" value="{{ momo.env }}" onChange="{{ momo.onEnv }}">
+                  <option value="sandbox">Sandbox &mdash; testing</option>
+                  <option value="production">Production &mdash; real money</option>
+                </select></div>
+              <div><label class="fl">Subscription key</label><input class="txt mono" type="password" value="••••••••••••3f9a"></div>
+              <div><label class="fl">API user</label><input class="txt mono" type="password" value="••••••••••••7c21"></div>
+              <div><label class="fl">API key</label><input class="txt mono" type="password" value="••••••••••••b40e"></div>
+            </div>
+            <sc-if value="{{ momo.prod }}" hint-placeholder-val="{{ false }}">
+            <div class="sb" style="margin:0 14px 12px;">
+              <svg class="sb-ic" viewBox="0 0 24 24"><path d="M12 9v4.5"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+              <div class="sb-b">
+                <p class="sb-t">Production moves real money out of agents&rsquo; wallets.</p>
+                <ul class="sb-l"><li>Every prompt from this shop will debit a real phone. Sandbox keys do not work here &mdash; a production subscription key from MTN&rsquo;s go-live approval is required, and the wrong one fails every payment silently at the agent&rsquo;s end.</li></ul>
+              </div>
+              <div class="sb-a" style="display:flex;gap:6px;">
+                <button class="btn btn-ghost ow-sm" onClick="{{ momo.cancelProd }}">Stay on sandbox</button>
+                <button class="btn btn-accent ow-sm" onClick="{{ momo.confirmProd }}">Go live</button>
+              </div>
+            </div>
+            </sc-if>
+            <div class="rr">
+              <div class="rr-n">Last prompt</div>
+              <p class="rr-d">Sent to Namusoke Grace, 0772&thinsp;418&thinsp;003, 14 minutes ago &mdash; <b>still pending</b>. A prompt pending long after it was sent is worth re-checking before the same money is counted twice.</p>
+              <div class="rr-v"><span class="ro">146,000</span><span class="door">All prompts<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            </sc-if>
+            <label class="sw">
+              <input type="checkbox">
+              <span class="sw-b">
+                <span class="sw-t">Airtel Money</span>
+                <span class="sw-n">Off. A client ID and secret from Airtel&rsquo;s developer portal turn it on.</span>
+              </span>
+            </label>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ show.devices }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Signed in to this shop</span>
+              <span class="ow-cp">Owners only</span>
+              <span class="ow-pan-n">4 devices</span>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Kevin Turyasingura</span><span class="ow-cp ow-good">this device</span></div>
+              <div class="ow-lr-m">Chrome on Windows &middot; the counter machine &middot; heard from just now</div>
+              <div class="ow-lr-v"><span class="ow-lr-b">signed in 6 Sep</span></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Namusoke Grace</span><span class="ow-cp">agent</span></div>
+              <div class="ow-lr-m">Agent app on Android &middot; heard from 2 hours ago</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Okello Denis</span><span class="ow-cp">picker</span></div>
+              <div class="ow-lr-m">Worker app on Android &middot; heard from 20 minutes ago</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Unnamed device</span><span class="ow-cp ow-warn">not heard from in 71 days</span></div>
+              <div class="ow-lr-m">Chrome on Android &middot; last seen 27 June</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <p class="ow-mini">Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ show.none }}" hint-placeholder-val="{{ false }}">
+        <div class="ow-pan"><div class="ow-empty">Nothing here is called &ldquo;{{ q }}&rdquo;. Try the thing it changes &mdash; <b>receipt</b>, <b>margin</b>, <b>agent</b>, <b>late</b> &mdash; rather than the word the app uses for it.</div></div>
+        </sc-if>
+      </div>
+
+      <!-- ============ THE INDEX ============
+           Twelve doors became none. This is a map with state on every
+           row, not a set of tabs: it says what is already set without
+           opening anything, which is the one thing the old nav could
+           not do for six of its twelve entries. -->
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-n">41 settings</span></div>
+          <div class="ix-g">The words</div>
+          <sc-for list="{{ index.words }}" as="r" hint-placeholder-count="6">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="ix-v">{{ r.v }}</span></button>
+          </sc-for>
+          <div class="ix-g">The rules</div>
+          <sc-for list="{{ index.rules }}" as="r" hint-placeholder-count="6">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="{{ r.cls }}">{{ r.v }}</span></button>
+          </sc-for>
+          <div class="ix-g">The shop itself</div>
+          <sc-for list="{{ index.shop }}" as="r" hint-placeholder-count="3">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="{{ r.cls }}">{{ r.v }}</span></button>
+          </sc-for>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Lately</span><span class="ow-pan-n">last 30 days</span></div>
+          <div class="ix"><span class="ix-n">Trust a price for &middot; 120 &rarr; 90 d</span><span class="ix-v">2 Sep</span></div>
+          <div class="ix"><span class="ix-n">Locations &middot; Gayaza added</span><span class="ix-v">28 Aug</span></div>
+          <div class="ix"><span class="ix-n">Agent retail share &middot; 25 &rarr; 30%</span><span class="ix-v">19 Aug</span></div>
+          <p class="rl">Every change on this page is dated and attributed, so a figure that moved last Tuesday can be traced to the setting that moved it. Kevin made all three of these.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Who can change what</span></div>
+          <p class="rl">Everything here saves the moment you leave a field &mdash; one grammar for the whole page, no Save button, and no draft to lose. The one exception is going live on mobile money, which asks first, because it starts moving real money.</p>
+          <p class="rl"><b>Counter and picker logins</b> see the words and nothing else. <b>Admins</b> see the words and the rules. <b>Owners</b> see all three regions. A locked region is shown locked rather than hidden, so nobody concludes the shop cannot take mobile money.</p>
+        </div>
+      </div>
+    </div>
+  </div>
