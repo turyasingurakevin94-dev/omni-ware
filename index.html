@@ -5817,6 +5817,11 @@
   /* The figures that can be typed into. The layer's ghost input, sized
      to the cell rather than to the old 100px box. */
   .q-doc .qty-input,.q-doc .price-input{width:100%;}
+  /* Under the typed figure, not beside it: the box stays the width it
+     was, and a basis line is a caption rather than a second control. */
+  .q-qty-pack{display:block;margin-top:2px;font-size:11px;color:var(--ow-ink-400);
+    text-align:right;max-width:92px;margin-left:auto;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .q-sell-cell{display:flex;align-items:center;gap:2px;min-width:0;justify-content:flex-end;width:100%;}
   .q-sell-cell .ow-gi{flex:1 1 auto;min-width:0;}
   /* Set by hand: underlined, not boxed in amber. Amber is this app's
@@ -8022,6 +8027,12 @@
   .a5-table{width:100%;border-collapse:collapse;margin-top:6mm;}
   .a5-table th, .a5-table td{border:1px solid #ccc;padding:5px 7px;font-size:11px;text-align:left;}
   .a5-table th{background:#eee;}
+  /* The base quantity under the packed one, and the unit under the rate.
+     SHOWN rather than swapped: a client reading "1 Ctn" should be able
+     to check the arithmetic without trusting a conversion they cannot
+     see, and a shop reading its own invoice back needs the figure the
+     stock ledger actually moved by. */
+  .a5-basis{display:block;font-size:9px;color:#666;}
   .a5-total-row{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-top:6mm;border-top:1px solid #000;padding-top:4mm;}
   .a5-foot{font-size:11px;margin-top:10mm;text-align:center;}
   /* A voided document must be unmistakable on paper. Printed, it is
@@ -30665,6 +30676,65 @@ function quoteItemPackingLabel(it){
   if(it.packQty && it.packUnit) return `${it.packQty} ${it.unit||'unit'} per ${it.packUnit}`;
   return it.unit ? `Per ${it.unit}` : '';
 }
+
+/* ---- HOW IT WAS SOLD, not how it is counted -------------------------
+   Everything in this app is arithmetic on the BASE unit: the stock
+   ledger, the wholesale threshold, a customer's habit, every total. So
+   the base quantity is the truth and is never rewritten here.
+
+   But twenty pairs is one carton, and the shop already said so --
+   packQty is that sentence. A document that tells somebody who bought a
+   carton that they bought twenty pairs is describing a different
+   transaction from the one that happened, and it does not stop there:
+   that invoice is what the Price Registry is later measured against, so
+   the app forgets the carton and then reports its own forgetting as a
+   fault on the supplier's row.
+
+   Derived at the moment of printing, never stored on the line. Nothing
+   to migrate, nothing to go stale, and a pack size corrected in the
+   registry tomorrow corrects every document drawn after it.
+
+   A REMAINDER IS NEVER HIDDEN. Twenty-five pairs is one carton and five
+   pairs, said in those words -- rounding it to a carton would be the
+   original fault with the sign flipped. */
+function quoteLinePack(it){
+  const packQty = Number(it && it.packQty) || 0;
+  const packUnit = String((it && it.packUnit) || '').trim();
+  const qty = Number(it && it.qty) || 0;
+  if(!(packQty > 0) || !packUnit || !(qty >= packQty)) return null;
+  const packs = Math.floor(qty / packQty), loose = Math.round((qty - packs * packQty) * 1e6) / 1e6;
+  const unit = String((it && it.unit) || '').trim();
+  const n = (x)=> Number(x).toLocaleString('en-UG');
+  return { packs, loose, packQty, packUnit, unit, whole: loose === 0,
+    /* `text` is for paper, where there is room to say it properly.
+       `short` is for the quote row, where the column is as wide as a
+       four-digit box: the remainder is still THERE, as +5, and the
+       whole sentence is in the row's title. Truncating "1 Ctn + 5
+       Pair" to "1 Ctn + 5 ..." would cut the noun off the count, which
+       is the fault this whole change exists to fix. */
+    text: [`${n(packs)} ${packUnit}`, loose ? `${n(loose)} ${unit}` : null].filter(Boolean).join(' + '),
+    short: `${n(packs)} ${packUnit}${loose ? ` +${n(loose)}` : ''}` };
+}
+/* The quantity as the person holding the document should read it, and
+   the base behind it where the two differ -- shown rather than swapped,
+   so nobody has to trust the conversion to check the arithmetic. */
+function quoteLineQtyText(it){
+  const qty = Number(it && it.qty) || 0;
+  const base = `${Number(qty).toLocaleString('en-UG')} ${String((it && it.unit) || '').trim()}`.trim();
+  const p = quoteLinePack(it);
+  return { text: p ? p.text : base, base: p ? base : '', pack: p };
+}
+/* And the rate beside it. Per pack ONLY when the quantity is whole
+   packs: a line with a remainder carries two rates and a "price each"
+   column has one cell, and money is never made to fit. Multiplied
+   before rounding so packs times each still comes to the line total. */
+function quoteLineEach(it, each){
+  const p = quoteLinePack(it);
+  return (p && p.whole)
+    ? { price: Math.round(each * p.packQty), unit: p.packUnit }
+    : { price: Math.round(each), unit: String((it && it.unit) || '').trim() };
+}
+
 function quoteItemSellPrice(it){
   if(it.sellPrice!=null && it.sellPrice!=='') return Number(it.sellPrice)||0;
   const buy = Number(it.price)||0;
@@ -32399,6 +32469,13 @@ function renderQuoteItems(){
         <input type="hidden" class="q-supplier" value="${esc(it.supplierId)}">
         <div class="suggestions q-supplier-suggestions"></div>
       </div>`;
+    /* The quantity is typed and counted in the base unit -- that is what
+       the stock ledger, the wholesale threshold and every total run on,
+       and the box must not start meaning something else under the
+       cursor. But the DOCUMENT will say the pack, so the row says the
+       pack too: the rep sees on the call exactly what the client will
+       read, instead of finding out from the invoice. */
+    const packView = quoteLinePack(it);
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
         <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}">
@@ -32414,7 +32491,8 @@ function renderQuoteItems(){
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit">${esc(it.unit)}</span>${consignTag}</span>
       </div>
-      <div class="ow-tbl-n" data-l="Qty"><input type="number" class="ow-gi qty-input q-qty" min="1" step="any" value="${it.qty}" aria-label="Quantity"></div>
+      <div class="ow-tbl-n" data-l="Qty"><input type="number" class="ow-gi qty-input q-qty" min="1" step="any" value="${it.qty}" aria-label="Quantity">${
+        packView ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
       <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
@@ -32777,12 +32855,13 @@ document.getElementById('q_print_btn').addEventListener('click', ()=>{
     const qty = Number(it.qty)||0;
     const lineTotal = qty * buy;
     const packing = quoteItemPackingLabel(it);
+    const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, buy);
     return `<tr>
       <td>${esc(it.productName)}</td>
       <td>${esc(packing)}</td>
       <td>${esc(it.supplierName||'')}</td>
-      <td>${esc(String(it.qty))} ${esc(it.unit||'')}</td>
-      <td>${fmtUGX(Math.round(buy))}</td>
+      <td>${esc(q2.text)}${q2.base ? `<span class="a5-basis">${esc(q2.base)}</span>` : ''}</td>
+      <td>${fmtUGX(ea.price)}${ea.unit ? `<span class="a5-basis">a ${esc(ea.unit)}</span>` : ''}</td>
       <td>${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
@@ -32853,11 +32932,12 @@ document.getElementById('q_print_quote_btn').addEventListener('click', ()=>{
     const qty = Number(it.qty)||0;
     const lineTotal = qty * sell;
     const packing = quoteItemPackingLabel(it);
+    const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, sell);
     return `<tr>
       <td>${esc(it.productName)}</td>
       <td>${esc(packing)}</td>
-      <td>${esc(String(it.qty))} ${esc(it.unit||'')}</td>
-      <td>${fmtUGX(Math.round(sell))}</td>
+      <td>${esc(q2.text)}${q2.base ? `<span class="a5-basis">${esc(q2.base)}</span>` : ''}</td>
+      <td>${fmtUGX(ea.price)}${ea.unit ? `<span class="a5-basis">a ${esc(ea.unit)}</span>` : ''}</td>
       <td>${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
@@ -32956,6 +33036,17 @@ function waFitQty(qty, unitAbbr, width){
   return numStr + unitAbbr.slice(0, room);
 }
 function waFmtNum(n){ return Number(n).toLocaleString('en-UG'); }
+/* The same line, in the same words, in the narrow column. A message
+   saying 20 Pr and an invoice saying 1 Ctn for the same order are two
+   descriptions of one sale, and the client has both. Only WHOLE packs
+   are folded: a remainder needs two rates, and five characters cannot
+   carry two rates without losing one of them. */
+function waQtyLabel(it, width){
+  const p = quoteLinePack(it);
+  return (p && p.whole)
+    ? waFitQty(p.packs, waAbbrUnit(p.packUnit), width)
+    : waFitQty(Number(it.qty) || 0, waAbbrUnit(it.unit), width);
+}
 
 // Builds a client-safe (no cost/margin) plain-text version of the quote
 // and opens it in WhatsApp, addressed to the client's number if one is on
@@ -32977,8 +33068,8 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
   const rows = data.quote.items.map(it=>{
     const sell = quoteItemSellPrice(it);
     const qty = Number(it.qty)||0;
-    const qtyLabel = waFitQty(qty, waAbbrUnit(it.unit), W_QTY);
-    return `${waPadEnd(it.productName,W_ITEM)} ${waPadStart(qtyLabel,W_QTY)} ${waPadStart(waFmtNum(Math.round(sell)),W_PRICE)}`;
+    const qtyLabel = waQtyLabel(it, W_QTY);
+    return `${waPadEnd(it.productName,W_ITEM)} ${waPadStart(qtyLabel,W_QTY)} ${waPadStart(waFmtNum(quoteLineEach(it, sell).price),W_PRICE)}`;
   });
   const grand = data.quote.items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
   const totalRow = `${waPadEnd('TOTAL',W_ITEM+W_QTY+1)} ${waPadStart(waFmtNum(grand),W_PRICE)}`;
@@ -33013,7 +33104,7 @@ function buildSalesGroupQuoteMessage(items, client){
   const headerRow = `${waPadEnd('ITEM',W_ITEM)} ${waPadStart('QTY',W_QTY)}`;
   const rows = items.map(it=>{
     const qty = Number(it.qty)||0;
-    const qtyLabel = waFitQty(qty, waAbbrUnit(it.unit), W_QTY);
+    const qtyLabel = waQtyLabel(it, W_QTY);
     return `${waPadEnd(it.productName,W_ITEM)} ${waPadStart(qtyLabel,W_QTY)}`;
   });
   const grand = items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
@@ -36652,7 +36743,7 @@ function buildReceiptHTML(q, payment, idx){
       const each = quoteItemSellPrice(it);
       return `<div class="r-item">
         <div class="r-item-name">${esc(it.productName || 'Item')}</div>
-        <div class="r-item-row"><span>${esc(qty)} ${esc(it.unit||'')} &times; ${receiptNum(each)}</span><span>${receiptNum(qty*each)}</span></div>
+        <div class="r-item-row"><span>${esc(quoteLineQtyText(it).text)} &times; ${receiptNum(quoteLineEach(it, each).price)}</span><span>${receiptNum(qty*each)}</span></div>
       </div>`;
     }).join('')}
     <div class="r-line"></div>
@@ -36891,10 +36982,11 @@ function buildQuoteA5HTML(q){
   const itemsRows = q.items.map(it=>{
     const sell = quoteItemSellPrice(it);
     const lineTotal = (Number(it.qty)||0) * sell;
+    const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, sell);
     return `<tr>
       <td>${esc(it.productName)}</td>
-      <td>${esc(String(it.qty))} ${esc(it.unit||'')}</td>
-      <td>${fmtUGX(Math.round(sell))}</td>
+      <td>${esc(q2.text)}${q2.base ? `<span class="a5-basis">${esc(q2.base)}</span>` : ''}</td>
+      <td>${fmtUGX(ea.price)}${ea.unit ? `<span class="a5-basis">a ${esc(ea.unit)}</span>` : ''}</td>
       <td>${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
@@ -38958,11 +39050,12 @@ function buildPurchaseInvoiceA5HTML(pi){
     const qty = Number(it.qty)||0;
     const lineTotal = qty*buy;
     const packing = quoteItemPackingLabel(it);
+    const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, buy);
     return `<tr>
       <td>${esc(it.productName)}</td>
       <td>${esc(packing)}</td>
-      <td>${esc(String(it.qty))} ${esc(it.unit||'')}</td>
-      <td>${fmtUGX(Math.round(buy))}</td>
+      <td>${esc(q2.text)}${q2.base ? `<span class="a5-basis">${esc(q2.base)}</span>` : ''}</td>
+      <td>${fmtUGX(ea.price)}${ea.unit ? `<span class="a5-basis">a ${esc(ea.unit)}</span>` : ''}</td>
       <td>${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
@@ -60174,6 +60267,28 @@ const PRICE_ODD_HEADS = {
 /* The note is PLAIN TEXT. It is read in three places -- a card, a rail
    and a toast at the moment of typing -- and only two of those are
    HTML, so escaping is the caller's job wherever it is one. */
+/* THE SAME PRICE, TWICE. An invoice billed by the carton and a row
+   priced by the pair are not two measurements -- they are one, as long
+   as the row says how many pairs are in a carton, which is exactly what
+   packQty is for. 85,000 a carton IS 4,250 a pair at 20 to the carton,
+   and the shop that typed both did nothing wrong.
+
+   Refusing to convert is what put a dozen correct rows on a list headed
+   "prices to check" on this shop's real books. A check that cries wolf
+   is worse than no check: it teaches the owner to scroll past the one
+   row that is genuinely broken. So the pack is used where the row
+   carries one, and only a pair that STILL cannot be reconciled is
+   reported as a unit that does not match. */
+function priceOnRowUnit(r, p){
+  const ru = priceUnitKey(r.unit), pu = priceUnitKey(p.unit);
+  if(!pu || !ru || pu === ru) return { price: p.price, converted: false };
+  const pk = Number(r.packQty) || 0, pkU = priceUnitKey(r.packUnit);
+  if(pk > 0 && pkU && pu === pkU) return { price: p.price / pk, converted: true };
+  /* Nothing on file joins these two words, so nothing here may join
+     them either. Guessing a conversion is how a wrong figure gets a
+     confident face put on it. */
+  return null;
+}
 function priceRowOddity(r, peersAll, paid){
   const rate = priceRowRate(r);
   if(rate == null) return null;   // no figure at all is a different fault
@@ -60186,19 +60301,25 @@ function priceRowOddity(r, peersAll, paid){
   /* Their own invoices are in another unit. Nothing here can be
      compared with anything -- not their history, not their peers -- and
      the ranking is sorting the row anyway. */
-  if(mine && mine.unitSplit)
+  if(mine && !priceOnRowUnit(r, mine))
     return { why: 'unitSplitPaid', rate,
-      note: `This quote is ${f(rate)}${per}, but ${mine.sname}’s own invoices bill it by the ${mine.unit || 'unknown unit'}. The two figures are not the same measurement, so nothing on this line can be ranked honestly until one of them is corrected.` };
+      note: `This quote is ${f(rate)}${per}, but ${mine.sname}’s own invoices bill it by the ${mine.unit || 'unknown unit'}, and this row records no pack that joins the two. They are not the same measurement, so nothing on this line can be ranked honestly until one of them is corrected.` };
 
   /* Against money that actually moved. The only evidence a
      single-supplier line has, and the strongest evidence any line has. */
-  const bills = (paid || []).filter(p=> !p.unitSplit && p.price > 0 && (!uk || !p.unit || p.unit === uk));
+  /* Every invoice put onto THIS row's unit first, so a shop that buys
+     by the carton and prices by the pair is compared rather than
+     skipped -- which is most of them. */
+  const bills = (paid || []).map(p=>{
+    const on = p.price > 0 ? priceOnRowUnit(r, p) : null;
+    return on ? { ...p, price: on.price, converted: on.converted } : null;
+  }).filter(Boolean);
   if(bills.length){
     const mid = priceMedian(bills.map(p=> p.price));
     if(mid > 0 && rate < mid * share){
       const last = bills.slice().sort((a, b)=> String(b.date).localeCompare(String(a.date)))[0];
       return { why: 'underPaid', rate, against: mid, pct: Math.round(rate / mid * 100),
-        note: `${f(rate)}${per} against the ${f(mid)} your own purchase invoices show — ${last.sname} billed ${f(last.price)} on ${fmtShortDate(last.date)}. This quote is ${Math.round(rate / mid * 100)}% of what money actually moved at.` };
+        note: `${f(rate)}${per} against the ${f(mid)} your own purchase invoices show — ${last.sname} billed ${f(last.price)}${last.converted ? ` a ${r.unit || 'unit'} (their invoice is by the ${last.unit}, ${r.packQty} to it)` : ''} on ${fmtShortDate(last.date)}. This quote is ${Math.round(rate / mid * 100)}% of what money actually moved at.` };
     }
   }
 
@@ -60235,7 +60356,7 @@ function priceOddities(){
          spellings of one unit are told to be the same unit. Printed as
          it is stored rather than title-cased back: inventing the casing
          would be claiming to know how the shop wrote it. */
-      unit: priceUnitKey(sr.last.unit), unitSplit: !!sr.fileUnitSplit,
+      unit: priceUnitKey(sr.last.unit),
       sname: sr.supplierName || supplierName(sr.supplierId) });
   });
   const out = new Map();
@@ -61429,10 +61550,6 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       && (sr.variantIdx == null ? null : sr.variantIdx) === variantIdx && sr.last)
     .map(sr=> ({ supplierId: sr.supplierId, price: sr.last.price, date: sr.last.date,
       unit: priceUnitKey(sr.last.unit),
-      /* This row's own unit is the one being typed, not the one on
-         file, so the split is recomputed against what is on screen. */
-      unitSplit: String(sr.supplierId) === String(supplierId)
-        ? priceUnitKey(record.unit) !== priceUnitKey(sr.last.unit) : !!sr.fileUnitSplit,
       sname: sr.supplierName || supplierName(sr.supplierId) }));
   const odd = priceRowOddity({ ...record, id: editingPriceId || -1 },
     peersNow.concat([{ ...record, id: editingPriceId || -1 }]), paidNow);
