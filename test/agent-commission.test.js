@@ -120,7 +120,12 @@ const migSrc = read('supabase/migrations/0038_commission_claim_cash_link.sql');
     confirm: () => true,
     toast: (m) => { env.__toast = m; },
     saveData: () => {},
-    renderCommissionClaims: () => {},
+    /* Settling a claim redraws the WHOLE agents screen, not just the
+       claims panel: it changes what the strip says you owe, empties a
+       row out of the queue, and can hand the accent back to Invite. A
+       renderer that only repainted the panel would leave three parts of
+       the screen stating a figure that had just moved. */
+    refreshAgentsScreen: () => {},
     renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
     document: { getElementById: () => null },
     addCashPayment: (account, amount, category, description) => {

@@ -213,14 +213,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/listPageSlice\('prices', ordered\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
     'and one product\'s quotes land next to each other rather than scattered by date — nothing but the page sits between grouping and drawing');
 
-  /* .price-card and .price-grid are NOT dead with it: the agent
-     promotions and the commission claims still build on them. Removing
-     them with the registry's card would have quietly broken two other
-     screens. */
+  /* .price-card and .price-grid are NOT dead with it. They were worn by
+     three screens: this registry, the agent promotions and the
+     commission claims. The last two have since become .ow-tbl tables --
+     four short cells in a card shell, three to a row, meant two claims
+     could not be read against each other -- so the products screen is
+     now the one holding these styles up, and the check names it rather
+     than the two that left. The point of the check is unchanged: do not
+     delete a shared style on the strength of one caller dropping it. */
   t.check(/\.price-grid\{/.test(src) && /\.price-card\{/.test(src),
     'the shared card styles stay');
-  t.check(/promotionCardHTML|claimCardHTML/.test(code),
-    'because other screens still use them');
+  t.check(/productLineHTML/.test(code),
+    'because the products screen still uses them');
 
   /* .reg-fig was the grouped row's figure, and those rows -- never
      called after the registry went back to cards -- are gone with the
