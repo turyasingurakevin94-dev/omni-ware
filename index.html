@@ -7619,6 +7619,9 @@
     font-size:12px;color:var(--ink);padding:2.5px 0;
   }
   .sconf-line + .sconf-line{border-top:1px solid var(--ow-rule-soft);}
+  /* The base quantity behind the pack one. Quiet, because it is the
+     working; present, because the shelf is counted in it. */
+  .sconf-basis{color:var(--ow-ink-400);}
   .sconf-line span:last-child{
     font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink-soft);
   }
@@ -33814,9 +33817,16 @@ function markOrderSupplierAsked(orderId, supplierId){
    slowly. */
 function supplierConfirmMessage(q, supplierId){
   const g = orderSupplierGroups(q).find(x=> String(x.supplierId) === String(supplierId));
+  /* IN THE SUPPLIER'S OWN WORDS. They quoted 290,000 a carton; asking
+     them for "20 @ 14,500" is asking in a unit they do not trade in,
+     and the bill that comes back is then in a third shape again. That
+     mismatch is not cosmetic -- the Price Registry measures its rows
+     against these invoices, so a message written in the base unit is
+     upstream of every "priced in a different unit" the shop is later
+     asked to explain. */
   const rows = (g ? g.lines : []).map(it=>{
-    const qty = Number(it.qty) || 0;
-    return `• ${it.productName}${it.unit ? ' ('+it.unit+')' : ''} — ${qty.toLocaleString('en-UG')} @ ${fmtUGX(Math.round(Number(it.price)||0))}`;
+    const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, Number(it.price) || 0);
+    return `• ${it.productName} — ${q2.text}${q2.base ? ` (${q2.base})` : ''} @ ${fmtUGX(ea.price)}${ea.unit ? '/' + ea.unit : ''}`;
   });
   return [
     `Hello *${supplierName(supplierId)}*,`,
@@ -33936,9 +33946,13 @@ function renderSupplierConfirmList(){
   const rows = groups.map(g=>{
     const st = orderSupplierConfirmState(q, g.supplierId);
     const pill = supplierConfirmPill(st);
-    const lines = g.lines.map(it=>
-      `<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''} @ ${esc(fmtUGX(Math.round(Number(it.price)||0)))}</span></div>`
-    ).join('');
+    const lines = g.lines.map(it=>{
+      /* Word for word what the message will say. Two readings of one
+         order, on the same screen, is how somebody rings a supplier and
+         quotes a figure the message never carried. */
+      const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, Number(it.price) || 0);
+      return `<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${esc(q2.text)}${q2.base ? ` <span class="sconf-basis">${esc(q2.base)}</span>` : ''} @ ${esc(fmtUGX(ea.price))}${ea.unit ? '/' + esc(ea.unit) : ''}</span></div>`;
+    }).join('');
     /* The stale case says what actually happened rather than just going
        grey again: somebody DID ring this supplier, and the useful fact
        is that the quote moved underneath that call, not that the tick
@@ -33995,7 +34009,7 @@ function renderSupplierConfirmList(){
   const orphan = noSupplier.length
     ? `<div class="sconf-row orphan">
         <div class="sconf-head"><b>No supplier chosen</b><span class="sconf-pill warn">Nobody to ask</span></div>
-        <div class="sconf-lines">${noSupplier.map(it=>`<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''}</span></div>`).join('')}</div>
+        <div class="sconf-lines">${noSupplier.map(it=>`<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${esc(quoteLineQtyText(it).text)}</span></div>`).join('')}</div>
         <div class="sconf-note">These do not hold the order back — a supplier is picked for them on the buying list.</div>
       </div>`
     : '';
