@@ -48,6 +48,11 @@ const data = {
     { id: 'P7', name: 'Steady Item', variants: [] },
     { id: 'P8', name: 'Unit Split', variants: [] },
     { id: 'P9', name: 'Free Sample', variants: [] },
+    /* A row that exists and STILL cannot be joined to its invoices: it
+       names no pack, so nothing on file says how many pieces are in the
+       carton being billed. This is what fileUnitSplit is now for, and it
+       has to be a real case in the fixture or the count means nothing. */
+    { id: 'P10', name: 'No Bridge', variants: [] },
   ],
   purchaseInvoices: [
     // P1: a small rise on a big volume — 2,500 → 2,600 over 600 units.
@@ -80,6 +85,10 @@ const data = {
     // point survives the guard and there is nothing to compare.
     pi(19, 70, 'S2', 'Roto', [line('P8', 'Unit Split', 400, 100, 'pc')]),
     pi(20, 18, 'S2', 'Roto', [line('P8', 'Unit Split', 9000, 4, 'ctn')]),
+    // P10: bought by the carton, priced by the piece, and no pack size
+    // written down anywhere — so there is nothing to convert through.
+    pi(21, 60, 'S1', 'Okuosi Gypsum', [line('P10', 'No Bridge', 12000, 3, 'ctn')]),
+    pi(22, 14, 'S1', 'Okuosi Gypsum', [line('P10', 'No Bridge', 12500, 3, 'ctn')]),
     // Lines the watch cannot read at all: one names no product, one
     // carries no price. Both must be COUNTED, not silently dropped.
     pi(21, 30, 'S1', 'Okuosi Gypsum', [
@@ -109,6 +118,11 @@ const data = {
        ranking multiplies the gap by how much is bought. */
     { id: 4, productId: 'P6', variantIdx: null, supplierId: 'S1', wholesale: 500, retail: 520,
       unit: 'pc', packQty: 20, packUnit: 'ctn', tiers: [], outOfStock: false },
+    /* Priced by the piece, bought by the carton, and NO pack size: the
+       one shape that still cannot be compared, because nothing the shop
+       wrote down joins the two words. */
+    { id: 5, productId: 'P10', variantIdx: null, supplierId: 'S1', wholesale: 400, retail: 450,
+      unit: 'pc', packQty: 0, packUnit: '', tiers: [], outOfStock: false },
   ],
 };
 
@@ -123,6 +137,10 @@ try {
   scope = compileScope([
     'supplierPriceSeries', 'supplierPriceWatch', 'dashSupplierPriceInflation',
     'waDaysBetween', 'productPriceRows', 'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
+    /* What puts an invoice billed by the carton onto a row priced by
+       the piece. Compiled in, never stubbed: whether two purchases are
+       comparable at all is the whole subject of section 1. */
+    'pwOnUnit',
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
       extractDeclaration(src, 'PRICE_WATCH_FILE_TOLERANCE_PCT', 'index.html'),
@@ -151,11 +169,35 @@ if (scope) {
   eq(angle.units, 600, 'over the quantity actually bought in the window');
   eq(angle.extra, 60000, 'and the money is that quantity at the new price — 100 more on each of 600');
 
+  /* WAS: the piece purchase was thrown away and the trend ran over the
+     two carton ones. That kept the screen honest -- it never subtracted
+     a carton from a piece -- but it did it by going blind. Half this
+     shop's trails are a supplier who billed by the piece and later by
+     the carton, and a rise ACROSS that change was the one thing the
+     screen could not see, which is the thing it exists for.
+
+     The pack size is what joins them, and the shop already wrote it
+     down: 20 pieces to the carton on P6's own registry row. So the
+     trail is CONVERTED onto that row's unit rather than cut in half --
+     500, then 10,000/ctn as 500, then 10,400/ctn as 520 -- and the 4%
+     rise on the last delivery is finally visible. */
   const switched = by('Switched Unit');
-  eq(switched.points.length, 2, 'a purchase recorded in another unit is NOT compared');
-  eq(switched.skippedOtherUnit, 1, 'it is counted instead, so the gap in the trail is visible');
-  t.check(switched.first.price === 10000 && switched.rise === 400,
-    'and the trend is only over the prices that can honestly be compared');
+  eq(switched.points.length, 3, 'a purchase billed in the pack is converted through it, not discarded');
+  eq(switched.skippedOtherUnit, 0, 'so nothing is left out of the trail');
+  eq(switched.converted, 2, 'and how many were converted is said, never silently folded in');
+  eq(switched.last.unit, 'pc', 'the trail is measured in the unit the registry row is priced in');
+  t.check(switched.first.price === 500 && switched.rise === 20,
+    'the trend runs across the change of unit — 500 a piece, then 520 — which is what actually happened');
+  t.check(switched.points[2].billed.price === 10400 && switched.points[2].billed.unit === 'ctn',
+    'and each converted point keeps what the supplier ACTUALLY billed, so the evidence still matches the paper');
+
+  /* The shape that still cannot be compared, and must not pretend to
+     be. Nothing on file says how many pieces are in No Bridge's carton. */
+  const bridge = by('No Bridge');
+  eq(bridge.points.length, 0, 'a row with no pack size cannot reach its own invoices');
+  eq(bridge.silence, 'unitSplit', 'and says that is why it is silent');
+  t.check(bridge.fileUnitSplit === true && bridge.onFile === null,
+    'no figure is put beside it — a number nobody can stand behind is worse than none');
 }
 
 /* ---------- 2. ranked by money, not percentage ------------------------ */
@@ -188,20 +230,28 @@ if (scope) {
   t.check(!names.includes('Screws'),
     'and neither is one whose VOLUME TIER matches what was paid at that quantity — a tier is not drift');
 
-  /* COMPARE LIKE WITH LIKE, ON BOTH SIDES. The invoice trail was split
-     by unit and then measured against a registry row that was never held
-     to the same rule. Switched Unit is bought by the carton at 10,400 and
-     priced in the file by the piece at 500 — the same money, two bases —
-     and the straight subtraction called the file 9,900 out of step on
-     every carton. It was ranked FIRST, too: the ranking multiplies the
-     gap by how much the shop buys, so the more of it it bought the
-     bigger the thing that was not happening grew. */
-  t.check(!names.includes('Switched Unit'),
-    'a row the file prices by the piece and the invoices buy by the carton is NOT called drift — it is the same price in two units, and subtracting one from the other is not a comparison');
+  /* COMPARE LIKE WITH LIKE, ON BOTH SIDES -- by CONVERTING, not by
+     declining. Switched Unit is bought by the carton at 10,400 and
+     priced in the file by the piece at 500. Subtracting one from the
+     other called the file 9,900 out of step on every carton, ranked
+     FIRST because the ranking multiplies the gap by how much is bought;
+     refusing to subtract at all fixed that by saying nothing -- which
+     also said nothing about the 20 a piece the file really IS behind.
+
+     Both figures now sit on the row's own unit, the unit its tiers are
+     written in, so purchasePriceAtQty is asked the question it can
+     answer. The gap that comes out is 20 a piece on a file of 500:
+     real, small, and worth a morning. The 9,900 phantom is what the
+     size of this number is pinned against. */
+  t.check(names.includes('Switched Unit'),
+    'a file 4% behind what the last carton actually cost IS named, once the carton and the piece are put on one unit');
   const split = scope.supplierPriceSeries(TODAY).find((s) => s.name === 'Switched Unit');
-  t.check(split.fileUnitSplit === true, 'the pair says why it could not be checked');
-  t.check(split.onFile === null && split.fileStale === false,
-    'and no figure is put beside it — a number nobody can stand behind is worse than none');
+  t.check(split.fileUnitSplit === false && split.onFile === 500,
+    'the file figure is read at the CONVERTED quantity — 5 cartons is 100 pieces, and 100 pieces earns the wholesale rung');
+  eq(split.fileGap, 20,
+    'and the gap is 20 a piece — never the 9,900 a carton that comes of subtracting two different measurements');
+  t.check(Math.abs(split.fileGap * split.units) < 9900 * 15,
+    'so the money the ranking is built on is the real exposure rather than a phantom multiplied by how much was bought');
 
   const once = scope.supplierPriceSeries(TODAY).find((s) => s.name === 'Once Only');
   t.check(once.onFile === null && once.fileStale === false,
@@ -223,11 +273,17 @@ if (scope) {
 
   eq(r.once, 1, 'a pair bought once is counted as such, not as a supplier holding their price');
   eq(r.sameDay, 1, 'and so is one bought several times on a single day');
-  eq(r.unitSplit, 1, 'a pair left with one comparable point by the unit guard is counted too');
+  /* Two now, and for two different reasons -- which is why the reason
+     is kept at all. Unit Split has no registry row, so nothing on file
+     could join its piece invoice to its carton one; No Bridge HAS a row
+     and that row names no pack, so it cannot reach its own invoices
+     either. Both are silent, and neither is guessed at. */
+  eq(r.unitSplit, 2, 'the pairs nothing on file can join are counted, and stay counted');
   t.check(w.steady.map((s) => s.name).join(',') === 'Steady Item',
     'a supplier who really did hold their price is NAMED');
   eq(r.steady, 1, 'and counted');
   eq(r.moved, 4, 'with the movers counted beside them');
+  eq(r.pairs, 9, 'and the account covers every pair the invoices make');
   eq(r.once + r.sameDay + r.unitSplit + r.steady + r.moved, r.pairs,
     'every pair is in exactly one bucket — the account adds up to the whole list');
 
@@ -238,8 +294,16 @@ if (scope) {
   /* NAMED RATHER THAN DROPPED, and named ACCURATELY. Folding these into
      noFileRow would have the screen say "no Price Registry row" about a
      pair that has one — true-sounding, and false. */
+  /* Still its own count, and now it means something narrower: not "the
+     units differ" -- most of those are converted and compared -- but
+     "there is a row, and nothing written on it joins its unit to the one
+     the invoices are in". No Bridge is that; Switched Unit no longer is,
+     because 20 pieces to the carton joins it. */
   eq(r.fileUnitSplit, 1,
-    'a pair the file prices in another unit is its own count, not quietly folded into "no row on file"');
+    'a row that cannot be joined to its own invoices is its own count, not quietly folded into "no row on file"');
+  t.check(scope.supplierPriceSeries(TODAY)
+    .filter((s) => s.fileUnitSplit).map((s) => s.name).join(',') === 'No Bridge',
+    'and it is the row with no pack size — never one a pack size could have reconciled');
   t.check(scope.supplierPriceSeries(TODAY)
     .filter((s) => s.fileUnitSplit).every((s) => s.onFile === null),
     'and every one of them declined to compare rather than comparing badly');

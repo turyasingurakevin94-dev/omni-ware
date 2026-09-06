@@ -32,10 +32,16 @@ const NAMES = ['dashCashTxnsInRange', 'dashMonthlyBurn', 'dashSupplierPriceInfla
    chain comes with it -- including the registry lookup the watch uses
    to compare the file against what was actually paid. The flag itself
    still reports only what the invoices say; the case below proves it. */
+/* pwOnUnit joined the chain when the watch learned to put an invoice
+   billed by the carton onto a row priced by the piece. The dashboard
+   flag reads the same series, so it has to compile the same chain --
+   the whole point of the delegation this file pins. */
 const CHAIN = ['supplierPriceWatch', 'supplierPriceSeries', 'waDaysBetween',
-  'productPriceRows', 'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind'];
+  'productPriceRows', 'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind', 'pwOnUnit'];
 const fn = compileScope([
   extractDeclaration(src, 'DASH_COST_RISE_PCT', 'index.html'),
+  // How pwOnUnit decides two spellings of a unit are one unit.
+  extractDeclaration(src, 'cmpUnitKey', 'index.html'),
   extractDeclaration(src, 'PRICE_WATCH_FILE_TOLERANCE_PCT', 'index.html'),
   ...NAMES.concat(CHAIN).map((n) => extractFunction(src, n, 'index.html')),
 ], env, NAMES);

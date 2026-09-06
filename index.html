@@ -3433,6 +3433,10 @@
   .pw-trailline{padding:8px 12px 0;font-size:11px;color:var(--ow-ink-600);line-height:1.5;
     font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
   .pw-trail{font-weight:400;}
+  /* A converted figure is marked, not hidden: an underline the reader
+     can ask about beats a number that quietly is not the one on the
+     invoice in their hand. */
+  .pw-conv{border-bottom:1px dotted var(--ow-ink-400);cursor:help;}
   .pw-card .pw-what:last-child,.pw-card .pw-trailline:last-child{padding-bottom:10px;}
   /* The account of what was read, in a panel: the shared rows, sized to it. */
   .pw-acc{margin-top:20px;}
@@ -60319,7 +60323,7 @@ function priceRowOddity(r, peersAll, paid){
     if(mid > 0 && rate < mid * share){
       const last = bills.slice().sort((a, b)=> String(b.date).localeCompare(String(a.date)))[0];
       return { why: 'underPaid', rate, against: mid, pct: Math.round(rate / mid * 100),
-        note: `${f(rate)}${per} against the ${f(mid)} your own purchase invoices show — ${last.sname} billed ${f(last.price)}${last.converted ? ` a ${r.unit || 'unit'} (their invoice is by the ${last.unit}, ${r.packQty} to it)` : ''} on ${fmtShortDate(last.date)}. This quote is ${Math.round(rate / mid * 100)}% of what money actually moved at.` };
+        note: `${f(rate)}${per} against the ${f(mid)} your own purchase invoices show — ${last.sname} billed ${f(last.price)}${(last.converted || last.billed) ? ` a ${r.unit || 'unit'} (their invoice reads ${f((last.billed || {}).price != null ? last.billed.price : last.price * (Number(r.packQty) || 1))} a ${(last.billed || {}).unit || r.packUnit}, ${r.packQty} to it)` : ''} on ${fmtShortDate(last.date)}. This quote is ${Math.round(rate / mid * 100)}% of what money actually moved at.` };
     }
   }
 
@@ -60357,6 +60361,10 @@ function priceOddities(){
          it is stored rather than title-cased back: inventing the casing
          would be claiming to know how the shop wrote it. */
       unit: priceUnitKey(sr.last.unit),
+      /* What the invoice ACTUALLY says, where the watch already put the
+         point onto the row's unit. The note names the receipt the shop
+         is holding, not only the rate derived from it. */
+      billed: sr.last.billed || null,
       sname: sr.supplierName || supplierName(sr.supplierId) });
   });
   const out = new Map();
@@ -61549,7 +61557,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     .filter(sr=> sr.productId === productId
       && (sr.variantIdx == null ? null : sr.variantIdx) === variantIdx && sr.last)
     .map(sr=> ({ supplierId: sr.supplierId, price: sr.last.price, date: sr.last.date,
-      unit: priceUnitKey(sr.last.unit),
+      unit: priceUnitKey(sr.last.unit), billed: sr.last.billed || null,
       sname: sr.supplierName || supplierName(sr.supplierId) }));
   const odd = priceRowOddity({ ...record, id: editingPriceId || -1 },
     peersNow.concat([{ ...record, id: editingPriceId || -1 }]), paidNow);
@@ -62567,7 +62575,7 @@ function renderCompare(){
         ${bad.length ? `<p class="cmp-q-why cmp-q-why-bad"><b>Buying more costs more on this ladder.</b> ${
             esc(bad.map(pr=> `${pr[0].minQty} at ${Math.round(pr[0].price)} but ${pr[1].minQty} at ${Math.round(pr[1].price)}`).join('; '))}. Until that is corrected in the Price Registry, this supplier’s position in the ranking cannot be trusted.</p>` : ''}
         ${p && p.fileStale && !p.fileUnitSplit ? `<p class="cmp-q-why"><b>The quote on file and the invoice do not agree.</b> The registry says ${esc(fmtUGX(Math.round(p.onFile)))}; the last purchase invoice of ${esc(fmtShortDate(p.last.date))} charged ${esc(fmtUGX(Math.round(p.last.price)))} — ${esc(fmtUGX(Math.abs(p.fileGap)))} ${p.fileGap > 0 ? 'more' : 'less'}. The ranking uses the quoted figure, because that is what they last said.</p>` : ''}
-        ${p && p.fileUnitSplit ? `<p class="cmp-q-why">You have bought this from them, but in a different unit from the one the registry prices, so the two cannot be set against each other and no comparison is drawn.</p>` : ''}
+        ${p && p.fileUnitSplit ? `<p class="cmp-q-why">You have bought this from them in a different unit from the one their row prices, and their row records no pack size joining the two — so nothing on file can set them against each other, and no comparison is drawn. Filling in the pack size on that row is what would make this checkable.</p>` : ''}
         ${!p ? `<p class="cmp-q-why">Nothing on your purchase invoices shows this supplier ever billing you for this line in the last ${priceWatchDays()} days, so their figure is a quote and nothing more.</p>` : ''}
 
         <div class="cmp-q-foot">
@@ -62690,7 +62698,7 @@ function cmpPaidRailHTML(rows, paid){
         <span class="cmp-rk-n" title="${esc(r.sname)}">${esc(r.sname)}</span>
         <span class="cmp-rk-v">${esc(fmtUGX(Math.round(p.last.price)))}</span>
         <p class="cmp-rk-m">${esc(fmtShortDate(p.last.date))}, ${esc(String(Math.round(p.last.qty)))} ${esc(p.last.unit || 'units')}${
-          p.fileUnitSplit ? ' · priced in another unit from the file, so the two are not compared'
+          p.fileUnitSplit ? ' · bought in another unit and no pack size on the row to join them, so the two are not compared'
           : gap == null ? ' · nothing on file at that quantity to set it against'
           : gap === 0 ? ' · matches their quote'
           : ` · <span class="${gap > 0 ? 'cmp-up' : 'cmp-dn'}">${esc(fmtUGX(Math.abs(gap)))} ${gap > 0 ? 'over' : 'under'}</span> the ${esc(fmtUGX(p.onFile))} they quote`}</p>
@@ -74446,12 +74454,21 @@ function renderPriceWatch(){
   const trail = (sr)=> {
     const pts = sr.points;
     const shown = pts.length <= 3 ? pts : [pts[0], pts[pts.length-2], pts[pts.length-1]];
+    /* A CONVERTED POINT KEEPS ITS RECEIPT. The trail is evidence, and a
+       shop checking a claim against the invoice in its hand must find
+       the figure that is printed on it -- so the converted rate is what
+       the row is measured by, and what was actually billed is what the
+       point says when you ask it. */
     return shown.map((pt,i)=> (i && shown.length === 3 && pts.length > 3 && i === 1 ? '… ' : '')
-      + '<b>' + fmtPriceCompact(pt.price) + '</b> <span class="pw-trail">' + esc(fmtShortDate(pt.date)) + '</span>').join(' → ');
+      + `<b${pt.billed ? ` class="pw-conv" title="Billed ${esc(fmtPriceCompact(pt.billed.price))} a ${esc(pt.billed.unit)} — shown here per ${esc(pt.unit)}, through the pack size on their Price Registry row"` : ''}>`
+      + fmtPriceCompact(pt.price) + '</b> <span class="pw-trail">' + esc(fmtShortDate(pt.date)) + '</span>').join(' → ');
   };
-  const skipped = (sr)=> sr.skippedOtherUnit
-    ? ` · ${sr.skippedOtherUnit} earlier purchase${sr.skippedOtherUnit===1?'':'s'} in another unit, not compared`
-    : '';
+  const skipped = (sr)=> [
+    sr.converted ? ` · ${sr.converted} billed by the pack, converted to the ${sr.last && sr.last.unit ? sr.last.unit : 'unit'} on their file` : '',
+    sr.skippedOtherUnit
+      ? ` · ${sr.skippedOtherUnit} purchase${sr.skippedOtherUnit===1?'':'s'} in a unit nothing on file joins to this one, not compared`
+      : '',
+  ].join('');
 
   /* WHAT IT COST, THEN THE PRICES BEHIND IT.
 
@@ -74526,7 +74543,7 @@ function renderPriceWatch(){
     if(r.steady) bits.push({ n: r.steady, why: 'bought again at the very same price' });
     if(r.moved) bits.push({ n: r.moved, why: 'that moved' });
     if(r.noFileRow) bits.push({ n: r.noFileRow, why: 'with no Price Registry row, so the file cannot be checked against them' });
-    if(r.fileUnitSplit) bits.push({ n: r.fileUnitSplit, why: 'bought in a unit the Price Registry row is not priced in, so the two are not comparable and neither is called wrong' });
+    if(r.fileUnitSplit) bits.push({ n: r.fileUnitSplit, why: 'bought in a unit their Price Registry row records no pack size for, so nothing on file joins the two and neither is called wrong' });
     return bits;
   };
   const account = ()=> {
@@ -74606,6 +74623,30 @@ document.getElementById('pw_days').addEventListener('change', e=>{
 });
 
 const PRICE_WATCH_FILE_TOLERANCE_PCT = 2;
+/* ONE PURCHASE, ONTO ONE UNIT. A supplier who billed by the piece in
+   March and by the carton in August has not changed what they sell, and
+   the shop already wrote down what joins the two: packQty. Refusing to
+   convert threw away half the trail and then reported the silence as a
+   reason -- so a real rise between a carton invoice and a piece invoice
+   was invisible, which is the one thing this screen exists to see.
+
+   Converted only where the registry row for that supplier says how, and
+   only between that row's own two words. Nothing invents a factor: a
+   point in a unit the row does not name comes back null and is counted
+   as skipped, exactly as before.
+
+   Both the price and the quantity move, in opposite directions, so the
+   money the trail is ranked by comes out the same either way. */
+function pwOnUnit(row, pt, want){
+  const u = cmpUnitKey(pt.unit), w = cmpUnitKey(want);
+  if(!u || !w || u === w) return { price: pt.price, qty: pt.qty, converted: false };
+  if(!row) return null;
+  const base = cmpUnitKey(row.unit), pack = cmpUnitKey(row.packUnit), pk = Number(row.packQty) || 0;
+  if(!(pk > 0) || !base || !pack) return null;
+  if(u === pack && w === base) return { price: pt.price / pk, qty: pt.qty * pk, converted: true };
+  if(u === base && w === pack) return { price: pt.price * pk, qty: pt.qty / pk, converted: true };
+  return null;
+}
 function supplierPriceSeries(dateISO){
   const today = dateISO || todayISO();
   const days = Math.max(1, Number(data.presetPriceWatchDays) || 180);
@@ -74635,24 +74676,46 @@ function supplierPriceSeries(dateISO){
   const out = [];
   groups.forEach(g=>{
     g.points.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+    /* The row is found FIRST, because it is what decides the unit
+       everything else is put onto. */
+    const row = productPriceRows(g.productId, g.variantIdx)
+      .find(r=> r.supplierId === g.supplierId);
+    /* THE ROW'S OWN UNIT is the anchor wherever there is a row: it is
+       what purchasePriceAtQty reads a tier at, so a trail measured in
+       anything else could not be set against the file at all. With no
+       row on file there is nothing to convert through and nothing to
+       compare against, so the newest purchase anchors it, as before. */
     const latestUnit = g.points[g.points.length-1].unit;
-    const comparable = g.points.filter(pt=> pt.unit === latestUnit);
+    const anchor = row && cmpUnitKey(row.unit) ? cmpUnitKey(row.unit) : latestUnit;
+    const seen = g.points.map(pt=>{
+      const on = pwOnUnit(row, pt, anchor);
+      return on ? { ...pt, unit: anchor, price: on.price, qty: on.qty,
+        billed: on.converted ? { price: pt.price, unit: pt.unit, qty: pt.qty } : null } : null;
+    });
+    const comparable = seen.filter(Boolean);
     const skippedOtherUnit = g.points.length - comparable.length;
+    const converted = comparable.filter(pt=> pt.billed).length;
+    /* Every point in the trail is in another unit and none of them can
+       be joined to the file -- so the trail says nothing about the row,
+       and the row must not be quoted beside it. */
+    const fileUnitSplit = !!row && !comparable.length;
+    if(!comparable.length){
+      /* Nothing survived. Kept in the account rather than dropped: a
+         pair the screen could read nothing of is not a pair that held
+         its price. */
+      out.push({ ...g, points: [], skippedOtherUnit, converted,
+        first: g.points[0], last: g.points[g.points.length-1],
+        units: 0, fileUnitSplit, silence: 'unitSplit', trend: false, rise: 0, risePct: 0,
+        extra: 0, onFile: null, fileGap: null, fileStale: false });
+      return;
+    }
     const first = comparable[0], last = comparable[comparable.length-1];
     const units = comparable.reduce((t,pt)=> t + pt.qty, 0);
     /* What the file says today, priced at the quantity last bought, so
-       a volume tier is never mistaken for the price having moved. */
-    const row = productPriceRows(g.productId, g.variantIdx)
-      .find(r=> r.supplierId === g.supplierId);
-    /* THE SAME RULE, ON THE FILE SIDE. The block above splits the invoice
-       trail by unit and then measured the result against a registry row
-       that was never held to it -- so a line bought by the dozen was
-       compared with a row priced by the carton and reported as a 294,500
-       drift that did not exist. Ranked TOP of the section, too, since the
-       ranking multiplies the gap by how much the shop buys: the more of
-       it it bought, the bigger the phantom grew. */
-    const fileUnitSplit = !!row && cmpUnitKey(row.unit) !== cmpUnitKey(latestUnit);
-    const onFile = (row && !fileUnitSplit) ? purchasePriceAtQty(row, last.qty) : null;
+       a volume tier is never mistaken for the price having moved. Both
+       figures are now on the row's own unit, which is the unit its
+       tiers are written in. */
+    const onFile = row ? purchasePriceAtQty(row, last.qty) : null;
     const rise = comparable.length > 1 ? last.price - first.price : 0;
     const trend = comparable.length > 1 && first.date !== last.date;
     /* Why this series says nothing, when it says nothing. Exactly one
@@ -74664,7 +74727,7 @@ function supplierPriceSeries(dateISO){
       : first.date === last.date ? 'sameDay'
       : last.price === first.price ? 'steady'
       : 'moved';
-    out.push({ ...g, points: comparable, skippedOtherUnit, first, last, units,
+    out.push({ ...g, points: comparable, skippedOtherUnit, converted, first, last, units,
       fileUnitSplit,
       silence,
       trend,
