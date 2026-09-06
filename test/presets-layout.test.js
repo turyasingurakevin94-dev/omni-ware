@@ -192,8 +192,12 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   });
 
   const render = (/function renderPresets\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetIndex\(\);\s*\n\}/.test(render),
-    'the counts, the band and the index are all written after the panels they describe');
+  /* Two bands now: what is UNSET among the rules, and what is TANGLED
+     in the lists. Both are drawn after the panels they describe, for
+     the same reason the counts are -- a band that ran first would be
+     reporting the state before the edit that prompted the redraw. */
+  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetWordsBand\(\);\s*\n  renderPresetIndex\(\);\s*\n\}/.test(render),
+    'the counts, both bands and the index are all written after the panels they describe');
   t.check(/if\(tab==='presets'\)\{/.test(code) && /renderPresets\(\);/.test(code),
     'and the tab redraws on entry, so every claim is about current data');
 
@@ -288,6 +292,128 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   // .pset-head is still the product form's pane heading and is untouched.
   t.check(/\.pset-head\{/.test(src) && /class="pset-head"/.test(src),
     'the shared heading class is left alone, being the product form’s');
+}
+
+/* ---------- 9. what the lists say about themselves ------------------- */
+{
+  /* The rules region reports what is UNSET. At this shop's real data the
+     words needed the same treatment for a different fault: three words
+     in two places at once, one category holding more sub-categories than
+     all the others together, and eight categories holding nothing. None
+     of that was visible on a screen that drew every sub-category chip at
+     once and let you scroll. */
+  const find = (/function presetWordsFindings\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(find.length > 0, 'what is tangled is computed, not written into the markup');
+
+  // Case-folded, because "colour" and "Colour" are the same word to a
+  // person typing into a suggestion box and two words to a filter.
+  const places = (/function presetWordPlaces\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/\.trim\(\)\.toLowerCase\(\)/.test(places),
+    'a word is the same word whatever its case — which is how a list reaches 58');
+  t.check(/kind:'category'/.test(places) && /kind:'sub'/.test(places),
+    'and both levels are indexed, since the duplicate that matters spans them');
+
+  /* The one threshold on the page, and it is a fact about the list
+     rather than an opinion about the shop: a catch-all is a name holding
+     more than every other name put together. */
+  t.check(/counts\[top\] > out\.subTotal - counts\[top\]/.test(find),
+    'a catch-all is one name holding more than all the rest together, not "a big category"');
+
+  // Nothing under it AND nothing filed in it. A category with no
+  // sub-categories but forty products is a category that works.
+  t.check(/if\(presetProductsInCategory\(c\.name\)\.length\) return;/.test(find),
+    'an empty category is only idle if no product is filed in it either');
+
+  const band = (/function renderPresetWordsBand\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(!lines\.length\)\{ wrap\.innerHTML = ''; return; \}/.test(band),
+    'and nothing tangled draws no band at all');
+  t.check(/cb-openbar/.test(band),
+    'in the same band the unset one uses, rather than a second kind of warning');
+
+  // Both bands are the shop's own figures. Neither counts anything the
+  // other does, so they can be read one after the other.
+  t.check(/presetProductsWithAttr/.test(code) && /variantAttrs/.test(code),
+    'attribute use is read off the products, not typed here');
+}
+
+/* ---------- 10. the one thing that moves records --------------------- */
+{
+  const plan = (/function presetMergePlan\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const commit = (/function presetMergeCommit\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(plan.length > 0 && commit.length > 0, 'a word can be moved into another');
+
+  /* Counted before it moves, and the count depends on the destination,
+     so it is recomputed rather than worked out once when the sheet
+     opens. */
+  t.check(/presetProductsInSub\(cat\.name, word\)/.test(plan)
+    && /presetProductsInCategory\(cat\.name\)/.test(plan),
+    'what would move is counted from the products themselves');
+  t.check(/to\.addEventListener\('change', presetMergeRecount\)/.test(code),
+    'and re-counted when the destination changes, since the answer depends on it');
+
+  /* The direction is toward the shallower word. Merging a
+     sub-category into a category OF THAT NAME drops the sub, or a
+     product ends up filed under "Hinges > Hinges". */
+  t.check(/const absorbs = isSub && dest\.name\.toLowerCase\(\) === String\(word\)\.toLowerCase\(\);/.test(plan),
+    'a word merged into a category of its own name becomes that category');
+  t.check(/p\.subcategory = absorbs \? '' : word;/.test(commit),
+    'rather than being carried in as a sub-category of itself');
+
+  /* It moves; it never removes. Deleting a word from a list stops it
+     being suggested, and that is a different act with a different
+     confirm. */
+  t.check(!/products\.splice/.test(commit) && !/delete data\.products/.test(commit),
+    'no product is deleted by a merge — only the words on it change');
+  t.check(/p\.category = dest\.name;/.test(commit), 'the products are refiled under the destination');
+
+  /* One snapshot, taken before anything is written, of exactly the two
+     fields this can change plus the two lists — so a half-applied merge
+     is not reachable through Undo. */
+  t.check(/presetLastMerge = \{[\s\S]{0,300}?id:p\.id, category:p\.category, subcategory:p\.subcategory/.test(commit),
+    'a snapshot is taken before anything is written');
+  const undo = (/function presetUndoMerge\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/data\.presetCategories = snap\.categories;/.test(undo) && /p\.subcategory = was\.subcategory;/.test(undo),
+    'and Undo restores the lists and the products together');
+  /* In the panel, not a toast: the toast this app ships lasts 2.2
+     seconds and takes no action, and a merge that refiles a hundred
+     order lines deserves longer than that to be taken back. */
+  t.check(/class="pset-undo"/.test(src) && /id="pset_merge_undo"/.test(code),
+    'the way back sits in the panel rather than in a toast that expires');
+
+  // Deleting a category says what happens to the products rather than
+  // implying they go with it.
+  t.check(/keep\$\{n===1\?'s':''\} their category text/.test(code),
+    'and deleting a word says plainly that the products keep their text');
+}
+
+/* ---------- 11. a list too long to read at once ---------------------- */
+{
+  /* 17 categories with 64 sub-categories drew 2,100px before the second
+     list began. The row now carries the one fact you decide from, and
+     everything you can DO to a category is inside the opened row -- so a
+     list of seventeen has no destructive control on it at all. */
+  const cats = (/function renderPresetCategories\(edit\)[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/presetOpenCat === idx \? null : idx/.test(cats), 'a category opens where it sits');
+  t.check(/data-cat-row=/.test(cats) && !/preset-row-remove[^]{0,80}data-idx="\$\{i\}"><\/button>/.test(cats),
+    'and the row itself is the only control on a closed one');
+  t.check(/id="preset_cat_find"/.test(cats),
+    'seventeen is enough to need finding rather than scrolling');
+  t.check(/again\.setSelectionRange\(at, at\);/.test(cats),
+    'and typing in it does not lose the caret to the redraw');
+
+  const attrs = (/function renderPresetAttrs\(edit\)[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  /* On products / on nothing. A HEADING, not an amber mark: a shop can
+     add an attribute the day before it builds the variants that use it,
+     so an unused attribute is not a fault -- it is just the line that
+     splits 58 into two lists you can each read. */
+  t.check(/On products/.test(attrs) && /On nothing/.test(attrs),
+    'attributes are split by the one fact that makes 58 readable');
+  t.check(/used: presetProductsWithAttr\(a\.name\)\.length/.test(attrs),
+    'derived from the products, not from a flag typed here');
+  t.check(!/ow-warn/.test(attrs) && !/ow-bad/.test(attrs),
+    'and it is a heading rather than a mark, because an unused attribute is not a fault');
+  t.check(/no values, so this attribute suggests nothing/i.test(attrs),
+    'an attribute with no values says why it can never match anything');
 }
 
 process.exit(t.done() ? 1 : 0);
