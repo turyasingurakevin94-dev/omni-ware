@@ -10770,6 +10770,8 @@
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .bf-tr{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .bf-was{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  /* Amber, and only ever on the shop's side of the glass. */
+  .bf-up{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
   .bf-was s{opacity:.85;}
   .bf-gh{margin-left:auto;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-400);
@@ -46882,8 +46884,8 @@ function customerProductHabits(customerId){
    counter cannot name two different figures for the same thing on the
    same morning -- and a line with no price on file has none here
    either, which is why a picture can show a quantity and no price. */
-function briefInStock(productId){
-  const q = (data.stock || {})[productId];
+function briefInStock(productId, variantIdx){
+  const q = (data.stock || {})[stockKey(productId, variantIdx == null ? null : variantIdx)];
   return q == null ? null : Number(q) || 0;
 }
 
@@ -46895,7 +46897,7 @@ function briefInStock(productId){
    this list is an opportunity rather than a problem. */
 function briefReasonFor(r, habits){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const inStock = (id)=> { const s = briefInStock(id); return s === null || s > 0; };
+  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
 
   /* 1. THEY ASKED. A follow-up they took out themselves, for something
         that has since come in. The highest priority there is: it is a
@@ -46913,7 +46915,7 @@ function briefReasonFor(r, habits){
   }
 
   /* 2. DUE BY RHYTHM, and by THEIR OWN gap rather than the calendar. */
-  const due = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN && inStock(h.productId))
+  const due = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN && inStock(h.productId, h.variantIdx))
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0];
   if(due){
     const p = productById(due.productId);
@@ -46928,7 +46930,7 @@ function briefReasonFor(r, habits){
         against what the shop used to charge. */
   const cheaper = habits.map(h=>{
     const now = briefPriceNow(h.productId, h.variantIdx, h.typicalQty);
-    if(now === null || !h.lastPrice || !inStock(h.productId)) return null;
+    if(now === null || !h.lastPrice || !inStock(h.productId, h.variantIdx)) return null;
     const drop = (h.lastPrice - now) / h.lastPrice * 100;
     return drop >= TELL_PRICE_DROP_PCT ? { h, now, drop } : null;
   }).filter(Boolean).sort((a, b)=> b.drop - a.drop)[0];
@@ -47242,30 +47244,53 @@ function briefPriceFor(productId, variantIdx, qty){
   const product = productById(productId);
   if(!product) return null;
   const rows = briefPriceRows(productId, variantIdx);
-  if(!rows.length){
+  const held = shelfValueForKey(stockKey(productId, variantIdx == null ? null : variantIdx));
+  if(!rows.length && !(held.ownedQty > 0 && held.unitCost != null)){
     /* A row that exists but is marked out of stock is a different
        problem from no row at all, and the owner fixes it somewhere
-       else. */
+       else. Goods on the shelf with a cost behind them need no row: the
+       shop can price what it is holding. */
     const any = productPriceRows(productId, variantIdx == null ? null : Number(variantIdx));
     return { why: any.length ? 'outOfStock' : 'noRow' };
   }
   const n = Number(qty) > 0 ? Number(qty) : 1;
-  /* The cheapest way the shop can actually buy it at that quantity --
-     the same reading the buying plan takes of the registry. */
+  /* The cheapest way the shop can BUY it at that quantity -- the same
+     reading the buying plan takes of the registry. It also supplies the
+     unit and the pack, which decide which side of the trade this is,
+     and those are wanted even when the price comes from the shelf. */
   let best = null;
   rows.forEach(r=>{
     const base = purchasePriceAtQty(r, n);
     if(base == null || !(base > 0)) return;
     if(!best || base < best.base) best = { row: r, base };
   });
-  if(!best) return { why: 'noBase' };
-  const packQty = Number(best.row.packQty) || 0;
+  const packQty = best ? (Number(best.row.packQty) || 0) : 0;
   const kind = briefPriceKind(packQty, n);
-  const sell = suggestedSellingPrice(product, best.base, kind, variantIdx, packQty);
+
+  /* WHAT IS ON THE SHELF IS SOLD FIRST, so it is what sets the price.
+     A supplier's quote is what the NEXT one will cost; the goods in the
+     yard cost what they cost, and marking them up off a cheaper quote
+     hands the difference away on every unit. The stock rule is used
+     where the shop has set one, exactly as a quote line sourced from
+     stock does. */
+  const shelf = shelfValueForKey(stockKey(productId, variantIdx == null ? null : variantIdx));
+  const onShelf = shelf.ownedQty > 0 && shelf.unitCost != null && shelf.unitCost > 0;
+  const cost = onShelf ? shelf.unitCost : (best ? best.base : null);
+  if(cost == null) return { why: 'noBase' };
+  const sell = onShelf
+    ? suggestedStockSellingPrice(product, cost, kind, variantIdx, packQty)
+    : suggestedSellingPrice(product, cost, kind, variantIdx, packQty);
   if(sell == null || !(sell > 0)) return { why: 'noRule' };
-  return { price: Math.round(sell), kind, packQty,
-    packUnit: String(best.row.packUnit || '').trim(),
-    unit: String(best.row.unit || product.unit || '').trim() };
+  /* AND NEVER UNDER WHAT IT COST. A markup rule can be set low, or the
+     shelf can hold goods bought dearer than they can be replaced today;
+     either way a figure below cost is a loss on every unit sold, and
+     the shop must decide that deliberately rather than have a picture
+     decide it for them. */
+  if(Math.round(sell) < Math.round(cost)) return { why: 'belowCost', cost: Math.round(cost), sell: Math.round(sell) };
+  return { price: Math.round(sell), kind, packQty, cost: Math.round(cost),
+    source: onShelf ? 'shelf' : 'registry',
+    packUnit: best ? String(best.row.packUnit || '').trim() : '',
+    unit: String((best && best.row.unit) || product.unit || '').trim() };
 }
 /* Kept for the queue's own reading, which only ever asks "has the
    figure moved", and now asks it of a selling price. */
@@ -47295,7 +47320,7 @@ function briefPackText(pr){
 }
 
 function briefGroups(c, habits){
-  const inStock = (id)=> { const s = briefInStock(id); return s === null || s > 0; };
+  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
   const seen = new Set();
   const groups = [];
   const dropped = { noPrice: 0, noRule: 0, rows: [] };
@@ -47309,7 +47334,7 @@ function briefGroups(c, habits){
   const rowFor = (productId, extra, variantIdx, qty)=>{
     const p = productById(productId);
     if(!p) return null;
-    if(!inStock(productId)) return null;
+    if(!inStock(productId, variantIdx)) return null;
     const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
     if(!px || px.price == null){
       const why = (px && px.why) || 'noRow';
@@ -47361,7 +47386,18 @@ function briefGroups(c, habits){
   /* 2. WHAT THEY ALWAYS TAKE, biggest by what an order is worth. */
   take('usual', 'YOU USUALLY TAKE', habits.slice()
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))
-    .map(h=> rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty))
+    .map(h=>{
+      const row = rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty);
+      if(row && h.lastPrice && h.sinceLast <= TELL_PRICE_MEMORY_DAYS){
+        /* Below what they paid: shown, whatever the size of the fall.
+           Above it: recorded for the SHOP only -- a price list that
+           advertises its own rises is not a price list, but an owner
+           who finds out from the customer is worse off still. */
+        if(row.price < h.lastPrice) row.wasPaid = Math.round(h.lastPrice);
+        else if(row.price > h.lastPrice) row.upFrom = Math.round(h.lastPrice);
+      }
+      return row;
+    })
     .filter(Boolean));
 
   /* 3. WHAT GOES WITH THOSE -- the owner's own pairings, from every
@@ -47497,6 +47533,7 @@ const BRIEF_LEFT_OFF = {
   outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   noRule: { head: 'no markup rule', fix: 'Set a markup on the product, or a shop default, under Pricing. A buying price is never shown to a customer.' },
+  belowCost: { head: 'the rule prices them UNDER what they cost you', fix: 'Raise the markup, or the price you are holding them at, before these go on anyone\u2019s list. Nothing is sent at a loss by accident.' },
 };
 function briefLeftOffHTML(pricing){
   const rows = (pricing && pricing.rows) || [];
@@ -47913,13 +47950,14 @@ function briefPaintList(ctx, fr){
     const money = f(it.price);
     const ms = briefFitNum(ctx, money, 600, 19, C[4] - C[3] - BRIEF_PAD * 2);
     ctx.font = `600 ${ms}px ${BRIEF_MONO}`;
-    ctx.fillText(money, cellR(3), it.was != null ? mid + 1 : mid + 5);
-    if(it.was != null){
+    const older = it.was != null ? it.was : (it.wasPaid != null ? it.wasPaid : null);
+    ctx.fillText(money, cellR(3), older != null ? mid + 1 : mid + 5);
+    if(older != null){
       /* The old price under the new one, inside the money column: a
          figure compared against another figure belongs beside it. */
       ctx.fillStyle = BRIEF_INK.ink400;
       ctx.font = `13px ${BRIEF_MONO}`;
-      const t = f(it.was);
+      const t = f(older);
       ctx.fillText(t, cellR(3), mid + 18);
       const w = ctx.measureText(t).width;
       ctx.fillRect(cellR(3) - w, mid + 13, w, 1);
@@ -48128,7 +48166,9 @@ function briefStripHTML(b){
             <span class="bf-v">${f(it.price)}</span>
             <span class="bf-x">${it.was != null ? f(it.was - it.price)
               : it.theirQty != null ? f(it.theirQty) : ''}</span>
-            ${it.was != null ? `<span class="bf-was"><s>${f(it.was)}</s></span>` : ''}
+            ${(it.was != null || it.wasPaid != null)
+              ? `<span class="bf-was"><s>${f(it.was != null ? it.was : it.wasPaid)}</s></span>` : ''}
+            ${it.upFrom != null ? `<span class="bf-up" title="Quoted above what they last paid">was ${f(it.upFrom)}</span>` : ''}
           </div>`).join('')}
     </div>`;
   }).join('')}</div>`;
@@ -48160,6 +48200,10 @@ function briefWhyHTML(b){
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
 ${briefLeftOffHTML(b.pricing)}
+    ${(()=>{ const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
+      return up.length ? `<p class="ow-q-note"><b>${up.length}</b> line${up.length === 1 ? '' : 's'} quoted ABOVE what they last paid:
+        ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
+        The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.</p>` : ''; })()}
     ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
       `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
     <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
