@@ -2221,6 +2221,12 @@
   .pset-head .page-title-row h3{margin-bottom:0;}
   .pset-head p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5;max-width:62ch;}
   .pset-group{margin-bottom:20px;}
+  /* A group heading with a switch on the right of it. Lives here
+     rather than in the OW layer because it names a .pset- class,
+     and a rule in that layer that reaches outside its namespace is
+     a rule that has left it. */
+  .pset-head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  .pset-head-row h4{margin-bottom:6px;}
   .pset-group h4{font-size:10.5px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
     color:var(--accent);margin:0 0 6px;}
   .pset-note{margin:0 0 10px;font-size:12px;color:var(--ink-soft);line-height:1.5;max-width:62ch;}
@@ -12483,6 +12489,92 @@
   .ow-sf-drop{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
     font-size:var(--ow-t-12);color:var(--ow-ink-600);cursor:pointer;white-space:nowrap;}
 
+
+  /* ==================================================================
+     SALES AGENTS — one screen, and almost none of it is new.
+
+     .ow-strip is the position, .ow-q the queue of what needs doing,
+     .ow-tbl the roster and both of the tables under it, .ow-cp the
+     states, .ow-f the search, .ow-mini every note. What is here is the
+     three column sets, the 3px key down the left of a queue row, and
+     the two-panel foot.
+
+     THE KEY IS THREE COLOURS AND THERE IS NO FOURTH. Crimson where the
+     shop's money is at risk, amber where somebody is late -- them, or
+     you -- and nothing at all where a thing has merely stopped moving.
+     The accent is spent on the one control that settles what you owe,
+     so it never appears in the list.
+     ================================================================== */
+  .ow-ag-rp{margin-bottom:var(--ow-sp-16);}
+  /* The queue's own row: a key, the twisty, a crest, the arithmetic, the
+     figure. padding-left goes to 0 so the key can reach both hairlines;
+     everything after it keeps the 12px the rest of the app uses. */
+  .ow-ag-q .ow-q-r{grid-template-columns:3px 18px 34px minmax(0,1fr) 152px;padding-left:0;}
+  .ow-ag-k{align-self:stretch;background:transparent;}
+  .ow-ag-k.ow-bad{background:var(--ow-crimson);}
+  .ow-ag-k.ow-warn{background:var(--ow-amber);}
+  .ow-ag-q .ow-q-cr{margin-left:var(--ow-sp-10);}
+  .ow-ag-q .ow-q-x{padding-left:65px;}
+  /* The shared body is emitted as both classes; inside the queue the
+     table's grid-column has no grid to sit in. */
+  .ow-ag-q .ow-tbl-x{grid-column:auto;}
+  /* The legend. It is read once and then never again, so it is 11px
+     caption ink and sits under the panel head rather than in it. */
+  .ow-ag-lg{display:flex;align-items:center;gap:var(--ow-sp-16);flex-wrap:wrap;
+    padding:var(--ow-sp-6) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ag-lg-i{display:inline-block;width:3px;height:11px;vertical-align:-1px;
+    margin-right:var(--ow-sp-6);background:var(--ow-rule);}
+  .ow-ag-lg-i.ow-bad{background:var(--ow-crimson);}
+  .ow-ag-lg-i.ow-warn{background:var(--ow-amber);}
+  /* What the queue is NOT saying. A ranked list is only trustworthy
+     about what it leaves out if it says what it left out. */
+  .ow-ag-acct{background:var(--ow-paper-2);max-width:none;}
+  .ow-ag-em{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+  /* The roster. Seven columns, every figure right-aligned and tabular,
+     the name the only one that gives way. */
+  .ow-ag-tbl{--ow-tbl-cols:minmax(0,1fr) 132px 128px 128px 128px 84px 104px;}
+  .ow-ag-r.ow-open{background:var(--ow-paper-2);}
+  .ow-ag-r.ow-open + .ow-tbl-x{display:block;}
+  /* Never invoiced, never sold, nothing owed: a dash, and a dash is not
+     a nought. ink-600 rather than ink-400 -- at 13px ink-400 does not
+     clear 4.5:1, which the ratchet has caught three times in this app. */
+  .ow-ag-none{color:var(--ow-ink-600);}
+  /* Retired, and the ones who never started. Quieter, never hidden. */
+  .ow-ag-quiet .ow-tbl-p{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+  .ow-ag-sect{grid-column:1/-1;display:flex;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-6);background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule);border-bottom:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+
+  /* Inside an open row: the case in prose, then their open invoices,
+     then the terms and the acts. The terms are a real credit decision
+     and so they get a label and a line of consequence, not a bare
+     dropdown wedged between two buttons. */
+  .ow-ag-x-t{--ow-tbl-cols:minmax(0,1fr) 108px 128px 128px 128px;
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
+    margin:0 0 var(--ow-sp-10);overflow:hidden;}
+  .ow-ag-term{display:flex;align-items:flex-start;gap:var(--ow-sp-10);flex-wrap:wrap;
+    padding:var(--ow-sp-10) 0 0;border-top:1px solid var(--ow-rule-soft);margin-top:var(--ow-sp-4);}
+  .ow-ag-term .ow-f{flex:0 0 220px;}
+  .ow-ag-term-w{flex:1 1 320px;min-width:0;font-size:var(--ow-t-12);line-height:1.5;
+    color:var(--ow-ink-600);align-self:center;}
+  .ow-ag-term-w.ow-warn{color:var(--ow-amber-ink);}
+  .ow-ag-term-w.ow-good{color:var(--ow-verdigris);}
+
+  /* The two panels at the foot: what a supplier is funding, and what you
+     owe for it. Not equal — the promotions table carries product names
+     and the claims table carries four short cells. */
+  .ow-ag-grid{display:grid;grid-template-columns:minmax(0,1fr) 436px;
+    gap:var(--ow-sp-16);align-items:start;}
+  .ow-ag-pt{--ow-tbl-cols:minmax(0,1fr) 168px 62px 128px;}
+  .ow-ag-pr.ow-open{background:var(--ow-paper-2);}
+  .ow-ag-pr.ow-open + .ow-tbl-x{display:block;}
+  .ow-ag-ct{--ow-tbl-cols:minmax(0,1fr) 132px auto;}
+  .ow-ag-mt{--ow-tbl-cols:120px minmax(0,1fr) 104px 116px 120px auto;}
+
   @media (max-width:820px){
     .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
@@ -12871,6 +12963,42 @@
     .ow-pi .ow-q-a .btn.ow-sm{width:100%;min-width:0;min-height:var(--ow-tap);
       font-size:15px;box-sizing:border-box;}
     .ow-pi-bs{gap:var(--ow-sp-16);}
+
+    /* SALES AGENTS ON THE PHONE. The roster, the promotions and the
+       claims are all .ow-tbl, so all three become cards from the same
+       call with no second template to keep in step -- every cell
+       carries the column name it lost. What is left is the queue and
+       the two-panel foot.
+
+       The key survives the switch. It is the only thing on a phone card
+       that says at a glance whether a row is money at risk or merely
+       something that has stopped, so it moves from a 3px column to a
+       3px edge down the whole card. */
+    .ow-ag-q .ow-q-r{display:none;}
+    .ow-ag-q .ow-q-card{border-left:3px solid transparent;padding-left:var(--ow-sp-10);}
+    .ow-ag-q .ow-q-card.ow-bad{border-left-color:var(--ow-crimson);}
+    .ow-ag-q .ow-q-card.ow-warn{border-left-color:var(--ow-amber);}
+    .ow-ag-q .ow-q-x{padding-left:var(--ow-sp-12);}
+    .ow-ag-lg{gap:var(--ow-sp-12);}
+    /* One column: 436px beside a table is a rail, and there is no room
+       for a rail at 390. */
+    .ow-ag-grid{grid-template-columns:minmax(0,1fr);}
+    /* The terms stop being a row. The consequence goes UNDER the select
+       rather than beside it, because a warning that wraps to two words
+       a line beside a dropdown is a warning nobody reads. */
+    .ow-ag-term{flex-direction:column;gap:var(--ow-sp-8);}
+    .ow-ag-term .ow-f{flex:1 1 auto;width:100%;}
+    .ow-ag-term-w{flex:1 1 auto;font-size:var(--ow-t-13);}
+    .ow-ag-x-t{--ow-tbl-cols:minmax(0,1fr);}
+    /* The section band inside a table that is no longer a grid. */
+    .ow-ag-sect{padding:var(--ow-sp-12);}
+    /* A 34px panel head cannot hold a 44px control, and .btn.ow-sm takes
+       half a row at this width by design -- so the one action in a panel
+       head drops to its own full-width line under the heading rather
+       than pushing the panel 74px past the edge of the screen. */
+    .ow-ag-grid .ow-pan-h{flex-wrap:wrap;height:auto;
+      padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+    .ow-ag-grid .ow-pan-h .btn.ow-sm{flex:1 1 100%;min-width:0;margin-left:0;}
   }
 </style>
 </head>
@@ -14646,116 +14774,92 @@
     </section>
 
     <!-- SALES AGENTS -->
+    <!-- SALES AGENTS — one screen, not four.
+
+         It carried four unrelated jobs under sub-tabs: this roster, a
+         supplier-promotions register, a bonus payout ledger, and a page
+         of live MTN/Airtel merchant API keys. Three of those are work;
+         the fourth is configuration, and it now lives in Presets beside
+         the other things set up once and changed almost never.
+
+         Two of the faults were hiding BEHIND the tabs rather than on the
+         roster. promotionClashes() detects two live promotions on one
+         product where only one pays and nothing decides which -- money,
+         behind a tab. Claims agents are waiting on -- money, behind
+         another tab. Both are now on the one screen somebody opens.
+
+         The first 200px is what is AT RISK: stock handed over on trust
+         to somebody who has stopped ordering. Not "eight agents", not a
+         search box.
+
+         THE ACCENT IS THE MONEY YOU OWE. Where a bonus claim is waiting,
+         the one oxide control on the screen settles it, and Invite an
+         agent is a ghost. Where nothing is waiting, Invite takes the
+         accent back. One, always, either way. -->
     <section id="tab-agents" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Sales agents</h1>
-        <p class="ow-ph-sub">Partners who sell for you through the Agent app.</p>
-        <p class="ow-ph-help">External partners who sell on your behalf through the standalone Agent app. Their clients' identities stay private to them -- orders they submit show up here under their own name with an "Agent order" badge.</p>
+        <p class="ow-ph-sub">Who is holding your stock, what they owe you, and what you owe them.</p>
+        <p class="ow-ph-help">Agents sell your stock through the standalone Agent app, at your prices, and keep their own margin on top &mdash; that margin is collected from their own client and never touches your books. Their clients' identities stay private to them &mdash; an order they submit shows up here under their own name with an &ldquo;Agent order&rdquo; badge. The only money you owe an agent is supplier-funded bonus commission, which is claimed monthly and settled below.</p>
         <span class="ow-ph-sp"></span>
+        <button type="button" class="btn btn-ghost ow-sm" id="ag_invite_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Invite an agent
+        </button>
+        <span id="agHeadAct"></span>
       </div>
 
-      <div class="agent-subtabs" id="agentSubTabs">
-        <button type="button" class="agent-subtab active" data-atab="roster">Agents</button>
-        <button type="button" class="agent-subtab" data-atab="promotions">Promotions</button>
-        <button type="button" class="agent-subtab" data-atab="claims">Commission Claims</button>
-        <button type="button" class="agent-subtab" data-atab="momo">Mobile Money</button>
-      </div>
+      <!-- The position and the queue. Rendered together because the foot
+           of the queue makes a claim about the whole roster, and the two
+           must never be able to disagree about what was counted. -->
+      <div id="agentsTop"></div>
 
-      <div id="apane-roster">
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">All agents</h2>
-            <button class="btn btn-accent btn-icon" id="ag_invite_btn">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Invite agent
-            </button>
-          </div>
-          <div class="search-bar" style="margin-top:14px;"><input id="ag_search" placeholder="Search by name or phone..."></div>
+      <div class="ow-pan ow-ag-rp" id="agRosterPan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The roster</span>
+          <span class="ow-pan-nt">Most owed first, then who sold most recently</span>
+          <span class="ow-pan-n" id="agRosterN"></span>
         </div>
-        <div class="panel">
-          <div id="agentsWrap"></div>
+        <!-- Static, so typing here never loses the caret to a re-render,
+             and so every existing caller can still read its value before
+             the screen has drawn once. The placeholder says what is
+             actually searched: renderAgents built its haystack from name,
+             phone and id, while the invite form REFUSES to save an agent
+             without a location -- so "who do I have in Jinja" was a
+             question the app could answer and this box could not. -->
+        <div class="ow-tb">
+          <label class="ow-f ow-f-grow ow-tb-s">
+            <span class="ow-f-l">Find an agent</span>
+            <span class="ow-f-in">
+              <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+              <input class="ow-f-v ow-f-t" id="ag_search" type="text" placeholder="Name, phone, place or Agent ID">
+            </span>
+          </label>
         </div>
+        <div class="ow-tbl ow-ag-tbl" id="agentsWrap"></div>
+        <p class="ow-mini"><b>Brought in</b> is what the shop was paid, at the shop&rsquo;s own prices. <b>They earned</b> is the agent&rsquo;s own margin on top, collected from their client &mdash; it is not money the shop pays out and it is not in your books. The only money you owe an agent is the supplier-funded bonus, and that is below.</p>
       </div>
 
-      <div id="apane-promotions" style="display:none;">
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">Supplier-funded promotions</h2>
-            <button class="btn btn-accent btn-icon" id="promo_add_btn">
+      <div class="ow-ag-grid">
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">Supplier-funded promotions</span>
+            <span class="ow-pan-n" id="agPromoN"></span>
+            <button type="button" class="btn btn-ghost ow-sm" id="promo_add_btn" style="margin-left:8px;">
               <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
               New promotion
             </button>
           </div>
-          <p class="preset-hint" style="margin:12px 0 0;">Products a supplier has agreed to fund an extra push on. Agents see these on their Explore page as a bonus commission -- never who's funding it -- and choose whether to add them to their own cluster.</p>
+          <div class="ow-tbl ow-ag-pt" id="promotionsWrap"></div>
+          <div id="promotionsNote"></div>
         </div>
-        <div class="panel">
-          <div id="promotionsWrap"></div>
-        </div>
-      </div>
-
-      <div id="apane-claims" style="display:none;">
-        <div class="panel">
-          <h2 style="margin-bottom:0;">Commission claims</h2>
-          <p class="preset-hint" style="margin:12px 0 0;">Supplier-funded bonus commission agents have requested payout for. Your own margin never appears here -- an agent collects that directly from their client, it's not money you owe them.</p>
-        </div>
-        <div class="panel">
-          <div id="claimsWrap"></div>
-        </div>
-      </div>
-
-      <div id="apane-momo" style="display:none;">
-        <div class="panel">
-          <h2 style="margin-bottom:0;">Mobile money providers</h2>
-          <p class="preset-hint" style="margin:12px 0 0;">Lets agents pay for their orders straight from the Agent app via a real MTN/Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop specifically -- sign up on MTN's / Airtel's developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners/admins.</p>
-        </div>
-        <div class="panel">
-          <div class="momo-provider-card">
-            <div class="panel-head-row">
-              <h2 style="margin-bottom:0;">MTN Mobile Money</h2>
-              <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Enabled</label>
-            </div>
-            <div class="field">
-              <label>Environment</label>
-              <select id="momo_mtn_environment">
-                <option value="sandbox">Sandbox (testing)</option>
-                <option value="production">Production (live)</option>
-              </select>
-            </div>
-            <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
-            <div class="momo-provision-row">
-              <button type="button" class="btn btn-ghost" id="momo_mtn_provision_btn">Auto-generate API user + key (sandbox)</button>
-              <p class="preset-hint" style="margin:6px 0 0;" id="momo_mtn_provision_hint">MTN doesn't have a portal page for this -- enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. Switch Environment to Production once you have a production subscription key from MTN's go-live approval and this same button will attempt it there too (untested against a real MTN merchant account -- if it fails, ask MTN for the API user/key directly and paste them into the fields below instead).</p>
-            </div>
-            <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
-            <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
-            <div class="momo-status-row" id="momo_mtn_status"></div>
-            <button type="button" class="btn btn-accent" id="momo_mtn_save_btn">Save MTN settings</button>
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">Bonus claims &mdash; money you owe</span>
+            <span class="ow-pan-n" id="agClaimN"></span>
           </div>
-        </div>
-        <div class="panel">
-          <div class="momo-provider-card">
-            <div class="panel-head-row">
-              <h2 style="margin-bottom:0;">Airtel Money</h2>
-              <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Enabled</label>
-            </div>
-            <div class="field">
-              <label>Environment</label>
-              <select id="momo_airtel_environment">
-                <option value="sandbox">Sandbox (testing)</option>
-                <option value="production">Production (live)</option>
-              </select>
-            </div>
-            <div class="field"><label>Client ID</label><input type="password" id="momo_airtel_clientId" autocomplete="off" placeholder="From the Airtel Money developer portal"></div>
-            <div class="field"><label>Client secret</label><input type="password" id="momo_airtel_clientSecret" autocomplete="off"></div>
-            <div class="momo-status-row" id="momo_airtel_status"></div>
-            <button type="button" class="btn btn-accent" id="momo_airtel_save_btn">Save Airtel settings</button>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">Payment activity</h2>
-          </div>
-          <div id="momoLedgerWrap"></div>
+          <div class="ow-tbl ow-ag-ct" id="claimsWrap"></div>
+          <p class="ow-mini">Every amount here is worked out on the server from the agent&rsquo;s own completed orders &mdash; nothing an agent types can change it. Settling one asks which till the money leaves and writes it to the Cash Book under their name. <b>Nothing is paid until you tap it.</b></p>
         </div>
       </div>
     </section>
@@ -15547,6 +15651,15 @@
               <span>Money in</span><b class="pset-count" data-count="income"></b></button>
             <button type="button" class="preset-tab" data-ptab="expense-cats">
               <span>Money out</span><b class="pset-count" data-count="expense"></b></button>
+            <!-- Merchant API keys, a sandbox switch and a callback URL are
+                 not a view of your agents: they are set up once, changed
+                 almost never, and readable only by an owner. They sat
+                 behind a fourth sub-tab on the agent roster, which put
+                 the shop's live payment credentials one tap from the list
+                 somebody opens every morning. Filed under the cash book
+                 because that is where a mobile-money payment lands. -->
+            <button type="button" class="preset-tab" data-ptab="momo">
+              <span>Mobile money</span></button>
 
             <div class="pset-nav-group">Where and who</div>
             <button type="button" class="preset-tab" data-ptab="locations">
@@ -15682,6 +15795,65 @@
                 <div class="form-grid pset-fields">
                   <div class="field"><label>Wait period (days)</label><input type="number" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="e.g. 7"></div>
                 </div>
+              </section>
+            </div>
+
+            <div class="preset-pane" id="ppane-momo" style="display:none;">
+              <header class="pset-head">
+                <h3>Mobile money</h3>
+                <p>Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
+              </header>
+              <section class="pset-group">
+                <div class="pset-head-row">
+                  <h4>MTN Mobile Money</h4>
+                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Enabled</label>
+                </div>
+                <div class="form-grid pset-fields">
+                  <div class="field">
+                    <label>Environment</label>
+                    <select id="momo_mtn_environment">
+                      <option value="sandbox">Sandbox (testing)</option>
+                      <option value="production">Production (live)</option>
+                    </select>
+                  </div>
+                  <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
+                </div>
+                <div class="momo-provision-row">
+                  <button type="button" class="btn btn-ghost" id="momo_mtn_provision_btn">Auto-generate API user + key (sandbox)</button>
+                  <p class="pset-note" id="momo_mtn_provision_hint">MTN doesn&rsquo;t have a portal page for this &mdash; enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. Switch Environment to Production once you have a production subscription key from MTN&rsquo;s go-live approval and this same button will attempt it there too (untested against a real MTN merchant account &mdash; if it fails, ask MTN for the API user/key directly and paste them into the fields below instead).</p>
+                </div>
+                <div class="form-grid pset-fields">
+                  <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
+                  <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
+                </div>
+                <div class="momo-status-row" id="momo_mtn_status"></div>
+                <button type="button" class="btn btn-accent" id="momo_mtn_save_btn">Save MTN settings</button>
+              </section>
+
+              <section class="pset-group">
+                <div class="pset-head-row">
+                  <h4>Airtel Money</h4>
+                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Enabled</label>
+                </div>
+                <div class="form-grid pset-fields">
+                  <div class="field">
+                    <label>Environment</label>
+                    <select id="momo_airtel_environment">
+                      <option value="sandbox">Sandbox (testing)</option>
+                      <option value="production">Production (live)</option>
+                    </select>
+                  </div>
+                  <div class="field"><label>Client ID</label><input type="password" id="momo_airtel_clientId" autocomplete="off" placeholder="From the Airtel Money developer portal"></div>
+                  <div class="field"><label>Client secret</label><input type="password" id="momo_airtel_clientSecret" autocomplete="off"></div>
+                </div>
+                <div class="momo-status-row" id="momo_airtel_status"></div>
+                <button type="button" class="btn btn-accent" id="momo_airtel_save_btn">Save Airtel settings</button>
+              </section>
+
+              <section class="pset-group">
+                <h4>Payment activity</h4>
+                <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
+                <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
               </section>
             </div>
 
@@ -23126,7 +23298,12 @@ function goToTab(tab){
   const railRow = document.querySelector(`#sidebar nav button[data-tab="${tab}"]`);
   if(railRow) railRow.scrollIntoView({block:'nearest'});
   document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
-  document.getElementById('tab-'+tab).style.display='block';
+  const shownSection = document.getElementById('tab-'+tab);
+  shownSection.style.display='block';
+  /* After the renders below, not before them: a header's "i" moves when
+     the row it sits in is filled, and a bubble clamped against the badge
+     the section booted with lands in the wrong place. */
+  requestAnimationFrame(()=> clampPageBubbles(shownSection));
   updateMobileTopbarTitle(tab);
   if(tab==='dashboard') renderDashboard();
   if(tab==='analysis') renderAnalysis();
@@ -23176,7 +23353,7 @@ function goToTab(tab){
   if(tab==='customers' && !custEntering){ custViewId = null; }
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
-  if(tab==='agents') renderAgents(document.getElementById('ag_search').value);
+  if(tab==='agents') refreshAgentsScreen();
   if(tab==='worker') renderWorkerView();
   if(tab==='analytics-sales') renderSalesAnalytics();
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
@@ -23385,6 +23562,34 @@ function foldInstruction(title, notes, label){
    visibility rather than display and so still has a box -- the same
    reason .page-info-bubble is written that way in the first place. */
 const TIP_EDGE_GAP = 8;
+/* THE RESTING POSITION HAS TO FIT TOO.
+
+   placeInfoBubble clamps a bubble into the viewport as it OPENS, and
+   that was enough to make it readable. It was not enough for the page.
+   A closed bubble is visibility:hidden rather than display:none -- on
+   purpose, so it keeps a measurable box and does not jump on first
+   open -- and an absolutely positioned box still adds to the document's
+   scrollable width wherever it is left lying. So the resting position,
+   `left:-6px` from a badge that on a phone sits well right of centre,
+   pushed the document up to 135px wider than the screen: every converted
+   screen scrolled sideways into empty grey, with nothing out there to
+   explain why. Measured at 390 on Customers, Sales agents and Presets.
+
+   Same clamp, run when a screen appears and when the window changes
+   size, so the bubble is already inside the viewport before anybody
+   touches it. Bubbles inside a modal are skipped: those are placed
+   against the viewport on open, and a closed modal lays nothing out.
+
+   The check for a laid-out box is what keeps it honest -- a badge in a
+   hidden section measures zero and would be given a meaningless offset
+   that survives until the next open. */
+function clampPageBubbles(root){
+  (root || document).querySelectorAll('.page-info').forEach(info=>{
+    if(info.closest('.modal-body')) return;
+    if(!info.getClientRects().length) return;
+    placeInfoBubble(info);
+  });
+}
 function placeInfoBubble(info){
   const bubble = info.querySelector('.page-info-bubble');
   if(!bubble) return;
@@ -23882,6 +24087,15 @@ document.addEventListener('keydown', (e)=>{
 // The list is anchored to a control on the screen; if the screen moves
 // out from under it, it is pointing at nothing.
 window.addEventListener('resize', ()=>{ if(owSel.menu) owSelClose(); });
+/* A rotation or a dragged window edge changes the only figure the clamp
+   is computed from. Trailing, because the browser fires this per frame
+   while a window is being dragged and re-measuring every bubble on the
+   screen at that rate is work nobody asked for. */
+let bubbleClampTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(bubbleClampTimer);
+  bubbleClampTimer = setTimeout(()=> clampPageBubbles(), 120);
+});
 window.addEventListener('scroll', ()=>{ if(owSel.menu) owSelPlace(); }, true);
 
 /* ---------------- THE CALENDAR, DRAWN BY THE APP ----------------
@@ -41066,113 +41280,510 @@ function agentTermConsequence(term){
     : { cls:'ok', text:'Their orders cannot be prepared until the money is in. Nothing leaves the shop on trust.' };
 }
 
-function agentCardHTML(a){
-  const initials = (a.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  // A retired agent keeps their card on purpose -- it's the only thing
-  // telling an admin why that Agent ID is still taken when they try to
-  // reuse it, which is the whole point of retiring rather than deleting.
+/* Which row is open, and on which of the two surfaces that can open
+   one -- the queue at the top or the roster below it. One key rather
+   than two, so the same agent is never expanded twice on one screen. */
+let agOpen = { id:null, where:null };
+/* A read that failed is not a shop with nothing in it. Both of these
+   stay null until their table has actually been read, and hold the
+   reason when it could not be -- so the screen can say MISSING where it
+   would otherwise print a nought and be believed. */
+let commissionClaimsError = null;
+let agentPromotionsError = null;
+/* What the roster is filtered by right now. A function rather than the
+   `document.getElementById('ag_search').value` written at each call
+   site: settling a claim redraws the whole screen, and that redraw is
+   asked for from code that can run before this section is in the
+   document. */
+function agSearchValue(){
+  const el = document.getElementById('ag_search');
+  return el ? el.value : '';
+}
+function refreshAgentsScreen(){ renderAgents(agSearchValue()); }
+
+/* An agent's invoices that still have money on them, oldest first. This
+   is the evidence behind every "owes you" figure on the screen, and the
+   open row shows it rather than asking anybody to take the total on
+   trust. */
+function agentOpenInvoices(a){
+  return agentOrders(a)
+    .filter(q=> q.invoiced && invoiceBalanceDue(q) > 0)
+    .sort((x,y)=> String(x.invoicedAt||x.date||'').localeCompare(String(y.invoicedAt||y.date||'')));
+}
+// How old the oldest unpaid invoice is, across everybody. Null when
+// nothing is owed -- never 0, which would read as "settled today".
+function agentOldestUnpaidDays(){
+  let oldest = null;
+  (data.agents||[]).forEach(a=>{
+    agentOpenInvoices(a).forEach(q=>{
+      const d = daysSinceDate(q.invoicedAt || q.date);
+      if(d != null && (oldest == null || d > oldest)) oldest = d;
+    });
+  });
+  return oldest;
+}
+
+/* ONE AGENT, ONE ROW -- and on a phone the same call is one card, because
+   .ow-tbl carries both skins. It was a card in a grid of equal cards,
+   which threw away the whole point of the sort: the agent holding
+   2,500,000 of the shop's stock and the one who has never sold anything
+   rendered at the same size, and left-to-right-then-down is not a
+   ranking anybody perceives. */
+function agentRowHTML(a){
   const retired = !!a.retiredAt;
   const s = agentStanding(a);
+  const open = agOpen.where === 'row' && agOpen.id === a.id;
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  // A dash is not a nought. Nought owed is a fact; nought brought in by
+  // somebody who has never sold is a claim that they were measured.
+  const dash = '<span class="ow-ag-none">&mdash;</span>';
+  const never = s.idleDays == null;
+
+  const state = retired ? '<span class="ow-cp">Retired</span>'
+    : a.unavailable ? '<span class="ow-cp ow-warn">Paused</span>' : '';
+  const terms = retired
+    ? `<span class="ow-quiet-v">Retired ${esc(fmtShortDate(String(a.retiredAt).slice(0,10)))}</span>`
+    : s.onCredit
+      ? '<span class="ow-cp ow-bad"><span class="ow-cp-d"></span>Pay on delivery</span>'
+      : '<span class="ow-quiet-v">Prepay</span>';
+
+  return `<div class="ow-tbl-r ow-tbl-k ow-ag-r${open?' ow-open':''}${never||retired?' ow-ag-quiet':''}"
+      data-agrow="${esc(a.id)}" role="button" tabindex="0" aria-expanded="${open}">
+    <div class="ow-tbl-c">
+      <span class="ow-tbl-p" title="${esc(a.name)}">${esc(a.name)}</span>
+      <span class="ow-tbl-s">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''} &middot; ${
+        s.orders} order${s.orders===1?'':'s'}</span>
+    </div>
+    <div class="ow-tbl-c" data-l="Terms">${terms}${state?' '+state:''}</div>
+    <div class="ow-tbl-n" data-l="Brought in">${s.revenue>0 ? money(s.revenue) : dash}</div>
+    <div class="ow-tbl-n" data-l="They earned">${s.earned>0 ? money(s.earned) : dash}</div>
+    <div class="ow-tbl-n" data-l="Owed to you">${s.owed>0
+      ? `<span class="ow-fig ${s.onCredit?'ow-bad':'ow-warn'}">${money(s.owed)}</span>` : dash}</div>
+    <div class="ow-tbl-n" data-l="In flight">${s.live>0 ? s.live : dash}</div>
+    <div class="ow-tbl-c" data-l="Last order"><span class="ow-quiet-v">${
+      never ? 'never' : esc(agingDaysLabel(s.idleDays)) + (s.idleDays===0?'':' ago')}</span></div>
+  </div>${open ? agentOpenHTML(a, s) : ''}`;
+}
+
+/* WHAT THE ROW OPENS INTO: the case for the figure, the invoices behind
+   it, the credit decision, and the two acts. All of it used to be a
+   card's worth of coloured notes stacked on every agent whether or not
+   they had anything to say -- the same verdigris sentence about prepay
+   appeared on five of six cards, marking the DEFAULT in the colour this
+   app keeps for good news. */
+function agentOpenHTML(a, s){
+  const retired = !!a.retiredAt;
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
   const term = agentTermConsequence(a.paymentTerm);
   const phantom = s.owed > 0 ? agentPhantomCustomer(a) : null;
-  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  const openInv = agentOpenInvoices(a);
+  const oldest = openInv.length ? daysSinceDate(openInv[0].invoicedAt || openInv[0].date) : null;
 
-  /* The two are NOT a softer and a harder version of one thing, and the
-     card said nothing to tell them apart while sitting them side by
-     side. Retiring runs through current_agent_id(), which every
-     agent-scoped policy in the schema resolves through, so it closes
-     everything at once and burns the id for ever. Pausing stops new
-     orders and leaves them their clients and history. */
-  const actions = retired
-    ? `<button class="pc-icon-btn" title="Bring back — they get access, clients and history again" onclick="restoreAgent('${esc(a.id)}')">${ICON_RESTOCK}</button>`
-    : `<button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable
-        ? 'Let them sell again'
-        : 'Pause — they keep their clients and history but cannot place new orders'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
-       <button class="pc-icon-btn danger" title="Retire — permanent. Access closes everywhere and their Agent ID can never be reused" onclick="retireAgent('${esc(a.id)}')">${ICON_TRASH}</button>`;
+  const why = [];
+  if(s.owed > 0 && s.onCredit){
+    why.push(`They take goods before paying, so their orders are prepared and handed over before any money arrives. <b>${money(s.owed)}</b> of the shop&rsquo;s stock is out with them${
+      oldest != null ? `, the oldest invoice raised ${esc(agingDaysLabel(oldest))} ago` : ''}.`);
+  } else if(s.owed > 0){
+    why.push(`They pay before anything is prepared, so <b>${money(s.owed)}</b> still open against them is money that should not be outstanding${
+      oldest != null ? ` &mdash; the oldest invoice was raised ${esc(agingDaysLabel(oldest))} ago` : ''}.`);
+  }
+  if(s.idleDays == null){
+    why.push('They have never placed an order. That is an invite that did not take, not a relationship going cold, and it is a different conversation.');
+  } else if(s.idleDays > AGENT_IDLE_DAYS){
+    why.push(`Their last order was ${esc(agingDaysLabel(s.idleDays))} ago.`);
+  }
+  if(!why.length){
+    why.push(`Nothing here needs doing. They owe nothing, and their last order was ${
+      s.idleDays===0 ? 'today' : esc(agingDaysLabel(s.idleDays)) + ' ago'}.`);
+  }
 
-  const state = retired
-    ? `<div class="ag-state retired">Retired. Access is closed everywhere and ${esc(a.id)} can never be reused. Their orders stay on record.</div>`
+  const invTable = openInv.length ? `<div class="ow-tbl ow-ag-x-t">
+    <div class="ow-tbl-h">
+      <div class="ow-tbl-c">Still open against them</div>
+      <div class="ow-tbl-c">Raised</div>
+      <div class="ow-tbl-n">Invoiced</div>
+      <div class="ow-tbl-n">Paid</div>
+      <div class="ow-tbl-n">Still due</div>
+    </div>
+    ${openInv.map(q=>{
+      const total = savedQuoteTotal(q), due = invoiceBalanceDue(q);
+      return `<div class="ow-tbl-r">
+        <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(quoteLineSummary(q))}">${esc(quoteLineSummary(q))}</span></div>
+        <div class="ow-tbl-c" data-l="Raised"><span class="ow-quiet-v">${esc(fmtShortDate(String(q.invoicedAt||q.date||'').slice(0,10)))}</span></div>
+        <div class="ow-tbl-n" data-l="Invoiced">${money(total)}</div>
+        <div class="ow-tbl-n" data-l="Paid">${money(total - due)}</div>
+        <div class="ow-tbl-n" data-l="Still due">${money(due)}</div>
+      </div>`;
+    }).join('')}
+  </div>` : '';
+
+  /* WHERE ELSE THIS MONEY APPEARS. Invoicing an agent order runs through
+     resolveInvoiceCustomer(), which matches on the name on the order --
+     the AGENT's -- finds nothing, and creates a customer. So agent credit
+     has been living in the Debtors list under a record nobody made, with
+     no location, which also lands it in the delivery clusters' "No
+     address yet" bucket. Restructuring that ledger is not this screen's
+     job; naming it is, because this is where somebody looking at the
+     money would expect to be told. */
+  const phantomNote = phantom ? `<p class="ow-q-note">This ${money(s.owed)} also appears on <b>Debtors</b>, under a customer record called <b>${esc(phantom.name)}</b> (${esc(phantom.id)}). Invoicing an agent order matches on the name on the order, finds no customer, and creates one &mdash; so chasing it in either place is chasing the same money.</p>` : '';
+
+  /* A <div>, not a <label>: a label forwards a click to the control it
+     wraps, so on a <select> the first click opens the native list and
+     the forwarded activation closes it again. Mouse only, which is why
+     the arrow keys always worked and nobody caught it. */
+  const termBlock = retired ? '' : `<div class="ow-ag-term">
+    <div class="ow-f">
+      <span class="ow-f-l" id="ag_term_l_${esc(a.id)}">Payment terms</span>
+      <span class="ow-f-in">
+        <select class="ow-f-sel ag-payment-term-select" id="ag_term_${esc(a.id)}" data-id="${esc(a.id)}"
+          aria-labelledby="ag_term_l_${esc(a.id)}">
+          <option value="prepay" ${a.paymentTerm==='prepay'?'selected':''}>Pay before we prepare</option>
+          <option value="pay_on_delivery" ${a.paymentTerm==='pay_on_delivery'?'selected':''}>Pay on delivery</option>
+        </select>
+      </span>
+    </div>
+    <p class="ow-ag-term-w ${term.cls==='warn'?'ow-warn':'ow-good'}">${esc(term.text)}</p>
+  </div>`;
+
+  /* Retiring and pausing are NOT a harder and a softer version of one
+     thing, and the old card sat two 28px icons side by side saying
+     nothing to tell them apart. Retirement resolves through
+     current_agent_id(), which every agent-scoped policy in the schema
+     goes through, so it closes everything at once and burns the Agent ID
+     for ever. A pause stops new orders and leaves them their clients and
+     history. They are words now, at a real tap size, and they say which
+     is which. */
+  const acts = retired
+    ? `<button type="button" class="btn btn-ghost ow-sm" onclick="restoreAgent('${esc(a.id)}')">Bring them back</button>`
+    : `${a.phone ? `<a class="btn btn-ghost ow-sm" href="tel:${esc(String(a.phone).replace(/[^0-9+]/g,''))}">Ring ${esc(a.phone)}</a>` : ''}
+       <button type="button" class="btn btn-ghost ow-sm" title="${a.unavailable
+         ? 'Let them sell again'
+         : 'Pause — they keep their clients and history but cannot place new orders'}"
+         onclick="toggleAgentAvailability('${esc(a.id)}')">${
+         a.unavailable ? 'Let them sell again' : 'Pause new orders'}</button>
+       <button type="button" class="btn btn-ghost ow-sm"
+         title="Retire — permanent. Access closes everywhere and their Agent ID can never be reused"
+         onclick="retireAgent('${esc(a.id)}')">Retire them</button>`;
+
+  const stateNote = retired
+    ? `<p class="ow-q-note">Retired. Access is closed everywhere and ${esc(a.id)} can never be reused, so nobody inherits their order history. Their orders stay on record under their name.</p>`
     : a.unavailable
-      ? '<div class="ag-state paused">Paused. They can still sign in and see their clients and history, but cannot place new orders.</div>'
+      ? '<p class="ow-q-note">Paused. They can still sign in and see their clients and history, but the server refuses any new order they place.</p>'
       : '';
 
-  /* Never sold is not "sold a long time ago". One is an invite that
-     never took, the other is a working relationship going cold, and
-     they are different conversations. */
-  const activity = s.idleDays == null
-    ? '<span class="ag-never">Has never sold anything</span>'
-    : `Last order ${esc(agingDaysLabel(s.idleDays))}${s.idleDays===0?'':' ago'} &middot; ${s.orders} order${s.orders===1?'':'s'}`;
-
-  return `<div class="supplier-card ag-card ${(a.unavailable||retired)?'staff-card-unavailable':''}">
-    <div class="sc-head">
-      <div class="sc-avatar">${esc(initials)}</div>
-      <div class="sc-title">
-        <div class="sc-name">${esc(a.name)}</div>
-        <div class="sc-id">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''}${a.phone?' &middot; '+esc(a.phone):''}</div>
-      </div>
-      <div class="sc-actions">${actions}</div>
-    </div>
-    ${state}
-    <div class="ag-figs">
-      <div class="ag-fig"><b>${money(s.revenue)}</b><span>brought in</span></div>
-      <div class="ag-fig ${s.owed > 0 ? (s.onCredit?'bad':'warn') : ''}"><b>${money(s.owed)}</b><span>owed to you</span></div>
-      <div class="ag-fig"><b>${s.live}</b><span>in flight</span></div>
-    </div>
-    <div class="ag-activity ${s.idleDays != null && s.idleDays > AGENT_IDLE_DAYS ? 'cold' : ''}">${activity}</div>
-    ${s.owed > 0 && s.onCredit
-      ? `<div class="ag-note bad">${money(s.owed)} is out on trust — they take goods before paying. ${
-          s.idleDays != null && s.idleDays > AGENT_IDLE_DAYS ? 'And they have gone quiet.' : ''}</div>` : ''}
-    ${phantom
-      ? `<div class="ag-note">This money also shows in the Debtors list under <b>${esc(phantom.name)}</b> (${esc(phantom.id)}) — invoicing an agent order files it against a customer record of the same name.</div>` : ''}
-    <div class="ag-term">
-      <label for="ag_term_${esc(a.id)}">Payment terms</label>
-      <select id="ag_term_${esc(a.id)}" class="ag-payment-term-select" data-id="${esc(a.id)}" ${retired?'disabled':''}>
-        <option value="prepay" ${a.paymentTerm==='prepay'?'selected':''}>Pay before we prepare</option>
-        <option value="pay_on_delivery" ${a.paymentTerm==='pay_on_delivery'?'selected':''}>Pay on delivery</option>
-      </select>
-      ${retired ? '' : `<div class="ag-note ${esc(term.cls)}">${esc(term.text)}</div>`}
-    </div>
-    ${s.done > 0
-      ? `<div class="ag-earned">They made <b>${money(s.earned)}</b> of their own on top of your prices${
-          s.revenue > 0 ? ` — ${Math.round(s.earned / s.revenue * 100)}% over` : ''}.</div>` : ''}
+  /* Both hosts, one wrapper: .ow-tbl-x is shown by the roster row it
+     follows, .ow-q-x by the queue row it sits inside. Emitting only one
+     of them is how the queue's open row rendered nothing at all. */
+  return `<div class="ow-tbl-x ow-q-x">
+    <p class="ow-q-why">${why.join(' ')}</p>
+    ${stateNote}${invTable}${phantomNote}
+    ${s.done > 0 ? `<p class="ow-q-note">They made <b>${money(s.earned)}</b> of their own on top of your prices${
+      s.revenue > 0 ? ` &mdash; ${Math.round(s.earned / s.revenue * 100)}% over` : ''}. That is collected from their own client and is not in your books.</p>` : ''}
+    ${termBlock}
+    <div class="ow-q-a" style="padding-top:10px;">${acts}</div>
   </div>`;
 }
 
-/* The roster at a glance, over the whole roster rather than the filtered
-   view -- the same rule the debtors position follows, because a search
-   box should not be able to change what the shop is owed. */
+/* A one-line description of what an order was for, so an invoice in the
+   open row is identifiable without opening it. Named rather than
+   dropped: the count of what is not shown is in the line. */
+function quoteLineSummary(q){
+  const items = q.items || [];
+  if(!items.length) return 'Order ' + (q.id != null ? '#'+q.id : '');
+  const first = items[0];
+  const name = first.productName || first.name || 'Item';
+  return items.length === 1 ? `${name} ×${first.qty}` : `${name} ×${first.qty} and ${items.length - 1} more line${items.length === 2 ? '' : 's'}`;
+}
+
+/* THE POSITION, and it opens on what is AT RISK rather than on how many
+   agents exist. "Eight agents" is not a fact anybody can act on;
+   "2,500,000 is out on trust with somebody who has stopped ordering" is
+   the reason to be on this screen at all.
+
+   Over the whole roster, never the filtered view -- the same rule the
+   debtors position follows, because a search box must not be able to
+   change what the shop is owed. */
 function agentRosterPositionHTML(){
   const p = agentRosterPosition();
   if(!p.total) return '';
-  const idle = p.neverSold + p.goneQuiet;
-  return `<div class="ag-pos">
-    <div class="ag-pos-figs">
-      <div class="ag-pos-fig"><b>${esc(fmtUGX(Math.round(p.revenue)))}</b><span>brought in by agents</span></div>
-      <div class="ag-pos-fig ${p.owed > 0 ? 'bad' : ''}"><b>${esc(fmtUGX(Math.round(p.owed)))}</b><span>still owed to you</span></div>
-      <div class="ag-pos-fig"><b>${p.selling} of ${p.total}</b><span>sold in the last ${AGENT_IDLE_DAYS} days</span></div>
+  const owing = (data.agents||[]).filter(a=> !a.retiredAt && agentStanding(a).owed > 0).length;
+  const oldest = agentOldestUnpaidDays();
+  const done = (data.agents||[]).reduce((n,a)=> n + agentStanding(a).done, 0);
+  const wait = claimsWaiting();
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+
+  // The one tile that can be read wrong is the one you owe, so it says
+  // plainly when it has nothing to go on rather than showing a nought.
+  const owedTile = commissionClaimsError
+    ? `<span class="ow-mt-v">&mdash;</span><p class="ow-mt-s">The claims could not be read, so this is missing rather than nothing</p>`
+    : commissionClaims === null
+      ? `<span class="ow-mt-v">&mdash;</span><p class="ow-mt-s">Still reading the claims</p>`
+      : `<span class="ow-mt-v">${money(wait.total)}</span><p class="ow-mt-s">${
+          wait.rows.length ? `${wait.rows.length} bonus claim${wait.rows.length===1?'':'s'} &middot; oldest waiting ${esc(agingDaysLabel(wait.oldest))}` : 'Nothing is waiting on you'}</p>`;
+
+  return `<div class="ow-strip ow-strip-5" style="margin-bottom:16px;">
+    <div class="ow-mt${p.owedOnCredit > 0 ? ' ow-bad' : ''}">
+      <p class="ow-mt-l">Out on trust</p>
+      <span class="ow-mt-v">${money(p.owedOnCredit)}</span>
+      <p class="ow-mt-s">${p.onCredit
+        ? `with the ${p.onCredit} agent${p.onCredit===1?' who takes':'s who take'} goods before paying`
+        : 'nobody takes goods before paying'}</p>
     </div>
-    ${p.owedOnCredit > 0
-      ? `<div class="ag-pos-line bad"><b>${esc(fmtUGX(Math.round(p.owedOnCredit)))}</b> of that is with the ${p.onCredit} agent${p.onCredit===1?' who takes':'s who take'} goods before paying.</div>` : ''}
-    ${idle
-      ? `<div class="ag-pos-line">${[
-          p.neverSold ? `${p.neverSold} ${p.neverSold===1?'has':'have'} never sold anything` : '',
-          p.goneQuiet ? `${p.goneQuiet} ${p.goneQuiet===1?'has':'have'} gone quiet` : '',
-        ].filter(Boolean).join(' &middot; ')}.</div>` : ''}
-    ${p.paused ? `<div class="ag-pos-line">${p.paused} paused.</div>` : ''}
+    <div class="ow-mt">
+      <p class="ow-mt-l">Owed to you</p>
+      <span class="ow-mt-v">${money(p.owed)}</span>
+      <p class="ow-mt-s">${owing
+        ? `${owing} agent${owing===1?'':'s'}${oldest != null ? ` &middot; oldest unpaid ${esc(agingDaysLabel(oldest))}` : ''}`
+        : 'every invoice settled'}</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Brought in</p>
+      <span class="ow-mt-v">${money(p.revenue)}</span>
+      <p class="ow-mt-s">${done} completed order${done===1?'':'s'}, at your prices</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Still selling</p>
+      <span class="ow-mt-v">${p.selling} <span class="ow-u">of ${p.total}</span></span>
+      <p class="ow-mt-s">sold in the last ${AGENT_IDLE_DAYS} days</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">You owe them</p>
+      ${owedTile}
+    </div>
   </div>`;
 }
+
+/* The claims somebody is waiting on, oldest first. One place works this
+   out, so the strip tile, the queue row, the accent button and the panel
+   can never disagree about what is outstanding. */
+function claimsWaiting(){
+  const rows = (commissionClaims || []).filter(c=> c.status === 'requested')
+    .sort((a,b)=> String(a.requested_at||'').localeCompare(String(b.requested_at||'')));
+  return {
+    rows,
+    total: rows.reduce((s,c)=> s + (Number(c.bonus_amount)||0), 0),
+    oldest: rows.length ? daysSinceDate(String(rows[0].requested_at||'').slice(0,10)) : null,
+  };
+}
+
+/* ===================== WHAT NEEDS DOING TODAY =========================
+   The band the four sub-tabs were hiding. It is deliberately NOT a list
+   of agents: a promotion two suppliers are both funding, and a bonus
+   claim somebody has been waiting a month for, are exactly as much
+   "somebody has to do something about this" as an agent sitting on
+   unpaid stock -- and each of them used to be behind its own tab.
+
+   Ranked by what it costs to ignore, and the arithmetic is IN the line.
+   "Holds 2,500,000 of your stock on trust and has not ordered in 74
+   days" is a fact somebody can argue with; a chip reading "At risk" is
+   not. */
+const AGENT_QUEUE_SHOWN = 6;
+function agentAttentionRows(){
+  const rows = [];
+  (data.agents||[]).filter(a=> !a.retiredAt).forEach(a=>{
+    const s = agentStanding(a);
+    const inv = agentOpenInvoices(a);
+    const oldest = inv.length ? daysSinceDate(inv[0].invoicedAt || inv[0].date) : null;
+    if(s.owed > 0 && s.onCredit){
+      rows.push({ rank:0, sort:s.owed, kind:'agent', id:a.id, key:'bad', who:a.name,
+        line:`holds ${fmtUGX(Math.round(s.owed))} of your stock on trust${
+          s.idleDays != null && s.idleDays > AGENT_IDLE_DAYS ? `, and has not placed an order in ${agingDaysLabel(s.idleDays)}` : ''}`,
+        fig: fmtUGX(Math.round(s.owed)), basis:'out on trust' });
+    } else if(s.owed > 0){
+      rows.push({ rank:2, sort:s.owed, kind:'agent', id:a.id, key:'warn', who:a.name,
+        line:`${fmtUGX(Math.round(s.owed))} unpaid${oldest != null ? ` on an invoice raised ${agingDaysLabel(oldest)} ago` : ''}. They are on prepay, so this one should not be open`,
+        fig: fmtUGX(Math.round(s.owed)), basis: oldest != null ? `${agingDaysLabel(oldest)} old` : 'unpaid' });
+    } else if(s.idleDays == null){
+      rows.push({ rank:5, sort:0, kind:'agent', id:a.id, key:'', who:a.name,
+        line:'has never placed an order since being invited',
+        fig:'—', basis:'never started' });
+    } else if(s.idleDays > AGENT_IDLE_DAYS){
+      rows.push({ rank:4, sort:s.idleDays, kind:'agent', id:a.id, key:'', who:a.name,
+        line:`has not placed an order in ${agingDaysLabel(s.idleDays)}`,
+        fig:'—', basis:'gone quiet' });
+    }
+  });
+  claimsWaiting().rows.forEach(c=>{
+    const d = daysSinceDate(String(c.requested_at||'').slice(0,10));
+    rows.push({ rank:1, sort:(d||0), kind:'claim', id:c.id, key:'warn', who:agentNameById(c.agent_id),
+      line:`asked for ${claimMonthLabel(c.month)}&rsquo;s supplier bonus${d != null ? ` and has been waiting ${agingDaysLabel(d)}` : ''}`,
+      fig: fmtUGX(Math.round(Number(c.bonus_amount)||0)), basis:'you owe them' });
+  });
+  const promos = agentPromotions || [];
+  const seenClash = new Set();
+  promos.forEach(p=>{
+    const state = promotionState(p);
+    if(state !== 'running') return;
+    const clash = promotionClashes(p, promos);
+    const key = promotionKey(p.product_id, p.variant_idx);
+    const product = data.products.find(x=> x.id === p.product_id);
+    const variantIdx = (p.variant_idx==null || p.variant_idx==='') ? null : Number(p.variant_idx);
+    const name = product ? productDisplayLabel(product, variantIdx) : String(p.product_id);
+    const earned = promotionEarnings(p);
+    if(clash.length && !seenClash.has(key)){
+      seenClash.add(key);
+      rows.push({ rank:3, sort:clash.length, kind:'promo', id:p.id, key:'', who:name,
+        line:`is running under ${clash.length + 1} promotions at once, so only one of them pays and nothing decides which`,
+        fig:'—', basis:'only one pays' });
+    } else if(!clash.length && earned.units === 0){
+      rows.push({ rank:4, sort:0, kind:'promo', id:p.id, key:'', who:name,
+        line:`has a funded bonus running on it and no agent has sold one yet`,
+        fig:'0', basis:'units sold on it' });
+    }
+  });
+  rows.sort((a,b)=> a.rank !== b.rank ? a.rank - b.rank : b.sort - a.sort);
+  return rows;
+}
+
+function agentAttentionHTML(){
+  const rows = agentAttentionRows();
+  const shown = rows.slice(0, AGENT_QUEUE_SHOWN);
+  const p = agentRosterPosition();
+
+  /* WHAT THE QUEUE IS NOT SAYING. A ranked list is only trustworthy
+     about what it leaves out if it says what it left out -- and this one
+     leaves out the retired, and says so. */
+  const counts = [];
+  const owing = rows.filter(r=> r.kind==='agent' && (r.key==='bad'||r.key==='warn')).length;
+  if(owing) counts.push(`<span class="ow-ag-em">${owing} owe${owing===1?'s':''} you money</span>`);
+  const claims = rows.filter(r=> r.kind==='claim').length;
+  if(claims) counts.push(`<span class="ow-ag-em">${claims} bonus claim${claims===1?' is':'s are'}</span> waiting on you`);
+  const promoRows = rows.filter(r=> r.kind==='promo').length;
+  if(promoRows) counts.push(`<span class="ow-ag-em">${promoRows} promotion${promoRows===1?'':'s'}</span> ${promoRows===1?'is':'are'} earning their funder nothing`);
+  const never = rows.filter(r=> r.basis==='never started').length;
+  if(never) counts.push(`<span class="ow-ag-em">${never} invite${never===1?'':'s'}</span> that never took`);
+  const retiredCount = (data.agents||[]).filter(a=> a.retiredAt).length;
+  const tail = [];
+  if(rows.length > shown.length) tail.push(`${rows.length - shown.length} more ${rows.length - shown.length===1?'is':'are'} below in the roster.`);
+  if(retiredCount) tail.push(`${retiredCount} retired agent${retiredCount===1?' is':'s are'} not counted here.`);
+  if(commissionClaims === null && !commissionClaimsError) tail.push('The bonus claims are still loading, so none are counted yet.');
+  if(commissionClaimsError) tail.push('The bonus claims could not be read, so none are counted here.');
+  if(agentPromotionsError) tail.push('The promotions could not be read, so none are counted here.');
+
+  const body = shown.length
+    ? shown.map(r=>{ const rk = r.kind+':'+r.id; const open = agOpen.where==='band' && agOpen.id===rk; return `<div class="ow-q${open?' ow-open':''}" data-agq="${esc(rk)}">
+        <button type="button" class="ow-q-r">
+          <span class="ow-ag-k ${r.key==='bad'?'ow-bad':r.key==='warn'?'ow-warn':''}"></span>
+          <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          ${r.kind==='promo'
+            ? `<span class="ow-av"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 3 12V5a2 2 0 0 1 2-2h7a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.6z"/><path d="M7.5 7.5h.01"/></svg></span>`
+            : `<span class="ow-av">${esc(agentInitials(r.who))}</span>`}
+          <span class="ow-q-t" title="${esc(r.who)}"><span class="ow-q-who">${esc(r.who)}</span><span class="ow-q-sep">&mdash;</span><span class="ow-q-rest">${r.line}</span></span>
+          <span class="ow-q-v${r.key==='bad'?' ow-bad':''}"><span class="ow-q-f">${esc(r.fig)}</span><span class="ow-q-b">${esc(r.basis)}</span></span>
+        </button>
+        <button type="button" class="ow-q-card${r.key==='bad'?' ow-bad':r.key==='warn'?' ow-warn':''}">
+          <p class="ow-q-ct"><b>${esc(r.who)}</b></p>
+          <span class="ow-q-cv">${esc(r.fig)}<span class="ow-q-b">${esc(r.basis)}</span></span>
+          <p class="ow-q-note">${r.line}</p>
+        </button>
+        ${open ? agentQueueBodyHTML(r) : ''}
+      </div>`; }).join('')
+    : `<div class="ow-empty">${
+        (data.agents||[]).length
+          ? '<b>Nothing needs you today.</b> Nobody owes you anything, no bonus claim is waiting, and every running promotion is earning somebody something.'
+          : ''}</div>`;
+
+  return `<div class="ow-pan ow-ag-q" style="margin-bottom:16px;">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Needs you today</span>
+      <span class="ow-pan-n">${shown.filter(r=> r.kind==='agent').length} of ${p.total} agents${
+        shown.some(r=> r.kind==='claim') ? ` &middot; ${shown.filter(r=> r.kind==='claim').length} claim${shown.filter(r=> r.kind==='claim').length===1?'':'s'}` : ''}${
+        shown.some(r=> r.kind==='promo') ? ` &middot; ${shown.filter(r=> r.kind==='promo').length} of ${(agentPromotions||[]).length} promotions` : ''}</span>
+    </div>
+    ${shown.length ? `<div class="ow-ag-lg">
+      <span><i class="ow-ag-lg-i ow-bad"></i>Your money is at risk</span>
+      <span><i class="ow-ag-lg-i ow-warn"></i>Somebody is late &mdash; them, or you</span>
+      <span><i class="ow-ag-lg-i"></i>Nothing is moving</span>
+    </div>` : ''}
+    ${body}
+    ${counts.length || tail.length
+      ? `<p class="ow-mini ow-ag-acct">${counts.join(' &middot; ')}${counts.length?'. ':''}${tail.join(' ')}</p>`
+      : ''}
+  </div>`;
+}
+
+/* WHAT A QUEUE ROW OPENS INTO. An agent opens into the same account the
+   roster row does -- one builder, so the two surfaces can never say
+   different things about the same person. A claim and a promotion open
+   into the one paragraph that explains why they are in the list, and the
+   one control that deals with them. */
+function agentQueueBodyHTML(r){
+  if(r.kind === 'agent'){
+    const a = (data.agents||[]).find(x=> x.id === r.id);
+    return a ? agentOpenHTML(a, agentStanding(a)) : '';
+  }
+  if(r.kind === 'claim'){
+    const c = (commissionClaims||[]).find(x=> x.id === r.id);
+    if(!c) return '';
+    const d = daysSinceDate(String(c.requested_at||'').slice(0,10));
+    return `<div class="ow-q-x">
+      <p class="ow-q-why">${esc(agentNameById(c.agent_id))} claimed <b>${esc(fmtUGX(Math.round(Number(c.bonus_amount)||0)))}</b> of supplier-funded bonus for ${esc(claimMonthLabel(c.month))}${
+        d != null ? `, ${esc(agingDaysLabel(d))} ago` : ''}. The amount was worked out on the server from their own completed orders &mdash; nothing they typed decides it. This is the only money the shop owes an agent; their own margin they collect from their client.</p>
+      <div class="ow-q-a"><button type="button" class="btn btn-ghost ow-sm" onclick="markClaimPaid(${Number(c.id)})">Settle it &mdash; record in the Cash Book</button></div>
+    </div>`;
+  }
+  const p = (agentPromotions||[]).find(x=> x.id === r.id);
+  if(!p) return '';
+  const clash = promotionClashes(p, agentPromotions||[]);
+  const earned = promotionEarnings(p);
+  return `<div class="ow-q-x">
+    <p class="ow-q-why">${clash.length
+      ? `${clash.length + 1} promotions are running on this product at once. An order line records the bonus it was PAID, never which promotion paid it, and the query that reads them has no order to it &mdash; so which of the ${clash.length + 1} pays is not decided anywhere. Switch off the ones you did not mean.${
+          earned.bonus > 0 ? ` The ${esc(fmtUGX(Math.round(earned.bonus)))} earned so far covers the product, not this promotion alone.` : ''}`
+      : 'It is agreed, funded and running, and no agent has sold one under it. Nobody is earning from it and its funder is getting nothing for it.'}</p>
+    <div class="ow-q-a">
+      <button type="button" class="btn btn-ghost ow-sm" onclick="editPromotion(${Number(p.id)})">Open the promotion</button>
+      <button type="button" class="btn btn-ghost ow-sm" onclick="togglePromotionActive(${Number(p.id)})">Switch it off</button>
+    </div>
+  </div>`;
+}
+
+function agentInitials(name){
+  return String(name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+/* THE ONE ACCENT. Where a bonus claim is waiting, the single oxide
+   control on this screen settles it -- that is money the shop owes
+   somebody who cannot make it move. Where nothing is waiting, Invite
+   takes the accent back. One, always, and never two. */
+function renderAgentHeadAction(){
+  const slot = document.getElementById('agHeadAct');
+  const invite = document.getElementById('ag_invite_btn');
+  if(!slot || !invite) return;
+  const wait = claimsWaiting();
+  if(commissionClaims && wait.rows.length){
+    invite.classList.remove('btn-accent'); invite.classList.add('btn-ghost');
+    slot.innerHTML = `<button type="button" class="btn btn-accent" id="ag_settle_btn">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="2.6"/></svg>
+      Settle ${wait.rows.length} claim${wait.rows.length===1?'':'s'} &middot; ${esc(fmtUGX(Math.round(wait.total)))}</button>`;
+    slot.querySelector('#ag_settle_btn').addEventListener('click', settleWaitingClaims);
+  } else {
+    invite.classList.remove('btn-ghost'); invite.classList.add('btn-accent');
+    slot.innerHTML = '';
+  }
+}
+
+/* Oldest first, one at a time. Each payout keeps its own confirmation
+   and its own choice of till, because each is a separate line in the
+   Cash Book and the shop has to be able to say which drawer it came
+   from. Backing out of either question stops the run where it stands --
+   nothing further is settled behind somebody's back. */
+async function settleWaitingClaims(){
+  const rows = claimsWaiting().rows.slice();
+  for(const c of rows){
+    const paid = await markClaimPaid(c.id);
+    if(!paid) break;
+  }
+}
+
+/* THE ROSTER. Ordered by what needs doing rather than by the alphabet:
+   money owed first, then who sold most recently, retired last. That sort
+   was already here and a grid of equal cards threw it away. */
 function renderAgents(filter=''){
   const tokens = searchTokens(filter);
   /* Retired agents sink to the bottom rather than disappearing -- still
      findable (and still visibly holding their Agent ID), just out of the
-     way of the active roster.
-
-     Above that line the order is what needs attention, not the alphabet.
-     Sorted by name, a dead invite that has never sold anything sat above
-     the agent holding 2,500,000 of the shop's stock on trust, because
-     her name began with a J. Money owed first, then who sold most
-     recently, then the alphabet to settle the rest -- so the top of the
-     roster is always the part somebody has to do something about. */
+     way of the active roster. */
   let rows = (data.agents||[]).slice().sort((a,b)=>{
     if(!!a.retiredAt !== !!b.retiredAt) return a.retiredAt ? 1 : -1;
     const sa = agentStanding(a), sb = agentStanding(b);
@@ -41186,16 +41797,80 @@ function renderAgents(filter=''){
     return String(a.name||'').localeCompare(String(b.name||''));
   });
   if(tokens.length){
-    rows = rows.filter(a=>matchesAllTokens((a.name+' '+(a.phone||'')+' '+a.id).toLowerCase(), tokens));
+    rows = rows.filter(a=> matchesAllTokens(
+      (a.name+' '+(a.phone||'')+' '+(a.location||'')+' '+(a.email||'')+' '+a.id).toLowerCase(), tokens));
   }
+
+  const top = document.getElementById('agentsTop');
+  const rosterPan = document.getElementById('agRosterPan');
+  const grid = document.querySelector('#tab-agents .ow-ag-grid');
   const wrap = document.getElementById('agentsWrap');
-  if(rows.length===0){
-    wrap.innerHTML = (data.agents||[]).length===0
-      ? `<div class="empty">No sales agents yet. Invite one to get started.</div>`
-      : '<div class="empty">No matches.</div>';
+  if(!wrap) return;
+  const total = (data.agents||[]).length;
+
+  renderAgentHeadAction();
+
+  /* NOBODY INVITED YET. No strip: five figures of nought are five
+     figures that mean nothing. The screen instead explains what an agent
+     is, since this is the one place somebody meets the idea, and names
+     the two things that go wrong later. */
+  if(!total){
+    if(top) top.innerHTML = `<div class="ow-pan" style="margin-bottom:16px;"><div class="ow-empty">
+      <b>You have no sales agents.</b>
+      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">An agent sells your stock through the Agent app, at your prices, and keeps their own margin on top. Their clients stay private to them &mdash; you see the order, never the buyer.</p>
+      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">Inviting one sends an email; they pick their own password and you never see it. Their Agent ID is issued by the server rather than typed here, so it can never collide with an ID that already has order history behind it. Decide the terms before you invite: <b>pay before we prepare</b> means nothing leaves the shop until the money is in, and <b>pay on delivery</b> means goods go out on trust to somebody who does not work for you.</p>
+    </div></div>`;
+    if(rosterPan) rosterPan.style.display = 'none';
+    if(grid) grid.style.display = 'none';
+    wrap.innerHTML = '';
     return;
   }
-  wrap.innerHTML = agentRosterPositionHTML() + `<div class="supplier-grid">${rows.map(agentCardHTML).join('')}</div>`;
+  if(rosterPan) rosterPan.style.display = '';
+  if(grid) grid.style.display = '';
+
+  if(top) top.innerHTML = agentRosterPositionHTML() + agentAttentionHTML();
+
+  const live = rows.filter(a=> !a.retiredAt);
+  const gone = rows.filter(a=> !!a.retiredAt);
+  const head = `<div class="ow-tbl-h">
+    <div class="ow-tbl-c">Agent</div>
+    <div class="ow-tbl-c">Terms</div>
+    <div class="ow-tbl-n">Brought in</div>
+    <div class="ow-tbl-n">They earned</div>
+    <div class="ow-tbl-n">Owed to you</div>
+    <div class="ow-tbl-n">In flight</div>
+    <div class="ow-tbl-c">Last order</div>
+  </div>`;
+  wrap.innerHTML = !rows.length
+    ? head + `<div class="ow-empty">No agent matches &ldquo;${esc(filter)}&rdquo;. The search reads names, phone numbers, places, emails and Agent IDs.</div>`
+    : head + live.map(agentRowHTML).join('')
+      + (gone.length
+        ? `<div class="ow-ag-sect">Retired &mdash; their Agent ID stays reserved and can never be reused</div>` + gone.map(agentRowHTML).join('')
+        : '');
+
+  const n = document.getElementById('agRosterN');
+  if(n) n.textContent = tokens.length
+    ? `${rows.length} of ${total}`
+    : `${live.length} selling${gone.length ? ` · ${gone.length} retired` : ''}`;
+
+  if(top) top.querySelectorAll('.ow-q[data-agq]').forEach(q=>{
+    q.querySelectorAll('.ow-q-r,.ow-q-card').forEach(btn=> btn.addEventListener('click', ()=>{
+      const k = q.dataset.agq;
+      agOpen = (agOpen.where === 'band' && agOpen.id === k) ? { id:null, where:null } : { id:k, where:'band' };
+      refreshAgentsScreen();
+    }));
+  });
+
+  wrap.querySelectorAll('.ow-ag-r').forEach(row=>{
+    const open = ()=>{
+      const id = row.dataset.agrow;
+      agOpen = (agOpen.where === 'row' && agOpen.id === id) ? { id:null, where:null } : { id, where:'row' };
+      refreshAgentsScreen();
+    };
+    row.addEventListener('click', (e)=>{ if(e.target.closest('button,select,a,input')) return; open(); });
+    row.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+  });
+
   wrap.querySelectorAll('.ag-payment-term-select').forEach(sel=>{
     sel.addEventListener('change', ()=>{
       const a = data.agents.find(x=>x.id===sel.dataset.id); if(!a) return;
@@ -41219,12 +41894,20 @@ function renderAgents(filter=''){
       }
       a.paymentTerm = sel.value;
       saveData();
-      renderAgents(document.getElementById('ag_search').value);
+      refreshAgentsScreen();
       toast(sel.value === 'pay_on_delivery'
         ? `${a.name} can now take goods before paying`
         : `${a.name} must now pay before anything is prepared`);
     });
   });
+
+  /* The two tables at the foot are the old sub-tabs, and they are now
+     part of the screen rather than behind it -- so they load with it.
+     Both are drawn from whatever has arrived; neither shows a nought
+     while it is still reading. */
+  loadAgentSideTables();
+  renderAgentPromotions();
+  renderCommissionClaims();
 }
 /* Pausing an agent. The flag was written to the database and read by
    NOTHING -- not current_agent_id(), not agent-submit-order, not
@@ -41241,7 +41924,7 @@ function renderAgents(filter=''){
 function toggleAgentAvailability(id){
   const a = data.agents.find(x=>x.id===id); if(!a) return;
   a.unavailable = !a.unavailable;
-  saveData(); renderAgents(document.getElementById('ag_search').value);
+  saveData(); refreshAgentsScreen();
   toast(a.unavailable
     ? `${a.name} paused — they keep their clients and history but cannot place new orders`
     : `${a.name} can sell again`, 5000);
@@ -41263,14 +41946,14 @@ function retireAgent(id){
     s.owed > 0 ? `\n\nTHEY STILL OWE ${fmtUGX(Math.round(s.owed))}. Retiring does not collect it, and they will not be able to sign in to settle it.` : ''}${
     s.live > 0 ? `\n\n${s.live} of their order${s.live===1?' is':'s are'} still in progress.` : ''}`)) return;
   a.retiredAt = new Date().toISOString();
-  saveData(); renderAgents(document.getElementById('ag_search').value);
+  saveData(); refreshAgentsScreen();
   toast(`${a.name} retired`);
 }
 function restoreAgent(id){
   const a = data.agents.find(x=>x.id===id); if(!a) return;
   if(!confirm(`Restore ${a.name}? They'll get access back, along with their own clients and order history.`)) return;
   a.retiredAt = null;
-  saveData(); renderAgents(document.getElementById('ag_search').value);
+  saveData(); refreshAgentsScreen();
   toast(`${a.name} restored`);
 }
 function resetAgentForm(){
@@ -41330,20 +42013,50 @@ document.getElementById('ag_search').addEventListener('input', e=>renderAgents(e
 let agentPromotions = null;
 let editingPromotionId = null;
 
-document.getElementById('agentSubTabs').addEventListener('click', (e)=>{
-  const btn = e.target.closest('.agent-subtab');
-  if(!btn) return;
-  document.querySelectorAll('#agentSubTabs .agent-subtab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const atab = btn.dataset.atab;
-  document.getElementById('apane-roster').style.display = atab==='roster' ? '' : 'none';
-  document.getElementById('apane-promotions').style.display = atab==='promotions' ? '' : 'none';
-  document.getElementById('apane-claims').style.display = atab==='claims' ? '' : 'none';
-  document.getElementById('apane-momo').style.display = atab==='momo' ? '' : 'none';
-  if(atab==='promotions') renderAgentPromotions();
-  if(atab==='claims') renderCommissionClaims();
-  if(atab==='momo'){ renderMomoProviderSettings(); renderMomoLedger(); }
-});
+/* THE TWO TABLES THAT USED TO BE TABS. They are read once, when the
+   screen is first opened, and the screen draws from whatever has
+   arrived -- not from a nought standing in for a table nobody has asked
+   for yet. A read that fails is remembered as a failure and SAID, which
+   is why the strip can print a dash where it would otherwise print a
+   nought and be believed.
+
+   Written directly through the Supabase client rather than through
+   saveData()'s addDiffOps/diff-sync system: agent_promotions.id is
+   `generated always as identity`, so unlike every other collection here
+   the client can never assign its own id, which the generic diff-sync
+   pattern assumes it can. */
+let agentSideLoading = false;
+async function loadAgentSideTables(){
+  if(agentSideLoading) return;
+  if(agentPromotions !== null && commissionClaims !== null) return;
+  if(agentPromotionsError || commissionClaimsError) return;
+  agentSideLoading = true;
+  try{
+    const jobs = [];
+    if(agentPromotions === null){
+      jobs.push(sb.from('agent_promotions').select('*').eq('shop_id', currentShopId).order('id', {ascending:false})
+        .then(({data: rows, error})=>{
+          if(error){ agentPromotionsError = error.message || String(error); }
+          else agentPromotions = rows || [];
+        }));
+    }
+    if(commissionClaims === null){
+      jobs.push(sb.from('agent_commission_claims').select('*').eq('shop_id', currentShopId).order('requested_at', {ascending:false})
+        .then(({data: rows, error})=>{
+          if(error){ commissionClaimsError = error.message || String(error); }
+          else commissionClaims = rows || [];
+        }));
+    }
+    await Promise.all(jobs);
+  } finally {
+    agentSideLoading = false;
+  }
+  // Only if the owner is still on the screen the read was for.
+  const sec = document.getElementById('tab-agents');
+  if(sec && sec.style.display !== 'none'){
+    refreshAgentsScreen();
+  }
+}
 
 function promotionBonusLabel(promo){
   return promo.bonus_type==='fixed' ? `${fmtUGX(promo.bonus_value)} bonus / unit` : `${promo.bonus_value}% bonus`;
@@ -41507,7 +42220,12 @@ function daysBetweenPromo(from, to){
   return Math.max(0, Math.round((b-a)/86400000));
 }
 
-function promotionCardHTML(promo){
+/* ONE PROMOTION, ONE ROW -- and a card on the phone, from the same call,
+   because .ow-tbl carries both skins. It was a card carrying up to four
+   coloured notes, three of which said the same thing about the state
+   already named in its own pill beside them. The state is a chip; the
+   only note left is the one that is genuinely a fault. */
+function promotionRowHTML(promo){
   const product = data.products.find(p=>p.id===promo.product_id);
   const variantIdx = (promo.variant_idx==null || promo.variant_idx==='') ? null : Number(promo.variant_idx);
   const pname = product ? productDisplayLabel(product, variantIdx) : promo.product_id;
@@ -41516,45 +42234,50 @@ function promotionCardHTML(promo){
   const def = PROMO_STATES[state];
   const earned = promotionEarnings(promo);
   const clash = promotionClashes(promo, agentPromotions||[]);
-  return `<div class="price-card promo-card ${state==='running'?'':'price-card-oos'}">
-    <div class="prc-head">
-      <div class="prc-head-main">
-        ${productThumbHTML(product||{image:null,name:pname}, variantIdx)}
-        <div class="prc-title">
-          <div class="prc-name">${esc(pname)}</div>
-          <div class="prc-meta"><span class="prc-date">${esc(promotionBonusLabel(promo))}</span></div>
-        </div>
-      </div>
-      <div class="pc-actions">
-        <button class="pc-icon-btn ${promo.active?'pc-icon-btn-active-danger':''}" title="${promo.active?'Switch off — agents stop earning its bonus':'Switch on'}" onclick="togglePromotionActive(${promo.id})">${promo.active?ICON_NO_STOCK:ICON_RESTOCK}</button>
-        <button class="pc-icon-btn" title="Edit promotion" onclick="editPromotion(${promo.id})">${ICON_EDIT}</button>
-        <button class="pc-icon-btn danger" title="Delete promotion" onclick="deletePromotion(${promo.id})">${ICON_TRASH}</button>
-      </div>
-    </div>
-    <div class="promo-when">
-      <span class="promo-state ${esc(def.cls)}">${esc(def.label)}</span>
-      <span class="promo-when-text">${esc(promotionWhenLabel(promo, state))}</span>
-    </div>
-    <div class="promo-figs">
-      <div class="promo-fig"><b>${earned.units ? esc(String(Math.round(earned.units))) : '0'}</b><span>units sold${clash.length?' on this product':' on it'}</span></div>
-      <div class="promo-fig"><b>${esc(fmtUGX(Math.round(earned.bonus)))}</b><span>bonus earned</span></div>
-      <div class="promo-fig"><b>${earned.orders}</b><span>orders</span></div>
-    </div>
-    ${state === 'running' && earned.units === 0
-      ? '<div class="promo-note warn">Running, and no agent has sold one yet. Nobody is earning from it and its funder is getting nothing.</div>' : ''}
-    ${state === 'ended'
-      ? '<div class="promo-note bad">Agents stopped earning this the day it ended. Give it a new end date to bring it back.</div>' : ''}
-    ${state === 'scheduled'
-      ? '<div class="promo-note warn">Agents cannot earn this yet, and it does not show as a bonus on their Explore page until it starts.</div>' : ''}
-    ${state === 'never'
-      ? '<div class="promo-note bad">Its end date is before its start date, so there is no day on which it pays. Edit the dates to bring it back.</div>' : ''}
-    ${clash.length
-      ? `<div class="promo-note bad">${clash.length === 1 ? 'Another promotion' : `${clash.length} other promotions`} on this same product ${clash.length === 1 ? 'is' : 'are'} running too. Only one of them pays, and which is not decided anywhere — switch off the ones you do not mean.${
-          earned.bonus > 0 ? ' The figures above cover the product, not this promotion alone: an order line records the bonus it was paid, never which promotion paid it.' : ''}</div>` : ''}
-    ${supplier ? `<div class="prc-supplier"><svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>Funded by ${esc(supplier.name)}</div>` : ''}
-  </div>`;
-}
+  const tone = def.cls === 'ok' ? ' ow-good' : def.cls === 'warn' ? ' ow-warn' : def.cls === 'bad' ? ' ow-bad' : '';
+  const dash = '<span class="ow-ag-none">&mdash;</span>';
 
+  /* A promotion that is running, funded and earning nobody anything is
+     the one worth a word; so is one whose window can never pay. Every
+     other state says all it has to say in its own chip. */
+  const note = clash.length
+    ? `<div class="ow-tbl-note">${clash.length === 1 ? 'Another promotion' : `${clash.length} other promotions`} on this same product ${clash.length === 1 ? 'is' : 'are'} running too. Only one of them pays, and which is not decided anywhere &mdash; switch off the ones you do not mean.${
+        earned.bonus > 0 ? ' The figures above cover the product, not this promotion alone: an order line records the bonus it was paid, never which promotion paid it.' : ''}</div>`
+    : state === 'never'
+      ? '<div class="ow-tbl-note">Its end date is before its start date, so there is no day on which it pays. Give it dates that overlap to bring it back.</div>'
+      : state === 'running' && earned.units === 0
+        ? '<div class="ow-tbl-note">Running, and no agent has sold one yet. Nobody is earning from it and its funder is getting nothing.</div>'
+        : '';
+
+  const open = agOpen.where === 'promorow' && agOpen.id === promo.id;
+  return `<div class="ow-tbl-r ow-tbl-k ow-ag-pr${open?' ow-open':''}${state==='running'?'':' ow-ag-quiet'}"
+      data-promorow="${Number(promo.id)}" role="button" tabindex="0" aria-expanded="${open}">
+    <div class="ow-tbl-c">
+      <span class="ow-tbl-p" title="${esc(pname)}">${esc(pname)}</span>
+      <span class="ow-tbl-s">${esc(promotionBonusLabel(promo))} &middot; ${supplier ? 'funded by '+esc(supplier.name) : 'no funder recorded'}</span>
+    </div>
+    <div class="ow-tbl-c" data-l="Window"><span class="ow-cp${tone}">${esc(def.label)}</span>
+      <span class="ow-tbl-s">${esc(promotionWhenLabel(promo, state))}</span></div>
+    <div class="ow-tbl-n" data-l="Units">${earned.units ? esc(String(Math.round(earned.units))) : dash}</div>
+    <div class="ow-tbl-n" data-l="Bonus earned">${earned.bonus ? esc(fmtUGX(Math.round(earned.bonus))) : dash}</div>
+    ${note}
+  </div>${open ? `<div class="ow-tbl-x">
+    <p class="ow-q-why">${esc(promotionWhenLabel(promo, state))}. ${
+      earned.orders ? `${earned.orders} order${earned.orders===1?'':'s'} ${earned.orders===1?'has':'have'} carried it, for ${esc(fmtUGX(Math.round(earned.bonus)))} of bonus.`
+                    : 'No order has carried it yet.'} Agents see it as a bonus on their Explore page and never see who is funding it.</p>
+    <div class="ow-q-a">
+      <button type="button" class="btn btn-ghost ow-sm" onclick="editPromotion(${Number(promo.id)})">Edit the arrangement</button>
+      <button type="button" class="btn btn-ghost ow-sm" onclick="togglePromotionActive(${Number(promo.id)})">${promo.active ? 'Switch it off' : 'Switch it on'}</button>
+      <button type="button" class="btn btn-ghost ow-sm" onclick="deletePromotion(${Number(promo.id)})">Delete it</button>
+    </div>
+  </div>` : ''}`;
+}
+/* WHAT THE WHOLE SET IS DOING, over every promotion rather than the
+   rendered subset: "six promotions" is not a fact anybody can act on,
+   "two of six are actually paying" is. It was a bordered box of figures
+   floating above a grid of cards; it is now the note under the table,
+   because it is a sentence about the table rather than a heading over
+   it. */
 function promotionPositionHTML(){
   const p = promotionPosition(agentPromotions||[]);
   if(!p.total) return '';
@@ -41563,28 +42286,33 @@ function promotionPositionHTML(){
     p.scheduled ? `${p.scheduled} not started` : '',
     p.off ? `${p.off} switched off` : '',
   ].filter(Boolean).join(' &middot; ');
-  return `<div class="ag-pos">
-    <div class="ag-pos-figs">
-      <div class="ag-pos-fig ${p.running ? '' : 'bad'}"><b>${p.running} of ${p.total}</b><span>actually paying today</span></div>
-      <div class="ag-pos-fig"><b>${esc(fmtUGX(Math.round(p.bonus)))}</b><span>bonus earned on them</span></div>
-    </div>
-    ${idle ? `<div class="ag-pos-line">${idle}.</div>` : ''}
-    ${p.runningUnsold
-      ? `<div class="ag-pos-line">${p.runningUnsold} running promotion${p.runningUnsold===1?' has':'s have'} never been sold on.</div>` : ''}
-    ${p.clashes
-      ? `<div class="ag-pos-line bad">${p.clashes} promotion${p.clashes===1?'':'s'} share a product with another that is also running — only one of each pair pays.</div>` : ''}
-  </div>`;
+  return `<p class="ow-mini"><b>${p.running} of ${p.total}</b> are actually paying today${idle ? ` &mdash; ${idle}` : ''}. <b>${
+    esc(fmtUGX(Math.round(p.bonus)))}</b> of bonus has been earned on them, counted once per product: an order line records the bonus it was paid, never which promotion paid it.${
+    p.runningUnsold ? ` ${p.runningUnsold} running promotion${p.runningUnsold===1?' has':'s have'} never been sold on.` : ''}${
+    p.clashes ? ` ${p.clashes} promotion${p.clashes===1?'':'s'} share a product with another that is also running &mdash; only one of each pair pays.` : ''} Agents see these as a bonus on their Explore page and never see who funds them.</p>`;
 }
-async function renderAgentPromotions(){
+function renderAgentPromotions(){
   const wrap = document.getElementById('promotionsWrap');
-  if(agentPromotions===null){
-    wrap.innerHTML = '<div class="empty">Loading…</div>';
-    const { data: rows, error } = await sb.from('agent_promotions').select('*').eq('shop_id', currentShopId).order('id', {ascending:false});
-    if(error){ wrap.innerHTML = '<div class="empty">Could not load promotions.</div>'; toast('Could not load promotions: '+error.message); return; }
-    agentPromotions = rows || [];
+  if(!wrap) return;
+  const note = document.getElementById('promotionsNote');
+  const n = document.getElementById('agPromoN');
+  const setNote = (html)=>{ if(note) note.innerHTML = html; };
+
+  /* A read that failed is not a shop with no promotions in it. */
+  if(agentPromotionsError){
+    wrap.innerHTML = `<div class="ow-empty"><b>The promotions could not be read.</b> ${esc(String(agentPromotionsError).replace(/\.?$/, '.'))}</div>`;
+    setNote('<p class="ow-mini">Nothing here is missing on purpose &mdash; this list is empty because the read failed, not because there are no promotions. The queue above is not counting them either.</p>');
+    if(n) n.textContent = 'could not be read';
+    return;
+  }
+  if(agentPromotions === null){
+    wrap.innerHTML = '<div class="ow-empty">Reading the promotions&hellip;</div>';
+    setNote(''); if(n) n.textContent = '';
+    return;
   }
   if(!agentPromotions.length){
-    wrap.innerHTML = `<div class="empty">No promotions yet. Add one when a supplier agrees to fund extra push on a product.</div>`;
+    wrap.innerHTML = '<div class="ow-empty"><b>No promotions yet.</b> Add one when a supplier agrees to fund an extra push on a product &mdash; agents see it as a bonus on their Explore page and never see who is funding it.</div>';
+    setNote(''); if(n) n.textContent = 'none';
     return;
   }
   /* Ordered by what needs doing. Newest-first put a promotion that ended
@@ -41603,7 +42331,25 @@ async function renderAgentPromotions(){
     if(ea !== eb) return eb - ea;
     return b.id - a.id;
   });
-  wrap.innerHTML = promotionPositionHTML() + `<div class="price-grid">${rows.map(promotionCardHTML).join('')}</div>`;
+  const p = promotionPosition(agentPromotions);
+  if(n) n.textContent = `${p.running} of ${p.total} paying today`;
+  wrap.innerHTML = `<div class="ow-tbl-h">
+    <div class="ow-tbl-c">Product, bonus and funder</div>
+    <div class="ow-tbl-c">Window</div>
+    <div class="ow-tbl-n">Units</div>
+    <div class="ow-tbl-n">Bonus earned</div>
+    <div class="ow-tbl-c"></div>
+  </div>` + rows.map(promotionRowHTML).join('');
+  setNote(promotionPositionHTML());
+  wrap.querySelectorAll('.ow-ag-pr').forEach(row=>{
+    const open = ()=>{
+      const id = Number(row.dataset.promorow);
+      agOpen = (agOpen.where === 'promorow' && agOpen.id === id) ? { id:null, where:null } : { id, where:'promorow' };
+      renderAgentPromotions();
+    };
+    row.addEventListener('click', (e)=>{ if(e.target.closest('button,select,a,input')) return; open(); });
+    row.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+  });
 }
 function resetPromotionForm(){
   editingPromotionId = null;
@@ -41634,7 +42380,7 @@ async function togglePromotionActive(id){
   const { error } = await sb.from('agent_promotions').update({ active: !promo.active }).eq('shop_id', currentShopId).eq('id', id);
   if(error){ toast('Could not update: '+error.message); return; }
   promo.active = !promo.active;
-  renderAgentPromotions();
+  refreshAgentsScreen();
   toast(promo.active ? 'Promotion activated' : 'Promotion deactivated');
 }
 async function deletePromotion(id){
@@ -41654,7 +42400,7 @@ async function deletePromotion(id){
   const { error } = await sb.from('agent_promotions').delete().eq('shop_id', currentShopId).eq('id', id);
   if(error){ toast('Could not delete: '+error.message); return; }
   agentPromotions = agentPromotions.filter(x=>x.id!==id);
-  renderAgentPromotions();
+  refreshAgentsScreen();
   toast('Promotion deleted');
 }
 function selectPromoSupplier(id){
@@ -41752,7 +42498,7 @@ document.getElementById('promo_save').addEventListener('click', async ()=>{
       agentPromotions = agentPromotions || [];
       agentPromotions.unshift(inserted);
     }
-    closeModal('promoModal'); resetPromotionForm(); renderAgentPromotions();
+    closeModal('promoModal'); resetPromotionForm(); refreshAgentsScreen();
     toast('Promotion saved');
   }catch(err){
     toast(`Could not save promotion: ${err.message||err}`);
@@ -41780,43 +42526,64 @@ function agentNameById(id){
   const a = (data.agents||[]).find(x=>x.id===id);
   return a ? a.name : String(id||'');
 }
-function claimCardHTML(c){
-  const agent = data.agents.find(a=>a.id===c.agent_id);
-  const paidDate = c.paid_at ? new Date(c.paid_at).toLocaleDateString() : '';
-  return `<div class="price-card">
-    <div class="prc-head">
-      <div class="prc-head-main">
-        <div class="prc-title">
-          <div class="prc-name">${esc(agent ? agent.name : c.agent_id)}</div>
-          <div class="prc-meta"><span class="prc-date">${esc(claimMonthLabel(c.month))} · ${fmtUGX(c.bonus_amount)}</span></div>
-        </div>
-      </div>
-      <div class="pc-actions">
-        ${c.status==='paid'
-          ? `<span class="st-status-pill busy" title="${esc(paidDate)}">Paid</span>`
-          : `<button class="btn btn-accent" style="padding:8px 14px;font-size:12.5px;" onclick="markClaimPaid(${c.id})">Mark as paid</button>`}
-      </div>
+/* ONE CLAIM, ONE ROW. It was a card whose whole content was a name, a
+   month, an amount and a button -- four short cells wearing the product
+   registry's card shell, three to a row, so two claims could not be read
+   against each other. */
+function claimRowHTML(c){
+  const waiting = c.status !== 'paid';
+  const days = waiting ? daysSinceDate(String(c.requested_at||'').slice(0,10)) : null;
+  const paidDate = c.paid_at ? fmtShortDate(String(c.paid_at).slice(0,10)) : '';
+  return `<div class="ow-tbl-r${waiting?'':' ow-ag-quiet'}">
+    <div class="ow-tbl-c">
+      <span class="ow-tbl-p" title="${esc(agentNameById(c.agent_id))}">${esc(agentNameById(c.agent_id))}</span>
+      <span class="ow-tbl-s">for ${esc(claimMonthLabel(c.month))}</span>
     </div>
+    <div class="ow-tbl-n" data-l="Amount">${esc(fmtUGX(Math.round(Number(c.bonus_amount)||0)))} ${
+      waiting && days != null ? `<span class="ow-tbl-nb">waiting ${esc(agingDaysLabel(days))}</span>` : ''}</div>
+    <div class="ow-tbl-a">${waiting
+      ? `<button type="button" class="btn btn-ghost ow-sm" onclick="markClaimPaid(${Number(c.id)})">Settle it</button>`
+      : `<span class="ow-quiet-v">Paid${paidDate ? ' '+esc(paidDate) : ''}</span>`}</div>
   </div>`;
 }
-async function renderCommissionClaims(){
+
+function renderCommissionClaims(){
   const wrap = document.getElementById('claimsWrap');
-  if(commissionClaims===null){
-    wrap.innerHTML = '<div class="empty">Loading…</div>';
-    const { data: rows, error } = await sb.from('agent_commission_claims').select('*').eq('shop_id', currentShopId).order('requested_at', {ascending:false});
-    if(error){ wrap.innerHTML = '<div class="empty">Could not load claims.</div>'; toast('Could not load claims: '+error.message); return; }
-    commissionClaims = rows || [];
-  }
-  if(!commissionClaims.length){
-    wrap.innerHTML = `<div class="empty">No commission claims yet.</div>`;
+  if(!wrap) return;
+  const n = document.getElementById('agClaimN');
+
+  if(commissionClaimsError){
+    wrap.innerHTML = `<div class="ow-empty"><b>The bonus claims could not be read.</b> ${esc(String(commissionClaimsError).replace(/\.?$/, '.'))} Nothing here is empty on purpose &mdash; what you owe is missing rather than nothing, and the strip above says so too.</div>`;
+    if(n) n.textContent = 'could not be read';
     return;
   }
+  if(commissionClaims === null){
+    wrap.innerHTML = '<div class="ow-empty">Reading the claims&hellip;</div>';
+    if(n) n.textContent = '';
+    return;
+  }
+  if(!commissionClaims.length){
+    wrap.innerHTML = '<div class="ow-empty"><b>No bonus has been claimed yet.</b> An agent claims a completed month from the Agent app; the amount is worked out on the server from their own orders, never taken from what they send.</div>';
+    if(n) n.textContent = 'nothing waiting';
+    return;
+  }
+  // What is waiting first, oldest at the top of it -- the order somebody
+  // would settle them in.
   const sorted = commissionClaims.slice().sort((a,b)=>{
     if(a.status !== b.status) return a.status==='requested' ? -1 : 1;
-    return b.month.localeCompare(a.month);
+    return a.status === 'requested'
+      ? String(a.requested_at||'').localeCompare(String(b.requested_at||''))
+      : b.month.localeCompare(a.month);
   });
-  wrap.innerHTML = `<div class="price-grid">${sorted.map(claimCardHTML).join('')}</div>`;
+  const wait = claimsWaiting();
+  if(n) n.textContent = wait.rows.length ? `${esc(fmtUGX(Math.round(wait.total)))} waiting` : 'nothing waiting';
+  wrap.innerHTML = `<div class="ow-tbl-h">
+    <div class="ow-tbl-c">Agent, and the month</div>
+    <div class="ow-tbl-n">Amount</div>
+    <div class="ow-tbl-c"></div>
+  </div>` + sorted.map(claimRowHTML).join('');
 }
+
 // Which account the money came out of. Built at call time rather than as
 // markup, since this is the only place that asks -- resolves to an account
 // key, or null if the person backs out.
@@ -41931,9 +42698,12 @@ function promptCashAccount(title, subtitle, opts){
   });
 }
 
+/* Returns true only when the money really moved. The accent settles a
+   run of claims one at a time and stops on the first `false`, so backing
+   out of either question must be distinguishable from having paid. */
 async function markClaimPaid(id){
-  const c = commissionClaims.find(x=>x.id===id); if(!c) return;
-  if(!confirm(`Mark ${fmtUGX(c.bonus_amount)} for ${claimMonthLabel(c.month)} as paid? Make sure you've actually settled it with the agent first.`)) return;
+  const c = (commissionClaims||[]).find(x=>x.id===id); if(!c) return false;
+  if(!confirm(`Mark ${fmtUGX(c.bonus_amount)} for ${claimMonthLabel(c.month)} as paid? Make sure you've actually settled it with the agent first.`)) return false;
   // This is real money leaving the till. It used to flip a status and
   // nothing else, so the Cash Book, the day's closing balance and every
   // profit figure built on them stayed exactly as if the payout had never
@@ -41941,7 +42711,7 @@ async function markClaimPaid(id){
   const account = await promptCashAccount('Where did the money come from?',
     `Recording ${fmtUGX(c.bonus_amount)} paid to ${agentNameById(c.agent_id)} in the Cash Book.`,
     {amount: Number(c.bonus_amount)||0, outgoing: true});
-  if(!account) return;
+  if(!account) return false;
 
   const amount = Number(c.bonus_amount)||0;
   const cashTxnId = addCashPayment(account, amount, 'Agent Commission',
@@ -41957,15 +42727,19 @@ async function markClaimPaid(id){
     removeCashTxnsByIds([cashTxnId]);
     saveData();
     toast('Could not update: '+error.message);
-    return;
+    return false;
   }
   c.status = 'paid'; c.paid_at = paidAt; c.cash_txn_id = cashTxnId;
   saveData();
-  renderCommissionClaims();
+  // The whole screen, not just the panel: settling a claim changes what
+  // the strip says you owe, empties a row out of the queue, and can hand
+  // the accent back to Invite.
+  refreshAgentsScreen();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
   toast('Marked as paid — recorded in the Cash Book');
+  return true;
 }
 
 /* ---- Mobile money providers (shop_payment_providers) ----
@@ -42081,29 +42855,38 @@ function momoPaymentStatusLabel(status){
 }
 async function renderMomoLedger(){
   const wrap = document.getElementById('momoLedgerWrap');
+  if(!wrap) return;
   if(momoPayments===null){
-    wrap.innerHTML = '<div class="empty">Loading…</div>';
+    wrap.innerHTML = '<div class="ow-empty">Reading the payment activity&hellip;</div>';
     const { data: rows, error } = await sb.from('agent_mobile_payments').select('*').eq('shop_id', currentShopId).order('created_at', {ascending:false}).limit(200);
-    if(error){ wrap.innerHTML = '<div class="empty">Could not load payment activity.</div>'; toast('Could not load payment activity: '+error.message); return; }
+    if(error){ wrap.innerHTML = `<div class="ow-empty"><b>The payment activity could not be read.</b> ${esc(String(error.message).replace(/\.?$/, '.'))}</div>`; toast('Could not load payment activity: '+error.message); return; }
     momoPayments = rows || [];
   }
-  if(!momoPayments.length){ wrap.innerHTML = '<div class="empty">No mobile money payments yet.</div>'; return; }
-  wrap.innerHTML = `<table class="dash-mini-table"><thead><tr>
-      <th>When</th><th>Agent</th><th>Order</th><th>Provider</th><th>Phone</th><th>Amount</th><th>Status</th><th></th>
-    </tr></thead><tbody>${momoPayments.map(p=>{
+  if(!momoPayments.length){
+    wrap.innerHTML = '<div class="ow-empty">No mobile money payment has been requested yet. One appears here the first time an agent pays for an order from the Agent app.</div>';
+    return;
+  }
+  const tone = { successful:' ow-good', failed:' ow-bad', timeout:' ow-bad', pending:' ow-warn' };
+  wrap.innerHTML = `<div class="ow-tbl-h">
+    <div class="ow-tbl-c">When</div>
+    <div class="ow-tbl-c">Agent</div>
+    <div class="ow-tbl-c">Order</div>
+    <div class="ow-tbl-n">Amount</div>
+    <div class="ow-tbl-c">Status</div>
+    <div class="ow-tbl-c"></div>
+  </div>` + momoPayments.map(p=>{
       const agent = data.agents.find(a=>a.id===p.agent_id);
       const when = p.created_at ? new Date(p.created_at).toLocaleString('en-UG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
-      return `<tr>
-        <td>${esc(when)}</td>
-        <td>${esc(agent ? agent.name : p.agent_id)}</td>
-        <td>${p.order_id!=null ? '#'+esc(p.order_id) : '—'}</td>
-        <td>${p.provider==='mtn'?'MTN':'Airtel'}</td>
-        <td>${esc(p.phone)}</td>
-        <td>${fmtUGX(p.amount)}</td>
-        <td><span class="momo-status-pill ${esc(p.status)}">${esc(momoPaymentStatusLabel(p.status))}</span></td>
-        <td>${p.status==='pending' ? `<button type="button" class="btn-link" onclick="recheckMomoPayment(${p.id})">Re-check</button>` : ''}</td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
+      return `<div class="ow-tbl-r">
+        <div class="ow-tbl-c"><span class="ow-quiet-v">${esc(when)}</span></div>
+        <div class="ow-tbl-c" data-l="Agent"><span class="ow-tbl-p" title="${esc(agent ? agent.name : p.agent_id)}">${esc(agent ? agent.name : p.agent_id)}</span>
+          <span class="ow-tbl-s">${p.provider==='mtn'?'MTN':'Airtel'} &middot; ${esc(p.phone)}</span></div>
+        <div class="ow-tbl-c" data-l="Order"><span class="ow-quiet-v">${p.order_id!=null ? '#'+esc(String(p.order_id)) : '&mdash;'}</span></div>
+        <div class="ow-tbl-n" data-l="Amount">${esc(fmtUGX(p.amount))}</div>
+        <div class="ow-tbl-c" data-l="Status"><span class="ow-cp${tone[p.status]||''}">${esc(momoPaymentStatusLabel(p.status))}</span></div>
+        <div class="ow-tbl-a">${p.status==='pending' ? `<button type="button" class="btn btn-ghost ow-sm" onclick="recheckMomoPayment(${p.id})">Re-check</button>` : ''}</div>
+      </div>`;
+    }).join('');
 }
 async function recheckMomoPayment(id){
   try{
@@ -60440,6 +61223,12 @@ document.querySelectorAll('.preset-tab').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.preset-pane').forEach(p=>p.style.display='none');
     document.getElementById('ppane-'+btn.dataset.ptab).style.display='block';
+    /* The one pane whose contents live on the server rather than in the
+       presets blob. Read when it is opened, as it was when it lived
+       behind the agents roster's fourth sub-tab -- credentials are
+       admin-only and change almost never, so they are not worth a place
+       in the boot sequence. */
+    if(btn.dataset.ptab === 'momo'){ renderMomoProviderSettings(); renderMomoLedger(); }
   });
 });
 // Shared inline-rename UX for a preset chip/row currently swapped for an
@@ -80487,7 +81276,7 @@ function renderAll(){
   renderSuppliers(document.getElementById('s_search').value);
   renderCustomers(document.getElementById('c_search').value);
   renderStaff(document.getElementById('st_search').value);
-  renderAgents(document.getElementById('ag_search').value);
+  refreshAgentsScreen();
   triggerProductsRender();
   refreshPriceDropdowns();
   populatePriceSupplierFilter(document.getElementById('pr_supplier_filter').value);
