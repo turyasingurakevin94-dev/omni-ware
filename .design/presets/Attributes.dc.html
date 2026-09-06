@@ -1,0 +1,496 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE WORDS, AT REAL SCALE =================
+       Every value from index.html: the 23-colour palette, the
+       11/12/13/14 ramp, Inter + Archivo Black + IBM Plex Mono, and the
+       .ow-* components already shipping. No new colour, no new weight,
+       no new type size. */
+    .main{overflow:visible;}
+
+    .rg{display:flex;align-items:baseline;gap:12px;margin:0 0 10px;
+      padding-bottom:8px;border-bottom:1px solid var(--ow-rule);}
+    .rg-t{font-size:13px;font-weight:700;margin:0;flex:none;color:var(--ow-ink-900);}
+    .rg-s{flex:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;
+      max-width:var(--ow-measure);}
+
+    /* the condition band — the same .cb-openbar the cash book ships */
+    .cb{display:flex;align-items:flex-start;gap:11px;background:var(--ow-amber-faint);
+      border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .cb-ic{width:18px;height:18px;flex:none;margin-top:1px;fill:none;stroke:var(--ow-amber-ink);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .cb-b{min-width:0;flex:1;}
+    .cb-t{font-size:13.5px;font-weight:600;color:var(--ow-amber-ink);margin:0 0 4px;}
+    .cb-w{font-size:12px;color:var(--ow-amber-ink);line-height:1.5;margin:0 0 3px;
+      max-width:var(--ow-measure);}
+    .cb-w b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;}
+    .cb-a{display:flex;gap:6px;flex:none;align-self:center;}
+    .cb-a .btn-ghost{background:var(--ow-paper);border-color:#E0C994;color:var(--ow-amber-ink);}
+
+    /* the category list — one 44px row each, opened in place */
+    .cr{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:5px 12px;box-sizing:border-box;
+      border-top:1px solid var(--ow-rule-soft);background:none;text-align:left;}
+    .cr-cv{width:11px;height:11px;justify-self:center;color:var(--ow-ink-400);fill:none;
+      stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .cr.is-open{background:var(--ow-paper-2);}
+    .cr.is-open .cr-cv{transform:rotate(90deg);}
+        .cr-n{min-width:0;font-size:13px;font-weight:500;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cr-s{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap;}
+    .cr-s.zero{color:var(--ow-ink-400);font-weight:400;}
+    
+    /* the opened row */
+    .cx{padding:2px 12px 12px 36px;background:var(--ow-paper-2);
+      border-top:1px solid var(--ow-rule-soft);}
+    .cx-h{display:flex;align-items:baseline;gap:8px;margin:6px 0 8px;}
+    .cx-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .cx-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;}
+    .cx-f{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+    .cx-a{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .cx-note{margin:8px 0 0;font-size:11px;color:var(--ow-amber-ink);line-height:1.45;
+      max-width:var(--ow-measure);}
+
+    /* a word */
+    .wc{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 4px 0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);font-size:11.5px;
+      font-weight:500;color:var(--ow-ink-900);white-space:nowrap;max-width:100%;}
+    .wc.dup{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .wc.odd{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .wc-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .wc-x{display:flex;align-items:center;justify-content:center;width:14px;height:14px;
+      border-radius:3px;color:var(--ow-ink-400);flex:none;}
+    .wc-x svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;}
+    .wc-in{height:22px;padding:0 7px;border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);
+      background:none;font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ow-ink-400);
+      box-sizing:border-box;}
+
+    /* the four flat lists */
+    .wd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+    .wd-b{padding:12px;border-top:1px solid var(--ow-rule-soft);
+      border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .wd-b:nth-child(2n+1){border-left:0;}
+    .wd-h{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;}
+    .wd-n{font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+    .wd-c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;color:var(--ow-ink-400);}
+    .wd-u{margin:0 0 8px;font-size:11px;color:var(--ow-ink-600);line-height:1.45;}
+    .wd-f{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+
+    /* the search over words */
+    .sf{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;width:100%;
+      box-sizing:border-box;border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);
+      font-size:12px;}
+    .sf svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* the merge sheet */
+    .mg{border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);
+      box-shadow:var(--ow-lift);overflow:hidden;}
+    .mg-h{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .mg-t{font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--ow-ink-900);}
+    .mg-b{padding:14px;}
+    .mg-p{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:10px;
+      align-items:center;margin-bottom:12px;}
+    .mg-c{border:1px solid var(--ow-rule);border-radius:var(--ow-r);padding:10px 12px;}
+    .mg-c.keep{border-color:var(--ow-verdigris);background:var(--ow-verdigris-soft);}
+    .mg-c.gone{border-style:dashed;}
+    .mg-cl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .mg-c.keep .mg-cl{color:var(--ow-verdigris);}
+    .mg-cn{font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .mg-cw{font-size:11px;color:var(--ow-ink-600);margin:3px 0 0;line-height:1.4;}
+    .mg-ar{justify-self:center;width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .mg-w{margin:0;padding:10px 12px;border-radius:var(--ow-r);background:var(--ow-amber-faint);
+      border:1px solid #EBD9B4;font-size:11.5px;color:var(--ow-amber-ink);line-height:1.5;}
+    .mg-w b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;}
+    .mg-f{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+
+    /* the carried-across table */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0 0;}
+    .cg th{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:6px 0 6px 16px;border-bottom:1px solid var(--ow-rule-soft);text-align:right;
+      white-space:nowrap;width:1%;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;font-family:'Inter',sans-serif;}
+    .cg tr:last-child td{border-bottom:0;}
+
+    /* attributes at scale */
+    .at{display:grid;grid-template-columns:16px minmax(0,1fr) auto auto;align-items:center;
+      gap:10px;width:100%;min-height:40px;padding:4px 12px;box-sizing:border-box;
+      border-top:1px solid var(--ow-rule-soft);}
+    .at-cv{width:11px;height:11px;justify-self:center;color:var(--ow-ink-400);fill:none;
+      stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .at-n{min-width:0;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;
+      white-space:nowrap;}
+    .at-v{min-width:0;font-size:11px;color:var(--ow-ink-600);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;max-width:280px;}
+    .at-u{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .at-u.zero{color:var(--ow-amber-ink);}
+    .at-g{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:12px 12px 4px;background:var(--ow-paper-2);
+      border-top:1px solid var(--ow-rule-soft);}
+
+    .fni{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+      width:15px;height:15px;border-radius:3px;background:var(--ow-crimson);color:#fff;
+      font-family:var(--mono);font-size:9.5px;font-weight:600;margin-left:6px;flex:none;}
+
+    .cx-a .btn{white-space:nowrap;}
+    /* A count with nothing beside it is a count of what the column header
+       already named. The unit is said once, at the top. */
+    .cr-s{min-width:34px;text-align:right;}
+    /* Tokens the shipped .ow-rl / .ow-mini rules use, which the canvas
+       chrome sheet does not carry. */
+    :root{--ow-t-11:11px;--ow-t-12:12px;--ow-t-13:13px;--ow-fw-600:600;
+      --ow-sp-4:4px;--ow-sp-8:8px;--ow-sp-10:10px;--ow-sp-12:12px;}
+    .ow-rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .ow-rl + .ow-rl{border-top:1px solid var(--ow-rule-soft);}
+    .ow-rl b{color:var(--ow-ink-900);font-weight:600;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:850px">
+  <div class="main">
+    <div class="rg">
+      <h2 class="rg-t">Attributes, at fifty-eight</h2>
+      <span class="rg-s">The drawing showed three, with every value on screen at once. At 58 that is a wall &mdash; and the question stops being &ldquo;what are the values&rdquo; and becomes &ldquo;which of these is real&rdquo;.</span>
+    </div>
+
+    <div class="ow-grid">
+      <div class="ow-stack">
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">Attributes</span>
+            <span class="ow-pan-n">58 &middot; 22 in use &middot; 36 on nothing</span>
+          </div>
+          <div class="sf">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+            <span>Find an attribute or a value</span>
+          </div>
+
+          <div class="at-g">On products &mdash; 22</div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Length</span>
+            <span class="at-v">2 m &middot; 2.5 m &middot; 3 m &middot; 3.5 m &middot; 4 m &middot; 6 m</span>
+            <span class="at-u">41 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Gauge</span>
+            <span class="at-v">G28 &middot; G30 &middot; G32</span>
+            <span class="at-u">28 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Colour</span>
+            <span class="at-v">Red &middot; White &middot; Blue &middot; Black &middot; Green &middot; Grey</span>
+            <span class="at-u">26 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Size</span>
+            <span class="at-v">Small &middot; Medium &middot; Large</span>
+            <span class="at-u">17 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Thickness</span>
+            <span class="at-v">0.4 mm &middot; 0.5 mm &middot; 0.8 mm</span>
+            <span class="at-u">9 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Finish</span>
+            <span class="at-v">Matt &middot; Gloss &middot; Satin</span>
+            <span class="at-u">6 products</span>
+          </div>
+          <div class="at" style="color:var(--ow-ink-400);">
+            <span></span>
+            <span class="at-n" style="color:var(--ow-ink-400);font-weight:400;">16 more in use</span>
+            <span class="at-v"></span><span class="at-u" style="color:var(--ow-ink-400);"></span>
+          </div>
+
+          <div class="at-g">On nothing &mdash; 36</div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">colour</span>
+            <span class="at-v">red &middot; white</span>
+            <span class="at-u zero">0 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Color</span>
+            <span class="at-v">Red &middot; Blue</span>
+            <span class="at-u zero">0 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">size</span>
+            <span class="at-v">small &middot; big</span>
+            <span class="at-u zero">0 products</span>
+          </div>
+          <div class="at">
+            <svg class="at-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="at-n">Length (mm)</span>
+            <span class="at-v">&mdash; no values</span>
+            <span class="at-u zero">0 products</span>
+          </div>
+          <div class="at" style="color:var(--ow-ink-400);">
+            <span></span>
+            <span class="at-n" style="color:var(--ow-ink-400);font-weight:400;">32 more on nothing</span>
+            <span class="at-v"></span><span class="at-u" style="color:var(--ow-ink-400);"></span>
+          </div>
+
+          <p class="ow-mini">The two groups are the whole design. <b>22 attributes are on a product; 36 are on none.</b> That is not a judgement about which are good &mdash; a shop can add an attribute the day before it builds the variants that use it &mdash; but it is the one fact that lets 58 be read at all, and it is derivable from the products themselves rather than typed here.</p>
+        </div>
+      </div>
+
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What the split shows</span></div>
+          <p class="ow-rl"><b>colour, Color and Colour are three attributes.</b> Only one is on a product. Case and spelling made three where the shop meant one &mdash; the same fault as Hinges next door, and it is why the list reached 58.</p>
+          <p class="ow-rl"><b>Four have no values at all.</b> A name was typed into a variant form and nothing followed it. They suggest nothing and can never match anything.</p>
+          <p class="ow-rl"><b>Nothing is deleted for you.</b> The screen sorts and counts; what to prune is the shop&rsquo;s call. The same Merge sheet works here &mdash; merging colour into Colour moves its values across.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Where 58 came from</span></div>
+          <div class="rf"><span class="rf-l">Attributes on file</span><span class="rf-v">58</span></div>
+          <div class="rf"><span class="rf-l">On at least one product</span><span class="rf-v">22</span></div>
+          <div class="rf"><span class="rf-l">On none</span><span class="rf-v warn">36</span></div>
+          <div class="rf"><span class="rf-l">With no values typed</span><span class="rf-v warn">4</span></div>
+          <div class="rf"><span class="rf-l">Differing only by case</span><span class="rf-v warn">7</span></div>
+          <p class="ow-rl">These five figures are illustrative &mdash; the split, the case clashes and the empty ones are all derivable from what the app already holds, and none is computed yet. If one cannot be derived cheaply the rule is to say so rather than show a number.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

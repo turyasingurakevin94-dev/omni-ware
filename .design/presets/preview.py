@@ -87,6 +87,12 @@ def expand(s, scope):
         i = j
     return ''.join(out)
 
+import os, json as _json
+_stem = os.path.basename(sys.argv[1]).split('.')[0]
+_pv = '_preview_%s.json' % _stem
+if os.path.exists(_pv):
+    V = _json.load(open(_pv))
+
 src = open(sys.argv[1]).read()
 head = src.split('</helmet>')[0].split('<helmet>')[1]
 body = src.split('</helmet>')[1].split('</x-dc>')[0]

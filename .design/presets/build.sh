@@ -36,4 +36,8 @@ build(){ # $1 out $2 body $3 extracss $4 w $5 h $6 railfile $7 logic
 build Before.dc.html body_before.html "_extra_before.css"  1440  790 _rail_before.html ""
 build Main.dc.html   body_main.html   "_extra_main.css"    1440 3760 _rail.html "_logic_main.js"
 build States.dc.html body_states.html "_extra_main.css _extra_states.css" 1440 1620 _rail.html ""
+build Words.dc.html      body_words.html      "_extra_words.css" 1440 1990 _rail.html "_logic_words.js"
+build WordsBefore.dc.html body_wordsbefore.html "_extra_words.css _extra_wb.css" 1440 830 _rail.html ""
+build Merge.dc.html      body_merge.html      "_extra_words.css" 1440 940 "" ""
+build Attributes.dc.html body_attributes.html "_extra_words.css" 1440 850 "" ""
 exit 0
