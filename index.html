@@ -9774,6 +9774,8 @@
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .bf-tr{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .bf-was{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  /* Amber, and only ever on the shop's side of the glass. */
+  .bf-up{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
   .bf-was s{opacity:.85;}
   .bf-gh{margin-left:auto;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-400);
@@ -44012,7 +44014,18 @@ function briefGroups(c, habits){
   /* 2. WHAT THEY ALWAYS TAKE, biggest by what an order is worth. */
   take('usual', 'YOU USUALLY TAKE', habits.slice()
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))
-    .map(h=> rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty))
+    .map(h=>{
+      const row = rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty);
+      if(row && h.lastPrice && h.sinceLast <= TELL_PRICE_MEMORY_DAYS){
+        /* Below what they paid: shown, whatever the size of the fall.
+           Above it: recorded for the SHOP only -- a price list that
+           advertises its own rises is not a price list, but an owner
+           who finds out from the customer is worse off still. */
+        if(row.price < h.lastPrice) row.wasPaid = Math.round(h.lastPrice);
+        else if(row.price > h.lastPrice) row.upFrom = Math.round(h.lastPrice);
+      }
+      return row;
+    })
     .filter(Boolean));
 
   /* 3. WHAT GOES WITH THOSE -- the owner's own pairings, from every
@@ -44564,13 +44577,14 @@ function briefPaintList(ctx, fr){
     const money = f(it.price);
     const ms = briefFitNum(ctx, money, 600, 19, C[4] - C[3] - BRIEF_PAD * 2);
     ctx.font = `600 ${ms}px ${BRIEF_MONO}`;
-    ctx.fillText(money, cellR(3), it.was != null ? mid + 1 : mid + 5);
-    if(it.was != null){
+    const older = it.was != null ? it.was : (it.wasPaid != null ? it.wasPaid : null);
+    ctx.fillText(money, cellR(3), older != null ? mid + 1 : mid + 5);
+    if(older != null){
       /* The old price under the new one, inside the money column: a
          figure compared against another figure belongs beside it. */
       ctx.fillStyle = BRIEF_INK.ink400;
       ctx.font = `13px ${BRIEF_MONO}`;
-      const t = f(it.was);
+      const t = f(older);
       ctx.fillText(t, cellR(3), mid + 18);
       const w = ctx.measureText(t).width;
       ctx.fillRect(cellR(3) - w, mid + 13, w, 1);
@@ -44779,7 +44793,9 @@ function briefStripHTML(b){
             <span class="bf-v">${f(it.price)}</span>
             <span class="bf-x">${it.was != null ? f(it.was - it.price)
               : it.theirQty != null ? f(it.theirQty) : ''}</span>
-            ${it.was != null ? `<span class="bf-was"><s>${f(it.was)}</s></span>` : ''}
+            ${(it.was != null || it.wasPaid != null)
+              ? `<span class="bf-was"><s>${f(it.was != null ? it.was : it.wasPaid)}</s></span>` : ''}
+            ${it.upFrom != null ? `<span class="bf-up" title="Quoted above what they last paid">was ${f(it.upFrom)}</span>` : ''}
           </div>`).join('')}
     </div>`;
   }).join('')}</div>`;
@@ -44811,6 +44827,10 @@ function briefWhyHTML(b){
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
 ${briefLeftOffHTML(b.pricing)}
+    ${(()=>{ const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
+      return up.length ? `<p class="ow-q-note"><b>${up.length}</b> line${up.length === 1 ? '' : 's'} quoted ABOVE what they last paid:
+        ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
+        The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.</p>` : ''; })()}
     ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
       `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
     <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
