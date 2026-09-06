@@ -128,8 +128,20 @@ const src = read('index.html');
      .ow-ph-help behind the "i", where every console screen before it
      put theirs. One fewer screen to police, not one that stopped being
      policed. */
+  /* 3 -> 2. Media converted: its name and its one-line sub are .ow-ph,
+     and the paragraph about where photos are chosen from, why the same
+     picture is never uploaded twice and what the screen will not do on
+     its own is .ow-ph-help behind the "i", where every console screen
+     before it put theirs.
+
+     TWO AT ONCE, and this is the case the note above about Inventory
+     and Compare Prices is describing. Products and Media converted on
+     separate branches, each lowered this floor from 4 to 3, and each
+     was right about its own screen. Taking either number would leave
+     the floor one HIGHER than the truth and stop policing a screen.
+     Both conversions are real, so the floor is 2. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 3, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 2, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
@@ -153,8 +165,11 @@ const src = read('index.html');
      ready to sell, that "costs you" is the price of buying ONE, and
      what each of the two print buttons produces. The fold this file
      polices is intact; there is simply one fewer screen left to fold. */
+  /* 3 -> 2, for the same conversion and by the same two-branch merge as
+     above. Media did not lose its explanation either: it gained an
+     .ow-ph-help, which is the fold this file exists to police. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 3,
+  t.check(paras.length >= 2,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

@@ -81,10 +81,26 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        (62, not 63, was the cash book's two floating + / - buttons: they
        duplicated Money in and Money out from the top of the page, and
        the entry line that replaced them is permanently on screen.) */
-    /* 55, not 56: a second elevation, on a tab. The statements' active
-       document tab lifted itself off the tray it sat in; it is
-       underscored now, and depth on this app is hairlines. */
-    'shadows': [55, /box-shadow:\s*([^;}]+)/g],
+    /* 56, not 55, and this one goes UP -- the only entry in this table
+       that ever has, so it is argued rather than nudged.
+
+       Media's phone screen ends in a camera bar fixed above the tab bar,
+       and the photographs scroll underneath it. That is the one thing
+       --ow-lift is FOR: "things that genuinely float -- a menu, a search
+       result". Every alternative was worse. A top hairline cannot edge a
+       bar inset 16px from both sides. Running the bar edge to edge to
+       earn a hairline would put a second full-width chrome band directly
+       above the tab bar, which reads as two tab bars. Leaving it flat
+       lets a card slide flush under an oxide stripe with nothing to say
+       the stripe is in front.
+
+       It is the layer's own value, used once, on the one element in the
+       app that is fixed over its own scrolling content.
+
+       (55, not 56, was a second elevation on a tab: the statements'
+       active document tab lifted itself off the tray it sat in; it is
+       underscored now, and depth on this app is hairlines.) */
+    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
     /* 104, not 105: the statements' verdict slab carried #C4DED6, a
        verdigris keyline that was in no palette and existed only to edge
        a tinted banner. The banner is a row in ink now and the colour
