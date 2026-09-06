@@ -35,6 +35,7 @@ const data = { stock: {}, stockLots: {}, products: [] };
 const scope = compileScope([
   extractDeclaration(src, 'INVENTORY_SORTS', 'index.html'),
   extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'stockOnHand', 'index.html'),
   extractFunction(src, 'getStockQty', 'index.html'),
   // The card now shows the shop's own restock level, so the rule that
   // reads it comes with the line builder.

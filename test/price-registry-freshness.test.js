@@ -49,7 +49,7 @@ const data = { prices: [], products: [], stock: {}, stockLog: [], savedQuotes: [
 const DECLS = ['PRICE_STALE_DAYS', 'PRICE_REVIEW_DEMAND_DAYS', 'PRICE_REVIEW_TARGET_DEFAULT',
   'PRICE_REVIEW_CONFIRMING_SOURCES', 'PRICE_DRIFT_TARGET', 'PRICE_LEARN_MIN_INTERVALS',
   'PRICE_LEARN_MIN_SPAN_DAYS', 'PRICE_LEARN_MIN_DAYS', 'PRICE_LEARN_MAX_DAYS'];
-const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getStockQty',
+const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'priceReviewTarget', 'priceReviewStaleDays',
   'priceReviewPeriod', 'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview',
   'priceReviewCandidates', 'priceReviewProgress', 'confirmPriceUnchanged',

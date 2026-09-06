@@ -31825,12 +31825,17 @@ function ipSuggestionPriceNote(p, variantIdx){
   }
   return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>`;
 }
-// "14 in stock" / "out of stock", said where the choosing happens --
-// whether the shelf can cover it decides what the admin promises.
+/* "14 in stock" / "out of stock", said where the choosing happens --
+   whether the shelf can cover it decides what the admin promises.
+   And "never counted" is its own answer: saying "out of stock" of goods
+   nobody has ever counted steers a rep away from something that may be
+   standing in the yard, on the strength of a fact the books do not
+   have. */
 function ipSuggestionStockNote(p, variantIdx){
-  const n = getStockQty(p.id, variantIdx==null ? null : variantIdx);
-  return n > 0 ? `<span class="ip-stock">${n} in stock</span>`
-               : '<span class="ip-stock none">out of stock</span>';
+  const s = stockOnHand(p.id, variantIdx==null ? null : variantIdx);
+  if(!s.counted) return '<span class="ip-stock none" title="This line has never been counted, which is not the same as having none">not counted</span>';
+  return s.qty > 0 ? `<span class="ip-stock">${s.qty} in stock</span>`
+                   : '<span class="ip-stock none">out of stock</span>';
 }
 function ipRenderList(query){
   const tokens = searchTokens(query);
@@ -47106,9 +47111,14 @@ function customerProductHabits(customerId){
    counter cannot name two different figures for the same thing on the
    same morning -- and a line with no price on file has none here
    either, which is why a picture can show a quantity and no price. */
+/* Through the one reader, so the picture and the counter cannot come to
+   different views of the same shelf. Null still means never counted,
+   and a caller treating that as "may be offered" is making a choice
+   rather than reading a zero -- which is what this used to do by
+   accident, with its own copy of the read. */
 function briefInStock(productId, variantIdx){
-  const q = (data.stock || {})[stockKey(productId, variantIdx == null ? null : variantIdx)];
-  return q == null ? null : Number(q) || 0;
+  const s = stockOnHand(productId, variantIdx == null ? null : variantIdx);
+  return s.counted ? s.qty : null;
 }
 
 /* ---- why this customer, this fortnight ------------------------------
@@ -58696,7 +58706,29 @@ function remapVariantStock(productId, oldToNew){
   });
   return { droppedQty, droppedVariants };
 }
-function getStockQty(productId, variantIdx){ return Number(data.stock[stockKey(productId, variantIdx)]) || 0; }
+/* THE SHELF, READ ONCE, IN THREE STATES.
+
+   `data.stock` holds a count per product::variant, and a key that is
+   not there has never been counted -- which is a different fact from
+   counted and empty, and the two were being collapsed differently in
+   two places. getStockQty read a missing key as 0, so screens said
+   "out of stock" about goods nobody had ever counted; briefInStock read
+   the same missing key as null and treated it as available, so a
+   customer's picture offered them. Both rules are defensible and they
+   contradict each other, which is the one thing a shop cannot work
+   with.
+
+   So there is one reader and it says which of the three it found.
+   Callers that do arithmetic take `qty`, where a thing never counted is
+   nought because you cannot sell what nobody has seen. Callers that put
+   WORDS on a screen have to look at `counted` first, because "we have
+   none" and "we have never looked" are different sentences and only one
+   of them is true. */
+function stockOnHand(productId, variantIdx){
+  const raw = (data.stock || {})[stockKey(productId, variantIdx)];
+  return { qty: Number(raw) || 0, counted: raw != null };
+}
+function getStockQty(productId, variantIdx){ return stockOnHand(productId, variantIdx).qty; }
 // Our-stock purchase cost — tracked as FIFO lots per stock item. Each lot is
 // {qty, cost} in the order it was purchased; a purchase pushes a new lot
 // onto the end, and any reduction in stock (sale, correction, damage, etc.)
@@ -82751,7 +82783,9 @@ function followUpAddResults(query){
     out.push({
       key: 'p:' + p.id + ':' + (variantIdx==null ? '' : variantIdx),
       label: productDisplayLabel(p, variantIdx),
-      sub: (getStockQty(p.id, variantIdx) > 0 ? `${getStockQty(p.id, variantIdx)} in stock` : 'Out of stock'),
+      // Three states, three sentences — see stockOnHand.
+      sub: (()=>{ const s = stockOnHand(p.id, variantIdx);
+        return !s.counted ? 'Never counted' : s.qty > 0 ? `${s.qty} in stock` : 'Out of stock'; })(),
       subject: {productId: p.id, variantIdx},
     });
   });

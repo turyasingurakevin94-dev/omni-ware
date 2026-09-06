@@ -79,7 +79,7 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    'stockKey', 'getStockQty', 'addStockLot', 'consumeStockLots', 'peekStockLots',
+    'stockKey', 'stockOnHand', 'getStockQty', 'addStockLot', 'consumeStockLots', 'peekStockLots',
     'consignTally', 'consignedOnShelf', 'consignedForLine', 'consignedForOrder',
     'consignTagLabel', 'consignTagTitle', 'consignTagHTML',
     'consignedUnitCostForSale', 'sellBelowCostClause',
@@ -90,7 +90,7 @@ try {
   ['peekStockLots', 'consignTally', 'consignedOnShelf', 'consignedForLine', 'consignedForOrder',
     'consignTagLabel', 'consignTagTitle', 'consignTagHTML', 'consignedUnitCostForSale',
     'sellBelowCostClause', 'shelfValueForKey', 'inventoryValue', 'inventoryLineFor',
-    'inventoryLineStats', 'getStockQty', 'stockKey', 'addStockLot', 'consumeStockLots',
+    'inventoryLineStats', 'stockOnHand', 'getStockQty', 'stockKey', 'addStockLot', 'consumeStockLots',
     'invPaymentSummaryHTML']);
 } catch (e) { err = e; }
 t.check(!!scope, `the reading compiles${err ? ` (${err.message})` : ''}`);

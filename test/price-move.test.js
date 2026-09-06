@@ -112,7 +112,7 @@ const CHAIN = ['ourCostFor', 'ourPriceFor', 'boughtInPriceFor', 'suggestedSellin
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule',
   'rivalMarketRows', 'rivalNeverChecked', 'marketVerdict', 'buyKeyParts', 'stockKey',
   'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
-  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty'];
+  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'stockOnHand', 'getStockQty'];
 
 const build = (data, extraSrc, names, over) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))

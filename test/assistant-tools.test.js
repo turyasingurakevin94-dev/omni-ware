@@ -70,7 +70,7 @@ const NAMES = [
   'collectableDebts', 'customerOldestOpenChargeDate', 'customerOpenCharges', 'daysSinceDate',
   'cashOnHandFor', 'cashOnHandByAccount', 'cashAnchorFor', 'cashIsMoneyIn', 'cashIsMoneyOut',
   'debtCollectionsOn', 'debtLogIsInvoiceOwned', 'cashIsDebtCollection',
-  'getStockQty', 'stockKey',
+  'stockOnHand', 'getStockQty', 'stockKey',
   'buildProductSuggestionEntries', 'supplierSkuIndex', 'searchTokens', 'matchesAllTokens',
   'productSearchText', 'productVariantLabel', 'variantLabel',
   'rankedPriceRows', 'productPriceRows', 'suggestedSellingPrice', 'effectiveMarkupRule',

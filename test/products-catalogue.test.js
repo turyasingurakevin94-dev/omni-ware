@@ -56,6 +56,7 @@ const data = { products: [], prices: [], stock: {}, suppliers: [] };
 const scope = compileScope([
   extractFunction(src, 'productPriceRows', 'index.html'),
   extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'stockOnHand', 'index.html'),
   extractFunction(src, 'getStockQty', 'index.html'),
   extractFunction(src, 'productLineStats', 'index.html'),
   extractFunction(src, 'productBestBuy', 'index.html'),
@@ -73,7 +74,7 @@ const scope = compileScope([
       .map((p) => ({ ...p, purchasePrice: p.buy == null ? null : p.buy }))
       .sort((a, b) => (a.purchasePrice == null ? Infinity : a.purchasePrice)
                     - (b.purchasePrice == null ? Infinity : b.purchasePrice)),
-}, ['productLineStats', 'productBestBuy', 'getStockQty', 'productSetupFault']);
+}, ['productLineStats', 'productBestBuy', 'stockOnHand', 'getStockQty', 'productSetupFault']);
 
 const line = extractFunction(src, 'productLineHTML', 'index.html');
 const price = (productId, variantIdx, supplierId, buy) => ({ productId, variantIdx, supplierId, buy });

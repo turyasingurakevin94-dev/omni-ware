@@ -112,7 +112,7 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
     'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',

@@ -71,7 +71,7 @@ const makeData = (over) => Object.assign({
   ],
 }, over || {});
 
-const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
   'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
   'quoteItemSellPrice', 'invoiceLineCost', 'buyKeptPct',

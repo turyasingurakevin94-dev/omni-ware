@@ -264,7 +264,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     ] }];
     const MARKET = ['rivalMarketRows', 'rivalNeverChecked', 'buyKeyParts', 'stockKey',
       'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
-      'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty',
+      'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'stockOnHand', 'getStockQty',
     'productPackInfo', 'productUnitLabel'];
     const s = compileScope(
       CHAIN.concat(MARKET).map((n) => extractFunction(src, n, 'index.html'))

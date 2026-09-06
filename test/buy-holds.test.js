@@ -90,7 +90,7 @@ const makeEnv = (data) => ({
 });
 
 const CHAIN = [
-  'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+  'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
   'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
   'quoteItemSellPrice', 'invoiceLineCost', 'quoteSuggestedPrice', 'quoteSuggestedStockPrice',

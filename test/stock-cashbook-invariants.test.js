@@ -70,7 +70,7 @@ const NAMES = [
   // the lots a sale consumed back at the front, instead of adding one
   // fresh lot with no cost on the back. See admin-stock-lots.test.js.
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
-  'applyStockDelta', 'getStockQty',
+  'applyStockDelta', 'stockOnHand', 'getStockQty',
   'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
   // Both kinds of line that come off our own shelf.
   'quoteLineReceived', 'quoteLineComesOffShelf',

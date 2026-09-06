@@ -88,7 +88,7 @@ const env = {
 
 const NAMES = [
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
-  'applyStockDelta', 'getStockQty', 'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  'applyStockDelta', 'stockOnHand', 'getStockQty', 'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
   // applyQuoteStockDeduction now also deducts a bought-in line that has
   // been received, so the test for that comes with it.
   'quoteLineReceived', 'quoteLineComesOffShelf',

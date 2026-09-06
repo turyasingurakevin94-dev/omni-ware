@@ -41,7 +41,12 @@ const src = read('index.html');
       { id: 1, productId: 'P1', variantIdx: null, supplierId: 'S1', wholesale: 6000, retail: 6250, packQty: 12, unit: 'pc', tiers: [], outOfStock: false },
       { id: 2, productId: 'P2', variantIdx: null, supplierId: 'S1', wholesale: 8000, retail: 8500, packQty: 0, unit: 'pc', tiers: [], outOfStock: false },
     ],
-    stock: { P1: 14 },
+    /* P1 counted and held, P2 counted and empty, P3 never counted at
+       all. The third is the one this fixture used to be missing: it had
+       P2 with no key and asserted the row said "out of stock" about it,
+       which was the very thing being said about goods nobody had ever
+       looked at. */
+    stock: { P1: 14, P2: 0 },
   };
   const scope = compileScope([
     extractFunction(src, 'productPriceRows', 'index.html'),
@@ -49,14 +54,15 @@ const src = read('index.html');
     extractFunction(src, 'effectiveMarkupRule', 'index.html'),
     extractFunction(src, 'suggestedSellingPrice', 'index.html'),
     extractFunction(src, 'stockKey', 'index.html'),
-    extractFunction(src, 'getStockQty', 'index.html'),
+    extractFunction(src, 'stockOnHand', 'index.html'),
+  extractFunction(src, 'getStockQty', 'index.html'),
     extractFunction(src, 'ipSuggestionPriceNote', 'index.html'),
     extractFunction(src, 'ipSuggestionStockNote', 'index.html'),
   ], {
     data,
     supplierName: () => 'Shafik',
     fmtUGXPerUnit: (n, u) => `${Number(n).toLocaleString('en-US')} UGX/${u || 'unit'}`,
-  }, ['ipSuggestionPriceNote', 'ipSuggestionStockNote']);
+  }, ['ipSuggestionPriceNote', 'ipSuggestionStockNote', 'getStockQty']);
 
   const ruled = { id: 'P1', name: 'Tape', retailMarkupType: 'percent', retailMarkupValue: 20 };
   const bare = { id: 'P2', name: 'Hinge' };
@@ -99,7 +105,18 @@ const src = read('index.html');
   t.check(/14 in stock/.test(scope.ipSuggestionStockNote(ruled, null)),
     'the row says what the shelf can cover');
   t.check(/out of stock/.test(scope.ipSuggestionStockNote(bare, null)),
-    'and when it cannot');
+    'and when it cannot — counted, and empty');
+  /* NEVER COUNTED IS ITS OWN ANSWER. Saying "out of stock" here steers
+     a rep away from goods that may be standing in the yard, on the
+     strength of a fact the books do not have. getStockQty still reads
+     it as nought, because arithmetic cannot sell what nobody has seen;
+     only the words have to tell the two apart. */
+  const never = { id: 'P3', name: 'Never Counted' };
+  const noteNever = scope.ipSuggestionStockNote(never, null);
+  t.check(/not counted/.test(noteNever) && !/out of stock/.test(noteNever),
+    'a line nobody has ever counted says so, rather than claiming the shelf is empty');
+  t.check(scope.getStockQty('P3', null) === 0,
+    'while the arithmetic still reads it as nought — you cannot sell what nobody has seen');
 }
 
 /* ---------- 2. the inline search is the front door ------------------- */
