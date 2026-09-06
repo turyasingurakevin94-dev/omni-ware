@@ -229,9 +229,30 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   /* .reg-fig was the grouped row's figure, and those rows -- never
      called after the registry went back to cards -- are gone with the
      rule. The card draws both prices in the layer's .ow-fig. */
-  t.check(/\.ow-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src)
-    && /class="ow-fig ow-fig-lg[^"]*"[^>]*>\$\{fmtPriceCompact\(r\.wholesale, r\.unit\)\}/.test(code),
+  t.check(/\.ow-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
     'the figures are tabular, so two suppliers can be read against each other across the cards');
+  /* WHICH figure, though. Wholesale is quoted and thought about by the
+     pack -- "290,000 a carton", never "14,500 a dozen" -- and
+     fmtPriceCompactPack has said so in index.html for a long time: the
+     New Quote supplier cards and the recommended-price square both use
+     it. This card printed the base rate, so one supplier's wholesale
+     figure read as two different numbers on two screens.
+
+     The base rate stays UNDER it, because it is the figure the
+     cheapest-wins ranking is actually made at -- two cartons on one
+     line can hold different numbers of units, so per-carton figures are
+     not comparable and per-unit ones are. A card that dropped it could
+     not explain its own "Cheapest" chip. */
+  t.check(/class="ow-fig ow-fig-lg[^"]*"[^>]*>\$\{fmtPriceCompactPack\(r\.wholesale, r\)\}/.test(code),
+    'and the wholesale one is quoted by the pack, as every other screen quotes it');
+  t.check(/class="pr-fig-b"[^>]*>\$\{fmtPriceCompact\(r\.wholesale, r\.unit\)\}/.test(code),
+    'with the base rate kept under it — the rate the ranking is really made at');
+  t.check(/\.pr-fig-b\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
+    'tabular too, since it is the figure being read down a column of cards');
+  /* And the delta beside them is per UNIT, which had to start saying so
+     the moment the figure above it became per pack. */
+  t.check(/\+\$\{fmtPriceCompact\(buy - best\)\}<\/span>\$\{r\.unit \? `<span class="prc-unit">\/\$\{esc\(r\.unit\)\}<\/span>` : ''\} vs cheapest/.test(code),
+    'the "vs cheapest" gap names its unit, because it is per unit while the figure above it is per pack');
 
   // Same gap the Presets page had: a summary that only drew at boot.
   t.check(/if\(tab==='prices'\)\{ refreshPriceDropdowns\(\); triggerPricesRender\(\); \}/.test(code),

@@ -3403,6 +3403,17 @@
      for readings. Crimson because a figure that cannot be right is the
      genuinely bad kind, not the cautionary kind: a shop quoting off it
      is losing money on every unit while it stands. */
+  /* The base rate under a pack price. Mono, because it is money, and
+     quiet, because it is the working rather than the answer. */
+  .pr-fig-b{margin-top:2px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:11px;color:var(--ow-ink-400);}
+  /* Aligned at the top, not the bottom: the wholesale column carries a
+     basis line under its figure and the retail one does not, and
+     bottom alignment hung RETAIL's label level with the wholesale
+     FIGURE. Kept here rather than in the layer, which every other
+     screen's .ow-figs reads. */
+  .pr-card .ow-figs{align-items:flex-start;}
   .pr-odd{display:flex;align-items:flex-start;gap:8px;margin:8px 12px 0;padding:8px 10px;
     border-radius:var(--ow-r);background:var(--ow-crimson-soft);color:var(--ow-crimson);
     font-size:11px;line-height:var(--ow-lh-snug);}
@@ -61069,7 +61080,12 @@ function priceCardHTML(r, tokens){
     : g && r.id === g.cheapestId
       ? `<span class="ow-cp ow-good" title="Cheapest to buy one from, of those in stock${only ? ' — the only supplier' : ''}">${ICON_CHECK}Cheapest${only ? ' · only' : ''}</span>`
       : (buy != null && best != null && buy > best)
-        ? `<span class="ow-cp" title="${fmtUGX(Math.round(buy - best))} above the cheapest in stock, to buy one"><span class="ow-fig">+${fmtPriceCompact(buy - best)}</span> vs cheapest</span>`
+        /* A PER-UNIT delta, and it has to say so now that the figure
+           above it is per pack. It stays per unit deliberately: the
+           quotes on a line can be packed differently, and comparing a
+           carton of twenty against a carton of twelve compares the
+           boxes rather than the goods. */
+        ? `<span class="ow-cp" title="${fmtUGX(Math.round(buy - best))} above the cheapest in stock, to buy one ${esc(r.unit || 'unit')}"><span class="ow-fig">+${fmtPriceCompact(buy - best)}</span>${r.unit ? `<span class="prc-unit">/${esc(r.unit)}</span>` : ''} vs cheapest</span>`
         : '';
   const sigs = [];
   const paid = sig.paid.get(priceSeriesKey(r.productId, r.variantIdx, r.supplierId)) || null;
@@ -61118,6 +61134,18 @@ function priceCardHTML(r, tokens){
   const provMark = prov ? `<span class="pr-prov" title="${prov[1]}">${prov[0]}</span>` : '';
   const meta = [sku, provMark].filter(Boolean).join(' ');
   const sid = esc(String(r.supplierId));
+  /* WHOLESALE IS QUOTED BY THE PACK, and thought about that way: a
+     shop that sells cartons says "290,000 a carton", never "14,500 a
+     dozen". fmtPriceCompactPack has said so in this file for a long
+     time -- the New Quote supplier cards and the recommended-price
+     square both use it -- and this card was the one place still
+     printing the base rate, so the same supplier's wholesale figure
+     read as two different numbers on two screens.
+     The base rate is kept underneath rather than dropped: it is what
+     every comparison on this screen is made at, so a card that hid it
+     could not explain its own "Cheapest" chip. */
+  const packed = (Number(r.packQty) || 0) > 0 && !!String(r.packUnit || '').trim()
+    && r.wholesale != null && r.wholesale !== '';
   const noRetail = r.retail == null || r.retail === '';
   return `<div class="ow-card pr-card${r.outOfStock ? ' pr-oos' : ''}">
     <div class="ow-card-h">
@@ -61127,7 +61155,8 @@ function priceCardHTML(r, tokens){
     </div>
     <div class="ow-card-r pr-sup">${ICON_STORE}<span class="pr-sup-n" title="${esc(r.sname)}">${highlightTokens(r.sname, tokens)}</span><span class="pr-meta">${meta}</span></div>
     <div class="ow-figs">
-      <div><div class="ow-fig-l">Wholesale</div><div class="ow-fig ow-fig-lg${r.wholesale == null || r.wholesale === '' ? ' ow-fig-none' : ''}">${fmtPriceCompact(r.wholesale, r.unit)}</div></div>
+      <div><div class="ow-fig-l">Wholesale</div><div class="ow-fig ow-fig-lg${r.wholesale == null || r.wholesale === '' ? ' ow-fig-none' : ''}">${fmtPriceCompactPack(r.wholesale, r)}</div>${
+        packed ? `<div class="pr-fig-b" title="The rate every comparison on this screen is made at — ${esc(String(r.packQty))} ${esc(r.unit || 'units')} in a ${esc(r.packUnit)}">${fmtPriceCompact(r.wholesale, r.unit)}</div>` : ''}</div>
       <div><div class="ow-fig-l">Retail</div><div class="ow-fig ow-fig-lg${noRetail ? ' ow-fig-none' : ''}"${noRetail ? ' title="Retail never recorded"' : ''}>${fmtPriceCompact(r.retail, r.unit)}</div></div>
       ${standing ? `<div class="ow-figs-st">${standing}</div>` : ''}
     </div>
