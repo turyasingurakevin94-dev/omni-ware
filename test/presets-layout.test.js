@@ -95,12 +95,30 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     'the rule and the class are both gone, not merely unused');
   t.check(!/pset-shell|pset-nav/.test(src),
     'and so is the two-column shell that held the rail');
-  // display:none in the markup is how a pane hides. Nothing on this page
-  // may start hidden except the section itself and the no-match panel,
-  // which the search turns on.
-  const hidden = (section.match(/style="display:none;?"/g) || []).length;
-  t.check(hidden === 2,
-    `nothing on the page starts hidden but the screen and the no-match note (${hidden})`);
+  /* WHAT MADE THE OLD DOORS DOORS was not that they hid things -- it
+     was that the thing hiding them said nothing about what was behind.
+     Six of twelve carried a count and six carried nothing at all.
+
+     A collapsed row is not that, as long as it reports its own state:
+     a category row carries its sub-category count, a provider row
+     carries whether it is live and when it last did anything. So what
+     is pinned is not "nothing is hidden" but "nothing is hidden behind
+     something silent" -- and the only two things that start hidden in
+     the markup are the two provider bodies, each with a head element
+     the script fills with that provider's state. */
+  const hiddenIds = [...section.matchAll(/id="([^"]+)"[^>]*style="display:none;?"/g)].map((m) => m[1]);
+  const unnamed = (section.match(/style="display:none;?"/g) || []).length - hiddenIds.length;
+  t.check(unnamed === 0, `everything that starts hidden is named (${unnamed} unnamed)`);
+  const allowed = ['tab-presets', 'pset_no_match', 'momo_mtn_body', 'momo_airtel_body'];
+  t.check(hiddenIds.every((id) => allowed.includes(id)),
+    `and only these four (${hiddenIds.join(', ')})`);
+  ['mtn', 'airtel'].forEach((p) => {
+    t.check(new RegExp(`id="momo_${p}_head"`).test(section),
+      `${p}'s collapsed body has a head to report its state`);
+  });
+  const rows = (/function renderMomoProviderRows\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/Live/.test(rows) && /Sandbox/.test(rows) && /Last prompt/.test(rows),
+    'and that row says whether it is live and when it last did anything');
 }
 
 /* ---------- 3. three regions, and one accent ------------------------- */
@@ -414,6 +432,72 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     'and it is a heading rather than a mark, because an unused attribute is not a fault');
   t.check(/no values, so this attribute suggests nothing/i.test(attrs),
     'an attribute with no values says why it can never match anything');
+}
+
+/* ---------- 12. taking mobile money ---------------------------------- */
+{
+  /* THE QUESTION is "can an agent pay me by phone right now, and is any
+     money in limbo?" The keys are set once and never touched; the
+     ledger changes by the hour. The panel was built the other way up --
+     two credential forms, then the ledger at the bottom. */
+  const sec = (/<div class="ow-pan pset-pan-2" data-find="mobile money[\s\S]*?\n            <\/div>/.exec(section) || [''])[0];
+  t.check(sec.indexOf('id="momoActivity"') < sec.indexOf('id="momo_mtn_head"'),
+    'the ledger comes before the credentials, not after them');
+  t.check(sec.indexOf('id="momoAnswer"') < sec.indexOf('id="momoActivity"'),
+    'and the answer comes before both');
+
+  /* THE LEDGER WAS READ ONCE AND NEVER AGAIN. momoPayments is only
+     cleared by a single re-check, so renderMomoLedger() on tab entry
+     no-opped for the life of the page: a prompt that resolved minutes
+     ago went on saying Pending until you reloaded. On the panel whose
+     own note says a stale pending prompt is how money gets counted
+     twice, the list of pending prompts was frozen. */
+  const led = (/async function renderMomoLedger\(force\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(momoPayments===null \|\| force\)/.test(led),
+    'the ledger can be re-read rather than only read once');
+  t.check(/renderMomoLedger\(true\);/.test(code),
+    'and the tab forces a fresh read on entry');
+  t.check(/momoPaymentsReadAt/.test(led) && /Read \$\{esc\(momoAgo/.test(led),
+    'and it says when it was read, so a stale figure cannot pass for a live one');
+
+  // Named rather than dropped: two hundred rows and no word about the
+  // rest, and the oldest is exactly where a payment goes to be forgotten.
+  t.check(/momoPayments\.length >= MOMO_LEDGER_LIMIT/.test(led),
+    'a truncated ledger says it is truncated');
+
+  /* A prompt still pending a quarter of an hour later is not going to
+     resolve on its own, and that is the one thing on this panel worth
+     acting on. */
+  const stuck = (/function momoStuckRows\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/p\.status === 'pending'/.test(stuck) && /MOMO_STUCK_MINUTES\*60000/.test(stuck),
+    'a prompt pending far too long is found rather than left in the list');
+  const band = (/function renderMomoBand\(\)[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/if\(!stuck\.length\)\{ wrap\.innerHTML = ''; return; \}/.test(band),
+    'and nothing stuck draws no band');
+  t.check(/counted twice/.test(band), 'the band says what is at stake rather than just counting');
+
+  /* THE HEADER READ THE FORM. Unticking Enabled without saving made it
+     announce that mobile money was off while it was still live, and a
+     page whose read had not landed reported a live merchant account as
+     off. */
+  const st = (/function momoProviderState\(p\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(momoProviders === null\) return null;/.test(st),
+    'not read yet is a third answer, not "off"');
+  t.check(/const row = momoProviders\[p\];/.test(st) && !/getElementById/.test(st),
+    'and the state is what the shop has saved, never what is sitting in the form');
+
+  /* GOING LIVE MOVES REAL MONEY, and it was an ordinary <select>
+     option with a Save button -- the only control on this page that
+     debits other people's phones, and the only one with nothing in
+     between. */
+  const save = (/async function saveMomoProvider\(provider\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const goingLive = enabled && environment === 'production'/.test(save)
+    && /!\(was && was\.enabled && was\.environment === 'production'\)/.test(save),
+    'going live is confirmed, once, at the moment it becomes true');
+  t.check(/if\(goingLive && !confirm\(/.test(save) && /debit a real phone/.test(save),
+    'and the confirm says what it will do rather than asking "are you sure"');
+  t.check(!/goingLive/.test(save.slice(save.indexOf('btn.disabled = true'))),
+    'asked before the save begins, not after it has started');
 }
 
 process.exit(t.done() ? 1 : 0);

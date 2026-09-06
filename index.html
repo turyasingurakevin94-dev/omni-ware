@@ -7189,6 +7189,26 @@
     padding:10px 12px;}
   .ls-tidy .ls-tidy-note{font-size:11px;color:var(--ink-soft);line-height:1.45;
     max-width:var(--ow-measure);}
+
+  /* ---- Taking mobile money ----------------------------------------
+     The keys are set once and never touched; the ledger changes by the
+     hour. So the ledger leads and each provider collapses to a row
+     carrying the two facts you decide from: whether it is live, and
+     when it last did anything. ------------------------------------- */
+  .momo-answer{border-top:0;padding-top:12px;}
+  .momo-p-h .ls-p{min-height:48px;}
+  .momo-x{border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  .momo-x .pset-grp{border-top:0;}
+  /* The ledger's own foot note already closes that section; the
+     provider rows follow it directly rather than across a gap. */
+  #momoLedgerWrap + .ow-mini{padding-bottom:0;}
+  .momo-p-h .ls-p{border-top:1px solid var(--ow-rule-soft);}
+  /* The switch that decides whether this provider is on at all belongs
+     with the credentials it needs, not floating in a heading row that
+     is now the collapsed row above. */
+  .momo-onoff{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:0 0 10px;margin-bottom:10px;border-bottom:1px solid var(--ow-rule-soft);}
+  .momo-onoff .momo-enabled-toggle{font-size:12.5px;font-weight:600;}
   .ln-addpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .ln-addpay input{flex:1 1 130px;min-width:0;}
   .ln-addpay .btn{flex:0 0 auto;}
@@ -16980,10 +17000,25 @@
                 <span class="ow-pan-n" id="pset_momo_state"></span>
               </div>
 
-              <section class="pset-group pset-grp">
-                <div class="pset-head-row">
-                  <h4>MTN Mobile Money</h4>
-                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Enabled</label>
+              <!-- The answer first: can an agent pay me by phone right
+                   now, and is any money in limbo? The keys are set once
+                   and never touched, so they collapse; what changes by
+                   the hour is the ledger. -->
+              <p class="ow-mini momo-answer" id="momoAnswer"></p>
+              <div id="momoBand"></div>
+
+<section class="pset-group pset-grp" id="momoActivity">
+                <h4>Payment activity</h4>
+                <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
+                <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
+              </section>
+
+
+              <div class="momo-p-h" id="momo_mtn_head"></div>
+              <div class="momo-x" id="momo_mtn_body" style="display:none;">
+<section class="pset-group pset-grp">
+                <div class="momo-onoff">
+                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Take payments through MTN</label>
                 </div>
                 <div class="form-grid pset-fields">
                   <div class="field">
@@ -17007,10 +17042,13 @@
                 <button type="button" class="btn btn-ghost ow-sm" id="momo_mtn_save_btn">Save MTN settings</button>
               </section>
 
-              <section class="pset-group pset-grp">
-                <div class="pset-head-row">
-                  <h4>Airtel Money</h4>
-                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Enabled</label>
+                            </div>
+
+              <div class="momo-p-h" id="momo_airtel_head"></div>
+              <div class="momo-x" id="momo_airtel_body" style="display:none;">
+<section class="pset-group pset-grp">
+                <div class="momo-onoff">
+                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Take payments through Airtel</label>
                 </div>
                 <div class="form-grid pset-fields">
                   <div class="field">
@@ -17027,11 +17065,8 @@
                 <button type="button" class="btn btn-ghost ow-sm" id="momo_airtel_save_btn">Save Airtel settings</button>
               </section>
 
-              <section class="pset-group pset-grp">
-                <h4>Payment activity</h4>
-                <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
-                <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
-              </section>
+                            </div>
+
               <p class="ow-mini">Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
             </div>
 
@@ -24967,8 +25002,11 @@ function goToTab(tab){
      until then the index cannot say what it has not read. */
   if(tab==='presets'){
     loadLoginSessions();
-    renderMomoProviderSettings().then(()=> renderPresetIndex());
-    renderMomoLedger();
+    renderMomoProviderSettings().then(()=>{ renderPresetIndex(); renderMomoProviderRows(); });
+    /* Forced, because the cache is only cleared by a re-check: without
+       this the ledger showed whatever it read the first time this page
+       was opened, for the life of the page. */
+    renderMomoLedger(true);
   }
   if(tab==='map') renderMap();
   if(tab==='ahead') renderAhead();
@@ -45002,13 +45040,30 @@ async function renderMomoProviderSettings(){
   if(momoProviders===null) await loadMomoProviders();
   populateMomoProviderForm('mtn');
   populateMomoProviderForm('airtel');
+  renderMomoAnswer();
+  renderMomoProviderRows();
 }
 async function saveMomoProvider(provider){
   const btn = document.getElementById(`momo_${provider}_save_btn`);
+  const name = provider==='mtn' ? 'MTN' : 'Airtel';
+  const enabled = document.getElementById(`momo_${provider}_enabled`).checked;
+  const environment = document.getElementById(`momo_${provider}_environment`).value;
+
+  /* GOING LIVE MOVES REAL MONEY. Every prompt from a live provider
+     debits a real phone, and a sandbox key used against production
+     fails every payment silently at the agent's end rather than saying
+     so here. Asked once, at the moment it becomes true -- not on every
+     save, and not when switching back down to sandbox. */
+  const was = momoProviders && momoProviders[provider];
+  const goingLive = enabled && environment === 'production'
+    && !(was && was.enabled && was.environment === 'production');
+  if(goingLive && !confirm(`Take ${name} payments for real?\n\n`
+    + `Every prompt this shop sends will debit a real phone. Sandbox keys do not work here — `
+    + `${name} has to have approved you to go live and given you production credentials.\n\n`
+    + `A wrong key fails every payment silently at the agent's end, not here.`)) return;
+
   btn.disabled = true;
   try{
-    const enabled = document.getElementById(`momo_${provider}_enabled`).checked;
-    const environment = document.getElementById(`momo_${provider}_environment`).value;
     const existing = (momoProviders[provider] && momoProviders[provider].credentials) || {};
     const credentials = { ...existing };
     let anyEntered = false;
@@ -45023,7 +45078,10 @@ async function saveMomoProvider(provider){
     if(error){ toast('Could not save: '+error.message); return; }
     momoProviders[provider] = saved;
     populateMomoProviderForm(provider);
-    toast(`${provider==='mtn'?'MTN':'Airtel'} settings saved${anyEntered?'':' (no credential changes)'}`);
+    renderMomoAnswer(); renderMomoBand(); renderMomoProviderRows();
+    if(typeof renderPresetIndex === 'function') renderPresetIndex();
+    toast(`${name} settings saved${anyEntered?'':' (no credential changes)'}`
+      + (enabled && environment === 'production' ? ' — live' : ''));
   }finally{
     btn.disabled = false;
   }
@@ -45069,20 +45127,186 @@ document.getElementById('momo_mtn_provision_btn').addEventListener('click', asyn
    Read-only reconciliation ledger -- rows are only ever written by the
    momo Edge Functions (service role), never directly by this app. */
 let momoPayments = null;
+/* ================= TAKING MOBILE MONEY ============================
+
+   THE QUESTION is "can an agent pay me by phone right now, and is any
+   money in limbo?" -- not "what are my API keys", which are set once
+   and never touched again. So the ledger leads and the credentials
+   collapse, which is the opposite of how this panel was built.
+
+   A prompt goes to a phone and a person has a minute or two to enter a
+   PIN. One still pending a quarter of an hour later is not going to
+   resolve on its own, and the shop's own note says why that matters:
+   the same money can end up counted twice. */
+const MOMO_STUCK_MINUTES = 15;
+let momoOpenProvider = null;
+
+function momoStuckRows(){
+  if(!Array.isArray(momoPayments)) return [];
+  const cut = Date.now() - MOMO_STUCK_MINUTES*60000;
+  return momoPayments.filter(p=> p.status === 'pending'
+    && p.created_at && new Date(p.created_at).getTime() < cut);
+}
+
+/* The state of a provider is what the SHOP has saved, not what is
+   sitting in the form. Reading the checkbox meant that unticking
+   Enabled without saving made the header announce mobile money was off
+   while it was still live, and that a page whose read had not landed
+   yet reported a live merchant account as off. */
+function momoProviderState(p){
+  if(momoProviders === null) return null;               // not read yet
+  const row = momoProviders[p];
+  if(!row || !row.enabled) return 'off';
+  return row.environment === 'production' ? 'live' : 'sandbox';
+}
+function momoStateWords(){
+  if(momoProviders === null) return 'not read';
+  const said = ['mtn','airtel'].map(p=>{
+    const st = momoProviderState(p);
+    return st === 'off' ? null : `${p==='mtn'?'MTN':'Airtel'} ${st}`;
+  }).filter(Boolean);
+  return said.length ? said.join(', ') : 'off';
+}
+
+function renderMomoAnswer(){
+  const el = document.getElementById('momoAnswer');
+  if(!el) return;
+  if(momoProviders === null){
+    el.innerHTML = '<b>Not read yet.</b> Mobile money settings are readable by owners and admins only.';
+    return;
+  }
+  const live = ['mtn','airtel'].filter(p=> momoProviderState(p) === 'live');
+  const sand = ['mtn','airtel'].filter(p=> momoProviderState(p) === 'sandbox');
+  const name = (p)=> p==='mtn' ? 'MTN' : 'Airtel';
+  if(live.length){
+    el.innerHTML = `<b>${live.map(name).join(' and ')} ${live.length===1?'is':'are'} live.</b> `
+      + `An agent can pay for their order from the Agent app and the money reaches you directly.`
+      + (sand.length ? ` ${sand.map(name).join(' and ')} ${sand.length===1?'is':'are'} on sandbox — `
+        + `those prompts move no real money.` : '');
+  } else if(sand.length){
+    el.innerHTML = `<b>${sand.map(name).join(' and ')} ${sand.length===1?'is':'are'} on sandbox.</b> `
+      + `Prompts are sent and answered but no real money moves. Switch to Production once the `
+      + `provider has approved you to go live.`;
+  } else {
+    el.innerHTML = '<b>Mobile money is off.</b> Agents pay you in cash and you confirm each one by '
+      + 'hand. Turning a provider on lets them pay from the Agent app instead.';
+  }
+}
+
+function renderMomoBand(){
+  const wrap = document.getElementById('momoBand');
+  if(!wrap) return;
+  const stuck = momoStuckRows();
+  /* Absent when nothing is stuck. The ledger below still shows every
+     prompt; this exists only to say when one needs you. */
+  if(!stuck.length){ wrap.innerHTML = ''; return; }
+  const total = stuck.reduce((n,p)=> n + (Number(p.amount)||0), 0);
+  wrap.innerHTML = `<div class="cb-openbar">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <div class="cb-openbar-b">
+      <p class="cb-openbar-t">${stuck.length} prompt${stuck.length===1?' has':'s have'} been pending for more than ${MOMO_STUCK_MINUTES} minutes.</p>
+      <p class="cb-openbar-w"><b>${esc(fmtUGX(total))}</b> between them. A prompt that never resolves is money
+        that may already be on its way, or may never come &mdash; and either way it can end up counted twice.
+        Re-checking asks the provider what actually happened.</p>
+    </div>
+    <div class="cb-openbar-a">
+      <button type="button" class="btn btn-accent ow-sm" id="momo_recheck_stuck">Re-check ${stuck.length===1?'it':`all ${stuck.length}`}</button>
+    </div>
+  </div>`;
+  const btn = document.getElementById('momo_recheck_stuck');
+  if(btn) btn.addEventListener('click', async ()=>{
+    btn.disabled = true;
+    const rows = momoStuckRows();
+    let done = 0;
+    for(const p of rows){
+      try {
+        await sb.functions.invoke('check-momo-payment-status', { body: { shopId: currentShopId, paymentId: p.id } });
+        done++;
+      } catch(e){ /* one that cannot be asked about must not stop the rest */ }
+    }
+    await renderMomoLedger(true);
+    toast(done === rows.length
+      ? `Re-checked ${done} prompt${done===1?'':'s'}`
+      : `Re-checked ${done} of ${rows.length} — the provider could not be asked about the rest`);
+  });
+}
+
+/* One row per provider, carrying the two facts you decide from: whether
+   it is live, and when it last did anything. The keys are inside. */
+function renderMomoProviderRows(){
+  ['mtn','airtel'].forEach(p=>{
+    const head = document.getElementById(`momo_${p}_head`);
+    const body = document.getElementById(`momo_${p}_body`);
+    if(!head || !body) return;
+    const open = momoOpenProvider === p;
+    body.style.display = open ? '' : 'none';
+    const st = momoProviderState(p);
+    const row = momoProviders && momoProviders[p];
+    const hasCreds = !!(row && row.credentials && Object.keys(row.credentials).length);
+    const last = Array.isArray(momoPayments)
+      ? momoPayments.filter(x=> x.provider === p)[0] : null;
+    const tag = st === 'live' ? '<span class="ls-tag live">Live</span>'
+      : st === 'sandbox' ? '<span class="ls-tag">Sandbox</span>'
+      : st === null ? '' : '';
+    head.innerHTML = `<button type="button" class="ls-p${open?' is-open':''}" data-momo-p="${p}">
+      <svg class="ls-p-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      <span class="ls-p-b">
+        <span class="ls-p-n">${p==='mtn'?'MTN Mobile Money':'Airtel Money'}${tag}</span>
+        <span class="ls-p-m">${
+          st === null ? 'Not read yet'
+          : st === 'off' ? (hasCreds ? 'Off — credentials on file' : 'Off — no credentials yet')
+          : (last ? `Last prompt ${esc(momoAgo(last.created_at))} · ${esc(momoPaymentStatusLabel(last.status))}`
+                  : 'No prompt sent yet')}</span>
+      </span>
+    </button>`;
+    head.querySelector('[data-momo-p]').addEventListener('click', ()=>{
+      momoOpenProvider = open ? null : p;
+      /* The row reports what the shop has SAVED and the form reports
+         what is typed. Re-populating on open is what stops them
+         disagreeing about whether this provider is live. */
+      if(momoOpenProvider === p && momoProviders) populateMomoProviderForm(p);
+      renderMomoProviderRows();
+    });
+  });
+}
+function momoAgo(iso){
+  if(!iso) return 'never';
+  const m = Math.round((Date.now() - new Date(iso).getTime())/60000);
+  if(!isFinite(m)) return 'never';
+  if(m < 1) return 'just now';
+  if(m < 60) return `${m} minute${m===1?'':'s'} ago`;
+  const h = Math.round(m/60);
+  if(h < 24) return `${h} hour${h===1?'':'s'} ago`;
+  const d = Math.round(h/24);
+  return `${d} day${d===1?'':'s'} ago`;
+}
+
 function momoPaymentStatusLabel(status){
   return { pending:'Pending', successful:'Successful', failed:'Failed', cancelled:'Cancelled', timeout:'Timed out' }[status] || status;
 }
-async function renderMomoLedger(){
+const MOMO_LEDGER_LIMIT = 200;
+let momoPaymentsReadAt = 0;
+async function renderMomoLedger(force){
   const wrap = document.getElementById('momoLedgerWrap');
   if(!wrap) return;
-  if(momoPayments===null){
-    wrap.innerHTML = '<div class="ow-empty">Reading the payment activity&hellip;</div>';
-    const { data: rows, error } = await sb.from('agent_mobile_payments').select('*').eq('shop_id', currentShopId).order('created_at', {ascending:false}).limit(200);
-    if(error){ wrap.innerHTML = `<div class="ow-empty"><b>The payment activity could not be read.</b> ${esc(String(error.message).replace(/\.?$/, '.'))}</div>`; toast('Could not load payment activity: '+error.message); return; }
+  if(momoPayments===null || force){
+    if(momoPayments===null) wrap.innerHTML = '<div class="ow-empty">Reading the payment activity&hellip;</div>';
+    const { data: rows, error } = await sb.from('agent_mobile_payments').select('*').eq('shop_id', currentShopId).order('created_at', {ascending:false}).limit(MOMO_LEDGER_LIMIT);
+    if(error){ wrap.innerHTML = `<div class="ow-empty"><b>The payment activity could not be read.</b> ${esc(String(error.message).replace(/\.?$/, '.'))}</div>`; toast('Could not load payment activity: '+error.message); renderMomoAnswer(); renderMomoBand(); renderMomoProviderRows(); return; }
     momoPayments = rows || [];
+    momoPaymentsReadAt = Date.now();
   }
+  renderMomoAnswer();
+  renderMomoBand();
+  renderMomoProviderRows();
+  const act = document.getElementById('momoActivity');
+  const everOn = momoProviders && ['mtn','airtel'].some(p=> momoProviders[p] && momoProviders[p].enabled);
+  if(act) act.style.display = (!momoPayments.length && !everOn) ? 'none' : '';
   if(!momoPayments.length){
-    wrap.innerHTML = '<div class="ow-empty">No mobile money payment has been requested yet. One appears here the first time an agent pays for an order from the Agent app.</div>';
+    /* On a shop that IS live this is news -- nobody has paid by phone
+       yet. On one that has never switched a provider on it is not, and
+       the answer line above has already said why. */
+    wrap.innerHTML = '<div class="ow-empty">Nothing has been paid by phone yet. A prompt appears here the first time an agent pays for an order from the Agent app.</div>';
     return;
   }
   const tone = { successful:' ow-good', failed:' ow-bad', timeout:' ow-bad', pending:' ow-warn' };
@@ -45105,14 +45329,17 @@ async function renderMomoLedger(){
         <div class="ow-tbl-c" data-l="Status"><span class="ow-cp${tone[p.status]||''}">${esc(momoPaymentStatusLabel(p.status))}</span></div>
         <div class="ow-tbl-a">${p.status==='pending' ? `<button type="button" class="btn btn-ghost ow-sm" onclick="recheckMomoPayment(${p.id})">Re-check</button>` : ''}</div>
       </div>`;
-    }).join('');
+    }).join('')
+    + `<p class="ow-mini">${momoPayments.length >= MOMO_LEDGER_LIMIT
+        ? `The most recent ${MOMO_LEDGER_LIMIT}. Older prompts are on file and are not shown here.`
+        : `All ${momoPayments.length} prompt${momoPayments.length===1?'':'s'} this shop has ever sent.`}
+      ${momoPaymentsReadAt ? `Read ${esc(momoAgo(new Date(momoPaymentsReadAt).toISOString()))}.` : ''}</p>`;
 }
 async function recheckMomoPayment(id){
   try{
     const { data: res, error } = await sb.functions.invoke('check-momo-payment-status', { body: { shopId: currentShopId, paymentId: id } });
     if(error) throw error;
-    momoPayments = null;
-    renderMomoLedger();
+    await renderMomoLedger(true);
     toast(res && res.status ? `Status: ${momoPaymentStatusLabel(res.status)}` : 'Rechecked');
   }catch(err){
     toast('Could not recheck: '+(err.message||err));
@@ -64536,17 +64763,10 @@ function renderPresetIndex(){
      than from the presets blob. Written here so the index and the panel
      say the same thing from one derivation; both async loads call this
      function again when they land. */
-  const momoWord = ()=>{
-    const on = (p)=>{
-      const box = document.getElementById(`momo_${p}_enabled`);
-      const env = document.getElementById(`momo_${p}_environment`);
-      if(!box || !box.checked) return null;
-      return (p==='mtn'?'MTN':'Airtel') + (env && env.value === 'production' ? ' live' : ' sandbox');
-    };
-    const live = [on('mtn'), on('airtel')].filter(Boolean);
-    return live.length ? live.join(', ') : 'off';
-  };
-  const momoState = momoWord();
+  /* What the SHOP has saved, not what is sitting in the form: reading
+     the checkbox meant a half-edited form could announce that mobile
+     money was off while it was still live. */
+  const momoState = typeof momoStateWords === 'function' ? momoStateWords() : 'not read';
   const momoEl = document.getElementById('pset_momo_state');
   if(momoEl) momoEl.textContent = momoState;
 
@@ -64569,7 +64789,7 @@ function renderPresetIndex(){
     presetIndexRow('On paper', (named && addr) ? 'named' : (named ? 'no address' : 'not named'),
       (named && addr) ? 'good' : 'warn', 'shop identity'),
     presetIndexRow('Mobile money', momoState,
-      /live/.test(momoState) ? 'good' : null, 'mobile money'),
+      momoState === 'not read' ? 'warn' : (/live/.test(momoState) ? 'good' : null), 'mobile money'),
     presetIndexRow('Signed-in devices', devices === null ? 'not read' : String(devices),
       devices === null ? 'warn' : null, 'devices'),
   ].join('');
