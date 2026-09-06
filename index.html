@@ -13338,6 +13338,12 @@
   .ow-pi-td.ow-q2{color:var(--ow-ink-600);}
   .ow-pi-td.ow-bf{color:var(--ow-ink-600);}
   .ow-pi-when{font-style:normal;color:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+  /* A missing word, said in the cell where it is missing. Amber: this is
+     a caution to come back to, not a loss -- the money on the line is
+     known and paid. */
+  .ow-pi-nounit{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);color:var(--ow-amber-ink);background:var(--ow-amber-soft);
+    border-radius:var(--ow-r-sm);padding:1px 5px;margin-left:4px;cursor:help;}
   .ow-pi-td.ow-up{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   .ow-pi-td.ow-dn{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .ow-pi-sub{display:block;font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
@@ -38008,6 +38014,27 @@ function purchaseInvoiceOverpaid(pi){
    the two the shop is out of pocket for first. `ids` is what the
    register reads to mark a row, so a bill and its finding can never
    disagree about each other. */
+/* LINES THAT RECORD NO UNIT, where the goods come in a pack.
+
+   A bill saying 30 @ 80,000 with nothing to say whether that is thirty
+   pairs or thirty cartons is not a small gap: the shop's costing, the
+   price watch and the registry check all read that figure, and every
+   one of them has to assume something. Where the product does NOT come
+   in a pack there is only one unit it could be and nothing is missing;
+   this is only about the lines where the answer is genuinely two.
+
+   Not money — the amount is known and was paid. What is missing is a
+   word, and the count of lines is the honest size of it. */
+function purchaseInvoiceUnitGaps(pi){
+  const lines = [];
+  (pi.items || []).forEach((it, i)=>{
+    if(String(it.unit || '').trim()) return;
+    const u = billLineUnits(pi, it);
+    if(!u.hasPack) return;
+    lines.push({ item: it, i, units: u });
+  });
+  return lines;
+}
 function purchaseInvoiceFindings(invoices){
   const floor = piReceiptStampFloor();
   const live = invoices.filter(pi=> !pi.voided);
@@ -38030,6 +38057,11 @@ function purchaseInvoiceFindings(invoices){
     const r = purchaseInvoicePriceRises(pi);
     if(r.lines.length) rises.push({pi, ...r});
   });
+  const unitGaps = [];
+  live.forEach(pi=>{
+    const lines = purchaseInvoiceUnitGaps(pi);
+    if(lines.length) unitGaps.push({pi, lines});
+  });
   const ids = new Map();
   const mark = (pi, kind, label, why)=>{ if(!ids.has(pi.id)) ids.set(pi.id, {kind, label, why}); };
   dups.forEach(g=> g.forEach((pi,i)=> mark(pi, 'bad',
@@ -38046,15 +38078,22 @@ function purchaseInvoiceFindings(invoices){
   rises.forEach(r=> mark(r.pi, 'warn',
     r.lines.length === 1 ? 'One line priced up' : r.lines.length + ' lines priced up',
     'against what you last paid'));
+  unitGaps.forEach(g=> mark(g.pi, 'warn',
+    g.lines.length === 1 ? 'A line with no unit' : g.lines.length + ' lines with no unit',
+    'and these come in a pack, so the figure could be either'));
   const count = new Set([...dups.flat().filter(pi=> inRange.has(pi.id)).map(pi=>pi.id),
     ...orphans.map(o=>o.pi.id),
-    ...overpaid.map(pi=>pi.id), ...unreceived.map(pi=>pi.id), ...rises.map(r=>r.pi.id)]).size;
+    ...overpaid.map(pi=>pi.id), ...unreceived.map(pi=>pi.id), ...rises.map(r=>r.pi.id),
+    ...unitGaps.map(g=>g.pi.id)]).size;
   const money = dups.reduce((s,g)=> s + purchaseInvoiceTotal(g[0]) * (g.length - 1), 0)
     + orphans.reduce((s,o)=> s + o.amount, 0)
     + overpaid.reduce((s,pi)=> s + purchaseInvoiceOverpaid(pi), 0)
     + unreceived.reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0)
     + rises.reduce((s,r)=> s + r.extra, 0);
-  return {dups, orphans, overpaid, unreceived, rises, ids, count, money,
+  /* unitGaps is deliberately NOT in `money`. The amount on those bills
+     is known and was paid; what is missing is a word, and claiming a
+     figure at stake would be inventing the very number nobody has. */
+  return {dups, orphans, overpaid, unreceived, rises, unitGaps, ids, count, money,
     checked: live.length, floor};
 }
 
@@ -38214,6 +38253,19 @@ function renderPurchaseInvoiceChecks(found){
       <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${r.pi.id}">Open the bill</button></span>
     </div>`);
     void first;
+  });
+
+  found.unitGaps.forEach(g=>{
+    const ev = g.lines.slice(0,2).map(l=> `${esc(itemDisplayName(l.item) || l.item.productName || 'a line')} &mdash; <b>${money(l.item.qty)}</b> at <b>${money(l.item.price)}</b>, which comes ${esc(String(l.units.packQty))} ${esc(l.units.unit || 'units')} to a ${esc(l.units.packUnit)}`).join('; ');
+    rows.push(`<div class="ow-ck">
+      <svg class="ow-ck-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 12v4"/><path d="M12 19h.01"/></svg>
+      <div class="ow-ck-b">
+        <p class="ow-ck-t">${g.lines.length === 1 ? 'A line' : g.lines.length + ' lines'} counted in nothing</p>
+        <p class="ow-ck-w" title="${esc(g.pi.supplierName||'')}"><b>${esc(purchaseInvoiceNumberLabel(g.pi))}</b> &middot; ${esc(g.pi.supplierName || 'Unknown supplier')} &middot; ${ev}${g.lines.length > 2 ? ` and ${g.lines.length - 2} more` : ''}. Costing, the price watch and the registry all read this figure and each has to assume which it was.</p>
+      </div>
+      <span class="ow-ck-v">${g.lines.length}<span class="ow-ck-u">to say the unit for</span></span>
+      <span class="ow-ck-a"><button type="button" class="btn btn-ghost ow-sm" data-pi-open="${g.pi.id}">Open the bill</button></span>
+    </div>`);
   });
 
   wrap.innerHTML = `<div class="ow-pan ow-ck-pan${piChecksOpen?' ow-ck-on':''}" style="margin-bottom:var(--ow-sp-16)">
@@ -38525,7 +38577,13 @@ function piOpenBodyHTML(pi){
 
   const rows = checks.map(l=>{
     const name = itemDisplayName(l.item) || l.item.productName || '';
-    const unit = l.item.unit ? ` ${l.item.unit}` : '';
+    /* A bare number where the goods come in a pack is the fault this
+       document could not show: it looked like a complete line. */
+    const gapUnits = l.item.unit ? null : billLineUnits(pi, l.item);
+    const unit = l.item.unit ? ` ${l.item.unit}`
+      : (gapUnits && gapUnits.hasPack)
+        ? ` <span class="ow-pi-nounit" title="Nothing on this line says whether that is ${esc(gapUnits.unit || 'units')} or ${esc(gapUnits.packUnit)} — ${esc(String(gapUnits.packQty))} to the ${esc(gapUnits.packUnit)}. Correct it to say which.">no unit</span>`
+        : '';
     const cmp = !l.best
       ? '<td class="ow-pi-td ow-bf"><i class="ow-pi-when">first time</i></td><td class="ow-pi-td ow-bf">&mdash;</td>'
       : `<td class="ow-pi-td ow-bf">${money(l.best.price)} <i class="ow-pi-when">&middot; ${esc(fmtShortDate(l.best.date) || l.best.date)}</i></td>`
@@ -38534,7 +38592,7 @@ function piOpenBodyHTML(pi){
             : '<td class="ow-pi-td ow-bf">&mdash;</td>');
     return `<tr class="ow-pi-tr${l.up?' ow-hi':''}">
       <td class="ow-pi-td ow-nm" title="${esc(name)}">${esc(name)}</td>
-      <td class="ow-pi-td ow-q2">${esc(String(l.qty))}${esc(unit)}</td>
+      <td class="ow-pi-td ow-q2">${esc(String(l.qty))}${unit}</td>
       <td class="ow-pi-td">${money(l.price)}</td>
       ${cmp}
       <td class="ow-pi-td ow-w">${money(l.line)}</td>
