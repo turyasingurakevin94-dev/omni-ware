@@ -3,7 +3,7 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs'; import path from 'path'; import {fileURLToPath} from 'url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const names = ['Now','Main','Band','PriceFirst','Cards','Leader'];
+const names = process.env.ONLY ? process.env.ONLY.split(',') : ['Now','Main','Band','PriceFirst','Cards','Leader','Grid','GridBanded','GridTight'];
 const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
 for (const n of names) {
   const src = fs.readFileSync(path.join(here, n + '.dc.html'), 'utf8')

@@ -332,6 +332,79 @@ D['Leader'] = dict(ground='#FFFFFF', css="""
     </div>
 """)
 
+# ================================================================
+# THE RULED GRID, which is what a price list actually looks like.
+# Cells boxed on all four sides, banded rows, a header row inside the
+# rule -- and the section title OUTSIDE the box in sentence case, which
+# settles rank by containment: a heading that is not inside the grid
+# can never be read as a line of it.
+# ================================================================
+GRID_BASE = """
+    .g-sec { margin: 22px 34px 10px; font-size: 20px; color: #14171B; }
+    .g-tab { width: 532px; margin: 0 34px; border-collapse: collapse; table-layout: fixed; }
+    .g-tab th, .g-tab td { border: 1px solid #CFD5DA; padding: 10px; text-align: left;
+                           font-size: 14px; color: #14171B; vertical-align: middle; }
+    /* The head is one line in every column: a wrapped column name grows
+       the row it sits in and, in the tight variant, was clipping. */
+    .g-tab th { font-size: 11px; font-weight: 700; letter-spacing: 1.1px; color: #59626B;
+                white-space: nowrap; }
+    .g-nm { font-weight: 600; }
+    .g-num { text-align: right; font-family: 'IBM Plex Mono', monospace;
+             font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-weight: 600;
+             font-size: 17px; }
+    .g-was { display: block; text-align: right; font-family: 'IBM Plex Mono', monospace;
+             font-size: 13px; color: #8A939C; text-decoration: line-through; margin-top: 4px; }
+    .g-save { text-align: right; font-family: 'IBM Plex Mono', monospace;
+              font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; color: #1C6B58; }
+    .g-take { text-align: right; font-family: 'IBM Plex Mono', monospace;
+              font-variant-numeric: tabular-nums; font-size: 15px; color: #59626B; }
+"""
+
+def grid_body(save_head, take_head):
+    return """
+    <div class="g-sec">Price down</div>
+    <table class="g-tab">
+      <colgroup><col style="width:152px"><col style="width:116px"><col style="width:52px"><col style="width:108px"><col style="width:104px"></colgroup>
+      <tr><th>PRODUCT</th><th>PACKING</th><th>PER</th><th style="text-align:right">PRICE</th><th style="text-align:right">%s</th></tr>
+      <tr><td class="g-nm">Runners</td><td>Sold loose</td><td>Each</td>
+          <td class="g-num">75,000<span class="g-was">122,500</span></td>
+          <td class="g-save">47,500</td></tr>
+    </table>
+    <div class="g-sec">You usually take</div>
+    <table class="g-tab">
+      <colgroup><col style="width:152px"><col style="width:116px"><col style="width:52px"><col style="width:108px"><col style="width:104px"></colgroup>
+      <tr><th>PRODUCT</th><th>PACKING</th><th>PER</th><th style="text-align:right">PRICE</th><th style="text-align:right">%s</th></tr>
+      <tr><td class="g-nm">Black screws</td><td>20 Boxes/Ctn</td><td>Box</td>
+          <td class="g-num">15,000</td><td class="g-take">20</td></tr>
+      <tr><td class="g-nm">Gold screws</td><td>Sold loose</td><td>Kg</td>
+          <td class="g-num">15,000</td><td class="g-take">20</td></tr>
+    </table>
+""" % (save_head, take_head)
+
+# F - faithful to the reference: banded rows, every cell boxed.
+D['Grid'] = dict(ground='#FFFFFF', css=GRID_BASE + """
+    .g-tab tr:nth-child(even) td { background: #F0F1F3; }
+    .g-tab th { background: #FFFFFF; border-bottom: 2px solid #8A939C; }
+""", body=grid_body('YOU SAVE', 'YOU TAKE'))
+
+# G - the same grid with a reversed header and no inner vertical rules.
+D['GridBanded'] = dict(ground='#FFFFFF', css=GRID_BASE + """
+    .g-tab th { background: #14171B; color: #FFFFFF; border-color: #14171B; }
+    .g-tab td { border-left: none; border-right: none; }
+    .g-tab th { border-left: none; border-right: none; }
+    .g-tab tr:nth-child(even) td { background: #F7F9FB; }
+""", body=grid_body('YOU SAVE', 'YOU TAKE'))
+
+# H - the dense trade sheet: every rule kept, banding dropped, rows
+# tightened. Roughly twice as many lines fit on one picture.
+D['GridTight'] = dict(ground='#FFFFFF', css=GRID_BASE + """
+    .g-sec { margin: 18px 34px 8px; font-size: 18px; }
+    .g-tab th, .g-tab td { padding: 7px 9px; font-size: 13px; }
+    .g-num { font-size: 15px; }
+    .g-tab th { background: #F0F1F3; }
+""", body=grid_body('YOU SAVE', 'YOU TAKE'))
+
+
 for name, spec in D.items():
     with open(os.path.join(HERE, name + '.dc.html'), 'w') as fh:
         fh.write(HEAD % spec)
