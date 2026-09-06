@@ -79,7 +79,8 @@ const env = {
   daysBetweenISO: (a, b)=> Math.round((Date.parse(b) - Date.parse(a)) / 86400000),
 };
 const NAMES = ['habitLineOnRowUnit', 'customerProductHabits', 'briefVariantForLine', 'briefSameSizeAs',
-  'briefPaidFigure', 'updateProductLink', 'productLinkLabel'];
+  'briefPaidFigure', 'updateProductLink', 'productLinkLabel', 'pairSizeIdx', 'pairFault',
+  'pairDuplicateOf', 'pairSideLabel'];
 const fns = compileScope([
   extractDeclaration(src, 'TELL_MIN_ORDERS', 'index.html'),
   extractDeclaration(src, 'TELL_PRICE_FALL_CEILING_PCT', 'index.html'),
@@ -240,11 +241,11 @@ const fns = compileScope([
   t.check(/Price Registry is not what is wrong/.test(leftOff), 'and they say the registry is not the fault');
   t.check(/pickVariant:[^}]*choose the size/.test(leftOff), 'the size words point at a chooser that now exists');
   t.check(/pickVariant:[^}]*name the sizes alike/.test(leftOff), 'and say how the match is earned');
-  t.check(/data-pf="tov"/.test(src), 'the pairing editor carries the size chooser');
+  t.check(/data-pf="\$\{from \? 'fromv' : 'tov'\}"/.test(src), 'the pairing editor carries the size chooser');
   t.check(/field === 'tov' \? \{ toVariantIdx:/.test(src), 'and the change handler writes it');
   t.check(/linkSizeColumn \? \{ to_variant_idx:/.test(src), 'the column is written only where it exists');
   t.check(/toVariantIdx: r\.to_variant_idx==null \? null : Number\(r\.to_variant_idx\)/.test(src), 'and read back as a number');
-  t.check(/sb\.from\('product_links'\)\.select\('to_variant_idx'\)\.limit\(1\)/.test(src), 'after a probe for it');
+  t.check(/sb\.from\('product_links'\)\.select\('to_variant_idx, from_variant_idx'\)\.limit\(1\)/.test(src), 'after a probe for it');
   t.check(read('supabase/migrations/0093_product_link_size.sql').includes('add column if not exists to_variant_idx integer'),
     'the migration adds exactly that column, idempotently');
 }

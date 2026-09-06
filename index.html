@@ -10903,6 +10903,29 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-obs .s{grid-column:1;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pr-obs .a{grid-column:2;grid-row:1 / span 2;display:flex;gap:var(--ow-sp-4);}
+  /* A sentence pinned to one size is the exception under its rule: set
+     in from the margin with a corner mark, so the rule and its
+     exceptions read as one paragraph. */
+  .pr-pin .pr-sent{padding-left:var(--ow-sp-20);}
+  .pr-pinmark{margin-left:calc(-1 * var(--ow-sp-20));}
+  .pr-pick.pr-size .pr-sel{font-weight:var(--ow-fw-500);}
+  /* Sized so the whole sentence, sizes and all, holds one line beside
+     the rail: two products, two sizes, a verb, a figure and its unit. */
+  .pr-sb .pr-pick{max-width:200px;}
+  .pr-pick.pr-per{width:100px;}
+  /* the sizes, lined up */
+  .pr-plan{margin:var(--ow-sp-12) 0;}
+  .pr-sz{display:grid;grid-template-columns:minmax(72px,auto) 13px minmax(0,1fr) auto;
+    gap:var(--ow-sp-8);align-items:center;padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);}
+  .pr-sz-f{font-weight:var(--ow-fw-600);}
+  .pr-sz-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-sz-t i{font-style:normal;color:var(--ow-ink-600);font-size:var(--ow-t-12);margin-left:var(--ow-sp-6);}
+  .pr-sz svg{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .pr-sz .pr-pick{height:30px;}
+  .pr-sz .pr-sel{height:28px;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
+  .pr-plan-n{padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
 
   /* the site stage, on the customer form */
   .cf-stage{display:flex;gap:var(--ow-sp-8);align-items:center;}
@@ -10933,6 +10956,9 @@
     .tl-grid{grid-template-columns:minmax(0,1fr);}
     .pr-sent{grid-column:1/-1;flex-wrap:wrap;}
     .pr-sent .pr-p{white-space:normal;}
+    .pr-sz{grid-template-columns:auto 13px minmax(0,1fr);}
+    .pr-sz-t{white-space:normal;}
+    .pr-sz .pr-pick{grid-column:1/-1;}
     /* Five desk columns cannot each take a line of a 390 card. The
        sentence keeps the top, and the three things that judge it --
        the figure, where it came from, what the orders show -- are
@@ -15612,7 +15638,7 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">What goes with what</h1>
         <p class="ow-ph-sub">The pairings you know and the ones your orders found &mdash; and what a picture may say because of them.</p>
-        <p class="ow-ph-help">A pairing is one sentence: this product needs that one, so many per one. Five verbs and no sixth &mdash; needs, goes with, instead of, runs out after, part of &mdash; because each one changes what a customer&rsquo;s picture is allowed to say. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named and shown with no quantity, because an invented one is worse than none. Underneath, your own invoices check every pairing you write and offer the pairs they keep seeing; saying no to one is as useful as keeping it. A pairing never changes a price, moves stock or places an order.</p>
+        <p class="ow-ph-help">A pairing is one sentence: this product needs that one, so many per one &mdash; for every size of the product, or for one size, and pointing at a size of the other where you say so. Where you leave the size open, a picture takes the size the customer already buys, the only size priced, or the size that matches; the table under a pairing shows that size by size and lets you pin any of them. Five verbs and no sixth &mdash; needs, goes with, instead of, runs out after, part of &mdash; because each one changes what a customer&rsquo;s picture is allowed to say. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named and shown with no quantity, because an invented one is worse than none. Underneath, your own invoices check every pairing you write and offer the pairs they keep seeing; saying no to one is as useful as keeping it. A pairing never changes a price, moves stock or places an order.</p>
         <span class="ow-ph-sp"></span>
         <button type="button" class="btn btn-accent ow-sm" id="pair_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -20265,7 +20291,7 @@ async function loadData(shopId){
     sb.from('rival_prices').select('side').limit(1),
     sb.from('customers').select('site_stage').limit(1),
     sb.from('manager_notes').select('id').limit(1),
-    sb.from('product_links').select('to_variant_idx').limit(1)
+    sb.from('product_links').select('to_variant_idx, from_variant_idx').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -20602,6 +20628,7 @@ async function loadData(shopId){
       // The size of the second product, where the owner named one. Null
       // is "the size that follows", which the brief works out itself.
       toVariantIdx: r.to_variant_idx==null ? null : Number(r.to_variant_idx),
+      fromVariantIdx: r.from_variant_idx==null ? null : Number(r.from_variant_idx),
       // Null, not 0: "no figure given" and "a quantity of none" are
       // different answers, and a brief renders them differently.
       qty: r.qty==null ? null : Number(r.qty),
@@ -20976,7 +21003,8 @@ function buildSyncRows(d, shopId){
     })),
     productLinks: (d.productLinks||[]).map(x=>({
       id:x.id, shop_id:shopId, from_id:x.fromId, verb:x.verb, to_id:x.toId,
-      ...(linkSizeColumn ? { to_variant_idx: x.toVariantIdx==null ? null : Number(x.toVariantIdx) } : {}),
+      ...(linkSizeColumn ? { to_variant_idx: x.toVariantIdx==null ? null : Number(x.toVariantIdx),
+                             from_variant_idx: x.fromVariantIdx==null ? null : Number(x.fromVariantIdx) } : {}),
       qty: x.qty==null ? null : Number(x.qty), per: x.per||null,
       note: x.note||null, active: x.active !== false, created_at: x.createdAt||null,
     })),
@@ -47070,41 +47098,151 @@ function productLinkName(id){
   return id ? `${id} \u2014 gone from the catalogue` : 'nothing';
 }
 
-function addProductLink(fromId, verb, toId, qty, per, note){
+/* ---- a pairing, with its sizes ---------------------------------------
+   Most of this shop's products come in sizes, and prices and stock are
+   kept per size. A pairing is still one sentence, but either end of it
+   may now name a size:
+
+     Runners            goes with  Soft Close Mulper            (every size)
+     Runners -- 12"     goes with  Soft Close Mulper -- 12"     (pinned)
+
+   `fromVariantIdx` null means the sentence holds for every size of the
+   first product; `toVariantIdx` null means "the size that follows" --
+   the size the customer already buys, the only size priced, or the
+   size matching the first product's -- which a picture works out on its
+   own. A pinned sentence for one size sits beside the general one and
+   wins for that size, so the general rule and its exceptions are both
+   written down and neither has to be repeated per size.
+
+   A size is an index into the product's variants, as every other size
+   reference in this app is, so a size renamed in the catalogue is the
+   same size here. */
+function pairSizeIdx(v){
+  return (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+}
+/* Two sentences that say the same thing are one sentence written twice,
+   and the second would be counted, listed and offered twice. */
+function pairDuplicateOf(l, exceptId){
+  return productLinksAll().find(x=> x.id !== exceptId && x.fromId === l.fromId && x.toId === l.toId
+    && x.verb === l.verb && pairSizeIdx(x.fromVariantIdx) === pairSizeIdx(l.fromVariantIdx)
+    && pairSizeIdx(x.toVariantIdx) === pairSizeIdx(l.toVariantIdx)) || null;
+}
+function pairFault(l){
+  if(!l.fromId || !l.toId) return 'A pairing needs both products.';
+  if(!pairVerb(l.verb)) return 'Pick one of the five verbs.';
+  const self = !!(pairVerb(l.verb) || {}).self;
+  if(self && l.fromId !== l.toId) return 'Runs out after is about the one product: it points back at itself.';
+  if(!self && l.fromId === l.toId && pairSizeIdx(l.fromVariantIdx) === pairSizeIdx(l.toVariantIdx))
+    return 'A product cannot go with itself. For a rhythm -- it will be finished in so many days -- use Runs out after.';
+  const dup = pairDuplicateOf(l, l.id);
+  if(dup) return 'That pairing is already written. Open it rather than writing it twice.';
+  return null;
+}
+function addProductLink(fromId, verb, toId, qty, per, note, sizes){
   if(!productLinksTable) return { ok:false, why:'Pairings need one update — paste supabase/migrations/0090_product_links.sql into the Supabase SQL editor and reload.' };
-  if(!fromId || !toId) return { ok:false, why:'A pairing needs both products.' };
-  if(!pairVerb(verb)) return { ok:false, why:'Pick one of the five verbs.' };
   const n = Number(qty);
-  productLinksAll().push({ id: allocRowId('productLink'), fromId:String(fromId), verb,
-    toId:String(toId), qty: n > 0 ? n : null, per: String(per||'').slice(0,24),
-    note: String(note||'').slice(0,400), active:true, createdAt: new Date().toISOString() });
+  /* Runs out after points at itself, and the caller need not know. */
+  const to = (pairVerb(verb) || {}).self ? fromId : toId;
+  const l = { id: allocRowId('productLink'), fromId:String(fromId || ''), verb,
+    fromVariantIdx: pairSizeIdx(sizes && sizes.fromVariantIdx),
+    toId:String(to || ''), toVariantIdx: pairSizeIdx(sizes && sizes.toVariantIdx),
+    qty: n > 0 ? n : null, per: String(per||'').slice(0,24),
+    note: String(note||'').slice(0,400), active:true, createdAt: new Date().toISOString() };
+  const why = pairFault(l);
+  if(why) return { ok:false, why, existing: pairDuplicateOf(l, l.id) };
+  productLinksAll().push(l);
   saveData();
-  return { ok:true };
+  return { ok:true, link: l };
 }
 function updateProductLink(id, patch){
   const l = productLinksAll().find(x=> x.id === id);
   if(!l) return { ok:false, why:'That pairing is no longer on file.' };
-  if(patch.verb && !pairVerb(patch.verb)) return { ok:false, why:'Pick one of the five verbs.' };
-  Object.assign(l, patch);
-  if('qty' in patch){ const n = Number(patch.qty); l.qty = n > 0 ? n : null; }
-  /* The size is the second product's, so a new second product starts
-     with none: size 2 of the old product is nobody's size of the new. */
-  if('toId' in patch && !('toVariantIdx' in patch)) l.toVariantIdx = null;
-  if('toVariantIdx' in patch){
-    const v = patch.toVariantIdx;
-    l.toVariantIdx = (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
-  }
+  /* Tried on a copy, so a change the rules refuse leaves the row as it
+     was rather than half-changed. */
+  const next = Object.assign({}, l, patch);
+  if('qty' in patch){ const n = Number(patch.qty); next.qty = n > 0 ? n : null; }
+  /* A size belongs to its product, so a new product on either end
+     starts with none: size 2 of the old product is nobody's size of
+     the new. */
+  if('fromId' in patch && !('fromVariantIdx' in patch)) next.fromVariantIdx = null;
+  if('toId' in patch && !('toVariantIdx' in patch)) next.toVariantIdx = null;
+  next.fromVariantIdx = pairSizeIdx(next.fromVariantIdx);
+  next.toVariantIdx = pairSizeIdx(next.toVariantIdx);
+  if((pairVerb(next.verb) || {}).self){ next.toId = next.fromId; next.toVariantIdx = null; }
+  const why = pairFault(next);
+  if(why) return { ok:false, why };
+  Object.assign(l, next);
   saveData();
   return { ok:true };
 }
-/* The second product, at the size the pairing names where it names one.
+/* Either end of a pairing, at the size it names where it names one.
    Everywhere a pairing is written out, so "Runners -> Soft Close" and
    "Runners -> Soft Close -- 12\"" cannot read as the same sentence. */
-function productLinkLabel(l){
-  const p = productById(l.toId);
-  if(!p) return productLinkName(l.toId);
-  const vi = l.toVariantIdx;
+function pairSideLabel(id, variantIdx){
+  const p = productById(id);
+  if(!p) return productLinkName(id);
+  const vi = pairSizeIdx(variantIdx);
   return (vi != null && p.variants && p.variants[vi]) ? productVariantLabel(p, vi) : p.name;
+}
+function productLinkLabel(l){ return pairSideLabel(l.toId, l.toVariantIdx); }
+function productLinkFromLabel(l){ return pairSideLabel(l.fromId, l.fromVariantIdx); }
+
+/* THE PAIRINGS THAT APPLY to one product at one size: every live
+   sentence written for the product, at every size or at this size --
+   and where both exist for the same companion, the one written for
+   this size is the one meant. "Runners -- 16\" goes with Soft Close --
+   18\"" is the exception the general rule was written to have. */
+function pairingsFor(productId, variantIdx){
+  const vi = pairSizeIdx(variantIdx);
+  const mine = productLinksAll().filter(l=> l.active !== false && l.fromId === productId
+    && !(pairVerb(l.verb) || {}).self
+    && (pairSizeIdx(l.fromVariantIdx) == null || pairSizeIdx(l.fromVariantIdx) === vi));
+  const byTo = new Map();
+  mine.forEach(l=>{
+    const k = l.verb + ' ' + l.toId;
+    const have = byTo.get(k);
+    if(!have || (pairSizeIdx(have.fromVariantIdx) == null && pairSizeIdx(l.fromVariantIdx) != null))
+      byTo.set(k, l);
+  });
+  return [...byTo.values()];
+}
+/* HOW THE SIZES LINE UP under a general pairing: for each size of the
+   first product, the size of the second a picture would take today and
+   why, and the pinned sentence for that size where one is written.
+   This is the table the owner reads to see where a pairing is still
+   guessing nothing, and where to pin. Read with no customer, so "the
+   size they already buy" never appears here -- that is a fact about a
+   customer, and this is a fact about the shop. */
+function pairSizePlan(l){
+  const fp = productById(l.fromId), tp = productById(l.toId);
+  const fvs = fp && Array.isArray(fp.variants) ? fp.variants : [];
+  const tvs = tp && Array.isArray(tp.variants) ? tp.variants : [];
+  if(!fp || !tp || !fvs.length || !tvs.length || pairSizeIdx(l.fromVariantIdx) != null) return null;
+  return fvs.map((v, i)=>{
+    const pin = productLinksAll().find(x=> x.id !== l.id && x.active !== false && x.fromId === l.fromId
+      && x.toId === l.toId && x.verb === l.verb && pairSizeIdx(x.fromVariantIdx) === i) || null;
+    const r = briefVariantForLine(l.toId, [], { toVariantIdx: pin ? pin.toVariantIdx : l.toVariantIdx,
+      from: { productId: l.fromId, variantIdx: i } });
+    return { fromIdx: i, fromLabel: variantLabel(v.combo || {}), pin,
+      toIdx: r.variantIdx == null ? null : r.variantIdx, by: r.by || null, why: r.why || null,
+      toLabel: r.variantIdx != null && tvs[r.variantIdx] ? variantLabel(tvs[r.variantIdx].combo || {}) : '' };
+  });
+}
+/* Pin one size: the sentence for that size alone, beside the general
+   one, carrying the general one's figure. Unpinning deletes it -- an
+   exception withdrawn is no sentence at all. */
+function pinPairSize(generalId, fromIdx, toIdx){
+  const g = productLinksAll().find(x=> x.id === generalId);
+  if(!g) return { ok:false, why:'That pairing is no longer on file.' };
+  const have = productLinksAll().find(x=> x.id !== g.id && x.fromId === g.fromId && x.toId === g.toId
+    && x.verb === g.verb && pairSizeIdx(x.fromVariantIdx) === pairSizeIdx(fromIdx));
+  const to = pairSizeIdx(toIdx);
+  if(to == null){
+    if(have){ data.productLinks = productLinksAll().filter(x=> x.id !== have.id); saveData(); }
+    return { ok:true };
+  }
+  if(have) return updateProductLink(have.id, { toVariantIdx: to, active: true });
+  return addProductLink(g.fromId, g.verb, g.toId, g.qty, g.per, '', { fromVariantIdx: fromIdx, toVariantIdx: to });
 }
 function deleteProductLink(id){
   data.productLinks = productLinksAll().filter(x=> x.id !== id);
@@ -47118,14 +47256,19 @@ function deleteProductLink(id){
 function invoicedOrders(){
   return (data.savedQuotes||[]).filter(q=> q.invoiced && !q.voided);
 }
-function pairEvidence(fromId, toId){
+function pairEvidence(fromId, toId, fromVariantIdx, toVariantIdx){
   let withFrom = 0, andTo = 0, fromQty = 0, toQty = 0;
+  /* At the size the sentence names, where it names one: a pairing
+     written for 12" runners is checked against orders of 12" runners,
+     not against every runner the shop ever sold. */
+  const fv = pairSizeIdx(fromVariantIdx), tv = pairSizeIdx(toVariantIdx);
+  const atSize = (it, v)=> v == null || pairSizeIdx(it.variantIdx) === v;
   invoicedOrders().forEach(q=>{
     const items = q.items || [];
-    const a = items.filter(it=> it.productId === fromId);
+    const a = items.filter(it=> it.productId === fromId && atSize(it, fv));
     if(!a.length) return;
     withFrom++;
-    const b = items.filter(it=> it.productId === toId);
+    const b = items.filter(it=> it.productId === toId && atSize(it, tv));
     if(!b.length) return;
     andTo++;
     a.forEach(it=> fromQty += Number(it.qty)||0);
@@ -47140,7 +47283,7 @@ function pairEvidence(fromId, toId){
 /* Where a pairing stands between the shop and its own books. Five
    answers, and the strongest is the one where they agree. */
 function pairStanding(link){
-  const ev = pairEvidence(link.fromId, link.toId);
+  const ev = pairEvidence(link.fromId, link.toId, link.fromVariantIdx, link.toVariantIdx);
   if((pairVerb(link.verb) || {}).self) return { key:'self', label:'Yours', tone:'ow-mg', ev };
   if(!productById(link.toId)) return { key:'unseen', label:'Books cannot see it', tone:'ow-warn', ev };
   if(!ev.withFrom) return { key:'nothing', label:'Yours only', tone:'ow-mg', ev };
@@ -47507,8 +47650,7 @@ function customerBrief(customerId){
   /* What goes with it. Only active pairings, only to something the shelf
      can actually give, and a quantity only where the owner wrote a
      ratio -- an invented figure is worse than none. */
-  const also = pick ? productLinksAll().filter(l=> l.active !== false && l.fromId === pick
-      && !(pairVerb(l.verb) || {}).self)
+  const also = pick ? pairingsFor(pick, pickVar)
     .map(l=>{
       const p = productById(l.toId);
       if(!p) return null;
@@ -47537,13 +47679,13 @@ function customerBrief(customerId){
     lastPrice: habit ? habit.lastPrice : null, also,
     /* What was left out, and why. The shop sees this; the customer
        never does. */
-    dropped: pick ? productLinksAll().filter(l=> l.active !== false && l.fromId === pick
-        && !(pairVerb(l.verb) || {}).self)
+    dropped: pick ? pairingsFor(pick, pickVar)
       .map(l=>{
         const p = productById(l.toId);
         if(!p) return { name: productLinkName(l.toId), why:'not a product you sell' };
-        const stock = briefInStock(p.id);
-        if(stock !== null && stock <= 0) return { name: p.name, why:'out of stock' };
+        const vi = (l.toVariantIdx != null && p.variants && p.variants[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
+        const stock = briefInStock(p.id, vi);
+        if(stock !== null && stock <= 0) return { name: productVariantLabel(p, vi), why:'out of stock' };
         return null;
       }).filter(Boolean) : [] };
 }
@@ -47965,11 +48107,12 @@ function briefGroups(c, habits){
         ratio was written down; an invented one is worse than none. */
   const links = [];
   habits.forEach(h=>{
-    productLinksAll().filter(l=> l.active !== false && l.fromId === h.productId
-      && !(pairVerb(l.verb) || {}).self).forEach(l=>{
-        const st = pairStanding(l);
-        links.push({ l, h, agree: st.key === 'agree' });
-      });
+    /* The sentences written for this product AT THIS SIZE: a general
+       one, or the one pinned for the size where the owner wrote it. */
+    pairingsFor(h.productId, h.variantIdx).forEach(l=>{
+      const st = pairStanding(l);
+      links.push({ l, h, agree: st.key === 'agree' });
+    });
   });
   take('also', 'ALSO BUY', links
     .sort((a, b)=> (b.agree - a.agree))
@@ -48969,9 +49112,7 @@ function renderPairings(){
     ${links.length ? `<div class="ow-tbl pr-tbl">
       <div class="ow-tbl-h"><span>The pairing</span><span class="ow-tbl-n">How many</span>
         <span>Where it came from</span><span class="ow-tbl-n">In orders</span><span></span></div>
-      ${stands.sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree')
-          || String(productLinkName(a.l.fromId)).localeCompare(productLinkName(b.l.fromId)))
-        .map(x=> pairRowHTML(x.l, x.st)).join('')}
+      ${pairRowsInOrder(stands).map(x=> pairRowHTML(x.l, x.st)).join('')}
     </div>` : `<div class="ow-empty"><b>Nothing written down yet.</b>
       <span>A pairing is one sentence: this product needs that one, so many per one. Write the first, or take one of the pairs your own orders keep showing.</span></div>`}
     <p class="ow-mini">A pairing changes nothing about prices, stock or orders. It only lets a picture say a second thing, and it only ever says a quantity where you gave one &mdash; where you did not, the thing is named and shown and no number appears.</p>
@@ -48986,7 +49127,7 @@ function pairOffHTML(off){
   return `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Not used in pictures</span><span class="ow-pan-n">${off.length}</span></div>
     ${off.map(l=> `<div class="pr-obs">
-      <span class="p">${esc(productLinkName(l.fromId))} &rarr; ${esc(productLinkLabel(l))}</span>
+      <span class="p">${esc(productLinkFromLabel(l))} &rarr; ${esc(productLinkLabel(l))}</span>
       <span class="s">${esc((pairVerb(l.verb)||{say:l.verb}).say)}${l.qty != null ? ` &middot; ${l.qty} per ${esc(l.per || 'one')}` : ''}</span>
       <span class="a">
         <button type="button" class="btn btn-ghost ow-sm" data-pair="on" data-id="${esc(String(l.id))}">Use it again</button>
@@ -48998,17 +49139,22 @@ function pairRowHTML(l, st){
   const open = l.id === pairOpenId;
   const v = pairVerb(l.verb) || { label:l.verb, say:l.verb };
   const ev = st.ev;
-  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}" role="button" tabindex="0"
+  /* A sentence pinned to one size sits under the general one, marked as
+     the exception it is, so the rule and its exceptions read as one
+     paragraph rather than as five unrelated rows. */
+  const pinned = pairSizeIdx(l.fromVariantIdx) != null;
+  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}${pinned ? ' pr-pin' : ''}" role="button" tabindex="0"
       data-pairopen="${esc(String(l.id))}" aria-expanded="${open}">
     <div class="pr-sent">
-      <span class="pr-p" title="${esc(productLinkName(l.fromId))}">${esc(productLinkName(l.fromId))}</span>
+      ${pinned ? '<svg class="pr-pinmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h6M14 14l4 4-4 4"/></svg>' : ''}
+      <span class="pr-p" title="${esc(productLinkFromLabel(l))}">${esc(productLinkFromLabel(l))}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
       <span class="pr-vb pr-${esc(l.verb)}">${esc(v.label)}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
       <span class="pr-p" title="${esc(productLinkLabel(l))}">${esc(productLinkLabel(l))}</span>
     </div>
     <span class="ow-tbl-n">${l.qty != null
-      ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">per ${esc(l.per || 'one')}</span>`
+      ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">${(v && v.self) ? 'days' : `per ${esc(l.per || 'one')}`}</span>`
       : '<span class="pr-nofig">no figure</span>'}</span>
     <span><span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span></span>
     <span class="ow-tbl-n">${ev.withFrom
@@ -49018,6 +49164,25 @@ function pairRowHTML(l, st){
   </div>
   ${open ? pairEditorHTML(l, st) : ''}`;
 }
+/* The general sentence first, strongest first as before; each one's
+   pinned sizes directly under it, in size order. A pin whose general
+   sentence has been deleted stands on its own where it falls. */
+function pairRowsInOrder(stands){
+  const general = stands.filter(x=> pairSizeIdx(x.l.fromVariantIdx) == null)
+    .sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree')
+      || String(productLinkName(a.l.fromId)).localeCompare(productLinkName(b.l.fromId)));
+  const pins = stands.filter(x=> pairSizeIdx(x.l.fromVariantIdx) != null)
+    .sort((a, b)=> pairSizeIdx(a.l.fromVariantIdx) - pairSizeIdx(b.l.fromVariantIdx));
+  const placed = new Set();
+  const out = [];
+  general.forEach(g=>{
+    out.push(g);
+    pins.filter(x=> x.l.fromId === g.l.fromId && x.l.toId === g.l.toId && x.l.verb === g.l.verb)
+      .forEach(x=> { if(!placed.has(x.l.id)){ placed.add(x.l.id); out.push(x); } });
+  });
+  pins.forEach(x=> { if(!placed.has(x.l.id)) out.push(x); });
+  return out;
+}
 function pairProductOptions(sel){
   const ps = data.products || [];
   const gone = sel && !ps.some(p=> p.id === sel)
@@ -49025,52 +49190,100 @@ function pairProductOptions(sel){
   return gone + ps.map(p=>
     `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 }
-/* WHICH SIZE, where the second product comes in sizes. Shown only then:
-   a plain product has nothing to choose, and a chooser with one entry
-   is a question with no answer. The blank entry is not "no size" but
-   "the size that follows" -- the one the customer already buys, the
-   only one priced, or the one matching the size on the other end --
-   which is what a picture works out on its own. */
-function pairSizeOptions(l){
-  const p = productById(l.toId);
+/* WHICH SIZE, at either end, where that product comes in sizes. Shown
+   only then: a plain product has nothing to choose, and a chooser with
+   one entry is a question with no answer. The blank entry on the first
+   product is "every size" -- the sentence holds for all of them. The
+   blank on the second is not "no size" but "the size that follows" --
+   the one the customer already buys, the only one priced, or the one
+   matching the first product's -- which a picture works out on its own,
+   and which the table under the sentence shows size by size. */
+function pairSizeSelect(l, side){
+  const from = side === 'from';
+  const p = productById(from ? l.fromId : l.toId);
   const vs = p && Array.isArray(p.variants) ? p.variants : [];
   if(!vs.length) return '';
-  /* A size chosen on a shop whose column has not landed would be kept
+  /* A size chosen on a shop whose columns have not landed would be kept
      on this device and lost on the next load, which is worse than no
-     chooser: said instead, in the words every other missing migration
-     is said in here. */
-  if(!linkSizeColumn) return `<span class="pr-w" title="Paste supabase/migrations/0093_product_link_size.sql into the Supabase SQL editor and reload to choose a size here. Until then the picture takes the size that follows: the one they already buy, the only one priced, or the one matching the first product's.">any size &mdash; needs 0093</span>`;
-  const cur = (l.toVariantIdx != null && vs[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
-  return `<div class="pr-pick"><select class="pr-sel" data-pf="tov" data-id="${esc(String(l.id))}"
-      title="Which size of ${esc(p.name)} this pairing means. Left open, the picture takes the size they already buy, the only size priced, or the size that matches the first product's.">
-    <option value=""${cur == null ? ' selected' : ''}>the size that follows</option>
+     chooser: said instead, once, in the words every other missing
+     migration is said in here. */
+  if(!linkSizeColumn) return from ? '' : `<span class="pr-w" title="Paste supabase/migrations/0093_product_link_size.sql into the Supabase SQL editor and reload to choose sizes here. Until then the picture takes the size that follows: the one they already buy, the only one priced, or the one matching the first product's.">any size &mdash; needs 0093</span>`;
+  const raw = from ? l.fromVariantIdx : l.toVariantIdx;
+  const cur = (pairSizeIdx(raw) != null && vs[pairSizeIdx(raw)]) ? pairSizeIdx(raw) : null;
+  const title = from
+    ? `Which size of ${p.name} this sentence is about. Every size, unless you pin one.`
+    : `Which size of ${p.name} this pairing means. Left open, the picture takes the size they already buy, the only size priced, or the size that matches the first product's.`;
+  return `<div class="pr-pick pr-size"><select class="pr-sel" data-pf="${from ? 'fromv' : 'tov'}" data-id="${esc(String(l.id))}" title="${esc(title)}">
+    <option value=""${cur == null ? ' selected' : ''}>${from ? 'every size' : 'the size that follows'}</option>
     ${vs.map((v, i)=> `<option value="${i}"${cur === i ? ' selected' : ''}>${esc(variantLabel(v.combo || {}))}</option>`).join('')}
   </select></div>`;
 }
+/* HOW THE SIZES LINE UP, size by size, under a sentence written for
+   every size of a product that comes in sizes. Each row is what a
+   picture would take today and why; the chooser at its end pins a
+   size, which writes the sentence for that size alone beside this one.
+   Amber only where nothing follows -- that is the one row that is a
+   gap, and colouring the rest would mark nothing. */
+function pairSizePlanHTML(l){
+  const plan = pairSizePlan(l);
+  if(!plan) return '';
+  const tp = productById(l.toId);
+  const tvs = tp && Array.isArray(tp.variants) ? tp.variants : [];
+  const gaps = plan.filter(r=> r.toIdx == null).length;
+  const words = (r)=>{
+    if(r.pin) return 'pinned here';
+    if(r.by === 'pairing') return 'the size this pairing names';
+    if(r.by === 'only') return 'the only size priced and on the shelf';
+    if(r.by === 'size') return 'the same size';
+    return '';
+  };
+  return `<div class="pr-chk pr-plan">
+    <div class="pr-chk-h">How the sizes line up &mdash; ${esc(productLinkName(l.fromId))} &rarr; ${esc(tp.name)}${
+      gaps ? ` &middot; ${gaps} of ${plan.length} still open` : ''}</div>
+    ${plan.map(r=> `<div class="pr-sz">
+      <span class="pr-sz-f">${esc(r.fromLabel)}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
+      <span class="pr-sz-t">${r.toIdx != null
+        ? `${esc(r.toLabel)}<i>${esc(words(r))}</i>`
+        : `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>nothing follows</span><i>a customer who has not bought one gets no ${esc(tp.name)} on their picture</i>`}</span>
+      ${linkSizeColumn ? `<div class="pr-pick"><select class="pr-sel" data-pin="${esc(String(l.id))}" data-from="${r.fromIdx}"
+          title="Pin which size of ${esc(tp.name)} goes with ${esc(productLinkName(l.fromId))} ${esc(r.fromLabel)}.">
+        <option value=""${!r.pin ? ' selected' : ''}>${r.toIdx != null && !r.pin ? 'as it follows' : 'not pinned'}</option>
+        ${tvs.map((v, i)=> `<option value="${i}"${r.pin && pairSizeIdx(r.pin.toVariantIdx) === i ? ' selected' : ''}>${esc(variantLabel(v.combo || {}))}</option>`).join('')}
+      </select></div>` : ''}
+    </div>`).join('')}
+    <p class="ow-mini pr-plan-n">Pinning a size writes the sentence for that size alone, under this one, with this figure. A customer who already buys a size of ${esc(tp.name)} is shown that size whatever is written here.</p>
+  </div>`;
+}
 function pairEditorHTML(l, st){
   const ev = st.ev;
-  const per = (productById(l.fromId) || {}).unit || 'one';
+  const per = productUnitLabel(l.fromId, pairSizeIdx(l.fromVariantIdx)) || (productById(l.fromId) || {}).unit || 'one';
+  const self = !!(pairVerb(l.verb) || {}).self;
   return `<div class="tl-x">
     <p class="pr-lbl">The pairing, as you would say it</p>
     <div class="pr-sb">
       <div class="pr-pick"><select class="pr-sel" data-pf="from" data-id="${esc(String(l.id))}">${pairProductOptions(l.fromId)}</select></div>
+      ${pairSizeSelect(l, 'from')}
       <div class="pr-pick pr-verb"><select class="pr-sel" data-pf="verb" data-id="${esc(String(l.id))}">${
         PAIR_VERBS.map(v=> `<option value="${v.id}"${v.id === l.verb ? ' selected' : ''}>${esc(v.say)}</option>`).join('')}</select></div>
-      <div class="pr-pick"><select class="pr-sel" data-pf="to" data-id="${esc(String(l.id))}">${pairProductOptions(l.toId)}</select></div>
-      ${pairSizeOptions(l)}
-      <span class="pr-w">&mdash;</span>
+      ${self
+        ? `<span class="pr-w" title="Runs out after is about the one product: it will be finished in about so many days, and the picture comes back then.">itself, in about</span>`
+        : `<div class="pr-pick"><select class="pr-sel" data-pf="to" data-id="${esc(String(l.id))}">${pairProductOptions(l.toId)}</select></div>
+      ${pairSizeSelect(l, 'to')}
+      <span class="pr-w">&mdash;</span>`}
       <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-pf="qty" data-id="${esc(String(l.id))}" value="${l.qty == null ? '' : l.qty}" placeholder="—"></div>
-      <span class="pr-w">per</span>
-      <div class="pr-pick"><input class="pr-in" data-pf="per" data-id="${esc(String(l.id))}" value="${esc(l.per || '')}" placeholder="${esc(per)}"></div>
+      <span class="pr-w">${self ? 'days' : 'per'}</span>
+      ${self ? '' : `<div class="pr-pick pr-per"><input class="pr-in" data-pf="per" data-id="${esc(String(l.id))}" value="${esc(l.per || '')}" placeholder="${esc(per)}"></div>`}
     </div>
+    ${self ? '' : pairSizePlanHTML(l)}
     <p class="pr-lbl">Why, for whoever reads this next</p>
     <textarea class="ow-msg pr-note" rows="2" data-pf="note" data-id="${esc(String(l.id))}"
       placeholder="What you know that the orders cannot show.">${esc(l.note || '')}</textarea>
     <div class="pr-two">
       <div class="pr-chk">
         <div class="pr-chk-h">What your own orders say</div>
-        <div class="ow-sr"><span class="ow-sr-k">Orders with ${esc(briefShortName(productLinkName(l.fromId)))}</span><span class="ow-sr-v">${ev.withFrom}</span></div>
-        <div class="ow-sr"><span class="ow-sr-k">&hellip; that also had it</span><span class="ow-sr-v">${ev.andTo}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Orders with ${esc(briefShortName(productLinkFromLabel(l)))}</span><span class="ow-sr-v">${ev.withFrom}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">&hellip; that also had ${esc(briefShortName(productLinkLabel(l)))}</span><span class="ow-sr-v">${ev.andTo}</span></div>
         <div class="ow-sr"><span class="ow-sr-k">Per one, on average</span><span class="ow-sr-v">${ev.perUnit == null ? '&mdash;' : ev.perUnit.toFixed(1)}</span></div>
         <div class="ow-sr"><span class="ow-sr-k">Your figure</span><span class="ow-sr-v">${l.qty == null ? 'none given' : Number(l.qty).toFixed(1)}</span></div>
         <p class="pr-verdict pr-v-${esc(st.key)}">${pairVerdictWords(l, st)}</p>
@@ -49080,7 +49293,8 @@ function pairEditorHTML(l, st){
         <b>Goes with</b> &mdash; usually bought together, offered but not insisted on.
         <b>Instead of</b> &mdash; a swap when the first is out of stock.
         <b>Runs out after</b> &mdash; it will be finished in about so many days, and the picture comes back then.
-        <b>Part of</b> &mdash; both belong to one job.</p>
+        <b>Part of</b> &mdash; both belong to one job.
+        <b>And a size at either end</b> &mdash; a sentence for every size of a product, or for one; the table under it shows which size of the second a picture takes for each size of the first, and lets you pin one.</p>
     </div>
     <div class="ow-tbl-a tl-acts">
       <button type="button" class="btn btn-ghost ow-sm" data-pair="save" data-id="${esc(String(l.id))}">Save the pairing</button>
@@ -49270,7 +49484,7 @@ async function saveBriefGif(customerId){
            together, never how many, and only the owner can say. */
         const r = addProductLink(from, 'with', to, null, '', '');
         if(!r.ok){ toast(r.why, 6000); return; }
-        pairOpenId = productLinksAll()[productLinksAll().length - 1].id;
+        pairOpenId = r.link.id;
       }
       renderPairings();
       return;
@@ -49300,10 +49514,20 @@ async function saveBriefGif(customerId){
      what they change. Typed fields do not: a redraw on every keystroke
      takes the cursor with it. */
   wrap.addEventListener('change', (e)=>{
+    /* A pin in the sizes table writes or withdraws the sentence for
+       that one size; the general sentence it sits under is untouched. */
+    const pin = e.target.closest('[data-pin]');
+    if(pin){
+      const r = pinPairSize(Number(pin.dataset.pin), Number(pin.dataset.from), pin.value);
+      if(!r.ok){ toast(r.why, 6000); }
+      renderPairings();
+      return;
+    }
     const el = e.target.closest('[data-pf]');
     if(!el) return;
     const id = idOf(el), field = el.dataset.pf;
     const patch = field === 'from' ? { fromId: el.value }
+      : field === 'fromv' ? { fromVariantIdx: el.value === '' ? null : Number(el.value) }
       : field === 'to' ? { toId: el.value }
       : field === 'tov' ? { toVariantIdx: el.value === '' ? null : Number(el.value) }
       : field === 'verb' ? { verb: el.value }
@@ -49312,16 +49536,21 @@ async function saveBriefGif(customerId){
       : { note: el.value };
     const r = updateProductLink(id, patch);
     if(!r.ok){ toast(r.why, 6000); return; }
-    if(['from','to','tov','verb','qty'].includes(field)) renderPairings();
+    if(['from','fromv','to','tov','verb','qty'].includes(field)) renderPairings();
   });
   const add = document.getElementById('pair_add_btn');
   if(add) add.addEventListener('click', ()=>{
     const ps = data.products || [];
     if(ps.length < 2){ toast('Two products are needed before anything can be paired.'); return; }
+    /* A fresh sentence opens ready to be changed. Where the same two
+       products are already paired, that one opens instead of a second
+       copy being refused with a message. */
     const r = addProductLink(ps[0].id, 'with', ps[1].id, null, '', '');
-    if(!r.ok){ toast(r.why, 6000); return; }
-    pairOpenId = productLinksAll()[productLinksAll().length - 1].id;
+    if(!r.ok && !r.existing){ toast(r.why, 6000); return; }
+    pairOpenId = r.ok ? r.link.id : r.existing.id;
     renderPairings();
+    const row = wrap.querySelector(`[data-pairopen="${pairOpenId}"]`);
+    if(row) row.scrollIntoView({ block: 'center' });
   });
 })();
 /* The account screen carries a picture too, and its buttons are the
