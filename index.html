@@ -2236,6 +2236,29 @@
      width. */
   .pset-wd-w{padding:12px;border-top:1px solid var(--ow-rule-soft);}
 
+  /* ---- Folding ------------------------------------------------------
+     Most of this page is set once and never touched. Folded it is a
+     dozen lines; what keeps it from being the twelve doors again is
+     that these are not exclusive, every header carries its own state,
+     and the search opens what it finds. ------------------------------ */
+  .pset-fold-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    gap:8px;width:100%;height:34px;padding:0 12px;background:var(--ow-paper-2);
+    border-bottom:1px solid transparent;}
+  .pset-fold.is-open > .pset-fold-h{border-bottom-color:var(--ow-rule-soft);}
+  .pset-fold-h:hover{background:var(--ow-steel-050);}
+  .pset-fold-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .pset-fold-cv{width:11px;height:11px;flex:none;color:var(--ow-ink-400);fill:none;
+    stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .pset-fold.is-open .pset-fold-cv{transform:rotate(90deg);}
+  /* A folded panel is one line, so it loses the shadow of a region and
+     reads as a row in a table of contents. */
+  .pset-fold:not(.is-open){border-radius:var(--ow-r-lg);}
+  .pset-fold:not(.is-open) > .pset-fold-h{border-radius:var(--ow-r-lg);}
+  .pset-fold-a{display:flex;justify-content:flex-end;padding:10px 12px 0;}
+  /* Two folded panels in a row sit as one list rather than as two
+     boxes with a gap between them. */
+  .pset-fold:not(.is-open) + .pset-fold.pset-pan-2:not(.is-open){margin-top:6px;}
+
   /* ---- A category is a row you open, not a row that holds everything.
      Seventeen categories, 64 sub-categories and 39 of them under one
      name made the flat version 2,100px before the second list began.
@@ -16763,77 +16786,100 @@
                  TANGLED. Same grammar, same silence when there is
                  nothing to report. -->
             <div id="psetWordsBand"></div>
-            <div class="ow-pan">
-              <div class="ow-pan-h">
-                <span class="ow-pan-t">Six lists</span>
-                <span class="ow-pan-n" id="pset_words_n"></span>
-              </div>
-              <div class="pset-wd-w" data-find="categories category sub-category subcategory product catalogue">
-                <div class="pset-wd-h"><span class="pset-wd-n">Categories</span><b class="pset-count" data-count="categories"></b></div>
-                <p class="pset-wd-u">Suggested in the Category and Sub-category fields when adding a product.</p>
-                <div class="preset-inline-add">
-                  <input type="text" id="preset_cat_new" placeholder="Add a category...">
-                  <button type="button" id="preset_cat_add">Add</button>
-                </div>
-                <div id="presetCategoriesWrap"></div>
-              </div>
-              <div class="pset-wd">
-                <div class="pset-wd-b" data-find="units unit pack piece bag kg metre price entry">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Units</span><b class="pset-count" data-count="units"></b></div>
-                  <p class="pset-wd-u">Suggested in the Unit and Pack unit fields on a price entry.</p>
+            <div class="ow-pan pset-fold" data-fold="categories" data-find="categories category sub-category product catalogue">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                <span class="ow-pan-t">Categories</span>
+                <span class="ow-pan-n" id="pset_cats_n"></span>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div class="pset-wd-w" data-find="categories category sub-category subcategory product catalogue">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Categories</span><b class="pset-count" data-count="categories"></b></div>
+                  <p class="pset-wd-u">Suggested in the Category and Sub-category fields when adding a product.</p>
                   <div class="preset-inline-add">
-                    <input type="text" id="preset_unit_new" placeholder="Add a unit...">
-                    <button type="button" id="preset_unit_add">Add</button>
+                    <input type="text" id="preset_cat_new" placeholder="Add a category...">
+                    <button type="button" id="preset_cat_add">Add</button>
                   </div>
-                  <div id="presetUnitsWrap"></div>
-                </div>
-
-                <div class="pset-wd-b" data-find="locations location place delivery deliver customer agent route order tracking">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Locations</span><b class="pset-count" data-count="locations"></b></div>
-                  <p class="pset-wd-u">Every place you deliver to. Chosen on a customer or an agent, and what groups orders going the same way on the board &mdash; which only works while one place is spelled one way.</p>
-                  <div class="preset-inline-add">
-                    <input type="text" id="preset_location_new" placeholder="Add a location...">
-                    <button type="button" id="preset_location_add">Add</button>
-                  </div>
-                  <div id="presetLocationsWrap"></div>
-                </div>
-
-                <div class="pset-wd-b" data-find="money in income cash in category cash book takings chart">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Money in</span><b class="pset-count" data-count="income"></b></div>
-                  <p class="pset-wd-u">Suggested in the Category field when logging Cash In, and what groups the income chart on the Cash book.</p>
-                  <div class="preset-inline-add">
-                    <input type="text" id="preset_income_cat_new" placeholder="Add an income category...">
-                    <button type="button" id="preset_income_cat_add">Add</button>
-                  </div>
-                  <div id="presetIncomeCatsWrap"></div>
-                </div>
-
-                <div class="pset-wd-b" data-find="money out expense cash out category cash book spending chart">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Money out</span><b class="pset-count" data-count="expense"></b></div>
-                  <p class="pset-wd-u">Suggested in the Category field when logging Cash Out, and what groups the expense chart on the Cash book.</p>
-                  <div class="preset-inline-add">
-                    <input type="text" id="preset_expense_cat_new" placeholder="Add an expense category...">
-                    <button type="button" id="preset_expense_cat_add">Add</button>
-                  </div>
-                  <div id="presetExpenseCatsWrap"></div>
+                  <div id="presetCategoriesWrap"></div>
                 </div>
               </div>
+            </div>
 
-              <!-- An attribute is a name AND its usual values, so it does
-                   not fit the two-column grid of single-word lists. It
-                   takes the width under them rather than a door of its
-                   own. -->
-              <div class="pset-wd-w" data-find="attributes attribute variants variant colour color gauge length size options">
-                <div class="pset-wd-h"><span class="pset-wd-n">Attributes</span><b class="pset-count" data-count="attributes"></b></div>
-                <p class="pset-wd-u">Reusable attribute names with their usual values &mdash; e.g. Colour: Red, Blue, Green. Suggested when a product is built in variants, and values auto-fill when the name matches one on file. Split by the one fact the app can derive about each: whether any product uses it.</p>
-                <div class="preset-inline-add wide">
-                  <input type="text" id="preset_attr_name" placeholder="Attribute name...">
-                  <input type="text" id="preset_attr_values" placeholder="Values, comma-separated...">
-                  <button type="button" id="preset_attr_add">Add</button>
+            <div class="ow-pan pset-fold pset-pan-2" data-fold="flat" data-find="units unit locations location money in money out income expense flat lists">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                <span class="ow-pan-t">The flat lists</span>
+                <span class="ow-pan-n" id="pset_flat_n"></span>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div class="pset-wd">
+                  <div class="pset-wd-b" data-find="units unit pack piece bag kg metre price entry">
+                    <div class="pset-wd-h"><span class="pset-wd-n">Units</span><b class="pset-count" data-count="units"></b></div>
+                    <p class="pset-wd-u">Suggested in the Unit and Pack unit fields on a price entry.</p>
+                    <div class="preset-inline-add">
+                      <input type="text" id="preset_unit_new" placeholder="Add a unit...">
+                      <button type="button" id="preset_unit_add">Add</button>
+                    </div>
+                    <div id="presetUnitsWrap"></div>
+                  </div>
+
+                  <div class="pset-wd-b" data-find="locations location place delivery deliver customer agent route order tracking">
+                    <div class="pset-wd-h"><span class="pset-wd-n">Locations</span><b class="pset-count" data-count="locations"></b></div>
+                    <p class="pset-wd-u">Every place you deliver to. Chosen on a customer or an agent, and what groups orders going the same way on the board &mdash; which only works while one place is spelled one way.</p>
+                    <div class="preset-inline-add">
+                      <input type="text" id="preset_location_new" placeholder="Add a location...">
+                      <button type="button" id="preset_location_add">Add</button>
+                    </div>
+                    <div id="presetLocationsWrap"></div>
+                  </div>
+
+                  <div class="pset-wd-b" data-find="money in income cash in category cash book takings chart">
+                    <div class="pset-wd-h"><span class="pset-wd-n">Money in</span><b class="pset-count" data-count="income"></b></div>
+                    <p class="pset-wd-u">Suggested in the Category field when logging Cash In, and what groups the income chart on the Cash book.</p>
+                    <div class="preset-inline-add">
+                      <input type="text" id="preset_income_cat_new" placeholder="Add an income category...">
+                      <button type="button" id="preset_income_cat_add">Add</button>
+                    </div>
+                    <div id="presetIncomeCatsWrap"></div>
+                  </div>
+
+                  <div class="pset-wd-b" data-find="money out expense cash out category cash book spending chart">
+                    <div class="pset-wd-h"><span class="pset-wd-n">Money out</span><b class="pset-count" data-count="expense"></b></div>
+                    <p class="pset-wd-u">Suggested in the Category field when logging Cash Out, and what groups the expense chart on the Cash book.</p>
+                    <div class="preset-inline-add">
+                      <input type="text" id="preset_expense_cat_new" placeholder="Add an expense category...">
+                      <button type="button" id="preset_expense_cat_add">Add</button>
+                    </div>
+                    <div id="presetExpenseCatsWrap"></div>
+                  </div>
                 </div>
-                <div id="presetAttrsWrap"></div>
+
+                <!-- An attribute is a name AND its usual values, so it does
+                     not fit the two-column grid of single-word lists. It
+                     takes the width under them rather than a door of its
+                     own. -->
+                <p class="ow-mini">Renaming a word carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
               </div>
-              <p class="ow-mini">Renaming a word carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
+            </div>
+
+            <div class="ow-pan pset-fold pset-pan-2" data-fold="attributes" data-find="attributes attribute variants values colour gauge length size">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                <span class="ow-pan-t">Attributes</span>
+                <span class="ow-pan-n" id="pset_attrs_n"></span>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div class="pset-wd-w" data-find="attributes attribute variants variant colour color gauge length size options">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Attributes</span><b class="pset-count" data-count="attributes"></b></div>
+                  <p class="pset-wd-u">Reusable attribute names with their usual values &mdash; e.g. Colour: Red, Blue, Green. Suggested when a product is built in variants, and values auto-fill when the name matches one on file. Split by the one fact the app can derive about each: whether any product uses it.</p>
+                  <div class="preset-inline-add wide">
+                    <input type="text" id="preset_attr_name" placeholder="Attribute name...">
+                    <input type="text" id="preset_attr_values" placeholder="Values, comma-separated...">
+                    <button type="button" id="preset_attr_add">Add</button>
+                  </div>
+                  <div id="presetAttrsWrap"></div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -16844,100 +16890,103 @@
               <span class="pset-rg-s">Every number the app assumes, and the screen each one drives. Five of them are set on the screen that uses them; they are read here so this page is the whole answer.</span>
             </div>
 
-            <div class="ow-pan">
-              <div class="ow-pan-h">
+            <div class="ow-pan pset-fold" data-fold="rules-here" data-find="rules set here markup agent margin cluster price check order limits">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                 <span class="ow-pan-t">Set here</span>
                 <span class="ow-pan-n">6 rules</span>
-              </div>
+              </button>
+              <div class="pset-fold-b" hidden>
 
-              <!-- Each rule is a row that states what it drives. That
-                   sentence is why the old panes carried 87 words of prose
-                   above the field; on the same line as the control it is
-                   one. -->
-              <div class="pset-rr" id="pset_rule_markup" data-find="default price rule markup percent fixed selling price cost wholesale retail">
-                <div class="pset-rr-b"><div class="pset-rr-n">Default price rule</div>
-                <p class="pset-rr-d">The selling rule for every product that has none of its own. Percent adds on top of the item&rsquo;s cheapest supplier cost and scales with the item; fixed adds a flat amount, per <b>pack</b> on the wholesale side and per <b>piece</b> on retail. A rule set on a product or a variant always wins, and clearing it drops the product back here. Leave a side at 0 for no default on that side.</p>
-                <p class="pset-rr-c" id="preset_default_markup_caption"></p>
-                </div>
-                <div class="pset-rr-v">
-                  <div class="pset-rr-p">
-                    <span class="pset-rr-u">Wholesale</span>
-                    <div class="input-pair">
-                      <select id="preset_default_markup_wholesale_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
-                      <input type="number" id="preset_default_markup_wholesale_value" min="0" step="any" placeholder="e.g. 12">
+                <!-- Each rule is a row that states what it drives. That
+                     sentence is why the old panes carried 87 words of prose
+                     above the field; on the same line as the control it is
+                     one. -->
+                <div class="pset-rr" id="pset_rule_markup" data-find="default price rule markup percent fixed selling price cost wholesale retail">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Default price rule</div>
+                  <p class="pset-rr-d">The selling rule for every product that has none of its own. Percent adds on top of the item&rsquo;s cheapest supplier cost and scales with the item; fixed adds a flat amount, per <b>pack</b> on the wholesale side and per <b>piece</b> on retail. A rule set on a product or a variant always wins, and clearing it drops the product back here. Leave a side at 0 for no default on that side.</p>
+                  <p class="pset-rr-c" id="preset_default_markup_caption"></p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p">
+                      <span class="pset-rr-u">Wholesale</span>
+                      <div class="input-pair">
+                        <select id="preset_default_markup_wholesale_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                        <input type="number" id="preset_default_markup_wholesale_value" min="0" step="any" placeholder="e.g. 12">
+                      </div>
+                    </div>
+                    <div class="pset-rr-p">
+                      <span class="pset-rr-u">Retail</span>
+                      <div class="input-pair">
+                        <select id="preset_default_markup_retail_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                        <input type="number" id="preset_default_markup_retail_value" min="0" step="any" placeholder="e.g. 18">
+                      </div>
                     </div>
                   </div>
-                  <div class="pset-rr-p">
-                    <span class="pset-rr-u">Retail</span>
-                    <div class="input-pair">
-                      <select id="preset_default_markup_retail_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
-                      <input type="number" id="preset_default_markup_retail_value" min="0" step="any" placeholder="e.g. 18">
-                    </div>
+                </div>
+
+                <div class="pset-rr" data-find="agent share margin discount wholesale retail commission">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Agent share of margin</div>
+                  <p class="pset-rr-d">A share of what you make on an item, not off its price &mdash; 50% gives an agent half your margin, 100% gives all of it and they pay exactly your cost. Below cost is not reachable, whatever is set here. Any product can override either side in its own edit form.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p"><span class="pset-rr-u">Wholesale</span><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 40"><span class="pset-rr-u">%</span></div>
+                    <div class="pset-rr-p"><span class="pset-rr-u">Retail</span><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 30"><span class="pset-rr-u">%</span></div>
                   </div>
                 </div>
-              </div>
 
-              <div class="pset-rr" data-find="agent share margin discount wholesale retail commission">
-                <div class="pset-rr-b"><div class="pset-rr-n">Agent share of margin</div>
-                <p class="pset-rr-d">A share of what you make on an item, not off its price &mdash; 50% gives an agent half your margin, 100% gives all of it and they pay exactly your cost. Below cost is not reachable, whatever is set here. Any product can override either side in its own edit form.</p>
+                <div class="pset-rr" data-find="cluster bonus wait agent starring commission">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Cluster bonus wait</div>
+                  <p class="pset-rr-d">How long a product must already have been in an agent&rsquo;s commission cluster before a sale of it earns the bonus. Stops an agent starring a high-bonus item right before checkout just to collect on it.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p"><input type="number" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="e.g. 7"><span class="pset-rr-u">days</span></div>
+                  </div>
                 </div>
-                <div class="pset-rr-v">
-                  <div class="pset-rr-p"><span class="pset-rr-u">Wholesale</span><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 40"><span class="pset-rr-u">%</span></div>
-                  <div class="pset-rr-p"><span class="pset-rr-u">Retail</span><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 30"><span class="pset-rr-u">%</span></div>
-                </div>
-              </div>
 
-              <div class="pset-rr" data-find="cluster bonus wait agent starring commission">
-                <div class="pset-rr-b"><div class="pset-rr-n">Cluster bonus wait</div>
-                <p class="pset-rr-d">How long a product must already have been in an agent&rsquo;s commission cluster before a sale of it earns the bonus. Stops an agent starring a high-bonus item right before checkout just to collect on it.</p>
+                <div class="pset-rr" data-find="trust a price stale days price checking registry analysis">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Trust a price for</div>
+                  <p class="pset-rr-d">Drives <b>Prices to check</b> on Analysis. Where an item has enough dated purchase invoices to show how fast its own price moves, that is used instead and this is ignored; where it has not, this applies.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p"><input type="number" id="preset_price_stale_days" min="1" step="1" placeholder="e.g. 90"><span class="pset-rr-u">days</span></div>
+                  </div>
                 </div>
-                <div class="pset-rr-v">
-                  <div class="pset-rr-p"><input type="number" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="e.g. 7"><span class="pset-rr-u">days</span></div>
-                </div>
-              </div>
 
-              <div class="pset-rr" data-find="trust a price stale days price checking registry analysis">
-                <div class="pset-rr-b"><div class="pset-rr-n">Trust a price for</div>
-                <p class="pset-rr-d">Drives <b>Prices to check</b> on Analysis. Where an item has enough dated purchase invoices to show how fast its own price moves, that is used instead and this is ignored; where it has not, this applies.</p>
+                <div class="pset-rr" data-find="prices to check each month review target list length">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Prices to check each month</div>
+                  <p class="pset-rr-d">How many the check list is allowed to hold before it stops being read.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p"><input type="number" id="preset_price_review_target" min="1" step="1" placeholder="e.g. 20"><span class="pset-rr-u">prices</span></div>
+                  </div>
                 </div>
-                <div class="pset-rr-v">
-                  <div class="pset-rr-p"><input type="number" id="preset_price_stale_days" min="1" step="1" placeholder="e.g. 90"><span class="pset-rr-u">days</span></div>
-                </div>
-              </div>
 
-              <div class="pset-rr" data-find="prices to check each month review target list length">
-                <div class="pset-rr-b"><div class="pset-rr-n">Prices to check each month</div>
-                <p class="pset-rr-d">How many the check list is allowed to hold before it stops being read.</p>
+                <div class="pset-rr" id="pset_rule_limits" data-find="order step limits timing late flag board minutes stage alert notification">
+                  <div class="pset-rr-b"><div class="pset-rr-n">Order step limits</div>
+                  <p class="pset-rr-d">If an order sits in one of these steps on the Order tracking board longer than its limit, its card gets a warning flag. Leave a step blank or 0 to turn its warning off &mdash; a step that waits on a lorry or a customer is not this shop&rsquo;s to hurry.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <span class="pset-rr-ro" id="pset_limits_n"></span>
+                  </div>
                 </div>
-                <div class="pset-rr-v">
-                  <div class="pset-rr-p"><input type="number" id="preset_price_review_target" min="1" step="1" placeholder="e.g. 20"><span class="pset-rr-u">prices</span></div>
-                </div>
-              </div>
+                <div class="pset-st form-grid" id="presetOrderLimitsWrap"></div>
 
-              <div class="pset-rr" id="pset_rule_limits" data-find="order step limits timing late flag board minutes stage alert notification">
-                <div class="pset-rr-b"><div class="pset-rr-n">Order step limits</div>
-                <p class="pset-rr-d">If an order sits in one of these steps on the Order tracking board longer than its limit, its card gets a warning flag. Leave a step blank or 0 to turn its warning off &mdash; a step that waits on a lorry or a customer is not this shop&rsquo;s to hurry.</p>
+                <label class="pset-toggle-row pset-sw" data-find="alert notification tell me late past limit">
+                  <input type="checkbox" id="preset_stage_alerts">
+                  <span><b>Tell me the moment an order goes past its limit</b><br>
+                    <span class="pset-toggle-note">A notification the moment a card goes over, instead of a flag that
+                      only warns whoever happens to be looking at the board. Each order is mentioned once per step,
+                      so a busy morning does not turn into a queue of the same reminder.</span></span>
+                </label>
+                <div class="pset-sw-n" id="preset_stage_alerts_state">
+                  <b>Only while the app is open.</b> This shop's notifications reach a picker's phone through their
+                  worker app; there is no such channel for you, so a closed browser cannot be reached. Keep the app
+                  open on the counter machine and it works all day. Set at least one limit above, or there is
+                  nothing to go past.
                 </div>
-                <div class="pset-rr-v">
-                  <span class="pset-rr-ro" id="pset_limits_n"></span>
-                </div>
+                <p class="ow-mini">Minutes, on every step. A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
               </div>
-              <div class="pset-st form-grid" id="presetOrderLimitsWrap"></div>
-
-              <label class="pset-toggle-row pset-sw" data-find="alert notification tell me late past limit">
-                <input type="checkbox" id="preset_stage_alerts">
-                <span><b>Tell me the moment an order goes past its limit</b><br>
-                  <span class="pset-toggle-note">A notification the moment a card goes over, instead of a flag that
-                    only warns whoever happens to be looking at the board. Each order is mentioned once per step,
-                    so a busy morning does not turn into a queue of the same reminder.</span></span>
-              </label>
-              <div class="pset-sw-n" id="preset_stage_alerts_state">
-                <b>Only while the app is open.</b> This shop's notifications reach a picker's phone through their
-                worker app; there is no such channel for you, so a closed browser cannot be reached. Keep the app
-                open on the counter machine and it works all day. Set at least one limit above, or there is
-                nothing to go past.
-              </div>
-              <p class="ow-mini">Minutes, on every step. A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
             </div>
 
             <!-- Five rules that write to this shop's own presets blob and
@@ -16948,13 +16997,16 @@
                  altered without its consequence on screen. Read here,
                  because otherwise there is nowhere to see what the app
                  assumes. -->
-            <div class="ow-pan pset-pan-2" data-find="restock cover target margin dead stock chase debt price watch supplier other screens">
-              <div class="ow-pan-h">
+            <div class="ow-pan pset-fold pset-pan-2" data-fold="rules-elsewhere" data-find="restock cover target margin dead stock chase debt price watch supplier other screens">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                 <span class="ow-pan-t">Set on the screen that uses them</span>
                 <span class="ow-pan-n">5 rules</span>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div id="presetOutsideRules"></div>
+                <p class="ow-mini">Each of these changes what a list in front of you says, so it is set beside that list rather than here. Reading them here is what makes this page the whole answer to what the app assumes.</p>
               </div>
-              <div id="presetOutsideRules"></div>
-              <p class="ow-mini">Each of these changes what a list in front of you says, so it is set beside that list rather than here. Reading them here is what makes this page the whole answer to what the app assumes.</p>
             </div>
           </div>
 
@@ -16965,130 +17017,141 @@
               <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, and what is signed in to it.</span>
             </div>
 
-            <div class="ow-pan" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
-              <div class="ow-pan-h">
+            <div class="ow-pan pset-fold" data-fold="on-paper" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                 <span class="ow-pan-t">On paper</span>
                 <span class="ow-pan-n">prints on every receipt</span>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div class="form-grid pset-fg">
+                  <div class="field" style="grid-column:1/-1;"><label>Shop name</label>
+                    <input type="text" id="preset_shop_name" placeholder="e.g. Telagon Hardware"></div>
+                  <div class="field" style="grid-column:1/-1;"><label>Address</label>
+                    <input type="text" id="preset_shop_address" placeholder="e.g. Jesco House Room JHB08"></div>
+                  <div class="field"><label>Phone</label>
+                    <input type="text" id="preset_shop_phone" placeholder="e.g. 0754 333419"></div>
+                  <div class="field"><label>TIN <span style="font-weight:400;color:var(--ink-soft);">(optional)</span></label>
+                    <input type="text" id="preset_shop_tin" placeholder="leave blank to omit the line"></div>
+                  <div class="field" style="grid-column:1/-1;"><label>Receipt footer</label>
+                    <textarea id="preset_receipt_footer" rows="2" placeholder="Thank you for your business"></textarea></div>
+                </div>
+                <label class="pset-toggle-row pset-sw">
+                  <input type="checkbox" id="preset_auto_print_receipt">
+                  <span><b>Print a receipt automatically when a payment is received</b><br>
+                    <span class="pset-toggle-note">Paper comes out the moment money is recorded, the way a till does. Turn it off on a day spent reconciling rather than trading.</span></span>
+                </label>
+                <p class="ow-mini">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents, so short sales use short paper. <b>To print with no dialog</b>, make a desktop shortcut to Chrome with <code>--kiosk-printing</code> after the program path and open the app from it, with the thermal printer set as the Windows default.</p>
               </div>
-              <div class="form-grid pset-fg">
-                <div class="field" style="grid-column:1/-1;"><label>Shop name</label>
-                  <input type="text" id="preset_shop_name" placeholder="e.g. Telagon Hardware"></div>
-                <div class="field" style="grid-column:1/-1;"><label>Address</label>
-                  <input type="text" id="preset_shop_address" placeholder="e.g. Jesco House Room JHB08"></div>
-                <div class="field"><label>Phone</label>
-                  <input type="text" id="preset_shop_phone" placeholder="e.g. 0754 333419"></div>
-                <div class="field"><label>TIN <span style="font-weight:400;color:var(--ink-soft);">(optional)</span></label>
-                  <input type="text" id="preset_shop_tin" placeholder="leave blank to omit the line"></div>
-                <div class="field" style="grid-column:1/-1;"><label>Receipt footer</label>
-                  <textarea id="preset_receipt_footer" rows="2" placeholder="Thank you for your business"></textarea></div>
-              </div>
-              <label class="pset-toggle-row pset-sw">
-                <input type="checkbox" id="preset_auto_print_receipt">
-                <span><b>Print a receipt automatically when a payment is received</b><br>
-                  <span class="pset-toggle-note">Paper comes out the moment money is recorded, the way a till does. Turn it off on a day spent reconciling rather than trading.</span></span>
-              </label>
-              <p class="ow-mini">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents, so short sales use short paper. <b>To print with no dialog</b>, make a desktop shortcut to Chrome with <code>--kiosk-printing</code> after the program path and open the app from it, with the thermal printer set as the Windows default.</p>
             </div>
 
             <!-- Merchant API keys, a sandbox switch and a callback URL:
                  set up once, changed almost never, and the only thing on
                  this page with an explicit Save, because a wrong key
                  fails every payment silently at the agent's end. -->
-            <div class="ow-pan pset-pan-2" data-find="mobile money momo mtn airtel merchant api key subscription client secret sandbox production credentials payment prompt agent pays">
-              <div class="ow-pan-h">
+            <div class="ow-pan pset-fold pset-pan-2" data-fold="mobile-money" data-find="mobile money momo mtn airtel merchant api key subscription client secret sandbox production credentials payment prompt agent pays">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                 <span class="ow-pan-t">Taking mobile money</span>
                 <span class="ow-pan-n" id="pset_momo_state"></span>
+              </button>
+              <div class="pset-fold-b" hidden>
+
+                <!-- The answer first: can an agent pay me by phone right
+                     now, and is any money in limbo? The keys are set once
+                     and never touched, so they collapse; what changes by
+                     the hour is the ledger. -->
+                <p class="ow-mini momo-answer" id="momoAnswer"></p>
+                <div id="momoBand"></div>
+
+  <section class="pset-group pset-grp" id="momoActivity">
+                  <h4>Payment activity</h4>
+                  <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
+                  <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
+                </section>
+
+
+                <div class="momo-p-h" id="momo_mtn_head"></div>
+                <div class="momo-x" id="momo_mtn_body" style="display:none;">
+  <section class="pset-group pset-grp">
+                  <div class="momo-onoff">
+                    <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Take payments through MTN</label>
+                  </div>
+                  <div class="form-grid pset-fields">
+                    <div class="field">
+                      <label>Environment</label>
+                      <select id="momo_mtn_environment">
+                        <option value="sandbox">Sandbox (testing)</option>
+                        <option value="production">Production (live)</option>
+                      </select>
+                    </div>
+                    <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
+                  </div>
+                  <div class="momo-provision-row">
+                    <button type="button" class="btn btn-ghost" id="momo_mtn_provision_btn">Auto-generate API user + key (sandbox)</button>
+                    <p class="pset-note" id="momo_mtn_provision_hint">MTN doesn&rsquo;t have a portal page for this &mdash; enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. Switch Environment to Production once you have a production subscription key from MTN&rsquo;s go-live approval and this same button will attempt it there too (untested against a real MTN merchant account &mdash; if it fails, ask MTN for the API user/key directly and paste them into the fields below instead).</p>
+                  </div>
+                  <div class="form-grid pset-fields">
+                    <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
+                    <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
+                  </div>
+                  <div class="momo-status-row" id="momo_mtn_status"></div>
+                  <button type="button" class="btn btn-ghost ow-sm" id="momo_mtn_save_btn">Save MTN settings</button>
+                </section>
+
+                              </div>
+
+                <div class="momo-p-h" id="momo_airtel_head"></div>
+                <div class="momo-x" id="momo_airtel_body" style="display:none;">
+  <section class="pset-group pset-grp">
+                  <div class="momo-onoff">
+                    <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Take payments through Airtel</label>
+                  </div>
+                  <div class="form-grid pset-fields">
+                    <div class="field">
+                      <label>Environment</label>
+                      <select id="momo_airtel_environment">
+                        <option value="sandbox">Sandbox (testing)</option>
+                        <option value="production">Production (live)</option>
+                      </select>
+                    </div>
+                    <div class="field"><label>Client ID</label><input type="password" id="momo_airtel_clientId" autocomplete="off" placeholder="From the Airtel Money developer portal"></div>
+                    <div class="field"><label>Client secret</label><input type="password" id="momo_airtel_clientSecret" autocomplete="off"></div>
+                  </div>
+                  <div class="momo-status-row" id="momo_airtel_status"></div>
+                  <button type="button" class="btn btn-ghost ow-sm" id="momo_airtel_save_btn">Save Airtel settings</button>
+                </section>
+
+                              </div>
+
+                <p class="ow-mini">Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
               </div>
-
-              <!-- The answer first: can an agent pay me by phone right
-                   now, and is any money in limbo? The keys are set once
-                   and never touched, so they collapse; what changes by
-                   the hour is the ledger. -->
-              <p class="ow-mini momo-answer" id="momoAnswer"></p>
-              <div id="momoBand"></div>
-
-<section class="pset-group pset-grp" id="momoActivity">
-                <h4>Payment activity</h4>
-                <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
-                <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
-              </section>
-
-
-              <div class="momo-p-h" id="momo_mtn_head"></div>
-              <div class="momo-x" id="momo_mtn_body" style="display:none;">
-<section class="pset-group pset-grp">
-                <div class="momo-onoff">
-                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Take payments through MTN</label>
-                </div>
-                <div class="form-grid pset-fields">
-                  <div class="field">
-                    <label>Environment</label>
-                    <select id="momo_mtn_environment">
-                      <option value="sandbox">Sandbox (testing)</option>
-                      <option value="production">Production (live)</option>
-                    </select>
-                  </div>
-                  <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
-                </div>
-                <div class="momo-provision-row">
-                  <button type="button" class="btn btn-ghost" id="momo_mtn_provision_btn">Auto-generate API user + key (sandbox)</button>
-                  <p class="pset-note" id="momo_mtn_provision_hint">MTN doesn&rsquo;t have a portal page for this &mdash; enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. Switch Environment to Production once you have a production subscription key from MTN&rsquo;s go-live approval and this same button will attempt it there too (untested against a real MTN merchant account &mdash; if it fails, ask MTN for the API user/key directly and paste them into the fields below instead).</p>
-                </div>
-                <div class="form-grid pset-fields">
-                  <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
-                  <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
-                </div>
-                <div class="momo-status-row" id="momo_mtn_status"></div>
-                <button type="button" class="btn btn-ghost ow-sm" id="momo_mtn_save_btn">Save MTN settings</button>
-              </section>
-
-                            </div>
-
-              <div class="momo-p-h" id="momo_airtel_head"></div>
-              <div class="momo-x" id="momo_airtel_body" style="display:none;">
-<section class="pset-group pset-grp">
-                <div class="momo-onoff">
-                  <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Take payments through Airtel</label>
-                </div>
-                <div class="form-grid pset-fields">
-                  <div class="field">
-                    <label>Environment</label>
-                    <select id="momo_airtel_environment">
-                      <option value="sandbox">Sandbox (testing)</option>
-                      <option value="production">Production (live)</option>
-                    </select>
-                  </div>
-                  <div class="field"><label>Client ID</label><input type="password" id="momo_airtel_clientId" autocomplete="off" placeholder="From the Airtel Money developer portal"></div>
-                  <div class="field"><label>Client secret</label><input type="password" id="momo_airtel_clientSecret" autocomplete="off"></div>
-                </div>
-                <div class="momo-status-row" id="momo_airtel_status"></div>
-                <button type="button" class="btn btn-ghost ow-sm" id="momo_airtel_save_btn">Save Airtel settings</button>
-              </section>
-
-                            </div>
-
-              <p class="ow-mini">Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
             </div>
 
             <!-- Who is signed in, on what, and since when. A question
                  about accounts and hardware, not about people, which is
                  why it is not on Staff. -->
-            <div class="ow-pan pset-pan-2" data-find="signed in devices device session phone computer sign out revoke stolen login">
-              <div class="ow-pan-h">
+            <div class="ow-pan pset-fold pset-pan-2" data-fold="devices" data-find="signed in devices device session phone computer sign out revoke stolen login">
+              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
+                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                 <span class="ow-pan-t">Signed in to this shop</span>
                 <span class="ow-pan-n" id="pset_devices_n"></span>
-                <button class="btn btn-ghost ow-sm ow-pan-a" id="ls_refresh">
-                  <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-                  Refresh
-                </button>
+              </button>
+              <div class="pset-fold-b" hidden>
+                <div class="pset-fold-a">
+                  <button class="btn btn-ghost ow-sm" id="ls_refresh">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                    Refresh
+                  </button>
+                </div>
+                <div id="ls_list"></div>
+                <!-- Two bulk sign-outs and a purge used to lead this panel,
+                     so the first thing read on a security screen was the
+                     biggest commitment on it. They follow the answer now. -->
+                <div class="ls-tidy" id="ls_tidy"></div>
+                <div id="ls_more"></div>
+                <p class="ow-mini">Every phone and computer signed in to this shop, and when it was last heard from. Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
               </div>
-              <div id="ls_list"></div>
-              <!-- Two bulk sign-outs and a purge used to lead this panel,
-                   so the first thing read on a security screen was the
-                   biggest commitment on it. They follow the answer now. -->
-              <div class="ls-tidy" id="ls_tidy"></div>
-              <div id="ls_more"></div>
-              <p class="ow-mini">Every phone and computer signed in to this shop, and when it was last heard from. Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
             </div>
           </div>
 
@@ -64669,7 +64732,8 @@ function renderPresetBand(){
       ${causes.map(c=> `<p class="cb-openbar-w">${c.said}</p>`).join('')}
     </div>
     <div class="cb-openbar-a">
-      <button type="button" class="btn btn-accent ow-sm" data-pset-go="${esc(causes[0].go)}">${
+      <button type="button" class="btn btn-accent ow-sm" data-pset-go="${esc(causes[0].go)}" data-pset-fold="${
+        causes[0].key === 'identity' ? 'on-paper' : 'rules-here'}">${
         causes[0].key === 'markup' ? 'Set the price rule'
         : causes[0].key === 'identity' ? 'Name the shop' : 'Set a limit'}</button>
     </div>
@@ -64804,13 +64868,22 @@ function renderPresetIndex(){
     n.textContent = `${listed} listed`;
   }
 
-  const words = document.getElementById('pset_words_n');
-  if(words){
-    const total = ['presetCategories','presetUnits','presetLocations','presetAttributes',
-      'presetIncomeCategories','presetExpenseCategories']
-      .reduce((s,k)=> s + (data[k]||[]).length, 0);
-    words.textContent = `${total} ${total===1?'entry':'entries'}`;
-  }
+  /* A folded header with nothing on it is a door, which is the whole
+     fault this page was rebuilt to remove. So each of the three word
+     panels says on its own line what is inside it. */
+  const setN = (id, txt)=>{ const el = document.getElementById(id); if(el) el.textContent = txt; };
+  const cats = data.presetCategories || [];
+  const subs = cats.reduce((n,c)=> n + ((c.subcategories||[]).length), 0);
+  setN('pset_cats_n', `${cats.length} · ${subs} sub-categor${subs===1?'y':'ies'}`);
+
+  const flat = ['presetUnits','presetLocations','presetIncomeCategories','presetExpenseCategories']
+    .reduce((n,k)=> n + (data[k]||[]).length, 0);
+  setN('pset_flat_n', `4 lists · ${flat} word${flat===1?'':'s'}`);
+
+  const attrs = data.presetAttributes || [];
+  const used = attrs.filter(a=> presetProductsWithAttr(a.name).length).length;
+  setN('pset_attrs_n', attrs.length
+    ? `${attrs.length} · ${used} in use` : 'none yet');
 
   const limNode = document.getElementById('pset_limits_n');
   if(limNode) limNode.textContent = steps ? `${limN} of ${steps} set` : '—';
@@ -64818,6 +64891,118 @@ function renderPresetIndex(){
   if(rowLim) rowLim.classList.toggle('is-unset', !limN && !!data.presetStageAlerts);
   const rowMk = document.getElementById('pset_rule_markup');
   if(rowMk) rowMk.classList.toggle('is-unset', !mk);
+}
+
+/* ================= FOLDING THE SECTIONS ===========================
+
+   Most of this page is set once and never touched, and at this shop's
+   data it is nearly five thousand pixels tall. Folded it is a dozen
+   lines.
+
+   WHAT MAKES A FOLD DIFFERENT FROM THE TWELVE DOORS this page used to
+   have -- which is the whole question, since those doors are what the
+   redesign removed:
+
+     they are not exclusive   opening one closes nothing. Three can be
+                              open at once; the doors could show one.
+     every header has state   "17 · 64 sub-categories", "6 rules",
+                              "MTN live", "32 signed in". Six of the
+                              twelve doors carried nothing at all, and
+                              they were the six that mattered.
+     search opens them        a folded section that matches is opened by
+                              the search, which is the one thing folding
+                              genuinely costs and the one thing a tab
+                              could never give back.
+     and so do the bands      the thing that says a setting is unset
+                              opens the section that sets it.
+     it remembers             what you left open is what you find.
+
+   Folded BY DEFAULT, except whatever needs you: on a shop with nothing
+   unset and nothing tangled the page opens as its own table of
+   contents, which for a page opened twice a year is the right first
+   sight of it. */
+const PSET_FOLD_KEY = 'ow.shop.folds';
+let psetFolds = null;
+/* Sections the search has forced open. Kept apart from what you chose,
+   so clearing the box puts the page back the way you had it rather
+   than leaving four sections open that you never opened. */
+let psetFoldFound = new Set();
+
+function psetFoldState(){
+  if(psetFolds) return psetFolds;
+  psetFolds = {};
+  try {
+    const raw = localStorage.getItem(PSET_FOLD_KEY);
+    if(raw) psetFolds = JSON.parse(raw) || {};
+  } catch(e){ /* storage refused: the page still works, it just forgets */ }
+  return psetFolds;
+}
+function psetFoldSave(){
+  try { localStorage.setItem(PSET_FOLD_KEY, JSON.stringify(psetFolds||{})); }
+  catch(e){ /* as above */ }
+}
+
+/* Which sections need you, derived from the two bands. Nothing here is
+   a preference: it is the same three causes the unset band names and
+   the same findings the tangle band names. */
+function psetFoldNeeded(){
+  const need = new Set();
+  try {
+    (presetUnsetCauses()||[]).forEach(c=>{
+      if(c.key === 'markup' || c.key === 'limits') need.add('rules-here');
+      if(c.key === 'identity') need.add('on-paper');
+    });
+    const f = presetWordsFindings();
+    if(f.dupes.length || f.catchAll || f.idle.length) need.add('categories');
+  } catch(e){ /* a derivation that cannot run opens nothing */ }
+  return need;
+}
+
+function psetFoldIsOpen(id){
+  if(psetFoldFound.has(id)) return true;
+  const st = psetFoldState();
+  if(Object.prototype.hasOwnProperty.call(st, id)) return !!st[id];
+  return psetFoldNeeded().has(id);
+}
+
+function renderPresetFolds(){
+  document.querySelectorAll('#tab-presets .pset-fold').forEach(pan=>{
+    const id = pan.dataset.fold;
+    const head = pan.querySelector(':scope > .pset-fold-h');
+    const body = pan.querySelector(':scope > .pset-fold-b');
+    if(!head || !body) return;
+    const open = psetFoldIsOpen(id);
+    pan.classList.toggle('is-open', open);
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    body.hidden = !open;
+  });
+}
+
+function psetFoldOpen(id){
+  psetFoldState()[id] = true;
+  psetFoldSave();
+  renderPresetFolds();
+  const pan = document.querySelector(`#tab-presets .pset-fold[data-fold="${id}"]`);
+  if(pan) pan.scrollIntoView({block:'nearest'});
+}
+
+{
+  const sec = document.getElementById('tab-presets');
+  if(sec) sec.addEventListener('click', (e)=>{
+    const head = e.target.closest('.pset-fold-h');
+    if(!head) return;
+    const pan = head.closest('.pset-fold');
+    if(!pan) return;
+    const id = pan.dataset.fold;
+    const open = psetFoldIsOpen(id);
+    /* A section the search opened is closed by choice, not put back to
+       "found" -- so clicking the chevron always does what it looks like
+       it does. */
+    psetFoldFound.delete(id);
+    psetFoldState()[id] = !open;
+    psetFoldSave();
+    renderPresetFolds();
+  });
 }
 
 /* THE SEARCH. Forty-odd settings, one field, and it matches what a
@@ -64841,16 +65026,27 @@ function runPresetSearch(){
     document.querySelectorAll('#tab-presets .pset-rgn').forEach(r=> r.style.display = '');
     document.getElementById('pset_no_match').style.display = 'none';
     if(count) count.textContent = '';
+    /* Clearing the box puts the page back the way you had it, rather
+       than leaving open four sections you never opened. */
+    psetFoldFound.clear();
+    renderPresetFolds();
     return;
   }
 
   let hits = 0;
+  psetFoldFound.clear();
   targets.forEach(el=>{
     const hay = (el.dataset.find + ' ' + el.textContent).toLowerCase();
     const on = hay.indexOf(q) !== -1;
     el.style.display = on ? '' : 'none';
-    if(on) hits++;
+    if(on){
+      hits++;
+      /* A match inside a folded section is a match you cannot see. */
+      const pan = el.closest('.pset-fold');
+      if(pan) psetFoldFound.add(pan.dataset.fold);
+    }
   });
+  renderPresetFolds();
   document.querySelectorAll('#tab-presets .pset-rgn').forEach(r=>{
     const shown = [...r.querySelectorAll('[data-find]')].some(el=> el.style.display !== 'none');
     r.style.display = shown ? '' : 'none';
@@ -64874,6 +65070,7 @@ function runPresetSearch(){
     if(door){ goToTab(door.dataset.psetTab); return; }
     const go = e.target.closest('[data-go],[data-pset-go]');
     if(!go || !box) return;
+    if(go.dataset.psetFold && typeof psetFoldOpen === 'function'){ psetFoldOpen(go.dataset.psetFold); return; }
     box.value = go.dataset.go || go.dataset.psetGo || '';
     runPresetSearch();
     box.focus();
@@ -65028,9 +65225,12 @@ function renderPresetWordsBand(){
   const btn = document.getElementById('pset_show_dupes');
   if(btn) btn.addEventListener('click', ()=>{
     presetCatFind = f.dupes[0].label;
+    if(typeof psetFoldOpen === 'function') psetFoldOpen('categories');
     const box = document.getElementById('preset_cat_find');
     if(box) box.value = presetCatFind;
     renderPresetCategories();
+    const again = document.getElementById('preset_cat_find');
+    if(again){ again.value = presetCatFind; again.focus(); }
   });
 }
 
@@ -65858,6 +66058,7 @@ function renderPresets(){
   renderPresetBand();
   renderPresetWordsBand();
   renderPresetIndex();
+  renderPresetFolds();
 }
 function renderPresetAgentDiscounts(){
   document.getElementById('preset_agent_discount_wholesale').value = data.presetAgentDiscountWholesalePct || '';

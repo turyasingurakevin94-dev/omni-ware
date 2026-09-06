@@ -214,8 +214,12 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
      in the lists. Both are drawn after the panels they describe, for
      the same reason the counts are -- a band that ran first would be
      reporting the state before the edit that prompted the redraw. */
-  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetWordsBand\(\);\s*\n  renderPresetIndex\(\);\s*\n\}/.test(render),
-    'the counts, both bands and the index are all written after the panels they describe');
+  /* And the folds last of all, because which sections are open depends
+     on what the bands have just found: a shop with an unset price rule
+     opens the rules, and one with nothing to report opens as its own
+     table of contents. */
+  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetWordsBand\(\);\s*\n  renderPresetIndex\(\);\s*\n  renderPresetFolds\(\);\s*\n\}/.test(render),
+    'the counts, both bands, the index and the folds are written after the panels they describe');
   t.check(/if\(tab==='presets'\)\{/.test(code) && /renderPresets\(\);/.test(code),
     'and the tab redraws on entry, so every claim is about current data');
 
@@ -440,7 +444,7 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
      money in limbo?" The keys are set once and never touched; the
      ledger changes by the hour. The panel was built the other way up --
      two credential forms, then the ledger at the bottom. */
-  const sec = (/<div class="ow-pan pset-pan-2" data-find="mobile money[\s\S]*?\n            <\/div>/.exec(section) || [''])[0];
+  const sec = (/<div class="ow-pan pset-fold pset-pan-2" data-fold="mobile-money"[\s\S]*?\n            <\/div>/.exec(section) || [''])[0];
   t.check(sec.indexOf('id="momoActivity"') < sec.indexOf('id="momo_mtn_head"'),
     'the ledger comes before the credentials, not after them');
   t.check(sec.indexOf('id="momoAnswer"') < sec.indexOf('id="momoActivity"'),
@@ -498,6 +502,78 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     'and the confirm says what it will do rather than asking "are you sure"');
   t.check(!/goingLive/.test(save.slice(save.indexOf('btn.disabled = true'))),
     'asked before the save begins, not after it has started');
+}
+
+/* ---------- 13. folded, but not doors again -------------------------- */
+{
+  /* Most of this page is set once and never touched, and at a real
+     shop's data it ran near five thousand pixels. Folded it is a dozen
+     lines. The risk is obvious -- this page exists BECAUSE twelve doors
+     were wrong -- so what is pinned here is every way a fold differs
+     from a door. */
+  const folds = [...section.matchAll(/data-fold="([a-z-]+)"/g)].map((m) => m[1]);
+  t.check(folds.length === 8, `every panel folds (${folds.length})`);
+  t.check(new Set(folds).size === folds.length, 'each under its own name, so what you left open can be found again');
+
+  /* NOT EXCLUSIVE. The doors showed one pane and closed the rest; a
+     fold closes nothing. There is no code anywhere that shuts the
+     others when one opens. */
+  const fold = (/function renderPresetFolds\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(!/forEach[\s\S]{0,200}?hidden = true/.test(fold),
+    'opening one closes nothing — three can be open at once');
+
+  /* EVERY HEADER CARRIES ITS STATE. This is the whole fault of the old
+     rail: six of twelve carried a count and six carried nothing, and
+     the silent six were the ones that mattered. A fold header with
+     nothing on it is a door. */
+  const heads = [...section.matchAll(/<button type="button" class="ow-pan-h pset-fold-h"[\s\S]*?<\/button>/g)]
+    .map((m) => m[0]);
+  t.check(heads.length === folds.length, `each fold has a header (${heads.length})`);
+  const silent = heads.filter((h) => !/class="ow-pan-n"/.test(h));
+  t.check(silent.length === 0,
+    `and every one of them reports its own state (${silent.length} silent)`);
+  /* An .ow-pan-n nobody writes into is a silent header wearing a state
+     element, which is worse than none: it looks answered. Each of the
+     eight is either literal text in the markup or an id something
+     fills. */
+  const ids = heads.map((h) => (/class="ow-pan-n"(?: id="([^"]+)")?>([^<]*)</.exec(h) || []));
+  const unwritten = ids.filter((m) => m[1] && !new RegExp(`setN\\('${m[1]}'|getElementById\\('${m[1]}'`).test(code));
+  t.check(unwritten.length === 0,
+    `and nothing fills that state is left blank (${unwritten.map((m) => m[1]).join(', ')})`);
+
+  /* SEARCH OPENS WHAT IT FINDS. Folding costs Ctrl-F, and this is the
+     one thing that gives it back -- a match inside a folded section is
+     a match you cannot see. */
+  const run = (/function runPresetSearch\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/psetFoldFound\.add\(pan\.dataset\.fold\)/.test(run),
+    'a folded section holding a match is opened by the search');
+  t.check(/psetFoldFound\.clear\(\);\s*\n    renderPresetFolds\(\);\s*\n    return;/.test(run),
+    'and clearing the box puts the page back the way you had it');
+  t.check(/psetFoldFound\.delete\(id\);/.test(code),
+    'while closing one by hand is a choice the search does not undo');
+
+  /* AND SO DO THE BANDS. A band that names an unset setting and cannot
+     take you to it is a band that has told you off. */
+  t.check(/data-pset-fold=/.test(code) && /psetFoldOpen\(go\.dataset\.psetFold\)/.test(code),
+    'the unset band opens the section that sets it');
+  t.check(/psetFoldOpen\('categories'\)/.test(code),
+    'and the tangle band opens the list it is about');
+
+  /* FOLDED BY DEFAULT, EXCEPT WHAT NEEDS YOU -- derived from the same
+     two bands, so a shop with a shop-stopping blank never opens to a
+     table of contents that hides it. */
+  const need = (/function psetFoldNeeded\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/presetUnsetCauses\(\)/.test(need) && /presetWordsFindings\(\)/.test(need),
+    'what opens itself is derived from the bands, not from a preference');
+  const isOpen = (/function psetFoldIsOpen\(id\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/hasOwnProperty\.call\(st, id\)/.test(isOpen),
+    'and a section you have opened or closed yourself outranks that');
+
+  /* IT REMEMBERS. A page opened twice a year should open the way you
+     left it -- and must still work when storage refuses. */
+  t.check(/localStorage\.setItem\(PSET_FOLD_KEY/.test(code)
+    && /catch\(e\)\{ \/\* storage refused/.test(code),
+    'what you left open is what you find, and a refused store loses the memory, not the page');
 }
 
 process.exit(t.done() ? 1 : 0);
