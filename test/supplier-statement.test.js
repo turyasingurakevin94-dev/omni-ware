@@ -240,11 +240,15 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
    what they owe you, and read the other way round that sentence is
    false. */
 {
-  const panel = extractFunction(src, 'supplierStatsHTML', 'index.html');
+  /* supplierStatsHTML is gone with the modal that held it. What drew
+     the statement was one line inside it; that line is now
+     supplierStatementBlockHTML, called by the supplier account screen,
+     and it is what the shared-layout guarantee attaches to. */
+  const panel = extractFunction(src, 'supplierStatementBlockHTML', 'index.html');
   const print = extractFunction(src, 'printSupplierStatement', 'index.html');
 
-  t.check(/statementLedgerHTML\(supplierStatementRows\(s\.id, from, to\)/.test(panel),
-    'the panel renders through the shared ledger');
+  t.check(/statementLedgerHTML\(supplierStatementRows\(supplierId, from, to\)/.test(panel),
+    'the account renders through the shared ledger');
   t.check(/printStatementSheet\(st, \{/.test(print), 'and the print through the shared sheet');
   t.check(/supplierStatementRows\(supplierId, from, to\)/.test(print),
     'both off the same builder, so the sheet cannot disagree with the screen');
@@ -262,76 +266,100 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   /* No invoice, no statement. The sheet would carry a brought-forward
      zero and "the account is settled" -- a true document about nothing,
      and a button that hands somebody a blank page teaches them not to
-     trust the button. */
-  const open = extractFunction(src, 'openSupplierStats', 'index.html');
-  /* Gated on its own, not on the action bar around it: the bar now also
-     carries "ask for prices", which a supplier with no invoice can very
-     much have. Printing a statement for one still produces a document
-     about nothing. */
-  t.check(/\$\{a\.invoiceCount \? `<button type="button" class="btn btn-ghost" id="sstPrintBtn"/.test(open),
+     trust the button.
+
+     The gate moved with the screen: it used to sit on a.invoiceCount
+     inside the modal builder, and now sits on r.everInvoiced in the
+     account, which is the same reading of the same purchase invoices. */
+  const acct = extractFunction(src, 'renderSupplierAccount', 'index.html');
+  t.check(/\$\{r\.everInvoiced \? `<button type="button" class="btn btn-ghost ow-sm" data-sact="print"/.test(acct),
     'the print button is withheld from a supplier with no purchase invoice');
-  t.check(/\(s && \(a\.invoiceCount \|\| ask\.length\)\)/.test(open),
-    'while the bar itself appears for either reason to be there');
-  t.check(/if\(!a\.invoiceCount\)\{/.test(panel) && /have not raised a purchase invoice/.test(panel),
-    'and the panel says why in words instead of showing an empty table');
-  t.check(/Their prices are\s*\n?\s*on the card behind this/.test(panel),
-    'pointing at what that supplier DOES have on file, since a priced supplier is not an empty one');
+  t.check(/const ask = r\.ask\.length\s*\n?\s*\? `<button/.test(acct),
+    'while asking for a price is offered on its own terms, which a supplier with no invoice can very much have');
+  t.check(/No purchase invoice has been raised with them yet/.test(acct),
+    'and the account says why in words instead of showing an empty ledger');
+  t.check(/the statement fills in once the first order to them is billed/.test(acct),
+    'naming what would make one appear');
 }
 
 /* ---------- 8. reached the same way a customer is --------------------- */
 {
-  const wiring = (/\(function wireSupplierCards\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
-  t.check(wiring.length > 0, 'the supplier grid opens an account');
-  t.check(/openSupplierStats\(card\.dataset\.supplier\)/.test(wiring), 'from the card that was clicked');
-  /* Scoped to the SUPPLIER card's own markup. Tested against the whole
+  /* The supplier grid became a register on the .ow- layer, and the
+     dialog it opened became a screen. What is checked is unchanged: a
+     row opens that supplier's account, it is reachable by keyboard as
+     well as by pointer, a control inside it does only its own job, and
+     the listener is bound once on the wrapper because the register is
+     rebuilt on every search keystroke. */
+  const wiring = (/\(function wireSupplierRegister\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
+  t.check(wiring.length > 0, 'the buying book opens an account');
+  t.check(/if\(name === 'open'\) return openSupplierAccount\(id\);/.test(wiring),
+    'from the row that was clicked');
+  /* Scoped to the SUPPLIER row's own markup. Tested against the whole
      file, `role="button" tabindex="0"` is satisfied by the customer
-     card, and stripping it off the supplier card passes unnoticed --
+     row, and stripping it off the supplier row would pass unnoticed --
      which is exactly what happened the first time this was written. */
-  const card = extractFunction(src, 'supplierCardHTML', 'index.html');
-  t.check(/data-supplier="\$\{esc\(s\.id\)\}"/.test(card), 'the card carries the id');
-  t.check(/role="button" tabindex="0"/.test(card),
+  const row = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
+  t.check(/data-sopen="\$\{esc\(r\.id\)\}"/.test(row), 'the row carries the id');
+  t.check(/role="button" tabindex="0"/.test(row),
     'and is reachable by keyboard, not only by pointer');
-  t.check(/title="See the account for \$\{esc\(s\.name\)\}"/.test(card),
-    'and says what clicking it does, since a card that opens something must look like it opens something');
-  t.check(/e\.target\.closest\('button'\)/.test(wiring),
-    'a click on commission, edit or delete does only its own job');
+  t.check(/title="See the account for \$\{esc\(r\.name\)\}"/.test(row),
+    'and says what clicking it does, since a row that opens something must look like it opens something');
+  t.check(/e\.target\.closest\('a, button'\)/.test(wiring),
+    'a click on an action inside the row does only its own job');
   t.check(/e\.key !== 'Enter' && e\.key !== ' '/.test(wiring), 'and it opens on Enter or Space');
   t.check(/e\.preventDefault\(\)/.test(wiring), 'with Space stopped from scrolling the page instead');
-  // Delegated: the grid is rebuilt on every search keystroke.
-  t.check(/wrap\.addEventListener/.test(wiring) && !/card\.addEventListener/.test(wiring),
-    'bound once on the wrapper, so re-rendering the grid does not stack listeners');
+  // Delegated: the register is rebuilt on every search keystroke.
+  t.check(/wrap\.addEventListener/.test(wiring) && !/row\.addEventListener/.test(wiring),
+    'bound once on the wrapper, so re-rendering the register does not stack listeners');
+  /* The account is a VIEW of this screen, not a dialog over it. A modal
+     could not be printed from, could not be read beside anything else,
+     and trapped the keyboard behind whatever was opened next. */
+  t.check(!/id="supplierStatsModal"/.test(src),
+    'and the dialog it replaced is gone from the file, not merely unused');
+  t.check(/if\(name === 'book'\)\{ supViewId = null;/.test(wiring),
+    'with a way back to the book rather than an X in a corner');
 }
 
-/* ---------- 9. the strip above the grid ------------------------------- */
+/* ---------- 9. the strip above the register --------------------------- */
 {
-  const sum = extractFunction(src, 'renderSupplierSummary', 'index.html');
-  t.check(/creditorTotalOwed\(s\.id\)/.test(sum),
-    'what you owe is read from creditorTotalOwed, not summed a second way');
-  t.check(!/purchaseInvoiceBalanceDue/.test(sum),
-    'so the strip cannot drift from the creditors list it summarises');
-  t.check(/v > 0\.5/.test(sum),
-    'and it counts a supplier as owing on the same 0.5 threshold the creditors list uses');
-  /* These were "the customers page's three, asked of the other side".
-     Customers is a console now and its strip asks four different
-     questions -- who bought in ninety days, what they paid, what the
-     shop kept, what is still owed -- so the suppliers strip is on its
-     own until that screen is converted too. The three figures are
-     pinned here because they are what this screen promises, not
-     because another screen happens to match. */
-  t.check(/Total suppliers/.test(sum) && /Total you owe/.test(sum) && /Suppliers with a balance/.test(sum),
-    'the three figures are named for what they count');
-  t.check(/renderSupplierSummary\(\);/.test(extractFunction(src, 'renderSuppliers', 'index.html')),
-    'and it is rebuilt with the grid');
+  const render = extractFunction(src, 'renderSuppliers', 'index.html');
+  const row = extractFunction(src, 'supplierBookRow', 'index.html');
 
-  /* Named for what it is rather than for the first screen that had one
-     -- which was Customers, and Customers no longer draws it. The name
-     is left alone deliberately: renaming it to .sup-summary now would
-     be the same mistake in the other direction, and the suppliers
-     directory is the next screen due for the console anyway. */
-  t.check(/\.dir-summary-row\{/.test(src) && !/cust-summary/.test(src),
-    'the strip’s classes stay unprefixed rather than being claimed by the one page left using them');
-  t.check(/id="supSummaryRow"/.test(src) && !/id="custSummaryRow"/.test(src),
-    'and only the suppliers page still carries a row — the customers strip is the layer’s now');
+  /* WHAT THE STRIP ASKS CHANGED, and that is the point of the
+     conversion. It used to be "total suppliers / total you owe /
+     suppliers with a balance" -- three tiles of which two were
+     Creditors' headline figure restated on a screen that cannot act on
+     it, one of them painted crimson on ordinary trade credit. The four
+     here are the buying book's own health: how many suppliers can
+     actually be bought from, how many priced lines have a second quote,
+     what has been spent, and how many prices are past their own age.
+     Not one of them is Creditors'. */
+  t.check(/You can buy from/.test(render) && /Lines with a choice/.test(render)
+    && /Spent in 90 days/.test(render) && /Prices to confirm/.test(render),
+    'the four figures are named for what they count');
+  t.check(!/Total suppliers/.test(render) && !/Total you owe/.test(render),
+    'and none of them restates the figure Creditors exists to give');
+
+  /* What is owed is still shown -- it is one column of the register,
+     because it is what you check before paying a bill -- and it is
+     still read from creditorTotalOwed rather than summed a second way,
+     which is what stopped the old strip drifting from the list it
+     summarised. */
+  t.check(/creditorTotalOwed\(s\.id\)/.test(row),
+    'what you owe is read from creditorTotalOwed, not summed a second way');
+  t.check(!/purchaseInvoiceBalanceDue/.test(row),
+    'so the register cannot drift from the creditors list beside it');
+  t.check(/r\.owed > 0\.5/.test(extractFunction(src, 'supplierRegisterRowHTML', 'index.html')),
+    'and a supplier counts as owing on the same 0.5 threshold the creditors list uses');
+
+  /* The borrowed strip is gone from the FILE, not merely unused.
+     Customers stopped drawing .dir-summary-row when it converted, and
+     this was the last screen carrying it -- along with the rule that
+     painted ordinary trade credit crimson. */
+  t.check(!/\.dir-summary-row\{/.test(src) && !/\.dir-summary-card\{/.test(src),
+    'the borrowed summary strip is gone from the file, and with it the crimson it put on trade credit');
+  t.check(!/id="supSummaryRow"/.test(src),
+    'and the suppliers page draws the layer’s strip instead');
 }
 
 process.exit(t.done() ? 1 : 0);

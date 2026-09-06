@@ -218,12 +218,18 @@ const reset = () => {
   // customer register's own meta line under the name.
   t.check(/Also a supplier/.test(src) && /Also a customer/.test(src),
     'both lists say when somebody is on the other one too');
-  /* Only the customer side ever netted the two: bothSidesPosition is
-     called once in the whole file, and the supplier card carries the
-     tag alone. So the pin is on the customer account, which is where
-     the line lives now. */
-  t.check((src.match(/bothSidesPosition\(/g) || []).length === 2,
-    'the netting is worked out in one place and read in one place');
+  /* Both sides net it now, and both read the SAME helper: the customer
+     account did from the start, and the supplier account joined it when
+     Suppliers converted -- two call sites plus the declaration. Two
+     screens each subtracting one balance from the other is how they
+     come to disagree about which way the money runs, which is exactly
+     the fault the sign check below was written for. */
+  t.check((src.match(/bothSidesPosition\(/g) || []).length === 3,
+    'the netting is worked out in one place and read from it on both sides');
+  t.check(/const linked = r\.linked \? bothSidesPosition\(r\.linked\) : null;/.test(src),
+    'the supplier account reads it through the helper rather than subtracting the two itself');
+  t.check(/linked\.net > 0 \? `<b>\$\{f\(linked\.net\)\}<\/b> your way/.test(src),
+    'and reads its sign the same way round, so the two accounts cannot contradict each other');
   t.check(/both: bothSidesPosition\(c\),/.test(src) && /\$\{r\.both \? `<p class="ow-q-note">/.test(src),
     'and the customer account draws the line only when the helper found one');
 
@@ -289,39 +295,46 @@ const reset = () => {
     'with the whole name in a title, so a truncated one can still be read');
 }
 
-/* ---------- the tag sits with the code, not inside the name ----------
-   Inline in the name it wrapped as though it were part of the name:
-   "Feko" / "(Ambrose)" / "Also a customer" / "S114" -- a four-line head
-   where the neighbouring cards have two.
+/* ---------- the name is the whole of its own element ------------------
+   Inline in the name, the "Also a customer" tag wrapped as though it
+   were part of it: "Feko" / "(Ambrose)" / "Also a customer" / "S114" --
+   a four-line head where the neighbouring cards had two.
 
-   The customer half of this is now the register's meta line, which is
-   one truncating block -- place, code, the tag and "no number on file"
-   in one gapped sentence under the name. It cannot wrap into a
-   four-line head because it cannot wrap at all. */
+   Both directories are registers now, and both solve it the same way:
+   the name is one truncating element, and everything qualifying it --
+   place, code, the tag, the shop number, "no number on file" -- is one
+   gapped sentence underneath that cannot wrap because it cannot wrap at
+   all. */
 {
-  const sup = (/function supplierCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
-  const cus = (/function customerRegisterRowHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const sup = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
+  const cus = extractFunction(src, 'customerRegisterRowHTML', 'index.html');
 
-  t.check(/<div class="sc-name">\$\{esc\(s\.name\)\}<\/div>/.test(sup),
+  t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">\$\{esc\(r\.name\)\}<\/span>/.test(sup),
     'the supplier name is the whole of its own element');
   t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">\$\{esc\(r\.name\)\}<\/span>/.test(cus),
     'and so is the customer name');
 
-  const metaLine = (fn, cls, idExpr) =>
-    new RegExp(`<div class="${cls}-meta">\\s*<span class="${cls}-id">\\$\\{esc\\(${idExpr}\\)\\}</span>\\s*\\$\\{[^]*?both-tag`).test(fn);
-  t.check(metaLine(sup, 'sc', 's\\.id'), 'the tag follows the supplier code on one meta line');
+  t.check(/const meta = \[r\.place, r\.id, r\.shopNo \? 'Shop ' \+ r\.shopNo : '',/.test(sup)
+    && /r\.linked \? 'Also a customer' : '',/.test(sup),
+    'the tag follows the supplier code on the register\'s own meta line');
   t.check(/const meta = \[r\.place, r\.id, r\.both \? 'Also a supplier' : ''/.test(cus),
-    'and the customer code carries it on the register\'s own meta line, in that order');
+    'and the customer code carries it on the same line, in the same order');
 
-  /* .both-tag carries margin-left for when it trails text inline. In a
-     gapped flex row that margin is a second gap, so it is zeroed --
-     otherwise the tag sits 14px off the code it belongs to. */
-  t.check(/\.sc-meta\{[^}]*display:flex/.test(src) && /\.sc-meta\{[^}]*gap:7px/.test(src),
-    'the supplier meta line is one gapped row');
-  t.check(/\.sc-meta \.both-tag\{margin-left:0;\}/.test(src),
-    'with the tag’s inline margin dropped, so the gap is not applied twice');
-  t.check(/\.sc-meta\{[^}]*flex-wrap:wrap/.test(src),
-    'and it wraps rather than pushing the tag off a narrow card');
+  /* One truncating block, not a wrapping row of chips: three
+     declarations or none, and min-width:0 so it shrinks instead of
+     pushing the figure columns out of the box. */
+  t.check(/\.ow-tbl-s\{[\s\S]{0,220}?overflow:hidden;text-overflow:ellipsis;white-space:nowrap;/.test(src),
+    'the meta line truncates properly rather than clipping mid-glyph');
+  t.check(/<span class="ow-tbl-s" title="\$\{esc\(meta\)\}">/.test(sup)
+    && /<span class="ow-tbl-s" title="\$\{esc\(meta\)\}">/.test(cus),
+    'with the whole of it in a title on both sides, so a truncated one can still be read');
+
+  /* .both-tag carried margin-left for when it trailed text inline. It
+     has no caller on either register -- the tag is a word in a
+     middot-joined sentence now, not an element -- so nothing here is
+     defending a gap applied twice. */
+  t.check(!/both-tag/.test(sup) && !/both-tag/.test(cus),
+    'and neither register wears the old inline tag element');
 }
 
 process.exit(t.done() ? 1 : 0);

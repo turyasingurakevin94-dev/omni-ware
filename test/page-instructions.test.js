@@ -116,8 +116,14 @@ const src = read('index.html');
      the screen will never do is .ow-ph-help behind the "i", where the
      seven console screens before it put theirs. One fewer screen to
      police, not one that stopped being policed. */
+  /* 5 -> 4. Suppliers converted: its name and its one-line sub are
+     .ow-ph, and the paragraph about what the ranking counts, what the
+     band means and what the screen deliberately does not do is
+     .ow-ph-help behind the "i", where every console screen before it
+     put theirs. One fewer screen to police, not one that stopped being
+     policed. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 5, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length >= 4, `the app has ${heads.length} screens carrying a page head`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
@@ -131,8 +137,12 @@ const src = read('index.html');
   /* 6 -> 5, for the same conversion, and the floor still only moves
      down. Map did not lose its explanation: it gained an .ow-ph-help,
      which is the fold this file exists to police. */
+  /* 5 -> 4, for the same conversion, and the floor still only moves
+     down. Suppliers did not lose its explanation: what was one
+     instruction about an ID field is now a full .ow-ph-help behind the
+     "i", which is the fold this file exists to police. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 5,
+  t.check(paras.length >= 4,
     `${paras.length} of them still hold their description in the markup, where it was written`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),

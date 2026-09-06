@@ -1118,10 +1118,27 @@ const sold = (productId, qty, date) => data.stockLog.push({
   t.check(/triggerPricesRender\(\);/.test(save), 'the registry is redrawn');
   t.check(/renderDashPriceReview\(\);/.test(save),
     'and so is the report, which would otherwise still be asking for what was just answered');
+  /* And the suppliers screen, whose band, strip and Standing chips are
+     all counts of exactly what was just answered. Left out, entering a
+     reply on that screen leaves it insisting the prices are still to be
+     confirmed. */
+  t.check(/renderSuppliers\(/.test(save),
+    'and the buying book, which counts the very prices the sheet just settled');
 
-  // Reachable beside the ask, since the two halves are one errand.
-  t.check(/id="sstReplyBtn"/.test(src) && /openSupplierReply\(replyBtn\.dataset\.id\)/.test(src),
-    'the supplier panel offers it next to the ask');
+  /* Reachable beside the ask, since the two halves are one errand.
+
+     It used to be #sstReplyBtn in the supplier modal, wired by id after
+     the dialog was written. The modal is gone -- the supplier account
+     is a screen now -- so the button lives at the foot of the list of
+     prices worth asking about, and goes through the register's one
+     delegated listener like every other control on that screen. The
+     guarantee is unchanged: whatever draws the ask also offers the way
+     to write down the answer. */
+  const askBlock = extractFunction(src, 'supplierAskBlockHTML', 'index.html');
+  t.check(/data-sact="reply"/.test(askBlock),
+    'the list of prices to ask about offers the reply sheet at its foot');
+  t.check(/if\(name === 'reply'\) return openSupplierReply\(id\);/.test(src),
+    'and the suppliers screen wires it to the sheet');
 
   /* NOT renderPrBulkVariantRows, which the plan for this named. That
      renders VARIANTS OF ONE PRODUCT, indexed into p.variants with shared

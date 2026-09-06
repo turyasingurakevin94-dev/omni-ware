@@ -83,16 +83,23 @@ const { nameInitials } = compileScope(
   });
   const calls = (src.match(/nameInitials\(/g) || []).length;
   t.check(calls >= 4, `all three grids go through the one function (${calls} references)`);
-  /* The customer grid is a register now and a 13px table row has no
-     width for a 38px square, so the customer avatar went with the card.
-     Staff and suppliers still draw one, and the point of this section
-     -- ONE initials function, never three copies -- is unchanged: the
-     count above still has to clear four, and nothing may reintroduce a
-     private copy. */
-  ['sc-avatar">${esc(nameInitials(s.name))}']
+  /* Both directory grids are registers now -- Customers first, then
+     Suppliers -- and a 13px table row has no width for a 38px square,
+     so both avatars went with their cards. The point of this section is
+     unchanged and is not about any one grid: ONE initials function,
+     never a private copy per screen. The count above still has to clear
+     four, and every avatar left in the app is lettered by it. */
+  ['rost-av${st.key===\'free\'?\' is-free\':\'\'}">${esc(nameInitials(s.name))}']
     .forEach((frag) => t.check(src.includes(frag), `the avatar is rendered from it: ${frag.slice(0, 12)}…`));
   t.check(!/cc-avatar/.test(src),
     'and the customer card\'s avatar is gone with the card, not left styling nothing');
+  /* Scoped to the register, not to the file: the agent roster still
+     wears .supplier-card and .sc-avatar, and those are its own. What
+     went is the SUPPLIERS screen's avatar -- 44 oxide marks on a screen
+     allowed one accent, lettering two characters that told a reader
+     nothing the name beside them did not. */
+  t.check(!/sc-avatar/.test(extractFunction(src, 'supplierRegisterRowHTML', 'index.html')),
+    'and the supplier register draws no avatar: 44 oxide marks on a screen allowed one accent');
 
   /* This used to pin that waInitials stayed its OWN function, because
      it fell back to the last two DIGITS of a bare phone number -- a
@@ -147,22 +154,33 @@ const { nameInitials } = compileScope(
 
 /* ---------- 5. a zero is not good news -------------------------------- */
 {
-  const card = (/function supplierCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/sc-stat best \$\{stats\.best \? '' : 'zero'\}/.test(card),
-    'a supplier who wins nothing is marked rather than shown a green zero');
-  t.check(/sc-stat \$\{stats\.priced \? '' : 'zero'\}/.test(card),
-    'and so is one with nothing priced');
+  /* This lived on .sc-stat: the supplier card showed "27 BEST PRICE" in
+     verdigris, and a supplier who won nothing showed a green 0 -- a
+     zero painted as good news. .sc-stat.zero fixed it by dropping such
+     a figure back to ordinary ink, and the whole argument was which of
+     two tying rules came LATER in the file.
 
-  /* .sc-stat.zero b and .sc-stat.best b tie on specificity (0,2,1), so
-     the only thing deciding the colour of a zero is which comes LATER.
-     The repo has been bitten by this before -- a media query adds no
-     specificity either. */
-  const bestAt = src.indexOf('.sc-stat.best b{');
-  const zeroAt = src.indexOf('.sc-stat.zero b{');
-  t.check(bestAt > -1 && zeroAt > -1, 'both rules exist');
-  t.check(zeroAt > bestAt,
-    'and the zero rule comes after the green one — they tie on specificity, so order is the whole argument');
-  t.check(/\.sc-stat\.zero b\{color:var\(--ink-soft\);\}/.test(src),
+     The card is a register row now and the figure is the column the
+     screen is RANKED on, so the same question is asked of the same
+     figure in its new home: green where they are winning lines, plain
+     ink where they win none, and a dash where they price nothing at all
+     and the app cannot say they win none. */
+  const row = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
+  t.check(/ow-fig su-win\$\{r\.wins \? '' : ' su-nil'\}/.test(row),
+    'a supplier who wins nothing is marked rather than shown a green zero');
+  t.check(/\$\{r\.priced\s*\n?\s*\?[\s\S]{0,120}?: dash\}/.test(row),
+    'and one with nothing priced shows a dash, because "cheapest on none" is a claim the app cannot make without a price');
+
+  /* .su-win and .su-win.su-nil do NOT tie -- the second is (0,2,0)
+     against (0,1,0) -- which is the lesson from .sc-stat.zero applied
+     rather than repeated: a rule whose only defence is document order
+     is one media query away from flipping. */
+  const winAt = src.indexOf('.su-win{');
+  const nilAt = src.indexOf('.su-win.su-nil{');
+  t.check(winAt > -1 && nilAt > -1, 'both rules exist');
+  t.check(nilAt > winAt,
+    'the quieter rule comes after the green one, and beats it on specificity as well as on order');
+  t.check(/\.su-win\.su-nil\{color:var\(--ow-ink-600\);\}/.test(src),
     'a zero reads as an ordinary count, leaving green for suppliers who actually win something');
 }
 

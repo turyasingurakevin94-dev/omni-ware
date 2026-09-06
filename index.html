@@ -2870,16 +2870,14 @@
   }
 
   /* Customer cards */
-  /* The strip above a directory grid. Named for what it is rather than
-     for the first screen that had one: customers and suppliers both
-     carry it now, and a .cust- prefix on the suppliers page is a lie
-     the next reader has to decode before they can trust anything else
-     in the rule. */
-  .dir-summary-row{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;}
-  .dir-summary-card{flex:1;min-width:160px;background:#F7F9FB;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;}
-  .dir-summary-card b{font-size:19px;font-family:'IBM Plex Mono',monospace;color:var(--ink);line-height:1.1;}
-  .dir-summary-card span{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
-  .dir-summary-card.owed b{color:var(--danger);}
+  /* THE BORROWED SUMMARY STRIP IS GONE. .dir-summary-row and
+     .dir-summary-card were the strip above a directory grid; Customers
+     stopped drawing them when it converted and Suppliers was the last
+     screen carrying them. Both screens now use the layer's .ow-strip,
+     which is what every other console screen uses -- and with the rule
+     goes .dir-summary-card.owed, which painted ordinary trade credit in
+     --danger. Crimson in this app means BAD: overdue, behind, a loss.
+     Buying and selling on credit is how the shop trades. */
 
   /* ---- A repayment is due ---- */
   .ld-intro{font-size:13px;color:var(--ink-soft);line-height:1.45;margin:0 0 14px;}
@@ -9444,9 +9442,9 @@
      cause: a grid with declared tracks cannot put two figures on two
      lines, so alignment stopped being something a rule has to defend.
 
-     .dir-summary-row and .dir-summary-card stay in the FILE -- the
-     suppliers directory is still a grid and wears them -- but this
-     screen may not draw them again. */
+     .dir-summary-row and .dir-summary-card have since gone from the
+     FILE altogether: Suppliers was the last screen wearing them and it
+     is on the layer now too. */
 
   /* The register's tracks. .ow-tbl.cu-tbl, not .cu-tbl: the layer sets
      the same custom property on .ow-tbl, and a bare class would lose
@@ -9696,6 +9694,250 @@
     .cu-find{flex:1 1 100%;width:100%;}
     .cu-find .ow-f-in{min-width:0;width:100%;height:var(--ow-tap);}
     .cu-find .ow-f-v{font-size:16px;}
+  }
+
+  /* ==================================================================
+     SUPPLIERS, ON THE CONSOLE.
+
+     The screen was a rolodex answering a question Creditors answers
+     better. Its headline was an instruction about an ID field, its
+     three tiles were Creditors' three figures with one of them painted
+     crimson on ordinary trade credit, and its list was alphabetical and
+     paged at 24 -- so twenty of forty-four suppliers sat behind a
+     button and the best one's position on screen was decided by the
+     alphabet.
+
+     Meanwhile supplierStats() already worked out, for every supplier,
+     how many lines they price and how many of those they currently WIN.
+     That is the whole answer to "who is worth buying from", and it was
+     two 16px tiles at the foot of a card. supplierAskList() already
+     knew which of their prices have gone past the age their OWN
+     invoices say they move at -- and that lived inside a modal, one
+     supplier at a time.
+
+     So: .ow-ph for the head and the search, .ow-strip for whether the
+     buying book is healthy, .ow-pan for the two regions, .ow-seg for
+     the five lenses, and .ow-tbl for both the band and the register --
+     the same components Customers, Creditors, Invoices and Purchase
+     invoices are already built from.
+
+     .supplier-card and .supplier-grid stay in the FILE: the agent
+     roster and the staff list wear them. This screen may not draw them
+     again. .dir-summary-row and .dir-summary-card are gone from the
+     file entirely -- Customers stopped drawing them when it converted
+     and this was the last screen using them. */
+
+  /* The register's tracks. .ow-tbl.su-tbl, not .su-tbl: the layer sets
+     the same custom property on .ow-tbl, and a bare class would lose
+     the cascade to it on document order. */
+  .ow-tbl.su-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 84px 108px 104px 132px 128px 18px;}
+  .su-tbl .ow-tbl-h,.su-tbl .ow-tbl-r{gap:var(--ow-sp-8);}
+  /* A column NAME may be cut; a column's figures may not. */
+  .su-tbl .ow-tbl-h > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .su-tbl .ow-tbl-r{align-items:center;}
+  /* A row opens the account, so it wears the pointer and the chevron a
+     console register's openable row wears. There is no expanded state:
+     one supplier is a screen, not a drawer. */
+  .su-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;}
+  .su-c-st{min-width:0;}
+  /* AN <input> CANNOT ELLIPSIS. It clips its value mid-glyph with no
+     marker and no way to read the rest, so a field whose placeholder is
+     a promise has to be wide enough to keep it: "Name, eith" is a
+     search box that has already broken its word. */
+  .su-find .ow-f-in{min-width:330px;}
+  /* .ow-f-v is 84px wide by default -- it was built for a figure, and a
+     figure is short. Widening the box around it changes nothing until
+     the input inside is told to take the room. */
+  .su-find .ow-f-v{flex:1;width:auto;}
+  /* A dash is not a zero and must not be read as one: it is the app
+     saying it cannot know yet. Caption ink at 13px would be 3.1 to 1,
+     so it takes the secondary ink every other quiet figure takes. */
+  .su-dash{color:var(--ow-ink-600);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  /* The matched lines, when the search was for a product rather than
+     for a name. A full-width line under the row, because it belongs to
+     the whole row rather than to any one column. */
+  .su-match{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);
+    margin:var(--ow-sp-2) 0 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .su-match-i{display:inline-flex;align-items:baseline;gap:var(--ow-sp-6);min-width:0;max-width:100%;}
+  .su-match-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .su-match-i b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);white-space:nowrap;}
+  /* WINNING LINES IS THE SUBJECT OF THIS SCREEN, so the one figure it
+     ranks on is the one figure allowed a colour -- and only where there
+     is something to be glad about. A supplier who wins nothing reads as
+     an ordinary count, which is what .sc-stat.zero did on the card and
+     is the same argument: green on a zero says a zero is good news.
+     AFTER .su-win, which it ties with on specificity (0,2,0). */
+  .su-win{color:var(--ow-verdigris);}
+  .su-win.su-nil{color:var(--ow-ink-600);}
+
+  /* The band: prices that have outlived what the shop's own invoices
+     say they are good for. Its own tracks, because a reason is a
+     sentence and the register's first column is a name. */
+  .ow-tbl.su-att-tbl{--ow-tbl-cols:minmax(0,1fr) 168px 132px 156px;}
+  .su-att-tbl .ow-tbl-r{align-items:center;}
+  .su-att-tbl .ow-tbl-r:first-child{border-top:0;}
+  /* The one thing on this screen allowed to wrap. Truncating the reason
+     would leave a queue of names with no reason to be in it. */
+  .su-why{margin:2px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    line-height:1.45;max-width:var(--ow-measure);}
+  .su-why b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .su-tel{text-decoration:none;}
+  .su-tel-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+  /* ---- the account's three tables --------------------------------- */
+  /* What they price that has outlived its own age, and what runs
+     through each one. The reason is the one thing here allowed to wrap:
+     truncating it would leave a list of items with no reason to be on
+     it. */
+  .ow-tbl.su-ask{--ow-tbl-cols:minmax(0,1fr) 132px minmax(0,1.1fr);}
+  .su-ask-why{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;}
+  /* What you buy from them, against what anybody else quotes on the
+     same line. The saving keeps a column of its own rather than being
+     left for the reader to subtract. */
+  .ow-tbl.su-buy{--ow-tbl-cols:minmax(0,1fr) 104px 104px 78px 118px;}
+  .ow-tbl.su-bill{--ow-tbl-cols:minmax(0,1fr) 132px 132px;}
+  /* Cheaper than everyone else is good news. Being beaten on a line is
+     not a warning, it is a fact, so it reads as an ordinary dash. */
+  .su-save{color:var(--ow-verdigris);}
+  .su-sp{flex:1;}
+
+  /* Delete sits after the spacer rather than beside Edit. On the old
+     card the two were 28px icons six pixels apart, a hundred and
+     thirty-two of them on the screen at once. */
+  .su-del:hover{color:var(--ow-crimson);border-color:var(--ow-crimson);}
+  .su-note{flex:1 1 100%;margin:var(--ow-sp-8) 0 0;font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+  .su-foot{border-top:1px solid var(--ow-rule-soft);}
+  /* An empty state is prose, and prose gets a measure: the layer's
+     .ow-empty centres its block, and on a 1140px region that leaves a
+     180-character line. */
+  .su-empty-pan .ow-empty,.ow-empty.su-empty{text-align:left;padding:var(--ow-sp-20) var(--ow-sp-16);}
+  .su-empty-pan .ow-empty b,.ow-empty.su-empty b{display:block;margin-bottom:var(--ow-sp-6);}
+  .su-empty-pan .ow-empty span,.ow-empty.su-empty span{display:block;max-width:var(--ow-measure);}
+
+  /* ---- the account, as a screen ------------------------------------
+     The register steps aside for it rather than a dialog opening over
+     it: #supplierStatsModal could not be printed from, could not be
+     read beside anything else, and trapped the keyboard behind whatever
+     was opened next. */
+  .su-acct-ph{align-items:baseline;row-gap:var(--ow-sp-4);}
+  .su-acct-ph .ow-ph-t{min-width:0;max-width:46ch;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+  /* THE WAY BACK IS NOT A BUTTON, and this is not a fourteenth button
+     family -- it is the same one navigation control Customers' account
+     already carries, and it is deliberately not .btn (the header
+     centres a .btn's label) nor .ow-link (that is oxide, and the accent
+     here is spent on asking for prices). */
+  .su-back{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;
+    align-items:center;gap:var(--ow-sp-6);height:26px;margin-bottom:var(--ow-sp-6);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);position:relative;}
+  .su-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .su-back:hover{color:var(--ow-ink-900);}
+  .su-back:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  /* A 26px control against a 44px floor: an invisible ring gives the
+     finger the target without putting a slab in the header. */
+  .su-back::after{content:"";position:absolute;inset:-9px -8px;}
+  .su-acct-grid{align-items:start;}
+  /* The four figures sit above the two columns rather than in them, so
+     they carry their own gap; the strip INSIDE the grid does not. */
+  .ow-strip.su-acct{margin-bottom:var(--ow-sp-16);}
+  .su-acct-grid .ow-strip{margin-bottom:0;}
+  .su-acct-bar{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;}
+  /* The rail's three blocks: how to reach them, what their commission
+     stands at, and where their goods are collected from. */
+  .su-side-a{padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .su-side-a .btn{width:100%;}
+  /* The same control in the main column, where a full-width button
+     would be 800px of ghost border. It sits under the list it acts on
+     and is sized to its own words. */
+  .su-ask-a{padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-12);}
+
+  @media (max-width:820px){
+    /* THE PHONE IS ITS OWN DESIGN. At the desk you work through the
+       book deciding who is worth buying from; on a phone you are in a
+       yard about to buy one thing, so the register becomes a card whose
+       two figures are what they win you and what you owe them, and the
+       three desk columns step off it rather than being shrunk into it. */
+    .su-tbl .ow-tbl-h{display:none;}
+    .ow-tbl.su-tbl{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .su-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);
+      min-height:var(--ow-tap);align-items:baseline;}
+    .su-tbl .ow-tbl-r > .ow-tbl-c{grid-column:1/-1;}
+    .su-tbl .ow-tbl-p{font-size:16px;white-space:normal;}
+    .su-tbl .ow-tbl-s{font-size:var(--ow-t-13);white-space:normal;}
+    .su-tbl .su-c-st{grid-column:1/-1;}
+    /* .ow-tbl.su-tbl and .ow-tbl-n.su-c-*, not the bare classes: the
+       layer's own phone rule for a labelled figure cell
+       (.ow-tbl-n[data-l]{display:flex}) sits LATER in the stylesheet and
+       ties on specificity, so a plainer selector here would lose on
+       document order and these three would reappear. */
+    .ow-tbl.su-tbl .ow-tbl-n.su-c-priced,
+    .ow-tbl.su-tbl .ow-tbl-n.su-c-conf,
+    .ow-tbl.su-tbl .ow-tbl-n.su-c-spent{display:none;}
+    .su-tbl .ow-tbl-n{font-size:15px;}
+    .su-tbl .su-cr{justify-self:end;width:14px;height:14px;}
+    /* The account's tables lose the columns a yard cannot use: the
+       reason behind a stale price, and the second quote. What is left
+       on each row is the item and the one figure that decides
+       anything. */
+    .ow-tbl.su-ask{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .su-ask .ow-tbl-h{display:none;}
+    .su-ask .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-4);}
+    .su-ask .ow-tbl-c.su-ask-why{grid-column:1/-1;font-size:var(--ow-t-12);}
+    .ow-tbl.su-buy{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .su-buy .ow-tbl-h{display:none;}
+    .su-buy .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-4);}
+    .su-buy .ow-tbl-r > .ow-tbl-c{grid-column:1/-1;}
+    .su-buy .ow-tbl-p{white-space:normal;font-size:15px;}
+    .ow-tbl.su-bill{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .su-bill .ow-tbl-h{display:none;}
+    .su-bill .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-4);}
+    .su-att-tbl .ow-tbl-h{display:none;}
+    .ow-tbl.su-att-tbl{--ow-tbl-cols:minmax(0,1fr);}
+    .su-att-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);align-items:start;}
+    .su-att-tbl .ow-tbl-n{justify-self:start;text-align:left;}
+    /* The band's figure carries its own basis in words, so it must not
+       also grow the layer's phone label. */
+    .su-att-tbl .ow-tbl-n::before{content:none;}
+    /* A grid item stretches to its track unless told not to, and a chip
+       stretched to 358px stops reading as a chip. */
+    .su-att-tbl .ow-cp,.su-tbl .ow-cp{justify-self:start;}
+    .su-att-tbl .ow-tbl-a{justify-self:stretch;}
+    .su-att-tbl .ow-tbl-a .btn.ow-sm,.su-acts .btn.ow-sm{min-height:var(--ow-tap);}
+    .su-why{font-size:var(--ow-t-13);max-width:none;}
+    .su-acct-ph .ow-ph-t{max-width:none;white-space:normal;}
+    /* Two to a row, and Delete on a line of its own at the end. The
+       spacer that pushes it right on a desk has nothing to push against
+       here, and Delete sharing a row with Edit is how a thumb finds the
+       wrong one. */
+    .su-acct-bar .btn.ow-sm{min-height:var(--ow-tap);flex:1 1 calc(50% - 3px);
+      min-width:0;box-sizing:border-box;}
+    .su-acct-bar .su-sp{display:none;}
+    .su-acct-bar .su-del{flex:1 1 100%;}
+    .su-side-a .btn.ow-sm,.su-ask-a .btn.ow-sm{min-height:var(--ow-tap);}
+    .su-ask-a .btn{width:100%;}
+    /* The search takes a line of its own. An <input> cannot ellipsis --
+       it clips mid-glyph with no marker -- so on a 390px phone the
+       placeholder would be cut and the box would promise something it
+       could not show. */
+    /* .ow-f{flex:1 1 40%} in the layer's own phone block sits LATER in
+       the stylesheet and ties on specificity, so the search would lose
+       on document order and come back as a 150px box promising "Name,
+       either". The page header is named to break the tie. */
+    .ow-ph .su-find{flex:1 1 100%;width:100%;}
+    .ow-ph .su-find .ow-f-in{min-width:0;width:100%;height:var(--ow-tap);}
+    .ow-ph .su-find .ow-f-v{font-size:16px;}
+    /* A 44px target in the thumb zone, not a 90px one hugging the right
+       edge of a card. */
+    .su-att-tbl .ow-tbl-a .btn{width:100%;}
   }
 
   /* ==================================================================
@@ -13964,24 +14206,60 @@
       </div>
     </section>
 
-    <!-- SUPPLIERS -->
+    <!-- SUPPLIERS, ON THE CONSOLE.
+
+         The screen was a rolodex: an alphabetical grid of business
+         cards, paged at 24, above three tiles that were Creditors'
+         three figures. It answered no question that another screen did
+         not answer better, and the one question only it can answer --
+         WHO IS WORTH BUYING FROM -- was two 16px tiles at the foot of a
+         card.
+
+         Creditors owns who to pay first and how old each bill is.
+         Purchase invoices owns one bill. Compare prices owns one item.
+         What is left is this screen's own, and the layout is in the
+         order those questions get asked: is the buying book healthy,
+         whose prices can I no longer trust, and then the whole book
+         ranked by the lines each supplier is currently CHEAPEST on. A
+         row opens that supplier's account in place of the register --
+         never over it. -->
     <section id="tab-suppliers" style="display:none;">
-      <div class="page-head">
-        <h1>Suppliers</h1>
-        <p>Everyone you buy hardware from. Give each one a short ID — it's used to link prices to them. Search by supplier name or by a product to see who stocks it.</p>
-      </div>
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">All suppliers</h2>
-          <button class="btn btn-accent btn-icon" id="s_add_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Add supplier
-          </button>
+      <div class="ow-ph" id="supBookHead">
+        <h1 class="ow-ph-t">Suppliers</h1>
+        <p class="ow-ph-sub">Who is winning you money on price, and whose prices you can no longer trust.</p>
+        <p class="ow-ph-help">Everyone you buy from, ranked by how many product lines they are currently the cheapest on &mdash; the same comparison Compare prices makes, so the two can never disagree about who wins a line. The band at the top is the short list of suppliers holding a price that has outlived what your own purchase invoices say that item&rsquo;s price is good for: cement is re-checked sooner than a door handle because the invoices say cement moves sooner, and a price nothing is sold, quoted or stocked against is left alone rather than nagged about. Red there means you are still buying on that price &mdash; they are cheapest on lines you order &mdash; and amber means the price is old but nothing depends on it. Every figure is read from your price book and your purchase invoices, so a supplier the app cannot value yet shows a dash rather than a zero, and a supplier with no price on file is named as one, because until a price exists they cannot be picked as a source for anything. A row opens that supplier&rsquo;s account: what you buy from them line by line against the next best quote anybody else gives, their recent bills, and their statement of account &mdash; the sheet you check before paying. Asking for a price opens WhatsApp with the list written out; nothing sends itself. Who to pay first is Creditors, and this screen deliberately ranks nothing by what is owed.</p>
+        <span class="ow-ph-sp"></span>
+        <div class="ow-f su-find">
+          <label class="ow-f-l" for="s_search">Find</label>
+          <div class="ow-f-in"><input class="ow-f-v" type="search" id="s_search" placeholder="Name, either number, place, ID &mdash; or a product" autocomplete="off"></div>
         </div>
-        <div class="dir-summary-row" id="supSummaryRow"></div>
-        <div class="search-bar" style="margin-top:14px;"><input id="s_search" placeholder="Search by supplier name or product..."></div>
+        <button type="button" class="btn btn-accent ow-sm" id="s_add_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Add supplier
+        </button>
+      </div>
+      <div id="supStripWrap"></div>
+      <div id="supAttentionWrap"></div>
+      <div class="ow-pan" id="supBookPan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The buying book</span>
+          <span class="ow-pan-n" id="supBookCount"></span>
+        </div>
+        <div class="ow-tb">
+          <div class="ow-seg" id="sup_lens">
+            <button type="button" class="ow-seg-b ow-on" data-slens="all">All<span class="ow-seg-n" id="supSegAll"></span></button>
+            <button type="button" class="ow-seg-b" data-slens="winning">Winning<span class="ow-seg-n" id="supSegWinning"></span></button>
+            <button type="button" class="ow-seg-b" data-slens="stale">Stale prices<span class="ow-seg-n" id="supSegStale"></span></button>
+            <button type="button" class="ow-seg-b" data-slens="owing">Owing<span class="ow-seg-n" id="supSegOwing"></span></button>
+            <button type="button" class="ow-seg-b" data-slens="unpriced">No prices<span class="ow-seg-n" id="supSegUnpriced"></span></button>
+          </div>
+          <span class="ow-tb-n" id="supBookRank">Ranked by the lines they are cheapest on</span>
+        </div>
         <div id="suppliersTableWrap"></div>
       </div>
+      <!-- One supplier's account. Drawn in place of everything above
+           it, never over it. -->
+      <div id="supAccountWrap" style="display:none;"></div>
     </section>
 
     <!-- PURCHASE INVOICES, on the console.
@@ -16440,18 +16718,6 @@
 </div>
 
 <!-- THE SUPPLIER'S ACCOUNT -->
-<div class="modal-overlay" id="supplierStatsModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="supplierStatsTitle">Supplier</h2>
-      <button class="modal-close" id="supplierStatsClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="supplierStatsBody"></div>
-  </div>
-</div>
-
 <!-- COVERING THE SHORTFALL -->
 <div class="modal-overlay" id="shortfallPlanModal">
   <div class="modal modal-wide">
@@ -22842,6 +23108,8 @@ function goToTab(tab){
      was open last time. */
   if(tab==='customers' && !custEntering){ custViewId = null; }
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
+  if(tab==='suppliers' && !supEntering){ supViewId = null; }
+  if(tab==='suppliers') renderSuppliers(document.getElementById('s_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
   if(tab==='agents') renderAgents(document.getElementById('ag_search').value);
   if(tab==='worker') renderWorkerView();
@@ -27847,7 +28115,6 @@ function wireBuyingListReceiving(){
 document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
 document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
-document.getElementById('supplierStatsClose').addEventListener('click', ()=>closeModal('supplierStatsModal'));
 document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
 // Dismissing the one in front brings the next reminder up, rather than
 // leaving rent that is already late to wait until tomorrow.
@@ -38416,142 +38683,316 @@ function supplierPriceMatches(supplierId, tokens){
     return aw-bw;
   });
 }
-function supplierCardHTML(s, productMatches){
-  const stats = supplierStats(s.id);
-  const matchesHtml = (productMatches && productMatches.length) ? `
-    <div class="sc-matches">
-      <div class="sc-matches-label">Matching prices</div>
-      ${productMatches.map(m=>`
-        <div class="sc-match-row">
-          <span class="sc-match-name" title="${esc(m.pname)}">${esc(m.pname)}</span>
-          <span class="sc-match-price">${m.wholesale!=null?fmtUGX(m.wholesale)+' <em>whs</em>':''}${(m.wholesale!=null&&m.retail!=null)?' · ':''}${m.retail!=null?fmtUGX(m.retail)+' <em>rtl</em>':''}</span>
-        </div>`).join('')}
-    </div>` : '';
-  return `<div class="supplier-card" data-supplier="${esc(s.id)}"
-      role="button" tabindex="0" title="See the account for ${esc(s.name)}">
-    <div class="sc-head">
-      <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
-      ${/* The tag sits on the meta line with the code, not inside the
-           name. Inline in the name it wrapped as if it were part of it:
-           "Feko" / "(Ambrose)" / "Also a customer" / "S114" is a
-           four-line head where the other cards have two, which is what
-           set the figure strips in a row at different heights. */''}
-      <div class="sc-title">
-        <div class="sc-name">${esc(s.name)}</div>
-        <div class="sc-meta">
-          <span class="sc-id">${esc(s.id)}</span>
-          ${linkedCustomerOf(s) ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}
-        </div>
-      </div>
-      <div class="sc-actions">
-        <button class="pc-icon-btn" title="Record commission" onclick="openSupplierCommissionModal('${esc(s.id)}')"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
-        <button class="pc-icon-btn" title="Edit supplier" onclick="editSupplier('${esc(s.id)}')">${ICON_EDIT}</button>
-        <button class="pc-icon-btn danger" title="Delete supplier" onclick="deleteSupplier('${esc(s.id)}')">${ICON_TRASH}</button>
-      </div>
-    </div>
-    <div class="sc-details">
-      ${contactPhones(s).map(ph=> `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(ph)}</span></div>`).join('')}
-      ${s.location ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(s.location)}</span></div>` : ''}
-      ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
-      ${(!s.phone && !s.location && !s.notes) ? `<div class="sc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
-    </div>
-    ${matchesHtml}
-    <div class="sc-stats">
-      <div class="sc-stat ${stats.priced ? '' : 'zero'}"><b>${stats.priced}</b><span>Priced items</span></div>
-      <div class="sc-stat best ${stats.best ? '' : 'zero'}"><b>${stats.best}</b><span>Best price</span></div>
-    </div>
+/* THE FOUR FIGURES ON ONE SUPPLIER.
+
+   Deliberately not Creditors' four. What you owe them is one of them
+   because it is what you check before paying a bill, but the other
+   three are this screen's own question: what you have bought, what they
+   win you, and how old the prices behind those wins are. */
+function supplierFiguresHTML(r){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const plural = (n, one, many)=> n === 1 ? one : many;
+  return `<div class="ow-strip su-acct">
+    <div class="ow-mt"><p class="ow-mt-l">You owe them now</p><span class="ow-mt-v">${f(r.owed)}</span>
+      <p class="ow-mt-s">${r.owed > 0.5
+        ? `UGX on ${r.openCount} open ${plural(r.openCount, 'bill', 'bills')}${r.oldestDueDays >= 0 ? `, oldest waiting ${r.oldestDueDays} ${plural(r.oldestDueDays, 'day', 'days')}` : ', with no dated bill to age'}`
+        : 'UGX &middot; nothing outstanding'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Bought from them</p><span class="ow-mt-v">${r.everInvoiced ? f(r.spend) : '&mdash;'}</span>
+      <p class="ow-mt-s">${r.everInvoiced
+        ? `UGX in 90 days, on ${r.bills} purchase ${plural(r.bills, 'invoice', 'invoices')} &middot; ${f(r.boughtEver)} all told`
+        : 'never invoiced, so there is nothing to total yet'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Cheapest on</p><span class="ow-mt-v">${r.priced ? String(r.wins) : '&mdash;'}</span>
+      <p class="ow-mt-s">${r.priced
+        ? `of the ${r.priced} ${plural(r.priced, 'line', 'lines')} they price`
+        : 'no price on file, so they cannot be picked as a source for anything'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Last priced</p><span class="ow-mt-v">${r.lastPricedDays !== null
+      ? `${r.lastPricedDays}<span class="ow-u">days</span>` : '&mdash;'}</span>
+      <p class="ow-mt-s">${r.lastPricedDays === null
+        ? 'nothing on their book carries a date'
+        : r.ask.length
+          ? `ago &middot; ${r.ask.length} of them ${plural(r.ask.length, 'is', 'are')} past the age their own invoices give ${plural(r.ask.length, 'it', 'them')}${r.askWinning ? `, and you buy on ${r.askWinning}` : ''}`
+          : 'ago &middot; nothing on their book is past its own age'}</p></div>
   </div>`;
 }
-/* What the shop knows about one supplier's account.
 
-   The customer panel leads with what they are worth and puts the debt
-   last, deliberately, so nobody reads as a debt rather than a
-   relationship. This one is the other way round on purpose: a supplier
-   account is opened to answer "what do we owe them", and the prices and
-   the wins are already on the card behind it. */
-function supplierAccountStats(supplierId){
-  const sup = (data.suppliers||[]).find(x=> String(x.id) === String(supplierId)) || null;
-  const invoices = (data.purchaseInvoices||[])
-    .filter(pi=> String(pi.supplierId) === String(supplierId) && !pi.voided);
-  const open = creditorOutstandingInvoices(supplierId);
-  const oldest = creditorOldestDueDate(supplierId);
-  return {
-    supplier: sup,
-    bought: invoices.reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0),
-    invoiceCount: invoices.length,
-    owed: creditorTotalOwed(supplierId),
-    openCount: open.length,
-    // Null, not zero: never having been paid is not the same as having
-    // been paid a long time ago, and only the first explains a supplier
-    // who will not extend credit again.
-    lastPaid: creditorLastPaymentDate(supplierId),
-    waitingDays: oldest ? daysBetweenISO(oldest, todayISO()) : null,
-  };
-}
-function openSupplierStats(supplierId){
-  const a = supplierAccountStats(supplierId);
-  const s = a.supplier;
-  document.getElementById('supplierStatsTitle').textContent =
-    s ? `${s.name}${s.location ? ` — ${s.location}` : ''}` : 'Supplier';
-  /* No purchase invoice, no statement to print. The sheet would carry a
-     brought-forward zero and the sentence "the account is settled",
-     which is a true document about nothing -- and a button that hands
-     somebody a blank page teaches them not to trust the button. The
-     panel says why in words instead. */
-  const ask = s ? supplierAskList(supplierId) : [];
-  document.getElementById('supplierStatsBody').innerHTML =
-    ((s && (a.invoiceCount || ask.length)) ? `<div class="cs-actions">
-      ${ask.length ? `<button type="button" class="btn btn-ghost" id="sstAskBtn" data-id="${esc(supplierId)}"
-        title="Open WhatsApp with a list of ${ask.length} ${ask.length===1?'price':'prices'} to confirm">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 8.6 8.4z"/></svg>
-        Ask for ${ask.length} ${ask.length===1?'price':'prices'}
-      </button>
-      ${/* The other half of the same errand, beside it: asking is only
-           useful if what comes back can be written down quickly. */''}
-      <button type="button" class="btn btn-ghost" id="sstReplyBtn" data-id="${esc(supplierId)}"
-        title="Type in the prices they gave">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-        Enter their reply
-      </button>` : ''}
-      ${a.invoiceCount ? `<button type="button" class="btn btn-ghost" id="sstPrintBtn" data-id="${esc(supplierId)}">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
-        Print statement
-      </button>` : ''}
-    </div>` : '') + supplierAskBlockHTML(supplierId, ask) + supplierStatsHTML(a);
-  const btn = document.getElementById('sstPrintBtn');
-  if(btn) btn.addEventListener('click', ()=> printSupplierStatement(btn.dataset.id));
-  const askBtn = document.getElementById('sstAskBtn');
-  if(askBtn) askBtn.addEventListener('click', ()=> askSupplierForPrices(askBtn.dataset.id));
-  const replyBtn = document.getElementById('sstReplyBtn');
-  if(replyBtn) replyBtn.addEventListener('click', ()=> openSupplierReply(replyBtn.dataset.id));
-  openModal('supplierStatsModal');
-}
-/* What is worth asking them, shown before the money.
+/* WHAT YOU BUY FROM THEM, LINE BY LINE, AGAINST WHAT ANYBODY ELSE
+   QUOTES ON THE SAME LINE.
 
-   On this panel rather than only on the dashboard because this is where
-   somebody lands when they are already thinking about this supplier --
-   about to ring them, or looking at what they are owed. The question
-   "while I have them, what else should I ask?" is answered where it
-   gets asked. */
+   The screen this replaces could say what a supplier was owed and what
+   they had been paid, and nothing at all about whether buying from them
+   was a good idea. The comparison already exists -- it is what
+   rankedPriceRows does for the buying list and Compare prices -- and it
+   has never been shown per supplier.
+
+   Read from their PURCHASE INVOICES over the window, so it is what you
+   actually bought rather than what they happen to have quoted. */
+function supplierBuysHTML(r){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const today = todayISO();
+  const byLine = new Map();
+  (data.purchaseInvoices || []).forEach(pi=>{
+    if(String(pi.supplierId) !== String(r.id) || pi.voided) return;
+    if(!pi.date || daysBetweenISO(pi.date, today) >= SUP_WINDOW_DAYS) return;
+    (pi.items || []).forEach(it=>{
+      if(!it.productId) return;
+      const vi = it.variantIdx == null ? null : Number(it.variantIdx);
+      const key = it.productId + '::' + (vi == null ? '' : vi);
+      const cur = byLine.get(key) || { productId: it.productId, variantIdx: vi, spent: 0 };
+      cur.spent += (Number(it.qty) || 0) * (Number(it.price) || 0);
+      byLine.set(key, cur);
+    });
+  });
+  const price = (row)=> row.wholesale != null ? Number(row.wholesale)
+    : row.retail != null ? Number(row.retail) : null;
+  const lines = [...byLine.values()].map(l=>{
+    const product = (data.products || []).find(p=> p.id === l.productId);
+    const rows = productPriceRows(l.productId, l.variantIdx);
+    const mine = rows.find(x=> x.supplierId === r.id) || null;
+    const others = rows.filter(x=> x.supplierId !== r.id).map(price).filter(v=> v != null);
+    const best = others.length ? Math.min(...others) : null;
+    const ours = mine ? price(mine) : null;
+    return { ...l,
+      name: product ? productVariantLabel(product, l.variantIdx) : productName(l.productId),
+      ours, best,
+      /* A saving only where there is something to be compared against.
+         One supplier on a line is not a supplier who is winning; it is
+         a line with no second opinion, which is the strip's figure. */
+      save: (ours != null && best != null && best > ours) ? (best - ours) / best * 100 : null,
+      alone: ours != null && best === null,
+    };
+  }).sort((a, b)=> b.spent - a.spent);
+  if(!lines.length) return '';
+  const shown = lines.slice(0, 8);
+  const beaten = lines.filter(l=> l.ours != null && l.best != null && l.best < l.ours).length;
+  const alone = lines.filter(l=> l.alone).length;
+  const notes = [];
+  if(beaten) notes.push(`Somebody else is cheaper on <b>${beaten}</b> of these, so ${beaten === 1 ? 'that line is' : 'those lines are'} not where this supplier is earning you anything`);
+  if(alone) notes.push(`<b>${alone}</b> ${alone === 1 ? 'has' : 'have'} no other quote at all, so there is nothing to compare and the saving is blank rather than 0%`);
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">What you buy from them</span>
+      <span class="ow-pan-n">by what you spent, 90 days &middot; UGX</span></div>
+    <div class="ow-tbl su-buy">
+      <div class="ow-tbl-h"><span>Line</span><span class="ow-tbl-n">Their price</span>
+        <span class="ow-tbl-n">Next best</span><span class="ow-tbl-n">You save</span>
+        <span class="ow-tbl-n">Spent</span></div>
+      ${shown.map(l=> `<div class="ow-tbl-r">
+        <span class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(l.name)}">${esc(l.name)}</span></span>
+        <span class="ow-tbl-n" data-l="Their price">${l.ours != null ? `<span class="ow-fig">${f(l.ours)}</span>` : '<span class="su-dash">&mdash;</span>'}</span>
+        <span class="ow-tbl-n" data-l="Next best">${l.best != null ? `<span class="ow-fig">${f(l.best)}</span>` : '<span class="su-dash">&mdash;</span>'}</span>
+        <span class="ow-tbl-n" data-l="You save">${l.save != null
+          ? `<span class="ow-fig su-save">${l.save.toFixed(1)}%</span>` : '<span class="su-dash">&mdash;</span>'}</span>
+        <span class="ow-tbl-n" data-l="Spent"><span class="ow-fig">${f(l.spent)}</span></span>
+      </div>`).join('')}
+    </div>
+    <p class="ow-mini">${lines.length > shown.length ? `The ${shown.length} biggest of <b>${lines.length}</b> lines bought in the window. ` : ''}<b>Next best</b> is the cheapest quote anybody else has on file for the same line, so a dash under <b>You save</b> means either nobody else prices it or somebody else prices it lower.${notes.length ? ' ' + notes.join('. ') + '.' : ''}</p>
+  </div>`;
+}
+
+/* Their recent bills. Not a ranking and not an ageing -- Creditors does
+   both, and a second opinion about which bill to pay first is one too
+   many. This is the history you look down while checking a new one. */
+function supplierBillsHTML(r){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const bills = (data.purchaseInvoices || [])
+    .filter(pi=> String(pi.supplierId) === String(r.id) && !pi.voided)
+    .sort((a, b)=> String(b.date || '').localeCompare(String(a.date || '')) || (b.id - a.id))
+    .slice(0, 6);
+  if(!bills.length) return '';
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Their last bills</span>
+      <span class="ow-pan-n">newest first &middot; UGX</span></div>
+    <div class="ow-tbl su-bill">
+      <div class="ow-tbl-h"><span>Bill</span><span class="ow-tbl-n">Total</span>
+        <span class="ow-tbl-n">Still due</span></div>
+      ${bills.map(pi=>{
+        const due = purchaseInvoiceBalanceDue(pi);
+        return `<div class="ow-tbl-r">
+          <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(pi.date ? fmtShortDate(pi.date) : 'no date')} &middot; ${esc(purchaseInvoiceNumberLabel(pi))}</span></span>
+          <span class="ow-tbl-n" data-l="Total"><span class="ow-fig">${f(purchaseInvoiceTotal(pi))}</span></span>
+          <span class="ow-tbl-n" data-l="Still due">${due > 0.5 ? `<span class="ow-fig">${f(due)}</span>` : '<span class="su-dash">&mdash;</span>'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="ow-mini">A bill opens, is checked and is paid on <b>Purchase invoices</b>; which supplier to pay first is <b>Creditors</b>. Nothing on this screen posts money.</p>
+  </div>`;
+}
+
+/* THE RAIL: the three things the ledger cannot say. How to reach them,
+   what their commission stands at, and where their goods are collected
+   from -- which is what a morning pickup run is grouped by, so a blank
+   one leaves that trip with nowhere to go. */
+function supplierAccountRailHTML(r){
+  const s = r.s;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const sr = (k, v, tone)=> `<div class="ow-sr"><span class="ow-sr-k">${k}</span><span class="ow-sr-v${tone ? ' ' + tone : ''}">${v}</span></div>`;
+  const reach = `${r.phones.map(ph=> sr('Phone', `<span class="su-tel-v">${esc(ph)}</span>`)).join('')}${
+    r.place ? sr('Collected from', esc(r.place)) : ''}${
+    r.shopNo ? sr('Shop', esc(r.shopNo)) : ''}${
+    r.notes ? `<p class="ow-mini">${esc(r.notes)}</p>` : ''}${
+    (!r.phones.length && !r.place && !r.notes)
+      ? '<p class="ow-mini">Nothing on file &mdash; there is nobody to ask for a price, and a pickup run has nowhere to collect from.</p>' : ''}${
+    (r.phones.length && !r.place)
+      ? '<p class="ow-mini">No place on the record, so their goods have nowhere to be collected from on a pickup run.</p>' : ''}`;
+
+  const linked = r.linked ? bothSidesPosition(r.linked) : null;
+  const both = linked ? `${sr('They owe you', `<span class="ow-fig">${f(linked.owed)}</span>`)}${
+    sr('You owe them', `<span class="ow-fig">${f(linked.owing)}</span>`)}
+    <p class="ow-mini">You sell to them as well. ${Math.abs(linked.net) < 1 ? 'The two sides are square.'
+      : linked.net > 0 ? `<b>${f(linked.net)}</b> your way on the two accounts together.`
+      : `<b>${f(-linked.net)}</b> their way on the two accounts together.`} They are kept as two records deliberately, so neither side quietly settles the other.</p>` : '';
+
+  const comm = r.commissionPct != null ? `${sr('Rate on file', `${r.commissionPct}<span class="ow-u">%</span>`)}
+    <p class="ow-mini">Commission is written down by you when it is agreed, never worked out from a bill &mdash; so it is not in the figures above and is not a debt the books carry.</p>` : '';
+
+  return `<div class="ow-side">
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">How to reach them</span></div>
+      ${reach}
+      <div class="su-side-a"><button type="button" class="btn btn-ghost ow-sm" data-sact="edit" data-sid="${esc(r.id)}">Edit the record</button></div>
+    </div>
+    ${comm ? `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Commission</span></div>${comm}
+      <div class="su-side-a"><button type="button" class="btn btn-ghost ow-sm" data-sact="commission" data-sid="${esc(r.id)}">Record commission</button></div></div>`
+      : `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Commission</span></div>
+        <p class="ow-mini">No rate on file for them.</p>
+        <div class="su-side-a"><button type="button" class="btn btn-ghost ow-sm" data-sact="commission" data-sid="${esc(r.id)}">Record commission</button></div></div>`}
+    ${both ? `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Both sides</span></div>${both}</div>` : ''}
+  </div>`;
+}
+
+/* ONE SUPPLIER, AS A SCREEN.
+
+   This was #supplierStatsModal: a dialog that could not be printed
+   from, could not be read beside anything else, and trapped the
+   keyboard behind whatever was opened next. The register steps aside
+   for it instead, so the supplier's name is the page name while you
+   are on it and Escape brings the book back. */
+function renderSupplierAccount(id){
+  const wrap = document.getElementById('supAccountWrap');
+  if(!wrap) return;
+  const s = (data.suppliers || []).find(x=> String(x.id) === String(id));
+  if(!s){
+    /* Openable for a supplier deleted on another device. A failure
+       names itself rather than drawing an empty account. */
+    wrap.innerHTML = `<button type="button" class="su-back" data-sact="book">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All suppliers</button>
+      <div class="ow-ph"><h1 class="ow-ph-t">Supplier</h1><span class="ow-ph-sp"></span></div>
+      <div class="ow-pan su-empty-pan"><div class="ow-empty"><b>That supplier is no longer on file.</b>
+        <span>They were deleted here or on another device while this was open. Nothing has been lost from the books &mdash; their bills and the payments against them keep their own record on Purchase invoices &mdash; but there is no account left to draw.</span></div></div>`;
+    return;
+  }
+  const r = supplierBookRow(s);
+  const reason = supAttentionReason(r);
+  const chip = reason
+    ? `<span class="ow-cp ${reason.tone}"><span class="ow-cp-d"></span>${esc(reason.chip)}</span>`
+    : r.wins
+      ? '<span class="ow-cp ow-good"><span class="ow-cp-d"></span>Cheapest on ' + r.wins + '</span>'
+      : '';
+  /* ONE ACCENT, AND ONLY WHERE THERE IS ONE THING TO DO. A price nobody
+     has confirmed is the one thing an account can act on from here --
+     paying a bill belongs on the bill, and asking for money is the
+     other side of the shop entirely. Where nothing is stale there is no
+     single next action, and the rule is that the accent appears at
+     MOST once, not at least once. */
+  const askable = r.ask.length && r.phones.length;
+  const ask = r.ask.length
+    ? `<button type="button" class="btn ${askable ? 'btn-accent' : 'btn-ghost'} ow-sm" data-sact="ask" data-sid="${esc(r.id)}"
+        title="${askable ? `Open WhatsApp with a list of ${r.ask.length} ${r.ask.length === 1 ? 'price' : 'prices'} to confirm` : 'No number on file to ask on'}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Ask for ${r.ask.length} ${r.ask.length === 1 ? 'price' : 'prices'}</button>`
+    : '';
+  wrap.innerHTML = `
+    <button type="button" class="su-back" data-sact="book">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All suppliers</button>
+    <div class="ow-ph su-acct-ph">
+      <h1 class="ow-ph-t" title="${esc(r.name)}">${esc(r.name)}</h1>
+      <p class="ow-ph-sub">${[r.place, r.id, r.priced ? `${r.priced} priced ${r.priced === 1 ? 'line' : 'lines'}` : 'no prices on file']
+        .filter(Boolean).map(esc).join(' &middot; ')}</p>
+      ${chip}
+      <span class="ow-ph-sp"></span>
+      ${/* No purchase invoice, no statement to print. The sheet would
+           carry a brought-forward zero and the sentence "the account is
+           settled" -- a true document about nothing, and a button that
+           hands somebody a blank page teaches them not to trust the
+           button. */''}
+      ${r.everInvoiced ? `<button type="button" class="btn btn-ghost ow-sm" data-sact="print" data-sid="${esc(r.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
+        Print the statement</button>` : ''}
+      ${ask}
+    </div>
+    ${supplierFiguresHTML(r)}
+    <div class="ow-grid su-acct-grid">
+      <div class="ow-stack">
+        ${r.priced ? '' : `<div class="ow-pan su-empty-pan"><div class="ow-empty">
+          <b>No price is on file for ${esc(r.name)}.</b>
+          <span>Until one is, they cannot be picked as a source anywhere in the app &mdash; not on a quote, not on the buying list, not on a pickup run. Adding them was a means to that end. Prices are entered against them in the <b>Price book</b>.</span></div></div>`}
+        ${supplierAskBlockHTML(r.id, r.ask)}
+        ${supplierBuysHTML(r)}
+        ${supplierBillsHTML(r)}
+        ${r.everInvoiced ? supplierStatementBlockHTML(r.id) : `<div class="ow-pan su-empty-pan"><div class="ow-empty">
+          <b>No purchase invoice has been raised with them yet.</b>
+          <span>What you owe and what you have paid are built from purchase invoices, so the statement fills in once the first order to them is billed. A bill is raised when an order is marked invoiced, or when a delivery on your own purchase order is received.</span></div></div>`}
+        <div class="su-acct-bar">
+          <button type="button" class="btn btn-ghost ow-sm" data-sact="commission" data-sid="${esc(r.id)}">Record commission</button>
+          <button type="button" class="btn btn-ghost ow-sm" data-sact="edit" data-sid="${esc(r.id)}">Edit the record</button>
+          <span class="su-sp"></span>
+          <button type="button" class="btn btn-ghost ow-sm su-del" data-sact="delete" data-sid="${esc(r.id)}">Delete</button>
+          <p class="su-note">Asking for a price opens WhatsApp with the list written out and stops there &mdash; nothing is sent until you send it. Paying a bill is done on the bill, in Purchase invoices; who to pay first is Creditors.</p>
+        </div>
+      </div>
+      ${supplierAccountRailHTML(r)}
+    </div>`;
+}
+
+/* The statement of account, the other way round. The same builder the
+   printed sheet uses, so the paper handed across a counter and the
+   screen it was read from cannot say different numbers. */
+function supplierStatementBlockHTML(supplierId){
+  if(supplierId == null) return '';
+  const { from, to } = customerStatementRange();
+  return statementLedgerHTML(supplierStatementRows(supplierId, from, to),
+    { payWord: 'Payment made', recordedAs: 'their open invoices carry' });
+}
+
+/* The one way in, from wherever it is asked for. */
+function openSupplierAccount(supplierId){
+  supViewId = supplierId;
+  /* goToTab draws the tab it lands on, so the account is rendered by
+     the switch rather than by a second call after it. */
+  supEntering = true;
+  try { goToTab('suppliers'); } finally { supEntering = false; }
+  window.scrollTo(0, 0);
+}
+/* WHICH of their prices have outlived their own age, and what runs
+   through each one.
+
+   Shown on the account because this is where somebody lands when they
+   are already thinking about this supplier -- about to ring them, or
+   checking a bill. The question "while I have them, what else should I
+   ask?" is answered where it gets asked, and the answer is per ITEM: a
+   count in a chip is not something anybody can act on. */
 function supplierAskBlockHTML(supplierId, list){
   const rows = list || supplierAskList(supplierId);
   if(!rows.length) return '';
-  const asked = rows.map(f=> priceAskedDaysAgo(f.row)).filter(d=> d !== null);
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const asked = rows.map(f2=> priceAskedDaysAgo(f2.row)).filter(d=> d !== null);
   const waiting = asked.length ? Math.min(...asked) : null;
-  return `
-    <section class="cs-block">
-      <h4>Prices worth asking about</h4>
-      <p class="cs-read cs-muted">Past ${priceReviewStaleDays()} days on something the shop
-      trades${waiting !== null ? `. Last asked ${waiting === 0 ? 'today' : `${waiting} ${waiting===1?'day':'days'} ago`} — still no answer on ${asked.length} of them.` : '.'}</p>
-      <table class="cs-table">
-        <thead><tr><th>Item</th><th class="r">At risk</th><th>Why</th></tr></thead>
-        <tbody>${rows.map(f=>`<tr>
-          <td>${esc(f.row.pname)}</td>
-          <td class="r num">${fmtUGX(Math.round(f.moneyAtRisk))}</td>
-          <td class="cs-ask-why">${esc(f.reasons.join(' · '))}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </section>`;
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Prices worth asking about</span>
+      <span class="ow-pan-n">${rows.length} of ${(data.prices || []).filter(p=> p.supplierId === supplierId).length} on their book</span></div>
+    <div class="ow-tbl su-ask">
+      <div class="ow-tbl-h"><span>Item</span><span class="ow-tbl-n">Runs through it</span><span>Why</span></div>
+      ${rows.map(x=> `<div class="ow-tbl-r">
+        <span class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(x.row.pname)}">${esc(x.row.pname)}</span></span>
+        <span class="ow-tbl-n" data-l="Runs through it"><span class="ow-fig">${f(x.moneyAtRisk)}</span></span>
+        <span class="ow-tbl-c su-ask-why">${esc(x.reasons.join(' · '))}</span>
+      </div>`).join('')}
+    </div>
+    <p class="ow-mini">How long a price is good for is read from that item&rsquo;s own purchase invoices where they support a figure, and from your ${priceReviewStaleDays()}-day setting where they do not &mdash; which is why one row here is flagged at three weeks and another is left alone at three months. <b>Runs through it</b> is what is sold, quoted and on the shelf against that price; a row with nothing behind it is not listed at all.${
+      waiting !== null ? ` Last asked ${waiting === 0 ? 'today' : `${waiting} ${waiting === 1 ? 'day' : 'days'} ago`} &mdash; still nothing back on ${asked.length} of them.` : ''}</p>
+    ${/* The other half of the same errand, beside it: asking is only
+         useful if what comes back can be written down in the same
+         minute, and this sheet takes all of their prices at once. */''}
+    <div class="su-ask-a"><button type="button" class="btn btn-ghost ow-sm" data-sact="reply" data-sid="${esc(supplierId)}">Enter what they said</button></div>
+  </div>`;
 }
 
 /* The reply sheet: their whole answer on one screen.
@@ -38605,6 +39046,11 @@ function saveSupplierReply(){
   triggerPricesRender();
   if(document.getElementById('tab-dashboard')
     && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
+  /* And the buying book. Its band, its strip and every Standing chip on
+     it are counts of prices worth asking about -- the very rows this
+     sheet just settled -- so leaving it alone means the screen the
+     reply was entered from goes on insisting they are outstanding. */
+  renderSuppliers(document.getElementById('s_search') ? document.getElementById('s_search').value : '');
   const said = [];
   if(r.changed) said.push(`${r.changed} moved`);
   if(r.confirmed) said.push(`${r.confirmed} unchanged`);
@@ -38647,101 +39093,413 @@ function askSupplierForPrices(supplierId, rowId){
   window.open(waComposeUrl(s && contactPhones(s)[0], msg), '_blank');
   toast(`${rows.length} ${rows.length===1?'price':'prices'} asked about — send the message to finish`, 5000);
 }
-function supplierStatsHTML(a){
-  const s = a.supplier;
-  if(!s) return `<div class="cs-empty"><p>That supplier is no longer on file.</p></div>`;
-  const plural = (n, one, many)=> n === 1 ? one : many;
-  const money = (n)=> fmtUGX(Math.round(n));
 
-  /* No purchase invoice is not the same as nothing to say: a supplier
-     you have only ever priced still has prices worth seeing, and the
-     statement below would be an empty table with a header. Said plainly,
-     the way the customer panel says it. */
-  if(!a.invoiceCount){
-    return `<div class="cs-empty">
-      <p>You have not raised a purchase invoice with <b>${esc(s.name)}</b> yet.</p>
-      <p class="cs-empty-note">What you owe and what you have paid are built from purchase
-      invoices, so this fills in once the first order to them is invoiced. Their prices are
-      on the card behind this.</p>
+/* ================= SUPPLIERS, ON THE CONSOLE ==========================
+
+   Which supplier's account is being read instead of the register.
+   Cleared on the way into the tab, so arriving from the rail always
+   lands on the book rather than on whoever was open three screens ago. */
+let supViewId = null;
+/* Which slice of the book the register is showing. */
+let supLens = 'all';
+/* Set only while openSupplierAccount is walking through goToTab, so that
+   one arrival is not treated as a request for the book. */
+let supEntering = false;
+/* The window every "in 90 days" figure on this screen is measured over.
+   The same length Customers uses, so the two sides of the same trade
+   read over the same quarter. */
+const SUP_WINDOW_DAYS = 90;
+const SUP_ATTENTION_SHOWN = 5;
+
+/* ONE SUPPLIER, EVERYTHING THIS SCREEN KNOWS.
+
+   Nothing here is a new calculation. supplierStats() already counts the
+   lines they price and the lines they WIN; supplierAskList() already
+   knows which of their prices have outlived what this shop's own
+   invoices say that item's price is good for; creditorTotalOwed() is
+   what Creditors totals. All three are read, none is re-derived -- a
+   second way of working out the same figure is how two screens come to
+   disagree about it. */
+function supplierBookRow(s){
+  const stats = supplierStats(s.id);
+  const ask = supplierAskList(s.id);
+  const today = todayISO();
+  let spend = 0, bills = 0, boughtEver = 0, invoiceCount = 0;
+  (data.purchaseInvoices || []).forEach(pi=>{
+    if(String(pi.supplierId) !== String(s.id) || pi.voided) return;
+    invoiceCount++;
+    const total = purchaseInvoiceTotal(pi);
+    boughtEver += total;
+    if(pi.date && daysBetweenISO(pi.date, today) < SUP_WINDOW_DAYS){ spend += total; bills++; }
+  });
+  /* The freshest price on their book, not the oldest: the question the
+     column answers is when this supplier was last put to the test at
+     all. Which of their prices is dangerously old is the band's
+     question, and it is asked per item there. */
+  const dated = (data.prices || [])
+    .filter(p=> p.supplierId === s.id).map(p=> priceAgeDays(p.date))
+    .filter(d=> d !== null);
+  const owed = creditorTotalOwed(s.id);
+  const oldestDue = creditorOldestDueDate(s.id);
+  return {
+    s, id: s.id, name: s.name || '', stats,
+    place: s.location || '', shopNo: s.shopNo || '', notes: s.notes || '',
+    phones: contactPhones(s),
+    linked: linkedCustomerOf(s),
+    priced: stats.priced, wins: stats.best,
+    /* Undated prices are not counted as fresh: a row nobody has dated is
+       a row nothing is known about, and averaging it in as "today"
+       would be the one direction that hides the problem. */
+    lastPricedDays: dated.length ? Math.min(...dated) : null,
+    undatedPrices: (data.prices || []).filter(p=> p.supplierId === s.id && priceAgeDays(p.date) === null).length,
+    ask,
+    /* Money still runs through a stale price only where they are the
+       one being bought from. That split is the whole ranking. */
+    askWinning: ask.filter(f=> f.isWinner).length,
+    askMoney: ask.reduce((n, f)=> n + f.moneyAtRisk, 0),
+    askOldest: ask.reduce((n, f)=> f.ageDays === null ? n : Math.max(n, f.ageDays), 0),
+    askUndated: ask.filter(f=> f.ageDays === null).length,
+    spend, bills, boughtEver, invoiceCount,
+    owed, openCount: creditorOutstandingInvoices(s.id).length,
+    oldestDueDays: oldestDue ? daysSinceDate(oldestDue) : -1,
+    lastPaid: creditorLastPaymentDate(s.id),
+    commissionPct: s.commissionPct == null ? null : Number(s.commissionPct),
+    everInvoiced: invoiceCount > 0,
+  };
+}
+
+/* THE WHOLE BOOK, DERIVED ONCE. The strip, the five lenses and the band
+   are all read off this list, so no two of them can describe different
+   sets. */
+function supplierBookRows(){
+  return (data.suppliers || []).map(supplierBookRow);
+}
+
+/* WHY A SUPPLIER IS IN THE BAND.
+
+   One rule, deliberately. Four were on the table and the shop picked
+   this one: a band that fires on everybody stops being a band.
+
+   Ranked by EXPOSURE rather than by age. A price 201 days old that
+   nobody buys on costs nothing; a price 118 days old that is still the
+   cheapest on eleven lines you order is money moving on a figure
+   nobody has confirmed. That is also what the two tones mean, and the
+   band says so in words underneath. */
+function supAttentionReason(r){
+  if(!r.ask.length) return null;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const items = r.ask.slice(0, 2).map(x=> x.row.pname);
+  const rest = r.ask.length - items.length;
+  const named = items.join(', ') + (rest > 0 ? `, ${rest} more` : '');
+  const age = r.askUndated === r.ask.length
+    ? 'never dated at all'
+    : `last confirmed ${r.askOldest} days ago`;
+  if(r.askWinning){
+    return { tone: 'ow-bad', chip: `Buying on ${r.askWinning} of them`, weight: r.askMoney,
+      why: `Still the cheapest on <b>${r.askWinning}</b> of these &mdash; ${esc(named)} &mdash; and ${age}.
+        <b>${f(r.askMoney)}</b> of what you sell and stock runs through them.`,
+      fig: String(r.ask.length), basis: r.ask.length === 1 ? 'price to confirm' : 'prices to confirm',
+      act: r.phones.length ? { label: `Ask for ${r.ask.length} ${r.ask.length === 1 ? 'price' : 'prices'}`, act: 'ask' }
+                           : { label: 'Add a number', act: 'edit' } };
+  }
+  return { tone: 'ow-warn', chip: 'Cheapest on none of them', weight: r.askMoney,
+    why: `${r.ask.length} ${r.ask.length === 1 ? 'price' : 'prices'} &mdash; ${esc(named)} &mdash; ${age},
+      and they are cheapest on none of them, so nothing you buy today depends on it.`,
+    fig: String(r.ask.length), basis: r.ask.length === 1 ? 'price to confirm' : 'prices to confirm',
+    act: r.phones.length ? { label: `Ask for ${r.ask.length} ${r.ask.length === 1 ? 'price' : 'prices'}`, act: 'ask' }
+                         : { label: 'Add a number', act: 'edit' } };
+}
+
+/* THE BAND. Money moving on an unconfirmed price first, then the size
+   of what is moving. */
+function supplierAttentionHTML(rows){
+  const flagged = rows.map(r=>{
+    const reason = supAttentionReason(r);
+    return reason ? { r, reason } : null;
+  }).filter(Boolean).sort((a, b)=>
+    ((b.reason.tone === 'ow-bad' ? 1 : 0) - (a.reason.tone === 'ow-bad' ? 1 : 0))
+    || (b.reason.weight - a.reason.weight)
+    || a.r.name.localeCompare(b.r.name));
+  if(!flagged.length){
+    return `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Prices you can no longer trust</span>
+        <span class="ow-pan-n">nothing of ${rows.length}</span></div>
+      <div class="ow-empty"><b>Every price you actually trade on is inside its own age.</b>
+        <span>A price is only counted as stale once it is past what this item&rsquo;s own purchase invoices say it moves in &mdash; and only where something is sold, quoted or sitting on the shelf against it. Nothing on the book is past both today.</span></div>
     </div>`;
   }
-
-  return `
-    <div class="cs-stats">
-      ${csStat('You owe them now', money(a.owed),
-        a.owed > 0
-          ? `${a.openCount} open ${plural(a.openCount,'invoice','invoices')}${a.waitingDays !== null ? `, oldest waiting ${a.waitingDays} ${plural(a.waitingDays,'day','days')}` : ''}`
-          : 'nothing outstanding',
-        a.owed > 0 ? 'bad' : 'good')}
-      ${csStat('Bought from them', money(a.bought),
-        `${a.invoiceCount} purchase ${plural(a.invoiceCount,'invoice','invoices')}`)}
-      ${csStat('Last paid', a.lastPaid ? esc(a.lastPaid) : 'never',
-        a.lastPaid
-          ? `${daysBetweenISO(a.lastPaid, todayISO())} days ago`
-          : 'no payment recorded against them yet',
-        a.lastPaid ? '' : 'bad')}
+  const shown = flagged.slice(0, SUP_ATTENTION_SHOWN);
+  const buying = flagged.filter(x=> x.reason.tone === 'ow-bad').length;
+  const idle = flagged.length - buying;
+  const noPhone = flagged.filter(x=> !x.r.phones.length).length;
+  const parts = [];
+  if(buying) parts.push(`<b>${buying}</b> ${buying === 1 ? 'is' : 'are'} still the cheapest on lines you order, so money is moving on the figure`);
+  if(idle) parts.push(`<b>${idle}</b> ${idle === 1 ? 'is' : 'are'} cheapest on nothing, so the price is old but nothing depends on it`);
+  if(noPhone) parts.push(`<b>${noPhone}</b> ${noPhone === 1 ? 'has' : 'have'} no number on file to ask on`);
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Prices you can no longer trust</span>
+      <span class="ow-pan-n">${flagged.length} of ${rows.length} &middot; most exposed first</span></div>
+    <div class="ow-tbl su-att-tbl">
+      ${shown.map(({ r, reason })=> `<div class="ow-tbl-r">
+        <div class="ow-tbl-c">
+          <span class="ow-tbl-p" title="${esc(r.name)}">${esc(r.name)}</span>
+          <p class="su-why">${reason.why}</p>
+        </div>
+        <span class="ow-cp ${reason.tone}"><span class="ow-cp-d"></span>${esc(reason.chip)}</span>
+        <span class="ow-tbl-n"><span class="ow-fig">${esc(reason.fig)}</span><span class="ow-fig-b">${esc(reason.basis)}</span></span>
+        <div class="ow-tbl-a">${supActionHTML(r, reason.act)}</div>
+      </div>`).join('')}
     </div>
-    ${(() => {
-      // The same six-month window the customer statement and both prints
-      // use, read once -- calling the range twice invites a statement
-      // whose header and body were built either side of midnight.
-      const { from, to } = customerStatementRange();
-      return statementLedgerHTML(supplierStatementRows(s.id, from, to),
-        { payWord: 'Payment made', recordedAs: 'their open invoices carry' });
-    })()}`;
+    <p class="ow-mini">${
+      flagged.length > shown.length
+        ? `The ${shown.length} carrying the most money of <b>${flagged.length}</b> are listed; the rest are in the register below under <b>Stale prices</b>. `
+        : ''}Of the ${flagged.length}: ${parts.join('; ')}. How long a price is good for is read from that item&rsquo;s own purchase invoices, so cement is asked about sooner than a door handle, and a price nothing is sold, quoted or stocked against is left alone. What this cannot check is whether a price is <b>right</b> &mdash; only how old it is. Asking opens WhatsApp with the list written out; nothing is sent until you send it.</p>
+  </div>`;
 }
 
-/* The three figures above the supplier grid, answering the same three
-   questions the customers page answers: how many, how much, how many of
-   them carry it.
-
-   Money owed to a supplier is not a field on the supplier -- unlike a
-   customer's c.debt, it is derived from their unvoided purchase
-   invoices, which is what creditorTotalOwed reads. Deriving it here a
-   second way is how this strip would come to disagree with the
-   creditors list it summarises.
-
-   The 0.5 threshold is creditorOutstandingInvoices' own. A settled
-   invoice can leave a fraction of a shilling behind, and counting that
-   supplier here while the creditors list does not show them is a
-   discrepancy somebody has to go and disprove. */
-function renderSupplierSummary(){
-  const wrap = document.getElementById('supSummaryRow');
-  if(!wrap) return;
-  const total = data.suppliers.length;
-  const owedEach = data.suppliers.map(s=> creditorTotalOwed(s.id));
-  const totalOwed = owedEach.reduce((a,b)=> a+b, 0);
-  const owingCount = owedEach.filter(v=> v > 0.5).length;
-  wrap.innerHTML = `
-    <div class="dir-summary-card"><b>${total}</b><span>Total suppliers</span></div>
-    <div class="dir-summary-card owed"><b>${fmtUGX(Math.round(totalOwed))}</b><span>Total you owe</span></div>
-    <div class="dir-summary-card"><b>${owingCount}</b><span>Suppliers with a balance</span></div>
-  `;
+/* One action, and never the accent: the accent on this screen is Add
+   supplier. A tel: link is the owner's own thumb on their own phone,
+   which is the only kind of sending this app allows. */
+function supActionHTML(r, act){
+  if(!act) return '';
+  if(act.act === 'tel'){
+    return `<a class="btn btn-ghost ow-sm su-tel" href="tel:${esc(String(act.tel).replace(/\s+/g, ''))}">${esc(act.label)}</a>`;
+  }
+  return `<button type="button" class="btn btn-ghost ow-sm" data-sact="${esc(act.act)}" data-sid="${esc(r.id)}">${esc(act.label)}</button>`;
 }
+
+/* THE REGISTER ROW.
+
+   A dash is not a zero. A supplier who has never been invoiced cannot
+   be said to have cost the shop nothing, and one with no price on file
+   cannot be said to be cheapest on none -- the app has nothing to
+   compare. Saying 0 would be a claim it cannot make. */
+function supplierRegisterRowHTML(r, matches){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const dash = '<span class="su-dash">&mdash;</span>';
+  const reason = supAttentionReason(r);
+  const chip = reason
+    ? `<span class="ow-cp ${reason.tone}"><span class="ow-cp-d"></span>${esc(reason.chip)}</span>`
+    : !r.priced
+      ? '<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>No prices</span>'
+      : r.wins
+        ? '<span class="ow-cp ow-good"><span class="ow-cp-d"></span>Winning</span>'
+        : '<span class="ow-cp"><span class="ow-cp-d"></span>Priced, wins none</span>';
+  /* WHY THIS SUPPLIER IS IN THE RESULTS, when the answer is not their
+     name. Searching a product and getting the suppliers who price it is
+     the most useful thing the old screen did and nothing on it said so;
+     a row that appears for "cement" and shows only a phone number looks
+     like a bug. So the matched lines are named, cheapest first, with
+     what they quote -- and the register is ranked on that price while
+     the search is running. */
+  const quoted = (m)=> m.wholesale != null ? f(m.wholesale)
+    : m.retail != null ? f(m.retail) : '&mdash;';
+  const matchLine = (matches && matches.length)
+    ? '<p class="su-match">'
+      + matches.slice(0, 3).map(m=> '<span class="su-match-i">'
+        + `<span class="su-match-n" title="${esc(m.pname)}">${esc(m.pname)}</span> `
+        + `<b>${quoted(m)}</b></span>`).join('')
+      + (matches.length > 3 ? `<span class="su-match-i">and ${matches.length - 3} more</span>` : '')
+      + '</p>'
+    : '';
+  const meta = [r.place, r.id, r.shopNo ? 'Shop ' + r.shopNo : '',
+    r.linked ? 'Also a customer' : '',
+    r.commissionPct ? r.commissionPct + '% commission' : '',
+    r.phones.length ? '' : 'no number on file'].filter(Boolean).join(' · ');
+  return `<div class="ow-tbl-r ow-tbl-k" role="button" tabindex="0"
+      data-sopen="${esc(r.id)}" title="See the account for ${esc(r.name)}">
+    <div class="ow-tbl-c">
+      <span class="ow-tbl-p" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>
+    </div>
+    <span class="su-c-st">${chip}</span>
+    <span class="ow-tbl-n su-c-priced" data-l="Priced">${r.priced ? String(r.priced) : dash}</span>
+    <span class="ow-tbl-n" data-l="Cheapest on">${r.priced
+      ? `<span class="ow-fig su-win${r.wins ? '' : ' su-nil'}">${r.wins}</span>`
+      : dash}</span>
+    <span class="ow-tbl-n su-c-conf" data-l="Last priced">${r.lastPricedDays !== null
+      ? `<span class="ow-fig${r.ask.length ? ' ow-warn' : ''}">${r.lastPricedDays}</span><span class="ow-fig-b">days</span>`
+      : dash}</span>
+    <span class="ow-tbl-n su-c-spent" data-l="Spent, 90 days">${r.everInvoiced
+      ? (r.spend > 0 ? `<span class="ow-fig">${f(r.spend)}</span><span class="ow-fig-b">${r.bills} ${r.bills === 1 ? 'bill' : 'bills'}</span>`
+                     : `${dash}<span class="ow-fig-b">nothing in 90 days</span>`)
+      : `${dash}<span class="ow-fig-b">never invoiced</span>`}</span>
+    <span class="ow-tbl-n" data-l="Owed now">${r.owed > 0.5
+      ? `<span class="ow-fig">${f(r.owed)}</span><span class="ow-fig-b">${r.oldestDueDays >= 0 ? `oldest ${r.oldestDueDays} days` : 'no dated bill'}</span>`
+      : dash}</span>
+    <svg class="su-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    ${matchLine}
+  </div>`;
+}
+
+/* THE SCREEN. Strip, band, register -- in the order the questions get
+   asked. Every count is read over the WHOLE book, never over the page
+   or the search, so "Owing 9" means nine suppliers are owed money and
+   not nine of the ones you happen to be looking at. */
 function renderSuppliers(filter=''){
-  renderSupplierSummary();
   const wrap = document.getElementById('suppliersTableWrap');
+  if(!wrap) return;
+  /* ONE SCREEN, TWO VIEWS. The register steps aside for an account
+     rather than a dialog opening over it, so the account gets the
+     page's header, the browser's print, and a back control instead of
+     an X in a corner. Everything the register drew is left in the DOM
+     and hidden, so coming back does not rebuild it. */
+  const book = ['supBookHead', 'supStripWrap', 'supAttentionWrap', 'supBookPan'];
+  const acct = document.getElementById('supAccountWrap');
+  if(supViewId){
+    book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+    if(acct){ acct.style.display = 'block'; renderSupplierAccount(supViewId); }
+    return;
+  }
+  book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = ''; });
+  if(acct){ acct.style.display = 'none'; acct.innerHTML = ''; }
+  const all = supplierBookRows();
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+
+  /* ---- the strip: is the BUYING book healthy ----------------------
+     Not one of these four is Creditors' figure. What you owe is one
+     column of the register and the subject of another screen; this
+     strip asks whether you can buy well. */
+  const usable = all.filter(r=> r.priced > 0);
+  const lines = new Set();
+  const contested = new Set();
+  (data.prices || []).forEach(p=>{
+    const key = p.productId + '::' + (p.variantIdx == null ? '' : p.variantIdx);
+    if(lines.has(key)) contested.add(key); else lines.add(key);
+  });
+  const spend = all.reduce((n, r)=> n + r.spend, 0);
+  const bills = all.reduce((n, r)=> n + r.bills, 0);
+  const buyers = all.filter(r=> r.bills > 0).length;
+  const staleRows = all.filter(r=> r.ask.length);
+  const stalePrices = staleRows.reduce((n, r)=> n + r.ask.length, 0);
+  const staleBuying = staleRows.filter(r=> r.askWinning).length;
+  const strip = document.getElementById('supStripWrap');
+  if(strip && !all.length){ strip.innerHTML = ''; }
+  else if(strip) strip.innerHTML = `<div class="ow-strip">
+    <div class="ow-mt"><p class="ow-mt-l">You can buy from</p><span class="ow-mt-v">${usable.length}</span>
+      <p class="ow-mt-s">of ${all.length} on the book${all.length - usable.length
+        ? ` &middot; ${all.length - usable.length} carry no price and cannot be picked as a source`
+        : ''}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Lines with a choice</p><span class="ow-mt-v">${contested.size}</span>
+      <p class="ow-mt-s">of ${lines.size} priced${lines.size - contested.size
+        ? ` &middot; ${lines.size - contested.size} have one supplier and no second quote`
+        : ''}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Spent in 90 days</p><span class="ow-mt-v">${f(spend)}</span>
+      <p class="ow-mt-s">UGX, on ${bills} purchase ${bills === 1 ? 'invoice' : 'invoices'} from ${buyers} ${buyers === 1 ? 'supplier' : 'suppliers'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Prices to confirm</p><span class="ow-mt-v">${stalePrices}</span>
+      <p class="ow-mt-s">${stalePrices
+        ? `across ${staleRows.length} ${staleRows.length === 1 ? 'supplier' : 'suppliers'}${staleBuying ? `, ${staleBuying} of whom you buy on` : ''}`
+        : 'nothing you trade on is past its own age'}</p></div>
+  </div>`;
+
+  /* ---- the band ---- */
+  const band = document.getElementById('supAttentionWrap');
+  if(band) band.innerHTML = all.length ? supplierAttentionHTML(all) : '';
+
+  /* ---- the lenses. Counted over the book, not over the search ---- */
+  const lenses = {
+    all: all,
+    winning: all.filter(r=> r.wins > 0),
+    stale: staleRows,
+    owing: all.filter(r=> r.owed > 0.5),
+    unpriced: all.filter(r=> !r.priced),
+  };
+  Object.entries({ all: 'supSegAll', winning: 'supSegWinning', stale: 'supSegStale',
+    owing: 'supSegOwing', unpriced: 'supSegUnpriced' }).forEach(([k, id])=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = String(lenses[k].length);
+  });
+  document.querySelectorAll('#sup_lens .ow-seg-b').forEach(b=>{
+    b.classList.toggle('ow-on', b.dataset.slens === supLens);
+  });
+
+  /* ---- the register ---- */
   const tokens = searchTokens(filter);
-  let rows = data.suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  let rows = (lenses[supLens] || all).slice();
   const matchMap = new Map();
+  let byProduct = 0;
   if(tokens.length){
-    rows = rows.filter(s=>{
-      const ownHaystack = (s.name+' '+s.location+' '+s.id).toLowerCase();
-      if(matchesAllTokens(ownHaystack, tokens)) return true;
-      const matches = supplierPriceMatches(s.id, tokens);
-      if(matches.length){ matchMap.set(s.id, matches); return true; }
+    /* EVERY number, not just the first. The old haystack read s.name,
+       s.location and s.id and stopped, so a supplier saved under their
+       second line could not be found by it -- while the duplicate check
+       and the WhatsApp draft both knew about both numbers.
+
+       Searching a PRODUCT and getting the suppliers who price it is the
+       best thing the old screen did and nothing said it was there. It
+       is kept, and the placeholder now says so. */
+    rows = rows.filter(r=>{
+      const hay = [r.name, r.place, r.id, r.shopNo, ...r.phones].join(' ').toLowerCase();
+      const own = matchesAllTokens(hay, tokens);
+      const priced = supplierPriceMatches(r.id, tokens);
+      if(priced.length) matchMap.set(r.id, priced);
+      if(own) return true;
+      if(priced.length){ byProduct++; return true; }
       return false;
     });
   }
-  if(rows.length===0){
-    wrap.innerHTML = data.suppliers.length===0
-      ? '<div class="empty">No suppliers yet. Add one above.</div>'
-      : '<div class="empty">No suppliers or priced products match your search.</div>';
+  /* ASKING A DIFFERENT QUESTION GETS A DIFFERENT ORDER. Typing a
+     product name is asking "who sells this, and for how much" -- and
+     three suppliers listed 37,000 / 39,000 / 38,500 is the answer in an
+     order that invites the wrong reading. So a product search is ranked
+     by the price it matched on, cheapest first, and the toolbar says
+     which ranking is on screen. Anything matched on its own details
+     rather than on a price has none, and sorts under all of them.
+
+     Otherwise: cheapest on most lines first, and a supplier with
+     nothing priced last -- a dash sorts under every figure, which is
+     where somebody the app cannot yet compare belongs. */
+  const matchPrice = (r)=>{
+    const m = matchMap.get(r.id);
+    if(!m || !m.length) return Infinity;
+    const v = m[0].wholesale != null ? m[0].wholesale : m[0].retail;
+    return v == null ? Infinity : Number(v);
+  };
+  const byPrice = byProduct > 0;
+  rows.sort(byPrice
+    ? (a, b)=> (matchPrice(a) - matchPrice(b)) || (b.wins - a.wins) || a.name.localeCompare(b.name)
+    : (a, b)=> (b.wins - a.wins) || (b.spend - a.spend) || a.name.localeCompare(b.name));
+  const rank = document.getElementById('supBookRank');
+  if(rank) rank.textContent = byPrice
+    ? 'Ranked by what they quote for what you searched, cheapest first'
+    : 'Ranked by the lines they are cheapest on';
+
+  const count = document.getElementById('supBookCount');
+  if(count) count.textContent = tokens.length || supLens !== 'all'
+    ? `${rows.length} of ${all.length} on the book`
+    : `${all.length} on the book`;
+
+  const lensWord = { winning: 'winning', stale: 'stale prices', owing: 'owing', unpriced: 'no prices' };
+  if(!rows.length){
+    wrap.innerHTML = !all.length
+      ? `<div class="ow-empty su-empty"><b>Nobody is on the book yet.</b>
+          <span>A supplier here is a means to an end: until a price is entered against them in the <b>Price book</b> they cannot be picked as a source for anything, so a name on its own changes nothing you can act on. If you are moving an existing shop in, start with the ones you already owe &mdash; an opening balance becomes a purchase invoice dated to the charge it came from, which is why the ageing on Creditors is right from the first day rather than showing an old balance as new.</span></div>`
+      : `<div class="ow-empty su-empty"><b>Nobody here matches.</b>
+          <span>${tokens.length ? 'The search reads the name, either phone number, the place, the shop number, the ID &mdash; and the products they have a price on. ' : ''}${
+            supLens === 'all' ? '' : `You are looking at <b>${esc(lensWord[supLens] || supLens)}</b> only &mdash; tap <b>All</b> above for the whole book of ${all.length}.`}</span></div>`;
     return;
   }
-  wrap.innerHTML = `<div class="supplier-grid">${
-    listPageSlice('suppliers', rows).map(s=>supplierCardHTML(s, matchMap.get(s.id))).join('')}</div>`
-    + listMoreButtonHTML('suppliers', rows.length, 'suppliers');
+
+  const unpriced = rows.filter(r=> !r.priced).length;
+  const never = rows.filter(r=> !r.everInvoiced).length;
+  const noPhone = rows.filter(r=> !r.phones.length).length;
+  const facts = [];
+  if(byProduct) facts.push(`<b>${byProduct}</b> of these ${byProduct === 1 ? 'was' : 'were'} matched on a product they price rather than on their own details`);
+  if(unpriced) facts.push(`<b>${unpriced}</b> ${unpriced === 1 ? 'carries' : 'carry'} no price at all and cannot be picked as a source for anything`);
+  if(never) facts.push(`<b>${never}</b> ${never === 1 ? 'has' : 'have'} never been invoiced and ${never === 1 ? 'sits' : 'sit'} with dashes rather than zeros, because nothing bought is not the same as nothing spent`);
+  if(noPhone) facts.push(`<b>${noPhone}</b> ${noPhone === 1 ? 'has' : 'have'} no way to reach them on file`);
+  wrap.innerHTML = `<div class="ow-tbl su-tbl">
+      <div class="ow-tbl-h">
+        <span>Supplier</span><span class="su-c-st">Standing</span>
+        <span class="ow-tbl-n su-c-priced">Priced</span>
+        <span class="ow-tbl-n">Cheapest on</span>
+        <span class="ow-tbl-n su-c-conf">Last priced</span>
+        <span class="ow-tbl-n su-c-spent">Spent, 90 days</span>
+        <span class="ow-tbl-n">Owed now</span><span></span>
+      </div>
+      ${listPageSlice('suppliers', rows).map(r=> supplierRegisterRowHTML(r, matchMap.get(r.id))).join('')}
+    </div>
+    ${listMoreButtonHTML('suppliers', rows.length, 'suppliers')}
+    <p class="ow-mini su-foot">${facts.length ? facts.join('. ') + '. ' : ''}<b>Cheapest on</b> counts the product lines where this supplier currently beats everyone else who prices the same line &mdash; the same comparison Compare prices makes, so the two cannot disagree about who wins a line. Who to pay first is <b>Creditors</b>, and nothing here is ranked by what is owed.</p>`;
 }
 function editSupplier(id){
   const s = data.suppliers.find(x=>x.id===id); if(!s) return;
@@ -42862,31 +43620,70 @@ function printSupplierStatement(supplierId){
   });
 }
 
-/* Delegated once on the wrapper rather than bound per card, because the
-   grid is rebuilt on every search keystroke and re-binding forty cards
-   each time leaks a listener per render. */
-/* The supplier grid opens an account the same way the customer grid
-   does. Delegated on the wrapper, not bound per card: the grid is
-   rebuilt on every search keystroke, so per-card binding would leak a
-   listener per render. */
-(function wireSupplierCards(){
+/* ONE DELEGATED LISTENER on the register, one on the band and one on
+   the account, not one per row: all three are rebuilt on every search
+   keystroke, and binding per row would leak a listener a render. The
+   row opens the account; every button inside it keeps doing only its
+   own job. */
+(function wireSupplierRegister(){
   const wrap = document.getElementById('suppliersTableWrap');
+  const band = document.getElementById('supAttentionWrap');
+  const lens = document.getElementById('sup_lens');
   if(!wrap) return;
-  const openFrom = (el)=>{
-    const card = el.closest('.supplier-card[data-supplier]');
-    if(card) openSupplierStats(card.dataset.supplier);
+  const rerender = ()=>{
+    const box = document.getElementById('s_search');
+    renderSuppliers(box ? box.value : '');
   };
-  wrap.addEventListener('click', (e)=>{
-    // Commission, edit and delete all live inside the card and must keep
-    // doing only their own job.
-    if(e.target.closest('button')) return;
-    openFrom(e.target);
+  const act = (name, id)=>{
+    if(name === 'open') return openSupplierAccount(id);
+    /* Back to the book. The register was only hidden, so this is a
+       re-render rather than a rebuild. */
+    if(name === 'book'){ supViewId = null; rerender(); window.scrollTo(0, 0); return; }
+    /* Opens WhatsApp with the list written out and stops there. The
+       stamp it leaves records "asked", never "delivered". */
+    if(name === 'ask') return askSupplierForPrices(id);
+    if(name === 'reply') return openSupplierReply(id);
+    if(name === 'print') return printSupplierStatement(id);
+    if(name === 'commission') return openSupplierCommissionModal(id);
+    if(name === 'edit') return editSupplier(id);
+    if(name === 'delete') return deleteSupplier(id);
+  };
+  const onClick = (e)=>{
+    const b = e.target.closest('[data-sact]');
+    if(b){ act(b.dataset.sact, b.dataset.sid); return; }
+    /* A tel: link is the owner's own thumb on their own phone, and the
+       row must not swallow it. */
+    if(e.target.closest('a, button')) return;
+    const row = e.target.closest('[data-sopen]');
+    if(row) act('open', row.dataset.sopen);
+  };
+  wrap.addEventListener('click', onClick);
+  if(band) band.addEventListener('click', onClick);
+  const acct = document.getElementById('supAccountWrap');
+  if(acct) acct.addEventListener('click', onClick);
+  /* Escape leaves an account, the way it used to close the dialog this
+     replaced -- but only while one is open and nothing else has taken
+     the key, or it would fight every modal in the app. */
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Escape' || !supViewId) return;
+    if(document.querySelector('.modal-overlay.show')) return;
+    supViewId = null;
+    rerender();
   });
   wrap.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter' && e.key !== ' ') return;
-    if(!e.target.classList || !e.target.classList.contains('supplier-card')) return;
-    e.preventDefault(); // Space would otherwise scroll the page
-    openFrom(e.target);
+    if(!e.target.closest) return;
+    if(e.target.closest('a, button')) return;
+    const row = e.target.closest('[data-sopen]');
+    if(!row) return;
+    e.preventDefault();   // Space would otherwise scroll the page
+    act('open', row.dataset.sopen);
+  });
+  if(lens) lens.addEventListener('click', (e)=>{
+    const b = e.target.closest('.ow-seg-b');
+    if(!b) return;
+    supLens = b.dataset.slens;
+    rerender();
   });
 })();
 /* ONE DELEGATED LISTENER on the register and one on the band, not one
