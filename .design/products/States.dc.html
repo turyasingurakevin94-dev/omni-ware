@@ -1,0 +1,453 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ============ THE PRODUCTS REGISTER ============ */
+
+    /* Header actions. Three ghosts and exactly one accent: printing is a
+       job you do FROM this screen, adding a line is what the screen is
+       for. The basis select sits against the Catalogue button because
+       the two produce different money on the same paper. */
+    .ow-ph-t{font-size:19px;}
+    .pg-acts{display:flex;align-items:center;gap:8px;}
+    .pg-basis{display:flex;align-items:center;height:28px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;}
+    .pg-basis-s{display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;font-size:12px;
+      font-weight:600;color:var(--ow-ink-900);border-right:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .pg-basis-s svg{width:11px;height:11px;fill:none;stroke:var(--ow-ink-400);stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pg-basis .btn{border:0;height:26px;border-radius:0;}
+
+    /* The toolbar. Five controls, house field chrome, search takes the
+       room the four selects do not need. */
+    .ow-tb{display:flex;align-items:flex-end;gap:10px;margin-bottom:14px;}
+    .ow-f-grow{flex:1;min-width:0;}
+    .ow-f-t{border:0;background:none;outline:0;width:100%;font-family:'Inter',sans-serif;
+      font-size:12.5px;color:var(--ow-ink-400);}
+    .ow-f-sel{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+      font-size:12.5px;color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-f-sel svg{width:11px;height:11px;fill:none;stroke:var(--ow-ink-400);stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ow-f-in.wide{min-width:168px;}
+    .ow-f-in .mag{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* Four figures about the register's CONDITION, not about money. */
+    .ow-strip{grid-template-columns:repeat(4,1fr);margin-bottom:12px;}
+    .ow-mt-v{font-size:21px;}
+
+    /* The set-up line. Present only when something is actually unfinished;
+       one amber line, never a banner over every figure. */
+    .pg-fix{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:9px 12px;
+      background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);}
+    .pg-fix svg.wrn{width:15px;height:15px;flex:none;fill:none;stroke:var(--ow-amber-ink);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .pg-fix-t{font-size:12.5px;color:var(--ow-amber-ink);line-height:1.45;min-width:0;}
+    .pg-fix-t b{font-weight:600;}
+    .pg-fix .btn{margin-left:auto;flex:none;border-color:#E0CBA0;color:var(--ow-amber-ink);background:var(--ow-paper);}
+
+    /* ---- the register itself ---- */
+    .pg-cols{display:grid;grid-template-columns:34px minmax(0,1fr) 126px 102px 102px 70px 22px;
+      column-gap:12px;align-items:center;padding:0 12px;box-sizing:border-box;}
+    .pg-th{height:28px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+    .pg-th span{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);white-space:nowrap;}
+    .pg-th .r{text-align:right;}
+
+    .pg-r{min-height:52px;padding-top:7px;padding-bottom:7px;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;margin-left:-3px;}
+    .pg-r:last-child{border-bottom:0;}
+    .pg-r.on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+
+    /* The thumbnail. 34px, and a line with no photo says so rather than
+       drawing an empty frame the size of a photo. */
+    .pg-th-i{width:34px;height:34px;border-radius:var(--ow-r);overflow:hidden;flex:none;
+      background:var(--ow-steel-100);}
+    .pg-th-i.none{background:var(--ow-paper);border:1px dashed var(--ow-rule);
+      display:flex;align-items:center;justify-content:center;}
+    .pg-th-i.none svg{width:14px;height:14px;fill:none;stroke:var(--ow-steel-400);stroke-width:1.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pg-th-i i{display:block;width:100%;height:100%;}
+
+    /* Name, then everything that identifies the line, on one meta line. */
+    .pg-nm{min-width:0;font-size:13px;font-weight:500;line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pg-meta{display:flex;align-items:center;gap:6px;min-width:0;margin-top:3px;
+      font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    .pg-meta .t{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .pg-id{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.02em;
+      color:var(--ow-ink-600);background:var(--ow-steel-050);border-radius:var(--ow-r-sm);
+      padding:1px 5px;flex:none;}
+    .pg-dot{color:var(--ow-steel-100);flex:none;}
+
+    /* A variant is a line under its product, not a product of its own. */
+    .pg-r.var .pg-cell1{padding-left:17px;position:relative;}
+    .pg-branch{position:absolute;left:3px;top:-9px;width:9px;height:22px;
+      border-left:1px solid var(--ow-rule);border-bottom:1px solid var(--ow-rule);
+      border-bottom-left-radius:4px;}
+    .pg-vlab{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ow-ink-900);
+      background:var(--ow-steel-050);border-radius:var(--ow-r-sm);padding:1px 5px;flex:none;}
+
+    /* Money. Figure, then unit, then basis, in that fixed relationship,
+       right-aligned and tabular so the column can be read down. Money
+       columns are sized to their content; the name column gives way. */
+    .pg-v{text-align:right;white-space:nowrap;min-width:0;}
+    .pg-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;
+      letter-spacing:-.02em;display:block;line-height:1.2;}
+    .pg-f .u{font-size:10px;font-weight:500;color:var(--ow-ink-400);margin-left:2px;letter-spacing:0;}
+    .pg-b{display:block;font-size:10.5px;color:var(--ow-ink-400);line-height:1.3;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;}
+    .pg-b.own{color:var(--ow-ink-600);font-weight:600;}
+    .pg-f.none{color:var(--ow-steel-400);font-weight:500;}
+
+    /* The row IS the way in. One pencil at the end, no delete on the
+       list at all -- deleting a line is done inside the line's record. */
+    .pg-go{width:16px;height:16px;fill:none;stroke:var(--ow-steel-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;justify-self:end;}
+    .pg-r.on .pg-go{stroke:var(--ow-ink-600);}
+
+    .pg-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;
+      height:17px;padding:0 6px;border-radius:var(--ow-r-sm);white-space:nowrap;flex:none;
+      background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
+    /* ---- the rail ---- */
+    .pg-cat{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;
+      column-gap:8px;padding:6px 12px;border-bottom:1px solid var(--ow-rule-soft);min-height:30px;}
+    .pg-cat:last-child{border-bottom:0;}
+    .pg-cat-n{min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pg-cat-n .s{color:var(--ow-ink-400);font-size:11px;}
+    .pg-cat-w{font-size:10.5px;font-weight:600;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border-radius:var(--ow-r-sm);padding:1px 5px;}
+    .pg-cat-c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-600);}
+    .pg-door{display:flex;align-items:center;gap:9px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);font-size:12px;}
+    .pg-door:last-child{border-bottom:0;}
+    .pg-door svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--ow-ink-400);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .pg-door .c{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);}
+
+    /* A variable product's own line: it is not sellable itself, so it
+       carries no figures -- it says what its variants are and stops. */
+    .pg-g{display:flex;align-items:center;gap:12px;padding:7px 12px;min-height:40px;
+      box-sizing:border-box;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .pg-gn{margin-left:auto;font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+    /* Four states drawn side by side. Each is a whole screen, so each is
+       allowed its own single accent. */
+    .st-h{display:flex;align-items:baseline;gap:10px;margin:0 0 9px;}
+    .st-n{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ow-paper);
+      background:var(--ow-steel-950);border-radius:var(--ow-r-sm);padding:1px 6px;flex:none;}
+    .st-t{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-d{font-size:11.5px;color:var(--ow-ink-400);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .st-sec{margin-bottom:20px;}
+
+    .st-empty{padding:38px 32px;text-align:center;}
+    .st-empty h3{font-family:'Archivo Black',sans-serif;font-size:17px;margin:0 0 10px;letter-spacing:-.01em;}
+    .st-empty p{font-size:13px;color:var(--ow-ink-600);line-height:1.55;margin:0 auto 16px;max-width:62ch;}
+    .st-empty .last{font-size:11.5px;color:var(--ow-ink-400);margin-bottom:0;}
+    .st-mark{width:46px;height:46px;margin:0 auto 14px;border-radius:11px;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;}
+    .st-mark svg{width:23px;height:23px;fill:none;stroke:var(--ow-steel-400);stroke-width:1.6;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* the key: one specimen row, and what actually clears it */
+    .st-key{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+      border-top:1px solid var(--ow-rule-soft);}
+    .st-why{display:flex;flex-direction:column;gap:4px;padding:11px 14px;
+      border-left:1px solid var(--ow-rule-soft);}
+    .st-why:first-child{border-left:0;}
+    .st-why b{font-size:11.5px;font-weight:600;}
+    .st-why span{font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;}
+
+    .st-cap{font-size:11.5px;color:var(--ow-ink-600);line-height:1.5;margin:0;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .st-cap b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* a read that failed. The one place crimson belongs on this screen. */
+    .st-fail{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;
+      background:var(--ow-crimson-soft);border-bottom:1px solid #EBCDC9;}
+    .st-fail svg{width:17px;height:17px;flex:none;margin-top:1px;fill:none;stroke:var(--ow-crimson);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .st-fail-t{min-width:0;}
+    .st-fail-t b{display:block;font-size:13px;font-weight:600;color:var(--ow-crimson);margin-bottom:3px;}
+    .st-fail-t span{font-size:12px;color:var(--ow-crimson);line-height:1.5;display:block;max-width:88ch;}
+    .st-fail .btn{margin-left:auto;flex:none;background:var(--ow-paper);border-color:#E0B8B2;color:var(--ow-crimson);}
+    .pg-f.unread{color:var(--ow-steel-400);font-weight:500;font-family:'Inter',sans-serif;font-size:11.5px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1720px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Catalogue</span><span>/</span><span>Products</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"></path><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"></path></svg><span>Compare prices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-section-label">Catalogue</div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg><span>Products</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"></circle><circle cx="17" cy="17" r="3.2"></circle><path d="M9.6 9.6l4.8 4.8"></path></svg><span>What goes with what</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Price registry</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7h13l-3-3"></path><path d="M21 17H8l3 3"></path></svg><span>Movements</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg><span>Media</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 6h18v12H3z"></path><circle cx="12" cy="12" r="2.6"></circle></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16v11H7l-3 3z"></path><path d="M9 9h6"></path></svg><span>Chase debts</span><span class="nav-badge">4</span></div>
+  </div>
+<div class="main">
+  <div class="ow-ph">
+    <h1 class="ow-ph-t">Products</h1>
+    <p class="ow-ph-sub">The four states the register has to be able to say out loud.</p>
+    <span class="ow-ph-sp"></span>
+  </div>
+<div class="st-sec"><div class="st-h"><span class="st-n">1</span><span class="st-t">Nothing in the register yet</span><span class="st-d">No strip of four zeros, because four figures of zero are four figures that mean nothing.</span></div>
+  <div class="ow-pan"><div class="st-empty">
+    <span class="st-mark"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
+    <h3>Nothing in the register yet</h3>
+    <p>A product is a thing you sell: a name, a category, and the markup rule that turns a supplier&rsquo;s
+      price into your own. Everything else in the app hangs off it &mdash; a supplier quote is a quote
+      <em>for a product</em>, and so is a stock count, an order line and a row on the printed catalogue.</p>
+    <button class="btn btn-accent"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add the first product</button>
+    <p class="last" style="margin-top:16px;">Nothing else appears on this screen until there is something to count.</p>
+  </div></div></div>
+<div class="st-sec"><div class="st-h"><span class="st-n">2</span><span class="st-t">What &ldquo;not ready to sell&rdquo; means, in four marks</span><span class="st-d">One amber chip, three causes. A screen that marked everything would mark nothing.</span></div><div class="ow-pan"><div class="pg-cols pg-th"><span></span><span>Line</span><span class="r">Costs you</span><span class="r">Wholesale</span><span class="r">Retail</span><span class="r">On shelf</span><span></span></div><div class="pg-cols pg-r"><span class="pg-th-i none"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><div class="pg-cell1"><div class="pg-nm">Wheelbarrow, heavy duty</div><div class="pg-meta"><span class="pg-id">P023</span> <span class="pg-chip"><svg viewBox="0 0 24 24" style="width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>no supplier price</span><span class="pg-dot">&bull;</span><span class="t">Tools &rsaquo; Hand Tools</span></div></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f ">0<span class="u"></span></span><span class="pg-b">never held</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(120deg,#B0A79B,#8C8378 60%,#A29A8E)"></i></span><div class="pg-cell1"><div class="pg-nm">Ridge caps (plain)</div><div class="pg-meta"><span class="pg-id">P021</span> <span class="pg-chip"><svg viewBox="0 0 24 24" style="width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>no markup rule</span><span class="pg-dot">&bull;</span><span class="t">Roofing</span></div></div><div class="pg-v"><span class="pg-f ">12,000<span class="u">/pc</span></span><span class="pg-b">1 quote &middot; Kirinya</span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f ">34<span class="u"></span></span><span class="pg-b">pieces</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(150deg,#C6A657,#947C39 60%,#B49A52)"></i></span><div class="pg-cell1"><div class="pg-nm">Padlock 50&nbsp;mm</div><div class="pg-meta"><span class="pg-id">P022</span> <span class="pg-chip"><svg viewBox="0 0 24 24" style="width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>no variants built</span><span class="pg-dot">&bull;</span><span class="t">Tools</span></div></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><div class="pg-v"><span class="pg-f none">&mdash;</span><span class="pg-b"></span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i none"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><div class="pg-cell1"><div class="pg-nm">Steel Nails 3 inch</div><div class="pg-meta"><span class="pg-id">P003</span><span class="pg-dot">&bull;</span><span class="t">Nails &amp; Fasteners</span></div></div><div class="pg-v"><span class="pg-f ">6,000<span class="u">/kg</span></span><span class="pg-b">2 quotes &middot; Nakawa</span></div><div class="pg-v"><span class="pg-f ">6,900<span class="u"></span></span><span class="pg-b">default +15%</span></div><div class="pg-v"><span class="pg-f ">7,800<span class="u"></span></span><span class="pg-b">default +30%</span></div><div class="pg-v"><span class="pg-f ">210<span class="u"></span></span><span class="pg-b">kg</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="st-key"><div class="st-why"><b>No supplier price</b><span>Nobody has quoted it, so there is no cost to mark up. Cleared by one price in the registry, or by receiving a delivery that carries a cost.</span></div><div class="st-why"><b>No markup rule</b><span>It has a cost but nothing to turn it into a price &mdash; no rule of its own, and no shop default behind it. Cleared in the line, or once for the whole shop.</span></div><div class="st-why"><b>No variants built</b><span>Sold in options that do not exist yet, so there is nothing to price, stock or sell. Cleared by building the options in the line&rsquo;s record.</span></div><div class="st-why"><b>No photo &mdash; and not a fault</b><span>It sells perfectly well without one. Only the printed catalogue and the item picker are poorer for it, so it is counted in the strip and never marked on the line.</span></div></div><p class="st-cap">The fourth line is the one that matters: <b>a missing photo is not a fault.</b> It is counted in the strip and never chipped on a row &mdash; which is what keeps the amber worth reading, because nineteen of thirty-one lines have no photo and only four are genuinely unfinished.</p></div></div>
+<div class="st-sec"><div class="st-h"><span class="st-n">3</span><span class="st-t">A name longer than the box it was drawn for</span><span class="st-d">Real stock is named longer than any column you can draw.</span></div><div class="ow-pan"><div class="pg-cols pg-th"><span></span><span>Line</span><span class="r">Costs you</span><span class="r">Wholesale</span><span class="r">Retail</span><span class="r">On shelf</span><span></span></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(120deg,#B7BFC6,#8E979F 40%,#C3CAD0 70%,#98A1A9)"></i></span><div class="pg-cell1"><div class="pg-nm">Iron Sheets &mdash; G28 gauge, 3&nbsp;m box profile, Uganda Baati, sold by the bundle of twenty (blue, ex-works Kampala)</div><div class="pg-meta"><span class="pg-id">P002</span><span class="pg-dot">&bull;</span><span class="t">Roofing &rsaquo; Long-span</span></div></div><div class="pg-v"><span class="pg-f ">1,240,000<span class="u">/bundle</span></span><span class="pg-b">4 quotes &middot; Kirinya Steel &amp; Hardware Ltd</span></div><div class="pg-v"><span class="pg-f ">1,426,000<span class="u"></span></span><span class="pg-b">default +15%</span></div><div class="pg-v"><span class="pg-f ">1,612,000<span class="u"></span></span><span class="pg-b">default +30%</span></div><div class="pg-v"><span class="pg-f ">1,208<span class="u"></span></span><span class="pg-b">sheets</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(150deg,#9AA3AB,#6E7780 55%,#8C959D)"></i></span><div class="pg-cell1"><div class="pg-nm">Cement (Tororo 50&nbsp;kg)</div><div class="pg-meta"><span class="pg-id">P001</span><span class="pg-dot">&bull;</span><span class="t">Cement</span></div></div><div class="pg-v"><span class="pg-f ">37,000<span class="u">/bag</span></span><span class="pg-b">3 quotes &middot; Mukwano</span></div><div class="pg-v"><span class="pg-f ">42,550<span class="u"></span></span><span class="pg-b">default +15%</span></div><div class="pg-v"><span class="pg-f ">48,100<span class="u"></span></span><span class="pg-b">default +30%</span></div><div class="pg-v"><span class="pg-f ">120<span class="u"></span></span><span class="pg-b">bags</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><p class="st-cap">The name column gives way and says so with an ellipsis, carrying the whole value in its tooltip; the basis line under the figure does the same. <b>No money column ever truncates.</b> &ldquo;1,240,00&rdquo; is a tenth of &ldquo;1,240,000&rdquo; and looks entirely plausible &mdash; a clipped figure is not a shortened figure, it is a wrong one. The same rule bars a bare <code>&lt;input&gt;</code> from holding a value that can outgrow it: an input clips mid-glyph with no ellipsis and no tooltip, so &ldquo;Mulongo Hardware&rdquo; reads as a different supplier rather than as a shortened one.</p></div></div>
+<div class="st-sec" style="margin-bottom:0;"><div class="st-h"><span class="st-n">4</span><span class="st-t">The price book did not load</span><span class="st-d">A state the screen does not have today &mdash; so it shows zeros, and a shop reads them as facts.</span></div>
+  <div class="ow-pan">
+    <div class="st-fail">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>
+      <span class="st-fail-t"><b>Your price book did not load, so this register cannot say what anything costs or fetches.</b>
+        <span>The names, IDs and categories below are current &mdash; those read fine. Every money column says
+        <em>not read</em> rather than 0, because a zero here would claim a line is free. The set-up count is
+        switched off rather than shown short: it cannot know what is unfinished without the prices, and a count
+        that quietly leaves lines out is worse than no count.</span></span>
+      <button class="btn btn-ghost ow-sm">Try again</button>
+    </div><div class="pg-cols pg-th"><span></span><span>Line</span><span class="r">Costs you</span><span class="r">Wholesale</span><span class="r">Retail</span><span class="r">On shelf</span><span></span></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(150deg,#9AA3AB,#6E7780 55%,#8C959D)"></i></span><div class="pg-cell1"><div class="pg-nm">Cement (Tororo 50&nbsp;kg)</div><div class="pg-meta"><span class="pg-id">P001</span><span class="pg-dot">&bull;</span><span class="t">Cement</span></div></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(120deg,#B7BFC6,#8E979F 40%,#C3CAD0 70%,#98A1A9)"></i></span><div class="pg-cell1"><div class="pg-nm">Iron Sheets (28 gauge, plain)</div><div class="pg-meta"><span class="pg-id">P002</span><span class="pg-dot">&bull;</span><span class="t">Roofing</span></div></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="pg-cols pg-r"><span class="pg-th-i"><i style="background:linear-gradient(160deg,#A9A29A,#7C736A 60%,#9C948B)"></i></span><div class="pg-cell1"><div class="pg-nm">Steel Nails 3 inch</div><div class="pg-meta"><span class="pg-id">P003</span><span class="pg-dot">&bull;</span><span class="t">Nails &amp; Fasteners</span></div></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><div class="pg-v"><span class="pg-f unread">not read</span></div><svg class="pg-go" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+    <p class="st-cap">Adding a product still works, and so does editing a name or a category &mdash; those are
+      writes to the register itself. <b>Printing does not,</b> and the two print buttons say why rather than
+      producing a customer catalogue with every price missing.</p>
+  </div></div>
+</div></div>
+</x-dc>
+</body>
+</html>
