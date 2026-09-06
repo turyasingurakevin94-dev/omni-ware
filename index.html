@@ -47561,6 +47561,45 @@ function briefPackText(pr){
   return 'Sold loose';
 }
 
+/* WHICH VARIANT A LINE THAT NAMES A PRODUCT ACTUALLY MEANS.
+
+   A pairing says "buy these with those" and a site stage says "roofing
+   needs sheets"; neither names a size. Both then asked for the product
+   with variantIdx null -- and for a VARIABLE product that is nobody's
+   row and nobody's shelf, because prices and stock are both keyed
+   product::variant. So a product priced and stocked perfectly well
+   under its variants came back "no price on file", every time, however
+   well it was priced. The owner was sent to the Price Registry to add a
+   price that was already there.
+
+   Resolved, in order of what the books actually say:
+     1. this customer's own habit on that product -- they have bought a
+        size before, and that is the size to quote them;
+     2. the product is not variable, so there is nothing to choose;
+     3. exactly one variant the shop can price AND has, which is not a
+        choice at all;
+   and otherwise NOTHING, said as itself. Picking between three sizes
+   the customer has never bought would put a number on a picture that
+   nobody in the shop chose. */
+function briefVariantForLine(productId, habits){
+  const p = productById(productId);
+  /* A pairing pointing at something that is no longer in the catalogue
+     is not a pricing gap and must not be reported as one -- "no price
+     on file" would send the owner to the Price Registry to price a
+     product that is not there. customerBrief's own dropped list already
+     names it, in those words: "not a product you sell". */
+  if(!p) return { gone: true };
+  const mine = (habits || []).find(h=> h.productId === productId && h.variantIdx != null);
+  if(mine) return { variantIdx: mine.variantIdx };
+  const vs = Array.isArray(p.variants) ? p.variants : [];
+  if(!vs.length) return { variantIdx: null };
+  const usable = vs.map((v, i)=> i).filter(i=>{
+    const s = briefInStock(productId, i);
+    return rankedPriceRows(productId, i).length && (s === null || s > 0);
+  });
+  if(usable.length === 1) return { variantIdx: usable[0] };
+  return { why: 'pickVariant', choices: usable.length };
+}
 function briefGroups(c, habits){
   const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
   const seen = new Set();
@@ -47672,7 +47711,11 @@ function briefGroups(c, habits){
          and pricing it retail would misquote the very line the pairing
          exists to sell. */
       const q = (x.l.qty && x.h.typicalQty) ? Math.max(1, Math.round(x.l.qty * x.h.typicalQty)) : null;
-      return rowFor(x.l.toId, { theirQty: q }, null, q);
+      const v = briefVariantForLine(x.l.toId, habits);
+      if(v.gone) return null;
+      if(v.why) return leaveOff(x.l.toId, null,
+        productVariantLabel(productById(x.l.toId) || { name: productLinkName(x.l.toId) }, null), v.why);
+      return rowFor(x.l.toId, { theirQty: q }, v.variantIdx, q);
     }).filter(Boolean));
 
   /* 4. WHAT THEIR SITE HAS REACHED, and only while somebody's word on
@@ -47682,7 +47725,15 @@ function briefGroups(c, habits){
     const sized = habits.length ? Math.max(...habits.map(h=> h.typicalQty)) : null;
     take('stage', `FOR YOUR ${String(site.stage.label).toUpperCase()}`,
       (data.products||[]).filter(p=> site.stage.buys.includes(p.category))
-        .map(p=> rowFor(p.id, {}, null, sized)).filter(Boolean));
+        .map(p=>{
+          /* A stage names a CATEGORY, so it reaches the whole catalogue
+             and would otherwise report every variable product in it as
+             unpriced. Where the size cannot be settled the product is
+             simply not offered: nothing was asked for by name here, so
+             there is nothing to explain to the owner about it. */
+          const v = briefVariantForLine(p.id, habits);
+          return (v.why || v.gone) ? null : rowFor(p.id, {}, v.variantIdx, sized);
+        }).filter(Boolean));
   }
   /* A product can be tried by more than one block -- ALSO BUY prices a
      companion at the pairing's quantity, which may fall on the other
@@ -47785,6 +47836,7 @@ const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
   outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
+  pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Point the pairing at the size you mean, under Pairings \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
   noRuleWholesale: { head: 'no WHOLESALE markup rule, which is the side they are sold at', fix: 'Fill in the wholesale markup on the product, or a shop default, under Pricing \u2014 the retail box does not price these, because there is no retail figure on file to price. A buying price is never shown to a customer.' },
   noRuleRetail: { head: 'no RETAIL markup rule, which is the side they are sold at', fix: 'Fill in the retail markup on the product, or a shop default, under Pricing \u2014 the wholesale box does not price these at this quantity. A buying price is never shown to a customer.' },
   checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
