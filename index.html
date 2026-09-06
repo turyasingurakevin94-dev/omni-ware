@@ -10552,22 +10552,28 @@
   .bf-g::after{content:"";flex:1;height:1px;background:var(--ow-rule-soft);}
   .bf-g-good{color:var(--ow-verdigris);}
   .bf-g-good::after{background:var(--ow-verdigris-soft);}
-  .bf-r{display:grid;grid-template-columns:minmax(0,1fr) 62px 88px;gap:0 var(--ow-sp-6);
-    padding:var(--ow-sp-6) var(--ow-sp-8);border-top:1px solid var(--ow-rule-soft);}
+  .bf-r{display:grid;grid-template-columns:minmax(0,1fr) 64px 52px 74px 52px;
+    gap:0 var(--ow-sp-6);padding:var(--ow-sp-6) var(--ow-sp-8);
+    border-top:1px solid var(--ow-rule-soft);}
   .bf-n{grid-area:1/1;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bf-p{grid-area:1/2;font-size:var(--ow-t-11);color:var(--ow-ink-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bf-pu{grid-area:1/3;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* Money never truncates and always lines up: the column is read down,
      and 41,00 is a tenth of 41,000 and looks entirely plausible. */
-  .bf-v{grid-area:1/3;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  .bf-v{grid-area:1/4;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
     font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
-  .bf-u{grid-area:2/3;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
-  .bf-was,.bf-take{grid-area:2/1;font-size:var(--ow-t-11);}
-  .bf-was{color:var(--ow-verdigris);}
-  .bf-was s{opacity:.7;}
-  .bf-take{color:var(--ow-ink-400);}
+  .bf-x{grid-area:1/5;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .bf-tr{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .bf-was{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  .bf-was s{opacity:.85;}
+  .bf-gh{margin-left:auto;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-400);
+    text-transform:none;}
   .bf{position:relative;aspect-ratio:3/4;border-radius:var(--ow-r);overflow:hidden;
     border:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;
     justify-content:flex-end;padding:var(--ow-sp-8);box-sizing:border-box;}
@@ -46242,11 +46248,14 @@ function customerProductHabits(customerId){
     if(!when) return;
     (q.items||[]).forEach(it=>{
       if(!it.productId) return;
-      const h = byProduct.get(it.productId) || { productId: it.productId, dates: [], qty: [], price: [] };
+      const vIdx = it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx);
+      const key = it.productId + '::' + vIdx;
+      const h = byProduct.get(key) || { key, productId: it.productId, variantIdx: vIdx,
+        dates: [], qty: [], price: [] };
       h.dates.push(when);
       h.qty.push(Number(it.qty)||0);
       h.price.push(quoteItemSellPrice(it));
-      byProduct.set(it.productId, h);
+      byProduct.set(key, h);
     });
   });
   return [...byProduct.values()].map(h=>{
@@ -46264,7 +46273,7 @@ function customerProductHabits(customerId){
     }
     const sinceLast = daysBetweenISO(last.d, today);
     return {
-      productId: h.productId, orders: order.length, everyDays,
+      productId: h.productId, variantIdx: h.variantIdx, orders: order.length, everyDays,
       lastAt: last.d, lastQty: last.q, lastPrice: last.p, sinceLast,
       /* Negative means it is already overdue, which is still "due". */
       dueIn: everyDays === null ? null : everyDays - sinceLast,
@@ -46324,7 +46333,7 @@ function briefReasonFor(r, habits){
         and the only one measured against what THEY paid rather than
         against what the shop used to charge. */
   const cheaper = habits.map(h=>{
-    const now = briefPriceNow(h.productId);
+    const now = briefPriceNow(h.productId, h.variantIdx, h.typicalQty);
     if(now === null || !h.lastPrice || !inStock(h.productId)) return null;
     const drop = (h.lastPrice - now) / h.lastPrice * 100;
     return drop >= TELL_PRICE_DROP_PCT ? { h, now, drop } : null;
@@ -46351,7 +46360,7 @@ function briefReasonFor(r, habits){
          picture names the thing and shows no quantity. */
       const sized = habits.length ? Math.max(...habits.map(h=> h.typicalQty)) : null;
       const p = want[0];
-      const price = briefPriceNow(p.id);
+      const price = briefPriceNow(p.id, null, sized);
       return { key:'stage', chip:`Site: ${site.stage.label.toLowerCase()}`, tone:'ow-warn',
         productId: p.id, qty: sized,
         weight: (sized || 1) * (price || 0),
@@ -46450,6 +46459,9 @@ function customerBrief(customerId){
   const reason = briefReasonFor(r, habits);
   const held = briefHeldBack(r);
   const told = briefLastTold(customerId);
+  /* Built once: it carries what it had to leave out, and asking twice
+     would count the same omissions twice. */
+  const brGroups = briefGroups(c, habits);
 
   /* What to show them. The reason picks it where there is one; where
      there is not, it is simply what they buy most, because a brief
@@ -46493,7 +46505,7 @@ function customerBrief(customerId){
     /* What the PICTURE carries: the whole list, in blocks. The single
        pick above stays because the queue row, the message and the
        reasoning are all about the one thing that put them on the list. */
-    groups: briefGroups(c, habits),
+    groups: brGroups, pricing: brGroups.dropped,
     product, qty, price: priceNow, sameAsTheirs, cheaperThanTheirs,
     lastPrice: habit ? habit.lastPrice : null, also,
     /* What was left out, and why. The shop sees this; the customer
@@ -46580,49 +46592,133 @@ const BRIEF_ROWS_PER_GROUP = 5, BRIEF_MAX_ROWS = 16, BRIEF_MAX_LIST_FRAMES = 4;
 
 /* The whole price row, not just the figure: packing lives on it, and
    packing is a column now. */
-function briefPriceRow(productId){
-  const rows = (data.prices||[]).filter(p=> p.productId === productId && Number(p.retail) > 0)
-    .sort((a, b)=> String(b.date||'').localeCompare(String(a.date||'')));
-  return rows.length ? rows[0] : null;
-}
-function briefPriceNow(productId){
-  const r = briefPriceRow(productId);
-  return r ? Math.round(Number(r.retail)) : null;
-}
 /* How it comes. "25/Bag" rather than "25 Kg per Bag", because the unit
    is said once, beside the price it belongs to, and saying it twice in
    a 600-pixel row is what forces the type down to a size nobody reads.
    Where the shop has recorded no packing the cell is a dash: an empty
    cell reads as a missing value, and a dash reads as "sold loose". */
-function briefPackText(pr, p){
-  const packQty = pr ? Number(pr.packQty) || 0 : 0;
-  const packUnit = pr ? String(pr.packUnit || '').trim() : '';
-  if(packQty > 0 && packUnit) return `${packQty}/${packUnit}`;
-  return '—';
-}
-function briefUnitOf(pr, p){
-  return String((pr && pr.unit) || (p && p.unit) || '').trim();
-}
 
 /* THE LIST, IN BLOCKS, EACH WITH ITS REASON AT THE TOP. Priority
    decides which block a product lands in, and a product is never listed
    twice: the fall in price is the strongest thing that can be said, so
    it takes the product; what they always take comes next; then what
    goes with those; then what their site has reached. */
+/* ---- what to charge THIS customer, at THEIR trade level -------------
+   The price registry holds what SUPPLIERS charge the shop -- one card a
+   supplier, wholesale by the pack and retail by the unit ("Add an entry
+   each time a supplier gives you a price"). Those are buying prices.
+   Reading `retail` off a registry row and printing it on a customer's
+   list, as this did, put roughly what the shop PAYS in front of the
+   person it is selling to.
+
+   A selling price in this app is always derived the same way: a base
+   the shop pays, at the quantity being bought, plus the markup rule for
+   that side of the trade -- variant rule, else product rule, else the
+   shop default. Exactly what quoteItemSellPrice does for a quote line;
+   this is that chain, for a customer's own habit.
+
+   AND THE SIDE IS THEIRS. Somebody who takes twenty boxes at a time is
+   buying a carton and is quoted the trade side; somebody who takes two
+   is quoted retail. The threshold is the pack, the same test
+   purchasePriceAtQty and quoteItemSellPrice already use, so the picture
+   and the counter cannot disagree about who is a trade buyer. */
+function briefPriceKind(packQty, qty){
+  return (Number(packQty) > 0 && Number(qty) >= Number(packQty)) ? 'wholesale' : 'retail';
+}
+/* The rows the shop holds for one product AND ONE VARIANT. Variant
+   matters everywhere in this app -- a price is keyed
+   product::variant::supplier -- and reading across variants is how a
+   4-inch runner's price ended up beside a 2-inch runner's history. */
+function briefPriceRows(productId, variantIdx){
+  const want = variantIdx == null ? null : Number(variantIdx);
+  return (data.prices || []).filter(p=>{
+    if(p.productId !== productId) return false;
+    const v = p.variantIdx == null ? null : Number(p.variantIdx);
+    return v === want;
+  }).filter(p=> !p.outOfStock);
+}
+/* What the shop would charge them for one, at the quantity they take.
+   Returns null rather than a guess: with no markup rule on file there
+   is no selling price to derive, and the base is a BUYING price that
+   must never reach a customer. */
+function briefPriceFor(productId, variantIdx, qty){
+  const product = productById(productId);
+  if(!product) return null;
+  const rows = briefPriceRows(productId, variantIdx);
+  if(!rows.length) return null;
+  const n = Number(qty) > 0 ? Number(qty) : 1;
+  /* The cheapest way the shop can actually buy it at that quantity --
+     the same reading the buying plan takes of the registry. */
+  let best = null;
+  rows.forEach(r=>{
+    const base = purchasePriceAtQty(r, n);
+    if(base == null || !(base > 0)) return;
+    if(!best || base < best.base) best = { row: r, base };
+  });
+  if(!best) return null;
+  const packQty = Number(best.row.packQty) || 0;
+  const kind = briefPriceKind(packQty, n);
+  const sell = suggestedSellingPrice(product, best.base, kind, variantIdx, packQty);
+  if(sell == null || !(sell > 0)) return null;
+  return { price: Math.round(sell), kind, packQty,
+    packUnit: String(best.row.packUnit || '').trim(),
+    unit: String(best.row.unit || product.unit || '').trim() };
+}
+/* Kept for the queue's own reading, which only ever asks "has the
+   figure moved", and now asks it of a selling price. */
+function briefPriceNow(productId, variantIdx, qty){
+  const p = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
+  return p ? p.price : null;
+}
+/* Packing, with its noun. "20/Ctn" counted nothing: the number needs
+   the thing it counts, and the reader should not have to join it to a
+   unit printed at the far side of the row. */
+/* Enough English to say "20 Boxes/Ctn" without inventing "Boxs" or
+   "Length (3m)s". Anything that is not a plain word -- a measure, a
+   size in brackets -- is left exactly as the shop recorded it, because
+   a unit is a fact and guessing at it is how "Kgs" happens. */
+function briefPlural(unit, n){
+  const u = String(unit || '').trim();
+  if(n === 1 || u.length < 3 || !/^[A-Za-z]+$/.test(u)) return u;
+  if(/(s|x|z|ch|sh)$/i.test(u)) return u + 'es';
+  return u + 's';
+}
+function briefPackText(pr){
+  const packQty = pr ? Number(pr.packQty) || 0 : 0;
+  const packUnit = pr ? String(pr.packUnit || '').trim() : '';
+  const unit = pr ? String(pr.unit || '').trim() : '';
+  if(packQty > 0 && packUnit) return `${packQty} ${briefPlural(unit, packQty) || 'per'}/${packUnit}`;
+  return 'Sold loose';
+}
+
 function briefGroups(c, habits){
   const inStock = (id)=> { const s = briefInStock(id); return s === null || s > 0; };
   const seen = new Set();
   const groups = [];
+  const dropped = { noPrice: 0, noRule: 0 };
   let total = 0;
+  groups.dropped = dropped;
 
-  const rowFor = (productId, extra)=>{
+  /* A row is priced at the quantity THIS customer takes, so the side of
+     the trade the figure comes from is theirs and not the shop's
+     default. Where nothing can be derived the line is left off rather
+     than shown at a made-up figure. */
+  const rowFor = (productId, extra, variantIdx, qty)=>{
     const p = productById(productId);
     if(!p) return null;
-    const price = briefPriceNow(productId);
-    if(price === null || !inStock(productId)) return null;
-    const pr = briefPriceRow(productId);
+    if(!inStock(productId)) return null;
+    const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
+    if(!px){
+      /* Two different silences, and the shop needs to tell them apart:
+         nothing the shop can buy it at, or nothing to mark it up by. */
+      const n = Number(qty) > 0 ? Number(qty) : 1;
+      const rows = briefPriceRows(productId, variantIdx == null ? null : variantIdx);
+      if(rows.some(r=> purchasePriceAtQty(r, n) > 0)) dropped.noRule++;
+      else dropped.noPrice++;
+      return null;
+    }
     return Object.assign({ productId, name: briefShortName(p.name),
-      packing: briefPackText(pr, p), unit: briefUnitOf(pr, p), price }, extra || {});
+      packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind }, extra || {});
   };
   const take = (key, head, rows)=>{
     const keep = [];
@@ -46645,17 +46741,24 @@ function briefGroups(c, habits){
      a product that misses the floor is not dropped, it simply falls
      through to the block below it. */
   take('price', 'PRICE DOWN', habits.map(h=>{
-    const now = briefPriceNow(h.productId);
-    if(now === null || !h.lastPrice || now >= h.lastPrice) return null;
+    /* Both figures are now SELLING prices for the same variant at the
+       same quantity -- what they were charged, against what they would
+       be charged today. The old reading compared a selling price
+       against a buying price off a registry row, which is why a fall
+       appeared where none existed. */
+    const px = briefPriceFor(h.productId, h.variantIdx, h.typicalQty);
+    if(!px || !h.lastPrice || px.price >= h.lastPrice) return null;
     if(h.sinceLast > TELL_PRICE_MEMORY_DAYS) return null;
-    if((h.lastPrice - now) / h.lastPrice * 100 < TELL_PRICE_DROP_PCT) return null;
-    return rowFor(h.productId, { was: Math.round(h.lastPrice), fall: h.lastPrice - now });
+    if((h.lastPrice - px.price) / h.lastPrice * 100 < TELL_PRICE_DROP_PCT) return null;
+    return rowFor(h.productId, { was: Math.round(h.lastPrice), fall: h.lastPrice - px.price,
+      theirQty: h.typicalQty }, h.variantIdx, h.typicalQty);
   }).filter(Boolean).sort((a, b)=> b.fall - a.fall));
 
   /* 2. WHAT THEY ALWAYS TAKE, biggest by what an order is worth. */
   take('usual', 'YOU USUALLY TAKE', habits.slice()
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))
-    .map(h=> rowFor(h.productId, { theirQty: h.typicalQty })).filter(Boolean));
+    .map(h=> rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty))
+    .filter(Boolean));
 
   /* 3. WHAT GOES WITH THOSE -- the owner's own pairings, from every
         product they buy rather than from one. A quantity only where a
@@ -46670,23 +46773,34 @@ function briefGroups(c, habits){
   });
   take('also', 'ALSO BUY', links
     .sort((a, b)=> (b.agree - a.agree))
-    .map(x=> rowFor(x.l.toId, { theirQty: (x.l.qty && x.h.typicalQty)
-      ? Math.max(1, Math.round(x.l.qty * x.h.typicalQty)) : null })).filter(Boolean));
+    .map(x=>{
+      /* A companion is quoted at the quantity the pairing implies --
+         eight nails a sheet against thirty sheets is a trade quantity,
+         and pricing it retail would misquote the very line the pairing
+         exists to sell. */
+      const q = (x.l.qty && x.h.typicalQty) ? Math.max(1, Math.round(x.l.qty * x.h.typicalQty)) : null;
+      return rowFor(x.l.toId, { theirQty: q }, null, q);
+    }).filter(Boolean));
 
   /* 4. WHAT THEIR SITE HAS REACHED, and only while somebody's word on
         that is fresh enough to believe. */
   const site = customerSiteStage(c);
   if(site.fresh && site.stage.buys.length){
+    const sized = habits.length ? Math.max(...habits.map(h=> h.typicalQty)) : null;
     take('stage', `FOR YOUR ${String(site.stage.label).toUpperCase()}`,
       (data.products||[]).filter(p=> site.stage.buys.includes(p.category))
-        .map(p=> rowFor(p.id, {})).filter(Boolean));
+        .map(p=> rowFor(p.id, {}, null, sized)).filter(Boolean));
   }
   return groups;
 }
 
 /* The list, cut into frames. A heading is never left stranded at the
    foot of a frame with its rows on the next one. */
-const BRIEF_ROW_H = 66, BRIEF_HEAD_H = 48, BRIEF_BODY_TOP = 206, BRIEF_BODY_BOT = 700;
+/* The bottom stops short of the foot by the height of the trade
+   footnote. Reserved on every frame rather than only where a trade line
+   lands: a page whose rows change height depending on whether a
+   footnote appeared is a column that moves as the picture loops. */
+const BRIEF_ROW_H = 42, BRIEF_HEAD_H = 80, BRIEF_BODY_TOP = 170, BRIEF_BODY_BOT = 652;
 function briefPaginate(groups){
   const cap = BRIEF_BODY_BOT - BRIEF_BODY_TOP;
   const pages = [];
@@ -46713,12 +46827,11 @@ function briefPaginate(groups){
   if(out.length === 1){
     const heads = out[0].filter(i=> i.kind === 'head').length;
     const rows = out[0].length - heads;
-    const natural = heads * BRIEF_HEAD_H + rows * BRIEF_ROW_H;
-    /* Headings and rows grow together, so the table keeps its
-       proportions rather than turning into thin headings between fat
-       rows. 1.55 is where a row stops reading as a line of a list and
-       starts reading as a card. */
-    if(natural > 0) out[0].scale = Math.min(1.55, cap / natural);
+    /* The ROWS take the spare room; a block title and its column bar
+       keep their size, because a heading stretched to fill a page stops
+       reading as a heading. */
+    const room = cap - heads * BRIEF_HEAD_H;
+    if(rows > 0 && room > 0) out[0].scale = Math.min(1.7, room / (rows * BRIEF_ROW_H));
   }
   return out;
 }
@@ -46755,9 +46868,9 @@ function briefWordCount(frames){
         if(it.was != null) n += 2;                 // WAS 42,000
         else if(it.theirQty != null) n += 3;       // YOU TAKE 3
       });
-      n += 2;                                      // REPLY YES, on the foot
+      n += 5;                                      // WHAT WOULD YOU LIKE TODAY, on the foot
     }
-    if(fr.kind === 'act'){ n += 5; }               // REPLY YES / WE KEEP IT FOR YOU
+    if(fr.kind === 'act'){ n += 11; }              // the question, and the promise under it
   });
   return n;
 }
@@ -47032,6 +47145,20 @@ function briefTrack(ctx, px){
 /* A figure that must not collide with the column beside it. Money never
    truncates and never wraps, so it gives up size instead -- the one
    thing on this page allowed to. */
+function briefClip(ctx, text, font, px, maxW, floor){
+  let size = px;
+  ctx.font = `${size}px ${font}`;
+  while(ctx.measureText(text).width > maxW && size > (floor || 12)){
+    size -= 1; ctx.font = `${size}px ${font}`;
+  }
+  /* The mark goes on only where something was actually removed:
+     measuring the text WITH an ellipsis it does not need is how a value
+     that fits gets cut anyway. */
+  let t = String(text);
+  if(ctx.measureText(t).width <= maxW) return { size, text: t };
+  while(t.length > 1 && ctx.measureText(t + '\u2026').width > maxW) t = t.slice(0, -1);
+  return { size, text: t.replace(/\s+$/, '') + '\u2026' };
+}
 function briefFitNum(ctx, text, weight, px, maxW){
   let size = px;
   for(;;){
@@ -47041,154 +47168,160 @@ function briefFitNum(ctx, text, weight, px, maxW){
   }
 }
 
+/* THE LIST FRAME — direction G, the ruled grid with a reversed header.
+   The shape a price list has always had: a boxed table, banded rows, and
+   the column names in a bar across the top. The section title sits
+   OUTSIDE the table in sentence case, which is what settles rank here --
+   a heading that is not inside the grid cannot be read as a line of it,
+   so it needs no weight contest with a product name.
+
+   Five columns, one shape for every block. The last one changes with
+   the block, because a saving and a habit are not the same fact:
+   YOU SAVE under a fall, YOU TAKE under a habit. */
 const BRIEF_MAST_H = 150, BRIEF_FOOT_H = 96;
+const BRIEF_GRP_H = 46, BRIEF_THEAD_H = 34;
+/* Column edges, left to right, inside the 34px margins. Money gets the
+   two right-hand columns and never gives up its width. */
+const BRIEF_COLS = [34, 186, 286, 378, 478, 566], BRIEF_PAD = 10;
 
 function briefPaintList(ctx, fr){
   const W = BRIEF_W, H = BRIEF_H, f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const NAME_X = 34, PACK_X = 316, PACK_W = 104, RIGHT = W - 34;
-  const k = fr.scale || 1;
-  const rowH = Math.round(BRIEF_ROW_H * k), headH = Math.round(BRIEF_HEAD_H * k);
+  const C = BRIEF_COLS, L = C[0], R = C[5];
+  const rowH = Math.round(BRIEF_ROW_H * (fr.scale || 1));
 
   ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(0, 0, W, H);
 
-  /* THE MASTHEAD. What it is, who it is for, and the day it was true --
-     in that order, which is the order a letterhead has always used. */
+  /* The masthead: what it is, who it is for, the day it was true. */
   ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, 0, W, BRIEF_MAST_H);
   briefMark(ctx, true);
   ctx.textAlign = 'right';
   briefTrack(ctx, 2.5);
   ctx.fillStyle = BRIEF_INK.oxideLight;
   ctx.font = `13px ${BRIEF_DISPLAY}`;
-  ctx.fillText('PRICE LIST', RIGHT, 48);
+  ctx.fillText('PRICE LIST', R, 48);
   briefTrack(ctx, 0);
   ctx.fillStyle = BRIEF_INK.paper;
   const ns = briefFit(ctx, String(fr.who).toUpperCase(), BRIEF_DISPLAY, 30, 400);
   ctx.font = `${ns}px ${BRIEF_DISPLAY}`;
-  ctx.fillText(String(fr.who).toUpperCase(), RIGHT, 98);
+  ctx.fillText(String(fr.who).toUpperCase(), R, 98);
   ctx.fillStyle = BRIEF_INK.ink400;
   ctx.font = `15px ${BRIEF_BODY}`;
-  ctx.fillText(`${fr.when}${fr.pages > 1 ? `   ·   ${fr.page} of ${fr.pages}` : ''}`, RIGHT, 126);
-  /* The one keyline, in the shop's own colour. */
+  ctx.fillText(`${fr.when}${fr.pages > 1 ? `   ·   ${fr.page} of ${fr.pages}` : ''}`, R, 126);
   ctx.fillStyle = BRIEF_INK.oxide; ctx.fillRect(0, BRIEF_MAST_H - 4, W, 4);
 
-  /* The column names, said once, quietly. No filled bar: a grey slab
-     across the page is the thing that made this look like a printout of
-     a spreadsheet rather than something a shop sends out. */
-  briefTrack(ctx, 1.6);
-  ctx.fillStyle = BRIEF_INK.ink400;
-  ctx.font = `12px ${BRIEF_DISPLAY}`;
-  ctx.textAlign = 'left';
-  ctx.fillText('PRODUCT', NAME_X, 180);
-  ctx.fillText('PACKING', PACK_X, 180);
-  ctx.textAlign = 'right';
-  ctx.fillText('PRICE', RIGHT, 180);
-  briefTrack(ctx, 0);
-  ctx.fillStyle = BRIEF_INK.rule; ctx.fillRect(NAME_X, 192, RIGHT - NAME_X, 1);
+  const cellL = (i)=> C[i] + BRIEF_PAD;          // a left-set column
+  const cellR = (i)=> C[i + 1] - BRIEF_PAD;      // a right-set one
+  let y = BRIEF_BODY_TOP, band = 0;
 
-  const last = fr.items.length - 1;
-  let y = BRIEF_BODY_TOP;
-  fr.items.forEach((it, idx)=>{
+  fr.items.forEach(it=>{
     if(it.kind === 'head'){
-      /* A heading with a rule running off it, rather than a band. The
-         eye gets the break without the page being cut into slabs, and
-         a fall in price is the one block that carries a colour --
-         marking every block would mark none of them. */
-      const good = it.key === 'price';
-      const cy = y + headH / 2;
+      band = 0;
+      /* The block's name, outside the table and in sentence case. */
       ctx.textAlign = 'left';
-      briefTrack(ctx, 1.8);
-      ctx.fillStyle = good ? BRIEF_INK.verdigris : BRIEF_INK.ink600;
-      const hs = briefFit(ctx, it.text, BRIEF_DISPLAY, 17, 400);
-      ctx.font = `${hs}px ${BRIEF_DISPLAY}`;
-      ctx.fillText(it.text, NAME_X, cy + 6);
-      const tw = ctx.measureText(it.text).width;
+      ctx.fillStyle = BRIEF_INK.navy;
+      const gs = briefFit(ctx, it.text, BRIEF_BODY, 21, R - L);
+      ctx.font = `${gs}px ${BRIEF_BODY}`;
+      ctx.fillText(it.text, L, y + BRIEF_GRP_H - 14);
+      y += BRIEF_GRP_H;
+      /* The column names, reversed out of a bar -- which is what makes
+         this G rather than F: no inner vertical rules, the columns held
+         by alignment and by the bar above them. */
+      ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(L, y, R - L, BRIEF_THEAD_H);
+      briefTrack(ctx, 1.1);
+      ctx.fillStyle = BRIEF_INK.paper;
+      ctx.font = `700 11px ${BRIEF_BODY}`;
+      ctx.fillText('PRODUCT', cellL(0), y + 22);
+      ctx.fillText('PACKING', cellL(1), y + 22);
+      ctx.fillText('PER', cellL(2), y + 22);
+      ctx.textAlign = 'right';
+      ctx.fillText('PRICE', cellR(3), y + 22);
+      ctx.fillText(it.key === 'price' ? 'YOU SAVE' : 'YOU TAKE', cellR(4), y + 22);
       briefTrack(ctx, 0);
-      ctx.fillStyle = good ? BRIEF_INK.verdigris : BRIEF_INK.rule;
-      ctx.globalAlpha = good ? 0.35 : 1;
-      ctx.fillRect(NAME_X + tw + 16, cy, RIGHT - NAME_X - tw - 16, 1);
-      ctx.globalAlpha = 1;
-      y += headH;
+      y += BRIEF_THEAD_H;
       return;
     }
 
-    /* Every row is set on the same two baselines whether or not it has
-       a note, so the columns line up down the page. A price list whose
-       columns wander is one nobody reads twice. */
-    const base = y + rowH / 2 - 1, sub = y + rowH / 2 + 22;
+    /* Banded rows, alternating from the top of each block. */
+    if(band % 2 === 1){ ctx.fillStyle = BRIEF_INK.paper2; ctx.fillRect(L, y, R - L, rowH); }
+    band++;
+    const mid = y + rowH / 2;
 
     ctx.textAlign = 'left';
     ctx.fillStyle = BRIEF_INK.navy;
-    const s = briefFit(ctx, it.name.toUpperCase(), BRIEF_DISPLAY, 22, PACK_X - NAME_X - 18);
-    ctx.font = `${s}px ${BRIEF_DISPLAY}`;
-    ctx.fillText(it.name.toUpperCase(), NAME_X, base);
+    const nm = briefClip(ctx, it.name, BRIEF_BODY, 15, C[1] - C[0] - BRIEF_PAD * 2, 12);
+    ctx.font = `600 ${nm.size}px ${BRIEF_BODY}`;
+    ctx.fillText(nm.text, cellL(0), mid + 5);
 
     ctx.fillStyle = BRIEF_INK.ink600;
-    const ps = briefFit(ctx, it.packing, BRIEF_BODY, 17, PACK_W);
-    ctx.font = `${ps}px ${BRIEF_BODY}`;
-    ctx.fillText(it.packing, PACK_X, base);
+    const pk = briefClip(ctx, it.packing, BRIEF_BODY, 14, C[2] - C[1] - BRIEF_PAD * 2, 11);
+    ctx.font = `${pk.size}px ${BRIEF_BODY}`;
+    ctx.fillText(pk.text, cellL(1), mid + 5);
 
-    /* THE PRICE IS THE POINT OF THE PAGE, so it is the largest thing on
-       the row and it is what the eye lands on coming down the column. */
+    /* The side of the trade, in the column that already names the unit.
+       A trade price with nothing marking it as one invites the argument
+       at the counter this picture exists to prevent. */
+    const per = it.unit ? (it.side === 'wholesale' ? it.unit + '*' : it.unit) : '—';
+    const pu = briefClip(ctx, per, BRIEF_BODY, 14, C[3] - C[2] - BRIEF_PAD * 2, 10);
+    ctx.fillStyle = it.side === 'wholesale' ? BRIEF_INK.verdigris : BRIEF_INK.ink600;
+    ctx.font = `${it.side === 'wholesale' ? '600 ' : ''}${pu.size}px ${BRIEF_BODY}`;
+    ctx.fillText(pu.text, cellL(2), mid + 5);
+
     ctx.textAlign = 'right';
     ctx.fillStyle = BRIEF_INK.navy;
     const money = f(it.price);
-    const ms = briefFitNum(ctx, money, 600, 32, RIGHT - (PACK_X + PACK_W) - 16);
+    const ms = briefFitNum(ctx, money, 600, 19, C[4] - C[3] - BRIEF_PAD * 2);
     ctx.font = `600 ${ms}px ${BRIEF_MONO}`;
-    ctx.fillText(money, RIGHT, base);
-    if(it.unit){
-      briefTrack(ctx, 1.2);
+    ctx.fillText(money, cellR(3), it.was != null ? mid + 1 : mid + 5);
+    if(it.was != null){
+      /* The old price under the new one, inside the money column: a
+         figure compared against another figure belongs beside it. */
       ctx.fillStyle = BRIEF_INK.ink400;
-      ctx.font = `11px ${BRIEF_DISPLAY}`;
-      ctx.fillText(`PER ${it.unit.toUpperCase()}`, RIGHT, sub);
-      briefTrack(ctx, 0);
+      ctx.font = `13px ${BRIEF_MONO}`;
+      const t = f(it.was);
+      ctx.fillText(t, cellR(3), mid + 18);
+      const w = ctx.measureText(t).width;
+      ctx.fillRect(cellR(3) - w, mid + 13, w, 1);
     }
-
-    /* One note a row, under the name. The old price outranks the habit:
-       a figure they can check against their own last receipt is worth
-       more than a reminder of what they usually take. */
-    ctx.textAlign = 'left';
     if(it.was != null){
       ctx.fillStyle = BRIEF_INK.verdigris;
-      ctx.font = `16px ${BRIEF_BODY}`;
-      const t = `${f(it.was)}`;
-      ctx.fillText(t, NAME_X, sub);
-      const w = ctx.measureText(t).width;
-      ctx.fillRect(NAME_X, sub - 5, w, 2);
-      ctx.fillStyle = BRIEF_INK.verdigris;
-      briefTrack(ctx, 1.2);
-      ctx.font = `11px ${BRIEF_DISPLAY}`;
-      ctx.fillText(`YOU SAVE ${f(it.was - it.price)}`, NAME_X + w + 12, sub);
-      briefTrack(ctx, 0);
+      ctx.font = `600 15px ${BRIEF_MONO}`;
+      ctx.fillText(f(it.was - it.price), cellR(4), mid + 5);
     } else if(it.theirQty != null){
-      ctx.fillStyle = BRIEF_INK.ink400;
-      briefTrack(ctx, 1.2);
-      ctx.font = `11px ${BRIEF_DISPLAY}`;
-      ctx.fillText(`YOU USUALLY TAKE ${f(it.theirQty)}`, NAME_X, sub);
-      briefTrack(ctx, 0);
+      ctx.fillStyle = BRIEF_INK.ink600;
+      ctx.font = `15px ${BRIEF_MONO}`;
+      ctx.fillText(f(it.theirQty), cellR(4), mid + 5);
     }
-    if(idx !== last){ ctx.fillStyle = BRIEF_INK.rule; ctx.fillRect(NAME_X, y + rowH - 1, RIGHT - NAME_X, 1); }
+
+    ctx.fillStyle = BRIEF_INK.rule; ctx.fillRect(L, y + rowH - 1, R - L, 1);
     y += rowH;
   });
 
-  /* The foot. Any one frame of this may be screenshotted and passed on,
-     so the number is on every one of them rather than only on the last.
-     Two lines rather than one: the instruction, and then the promise
-     that makes it worth following. */
+  /* A star beside a unit means the trade side, said once at the foot
+     rather than on every row that carries it. */
+  if(fr.items.some(i=> i.kind === 'row' && i.side === 'wholesale')){
+    ctx.textAlign = 'left';
+    ctx.fillStyle = BRIEF_INK.verdigris;
+    ctx.font = `13px ${BRIEF_BODY}`;
+    ctx.fillText('* trade price, at the quantity you usually take', L, y + 24);
+  }
+
+  /* The foot. Any one frame may be screenshotted and passed on, so the
+     number is on every one of them. */
   ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, H - BRIEF_FOOT_H, W, BRIEF_FOOT_H);
   ctx.textAlign = 'left';
   ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `24px ${BRIEF_DISPLAY}`;
-  ctx.fillText('REPLY YES', NAME_X, H - 46);
+  ctx.font = `20px ${BRIEF_DISPLAY}`;
+  ctx.fillText('WHAT WOULD YOU LIKE TODAY?', L, H - 48);
   briefTrack(ctx, 1.4);
   ctx.fillStyle = BRIEF_INK.oxideLight;
   ctx.font = `12px ${BRIEF_DISPLAY}`;
-  ctx.fillText('AND WE KEEP IT FOR YOU', NAME_X, H - 26);
+  ctx.fillText('TELL US AND WE KEEP IT FOR YOU', L, H - 26);
   briefTrack(ctx, 0);
   if(fr.tel){
     ctx.textAlign = 'right';
     ctx.fillStyle = BRIEF_INK.paper;
-    ctx.font = `600 27px ${BRIEF_MONO}`;
-    ctx.fillText(fr.tel, RIGHT, H - 38);
+    ctx.font = `600 26px ${BRIEF_MONO}`;
+    ctx.fillText(fr.tel, R, H - 34);
   }
   ctx.textAlign = 'left';
 }
@@ -47204,13 +47337,14 @@ function briefPaint(ctx, fr){
   briefMark(ctx, true);
   ctx.textAlign = 'center';
   ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `84px ${BRIEF_DISPLAY}`;
-  ctx.fillText('REPLY', W / 2, 320);
-  ctx.fillText('YES', W / 2, 404);
+  ctx.font = `58px ${BRIEF_DISPLAY}`;
+  ctx.fillText('WHAT WOULD', W / 2, 296);
+  ctx.fillText('YOU LIKE', W / 2, 364);
+  ctx.fillText('TODAY?', W / 2, 432);
   briefTrack(ctx, 2.5);
   ctx.fillStyle = BRIEF_INK.oxideSoft;
   ctx.font = `20px ${BRIEF_DISPLAY}`;
-  ctx.fillText('AND WE KEEP IT FOR YOU', W / 2, 452);
+  ctx.fillText('TELL US AND WE KEEP IT FOR YOU', W / 2, 478);
   briefTrack(ctx, 0);
   if(fr.tel){
     ctx.font = `600 44px ${BRIEF_MONO}`;
@@ -47244,7 +47378,12 @@ function briefPaint(ctx, fr){
    file for the owner to look at and share with their own thumb. */
 async function buildBriefGif(customerId){
   const b = customerBrief(customerId);
-  if(!b || !(b.groups || []).length) return { ok:false, why:'There is nothing on file to build a price list from yet — their own dealings with the shop are what fills it, and a product with no price recorded cannot go on one.' };
+  if(!b || !(b.groups || []).length){
+    const d = (b && b.pricing) || {};
+    return { ok:false, why: d.noRule
+      ? `${d.noRule} of their lines have a buying price but no markup rule, so no selling price can be worked out. Set a markup under Pricing — on the product or as the shop default — and this builds itself.`
+      : 'There is nothing on file to build a price list from yet — their own dealings with the shop are what fills it, and a product with no price recorded cannot go on one.' };
+  }
   const frames = briefFrames(b);
   /* The faces have to be there before anything is measured, or the
      first picture of a session is laid out in Times New Roman. */
@@ -47314,7 +47453,7 @@ function briefMessageText(b){
   const first = String(b.customer.name).split(/\s+/)[0];
   const fell = (b.groups.find(g=> g.key === 'price') || { rows: [] }).rows.length;
   return `${first} — your prices today from ${printedShopName()}. ${n} item${n === 1 ? '' : 's'}${
-    fell ? `, ${fell} cheaper than you last paid` : ''}. Reply YES for anything you want kept.`;
+    fell ? `, ${fell} cheaper than you last paid` : ''}. What would you like today?`;
 }
 
 /* ---- the filmstrip, on the shop's screen -----------------------------
@@ -47329,20 +47468,23 @@ function briefStripHTML(b){
      the one thing a thumbnail cannot be trusted to show. Same rows, same
      order, same headings as the frames themselves. */
   return `<div class="bf-strip">${frames.map(fr=>{
-    if(fr.kind !== 'list') return `<div class="bf bf-4"><b>REPLY<br>YES</b>
+    if(fr.kind !== 'list') return `<div class="bf bf-4"><b>WHAT WOULD<br>YOU LIKE<br>TODAY?</b>
       <span class="bf-s">${esc(fr.tel || '')}</span></div>`;
     return `<div class="bf-l">
       <div class="bf-h"><b>${esc(String(fr.who).toUpperCase())}</b>
         <span>${esc(fr.when)}${fr.pages > 1 ? ` · ${fr.page}/${fr.pages}` : ''}</span></div>
       ${fr.items.map(it=> it.kind === 'head'
-        ? `<div class="bf-g${it.key === 'price' ? ' bf-g-good' : ''}">${esc(it.text)}</div>`
+        ? `<div class="bf-g${it.key === 'price' ? ' bf-g-good' : ''}">${esc(it.text)}
+             <span class="bf-gh">${it.key === 'price' ? 'you save' : 'you take'}</span></div>`
         : `<div class="bf-r">
             <span class="bf-n" title="${esc(it.name)}">${esc(it.name)}</span>
             <span class="bf-p">${esc(it.packing)}</span>
+            <span class="bf-pu${it.side === 'wholesale' ? ' bf-tr' : ''}">${
+              esc(it.unit || '—')}${it.side === 'wholesale' ? '*' : ''}</span>
             <span class="bf-v">${f(it.price)}</span>
-            <span class="bf-u">${esc(it.unit ? 'per ' + it.unit : '')}</span>
-            ${it.was != null ? `<span class="bf-was"><s>${f(it.was)}</s> save ${f(it.was - it.price)}</span>`
-              : it.theirQty != null ? `<span class="bf-take">usually takes ${f(it.theirQty)}</span>` : ''}
+            <span class="bf-x">${it.was != null ? f(it.was - it.price)
+              : it.theirQty != null ? f(it.theirQty) : ''}</span>
+            ${it.was != null ? `<span class="bf-was"><s>${f(it.was)}</s></span>` : ''}
           </div>`).join('')}
     </div>`;
   }).join('')}</div>`;
@@ -47373,6 +47515,8 @@ function briefWhyHTML(b){
   const cut = briefRowCount(b) - shown;
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
+    ${(b.pricing && b.pricing.noRule) ? `<p class="ow-q-note"><b>${b.pricing.noRule}</b> line${b.pricing.noRule === 1 ? '' : 's'} left off: you buy ${b.pricing.noRule === 1 ? 'it' : 'them'}, but no markup rule says what to charge, and a buying price is never shown to a customer. Set one under Pricing.</p>` : ''}
+    ${(b.pricing && b.pricing.noPrice) ? `<p class="ow-q-note"><b>${b.pricing.noPrice}</b> line${b.pricing.noPrice === 1 ? '' : 's'} left off: nothing in the price registry says what you pay for ${b.pricing.noPrice === 1 ? 'it' : 'them'}.</p>` : ''}
     ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
       `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
     <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
@@ -47742,10 +47886,20 @@ function customerBriefPanelHTML(customerId){
   const b = customerBrief(customerId);
   if(!b) return '';
   if(!(b.groups || []).length){
+    const d = b.pricing || { noRule: 0, noPrice: 0 };
+    /* Two empty screens that mean opposite things. One is "we do not
+       know them yet"; the other is "we know them, and the shop has not
+       said what it charges" -- which is a setting away from working
+       and must never be reported as the first. */
+    const why = d.noRule
+      ? `<b>${d.noRule} line${d.noRule === 1 ? '' : 's'} of theirs cannot be priced.</b>
+         <span>The registry holds what your suppliers charge you, and a selling price is that plus your markup &mdash; but no markup rule is set for these, so there is nothing to work one out from. Set one under <b>Pricing</b>, on the product or as the shop default, and their list fills itself. Nothing here will ever show a buying price to a customer.</span>`
+      : `<b>There is nothing on file to make a price list from.</b>
+         <span>The list is built from their own dealings with the shop &mdash; what they buy, how it is packed, what they pay. One invoiced order for a product that carries a price is enough. Until then anything shown here would be about the shop rather than about them.</span>`;
     return `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span><span class="ow-pan-n">nothing to build one from yet</span></div>
-      <div class="ow-empty"><b>There is nothing on file to make a price list from.</b>
-        <span>The list is built from their own dealings with the shop &mdash; what they buy, how it is packed, what they pay. One invoiced order for a product that carries a price is enough. Until then anything shown here would be about the shop rather than about them.</span></div>
+      <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span><span class="ow-pan-n">${
+        d.noRule ? 'no selling rule on file' : 'nothing to build one from yet'}</span></div>
+      <div class="ow-empty">${why}</div>
     </div>`;
   }
   const held = b.held;
