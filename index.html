@@ -30779,7 +30779,11 @@ function quoteLinePack(it){
   const packQty = Number(it && it.packQty) || 0;
   const packUnit = String((it && it.packUnit) || '').trim();
   const qty = Number(it && it.qty) || 0;
+  /* A line already counted in cartons cannot also be 25 to the carton:
+     that reads as cartons of cartons. Guarded here as well as cleared on
+     the write, because old rows on file may still carry both. */
   if(!(packQty > 0) || !packUnit || !(qty >= packQty)) return null;
+  if(String((it && it.unit) || '').trim().toLowerCase() === packUnit.toLowerCase()) return null;
   const packs = Math.floor(qty / packQty), loose = Math.round((qty - packs * packQty) * 1e6) / 1e6;
   const unit = String((it && it.unit) || '').trim();
   const n = (x)=> Number(x).toLocaleString('en-UG');
@@ -38856,6 +38860,21 @@ function togglePurchaseInvoiceVoided(id){
    money only, stock untouched: qty and price per line, the same
    overpaid honesty as the movement path, never an order's bill (that is
    the order's own truth) and never a voided one. */
+/* WHAT THIS LINE COULD BE COUNTED IN. Off the line where it says, else
+   off the supplier's own registry row -- a bill written before the app
+   carried units has neither, and the row is the only thing that knows
+   these come 25 to a carton. */
+function billLineUnits(pi, it){
+  const vi = (it.variantIdx == null || it.variantIdx === '') ? null : Number(it.variantIdx);
+  const row = (typeof productPriceRows === 'function' && it.productId)
+    ? (productPriceRows(it.productId, vi).find(r=> String(r.supplierId) === String(pi && pi.supplierId))
+       || productPriceRows(it.productId, vi)[0] || null)
+    : null;
+  const unit = String(it.unit || (row && row.unit) || '').trim();
+  const packUnit = String(it.packUnit || (row && row.packUnit) || '').trim();
+  const packQty = Number(it.packQty) || (row ? Number(row.packQty) : 0) || 0;
+  return { unit, packUnit, packQty, hasPack: packQty > 0 && !!packUnit };
+}
 function applyPurchaseBillEdit(piId, lines){
   const pi = (data.purchaseInvoices || []).find(x => x.id === Number(piId));
   if(!pi) return {ok: false, error: 'That bill no longer exists.'};
@@ -38868,11 +38887,27 @@ function applyPurchaseBillEdit(piId, lines){
     if(!(q > 0)) return {ok: false, error: `Line ${i + 1}: the quantity must be above zero — void the bill instead if it is not real.`};
     if(isNaN(p) || p < 0) return {ok: false, error: `Line ${i + 1}: the price must be a number.`};
   }
+  /* The unit counts as a change. It moves no money on this bill, and it
+     is the one correction that was impossible before: a line recording
+     30 @ 80,000 with no unit could never be told from 30 pairs, and
+     every screen that measured a price against it inherited the guess. */
   const changed = lines.some((l, i) => Number(l.qty) !== (Number(pi.items[i].qty) || 0)
-    || Number(l.price) !== (Number(pi.items[i].price) || 0));
+    || Number(l.price) !== (Number(pi.items[i].price) || 0)
+    || (l.unit !== undefined && String(l.unit || '') !== String(pi.items[i].unit || '')));
   if(!changed) return {ok: false, error: 'Nothing was changed.'};
   const billBefore = purchaseInvoiceBalanceDue(pi);
-  lines.forEach((l, i) => { pi.items[i].qty = Number(l.qty); pi.items[i].price = Number(l.price); });
+  lines.forEach((l, i) => {
+    pi.items[i].qty = Number(l.qty); pi.items[i].price = Number(l.price);
+    if(l.unit === undefined) return;
+    const u = String(l.unit || '').trim();
+    pi.items[i].unit = u;
+    /* A line counted in cartons has no pack left INSIDE it -- carrying
+       "25 per ctn" on a line already measured in ctn would have every
+       document read it as cartons of cartons. */
+    if(u && String(pi.items[i].packUnit || '').trim().toLowerCase() === u.toLowerCase()){
+      pi.items[i].packUnit = ''; pi.items[i].packQty = 0;
+    }
+  });
   const billAfter = purchaseInvoiceBalanceDue(pi);
   const overpaid = (Number(pi.amountPaid) || 0) > purchaseInvoiceTotal(pi);
   return {ok: true, pi, billBefore, billAfter, overpaid};
@@ -38890,8 +38925,20 @@ function openPiBillEditModal(id){
   document.getElementById('pbe_lines').innerHTML = (pi.items || []).map((it, i) => `
     <div class="form-grid">
       <div class="field" style="grid-column:1 / -1; margin-bottom:-8px;"><b>${esc(it.productName || ('Line ' + (i + 1)))}</b>${it.packUnit && it.packQty ? ` <span class="lc-none">packed ${esc(String(it.packQty))} per ${esc(it.packUnit)}</span>` : ''}</div>
-      <div class="field"><label>Quantity${it.unit ? ` (${esc(it.unit)})` : ''}</label><input type="number" id="pbe_qty_${i}" min="0" step="any" value="${esc(String(it.qty))}"></div>
-      <div class="field"><label>Price each (UGX${it.unit ? ` per ${esc(it.unit)}` : ''})</label><input type="number" id="pbe_price_${i}" min="0" step="any" value="${esc(String(it.price))}"></div>
+      <div class="field"><label>Quantity</label><input type="number" id="pbe_qty_${i}" min="0" step="any" value="${esc(String(it.qty))}"></div>
+      ${(()=>{ const u = billLineUnits(pi, it);
+        const opts = [];
+        if(u.unit) opts.push(u.unit);
+        if(u.hasPack && u.packUnit.toLowerCase() !== u.unit.toLowerCase()) opts.push(u.packUnit);
+        /* COUNTED IN WHAT. Nothing on this bill said, and nothing could
+           be made to say it -- so a figure the shop knew was a carton
+           price was read as a piece price by every screen behind it. */
+        return opts.length ? `<div class="field"><label>Counted in${u.hasPack ? ` <span class="lc-none">${esc(String(u.packQty))} ${esc(u.unit || 'units')} in a ${esc(u.packUnit)}</span>` : ''}</label>
+          <select id="pbe_unit_${i}">
+            <option value=""${!it.unit ? ' selected' : ''}>&mdash; not recorded &mdash;</option>
+            ${opts.map(o=> `<option value="${esc(o)}"${String(it.unit||'').toLowerCase() === o.toLowerCase() ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+          </select></div>` : ''; })()}
+      <div class="field"><label>Price each</label><input type="number" id="pbe_price_${i}" min="0" step="any" value="${esc(String(it.price))}"></div>
     </div>`).join('');
   const refresh = () => {
     let tot = 0;
@@ -38916,10 +38963,13 @@ document.getElementById('pbe_save').addEventListener('click', ()=>{
   if(piBillEditId == null) return;
   const pi = data.purchaseInvoices.find(x => x.id === piBillEditId);
   if(!pi) return;
-  const lines = (pi.items || []).map((it, i) => ({
-    qty: document.getElementById('pbe_qty_' + i).value,
-    price: document.getElementById('pbe_price_' + i).value,
-  }));
+  const lines = (pi.items || []).map((it, i) => {
+    const u = document.getElementById('pbe_unit_' + i);
+    return { qty: document.getElementById('pbe_qty_' + i).value,
+      price: document.getElementById('pbe_price_' + i).value,
+      // Undefined where the line offers no choice, so it is left alone.
+      unit: u ? u.value : undefined };
+  });
   const res = applyPurchaseBillEdit(piBillEditId, lines);
   const err = document.getElementById('pbe_error');
   if(!res.ok){ err.textContent = res.error; err.style.display = ''; return; }
@@ -60470,6 +60520,7 @@ const PRICE_ODD_HEADS = {
   underPeers: 'far below every other quote',
   overPeers: 'far above every other quote',
   peerSplit: 'two quotes on this line that cannot both be right',
+  noBillUnit: 'the bill behind it records no unit, and these come in a pack',
 };
 /* The note is PLAIN TEXT. It is read in three places -- a card, a rail
    and a toast at the moment of typing -- and only two of those are
@@ -60488,6 +60539,8 @@ const PRICE_ODD_HEADS = {
    reported as a unit that does not match. */
 function priceOnRowUnit(r, p){
   const ru = priceUnitKey(r.unit), pu = priceUnitKey(p.unit);
+  // Same rule as pwOnUnit: a blank unit is only safe where nothing packs.
+  if(!pu && (Number(r.packQty) || 0) > 0 && priceUnitKey(r.packUnit)) return null;
   if(!pu || !ru || pu === ru) return { price: p.price, converted: false };
   const pk = Number(r.packQty) || 0, pkU = priceUnitKey(r.packUnit);
   if(pk > 0 && pkU && pu === pkU) return { price: p.price / pk, converted: true };
@@ -60509,8 +60562,14 @@ function priceRowOddity(r, peersAll, paid){
      compared with anything -- not their history, not their peers -- and
      the ranking is sorting the row anyway. */
   if(mine && !priceOnRowUnit(r, mine))
-    return { why: 'unitSplitPaid', rate, wantUnit: mine.unit,
-      note: `This quote is ${f(rate)}${per}, but ${mine.sname}’s own invoices bill it by the ${mine.unit || 'unknown unit'}, and this row records no pack that joins the two. They are not the same measurement, so nothing on this line can be ranked honestly until one of them is corrected.` };
+    return mine.unit
+      ? { why: 'unitSplitPaid', rate, wantUnit: mine.unit,
+          note: `This quote is ${f(rate)}${per}, but ${mine.sname}’s own invoices bill it by the ${mine.unit}, and this row records no pack that joins the two. They are not the same measurement, so nothing on this line can be ranked honestly until one of them is corrected.` }
+      /* The bill says a number and no unit, and these come ${r.packQty} to
+         a ${r.packUnit} -- so the figure could be either, and nothing on
+         file says which. Not guessed at: say where to go and what to say. */
+      : { why: 'noBillUnit', rate,
+          note: `${mine.sname}’s bill of ${fmtShortDate(mine.date)} records ${f(mine.price)} with NO unit on it, and these come ${r.packQty} ${r.unit || 'units'} to a ${r.packUnit}. That figure could be a ${r.unit || 'unit'} or a ${r.packUnit} and nothing on file says which — ${f(mine.price)} a ${r.packUnit} would be ${f(mine.price / (Number(r.packQty) || 1))} a ${r.unit || 'unit'}, against your quote of ${f(rate)}. Open the bill and say which it was.` };
 
   /* Against money that actually moved. The only evidence a
      single-supplier line has, and the strongest evidence any line has. */
@@ -75034,8 +75093,17 @@ const PRICE_WATCH_FILE_TOLERANCE_PCT = 2;
 
    Both the price and the quantity move, in opposite directions, so the
    money the trail is ranked by comes out the same either way. */
+/* A BILL THAT NAMES NO UNIT IS NOT A BILL IN THE ROW'S UNIT.
+   Reading a blank as "the same as the row" is an assumption, and where
+   the goods come in a pack it is the assumption that costs the most: a
+   line typed 30 @ 80,000 with no unit against a row priced by the Pair
+   at 25 to the carton was read as 80,000 a PAIR, and the shop was told
+   its own quote of 3,400 was 4% of what it had paid. It had paid 3,200.
+   Where the row records no pack there is only one unit the figure could
+   be in, so the assumption is safe there and stays. */
 function pwOnUnit(row, pt, want){
   const u = cmpUnitKey(pt.unit), w = cmpUnitKey(want);
+  if(!u && row && (Number(row.packQty) || 0) > 0 && cmpUnitKey(row.packUnit)) return null;
   if(!u || !w || u === w) return { price: pt.price, qty: pt.qty, converted: false };
   if(!row) return null;
   const base = cmpUnitKey(row.unit), pack = cmpUnitKey(row.packUnit), pk = Number(row.packQty) || 0;
