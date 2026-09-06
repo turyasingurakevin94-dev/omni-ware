@@ -113,6 +113,59 @@ const { nameInitials } = compileScope(
     'and the WhatsApp copy is gone too, with the avatars it lettered');
 }
 
+/* ---------- 3b. the SHAPE, not just the three old names ---------------
+ *
+ * Banning supplierInitials, staffInitials and customerInitials BY NAME
+ * left the door open, and something walked through it: agentCardHTML
+ * carried the fault inline, with no function name to ban --
+ *
+ *     const initials = (a.name||'?').trim().split(/\s+/)
+ *       .slice(0,2).map(w=>w[0]).join('').toUpperCase();
+ *
+ * -- so "Reagan - Stuart" was lettered "R-", the exact bug section 3
+ * exists to prevent, sitting four hundred lines below the function that
+ * fixes it. Three more copies were doing it in the agent app and on the
+ * public catalogue, where the mark is the first thing a customer sees.
+ *
+ * So the pin is on the MISTAKE rather than on the names anybody happened
+ * to give it: nothing in any shipped file may take character zero of a
+ * word and call it an initial. Every file is checked, because agent.html
+ * and catalogue.html share no script with index.html and each needs its
+ * own copy of nameInitials -- and a copy is only safe while there is one
+ * of it.
+ */
+{
+  const FILES = ['index.html', 'agent.html', 'catalogue.html', 'worker.html'];
+  /* The shape, loosely: split a name on whitespace and take [0] of each
+     word. Written to match the four that shipped and anything close
+     enough to be the same mistake, not to be a general JS parser. */
+  const CHAR_ZERO = /split\(\/\\s\+\/\)[\s\S]{0,40}?map\(\s*w\s*=>\s*w\[0\]\s*\)/g;
+  FILES.forEach((f) => {
+    const text = read(f);
+    const hits = text.match(CHAR_ZERO) || [];
+    t.check(hits.length === 0,
+      `${f} computes no initials from character zero${hits.length ? ' — ' + hits[0].slice(0, 60) : ''}`);
+  });
+
+  /* And each app that letters an avatar has exactly ONE implementation
+     to fix when this is wrong again. */
+  ['index.html', 'agent.html', 'catalogue.html'].forEach((f) => {
+    const defs = (read(f).match(/function nameInitials\(/g) || []).length;
+    t.check(defs === 1, `${f} defines nameInitials exactly once (got ${defs})`);
+  });
+
+  /* The two helpers in the agent app are wrappers, not second opinions:
+     an agent's initials and a client's have to be the same letters for
+     the same name. */
+  const agent = read('agent.html');
+  t.check(/function clientInitials\(name\)\{ return nameInitials\(name\); \}/.test(agent),
+    "the agent app's client initials go through it");
+  t.check(/return nameInitials\(myAgent && myAgent\.name\);/.test(agent),
+    "and so do the agent's own");
+  t.check(/const initials = nameInitials\(a\.name\);/.test(src),
+    "and the admin app's agent card, which is where this was found");
+}
+
 /* ---------- 4. the figure strip sits on the card's bottom edge -------- */
 {
   const rule = (sel) => {

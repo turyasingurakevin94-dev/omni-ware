@@ -3373,7 +3373,7 @@ function clientStats(orders){
   };
 }
 function clientRowHTML(c, orders){
-  const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const initials = clientInitials(c.name);
   const s = clientStats(orders);
   // Compacted, because three figures plus a date will not fit across a
   // phone at full length. Exact amounts live on the orders themselves.
@@ -3580,7 +3580,7 @@ function renderSyncCard(){
 // Shared by the Account card and the floating account button, so the two
 // can never show different initials for the same person.
 function agentInitials(){
-  return ((myAgent && myAgent.name) || '?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  return nameInitials(myAgent && myAgent.name);
 }
 function renderAccount(){
   const initials = agentInitials();
@@ -5758,9 +5758,31 @@ function showQuoteUnassigned(){
   renderCartTab();
 }
 /* ---- Client picking ---- */
-function clientInitials(name){
-  return (name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+/* The first LETTER of each of the first two words -- not the first
+   CHARACTER, which is what every copy of this in the app used to take.
+
+   This shop tells two people of the same name apart by qualifying it:
+   "Feko (Ambrose)" and "Feko (Rebbeca)", "Bahco - Jose", "Reagan -
+   Stuart" and "Ronald - 7th Street". Character zero of the second word
+   is then a bracket or a hyphen, so the avatar read "F(", "B-", "R-" --
+   punctuation where initials belong, on 11 of 99 customers. Worse, both
+   Fekos came out "F(" and both R-names "R-": the one mark on the row
+   whose job is telling two clients apart was identical on precisely the
+   pairs it exists for.
+
+   Digits count as letters here, because "Ronald - 7th Street" is
+   distinguished by its 7 and "R7" says which Ronald.
+
+   Byte-for-byte the admin app's nameInitials(). The two apps do not
+   share a script, so this is a copy -- but it is the ONLY copy in this
+   file, and everything here that letters an avatar goes through it. */
+function nameInitials(name){
+  const letters = String(name||'').trim().split(/\s+/)
+    .map(w=> (w.match(/[A-Za-z0-9]/)||[''])[0]).filter(Boolean);
+  if(!letters.length) return '?';
+  return (letters[0] + (letters[1]||'')).toUpperCase();
 }
+function clientInitials(name){ return nameInitials(name); }
 // Same chosenClient the Quote screen's own picker reads -- this is
 // purely a second, always-visible place to see and change it, on the
 // screen an agent actually lands on first. Recognition over recall: no
