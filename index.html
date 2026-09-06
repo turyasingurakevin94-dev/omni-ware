@@ -20246,7 +20246,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -20264,7 +20264,8 @@ async function loadData(shopId){
     sb.from('stock_lots').select('consign').limit(1),
     sb.from('rival_prices').select('side').limit(1),
     sb.from('customers').select('site_stage').limit(1),
-    sb.from('manager_notes').select('id').limit(1)
+    sb.from('manager_notes').select('id').limit(1),
+    sb.from('product_links').select('to_variant_idx').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -20356,6 +20357,11 @@ async function loadData(shopId){
   const briefSentRows = (briefsSentR && !briefsSentR.error && briefsSentR.data) || [];
   briefsSentTable = !(briefsSentR && briefsSentR.error);
   siteStageColumn = !(stageColR && stageColR.error);
+  /* Same shape as the stage column: a shop whose 0093 has not landed
+     keeps its pairings, reads no sizes on them, and writes none -- an
+     upsert carrying a column the table lacks would fail every pairing
+     save, over a size nobody there has chosen yet. */
+  linkSizeColumn = !(linkSizeColR && linkSizeColR.error);
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -20593,6 +20599,9 @@ async function loadData(shopId){
     nextPaymentPromiseId: promiseRows.length ? Math.max(0,...promiseRows.map(r=>Number(r.id)||0))+1 : 1,
     productLinks: productLinkRows.map(r=>({
       id:r.id, fromId:r.from_id, verb:r.verb, toId:r.to_id,
+      // The size of the second product, where the owner named one. Null
+      // is "the size that follows", which the brief works out itself.
+      toVariantIdx: r.to_variant_idx==null ? null : Number(r.to_variant_idx),
       // Null, not 0: "no figure given" and "a quantity of none" are
       // different answers, and a brief renders them differently.
       qty: r.qty==null ? null : Number(r.qty),
@@ -20753,6 +20762,7 @@ let paymentPromisesTable = false;
 let productLinksTable = false;
 let briefsSentTable = false;
 let siteStageColumn = false;
+let linkSizeColumn = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -20966,6 +20976,7 @@ function buildSyncRows(d, shopId){
     })),
     productLinks: (d.productLinks||[]).map(x=>({
       id:x.id, shop_id:shopId, from_id:x.fromId, verb:x.verb, to_id:x.toId,
+      ...(linkSizeColumn ? { to_variant_idx: x.toVariantIdx==null ? null : Number(x.toVariantIdx) } : {}),
       qty: x.qty==null ? null : Number(x.qty), per: x.per||null,
       note: x.note||null, active: x.active !== false, created_at: x.createdAt||null,
     })),
@@ -47076,8 +47087,24 @@ function updateProductLink(id, patch){
   if(patch.verb && !pairVerb(patch.verb)) return { ok:false, why:'Pick one of the five verbs.' };
   Object.assign(l, patch);
   if('qty' in patch){ const n = Number(patch.qty); l.qty = n > 0 ? n : null; }
+  /* The size is the second product's, so a new second product starts
+     with none: size 2 of the old product is nobody's size of the new. */
+  if('toId' in patch && !('toVariantIdx' in patch)) l.toVariantIdx = null;
+  if('toVariantIdx' in patch){
+    const v = patch.toVariantIdx;
+    l.toVariantIdx = (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+  }
   saveData();
   return { ok:true };
+}
+/* The second product, at the size the pairing names where it names one.
+   Everywhere a pairing is written out, so "Runners -> Soft Close" and
+   "Runners -> Soft Close -- 12\"" cannot read as the same sentence. */
+function productLinkLabel(l){
+  const p = productById(l.toId);
+  if(!p) return productLinkName(l.toId);
+  const vi = l.toVariantIdx;
+  return (vi != null && p.variants && p.variants[vi]) ? productVariantLabel(p, vi) : p.name;
 }
 function deleteProductLink(id){
   data.productLinks = productLinksAll().filter(x=> x.id !== id);
@@ -47171,6 +47198,51 @@ function dismissObservedPair(fromId, toId){
    nails rhythm are different facts, and a customer-level "buys every 18
    days" cannot say which shelf is due. Read from invoiced orders only:
    a quote on the board is not a purchase and must not set a rhythm. */
+/* ---- an order line, read in the registry row's unit -----------------
+   A habit is measured against the registry: "cheaper than they last
+   paid" puts a derived price beside the figure on their receipt, and the
+   two are only comparable in the same unit. A line sold by the Ctn at
+   85,000 against a row priced 3,400 a Pair, 25 to the Ctn, is the SAME
+   price -- and read as written it was "a price on file far below what
+   they last paid", which sent the owner to fix a row that was right.
+
+   The same conversion pwOnUnit makes for a supplier's bill, with one
+   difference. A sales line is always written by this app, and it copies
+   its unit off the row it was priced from -- so a blank unit on the line
+   with a blank unit on the row is one nameless unit, not a mystery. Only
+   a blank line against a NAMED base unit that comes packed cannot be
+   settled, and that is said (`unitKnown: false`) rather than guessed.
+
+   Everything downstream -- rhythm, typical quantity, the receipt figure
+   -- is then in the row's unit, which is the unit every price, tier and
+   stock count already uses. */
+function habitLineOnRowUnit(it){
+  const vIdx = it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx);
+  const qty = Number(it.qty) || 0;
+  const price = quoteItemSellPrice(it);
+  const asIs = { qty, price, unit: String(it.unit || '').trim(), converted: false, unitKnown: true };
+  /* The pack, from the line where it still carries one, else from the
+     registry. A line counted in cartons has its own count cleared on the
+     write, so the registry is usually the only thing that knows. */
+  const rows = typeof productPriceRows === 'function' ? productPriceRows(it.productId, vIdx) : [];
+  const live = rows.filter(r=> !r.outOfStock);
+  const packed = (live.find(r=> Number(r.packQty) > 0 && r.packUnit)
+    || rows.find(r=> Number(r.packQty) > 0 && r.packUnit) || null);
+  const base = cmpUnitKey(packed ? packed.unit : (rows.find(r=> r.unit) || {}).unit);
+  const lineUnit = cmpUnitKey(it.unit);
+  if(!packed) return asIs;
+  const pack = cmpUnitKey(packed.packUnit);
+  const pk = (Number(it.packQty) > 0 && cmpUnitKey(it.packUnit) === lineUnit)
+    ? Number(it.packQty) : Number(packed.packQty);
+  if(!lineUnit){
+    if(!base) return asIs;
+    return Object.assign(asIs, { unitKnown: false });
+  }
+  if(lineUnit === pack && lineUnit !== base && pk > 0)
+    return { qty: qty * pk, price: price / pk, unit: String(packed.unit || '').trim(),
+      converted: true, unitKnown: true, packQty: pk, packUnit: String(packed.packUnit).trim() };
+  return asIs;
+}
 function customerProductHabits(customerId){
   const today = todayISO();
   const byProduct = new Map();
@@ -47182,15 +47254,17 @@ function customerProductHabits(customerId){
       const vIdx = it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx);
       const key = it.productId + '::' + vIdx;
       const h = byProduct.get(key) || { key, productId: it.productId, variantIdx: vIdx,
-        dates: [], qty: [], price: [] };
+        dates: [], qty: [], price: [], line: [] };
+      const line = habitLineOnRowUnit(it);
       h.dates.push(when);
-      h.qty.push(Number(it.qty)||0);
-      h.price.push(quoteItemSellPrice(it));
+      h.qty.push(line.qty);
+      h.price.push(line.price);
+      h.line.push({ unit: line.unit, unitKnown: line.unitKnown, order: q });
       byProduct.set(key, h);
     });
   });
   return [...byProduct.values()].map(h=>{
-    const order = h.dates.map((d, i)=> ({ d, q: h.qty[i], p: h.price[i] }))
+    const order = h.dates.map((d, i)=> ({ d, q: h.qty[i], p: h.price[i], l: h.line[i] }))
       .sort((a, b)=> a.d.localeCompare(b.d));
     const last = order[order.length - 1];
     let everyDays = null;
@@ -47205,7 +47279,13 @@ function customerProductHabits(customerId){
     const sinceLast = daysBetweenISO(last.d, today);
     return {
       productId: h.productId, variantIdx: h.variantIdx, orders: order.length, everyDays,
-      lastAt: last.d, lastQty: last.q, lastPrice: last.p, sinceLast,
+      /* The receipt figure, in the row's unit, or NOTHING where the line
+         does not say its unit and the goods come packed: a figure that
+         might be a carton's or a pair's is not a figure to measure
+         against. The unit and the order are carried so that a wrong
+         figure can be named by where it was written. */
+      lastAt: last.d, lastQty: last.q, lastPrice: last.l.unitKnown ? last.p : null, sinceLast,
+      unit: last.l.unit, unitKnown: last.l.unitKnown, lastOrder: last.l.order,
       /* Negative means it is already overdue, which is still "due". */
       dueIn: everyDays === null ? null : everyDays - sinceLast,
       typicalQty: Math.round(order.reduce((s, o)=> s + o.q, 0) / order.length),
@@ -47262,7 +47342,7 @@ function briefReasonFor(r, habits){
     return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
       productId: due.productId, variantIdx: due.variantIdx, qty: due.typicalQty,
       weight: due.typicalQty * (due.lastPrice || 0),
-      why: `Takes <b>${f(due.typicalQty)}</b> ${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
+      why: `Takes <b>${f(due.typicalQty)}</b> ${due.unit ? `${esc(due.unit)} of ` : ''}${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
   }
 
   /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
@@ -47432,10 +47512,14 @@ function customerBrief(customerId){
     .map(l=>{
       const p = productById(l.toId);
       if(!p) return null;
-      const stock = briefInStock(p.id);
+      /* At the size the pairing names, where it names one: stock is
+         kept per size, and a product-level read of a variable product
+         is nobody's shelf. */
+      const vi = (l.toVariantIdx != null && p.variants && p.variants[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
+      const stock = briefInStock(p.id, vi);
       if(stock !== null && stock <= 0) return null;
       const st = pairStanding(l);
-      return { link: l, product: p, standing: st,
+      return { link: l, product: p, standing: st, variantIdx: vi, label: productVariantLabel(p, vi),
         qty: (l.qty && qty) ? Math.max(1, Math.round(l.qty * qty)) : null,
         verb: pairVerb(l.verb) };
     }).filter(Boolean)
@@ -47696,10 +47780,23 @@ function briefPackText(pr){
      2. the product is not variable, so there is nothing to choose;
      3. exactly one variant the shop can price AND has, which is not a
         choice at all;
+     4. the size the pairing was WRITTEN with, where the owner named one
+        -- their word, taken before any of the above is asked, because
+        it is the one answer nobody has to derive;
+     5. the same size as the one they buy it WITH. A 12" runner paired
+        with a soft-close that also comes in 12" is not a choice either:
+        the shop's own catalogue says both come in that size, and the
+        customer has already chosen it once. Same attribute value on
+        both products, and exactly one live size of the second carries
+        it -- two would be a choice again;
    and otherwise NOTHING, said as itself. Picking between three sizes
    the customer has never bought would put a number on a picture that
-   nobody in the shop chose. */
-function briefVariantForLine(productId, habits){
+   nobody in the shop chose.
+
+   `opts.toVariantIdx` is the pairing's own size; `opts.from` is the
+   product and size on the other end of it. A site stage passes neither,
+   because a stage names a category and not a companion. */
+function briefVariantForLine(productId, habits, opts){
   const p = productById(productId);
   /* A pairing pointing at something that is no longer in the catalogue
      is not a pricing gap and must not be reported as one -- "no price
@@ -47707,16 +47804,65 @@ function briefVariantForLine(productId, habits){
      product that is not there. customerBrief's own dropped list already
      names it, in those words: "not a product you sell". */
   if(!p) return { gone: true };
-  const mine = (habits || []).find(h=> h.productId === productId && h.variantIdx != null);
-  if(mine) return { variantIdx: mine.variantIdx };
   const vs = Array.isArray(p.variants) ? p.variants : [];
+  const named = opts && opts.toVariantIdx != null ? Number(opts.toVariantIdx) : null;
+  if(named != null && vs[named]) return { variantIdx: named, by: 'pairing' };
+  const mine = (habits || []).find(h=> h.productId === productId && h.variantIdx != null);
+  if(mine) return { variantIdx: mine.variantIdx, by: 'habit' };
   if(!vs.length) return { variantIdx: null };
   const usable = vs.map((v, i)=> i).filter(i=>{
     const s = briefInStock(productId, i);
     return rankedPriceRows(productId, i).length && (s === null || s > 0);
   });
-  if(usable.length === 1) return { variantIdx: usable[0] };
+  if(usable.length === 1) return { variantIdx: usable[0], by: 'only' };
+  const same = briefSameSizeAs(opts && opts.from, vs, usable);
+  if(same != null) return { variantIdx: same, by: 'size' };
   return { why: 'pickVariant', choices: usable.length };
+}
+/* The one live size of `vs` that shares an attribute value with the
+   size on the other end of the pairing, or null. Matched on the VALUE
+   first -- 12" is 12" whether one product calls it Size and the other
+   Length -- and narrowed to the same attribute name only where the
+   value alone leaves more than one. Case and spacing are the shop's
+   typing, not the shop's meaning. */
+function briefSameSizeAs(from, vs, usable){
+  if(!from || from.variantIdx == null) return null;
+  const fp = productById(from.productId);
+  const fv = fp && Array.isArray(fp.variants) ? fp.variants[from.variantIdx] : null;
+  const combo = (fv && fv.combo) || {};
+  const key = (s)=> String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ');
+  const mine = Object.entries(combo).map(([k, v])=> ({ k: key(k), v: key(v) })).filter(x=> x.v);
+  if(!mine.length) return null;
+  const shares = (i, sameName)=> Object.entries(vs[i].combo || {}).some(([k, v])=>
+    mine.some(m=> m.v === key(v) && (!sameName || m.k === key(k))));
+  const byValue = (usable || []).filter(i=> shares(i, false));
+  if(byValue.length === 1) return byValue[0];
+  const byName = byValue.filter(i=> shares(i, true));
+  return byName.length === 1 ? byName[0] : null;
+}
+/* WHAT A DERIVED PRICE FAR UNDER THE RECEIPT MEANS, said by cause.
+
+   The ceiling above catches a wrong row: one typed per piece where the
+   rest are per carton becomes the cheapest and prices the whole shop.
+   But the receipt can be the odd one out instead. 85,000 against a row
+   at 3,400, 25 to the Ctn, is 25 x 3,400 -- the CARTON price, on a line
+   the order counts in Pair. Sending the owner to the Price Registry for
+   that would have them "fix" a row that is right; the line is what
+   needs a look, and it is named by its order.
+
+   A receipt within this share of the pack price is read as the pack
+   price. Wide enough to cover a carton that has since moved a little in
+   price; nowhere near wide enough to cover a digit. */
+const BRIEF_PACK_FIGURE_PCT = 15;
+function briefPaidFigure(px, lastPaid, habit){
+  if(!px || px.price == null || !(lastPaid > 0)) return null;
+  if(px.price >= lastPaid * (1 - TELL_PRICE_FALL_CEILING_PCT / 100)) return null;
+  const pk = Number(px.packQty) || 0;
+  if(pk > 1 && Math.abs(lastPaid - px.price * pk) <= lastPaid * BRIEF_PACK_FIGURE_PCT / 100)
+    return { why: 'packFigure', packQty: pk, packUnit: String(px.packUnit || '').trim() || 'pack',
+      unit: String((habit && habit.unit) || px.unit || '').trim(),
+      order: habit && habit.lastOrder ? habit.lastOrder : null };
+  return { why: 'checkRow' };
 }
 function briefGroups(c, habits){
   const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
@@ -47737,7 +47883,7 @@ function briefGroups(c, habits){
         name, why });
     return null;
   };
-  const rowFor = (productId, extra, variantIdx, qty, lastPaid)=>{
+  const rowFor = (productId, extra, variantIdx, qty, lastPaid, habit)=>{
     const p = productById(productId);
     if(!p) return null;
     if(!inStock(productId, variantIdx)) return null;
@@ -47746,12 +47892,16 @@ function briefGroups(c, habits){
       return leaveOff(productId, variantIdx, productVariantLabel(p, variantIdx),
         (px && px.why) || 'noRow');
     /* Against their own receipt, wherever there is one. A derived price
-       this far under what they actually paid is not a price. */
-    if(lastPaid > 0 && px.price < lastPaid * (1 - TELL_PRICE_FALL_CEILING_PCT / 100)){
+       this far under what they actually paid is not a price -- and
+       WHICH of the two is wrong is said, because the two fixes live on
+       different screens. */
+    const odd = briefPaidFigure(px, lastPaid, habit);
+    if(odd){
       const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-      return leaveOff(productId, variantIdx,
-        `${productVariantLabel(p, variantIdx)} (${f(px.price)} against ${f(lastPaid)} paid)`,
-        'checkRow');
+      const name = odd.why === 'packFigure'
+        ? `${productVariantLabel(p, variantIdx)} (${f(lastPaid)} paid is ${odd.packQty} × ${f(px.price)}, the ${odd.packUnit} price, on a line ${odd.order ? invoiceNumberLabel(odd.order) : 'the order'} counts in ${odd.unit || 'the piece'})`
+        : `${productVariantLabel(p, variantIdx)} (${f(px.price)} against ${f(lastPaid)} paid)`;
+      return leaveOff(productId, variantIdx, name, odd.why);
     }
     const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
       ? variantLabel(p.variants[variantIdx].combo) : '';
@@ -47789,7 +47939,7 @@ function briefGroups(c, habits){
     if(h.sinceLast > TELL_PRICE_MEMORY_DAYS) return null;
     if((h.lastPrice - px.price) / h.lastPrice * 100 < TELL_PRICE_DROP_PCT) return null;
     return rowFor(h.productId, { was: Math.round(h.lastPrice), fall: h.lastPrice - px.price,
-      theirQty: h.typicalQty }, h.variantIdx, h.typicalQty, h.lastPrice);
+      theirQty: h.typicalQty }, h.variantIdx, h.typicalQty, h.lastPrice, h);
   }).filter(Boolean).sort((a, b)=> b.fall - a.fall));
 
   /* 2. WHAT THEY ALWAYS TAKE, biggest by what an order is worth. */
@@ -47797,7 +47947,7 @@ function briefGroups(c, habits){
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))
     .map(h=>{
       const row = rowFor(h.productId, { theirQty: h.typicalQty }, h.variantIdx, h.typicalQty,
-        h.sinceLast <= TELL_PRICE_MEMORY_DAYS ? h.lastPrice : null);
+        h.sinceLast <= TELL_PRICE_MEMORY_DAYS ? h.lastPrice : null, h);
       if(row && h.lastPrice && h.sinceLast <= TELL_PRICE_MEMORY_DAYS){
         /* Below what they paid: shown, whatever the size of the fall.
            Above it: recorded for the SHOP only -- a price list that
@@ -47829,7 +47979,8 @@ function briefGroups(c, habits){
          and pricing it retail would misquote the very line the pairing
          exists to sell. */
       const q = (x.l.qty && x.h.typicalQty) ? Math.max(1, Math.round(x.l.qty * x.h.typicalQty)) : null;
-      const v = briefVariantForLine(x.l.toId, habits);
+      const v = briefVariantForLine(x.l.toId, habits, { toVariantIdx: x.l.toVariantIdx,
+        from: { productId: x.h.productId, variantIdx: x.h.variantIdx } });
       if(v.gone) return null;
       if(v.why) return leaveOff(x.l.toId, null,
         productVariantLabel(productById(x.l.toId) || { name: productLinkName(x.l.toId) }, null), v.why);
@@ -47954,7 +48105,8 @@ const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
   outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
-  pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Point the pairing at the size you mean, under Pairings \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
+  pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Open the pairing under Pairings and choose the size it means \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Where the two products come in the same sizes, name the sizes alike on both and the picture takes the size they already buy. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
+  packFigure: { head: 'a receipt that carries the PACK price on a line counted in the piece', fix: 'The Price Registry is not what is wrong here: the figure they paid is the pack price to the shilling. Open that order \u2014 where they really took packs, the line should be counted in packs; where they truly paid that much a piece, the row is what needs a look. Until one of them is put right, nothing about this line is claimed to the customer.' },
   noRuleWholesale: { head: 'no WHOLESALE markup rule, which is the side they are sold at', fix: 'Fill in the wholesale markup on the product, or a shop default, under Pricing \u2014 the retail box does not price these, because there is no retail figure on file to price. A buying price is never shown to a customer.' },
   noRuleRetail: { head: 'no RETAIL markup rule, which is the side they are sold at', fix: 'Fill in the retail markup on the product, or a shop default, under Pricing \u2014 the wholesale box does not price these at this quantity. A buying price is never shown to a customer.' },
   checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
@@ -48613,7 +48765,7 @@ function briefWhyHTML(b){
     bits.push(a.qty != null
       ? `Under <b>Also buy</b> is your own pairing &mdash; <b>${a.link.qty}</b> ${esc(a.product.unit || '')} per ${esc(a.link.per || 'one')}${
           ev.withFrom ? `, which your orders agree with in ${ev.andTo} of ${ev.withFrom} cases` : ''}.`
-      : `<b>${esc(a.product.name)}</b> is listed with no quantity: you have not given a figure for that pairing, and an invented one is worse than none.`);
+      : `<b>${esc(a.label || a.product.name)}</b> is listed with no quantity: you have not given a figure for that pairing, and an invented one is worse than none.`);
   });
   /* NAMED RATHER THAN DROPPED. The list is capped by what fits on four
      frames; anything past that is said here, because a line the shop
@@ -48834,7 +48986,7 @@ function pairOffHTML(off){
   return `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Not used in pictures</span><span class="ow-pan-n">${off.length}</span></div>
     ${off.map(l=> `<div class="pr-obs">
-      <span class="p">${esc(productLinkName(l.fromId))} &rarr; ${esc(productLinkName(l.toId))}</span>
+      <span class="p">${esc(productLinkName(l.fromId))} &rarr; ${esc(productLinkLabel(l))}</span>
       <span class="s">${esc((pairVerb(l.verb)||{say:l.verb}).say)}${l.qty != null ? ` &middot; ${l.qty} per ${esc(l.per || 'one')}` : ''}</span>
       <span class="a">
         <button type="button" class="btn btn-ghost ow-sm" data-pair="on" data-id="${esc(String(l.id))}">Use it again</button>
@@ -48853,7 +49005,7 @@ function pairRowHTML(l, st){
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
       <span class="pr-vb pr-${esc(l.verb)}">${esc(v.label)}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
-      <span class="pr-p" title="${esc(productLinkName(l.toId))}">${esc(productLinkName(l.toId))}</span>
+      <span class="pr-p" title="${esc(productLinkLabel(l))}">${esc(productLinkLabel(l))}</span>
     </div>
     <span class="ow-tbl-n">${l.qty != null
       ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">per ${esc(l.per || 'one')}</span>`
@@ -48873,6 +49025,28 @@ function pairProductOptions(sel){
   return gone + ps.map(p=>
     `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 }
+/* WHICH SIZE, where the second product comes in sizes. Shown only then:
+   a plain product has nothing to choose, and a chooser with one entry
+   is a question with no answer. The blank entry is not "no size" but
+   "the size that follows" -- the one the customer already buys, the
+   only one priced, or the one matching the size on the other end --
+   which is what a picture works out on its own. */
+function pairSizeOptions(l){
+  const p = productById(l.toId);
+  const vs = p && Array.isArray(p.variants) ? p.variants : [];
+  if(!vs.length) return '';
+  /* A size chosen on a shop whose column has not landed would be kept
+     on this device and lost on the next load, which is worse than no
+     chooser: said instead, in the words every other missing migration
+     is said in here. */
+  if(!linkSizeColumn) return `<span class="pr-w" title="Paste supabase/migrations/0093_product_link_size.sql into the Supabase SQL editor and reload to choose a size here. Until then the picture takes the size that follows: the one they already buy, the only one priced, or the one matching the first product's.">any size &mdash; needs 0093</span>`;
+  const cur = (l.toVariantIdx != null && vs[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
+  return `<div class="pr-pick"><select class="pr-sel" data-pf="tov" data-id="${esc(String(l.id))}"
+      title="Which size of ${esc(p.name)} this pairing means. Left open, the picture takes the size they already buy, the only size priced, or the size that matches the first product's.">
+    <option value=""${cur == null ? ' selected' : ''}>the size that follows</option>
+    ${vs.map((v, i)=> `<option value="${i}"${cur === i ? ' selected' : ''}>${esc(variantLabel(v.combo || {}))}</option>`).join('')}
+  </select></div>`;
+}
 function pairEditorHTML(l, st){
   const ev = st.ev;
   const per = (productById(l.fromId) || {}).unit || 'one';
@@ -48883,6 +49057,7 @@ function pairEditorHTML(l, st){
       <div class="pr-pick pr-verb"><select class="pr-sel" data-pf="verb" data-id="${esc(String(l.id))}">${
         PAIR_VERBS.map(v=> `<option value="${v.id}"${v.id === l.verb ? ' selected' : ''}>${esc(v.say)}</option>`).join('')}</select></div>
       <div class="pr-pick"><select class="pr-sel" data-pf="to" data-id="${esc(String(l.id))}">${pairProductOptions(l.toId)}</select></div>
+      ${pairSizeOptions(l)}
       <span class="pr-w">&mdash;</span>
       <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-pf="qty" data-id="${esc(String(l.id))}" value="${l.qty == null ? '' : l.qty}" placeholder="—"></div>
       <span class="pr-w">per</span>
@@ -49130,13 +49305,14 @@ async function saveBriefGif(customerId){
     const id = idOf(el), field = el.dataset.pf;
     const patch = field === 'from' ? { fromId: el.value }
       : field === 'to' ? { toId: el.value }
+      : field === 'tov' ? { toVariantIdx: el.value === '' ? null : Number(el.value) }
       : field === 'verb' ? { verb: el.value }
       : field === 'qty' ? { qty: el.value }
       : field === 'per' ? { per: el.value }
       : { note: el.value };
     const r = updateProductLink(id, patch);
     if(!r.ok){ toast(r.why, 6000); return; }
-    if(['from','to','verb','qty'].includes(field)) renderPairings();
+    if(['from','to','tov','verb','qty'].includes(field)) renderPairings();
   });
   const add = document.getElementById('pair_add_btn');
   if(add) add.addEventListener('click', ()=>{
