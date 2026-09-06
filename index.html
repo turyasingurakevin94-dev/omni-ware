@@ -60384,6 +60384,8 @@ const PRICE_ODD_HEADS = {
   unitSplitPeers: 'priced in a different unit from every other quote',
   underPaid: 'far below what you actually paid',
   underPeers: 'far below every other quote',
+  overPeers: 'far above every other quote',
+  peerSplit: 'two quotes on this line that cannot both be right',
 };
 /* The note is PLAIN TEXT. It is read in three places -- a card, a rail
    and a toast at the moment of typing -- and only two of those are
@@ -60446,11 +60448,49 @@ function priceRowOddity(r, peersAll, paid){
 
   const peers = (peersAll || []).filter(x=> x.id !== r.id && priceRowRate(x) != null);
   const sameUnit = peers.filter(x=> priceUnitKey(x.unit) === uk);
+  /* TWO QUOTES, AND NO WAY TO SAY WHICH IS WRONG.
+     A median needs a middle. With one quote on either side there is no
+     middle -- there is a PAIR, wildly apart, and the check has no
+     grounds to accuse either one. It accused the cheaper, because the
+     cheaper is the one that wins the ranking and does the damage; on
+     this shop's real books that named a sofa leg at 2,150 as the fault
+     beside a peer quoting 190,000 for the same piece, when the 190,000
+     is obviously the row somebody typed a box price into.
+     So the pair is reported AS a pair, both rows, both figures, and no
+     verdict. Naming the wrong row is worse than naming neither: it
+     sends the owner to correct a figure that was right. */
+  if(sameUnit.length === 1){
+    const other = sameUnit[0], otherRate = priceRowRate(other);
+    const lo = Math.min(rate, otherRate), hi = Math.max(rate, otherRate);
+    if(lo > 0 && lo < hi * share)
+      return { why: 'peerSplit', rate, against: otherRate,
+        pct: Math.round(lo / hi * 100),
+        note: `Two quotes on this line and they are ${Math.round(hi / lo)} times apart: ${f(rate)}${per} here, ${f(otherRate)}${per} from ${supplierName(other.supplierId)}. One of them is wrong and nothing on file says which — there is no third quote to sit between them, and no purchase invoice in the same unit to settle it. Usually one of the two was typed by the pack.` };
+  }
   if(sameUnit.length){
-    const mid = priceMedian(sameUnit.map(x=> priceRowRate(x)));
+    /* THE MIDDLE OF THE WHOLE LINE, this row included.
+       Measuring against the median of the OTHERS looks careful and is
+       not: with three quotes, "the others" is two, and a two-element
+       median is their average -- which one wild figure drags to the
+       middle of nowhere. Three sofa-leg quotes of 2,100, 2,200 and
+       190,000 gave the two honest rows a yardstick of 96,100 and
+       accused them both, while the one row actually at fault sat
+       beside them. Including this row makes it a real median: 2,200,
+       which no single figure can move. */
+    const mid = priceMedian([rate].concat(sameUnit.map(x=> priceRowRate(x))));
     if(mid > 0 && rate < mid * share)
       return { why: 'underPeers', rate, against: mid, pct: Math.round(rate / mid * 100),
-        note: `${f(rate)}${per} where the other ${sameUnit.length} quote${sameUnit.length === 1 ? '' : 's'} on this line sit${sameUnit.length === 1 ? 's' : ''} around ${f(mid)} — ${Math.round(rate / mid * 100)}% of them. Being the cheapest is the point of a registry; being a fifth of everybody is a keystroke.` };
+        note: `${f(rate)}${per} where the middle of the ${sameUnit.length + 1} quotes on this line is ${f(mid)} — ${Math.round(rate / mid * 100)}% of it. Being the cheapest is the point of a registry; being a fifth of everybody is a keystroke.` };
+    /* AND THE OTHER DIRECTION. A row far ABOVE its peers is the same
+       keystroke seen from the other end, and it was invisible because
+       only the winner was being checked. It costs differently -- a
+       dear row loses the sale rather than the margin -- but a row at
+       eighty times the others is not a dear supplier, it is a box
+       price in a piece column. Only where a median means something,
+       which is two peers or more. */
+    if(mid > 0 && sameUnit.length >= 2 && rate > mid / share)
+      return { why: 'overPeers', rate, against: mid, pct: Math.round(rate / mid * 100),
+        note: `${f(rate)}${per} where the middle of the ${sameUnit.length + 1} quotes on this line is ${f(mid)} — ${Math.round(rate / mid)} times it. A dear supplier is worth having on file; a figure this far out is usually a pack price typed into a unit column, and it drags the spread this screen is read for.` };
   }
   /* Priced by something none of its peers price by. */
   const otherUnits = [...new Set(peers.map(x=> priceUnitKey(x.unit)).filter(Boolean))];
