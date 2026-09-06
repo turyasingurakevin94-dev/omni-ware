@@ -30460,6 +30460,26 @@ function purchasePriceAtQty(row, qty){
   const price = tieredUnitPrice(row, qty, natural);
   return price!=null ? price : tieredUnitPrice(row, qty, other);
 }
+/* WHICH SIDE THAT FIGURE CAME OFF, which the function above knows and
+   does not say.
+
+   The fallback is the point: half this shop's catalogue is carton-only,
+   with a wholesale rate and no retail anything, so a quantity under the
+   pack still gets a price -- out of the WHOLESALE column. Anything that
+   then asks the RETAIL markup rule about it is asking about a column the
+   money did not come from, and a product carrying a perfectly good rule
+   for the tier it is really sold at is reported as having none.
+
+   Kept beside purchasePriceAtQty, in the same words, so the two cannot
+   drift into disagreeing about which column they mean. */
+function purchaseSideAtQty(row, qty){
+  if(!row) return null;
+  const packQty = Number(row.packQty)||0;
+  const natural = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
+  const other = natural==='wholesale' ? 'retail' : 'wholesale';
+  if(tieredUnitPrice(row, qty, natural) != null) return natural;
+  return tieredUnitPrice(row, qty, other) != null ? other : null;
+}
 // The price entry form no longer has separate flat wholesale/retail
 // inputs -- everything's typed into the one tier list. wholesale/retail
 // are derived from it for the many places that still read those two
@@ -47387,7 +47407,13 @@ function briefPriceFor(productId, variantIdx, qty){
     if(!best || base < best.base) best = { row: r, base };
   });
   const packQty = best ? (Number(best.row.packQty) || 0) : 0;
-  const kind = briefPriceKind(packQty, n);
+  /* THE SIDE THE MONEY CAME OFF, not the side the quantity suggests.
+     A carton-only line has no retail column at all, so every quantity
+     is priced out of the wholesale one -- and asking the retail markup
+     rule about that figure reported a shop with a 10,000 wholesale
+     markup on file as having no rule, and left the line off the
+     customer's list. */
+  const kind = (best && purchaseSideAtQty(best.row, n)) || briefPriceKind(packQty, n);
 
   /* WHAT IS ON THE SHELF IS SOLD FIRST, so it is what sets the price.
      A supplier's quote is what the NEXT one will cost; the goods in the
@@ -47402,7 +47428,10 @@ function briefPriceFor(productId, variantIdx, qty){
   const sell = onShelf
     ? suggestedStockSellingPrice(product, cost, kind, variantIdx, packQty)
     : suggestedSellingPrice(product, cost, kind, variantIdx, packQty);
-  if(sell == null || !(sell > 0)) return { why: 'noRule' };
+  /* And when there really is none, WHICH BOX to fill. "No markup rule"
+     over a product whose other side carries one sends the owner to a
+     screen that looks correctly filled in. */
+  if(sell == null || !(sell > 0)) return { why: kind === 'wholesale' ? 'noRuleWholesale' : 'noRuleRetail' };
   /* AND NEVER UNDER WHAT IT COST. A markup rule can be set low, or the
      shelf can hold goods bought dearer than they can be replaced today;
      either way a figure below cost is a loss on every unit sold, and
@@ -47458,7 +47487,7 @@ function briefGroups(c, habits){
      default. Where nothing can be derived the line is left off rather
      than shown at a made-up figure. */
   const leaveOff = (productId, variantIdx, name, why)=>{
-    dropped[why === 'noRule' ? 'noRule' : 'noPrice']++;
+    dropped[String(why).startsWith('noRule') ? 'noRule' : 'noPrice']++;
     if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
       dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
         name, why });
@@ -47576,8 +47605,8 @@ function briefGroups(c, habits){
      not broken. Anything that reached the list is struck from the
      report, and the counts are taken from what survives. */
   dropped.rows = dropped.rows.filter(r=> !seen.has(r.id));
-  dropped.noPrice = dropped.rows.filter(r=> r.why !== 'noRule').length;
-  dropped.noRule = dropped.rows.filter(r=> r.why === 'noRule').length;
+  dropped.noPrice = dropped.rows.filter(r=> !String(r.why).startsWith('noRule')).length;
+  dropped.noRule = dropped.rows.filter(r=> String(r.why).startsWith('noRule')).length;
   return groups;
 }
 
@@ -47669,7 +47698,8 @@ const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
   outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
-  noRule: { head: 'no markup rule', fix: 'Set a markup on the product, or a shop default, under Pricing. A buying price is never shown to a customer.' },
+  noRuleWholesale: { head: 'no WHOLESALE markup rule, which is the side they are sold at', fix: 'Fill in the wholesale markup on the product, or a shop default, under Pricing \u2014 the retail box does not price these, because there is no retail figure on file to price. A buying price is never shown to a customer.' },
+  noRuleRetail: { head: 'no RETAIL markup rule, which is the side they are sold at', fix: 'Fill in the retail markup on the product, or a shop default, under Pricing \u2014 the wholesale box does not price these at this quantity. A buying price is never shown to a customer.' },
   checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
   belowCost: { head: 'the rule prices them UNDER what they cost you', fix: 'Raise the markup, or the price you are holding them at, before these go on anyone\u2019s list. Nothing is sent at a loss by accident.' },
 };
