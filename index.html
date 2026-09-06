@@ -30460,6 +30460,31 @@ function purchasePriceAtQty(row, qty){
   const price = tieredUnitPrice(row, qty, natural);
   return price!=null ? price : tieredUnitPrice(row, qty, other);
 }
+/* WHICH SIDE A LINE IS ACTUALLY SOLD AT, in order of how hard the
+   evidence is.
+
+     1. The column the money came out of, when there is a supplier row
+        to read it off. That is a fact about the money, not a guess.
+     2. The side the shop has a RULE for, when only one side has one.
+        This is what a carton-only catalogue looks like from the shelf,
+        where there are no columns to read: the shop set a wholesale
+        markup and left retail empty, and that IS the shop saying which
+        side it sells at.
+     3. The quantity against the pack, as before.
+
+   Never a guess between two real answers: with rules on both sides and
+   no row to read, (3) decides, exactly as it always did. `ruleAt` is
+   passed in because a line off our own shelf is priced by the stock
+   rule and a bought-in line by the default one, and this must not
+   quietly pick the wrong book. */
+function sellSideFor(row, qty, packQty, ruleAt){
+  const natural = (Number(packQty) > 0 && Number(qty) >= Number(packQty)) ? 'wholesale' : 'retail';
+  const other = natural === 'wholesale' ? 'retail' : 'wholesale';
+  const fromRow = row ? purchaseSideAtQty(row, qty) : null;
+  if(fromRow) return fromRow;
+  if(typeof ruleAt === 'function' && !ruleAt(natural) && ruleAt(other)) return other;
+  return natural;
+}
 /* WHICH SIDE THAT FIGURE CAME OFF, which the function above knows and
    does not say.
 
@@ -30778,11 +30803,26 @@ function quoteItemSellPrice(it){
      to spread a fixed wholesale markup across the pack. */
   const packQty = Number(it.packQty)||0;
   const qty = Number(it.qty)||0;
-  const kind = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
   // A line sourced from our own stock uses the stock-only markup rule
   // (falling back to the product's default rule when none is set) —
   // every other line always uses the default rule.
-  const sugg = it.supplierId==='__stock__'
+  const fromStock = it.supplierId==='__stock__';
+  /* THE COLUMN THE MONEY CAME OUT OF, where a supplier row can say.
+     purchasePriceAtQty falls from the natural side to the other when
+     the natural one carries no figure -- which is every carton-only
+     line at a quantity under the pack -- so the buy price on this row
+     can perfectly well have come off the WHOLESALE column while this
+     asked the retail rule about it. With no rule there, the line fell
+     back to the buy price and quoted the shop's own cost: on a 300,000
+     carton with a 10,000 wholesale markup on file, 10,000 given away a
+     carton with nothing on the row saying so. */
+  const ruleAt = (k)=> fromStock ? effectiveStockMarkupRule(product, variantIdx, k)
+                                 : effectiveMarkupRule(product, variantIdx, k);
+  const row = (!fromStock && typeof productPriceRows === 'function')
+    ? productPriceRows(it.productId, variantIdx).find(r=> r.supplierId === it.supplierId) || null
+    : null;
+  const kind = sellSideFor(row, qty, packQty, ruleAt);
+  const sugg = fromStock
     ? quoteSuggestedStockPrice(product, buy, kind, variantIdx, packQty)
     : quoteSuggestedPrice(product, buy, kind, variantIdx, packQty);
   return sugg!=null ? sugg : buy;
@@ -47407,13 +47447,6 @@ function briefPriceFor(productId, variantIdx, qty){
     if(!best || base < best.base) best = { row: r, base };
   });
   const packQty = best ? (Number(best.row.packQty) || 0) : 0;
-  /* THE SIDE THE MONEY CAME OFF, not the side the quantity suggests.
-     A carton-only line has no retail column at all, so every quantity
-     is priced out of the wholesale one -- and asking the retail markup
-     rule about that figure reported a shop with a 10,000 wholesale
-     markup on file as having no rule, and left the line off the
-     customer's list. */
-  const kind = (best && purchaseSideAtQty(best.row, n)) || briefPriceKind(packQty, n);
 
   /* WHAT IS ON THE SHELF IS SOLD FIRST, so it is what sets the price.
      A supplier's quote is what the NEXT one will cost; the goods in the
@@ -47424,6 +47457,20 @@ function briefPriceFor(productId, variantIdx, qty){
   const shelf = shelfValueForKey(stockKey(productId, variantIdx == null ? null : variantIdx));
   const onShelf = shelf.ownedQty > 0 && shelf.unitCost != null && shelf.unitCost > 0;
   const cost = onShelf ? shelf.unitCost : (best ? best.base : null);
+  /* THE SIDE THE MONEY CAME OFF, not the side the quantity suggests. A
+     carton-only line has no retail column at all, so every quantity is
+     priced out of the wholesale one -- and asking the retail markup
+     rule about that figure reported a shop with a 10,000 wholesale
+     markup on file as having no rule, and left the line off the
+     customer's list.
+
+     Decided AFTER the shelf, because which BOOK of rules governs this
+     line decides which side of it can be said to be empty: a line off
+     our own goods is priced by the stock rules, and asking the default
+     ones whether a side is set would pick the side by the wrong book. */
+  const kind = sellSideFor(best ? best.row : null, n, packQty,
+    (k)=> onShelf ? effectiveStockMarkupRule(product, variantIdx, k)
+                  : effectiveMarkupRule(product, variantIdx, k));
   if(cost == null) return { why: 'noBase' };
   const sell = onShelf
     ? suggestedStockSellingPrice(product, cost, kind, variantIdx, packQty)

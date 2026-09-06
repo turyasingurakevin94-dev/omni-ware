@@ -36,6 +36,14 @@ const src = read('index.html');
 
 const data = { products: [] };
 const scope = compileScope([
+  /* Which side of the trade a line is sold at, and the two functions
+     behind that reading. Compiled in rather than stubbed: whether the
+     wholesale markup is the one that applies is the whole subject of
+     this file, and a stub would answer it before the test does. */
+  extractFunction(src, 'tiersForKind', 'index.html'),
+  extractFunction(src, 'tieredUnitPrice', 'index.html'),
+  extractFunction(src, 'purchaseSideAtQty', 'index.html'),
+  extractFunction(src, 'sellSideFor', 'index.html'),
   extractFunction(src, 'effectiveMarkupRule', 'index.html'),
   extractFunction(src, 'effectiveStockMarkupRule', 'index.html'),
   extractFunction(src, 'suggestedSellingPrice', 'index.html'),
@@ -95,7 +103,40 @@ const line = (over) => Object.assign({
 
   // No pack break means there is no wholesale side to earn.
   t.check(scope.quoteItemSellPrice(line({ qty: 500, packQty: 0 })) === 15000,
-    'with no pack quantity on file every line is retail, however many are sold');
+    'with no pack quantity on file every line is retail, however many are sold — with BOTH rules set, the quantity still decides and nothing is inferred');
+}
+
+/* ---------- 1b. a carton-only line is not "retail" ------------------- */
+/*
+ * The shop that found this sells ELEPHANT King by the carton: a
+ * wholesale figure on the supplier row, no retail column at all, and a
+ * fixed 10,000 wholesale markup on the product with the retail box
+ * empty. A customer took three.
+ *
+ * packQty is 0 on that row, so the quantity test called it retail, the
+ * retail rule did not exist, and the line fell back to the BUY PRICE --
+ * the shop's own cost, quoted to the customer, 10,000 a carton given
+ * away with nothing on the row saying so. The markup was on file and
+ * visible in Edit Product the whole time.
+ */
+{
+  product({ retailMarkupValue: 0, wholesaleMarkupType: 'fixed', wholesaleMarkupValue: 10000 });
+  const carton = line({ qty: 3, packQty: 0, price: 300000 });
+  t.check(scope.quoteItemSellPrice(carton) === 310000,
+    `a line whose product has only a wholesale rule is sold at it (got ${scope.quoteItemSellPrice(carton)}, expected 310,000)`);
+  t.check(scope.quoteItemSellPrice(carton) !== 300000,
+    'and never at the shop\u2019s own cost — the old fallback, which said nothing while it did it');
+
+  // The mirror: only a retail rule, a quantity over the pack.
+  product({ retailMarkupType: 'fixed', retailMarkupValue: 2000, wholesaleMarkupValue: 0 });
+  t.check(scope.quoteItemSellPrice(line({ qty: 12, packQty: 12 })) === 12000,
+    'and a pack quantity on a product with only a retail rule is sold at THAT, rather than at cost');
+
+  /* Only when the shop has said nothing at all is the cost still the
+     answer -- that fallback is deliberate and stays. */
+  product({ retailMarkupValue: 0, wholesaleMarkupValue: 0 });
+  t.check(scope.quoteItemSellPrice(line({ qty: 3, packQty: 0, price: 300000 })) === 300000,
+    'with no rule on either side the line still falls back to what it cost, because there is nothing else to say');
 }
 
 /* ---------- 2. a fixed wholesale markup is per PACK ------------------- */
@@ -281,8 +322,27 @@ const line = (over) => Object.assign({
   // The literal that caused the first half of this file.
   t.check(!/quoteSuggestedPrice\(product, buy, 'retail', variantIdx\)/.test(code),
     "quoteItemSellPrice no longer hard-codes 'retail'");
-  t.check(/const kind = \(packQty>0 && qty>=packQty\) \? 'wholesale' : 'retail';/.test(code),
-    'choosing the side by the same qty-vs-pack test used on the buying side');
+  /* The test moved rather than went away. It used to be written out
+     inside quoteItemSellPrice; it now lives in sellSideFor, beside
+     purchasePriceAtQty, because the buying side does not merely apply
+     that test -- it FALLS THROUGH when the natural side carries no
+     figure, and a carton-only line priced out of the wholesale column
+     was still being asked the retail rule about it. What is pinned is
+     the property, not the line: the side comes from one shared reading,
+     and that reading is the qty-vs-pack test. */
+  t.check(/const kind = sellSideFor\(row, qty, packQty, ruleAt\);/.test(code),
+    'the side comes from the one shared reading rather than a copy of the test');
+  const side = extractFunction(src, 'sellSideFor', 'index.html');
+  t.check(/\? 'wholesale' : 'retail'/.test(side) && /packQty/.test(side) && /qty/.test(side),
+    'and that reading is still the same qty-vs-pack test used on the buying side');
+  t.check(/purchaseSideAtQty\(row, qty\)/.test(side),
+    'asked first of the column the money actually came out of, which is a fact rather than an inference');
+  t.check(/!ruleAt\(natural\) && ruleAt\(other\)/.test(side),
+    'and where there is no column to read — a line off our own shelf — the side the shop set a rule for decides');
+  const q = extractFunction(src, 'quoteItemSellPrice', 'index.html');
+  t.check(/effectiveStockMarkupRule\(product, variantIdx, k\)/.test(q)
+    && /effectiveMarkupRule\(product, variantIdx, k\)/.test(q),
+    'a line off our own goods asks the STOCK book which sides are set, never the default one');
 }
 
 process.exit(t.done() ? 1 : 0);
