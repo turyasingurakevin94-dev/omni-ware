@@ -267,11 +267,17 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     packQty: 10, packUnit: 'lot', qty: 30, unitCost: 27000 }], shift(TODAY, 3));
   const msg = s.buyOrderMessage(o);
   t.check(/Roto/.test(msg), 'the supplier is greeted by name');
-  t.check(/Cement/.test(msg) && /30/.test(msg), 'the line and the quantity are in it');
-  t.check(/27,000/.test(msg),
-    'AND THE PRICE — an order that leaves it out gets back "yes, we have them" against a figure the supplier never saw');
+  /* IN THE PACKS THEY SELL IN, and only those. The plan rounds a buy up
+     to whole packs, so the supplier is asked for "3 lot @ 270,000/lot":
+     one count and one price, in the unit they trade in. The old line
+     said "30 (3 lot) @ 27,000" and left them to fold one into the other. */
+  t.check(/Cement/.test(msg) && /3 lot/.test(msg), 'the line and the quantity are in it, in the packs they sell in');
+  t.check(!/\b30\b/.test(msg.split('\n').find(x=> /Cement/.test(x)) || ''), 'and not also in the units the shop counts in');
+  t.check(/270,000/.test(msg),
+    'AND THE PRICE, per pack — an order that leaves it out gets back "yes, we have them" against a figure the supplier never saw');
   t.check(/810,000/.test(msg), 'with what it comes to, so a wrong line is caught before the lorry loads');
-  t.check(/3 lot/.test(msg), 'said in the packs they sell in as well as the units the shop counts in');
+  const loose = s.buyOrderMessage(s.placeBuyOrder('S2', [{ key: 'P3', productId: 'P3', name: 'Wire', unit: 'Kg', qty: 25, unitCost: 4000 }], null));
+  t.check(/25 Kg @ 4,000 UGX\/Kg/.test(loose), `a line with no pack is asked for in its unit (${loose.split('\n').find(x=> /Wire/.test(x))})`);
   t.check(s.buyOrderWaUrl(o).startsWith('https://wa.me/256772000002'),
     'and the draft opens at their number');
 

@@ -30186,8 +30186,11 @@ function supplierTripMessage(trip){
      never cut, and plain lines wrap on a narrow phone where a fixed
      table would not. */
   const rows = tripLines(trip).map(l=>{
-    const qty = Number(l.qty) || 0;
-    return `• ${l.productName || 'Item'} — ${qty}${l.unit ? ' ' + l.unit : ''}`;
+    /* In the unit the line was chosen in: a carton line asks the
+       supplier for cartons, which is what they trade in. The trip
+       carries the choice off the order line (createCollectionTripFromRun). */
+    const c = quoteLineCount(l, Number(l.qty) || 0);
+    return `• ${l.productName || 'Item'} — ${c.n}${c.unit ? ' ' + c.unit : ''}`;
   });
   const carrier = (!bySupplier && trip.assignedWorkerId) ? staffName(trip.assignedWorkerId) : '';
   const closing = bySupplier
@@ -78036,9 +78039,18 @@ function buyOrderMessage(o){
   if(!o) return '';
   const rows = (o.lines || []).map(l=>{
     const qty = Number(l.qty) || 0;
-    const packs = (Number(l.packQty) > 0)
-      ? ` (${Math.round(qty / Number(l.packQty))} ${l.packUnit || 'pack'})` : '';
-    return `• ${l.name}${l.unit ? ' (' + l.unit + ')' : ''} — ${qty.toLocaleString('en-UG')}${packs} @ ${fmtUGX(Math.round(Number(l.unitCost) || 0))}`;
+    const packQty = Number(l.packQty) || 0;
+    const unitCost = Math.round(Number(l.unitCost) || 0);
+    /* IN THE PACKS THEY SELL IN. The plan already rounds a buy up to
+       whole packs, so a packed line is asked for as "3 lot @ 270,000/lot"
+       and nothing else -- "30 (3 lot) @ 27,000" made the supplier fold
+       one figure into the other before answering. A count that is not
+       whole packs, or a line with no pack, is asked for in the unit. */
+    const whole = packQty > 0 && Math.abs(qty / packQty - Math.round(qty / packQty)) < 1e-9;
+    const count = whole
+      ? `${Math.round(qty / packQty).toLocaleString('en-UG')} ${l.packUnit || 'pack'} @ ${fmtUGX(unitCost * packQty)}/${l.packUnit || 'pack'}`
+      : `${qty.toLocaleString('en-UG')}${l.unit ? ' ' + l.unit : ''} @ ${fmtUGX(unitCost)}${l.unit ? '/' + l.unit : ''}`;
+    return `• ${l.name} — ${count}`;
   });
   return [
     `Hello *${o.supplier}*,`,
