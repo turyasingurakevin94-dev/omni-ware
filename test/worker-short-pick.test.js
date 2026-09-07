@@ -327,6 +327,12 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         extractFunction(indexHtml, 'applyQuoteStockDeduction', 'index.html'),
         extractFunction(indexHtml, 'amendOrderToPickedQuantities', 'index.html'),
         extractFunction(indexHtml, 'pickShortfallLabel', 'index.html'),
+        /* The label counts in the unit the line was chosen in, through
+           the same reader every document uses; a loose line reads as
+           before. */
+        extractFunction(indexHtml, 'quoteLinePack', 'index.html'),
+        extractFunction(indexHtml, 'quoteLineCountPer', 'index.html'),
+        extractFunction(indexHtml, 'quoteLineCount', 'index.html'),
       ], {
         data: data3,
         document: { getElementById: () => null },

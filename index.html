@@ -35613,9 +35613,11 @@ function pickShortfallLabel(q){
   if(!lines.length) return '';
   if(lines.length===1){
     const l = lines[0];
+    /* In the unit the line was chosen in, like the picker's own card. */
+    const o = quoteLineCount(l.it, l.ordered);
     return l.picked===0
-      ? `Picked short — none of the ${l.ordered} found`
-      : `Picked short — ${l.picked} of ${l.ordered} found`;
+      ? `Picked short — none of the ${o.n} found`
+      : `Picked short — ${quoteLineCount(l.it, l.picked).n} of ${o.n} found`;
   }
   return `Picked short — ${lines.length} items`;
 }
@@ -35670,7 +35672,7 @@ function openPickShortfallModal(orderId, fromInvoice){
     return `
     <div class="ps-line">
       <span class="ps-line-name">${esc(l.it.productName || 'Item')}</span>
-      <span class="ps-line-nums"><b>${l.picked}</b> of ${l.ordered}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</span>
+      <span class="ps-line-nums"><b>${esc(quoteLineCount(l.it, l.picked).n)}</b> of ${esc(quoteLineCount(l.it, l.ordered).n)}${quoteLineCount(l.it, l.ordered).unit ? ` ${esc(quoteLineCount(l.it, l.ordered).unit)}` : ''}</span>
       ${(q.customerId && l.it.productId)
         ? (already
           ? `<span class="fup-row-meta">On their follow-ups</span>`

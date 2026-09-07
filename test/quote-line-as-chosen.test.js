@@ -115,7 +115,23 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   t.check(/1\.5 of 2 Ctn/.test(check) && !/200 Pair/.test(check),
     `the invoice check says "1.5 of 2 Ctn", not "150 of 200 Pair" (${(check.match(/ow-ot-ck-q[^<]*>([^<]*)</) || [])[1]})`);
   /* The packing list is pinned beside its own fixtures, in
-     order-preview.test.js. */
+     order-preview.test.js. The board card's one-line label counts the
+     same way. */
+  const worker = read('shared-worker.js');
+  const LN = ['pickShortfallLabel', 'pickShortfallLines', 'itemOrderedQty', 'itemPickedQty', 'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount'];
+  const L = compileScope([
+    extractFunction(src, 'pickShortfallLabel', 'index.html'),
+    extractFunction(worker, 'pickShortfallLines', 'shared-worker.js'),
+    extractFunction(worker, 'itemOrderedQty', 'shared-worker.js'),
+    extractFunction(worker, 'itemPickedQty', 'shared-worker.js'),
+    extractDeclaration(worker, 'PICK_ANSWERED', 'shared-worker.js'),
+    extractFunction(worker, 'itemPickAnswered', 'shared-worker.js'),
+    extractFunction(src, 'quoteLinePack', 'index.html'),
+    extractFunction(src, 'quoteLineCountPer', 'index.html'),
+    extractFunction(src, 'quoteLineCount', 'index.html'),
+  ], {}, LN);
+  eq(L.pickShortfallLabel(order), 'Picked short — 1.5 of 2 found',
+    'the board card says the short pick in cartons too');
 }
 
 /* ---- 2. the picker counts in the chosen unit -------------------------- */

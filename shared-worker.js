@@ -1441,6 +1441,23 @@ function itemOrderedQty(it){ return Math.max(0, Number(it && it.qty) || 0); }
 // carries ticks with nothing behind them -- resetPickingProgress nulls
 // pickedQty and acceptOrderAssignment does not refill it -- and reading
 // those as zero would report a shop-wide shortfall that never happened.
+/* A count, said in the unit the line was CHOSEN in. it.qty is always
+   the base count; a line the admin chose as "2 Ctn" carries qtyIn 'pack'
+   and its pack size, and THAT line is read back as 2 Ctn -- the same
+   words the packing list, the invoice and the client's quotation use,
+   so the picker is asked for what the order says. A line that does not
+   say so is a count of base units and stays one, whatever pack the
+   registry mentions: that is where "12 Ctn for twelve dozen" came from,
+   and this card exists to prevent it. The number and the unit come back
+   apart, with the step a picker counts in. */
+function pickLineCount(it, n){
+  const q = Number(n) || 0;
+  const num = (x)=> Number(Math.round(x * 100) / 100).toLocaleString('en-UG');
+  const packQty = Number(it && it.packQty) || 0;
+  const packUnit = String((it && it.packUnit) || '').trim();
+  if(it && it.qtyIn === 'pack' && packQty > 0 && packUnit) return { n: num(q / packQty), unit: packUnit, per: packQty };
+  return { n: num(q), unit: (it && (it.unit || it.packUnit)) || '', per: 1 };
+}
 function itemPickedQty(it){
   if(!itemPickAnswered(it)) return null;
   if(it.pickStatus==='done') return itemOrderedQty(it);
@@ -1768,19 +1785,12 @@ function renderWorkerPickStepper(q){
     const picked = itemPickedQty(it);
     const isShort = answered && picked < itemOrderedQty(it);
     const isDone = answered && !isShort;
-    const qty = it.qty!=null ? it.qty : '';
-    /* The line's OWN unit. it.qty is always in base units -- ipComputeQty
-       multiplies a pack entry out by packQty before the line is written,
-       so choosing "2 cartons" of something sold by the dozen stores 12,
-       not 2 -- and pairing that number with packUnit printed "12 Ctn"
-       for twelve dozen. A picker reading that pulls twelve cartons: six
-       times the order, which is exactly the mistake this card is built
-       to prevent.
-
-       The buying list has always shown it.unit for the same number, so
-       the two screens disagreed about what a line was; this is the one
-       that was wrong. */
-    const unit = it.unit || it.packUnit || '';
+    /* In the words the order was written in -- see pickLineCount. A
+       line chosen as 2 Ctn reads 2 Ctn; a line that only says 200 reads
+       200 in its own unit, never as cartons it was not chosen in. */
+    const count = pickLineCount(it, itemOrderedQty(it));
+    const qty = it.qty!=null ? count.n : '';
+    const unit = count.unit;
     // Which leaves nothing for "Pack" to mean here: the number is a count
     // of units in every case, whether or not the supplier sells them in
     // packs. Pack size is a purchasing fact and belongs on the buying
@@ -1828,7 +1838,7 @@ function renderWorkerPickStepper(q){
     // check against the bags in their hand, and it is the same figure the
     // admin's board and the invoice gate will report later.
     const badgeClass = isShort ? 'short' : (isDone ? 'done' : 'pending');
-    const badgeLabel = isShort ? `${picked} of ${itemOrderedQty(it)}`
+    const badgeLabel = isShort ? `${pickLineCount(it, picked).n} of ${count.n}`
       : (isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick');
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
@@ -1847,7 +1857,7 @@ function renderWorkerPickStepper(q){
               find them, which is a different fact about a different
               person. */
           quoteLineShortfall(it) > 0
-            ? `<div class="wv-carousel-owed">${ICON_WARN_SMALL}Only ${esc(String(it.receivedQty))} arrived — ${esc(String(quoteLineShortfall(it)))} short</div>`
+            ? `<div class="wv-carousel-owed">${ICON_WARN_SMALL}Only ${esc(pickLineCount(it, it.receivedQty).n)} arrived — ${esc(pickLineCount(it, quoteLineShortfall(it)).n)} short</div>`
             : /* The pack the shop could not buy less than. Says the
                  whole delivery first, because that is what is standing
                  in front of them, and then how much of it is not going
@@ -1992,7 +2002,11 @@ function promptPickedQty(orderId, idx){
   const product = (data.products||[]).find(p=>p.id===it.productId);
   const name = (product && product.name) || it.productName || 'this item';
   const ordered = itemOrderedQty(it);
-  const unit = it.packUnit || it.unit || '';
+  /* Counted in the unit the line was chosen in, and stepped in it: a
+     carton line steps a carton at a time, since that is what stands on
+     the shelf. The number kept is still the base count. */
+  const count = pickLineCount(it, ordered);
+  const unit = count.unit, per = count.per;
   const start = itemPickedQty(it);
   // Opens on the full quantity for an unanswered item -- the number they
   // are about to reduce -- and on whatever was recorded when re-opened.
@@ -2008,7 +2022,7 @@ function promptPickedQty(orderId, idx){
   el.innerHTML = `
     <div class="wv-qty-sheet">
       <div class="wv-qty-title">How many did you find?</div>
-      <div class="wv-qty-sub">${esc(name)} — ${ordered}${unit ? ` ${esc(unit)}` : ''} ordered</div>
+      <div class="wv-qty-sub">${esc(name)} — ${esc(count.n)}${unit ? ` ${esc(unit)}` : ''} ordered</div>
       <div class="wv-qty-stepper">
         <button type="button" class="wv-qty-step" data-step="-1" aria-label="One fewer">−</button>
         <div class="wv-qty-value" id="wvQtyValue">0</div>
@@ -2023,7 +2037,7 @@ function promptPickedQty(orderId, idx){
 
   const valueEl = el.querySelector('#wvQtyValue');
   const paint = ()=>{
-    valueEl.textContent = String(n);
+    valueEl.textContent = pickLineCount(it, n).n;
     el.querySelectorAll('.wv-qty-step').forEach(btn=>{
       const step = Number(btn.dataset.step);
       btn.disabled = (step<0 && n<=0) || (step>0 && n>=ordered);
@@ -2031,7 +2045,7 @@ function promptPickedQty(orderId, idx){
   };
   el.querySelectorAll('.wv-qty-step').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      n = Math.min(ordered, Math.max(0, n + Number(btn.dataset.step)));
+      n = Math.min(ordered, Math.max(0, n + Number(btn.dataset.step) * per));
       paint();
     });
   });

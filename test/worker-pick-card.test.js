@@ -49,16 +49,39 @@ const code = strip(js);
  * list, next to what has to be fetched, not on the card of somebody
  * counting goods off a shelf.
  */
+/*
+ * And later again, the other way for ONE case: the admin can now choose
+ * the pack in the picker, and a line chosen as "2 Ctn" says so on itself
+ * (qtyIn 'pack', with its pack size). That line reads as 2 Ctn here, in
+ * the same words as the packing list, the invoice and the client's
+ * quotation. A line that does NOT say so is still a count of base units
+ * -- the reading below is unchanged for it, because that is exactly the
+ * data the twelve-dozen mistake came from.
+ */
+const pick = compileScope([extractFunction(js, 'pickLineCount', 'shared-worker.js')], {}, ['pickLineCount']);
 {
-  t.check(/const unit = it\.unit \|\| it\.packUnit \|\| '';/.test(code),
-    'the card shows the line’s own unit, the same one the buying list shows');
+  t.check(/const count = pickLineCount\(it, itemOrderedQty\(it\)\);\s*const qty = it\.qty!=null \? count\.n : '';\s*const unit = count\.unit;/.test(code),
+    'the card reads the count and its unit through pickLineCount');
+  const chosen = pick.pickLineCount({ unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200 }, 200);
+  t.check(chosen.n === '2' && chosen.unit === 'Ctn' && chosen.per === 100,
+    `a line chosen as cartons reads 2 Ctn, stepped a carton at a time (${JSON.stringify(chosen)})`);
+  const part = pick.pickLineCount({ unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200 }, 150);
+  t.check(part.n === '1.5', `and a part of it is a part of a carton (${part.n})`);
+  const twelve = pick.pickLineCount({ packUnit: 'Ctn', packQty: 12, unit: 'Dozen', qty: 12 }, 12);
+  t.check(twelve.n === '12' && twelve.unit === 'Dozen',
+    'twelve of something sold by the dozen, on a line that never chose the carton, still reads as twelve dozen');
+  t.check(/const badgeLabel = isShort \? `\$\{pickLineCount\(it, picked\)\.n\} of \$\{count\.n\}`/.test(code),
+    'a short pick’s badge counts both numbers in the same unit');
+  t.check(/const unit = count\.unit, per = count\.per;/.test(code)
+    && /n \+ Number\(btn\.dataset\.step\) \* per/.test(code),
+    'and "How many did you find?" steps in that unit too');
   t.check(/const qtyLabel = 'Quantity';/.test(code),
     'and calls it a quantity, because that is what the number is');
   t.check(/class="wv-carousel-qty-label">\$\{esc\(qtyLabel\)\}/.test(code),
     'still rendered through the variable rather than hard-coded into the markup');
 
   // The rule itself, on the case that was wrong.
-  const unitFor = (it) => it.unit || it.packUnit || '';
+  const unitFor = (it) => pick.pickLineCount(it, 12).unit;
   t.check(unitFor({ packUnit: 'Ctn', unit: 'Dozen' }) === 'Dozen',
     'twelve of something sold by the dozen reads as dozens, not as cartons');
   t.check(unitFor({ unit: 'pc' }) === 'pc', 'a loose item still shows its base unit');
