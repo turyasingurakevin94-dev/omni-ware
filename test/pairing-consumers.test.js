@@ -226,5 +226,20 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     'and the shop is told which companion it replaced');
 }
 
+/* ---- 9. the counters that now read a rule ---------------------------- */
+{
+  t.check(/id="q_rail_with"/.test(src), 'the quote rail has a place for what goes with a line');
+  t.check(/pairCompanionsFor\(it\.productId, it\.variantIdx, Number\(it\.qty\)\|\|0,/.test(src),
+    'and fills it through the one reading');
+  t.check(/data-with="\$\{esc\(c\.productId\)\}"/.test(src), 'each companion offers itself as a line');
+  t.check(/data-swap="\$\{r\.it\.lineId\}"/.test(src), 'and a short line offers the swap the owner wrote down');
+  t.check(/pairSubstitutesFor\(r\.it\.productId, r\.it\.variantIdx\)/.test(src), 'read the same way everywhere');
+  /* Nothing sends itself: every one of those is a button, never a push
+     that happens on render. */
+  const railBody = extractFunction(src, 'renderQuoteRail', 'index.html');
+  t.check(!/data\.quote\.items\.push[\s\S]{0,400}?renderQuoteItems\(\);\s*\}\s*\)/.test(railBody.replace(/addEventListener\('click'[\s\S]*/, '')),
+    'and no line is added outside a click');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);

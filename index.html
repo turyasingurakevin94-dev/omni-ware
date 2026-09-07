@@ -14914,6 +14914,7 @@
         <div class="ow-side" id="q_rail">
           <div class="ow-pan" id="q_rail_client"></div>
           <div class="ow-pan" id="q_rail_cheaper"></div>
+          <div class="ow-pan" id="q_rail_with"></div>
           <div class="ow-pan" id="q_rail_stock"></div>
         </div>
       </div>
@@ -32950,8 +32951,9 @@ function renderQuoteItems(){
 function renderQuoteRail(){
   const clientEl = document.getElementById('q_rail_client');
   const cheaperEl = document.getElementById('q_rail_cheaper');
+  const withEl = document.getElementById('q_rail_with');
   const stockEl = document.getElementById('q_rail_stock');
-  if(!clientEl || !cheaperEl || !stockEl) return;
+  if(!clientEl || !cheaperEl || !withEl || !stockEl) return;
   ensureQuote();
   const items = data.quote.items || [];
   const n = (v)=> Number(v).toLocaleString('en-UG');
@@ -33021,6 +33023,80 @@ function renderQuoteRail(){
     });
   }
 
+  /* ---- goes with it ----
+     What the shop itself has written down about the lines already on
+     the document: what they cannot be used without, what is usually
+     taken with them, what shares their job. Nothing is added by this
+     panel; every line on a quote is still an owner's tap. */
+  {
+    const onDoc = new Set(items.map(it=> it.productId).filter(Boolean));
+    const seenC = new Set();
+    const rows = [];
+    items.forEach((it, idx)=>{
+      if(!it.productId) return;
+      pairCompanionsFor(it.productId, it.variantIdx, Number(it.qty)||0,
+        { exclude: onDoc, substitute: true }).forEach(c=>{
+          if(c.verbId === 'instead') return;
+          const k = c.productId + '::' + (c.variantIdx == null ? '' : c.variantIdx);
+          if(seenC.has(k)) return;
+          seenC.add(k);
+          rows.push({ c, idx, line: it });
+        });
+    });
+    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Goes with it</span>${
+      rows.length ? `<span class="ow-pan-n">${rows.length}</span>` : ''}</div>`;
+    let body = '';
+    if(!items.length) body = `<p class="ow-mini">Add a line and what you have written down about it sits beside it.</p>`;
+    else if(!rows.length) body = `<p class="ow-mini">Nothing is written down about these lines &mdash; What goes with what is where it is written, and it is read here.</p>`;
+    else body = rows.slice(0, 4).map(r=>{
+      const c = r.c;
+      const say = c.verbId === 'needs' ? 'cannot be used without' : c.verbId === 'part' ? 'is part of the same job as' : 'usually goes with';
+      const qty = c.qty ? `<span class="ow-fig">${n(c.qty)}</span> ${esc(c.unit || '')}` : 'no figure written';
+      /* Out of stock is said, and answered where the owner has already
+         written down what stands in for it. */
+      if(c.why === 'outOfStock'){
+        const sub = c.substitutes[0];
+        return `<div class="q-rail-note"><b>${esc(c.label)}</b> &mdash; ${esc(say)} line ${r.idx+1}, and the shelf has none.${
+          sub ? `<br>${esc(sub.label)} stands in for it, <span class="ow-fig">${n(sub.stock)}</span> on the shelf.<div><button type="button" class="q-rail-act" data-with="${esc(sub.productId)}" data-wv="${sub.variantIdx == null ? '' : sub.variantIdx}" data-wq="${c.qty || 1}" data-wp="${sub.price}">Add ${esc(briefShortName(sub.label))} instead</button></div>` : ''}</div>`;
+      }
+      if(c.why) return `<div class="q-rail-note"><b>${esc(c.label)}</b> &mdash; ${esc(say)} line ${r.idx+1}, and there is no price on file for it.</div>`;
+      return `<div class="q-rail-note"><b>${esc(c.label)}</b> &mdash; ${esc(say)} line ${r.idx+1}. ${qty} at <span class="ow-fig">${n(c.price)}</span>/${esc(c.unit || 'unit')}${
+        c.evidence.withFrom ? `, on ${c.evidence.andTo} of ${c.evidence.withFrom} orders that carried it` : ''}.<div><button type="button" class="q-rail-act" data-with="${esc(c.productId)}" data-wv="${c.variantIdx == null ? '' : c.variantIdx}" data-wq="${c.qty || 1}" data-wp="${c.price}">Add ${c.qty ? n(c.qty) + ' ' + esc(c.unit || '') : ''} to the quote</button></div></div>`;
+    }).join('') + (rows.length > 4 ? `<p class="ow-mini">${rows.length - 4} more written down for these lines.</p>` : '');
+    withEl.innerHTML = head + body;
+    /* The add is the item picker's own move, done from here: our own
+       shelf where it can serve the quantity, otherwise the cheapest
+       supplier who can, at the figure this note just quoted. */
+    withEl.querySelectorAll('.q-rail-act').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.with;
+        const vi = btn.dataset.wv === '' ? null : Number(btn.dataset.wv);
+        const qty = Number(btn.dataset.wq) || 1;
+        const sell = Number(btn.dataset.wp) || 0;
+        const p = productById(id);
+        if(!p) return;
+        const shelf = getStockQty(id, vi);
+        const best = rankedPurchaseRowsAtQty(id, vi, qty).find(r=> r.purchasePrice != null) || null;
+        const fromShelf = shelf >= qty;
+        if(!fromShelf && !best){ toast('No supplier has that on file — add a price for it first.', 6000); return; }
+        const supplierId = fromShelf ? '__stock__' : best.supplierId;
+        ensureQuote();
+        data.quote.items.push({
+          lineId: data.nextQuoteLineId++,
+          productId: id, variantIdx: vi, productName: productVariantLabel(p, vi),
+          unit: (best && best.unit) || productUnitLabel(id, vi) || p.unit || '',
+          packUnit: best ? (best.packUnit||'') : '', packQty: best ? (best.packQty||0) : '',
+          qty, supplierId, supplierName: supplierName(supplierId),
+          price: ipLineBuyPrice(supplierId, best, qty, fromShelf ? getFIFOUnitCost(id, vi) : null),
+          sellPrice: sell,
+        });
+        saveData();
+        renderQuoteItems();
+        toast(`Added ${productVariantLabel(p, vi)}.`);
+      });
+    });
+  }
+
   /* ---- stock to cover it ---- */
   {
     const head = `<div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span></div>`;
@@ -33038,8 +33114,42 @@ function renderQuoteRail(){
       body = rows.map(r=> `<div class="ow-sr"><span class="ow-sr-k" title="${esc(r.it.productName)}">${esc(r.it.productName)}</span><span class="ow-sr-v">${n(r.qty)} / ${r.short ? '<span class="ow-fig ow-warn">'+n(r.shelf)+'</span>' : n(r.shelf)}</span></div>`).join('');
       const shorts = rows.filter(r=>r.short);
       if(shorts.length) body += `<p class="ow-mini">${shorts.map(r=> esc(r.it.productName)+' is <span class="ow-fig ow-warn">'+n(r.qty-r.shelf)+' short</span> on the shelf').join('; ')}. Order the balance with this quote or the delivery splits.</p>`;
+      /* A line the shelf cannot cover, and something the owner has
+         already written down as its swap. Offered as a swap of the
+         line, at the quantity already quoted -- never applied. */
+      shorts.forEach(r=>{
+        const subs = pairSubstitutesFor(r.it.productId, r.it.variantIdx);
+        const sub = subs.find(x=> x.stock === null || x.stock >= r.qty) || subs[0];
+        if(!sub) return;
+        body += `<div class="q-rail-note"><b>${esc(sub.label)}</b> is what you wrote down instead of ${esc(r.it.productName)}, and the shelf has <span class="ow-fig">${n(sub.stock)}</span>.<div><button type="button" class="q-rail-act" data-swap="${r.it.lineId}" data-sid="${esc(sub.productId)}" data-sv="${sub.variantIdx == null ? '' : sub.variantIdx}" data-sp="${sub.price}">Swap line ${rows.indexOf(r)+1} to ${esc(briefShortName(sub.label))}</button></div></div>`;
+      });
     }
     stockEl.innerHTML = head + body;
+    /* The swap keeps the quantity and changes what the line IS: the
+       product, its size, its name, its unit and both its figures. */
+    stockEl.querySelectorAll('.q-rail-act').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const it = data.quote.items.find(x=> String(x.lineId) === String(btn.dataset.swap));
+        if(!it) return;
+        const id = btn.dataset.sid, vi = btn.dataset.sv === '' ? null : Number(btn.dataset.sv);
+        const p = productById(id);
+        if(!p) return;
+        const qty = Number(it.qty) || 1;
+        const shelf = getStockQty(id, vi);
+        const best = rankedPurchaseRowsAtQty(id, vi, qty).find(x=> x.purchasePrice != null) || null;
+        const fromShelf = shelf >= qty;
+        it.productId = id; it.variantIdx = vi; it.productName = productVariantLabel(p, vi);
+        it.unit = (best && best.unit) || productUnitLabel(id, vi) || p.unit || '';
+        it.packUnit = best ? (best.packUnit||'') : ''; it.packQty = best ? (best.packQty||0) : '';
+        it.supplierId = fromShelf ? '__stock__' : (best ? best.supplierId : it.supplierId);
+        it.supplierName = supplierName(it.supplierId);
+        it.price = ipLineBuyPrice(it.supplierId, best, qty, fromShelf ? getFIFOUnitCost(id, vi) : null);
+        it.sellPrice = Number(btn.dataset.sp) || it.sellPrice;
+        saveData();
+        renderQuoteItems();
+        toast(`Line swapped to ${it.productName}.`);
+      });
+    });
   }
 }
 
