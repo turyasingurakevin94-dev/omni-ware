@@ -79173,12 +79173,29 @@ function standingPoliciesData(){
     const m = Number((data.presetOrderStageLimits||{})[st])||0;
     if(m > 0) limits.push({ stage: st, label: SQ_STATUSES[st].label, minutes: m });
   });
+  /* WHAT GOES WITH WHAT is a standing rule like any other: the owner
+     wrote it, it holds until they change it, and it decides what the
+     shop says to customers. It was the one book of the shop's own rules
+     the Manager could not read. */
+  const rules = [];
+  productLinksAll().filter(l=> l.active !== false).forEach(l=>{
+    const st = pairStanding(l);
+    rules.push({ from: pairSideLabel(l.fromId, l.fromVariantIdx),
+      verb: (pairVerb(l.verb) || {}).say || l.verb,
+      to: (pairVerb(l.verb) || {}).self ? null : pairSideLabel(l.toId, l.toVariantIdx),
+      qty: l.qty == null ? null : Number(l.qty), per: l.per || null,
+      books: st.label, orders_with_both: st.ev.andTo, orders_with_first: st.ev.withFrom });
+  });
+  const openSizes = pairProductRows().reduce((n, x)=> n + x.gaps, 0);
   return {
     chase: { after_days: Math.max(0, Number(data.presetChaseAfterDays)||0),
       rest_days: Math.max(0, Number(data.presetChaseRestDays)||0) },
     restock: { default_cover_days: Number(data.presetRestockCoverDays)||14,
       rules_count: reorder.length, rules: reorder },
     stages: { limits, alerts_on: !!data.presetStageAlerts },
+    pairings: { rules_count: rules.length, with_a_figure: rules.filter(r=> r.qty != null).length,
+      sizes_still_open: openSizes, seen_in_orders_not_judged: observedPairs().length,
+      rules: rules.slice(0, 12) },
   };
 }
 
@@ -89171,11 +89188,26 @@ const ASSISTANT_TOOLS = {
       });
       return out;
     });
+    /* WHAT THE SHOP WROTE DOWN about it, at the product level, so the
+       Manager reads the same rules the counters do. Read at the first
+       size where the product has sizes -- companions are settled per
+       size, and a Manager asking about a product wants the shape of
+       the rule, not one size's answer. */
+    const companions = pairCompanionsFor(p.id, idxs[0], 1).map(c=> ({
+      name: c.label, verb: (c.verb || {}).say || c.verbId,
+      per_one_of_this: c.link.qty == null ? null : Number(c.link.qty),
+      per: c.link.per || null, on_the_shelf: c.stock, priced: c.price != null,
+      books: c.standing.label }));
+    const lasts = pairLastsDays(p.id);
     return { name: p.name, category: p.category||'',
       description: p.shortDescription||'', notes: p.notes||'',
       markup_rules: { retail: apRuleWords('retail', effectiveMarkupRule(p, null, 'retail')),
         wholesale: apRuleWords('wholesale', effectiveMarkupRule(p, null, 'wholesale')) },
-      variant_count: idxs.length, variants };
+      variant_count: idxs.length, variants,
+      ...(companions.length ? { goes_with: companions } : {}),
+      ...(lasts ? { runs_out_after_days: lasts } : {}),
+      ...((()=>{ const subs = pairSubstitutesFor(p.id, idxs[0]);
+        return subs.length ? { instead_of_it: subs.map(x=> ({ name: x.label, on_the_shelf: x.stock })) } : {}; })()) };
   }},
 
   /* The shelf at a glance, through the Inventory screen's own stack --
@@ -90050,6 +90082,78 @@ const ASSISTANT_TOOLS = {
      must never silently erase the half it did not talk about. Both
      zero removes the rule and the line follows the shop default again
      (the setReorderRule law). */
+  /* WHAT THE SHOP KNOWS ABOUT ITS OWN GOODS, read and written. The
+     Manager could see every figure in the books and not one of these
+     rules, which is the only knowledge in the app that came from the
+     counter rather than the ledger. */
+  product_rules: { confirm: false, run(input){
+    const p = (data.products||[]).find(x=> x.id === input.product_id);
+    if(!p) throw new Error('No product with that id — use find_product first.');
+    const rules = pairRulesOf(p.id).filter(r=> r.active).map(r=>{
+      const st = pairStanding(r.lead);
+      const grid = (pairVerb(r.verb) || {}).self ? null : pairGrid(r);
+      return { verb: (pairVerb(r.verb) || {}).say || r.verb,
+        goes_with: (pairVerb(r.verb) || {}).self ? null : productLinkName(r.toId),
+        qty_per_one: r.lead.qty == null ? null : Number(r.lead.qty),
+        per: r.lead.per || null, note: r.lead.note || '',
+        for_size: pairSizeIdx(r.lead.fromVariantIdx) == null ? 'every size' : pairSideLabel(r.fromId, r.lead.fromVariantIdx),
+        books: st.label, orders_with_first: st.ev.withFrom, orders_with_both: st.ev.andTo,
+        ...(grid ? { sizes_settled: grid.settled, sizes_still_open: grid.open } : {}) };
+    });
+    const seen = observedPairs().filter(o=> o.fromId === p.id || o.toId === p.id)
+      .slice(0, 6).map(o=> ({ first: productLinkName(o.fromId), second: productLinkName(o.toId),
+        orders_with_both: o.ev.andTo, orders_with_first: o.ev.withFrom }));
+    return { product: p.name, rules_count: rules.length, rules,
+      ...(seen.length ? { seen_in_orders_not_judged: seen } : {}) };
+  }},
+  set_product_rule: { confirm: true,
+    summary(input){
+      const name = (id)=> { const p = (data.products||[]).find(x=> x.id === id); return p ? p.name : String(id || ''); };
+      const v = pairVerb(input.verb) || { say: String(input.verb || '') };
+      const from = name(input.from_product_id);
+      const qty = input.qty == null ? null : Number(input.qty);
+      if(v.self) return `Write down that one ${from} lasts about ${qty == null ? '?' : Math.round(qty)} days — a customer's picture comes back then. It changes no price, no stock and no order.`;
+      const to = name(input.to_product_id);
+      const size = input.from_variant_index == null ? 'every size' : 'one size';
+      return `Write down: ${from} ${v.say} ${to}${qty != null ? `, ${qty} per ${input.per || 'one'}` : ', with no figure'} — for ${size} of ${from}${
+        input.active === false ? ', switched off so pictures do not use it' : ''}. It changes no price, no stock and no order.`;
+    },
+    run(input){
+      const from = (data.products||[]).find(x=> x.id === input.from_product_id);
+      if(!from) throw new Error('No product with that id — use find_product first.');
+      const v = pairVerb(input.verb);
+      if(!v) throw new Error('The verb must be one of: needs, with, instead, after, part.');
+      const to = v.self ? from : (data.products||[]).find(x=> x.id === input.to_product_id);
+      if(!to) throw new Error('Say which second product it goes with — use find_product for it too.');
+      const size = (p, i, which)=>{
+        if(i == null) return null;
+        if(!(p.type === 'variable' && p.variants && p.variants[i]))
+          throw new Error(p.name + ' has no size ' + i + ' for the ' + which + ' product.');
+        return Number(i);
+      };
+      const sizes = { fromVariantIdx: size(from, input.from_variant_index, 'first'),
+        toVariantIdx: v.self ? null : size(to, input.to_variant_index, 'second') };
+      const existing = pairDuplicateOf({ id: null, fromId: from.id, verb: input.verb, toId: to.id,
+        fromVariantIdx: sizes.fromVariantIdx, toVariantIdx: sizes.toVariantIdx }, null);
+      const patch = {};
+      if('qty' in input) patch.qty = input.qty;
+      if('per' in input) patch.per = String(input.per || '').slice(0, 24);
+      if('note' in input) patch.note = String(input.note || '').slice(0, 400);
+      if('active' in input) patch.active = !!input.active;
+      const r = existing
+        ? updateProductLink(existing.id, patch)
+        : addProductLink(from.id, input.verb, to.id, input.qty, input.per, input.note, sizes);
+      if(!r.ok) throw new Error(r.why);
+      if(!existing && input.active === false){
+        const w = updateProductLink(r.link.id, { active: false });
+        if(!w.ok) throw new Error(w.why);
+      }
+      return { done: true, changed: !!existing,
+        rule: `${from.name} ${v.say}${v.self ? '' : ' ' + to.name}`,
+        qty_per_one: input.qty == null ? null : Number(input.qty),
+        note: 'Nothing about prices, stock or orders has changed. It is read by customers\u2019 pictures, the quote rail, the till and the buying plan.' };
+    }},
+
   set_restock_rule: { confirm: true,
     summary(input){
       const p = (data.products||[]).find(x=> x.id === input.product_id);

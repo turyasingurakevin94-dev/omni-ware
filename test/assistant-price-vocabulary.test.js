@@ -63,6 +63,12 @@ const data = {
 
 const env = {
   data,
+  /* product_details also reads what the shop wrote down about what
+     goes with what. This fixture is about the WORDS a price is said
+     in, and its shop has written no rules. */
+  pairCompanionsFor: () => [],
+  pairSubstitutesFor: () => [],
+  pairLastsDays: () => null,
   /* product_details now reads what other shops charge, and that
      reading dates each sighting. */
   todayISO: () => '2026-08-29',

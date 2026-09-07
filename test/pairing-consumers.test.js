@@ -280,5 +280,52 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   t.check(rows.every(r=> !r.sales && !r.profit), 'there is no money in this view to add up');
 }
 
+/* ---- 12. the Manager reads and writes the shop's own rules ----------- */
+{
+  const T = compileScope([
+    ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
+    extractFunction(src, 'pairRuleById', 'index.html'),
+    extractFunction(src, 'pairGrid', 'index.html'),
+    extractFunction(src, 'updateProductLink', 'index.html'),
+    extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    'function tools(){ return { ASSISTANT_TOOLS }; }',
+  ], Object.assign({}, env, { briefPriceFor: env.briefPriceFor }), ['tools']).tools().ASSISTANT_TOOLS;
+
+  eq(T.product_rules.confirm, false, 'reading the shop\'s rules asks nobody');
+  eq(T.set_product_rule.confirm, true, 'writing one is put to the owner first');
+  eq(typeof T.set_product_rule.summary, 'function', 'in words, on a card');
+
+  const read = T.product_rules.run({ product_id: 'P-RUN' });
+  t.check(read.rules.some(r=> r.goes_with === 'Black Screws' && r.qty_per_one === 8),
+    'every rule written about the product comes back with its figure');
+  t.check(read.rules.every(r=> typeof r.orders_with_first === 'number'),
+    'and what the shop\'s own invoices say about it');
+  const sized = read.rules.find(r=> r.sizes_still_open != null);
+  t.check(!!sized, 'a rule between two sized products says how far its sizes are settled');
+
+  const before = data.productLinks.length;
+  const wrote = T.set_product_rule.run({ from_product_id: 'P-SCR', verb: 'with', to_product_id: 'P-GLUE', qty: 1, per: 'Box' });
+  eq(wrote.done, true, 'a new rule is written');
+  eq(data.productLinks.length, before + 1, 'as one row');
+  t.check(/no price/.test(T.set_product_rule.summary({ from_product_id: 'P-SCR', verb: 'with', to_product_id: 'P-GLUE', qty: 1 })),
+    'and the card says plainly that nothing about money changes');
+  const again = T.set_product_rule.run({ from_product_id: 'P-SCR', verb: 'with', to_product_id: 'P-GLUE', qty: 2, per: 'Box' });
+  eq(again.changed, true, 'writing the same sentence twice changes the one already there');
+  eq(data.productLinks.length, before + 1, 'rather than writing a second');
+  eq(data.productLinks[data.productLinks.length - 1].qty, 2, 'with the new figure');
+  let threw = '';
+  try { T.set_product_rule.run({ from_product_id: 'P-SCR', verb: 'sells' }); } catch(e){ threw = e.message; }
+  t.check(/needs, with, instead, after, part/.test(threw), 'a sixth verb is refused, and the five are named');
+  try { T.set_product_rule.run({ from_product_id: 'P-RUN', verb: 'with', to_product_id: 'P-SOFT', from_variant_index: 9 }); } catch(e){ threw = e.message; }
+  t.check(/has no size 9/.test(threw), 'and a size the product has not got');
+  const self = T.set_product_rule.run({ from_product_id: 'P-HINGE', verb: 'after', qty: 30 });
+  eq(self.done, true, 'runs out after needs no second product');
+  eq(T.product_rules.run({ product_id: 'P-HINGE' }).rules.some(r=> r.goes_with === null), true,
+    'because it is about the one product');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);
