@@ -48868,7 +48868,7 @@ function briefGroups(c, habits){
   const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
   const seen = new Set();
   const groups = [];
-  const dropped = { noPrice: 0, noRule: 0, rows: [] };
+  const dropped = { noPrice: 0, noRule: 0, shelfOut: 0, rows: [] };
   let total = 0;
   groups.dropped = dropped;
 
@@ -48877,7 +48877,11 @@ function briefGroups(c, habits){
      default. Where nothing can be derived the line is left off rather
      than shown at a made-up figure. */
   const leaveOff = (productId, variantIdx, name, why)=>{
-    dropped[String(why).startsWith('noRule') ? 'noRule' : 'noPrice']++;
+    /* Three buckets, not two. A line at a zero on our own shelf CAN be
+       priced -- the registry is fine and we simply hold none -- so
+       counting it as unpriceable sends the owner to the wrong screen. */
+    dropped[why === 'shelfOut' ? 'shelfOut'
+      : String(why).startsWith('noRule') ? 'noRule' : 'noPrice']++;
     if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
       dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
         name, why });
@@ -49000,7 +49004,7 @@ function briefGroups(c, habits){
       const label = hp ? productVariantLabel(hp, h.variantIdx) : h.productId;
       if(mine) swaps.push({ toId: mine.productId, variantIdx: mine.variantIdx, qty: h.typicalQty,
         insteadOf: label, h });
-      else if(hp) leaveOff(h.productId, h.variantIdx == null ? null : h.variantIdx, label, 'outOfStock');
+      else if(hp) leaveOff(h.productId, h.variantIdx == null ? null : h.variantIdx, label, 'shelfOut');
     }
     pairCompanionsFor(h.productId, h.variantIdx, h.typicalQty, { habits, substitute: true }).forEach(c=>{
       if(c.verbId === 'instead') return;   // a swap is not a companion
@@ -49055,7 +49059,8 @@ function briefGroups(c, habits){
      not broken. Anything that reached the list is struck from the
      report, and the counts are taken from what survives. */
   dropped.rows = dropped.rows.filter(r=> !seen.has(r.id));
-  dropped.noPrice = dropped.rows.filter(r=> !String(r.why).startsWith('noRule')).length;
+  dropped.shelfOut = dropped.rows.filter(r=> r.why === 'shelfOut').length;
+  dropped.noPrice = dropped.rows.filter(r=> r.why !== 'shelfOut' && !String(r.why).startsWith('noRule')).length;
   dropped.noRule = dropped.rows.filter(r=> String(r.why).startsWith('noRule')).length;
   return groups;
 }
@@ -49147,6 +49152,7 @@ function briefWordCount(frames){
 const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
   outOfStock: { head: 'every supplier row marked out of stock', fix: 'That mark is about the SUPPLIER, not our own shelf: a thing we are simply holding none of is still offered and ordered in. So this says nobody can send it. Clear the mark in the Price Registry for any supplier who can supply again, or leave them off until they are back.' },
+  shelfOut: { head: 'none of our own on the shelf', fix: 'This is OUR count, not a supplier mark \u2014 the Price Registry is fine. Count it in when it lands, or write down what stands in for it under Pairings so the brief offers that instead.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Open the pairing under Pairings and choose the size it means \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Where the two products come in the same sizes, name the sizes alike on both and the picture takes the size they already buy. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
   packFigure: { head: 'a receipt that carries the PACK price on a line counted in the piece', fix: 'The Price Registry is not what is wrong here: the figure they paid is the pack price to the shilling. Open that order \u2014 where they really took packs, the line should be counted in packs; where they truly paid that much a piece, the row is what needs a look. Until one of them is put right, nothing about this line is claimed to the customer.' },
@@ -49682,8 +49688,14 @@ async function buildBriefGif(customerId){
   const b = customerBrief(customerId);
   if(!b || !(b.groups || []).length){
     const d = (b && b.pricing) || {};
-    const named = (d.rows || []).map(r=> r.name).join(', ');
-    return { ok:false, why: named
+    const rows = d.rows || [];
+    const named = rows.map(r=> r.name).join(', ');
+    /* A shelf at zero is not a book that cannot be priced, and the
+       owner is not sent to the registry to fix a row that is right. */
+    const allShelf = rows.length > 0 && rows.every(r=> r.why === 'shelfOut');
+    return { ok:false, why: allShelf
+      ? `Nothing of theirs is on the shelf today: ${named}. The prices are on file — count them in when they land, or write down what stands in for them under Pairings.`
+      : named
       ? `Nothing of theirs can be priced yet: ${named}. Their account says what each one is waiting on.`
       : 'There is nothing on file to build a price list from yet — their own dealings with the shop are what fills it, and a product with no price recorded cannot go on one.' };
   }
@@ -50425,18 +50437,29 @@ function customerBriefPanelHTML(customerId){
   if(!b) return '';
   if(!(b.groups || []).length){
     const d = b.pricing || { noRule: 0, noPrice: 0 };
-    /* Two empty screens that mean opposite things. One is "we do not
-       know them yet"; the other is "we know them, and the shop has not
-       said what it charges" -- which is a setting away from working
-       and must never be reported as the first. */
-    const why = (d.rows && d.rows.length)
-      ? `<b>${d.rows.length} line${d.rows.length === 1 ? '' : 's'} of theirs cannot be priced.</b>
+    /* Three empty screens that mean different things. One is "we do not
+       know them yet"; one is "we know them, and the shop has not said
+       what it charges", which is a setting away from working; one is
+       "we know them and the price is on file, the shelf is simply
+       empty", which is a delivery away and not a fault in the books.
+       Sending the owner to the Price Registry for the last of those is
+       an errand with nothing to do at the end of it. */
+    const nShelf = (d.rows || []).filter(r=> r.why === 'shelfOut').length;
+    const nPrice = (d.rows || []).length - nShelf;
+    const line = (k)=> `${k} line${k === 1 ? '' : 's'}`;
+    const why = nPrice
+      ? `<b>${line(nPrice)} of theirs cannot be priced${nShelf ? `, and ${line(nShelf)} ${nShelf === 1 ? 'is' : 'are'} at a zero on our shelf` : ''}.</b>
          <span>They buy from you; the shop just cannot work out what to charge for these yet. Each one is named below with what it is waiting on.</span>`
+      : nShelf
+      ? `<b>${line(nShelf)} of theirs ${nShelf === 1 ? 'is' : 'are'} at a zero on our own shelf.</b>
+         <span>Nothing is wrong with the books: they buy these from you and the prices are on file. We are simply holding none today, and a picture is not built around what cannot be handed over. Count them in when they land, or write down under Pairings what stands in for them and the picture offers that instead.</span>`
       : `<b>There is nothing on file to make a price list from.</b>
          <span>The list is built from their own dealings with the shop &mdash; what they buy, how it is packed, what they pay. One invoiced order for a product that carries a price is enough. Until then anything shown here would be about the shop rather than about them.</span>`;
     return `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span><span class="ow-pan-n">${
-        (d.rows && d.rows.length) ? 'nothing here can be priced yet' : 'nothing to build one from yet'}</span></div>
+        nPrice ? 'nothing here can be priced yet'
+        : nShelf ? 'nothing of theirs is on the shelf'
+        : 'nothing to build one from yet'}</span></div>
       <div class="ow-empty">${why}</div>
       ${briefLeftOffHTML(d)}
     </div>`;

@@ -489,10 +489,15 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     'a customer whose own line is out is offered what stands in for it');
   eq(or && or.rows[0].theirQty, 4, 'at the quantity they take');
   /* And where nothing stands in, the picture says so to the shop
-     rather than dropping the line without a word. */
+     rather than dropping the line without a word -- in the words of OUR
+     shelf, which is what counted zero. The Plain Board's registry row is
+     healthy, so telling the owner "every price marked out of stock"
+     would send them to fix something that is not broken. */
   const boardOnly = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-BOARD', variantIdx: null, typicalQty: 2, sinceLast: 6, orders: 3, lastPrice: 5000 }]);
-  t.check(boardOnly.dropped.rows.some(x=> x.id === 'P-BOARD' && x.why === 'outOfStock'),
-    'and one with nothing to stand in for it is named as left off');
+  t.check(boardOnly.dropped.rows.some(x=> x.id === 'P-BOARD' && x.why === 'shelfOut'),
+    'and one with nothing to stand in for it is named as left off, on our own shelf');
+  eq(boardOnly.dropped.noPrice, 0, 'a line at a zero on the shelf is not a line that cannot be priced');
+  eq(boardOnly.dropped.shelfOut, 1, 'it is counted as the empty shelf it is');
 }
 
 /* ---- 16. what the screen itself says --------------------------------- */
