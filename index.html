@@ -37480,17 +37480,78 @@ window.addEventListener('resize', ()=>{
 // Invoices dropdown set q.voided and stopped there, so voiding two
 // invoices at once left the customer owing for both, while voiding the
 // same two one at a time cleared them. One function now, for all three.
+/* WHAT VOIDING ACTUALLY DOES, said before it is done.
+
+   It was one tap, from a small grey icon sitting beside two printing
+   icons, and it cancelled a sale. That was survivable while it was the
+   only reversal on the row; it stopped being survivable when Undo
+   invoice came to sit next to it, because the two marks are a thumb's
+   width apart and do very different things.
+
+   The wording exists to correct the assumption a shop actually makes,
+   which is that voiding puts things back. It does not. It cancels the
+   BILL: the debt goes, and nothing else moves. So the goods are named
+   as staying off the shelf, with the act that does put them back named
+   beside it -- undoing the invoice -- and any money already received is
+   named as still sitting in the Cash Book, because that is the loose
+   end the register will go on flagging afterwards.
+
+   And it says the one reassuring thing that is true, which the
+   un-invoice warning cannot say: this one can be taken back. A dialog
+   that cries wolf on a reversible act teaches people to click through
+   the one that isn't. */
+function voidInvoicesWarning(quotes){
+  if(!quotes || !quotes.length) return null;
+  const n = quotes.length;
+  const it = n === 1 ? 'it' : 'them';
+  const owed = quotes.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
+  const held = quotes.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
+  const head = n === 1
+    ? `Void ${invoiceNumberLabel(quotes[0])}?`
+    : `Void ${n} invoices?`;
+  /* One document is named to its customer, because that is who the shop
+     is about to stop billing. Several are not: three invoices can all
+     belong to one person, and "Customers stop owing" would be the dialog
+     inventing a plurality it has not checked. */
+  const who = (quotes[0].client && quotes[0].client.name) || 'The customer';
+  const stops = owed <= 0.5
+    ? `Nothing is still owed on ${it}, so no balance changes.`
+    : n === 1
+      ? `${who} stops owing ${fmtUGX(Math.round(owed))}.`
+      : `That takes ${fmtUGX(Math.round(owed))} off what customers owe you.`;
+  const goods = `\n\nThe goods stay off the shelf — voiding cancels the bill, not the sale. If they never left the shop, undo the invoice instead.`;
+  const takings = quotes.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
+  const money = held > 0.5
+    ? `\n\n${fmtUGX(Math.round(held))} already received stays recorded against ${it} and stays in the Cash Book. The register will keep saying so until ${
+        takings === 1 ? 'the payment is' : 'those payments are'} removed.`
+    : '';
+  return `${head} ${stops}${goods}${money}\n\nThis can be taken back with Unvoid.`;
+}
+/* Returns whether it went ahead, so a caller cannot announce something
+   the shop declined.
+
+   The ask lives HERE rather than at the two buttons for the same reason
+   the debt sync does: this is the one function that owns voiding, and
+   the fault it was written for was a second path doing less than the
+   first. A third path added later asks without anybody remembering to
+   make it. Unvoiding is not asked about -- it restores the document,
+   and it is the way back from the question above. */
 function setInvoicesVoided(quotes, voided){
+  if(voided){
+    const warning = voidInvoicesWarning(quotes);
+    if(warning && !confirm(warning)) return false;
+  }
   quotes.forEach(q=>{ q.voided = voided; syncInvoiceDebtCharge(q); });
   saveData();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
+  return true;
 }
 function toggleInvoiceVoided(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
-  setInvoicesVoided([q], !q.voided);
+  if(!setInvoicesVoided([q], !q.voided)) return;
   toast(q.voided ? 'Invoice voided' : 'Invoice unvoided');
 }
 
@@ -37869,17 +37930,20 @@ document.getElementById('inv_doc_print_selected_btn').addEventListener('click', 
 });
 document.getElementById('inv_doc_void_selected_btn').addEventListener('click', ()=>{
   const quotes = invSelectedQuotes();
-  if(quotes.length===0){ toast('Select at least one invoice to void'); return; }
-  setInvoicesVoided(quotes, true);
-  toast(`Voided ${quotes.length} invoice${quotes.length===1?'':'s'}`);
+  /* Shut before asking. The menu is a floating layer and the confirm
+     sits over the whole window; leaving it open behind the dialog and
+     closing it afterwards makes the screen look like it acted twice. */
   document.getElementById('inv_bulk_dd_menu').classList.remove('show');
+  if(quotes.length===0){ toast('Select at least one invoice to void'); return; }
+  if(!setInvoicesVoided(quotes, true)) return;
+  toast(`Voided ${quotes.length} invoice${quotes.length===1?'':'s'}`);
 });
 document.getElementById('inv_doc_unvoid_selected_btn').addEventListener('click', ()=>{
   const quotes = invSelectedQuotes();
+  document.getElementById('inv_bulk_dd_menu').classList.remove('show');
   if(quotes.length===0){ toast('Select at least one invoice to unvoid'); return; }
   setInvoicesVoided(quotes, false);
   toast(`Unvoided ${quotes.length} invoice${quotes.length===1?'':'s'}`);
-  document.getElementById('inv_bulk_dd_menu').classList.remove('show');
 });
 document.getElementById('inv_bulk_dd_btn').addEventListener('click', (e)=>{
   e.stopPropagation();

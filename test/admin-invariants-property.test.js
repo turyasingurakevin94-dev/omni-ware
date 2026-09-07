@@ -79,8 +79,12 @@ const env = {
   renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
   renderInvoices: () => {}, renderCustomers: () => {}, renderDebtorsList: () => {},
   renderSavedQuotes: () => {}, renderPurchaseInvoices: () => {},
-  // deleteSavedQuote asks before it acts. Always saying yes is the harsher
-  // path -- it is the one that actually performs the reversal.
+  // deleteSavedQuote asks before it acts, and so does voiding now.
+  // Always saying yes is the harsher path -- it is the one that actually
+  // performs the reversal. The warning is stubbed truthy rather than null
+  // so the confirm is really reached and the books are driven through the
+  // branch a shop actually takes.
+  voidInvoicesWarning: () => 'Void?',
   confirm: () => true,
   toast: () => {},
   fmtUGX: (n) => `${Math.round(n)} UGX`,
