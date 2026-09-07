@@ -31076,14 +31076,18 @@ function quoteLinePack(it){
     text: [`${n(packs)} ${packUnit}`, loose ? `${n(loose)} ${unit}` : null].filter(Boolean).join(' + '),
     short: `${n(packs)} ${packUnit}${loose ? ` +${n(loose)}` : ''}` };
 }
-/* The quantity as the person holding the document should read it, and
-   the base behind it where the two differ -- shown rather than swapped,
-   so nobody has to trust the conversion to check the arithmetic. */
+/* The quantity as the person holding the document should read it. A
+   line chosen in cartons says cartons and nothing else: "2 Ctn (200
+   Pair)" on a quotation is the sum the client did not ask for, printed
+   anyway, and the same reader feeds the invoice, the receipt and the
+   message to the supplier. The base is given only for a line written
+   before the choice was recorded that carries a remainder, where the
+   document folds the count itself and should show its working. */
 function quoteLineQtyText(it){
   const qty = Number(it && it.qty) || 0;
   const base = `${Number(qty).toLocaleString('en-UG')} ${String((it && it.unit) || '').trim()}`.trim();
   const p = quoteLinePack(it);
-  return { text: p ? p.text : base, base: p ? base : '', pack: p };
+  return { text: p ? p.text : base, base: (p && !p.chosen && !p.whole) ? base : '', pack: p };
 }
 /* The factor between what the quote row SHOWS and what the line KEEPS:
    the pack size when the line is counted in packs, else 1. Every box on

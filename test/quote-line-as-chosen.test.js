@@ -60,6 +60,14 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   eq(ctn && ctn.text, '1 Ctn', 'said as a carton');
   eq(fns.quoteLineEach(Object.assign({ qty: 100, qtyIn: 'pack' }, base), 2400).price, 240000,
     'at the carton rate');
+  eq(fns.quoteLineQtyText(Object.assign({ qty: 200, qtyIn: 'pack' }, base)).text, '2 Ctn',
+    'the quotation, invoice, receipt and supplier message all say "2 Ctn"');
+  eq(fns.quoteLineQtyText(Object.assign({ qty: 200, qtyIn: 'pack' }, base)).base, '',
+    'with no "(200 Pair)" after it');
+  eq(fns.quoteLineQtyText(Object.assign({ qty: 250 }, base)).base, '250 Pair',
+    'only an old line with a remainder, folded by the document itself, shows its working');
+  eq(fns.quoteLineQtyText(Object.assign({ qty: 200 }, base)).base, '',
+    'and an old line of whole cartons does not');
 
   const half = fns.quoteLinePack(Object.assign({ qty: 150, qtyIn: 'pack' }, base));
   near(half && half.packs, 1.5, 'a carton and a half typed as 1.5 stays 1.5');
