@@ -1,0 +1,503 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the Purchase invoices console ----
+       Built from the shipped .ow-* vocabulary plus the screen-local
+       classes below. No new colour, no new weight, no new type size,
+       no fourteenth button family. */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ow-mt-s .f{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- WHAT NEEDS YOUR EYE ----
+       The band is the point of the screen, so it is a panel with a
+       header like every other region -- not a red slab. Each line is
+       ONE fault, named, with the money at stake and the one act. It
+       is amber where a person must look and crimson only where the
+       shop is out of pocket for goods it never got. */
+    .ck-h{background:var(--ow-amber-faint);border-bottom-color:#EBD9B4;}
+    .ck-h .ow-pan-t{color:var(--ow-amber-ink);}
+    .ck-h .ow-pan-n{color:#8A6520;}
+    .ck{display:grid;grid-template-columns:16px minmax(0,1fr) 146px 134px;align-items:center;
+      gap:12px;padding:9px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ck:last-child{border-bottom:0;}
+    .ck > .i{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;justify-self:center;color:var(--ow-amber);}
+    .ck.sev > .i{color:var(--ow-crimson);}
+    .ck-b{min-width:0;}
+    .ck-t{margin:0;font-size:13px;line-height:1.35;font-weight:500;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ck-w{margin:2px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.4;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ck-w b{color:var(--ow-ink-900);font-weight:600;}
+    .ck-v{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ck-v.bad{color:var(--ow-crimson);}
+    .ck-v .u{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .ck-a{display:flex;justify-content:flex-end;gap:6px;}
+    .ck-ok{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;}
+    .ck-ok > svg{width:15px;height:15px;fill:none;stroke:var(--ow-verdigris);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .ck-ok p{margin:0;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .ck-ok b{color:var(--ow-ink-900);font-weight:600;}
+    .ck-el{margin:0;padding:8px 12px;font-size:11px;color:var(--ow-ink-600);line-height:1.45;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);max-width:none;}
+    .ck-el a{font-weight:600;}
+    .ck-el b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* ---- the split: two kinds of bill, never one column with two meanings ---- */
+    .seg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;background:var(--ow-paper);flex:none;}
+    .seg > span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;
+      font-size:12px;font-weight:500;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);
+      white-space:nowrap;}
+    .seg > span:first-child{border-left:0;}
+    .seg > span.on{background:var(--ow-steel-950);color:#fff;font-weight:600;}
+    .seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);}
+    .seg > span.on .n{color:rgba(255,255,255,.66);}
+
+    /* ---- a bill's row: 44px, opens to the LINES ----
+       Five tracks. The mark column is empty on a bill with nothing
+       wrong -- a device that marks everything marks nothing. */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-doc{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ow-q.void .ow-q-t{color:var(--ow-ink-400);}
+    .ow-q.void .ow-q-who{text-decoration:line-through;}
+    .ow-q.void .ow-q-f{color:var(--ow-ink-400);text-decoration:line-through;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ow-q-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    .ow-q-b.good{color:var(--ow-verdigris);font-weight:500;}
+    /* the date track */
+    .dt{font-size:12px;color:var(--ow-ink-900);white-space:nowrap;}
+    .dt span{display:block;font-size:11px;color:var(--ow-ink-400);}
+    /* the mark track: only where something is wrong, or where the bill
+       is what it is FOR -- the order it was raised against. */
+    .mk{min-width:0;font-size:11px;line-height:1.35;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mk b{display:block;font-size:12px;font-weight:600;}
+    .mk.bad{color:var(--ow-crimson);}
+    .mk.warn{color:var(--ow-amber-ink);}
+    .mk.ord{color:var(--ow-ink-600);}
+    .mk.ord b{color:var(--ow-ink-900);font-family:var(--mono);letter-spacing:-.02em;font-weight:600;
+      text-decoration:underline;text-decoration-color:var(--ow-rule);text-underline-offset:2px;}
+    .mk.none{color:var(--ow-ink-400);}
+    .mk.none b{color:var(--ow-ink-400);font-weight:500;}
+
+    /* ---- an open bill: what they billed you, against what you paid before ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .bl{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .bl caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .bl th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .bl th.l{text-align:left;padding-left:0;}
+    .bl td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .bl tr:last-child td{border-bottom:0;}
+    .bl td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .bl td.w{font-weight:600;}
+    .bl td.q{color:var(--ow-ink-400);}
+    /* the check column: what the same goods cost you last time */
+    .bl td.bf{color:var(--ow-ink-600);}
+    .bl td.bf i{font-style:normal;color:var(--ow-ink-400);font-family:'Inter',sans-serif;}
+    .bl td.up{color:var(--ow-crimson);font-weight:600;}
+    .bl td.up span,.bl td.dn span{display:block;font-family:'Inter',sans-serif;font-weight:400;
+      font-size:11px;letter-spacing:0;color:var(--ow-ink-600);}
+    .bl td.dn{color:var(--ow-verdigris);font-weight:600;}
+    .bl tr.hi td{background:var(--ow-crimson-soft);}
+    .bl tr.hi td.nm{box-shadow:inset 3px 0 0 var(--ow-crimson);padding-left:9px;}
+    .bl tfoot td{border-top:1px solid var(--ow-rule);border-bottom:0;font-weight:600;padding-top:8px;}
+    .bl tfoot td.nm{font-family:'Inter',sans-serif;color:var(--ow-ink-600);font-weight:500;}
+
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-n b{color:var(--ow-ink-900);font-weight:600;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* the money summary inside an open bill, above the acts */
+    .bs{display:flex;gap:22px;margin:0 0 10px;}
+    .bs > div{display:flex;flex-direction:column;gap:1px;}
+    .bs-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-400);}
+    .bs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.03em;}
+    .bs-v.bad{color:var(--ow-crimson);}
+    .bs-v.good{color:var(--ow-verdigris);}
+    .bs-s{font-size:11px;color:var(--ow-ink-600);}
+
+    /* ---- the rail ---- */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rf-v span{font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:var(--ow-ink-400);margin-left:5px;}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    .rl a{font-weight:600;}
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+    /* ---- the list toolbar: controls that look like controls ---- */
+    .tb2{display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .sb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:236px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;color:var(--ow-ink-400);}
+    .sb svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sb.has{color:var(--ow-ink-900);}
+    .tg{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);background:var(--ow-paper);white-space:nowrap;}
+    .tg .bx{width:13px;height:13px;border-radius:3px;background:var(--ow-steel-950);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .tg .bx svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb2-sp{flex:1;}
+    /* the band filter, echoed where the rows it removed would have been */
+    .fc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-amber);border-radius:var(--ow-r);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);font-size:12px;font-weight:500;white-space:nowrap;}
+    .fc b{font-weight:600;}
+    .fc .x{width:18px;height:18px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+      justify-content:center;background:rgba(122,74,2,.11);}
+    .fc .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;}
+    /* .ow-empty's b is the headline; a b INSIDE a paragraph there is
+       an emphasis inside a sentence and must stay inline. */
+    .ow-empty p b{display:inline;font-size:inherit;color:var(--ow-ink-900);margin:0;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1120px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Buy</span><span>/</span><span>Purchase invoices</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"></path><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"></path></svg><span>Compare prices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"></path></svg><span>Sourcing</span><span class="nav-badge">3</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3M14 15h2"></path></svg><span>What&#39;s coming</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">Purchase invoices</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">Every bill a supplier has given you &mdash; what it was for, whether it is right, and what is still owed on it</p>
+      <span class="ow-ph-sp"></span>
+      <div class="ow-f">
+        <span class="ow-f-l">Range</span>
+        <span class="ow-f-in"><span class="ow-f-v">Last 30 days</span><span class="ow-f-u">&#9662;</span></span>
+      </div>
+    </div>
+
+    <div class="ow-stack">
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">1 &middot; Nothing to look at</span><span class="ow-pan-n">34 bills, all sound</span></div>
+        <div class="ck-ok">
+          <svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+          <p><b>All 34 bills in the last 30 days check out.</b> Nothing billed twice, no line above a price you have paid before, every bill has a delivery behind it, and nothing paid beyond what was asked. <b>18,940,000</b> billed, <b>6,280,000</b> of it still open.</p>
+        </div>
+        <p class="ck-el">A clean check is worth saying out loud. A band that only ever appears when something is wrong leaves you unable to tell &ldquo;nothing wrong&rdquo; from &ldquo;not looked at&rdquo;.</p>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">2 &middot; Nothing in this range</span></div>
+        <div class="ow-empty">
+          <b>No bills between 1 and 31 August.</b>
+          Every supplier bill on file is outside this range. The nearest is <b>PINV&#8209;0198</b> from Tororo Cement Depot on 24 July.<br>
+          <span style="display:inline-flex;gap:6px;margin-top:12px">
+            <span class="btn btn-ghost ow-sm">Widen to all time</span>
+            <span class="btn btn-ghost ow-sm">Jump to July</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">3 &middot; Never had one</span></div>
+        <div class="ow-empty">
+          <b>No supplier bill has been raised yet.</b>
+          Nothing here is typed in. A bill appears when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order.<br>
+          <span style="display:inline-flex;gap:6px;margin-top:12px">
+            <span class="btn btn-ghost ow-sm">Open What to buy</span>
+            <span class="btn btn-ghost ow-sm">Open Order tracking</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h" style="background:var(--ow-crimson-soft);border-bottom-color:#E9BDB6">
+          <span class="ow-pan-t" style="color:var(--ow-crimson)">4 &middot; The bills would not load</span>
+        </div>
+        <div class="ow-empty" style="text-align:left;padding:16px 14px">
+          <b style="color:var(--ow-crimson)">The supplier bills could not be read, so this screen is not showing your books.</b>
+          <p style="margin:0 0 10px;max-width:var(--ow-measure);line-height:1.5">The last good read was at <b>08:12 this morning</b>, and it had <b>34 bills</b> in this range. What is on screen now is that copy, not today&#39;s. It may be out of date and it may be missing bills raised since.</p>
+          <p style="margin:0 0 12px;max-width:var(--ow-measure);line-height:1.5;color:var(--ow-crimson)">Recording a payment is turned off until it reads again &mdash; money must not be posted against a bill nobody can see.</p>
+          <span style="display:inline-flex;gap:6px">
+            <span class="btn btn-ghost ow-sm">Try again</span>
+            <span class="btn btn-ghost ow-sm">What went wrong</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

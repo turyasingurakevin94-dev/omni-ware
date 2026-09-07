@@ -51,6 +51,15 @@ const env = {
   renderChaseScreen: () => {}, renderChaseBadge: () => {}, renderSavedQuotes: () => {},
   debtChaseRows: () => ({ due: [{ id: 1 }, { id: 2 }], resting: [{ id: 3 }], blocked: [] }),
   productVariantLabel: (p, vi) => p.name + (vi != null ? ' — ' + p.variants[vi].name : ''),
+  /* What goes with what, as the shop's other standing rules are read:
+     this fixture has written one down and judged no observed pair. */
+  productLinksAll: () => data.productLinks || [],
+  pairVerb: (id) => ({ needs: { say: 'needs' }, with: { say: 'goes with' },
+    after: { say: 'runs out after', self: true } })[id] || null,
+  pairStanding: (l) => ({ label: 'Yours only', ev: { andTo: 0, withFrom: 0 } }),
+  pairSideLabel: (id) => String(id),
+  pairProductRows: () => [],
+  observedPairs: () => [],
   fmtUGX: (n) => `${Math.round(n).toLocaleString('en-US')} UGX`,
   Math, Number, String, Array, Object, JSON,
 };

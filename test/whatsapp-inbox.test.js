@@ -264,13 +264,17 @@ if (!hook) process.exit(1);
 
 /* ---------- 6. all of it is REACHED ---------------------------------- */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src),
-    'entering the tab starts the picks, the intelligence strip and the inbox');
+  /* One door now. waInboxEnter draws every panel once it knows whether
+     the number is linked; the old order drew the picks and the strip
+     first, so a shop that had never connected saw its daily post and
+     six zeroes above a desk that did not exist. */
+  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
+    'entering the tab starts the desk, which draws the rest once it knows the number is linked');
   t.check(/if\(currentActiveTab !== 'whatsapp' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
     'the poller stops itself when the user leaves the tab');
   t.check(/action: 'send', conversationId: waInbox\.active, text/.test(src),
     'a reply goes through the edge function, with the conversation named');
-  t.check(/<textarea id="wa_reply" data-conv="\$\{active\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
+  t.check(/<textarea id="wa_reply" data-conv="\$\{c\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
     'a closed window disables the composer before the server has to refuse');
   t.check(/const body = await error\.context\.json\(\); if\(body && body\.error\) msg = body\.error;/.test(src),
     'a refusal reaches the user as its real sentence, not "non-2xx status code"');
@@ -294,12 +298,25 @@ if (!hook) process.exit(1);
      it. The settings button must exist outside the checklist, and
      saving a different number must REPLACE the shop's mapping -- a
      second row makes every maybeSingle() lookup fail. */
-  const settingsAt = src.indexOf("id=\"wa_inbox_settings\"");
-  const checklistAt = src.indexOf('function waRenderConnect');
-  t.check(settingsAt > -1 && settingsAt < checklistAt,
+  /* The way in moved from a gear beside the inbox heading to the rail's
+     own channel panel, beside the facts it governs — the number, what is
+     in the catalogue, whether the system answers by itself. Still
+     reachable from a connected shop, which is the point of the pin: a
+     shop that HAS connected must still be able to get back in. */
+  /* Outside the checklist means outside waRenderConnect's own markup:
+     a door drawn only by the room it opens is not a door. */
+  const chanFn = extractFunction(src, 'waRenderChannel', 'index.html');
+  const connFn = extractFunction(src, 'waRenderConnect', 'index.html');
+  t.check(/id="wa_conn_open">Connection<\/button>/.test(chanFn)
+    && !/id="wa_conn_open"/.test(connFn),
     'connection settings are reachable outside the checklist');
-  t.check(/wa_inbox_settings'\)\.addEventListener\('click', \(\)=> waRenderConnect\(\)\);/.test(src),
+  t.check(/conn\.addEventListener\('click', \(\)=>\{[\s\S]{0,240}?waRenderConnect\(\);/.test(src),
     'and the button actually opens them');
+  /* And back out again. The old checklist was a dead end you left by
+     switching tabs; a shop that opened it to check one number could not
+     return to the desk it came from. */
+  t.check(/id="wa_conn_back">Back to the desk<\/button>/.test(src),
+    'with a way back to the desk for a shop that is already connected');
   t.check(/\.delete\(\)\.eq\('shop_id', currentShopId\)\.neq\('phone_number_id', v\);/.test(src),
     'saving a new number replaces the old mapping instead of standing beside it');
 }

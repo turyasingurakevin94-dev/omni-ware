@@ -29,8 +29,12 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const data = { products: [], prices: [] };
+/* productRowsForList now answers three more set-up questions than "is it
+   priced", so the functions that decide them are pulled in as REAL code
+   rather than stubbed -- a stub here would let the filter and the strip
+   drift apart, which is the one thing sections 2 and 5 exist to stop. */
 const NAMES = ['productPriceRows', 'productLineIsPriced', 'productRowsForList',
-  'productLinesNotPriceable', 'productLineStats'];
+  'productLinesNotPriceable', 'productLineStats', 'productSetupFault', 'productHasPhoto'];
 const scope = compileScope([
   // productRowsForList now consults the date-added band; pull in the real
   // helpers rather than stubbing, so this file keeps testing real code.
@@ -43,9 +47,15 @@ const scope = compileScope([
   extractFunction(src, 'productRecencyRank', 'index.html'),
   extractFunction(src, 'productIdNumber', 'index.html'),
   extractFunction(src, 'compareProductsNewestFirst', 'index.html'),
+  extractFunction(src, 'effectiveMarkupRule', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
+  /* Whether a line has a PHOTOGRAPH is a question about the media
+     library, which lives in shared-worker.js and has its own tests. What
+     matters here is that a missing photograph is never a set-up fault --
+     section 5 pins that, and it holds whichever way this stub answers. */
+  resolveProductImage: () => '',
   supplierName: () => 'A supplier',
   searchTokens: (f) => String(f || '').toLowerCase().split(/\s+/).filter(Boolean),
   matchesAllTokens: (hay, toks) => toks.every((x) => hay.includes(x)),
@@ -166,10 +176,27 @@ const list = (priced) => scope.productRowsForList('', '', '', priced).map(label)
 
   /* The empty states are different sentences because they mean different
      things: nothing left to price is good news, nothing priced yet is
-     not. "No products match your filters" said neither. */
-  t.check(/Every line that matches has a price on file/.test(render)
-    && /Nothing that matches has been priced yet/.test(render),
-    'an empty list says which of the two emptinesses it is');
+     not. "No products match your filters" said neither.
+     The two became seven when the filter learned to ask about markup
+     rules, variants and photographs as well, and the sentences moved out
+     of renderProducts into PRODUCT_EMPTY_SAYS beside it. Every value the
+     filter offers is checked to have one, from the markup rather than
+     from a list written here -- a value added to the select without a
+     sentence would otherwise fall through to the generic message and
+     nothing would say so. */
+  const says = extractDeclaration(src, 'PRODUCT_EMPTY_SAYS', 'index.html');
+  t.check(/PRODUCT_EMPTY_SAYS\[pricedFilter\]/.test(render),
+    'an empty list says which of the several emptinesses it is');
+  t.check(/Every line that matches has a price on file/.test(says)
+    && /Nothing that matches has been priced yet/.test(says),
+    'and the two original sentences still say opposite things about opposite states');
+
+  const offered = [...(/<select class="ow-f-sel" id="p_priced_filter">([\s\S]*?)<\/select>/
+    .exec(src)[1].matchAll(/value="([a-z]+)"/g))].map((m) => m[1]).filter(Boolean);
+  t.check(offered.length >= 6, `the set-up filter offers ${offered.length} states`);
+  const unsaid = offered.filter((v) => !new RegExp('\\b' + v + ':').test(says));
+  t.check(unsaid.length === 0,
+    `every state the filter offers has its own empty sentence${unsaid.length ? ' — missing: ' + unsaid.join(', ') : ''}`);
 
   const prt = (/p_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
   t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/.test(prt),

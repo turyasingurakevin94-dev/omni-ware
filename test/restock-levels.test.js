@@ -92,6 +92,9 @@ const data = {
 let saved = 0;
 const env = {
   data,
+  /* What the shop wrote down about its own goods, as the one reader
+     returns it. This fixture has written none. */
+  pairCompanionsFor: () => [],
   todayISO: () => TODAY,
   saveData: () => { saved++; },
   supplierName: (id) => ({ S1: 'Quick Steel', S2: 'Slow Roto', S3: 'Once Only Ltd' })[id] || String(id),
@@ -103,7 +106,7 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
     'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
@@ -199,11 +202,21 @@ if (scope) {
 {
   t.check(/id="reorderModal"/.test(src) && /id="ro_min"/.test(src) && /id="ro_cover"/.test(src),
     'the restock level is set in its own small editor');
-  const inv = extractFunction(src, 'renderInventory', 'index.html');
-  t.check(/inv-reorder-btn/.test(inv) && /openReorderEditor\(btn\.dataset\.id, vidx\)/.test(inv),
+  /* Both of these named classes that belonged to the card grid, and the
+     grid is gone -- the shelf is the layer's queue now, and the row is
+     built by invLineHTML with its acts inside the opened line. What is
+     checked is the same two things: the level is set from the shelf
+     where it is decided, and a line under its floor says so on the row
+     beside the level it is under. The action is named in words now
+     rather than drawn as one of four unlabelled glyphs, which is the
+     point of the reshape. */
+  const inv = extractFunction(src, 'invLineHTML', 'index.html')
+    + extractFunction(src, 'invOpenHTML', 'index.html')
+    + extractFunction(src, 'wireInventoryRows', 'index.html');
+  t.check(/data-invact="reorder"/.test(inv) && /openReorderEditor\(id, vidx\)/.test(inv),
     'opened from the shelf, where a level is decided');
-  t.check(/inv-low-pill/.test(inv) && /'below ' : 'keep '/.test(inv),
-    'and a line under its floor says so on the card, beside the level it is under');
+  t.check(/\$\{short\} short/.test(inv) && /floor \$\{l\.rule\.minUnits\}/.test(inv),
+    'and a line under its floor says how far under it is, beside the level it is under');
   const line = extractFunction(src, 'inventoryLineFor', 'index.html');
   t.check(/belowFloor: !!\(rule && rule\.minUnits && qty < rule\.minUnits\)/.test(line),
     'from the same rule the buying plan reads — one answer, two screens');

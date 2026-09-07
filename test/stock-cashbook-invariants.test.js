@@ -45,6 +45,7 @@ const env = {
   data,
   todayISO: () => '2026-08-01',
   productVariantLabel: (p, v) => (v == null ? p.name : `${p.name} / ${v}`),
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
   saveData: () => {},
   // Stock log and cash txn ids come from the database's block allocator now
   // (0034, see row-id-allocation.test.js). Stubbed with its offline path --
@@ -70,8 +71,10 @@ const NAMES = [
   // the lots a sale consumed back at the front, instead of adding one
   // fresh lot with no cost on the back. See admin-stock-lots.test.js.
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
-  'applyStockDelta', 'getStockQty',
+  'applyStockDelta', 'stockOnHand', 'getStockQty',
   'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  // A sale leaves in the shelf's unit, read through these two.
+  'stockUnitFor', 'stockMoveOnRowUnit',
   // Both kinds of line that come off our own shelf.
   'quoteLineReceived', 'quoteLineComesOffShelf',
   'addCashReceipt', 'addCashPayment', 'removeCashTxnsByIds',

@@ -68,53 +68,113 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'with a measure on it — it is a sentence, and a sentence needs one');
 }
 
-/* ---------- 2. the offer is born settled ---------- */
+/* ---------- 2. the offer is born settled ----------
+
+   THE LAW IS UNCHANGED and it is the whole reason this file exists:
+   the main action of the screen must never change under the owner's
+   eyes. What changed is what "the offer" is.
+
+   It used to be one button whose COLOUR and WORDS were rewritten when
+   the journal answered — red "Hold the meeting" demoted to grey "Hold
+   another anyway". The fix then was to paint it from the device's own
+   stamp so it was born in the right colour.
+
+   A held morning and an un-held morning are not one control in two
+   colours, though; they are two different screens. Held: the plan is
+   the answer, and holding a second meeting is a rare, quiet act — a
+   ghost button in the panel's footer. Not held: there is nothing on
+   the panel at all, and the one thing to do next is the accent, in the
+   empty state, where the eye already is. So the shell is chosen from
+   the stamp BEFORE any query goes out, and the journal corrects it
+   only in the one case the stamp cannot know about. */
 {
   t.check(/const heldGuess = !!\(managerToday \|\| lsGet\(MANAGER_MEETING_KEY\) === todayISO\(\)\)/.test(render),
     'the offer reads this device\'s own stamp before it paints anything');
-  t.check(/class="btn \$\{heldGuess \? 'btn-ghost' : 'btn-accent'\}"/.test(render),
-    'and the button is BORN in the right colour rather than demoted into it');
-  t.check(/\$\{\s*heldGuess \? 'Hold another anyway' : 'Hold the meeting'\}/.test(render),
-    'and with the right words');
+
+  /* Born in the right SHAPE, which is the stronger form of born in the
+     right colour: the two states are drawn by two different helpers and
+     neither can become the other. */
+  const shell = /planWrap\.innerHTML = heldGuess\s*\?\s*planShell\([\s\S]{0,240}?heldFoot\(null, false\)\)\s*:\s*notHeldHTML\(null, null\);/.exec(render);
+  t.check(!!shell, 'and the panel is born in the shape the stamp says, before the query goes out');
+  const at = render.indexOf('managerLoadState().then');
+  t.check(shell && render.indexOf(shell[0]) < at, 'BEFORE it, not after it comes back');
+
+  /* The accent lives in exactly one of the two, and it is the one where
+     holding a meeting IS the next thing to do. */
+  const notHeld = (/const notHeldHTML = [\s\S]*?<\/div>`;/.exec(render) || [''])[0];
+  const heldFoot = (/const heldFoot = [\s\S]*?<\/div>`;/.exec(render) || [''])[0];
+  t.check(notHeld.length > 400 && heldFoot.length > 200,
+    'both shells were found, not silently skipped');
+  t.check(/btn-accent[^`]*mgrRunBtn|mgrRunBtn[^`]*Hold the morning meeting/.test(notHeld)
+    && /btn btn-accent/.test(notHeld),
+    'an un-held morning wears the accent on "Hold the morning meeting"');
+  t.check(/Hold another anyway/.test(heldFoot) && !/btn-accent/.test(heldFoot),
+    'and a held one offers another as a ghost in the panel\'s footer, never as the accent');
 
   /* The correction must survive — a meeting held on the owner's other
      device is real, and the stamp cannot know about it. What must not
      survive is correcting a guess that was already right. */
   t.check(/if\(!!st\.today !== heldGuess\)\{/.test(render),
     'the journal only speaks when it DISAGREES with the stamp — on an ordinary morning this branch does nothing');
-  t.check(!/rb\.classList\.remove\('btn-accent'\)/.test(render),
+  t.check(!/rb\.classList\.remove\('btn-accent'\)/.test(render)
+    && !/classList\.toggle\('btn-accent'/.test(render),
     'the unconditional demotion is gone, not merely moved');
   t.check(/on another device/.test(render),
     'and when it does correct, it says why rather than silently swapping the button');
 }
 
-/* ---------- 3. nothing stale is left on screen ---------- */
+/* ---------- 3. nothing stale is left on screen ----------
+
+   THE LAW IS UNCHANGED: several unawaited chains fill this page, and
+   until each answers, whatever the last render put there is still up —
+   so on a slow morning the owner reads yesterday's plan as today's,
+   with nothing on screen to say otherwise.
+
+   TWO CONTAINERS OF THE OLD EIGHT ARE GONE, so the list is shorter:
+   revWrap folded into the journal (a review and a meeting are the same
+   kind of event on the same clock) and passed folded into the levers
+   table (a verdict is a column, not a section). Neither exists to go
+   stale.
+
+   AND THE ONE SENTENCE MOVED. It used to be printed into whichever
+   container happened to be first in the loop, which put "Reading the
+   journal…" in the rail. It now sits inside the plan panel, at the top
+   of the page where the eye already is, and the loop empties the rest
+   in silence — which was always the part that mattered. Saying it in
+   every container stacked identical grey lines down the page and the
+   screen read as broken rather than as busy. */
 {
   t.check(/mgr-reading/.test(render),
-    'every container the journal fills is cleared before the query goes out');
-  /* The playbook clears its own container a few lines earlier, so this
-     locates the LOOP rather than the first mention of the class. */
-  const loop = /\[acct,[\s\S]{0,900}?mgr-reading[\s\S]{0,160}?\}\);/.exec(render);
+    'the page says it is reading rather than leaving the last answer up');
+  /* The announcement is inside the plan's own shell, not in the rail. */
+  const shellAt = render.indexOf("planShell(`<p class=\"mgr-reading\">");
+  t.check(shellAt > -1, 'and it says so in the plan panel, where the eye already is');
+
+  const loop = /\[scoreWrap,[\s\S]{0,400}?forEach\(el=>\{ if\(el\) el\.innerHTML = ''; \}\);/.exec(render);
   t.check(!!loop, 'the clearing loop exists and names its containers in one place');
   const at = render.indexOf('managerLoadState().then');
   t.check(loop && render.indexOf(loop[0]) < at,
     'and it runs BEFORE the query goes out, not after it comes back');
   const block = loop ? loop[0] : '';
-  ['acct', 'planWrap', 'scoreWrap', 'qWrap', 'revWrap', 'hist', 'passed'].forEach(n => {
+  ['scoreWrap', 'qWrap', 'hist', 'acct'].forEach(n => {
     t.check(new RegExp(`\\b${n}\\b`).test(block), `${n} is among them`);
   });
   t.check(/managerTrackWrap/.test(block),
-    'including the track record, which is filled by a chain nested two deep and would linger longest');
-  /* Eight containers, ONE sentence. Saying it in every one of them
-     stacked eight identical grey lines down the page and the screen
-     read as broken rather than as busy — which the owner saw in a
-     screenshot before anyone else did. The clearing is the part that
-     matters; the announcement only has to happen once. */
-  t.check(/i === 0 \? '<p class="mgr-reading">/.test(block),
-    'and exactly one of them says so — the rest are emptied in silence');
-  t.check(/: ''/.test(block),
-    'the others really are emptied, not merely left alone');
-  t.check(/\.mgr-reading\{/.test(src), 'and the line has a style, so it reads as a wait rather than as content');
+    'including the track record, which is filled by its own chain and would linger longest');
+  t.check(!/revWrap|managerReviewWrap|\bpassed\b/.test(render),
+    'and the two containers that folded into others are gone from the render entirely');
+  t.check(/\.mgr-reading\{/.test(src), 'the line has a style, so it reads as a wait rather than as content');
+
+  /* THE VERDICT WAITS OUT LOUD TOO. Four figures painted as 0 while
+     the journal is still being read say the manager has done nothing,
+     which is a different claim from "not counted yet" and the wrong
+     one — the same lie as a stale plan, in a smaller box. */
+  t.check(/mgrPaintVerdict\(\{\}\);/.test(render),
+    'the verdict strip is painted in its waiting state before the readings go out');
+  t.check(/const MGR_WAIT_CELLS = \[[\s\S]*?wait: true/.test(src),
+    'with em-dashes rather than zeroes');
+  t.check(/\.mgr-verdict \.mgr-wait \.ow-mt-v\{color:var\(--ow-ink-400\)/.test(src.replace(/\s*\n\s*/g, '')),
+    'and in a colour that reads as a wait');
 }
 
 process.exit(t.done() ? 1 : 0);

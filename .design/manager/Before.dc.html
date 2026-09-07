@@ -1,0 +1,746 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE MANAGER — console additions =================
+       Everything here is built from the 23-colour palette, the 11/12/13/14
+       ramp and the .ow-* components already shipping on Today, Debtors,
+       Creditors, Purchase invoices and the cash book. No new colour, no
+       new button family, no half-pixel type. */
+
+    /* ---- the verdict strip: what this manager has been worth ---- */
+    .ow-strip.mgs{grid-template-columns:1.16fr 1fr 1.1fr 1fr 1.06fr;}
+    .ow-mt-v.acc{font-size:24px;}
+    .ow-mt-v .of{color:var(--ow-ink-400);font-size:.62em;margin:0 .12em;letter-spacing:0;}
+    .mt-none .ow-mt-v{color:var(--ow-ink-400);}
+
+    /* ---- the view switch. Two beds of one ledger: what is live, and
+       what is the record. Steel ground, white pill, exactly the control
+       the cash book already uses for its account filter. ---- */
+    .mv{display:flex;align-items:center;gap:10px;margin:14px 0 14px;}
+    .mv-sw{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+      border-radius:7px;padding:2px;flex:none;}
+    .mv-sw > span{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 13px;
+      border-radius:5px;font-size:13px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .mv-sw > span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.08);}
+    .mv-sw .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-400);}
+    .mv-sw > span.on .n{color:var(--ow-ink-600);}
+    .mv-w{font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;min-width:0;max-width:64ch;}
+
+    /* ---- the one thing, at the head of the plan ---- */
+    .key{display:flex;align-items:baseline;gap:9px;padding:9px 12px;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule-soft);font-size:13px;line-height:1.45;}
+    .key-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);flex:none;}
+    .key-t{min-width:0;max-width:var(--ow-measure);}
+
+    /* ---- a move, as a console row ---- */
+    .ow-q-r.mq{grid-template-columns:18px minmax(0,1fr) 106px 146px;}
+    .ow-q-t .obj{color:var(--ow-ink-600);}
+    .ow-q.done .ow-q-t{color:var(--ow-ink-600);}
+    .ow-q.done .ow-q-f{color:var(--ow-ink-400);}
+    .mq-chip{justify-self:start;}
+    .ow-q-x .btn{height:30px;padding:0 14px;font-size:12.5px;}
+    .ow-q-x .btn-accent{font-weight:700;}
+    .qx-in{display:flex;align-items:center;height:30px;padding:0 10px;min-width:230px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12.5px;color:var(--ow-ink-400);}
+    .qx-ev{display:flex;flex-wrap:wrap;gap:4px 18px;margin:0 0 10px;padding:8px 10px;
+      background:var(--ow-paper-2);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);}
+    .qx-ev span{font-size:11.5px;color:var(--ow-ink-600);}
+    .qx-ev b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;color:var(--ow-ink-900);}
+    /* The state sentence of a move already acted on. Its own line, never
+       a flex item wedged between two buttons. */
+    .ow-q-st{font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 8px;max-width:var(--ow-measure);}
+
+    /* ---- the foot of a panel: the quiet second offer ---- */
+    .pfoot{display:flex;align-items:center;gap:12px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .pfoot p{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:70ch;}
+    .pfoot .sp{flex:1;}
+    .pfoot .btn{height:28px;padding:0 12px;font-size:12px;font-weight:600;flex:none;}
+
+    /* ---- the playbook ---- */
+    .pb{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:baseline;
+      padding:10px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+    .pb:last-child{border-bottom:0;}
+    .pb-n{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;font-weight:500;}
+    .pb-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pb-ck{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      letter-spacing:-.02em;color:var(--ow-ink-600);background:var(--ow-steel-050);
+      border-radius:var(--ow-r-pill);padding:2px 8px;flex:none;}
+    .pb-ck.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:600;}
+    .pb-m{grid-column:1;font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;margin-top:3px;
+      max-width:var(--ow-measure);}
+    .pb-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .pb-m.good b{color:var(--ow-verdigris);}
+    .pb-m.bad b{color:var(--ow-crimson);}
+    .pb-a{grid-column:2;grid-row:1 / span 2;display:flex;gap:5px;align-self:center;flex:none;}
+    .pb-a .btn{height:26px;padding:0 10px;font-size:11.5px;font-weight:600;}
+
+    /* ---- rail: the scoreboard ---- */
+    .tg{padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .tg:first-child{border-top:0;}
+    .tg-t{display:flex;align-items:baseline;gap:8px;}
+    .tg-n{font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tg-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12.5px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;flex:none;}
+    .tg-b{height:5px;border-radius:2px;background:var(--ow-steel-100);overflow:hidden;margin:6px 0 5px;}
+    .tg-b i{display:block;height:100%;background:var(--ow-steel-800);border-radius:2px;}
+    .tg.met .tg-b i{background:var(--ow-verdigris);}
+    .tg.behind .tg-b i{background:var(--ow-crimson);}
+    .tg-f{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
+    .tg-f.behind{color:var(--ow-crimson);}
+    .tg-f.met{color:var(--ow-verdigris);}
+    .tg-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+
+    /* ---- rail: an offer it wants an answer to (a target, a play, a question) ---- */
+    .of{padding:10px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .of:first-child{border-top:0;}
+    .of-q{font-size:12.5px;font-weight:600;line-height:1.4;margin:0 0 3px;}
+    .of-w{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 8px;}
+    .of-w b{color:var(--ow-ink-900);font-weight:600;}
+    .of-r{display:flex;gap:6px;}
+    .of-r .btn{height:28px;padding:0 11px;font-size:12px;font-weight:600;}
+    .of-in{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;flex:1;min-width:0;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12.5px;color:var(--ow-ink-400);}
+    .of-r.f .btn{height:34px;}
+    .of-when{font-size:11px;color:var(--ow-ink-400);margin:6px 0 0;}
+
+    /* ---- the journal: meetings and reviews, one list ---- */
+    .jr{border-bottom:1px solid var(--ow-rule-soft);}
+    .jr:last-child{border-bottom:0;}
+    .jr-r{display:grid;grid-template-columns:18px 86px minmax(0,1fr) 74px 92px;align-items:center;
+      column-gap:10px;min-height:44px;padding:6px 12px;box-sizing:border-box;}
+    .jr.open .jr-r{background:var(--ow-paper-2);}
+    .jr-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;fill:none;
+      stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .jr.open .jr-cr{transform:rotate(90deg);}
+    .jr-d{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap;}
+    .jr.open .jr-d{color:var(--ow-ink-900);font-weight:600;}
+    .jr-t{min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .jr-v{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12.5px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .jr-v.zero{color:var(--ow-ink-400);}
+    .jr-x{padding:2px 12px 14px 116px;}
+    .jr-les{font-size:12.5px;line-height:1.55;margin:0 0 2px;max-width:var(--ow-measure);}
+    .jr-les .ar{color:var(--ow-ink-400);margin-right:5px;}
+    .wk{width:100%;border-collapse:collapse;font-size:12.5px;margin:0 0 10px;max-width:520px;}
+    .wk td{padding:6px 0;border-bottom:1px solid var(--ow-rule-soft);}
+    .wk tr:last-child td{border-bottom:0;}
+    .wk td:first-child{color:var(--ow-ink-600);}
+    .wk td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .wk td.p{text-align:right;color:var(--ow-ink-400);font-size:11.5px;white-space:nowrap;padding-left:18px;}
+
+    /* ---- the levers table: what the advice has actually done ----
+       Three prose sections — passed on, not landing, what has worked —
+       are one question asked three ways. One table, one filter. ---- */
+    .fp{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:7px;padding:2px;flex:none;}
+    .fp > span{display:inline-flex;align-items:center;gap:6px;padding:0 9px;height:22px;
+      border-radius:5px;font-size:11.5px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .fp > span.on{background:var(--ow-paper);color:var(--ow-ink-900);box-shadow:0 1px 2px rgba(20,30,40,.08);}
+    .fp .n{font-family:var(--mono);font-size:11px;letter-spacing:-.02em;color:var(--ow-ink-400);}
+
+    .lv{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+    .lv th{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);text-align:left;padding:9px 8px 8px 12px;
+      border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
+    .lv th.r{text-align:right;padding-right:12px;}
+    .lv td{padding:9px 8px 9px 12px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+    .lv tr:last-child td{border-bottom:0;}
+    .lv .nm{font-size:13px;font-weight:500;line-height:1.3;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lv .kd{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lv .vd{font-size:12.5px;color:var(--ow-ink-600);line-height:1.45;}
+    .lv .vd b{color:var(--ow-ink-900);font-weight:600;}
+    .lv td.sc{text-align:right;padding-right:12px;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+    .lv td.sc .b{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .lv tr.never td.sc.w{color:var(--ow-crimson);}
+    .lv tr.works td.sc.w{color:var(--ow-verdigris);}
+    .lv td.sc.t{color:var(--ow-ink-600);font-weight:500;}
+    .lv td.cp{text-align:right;padding-right:12px;}
+
+    /* ---- rail: the running account of the relationship ---- */
+    .rf-v.good{color:var(--ow-verdigris);}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rf.hd{background:var(--ow-paper-2);}
+
+    /* ---- the memory-broken banner: a failure that names itself ---- */
+    .brk{display:flex;align-items:flex-start;gap:11px;background:var(--ow-crimson-soft);
+      border:1px solid #EAC7C1;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .brk-i{width:18px;height:18px;flex:none;margin-top:1px;fill:none;stroke:var(--ow-crimson);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .brk-b{min-width:0;flex:1;}
+    .brk-t{font-size:13.5px;font-weight:600;color:var(--ow-crimson);margin:0 0 3px;}
+    .brk-w{font-size:12px;color:var(--ow-crimson);line-height:1.5;margin:0;max-width:var(--ow-measure);}
+    .brk-w code{font-family:var(--mono);font-size:11.5px;background:var(--ow-paper);
+      border:1px solid #EAC7C1;border-radius:var(--ow-r-sm);padding:1px 5px;}
+
+    /* ---- the empty state, when no meeting has been held ---- */
+    .emp{padding:30px 32px 32px;text-align:center;}
+    .emp-i{width:34px;height:34px;margin:0 auto 12px;display:block;fill:none;
+      stroke:var(--ow-ink-400);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+    .emp-t{font-size:15px;font-weight:600;margin:0 0 6px;}
+    .emp-w{font-size:12.5px;color:var(--ow-ink-600);line-height:1.55;margin:0 auto 14px;max-width:58ch;}
+    .emp .btn{height:34px;padding:0 20px;font-size:13.5px;}
+    .emp-n{font-size:11px;color:var(--ow-ink-400);margin:10px 0 0;}
+
+    /* the section label above a stacked artboard pair */
+    .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);margin:0 0 8px;}
+    .lbl.sp{margin-top:26px;}
+    .ow-pan-nt{font-size:11px;color:var(--ow-ink-400);}
+    .ow-pan-h .sp{flex:1;}
+    /* The manager screen as it ships: the legacy .mgr-* vocabulary,
+       reproduced from index.html's own declarations — 12.5/13.5/14.5px
+       type, radius 10 and 12, weight 700, the amber ink on oxide, and
+       the twelve flat sections in the two-column .ow-rec grid. */
+    .b-main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;
+      box-sizing:border-box;overflow:hidden;}
+    .b-rec{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;align-items:start;}
+    .b-full{grid-column:1 / -1;}
+    .mgr-meet{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:16px 18px;
+      margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+    .mgr-meet-note{font-size:12.5px;color:var(--ow-ink-600);max-width:56ch;line-height:1.5;}
+    .mgr-meet-note b{color:var(--ow-ink-900);}
+    .mgr-sec-title{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ow-ink-600);margin:18px 0 8px;}
+    .mgr-objective{background:var(--ow-oxide-soft);border-left:3px solid var(--ow-oxide);
+      border-radius:8px;padding:9px 13px;font-size:13.5px;margin:0 0 10px;}
+    .mgr-keyline{background:var(--ow-steel-050);border:1px dashed var(--ow-rule);border-radius:10px;
+      padding:10px 13px;font-size:13.5px;margin:0 0 12px;}
+    .mgr-move{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:12px 15px;margin:0 0 10px;}
+    .mgr-move-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+    .mgr-move-title{font-weight:700;font-size:14.5px;}
+    .mgr-worth{font-weight:700;font-size:13px;color:var(--ow-amber-ink);white-space:nowrap;}
+    .mgr-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;margin:4px 0 9px;}
+    .mgr-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .mgr-acts .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:700;}
+    .mgr-review-offer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;
+      border-top:1px dashed var(--ow-rule);padding-top:10px;margin-top:2px;}
+    .mgr-review-thin{font-size:12px;color:var(--ow-ink-600);}
+    .mgr-score{display:flex;flex-direction:column;gap:9px;margin:0 0 14px;}
+    .mgr-target{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:11px 15px;}
+    .mgr-target.met{border-left:3px solid var(--ow-verdigris);}
+    .mgr-target.missed{border-left:3px solid var(--ow-crimson);opacity:.8;}
+    .mgr-target-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+    .mgr-target-name{font-weight:700;font-size:14px;}
+    .mgr-target-fig{font-weight:700;font-size:13.5px;color:var(--ow-amber-ink);white-space:nowrap;text-align:right;}
+    .mgr-basis{display:block;font-weight:400;font-size:11px;color:var(--ow-ink-600);text-align:right;margin-top:1px;}
+    .mgr-bar{height:6px;border-radius:99px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+      overflow:hidden;margin-top:7px;}
+    .mgr-bar span{display:block;height:100%;background:var(--ow-oxide);}
+    .mgr-target.met .mgr-bar span{background:var(--ow-verdigris);}
+    .mgr-target-foot{font-size:12px;color:var(--ow-ink-600);margin-top:5px;}
+    .mgr-pace-foot{font-size:12px;color:var(--ow-ink-600);margin-top:4px;}
+    .mgr-pace-foot.behind{color:var(--ow-crimson);}
+    .mgr-asks{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:13px 15px;margin:0 0 14px;}
+    .mgr-ask{padding:9px 0;border-top:1px solid var(--ow-rule);}
+    .mgr-ask:first-of-type{border-top:0;}
+    .mgr-ask-q{font-size:13.5px;font-weight:600;margin-bottom:6px;}
+    .mgr-ask-row{display:flex;gap:8px;}
+    .mgr-ask-input{flex:1;min-width:0;height:34px;border:1px solid var(--ow-rule);border-radius:6px;
+      background:#fff;display:flex;align-items:center;padding:0 10px;font-size:13px;color:var(--ow-ink-400);}
+    .mgr-ask-row .btn{padding:0 14px;height:34px;font-size:13px;font-weight:700;}
+    .mgr-ask-when{font-size:11.5px;color:var(--ow-ink-600);margin-top:5px;}
+    .mgr-hist-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;
+      color:var(--ow-ink-600);padding:8px 2px;border-bottom:1px solid var(--ow-rule);}
+    .mgr-hist-row.bad{color:var(--ow-oxide-deep);}
+    .mgr-hist-row i{font-style:normal;color:var(--ow-ink-900);}
+    .mgr-review{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:12px 15px;margin:0 0 10px;}
+    .mgr-lesson{font-size:13px;line-height:1.55;}
+    .mgr-week{width:100%;border-collapse:collapse;margin-top:9px;font-size:13px;}
+    .mgr-week td{padding:5px 8px 5px 0;border-top:1px solid var(--ow-rule);}
+    .mgr-week td:first-child{color:var(--ow-ink-600);}
+    .mgr-week .mgr-prior{color:var(--ow-ink-600);font-size:12px;text-align:right;}
+    .mgr-play{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:11px 15px;margin:0 0 9px;}
+    .mgr-play-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+    .mgr-play-name{font-weight:700;font-size:14px;}
+    .mgr-play-tag{font-size:11.5px;color:var(--ow-ink-600);white-space:nowrap;}
+    .mgr-play-clock{font-size:11px;color:var(--ow-ink-600);padding:2px 8px;border-radius:20px;
+      background:var(--ow-steel-050);margin-right:auto;}
+    .mgr-play-clock.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:650;}
+    .mgr-play-sized{font-size:12.5px;color:var(--ow-amber-ink);margin:0 0 6px;}
+    .mgr-play-moved{font-size:12px;color:var(--ow-ink-600);margin:0 0 6px;line-height:1.5;
+      padding:5px 9px;border-radius:7px;background:var(--ow-steel-050);}
+    .mgr-play-moved.good{color:var(--ow-verdigris);background:var(--ow-verdigris-soft);}
+    .mgr-policies{background:#fff;border:1px solid var(--ow-rule);border-radius:12px;padding:6px 15px 11px;}
+    .mgr-pol-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:8px 0;
+      border-bottom:1px solid var(--ow-rule);}
+    .mgr-pol-row span:first-child{font-weight:600;white-space:nowrap;}
+    .mgr-pol-row span:last-child{color:var(--ow-ink-600);text-align:right;}
+    .b-ph{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--ow-rule);
+      padding:0 0 12px;margin-bottom:16px;}
+    .b-fold{position:absolute;left:220px;right:0;top:954px;border-top:2px dashed var(--ow-oxide);z-index:4;}
+    .b-fold span{position:absolute;right:14px;top:-9px;background:var(--ow-oxide);color:#fff;
+      font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:2px 8px;border-radius:3px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:3200px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Insight</span><span>/</span><span>Manager</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Debtors</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-section-label">Insight</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3"></path></svg><span>The day</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg><span>Manager</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Analysis</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 15l4-5 3 3 5-7"></path></svg><span>Sales analytics</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"></path></svg><span>Map</span></div>
+  </div>
+<div class="b-main">
+  <div class="b-ph">
+    <h1 class="ow-ph-t">The Manager</h1>
+    <p class="ow-ph-sub">Reads your books, keeps score on its own advice, and moves nothing without you.</p>
+    <span class="ow-ph-sp"></span>
+    <span class="btn btn-accent ow-sm">Talk to it</span>
+  </div>
+
+  <div class="mgr-meet">
+    <div class="mgr-meet-note"><b>Today&rsquo;s plan is below.</b> The meeting has been held. Another one
+      spends more AI credit to read a position that has not moved since this morning, and adds a second
+      plan to the day rather than replacing the first &mdash; worth it only if something real has changed.</div>
+    <span class="btn btn-ghost">Hold another anyway</span>
+    <div class="mgr-review-offer">
+      <span class="btn btn-ghost">Hold the weekly review</span>
+      <span class="mgr-review-thin">What the week did, what the advice earned, what the skips cost
+        &mdash; judged from the books alone.</span>
+    </div>
+  </div>
+
+  <div class="b-rec">
+    <div class="b-full">
+      <div class="mgr-sec-title">Today&rsquo;s plan</div>
+      <div class="mgr-objective"><b>Get cash in.</b> Thursday&rsquo;s cement order is 3,180,000 and the
+        drawer holds 1,910,000.</div>
+      <div class="mgr-keyline"><b>The one thing:</b> Get Mulongo&rsquo;s 1,420,000 in before Thursday&rsquo;s
+        cement order goes out.</div>
+
+      <div class="mgr-move">
+        <div class="mgr-move-top"><span class="mgr-move-title">Chase Mulongo Hardware</span>
+          <span class="mgr-worth">1,420,000</span></div>
+        <div class="mgr-why">They have paid inside three days on five of the last seven chases, and this is
+          the oldest thing on the debtors&rsquo; book. Thursday&rsquo;s cement order is 3,180,000 and the
+          drawer holds 1,910,000 &mdash; this invoice is the difference between paying Katende on delivery
+          and asking him for terms you have never asked for.</div>
+        <div class="mgr-acts"><span class="btn btn-accent">Draft the chase</span>
+          <span class="btn btn-ghost">Skip</span><span class="btn btn-ghost">Discuss</span></div>
+      </div>
+      <div class="mgr-move">
+        <div class="mgr-move-top"><span class="mgr-move-title">Reorder iron sheets &mdash; G28, 3m box profile</span>
+          <span class="mgr-worth">3,180,000</span></div>
+        <div class="mgr-why">Four days&rsquo; cover left at last month&rsquo;s rate and Katende&rsquo;s price
+          moved on the 1st of each of the last three months.</div>
+        <div class="mgr-acts"><span class="btn btn-accent">Draft the order</span>
+          <span class="btn btn-ghost">Skip</span><span class="btn btn-ghost">Discuss</span></div>
+      </div>
+      <div class="mgr-move">
+        <div class="mgr-move-top"><span class="mgr-move-title">Follow up Kato Construction Ltd</span>
+          <span class="mgr-worth">860,000</span></div>
+        <div class="mgr-why">Quote 002191 has sat six days. Their last three quotes closed on the day
+          somebody rang.</div>
+        <div class="mgr-acts"><span class="btn btn-accent">Draft the follow-up</span>
+          <span class="btn btn-ghost">Skip</span><span class="btn btn-ghost">Discuss</span></div>
+      </div>
+      <div class="mgr-move">
+        <div class="mgr-move-top"><span class="mgr-move-title">Raise Hima 50kg cement by 500 a bag</span>
+          <span class="mgr-worth">214,000</span></div>
+        <div class="mgr-why">You are 8% under the street on the line that carries a third of your volume.</div>
+        <div class="mgr-acts"><span class="btn btn-accent">Open pricing</span>
+          <span class="btn btn-ghost">Skip</span><span class="btn btn-ghost">Discuss</span></div>
+      </div>
+    </div>
+
+    <div class="b-full">
+      <div class="mgr-sec-title">The last meeting &mdash; 2 Sep</div>
+      <div class="mgr-move">
+        <div class="mgr-move-top"><span class="mgr-move-title">Clear the four quotes over five days old</span>
+          <span class="mgr-worth">2,240,000</span></div>
+        <div class="mgr-why">Three of four were drafted and sent. One is still open.</div>
+        <div class="mgr-acts"><span class="btn btn-ghost">Discuss</span></div>
+      </div>
+    </div>
+
+    <div class="b-full">
+      <div class="mgr-sec-title">The scoreboard</div>
+      <div class="mgr-score">
+        <div class="mgr-target">
+          <div class="mgr-target-top"><span class="mgr-target-name">Collect this week</span>
+            <span class="mgr-target-fig">4,120,000 <span class="mgr-basis">of 6,000,000</span></span></div>
+          <div class="mgr-bar"><span style="width:69%"></span></div>
+          <div class="mgr-target-foot">69% there &middot; 2 days left</div>
+          <div class="mgr-pace-foot behind">Behind &mdash; level today would be 5,140,000, 1,020,000 short.
+            At this rate it ends at 5,300,000.</div>
+        </div>
+        <div class="mgr-target met">
+          <div class="mgr-target-top"><span class="mgr-target-name">Cement out</span>
+            <span class="mgr-target-fig">251 <span class="mgr-basis">of 240 bags</span></span></div>
+          <div class="mgr-bar"><span style="width:100%"></span></div>
+          <div class="mgr-target-foot">Met &mdash; week ended 31 Aug</div>
+        </div>
+      </div>
+      <div class="mgr-asks">
+        <div class="mgr-why" style="margin:0 0 9px;"><b>Targets it wants to be measured against.</b>
+          A number becomes a commitment only when you take it on.</div>
+        <div class="mgr-ask">
+          <div class="mgr-ask-q">Dead stock 800,000 this week</div>
+          <div class="mgr-why" style="margin:2px 0 7px;">Nine lines have not moved in 90 days and hold 2,240,000.</div>
+          <div class="mgr-ask-row"><span class="btn btn-accent">Take it on</span><span class="btn btn-ghost">Set aside</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">What the manager needs to know</div>
+      <div class="mgr-asks">
+        <div class="mgr-why" style="margin:0 0 9px;">It could not find these in your books. Answer in a line
+          and it argues from them tomorrow.</div>
+        <div class="mgr-ask">
+          <div class="mgr-ask-q">What does Kato Steel charge for G28 iron sheets?</div>
+          <div class="mgr-ask-row"><span class="mgr-ask-input">What Kato Steel charges &mdash; just the figure</span>
+            <span class="btn btn-accent">Answer</span></div>
+          <div class="mgr-ask-when">asked 3 Sep</div>
+        </div>
+        <div class="mgr-ask">
+          <div class="mgr-ask-q">Why did Ssekitoleko stop buying in July?</div>
+          <div class="mgr-ask-row"><span class="mgr-ask-input">What you found out &mdash; one line</span>
+            <span class="btn btn-accent">Answer</span></div>
+          <div class="mgr-ask-when">asked 1 Sep</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">The weekly review &mdash; 1 Sep</div>
+      <div class="mgr-review">
+        <div class="mgr-keyline" style="margin:0;"><b>Verdict:</b> a good week on margin, a bad one on collection.</div>
+        <div class="mgr-why" style="margin:9px 0 0;"><b>For next week:</b></div>
+        <div class="mgr-lesson">&rarr; Margin held because you did not discount the cement.</div>
+        <div class="mgr-lesson">&rarr; Kato has gone four chases without paying inside a week.</div>
+        <table class="mgr-week"><tbody>
+          <tr><td>Sales</td><td>18,420,000</td><td class="mgr-prior">prior week 16,900,000</td></tr>
+          <tr><td>Gross profit</td><td>3,206,000</td><td class="mgr-prior">prior week 2,704,000</td></tr>
+          <tr><td>Collected</td><td>4,120,000</td><td class="mgr-prior">11 chases drafted, 6 sent</td></tr>
+          <tr><td>Advice</td><td>7 of 14 done</td><td class="mgr-prior">3 skipped &middot; 4 untouched</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">Earlier meetings</div>
+      <div class="mgr-hist-row"><span>31 Aug &mdash; Buy the iron sheets before Katende&rsquo;s price moves</span><span>0 of 5 done</span></div>
+      <div class="mgr-hist-row"><span>30 Aug &mdash; Stop the bleed on delivery</span><span>2 of 4 done</span></div>
+      <div class="mgr-hist-row"><span>25 Aug &mdash; Weekly review &mdash; the best week since June</span><span></span></div>
+      <div class="mgr-hist-row"><span>24 Aug &mdash; Clear the quotes before month end</span><span>1 of 5 done</span></div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">Advice you have passed on</div>
+      <div class="mgr-why" style="margin-bottom:6px;">Skipped 3 times or more in the last 60 days and never
+        done, so the manager has been told to stop proposing them and think of something else. Doing one is
+        all it takes to bring it back.</div>
+      <div class="mgr-hist-row"><span>Reorder iron sheets G28 &mdash; <i>Katende is out of stock; waiting on the Kampala price</i></span><span>passed on 3 times</span></div>
+      <div class="mgr-sec-title">Advice that is not landing</div>
+      <div class="mgr-why" style="margin-bottom:6px;">Put to you 3 times or more in the last 60 days, never
+        done and never turned down. The manager is told to say so rather than give them again in different
+        words. Do one, or skip one with a reason, and it stops.</div>
+      <div class="mgr-hist-row"><span>Raise Hima 50kg cement</span><span>put to you 6 times</span></div>
+      <div class="mgr-hist-row"><span>Charge for delivery runs under 400,000</span><span>put to you 5 times</span></div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">What has worked, and what has not</div>
+      <div class="mgr-why" style="margin-bottom:6px;">Everything the manager has advised on 3 times or more
+        since 4 Jun, and what the books say followed each time. Counted once per occasion &mdash; each one
+        closed at the next time the same thing was advised &mdash; so the same payment is never counted
+        twice. 9 older moves name nothing the books could follow, so they are not here.</div>
+      <div class="mgr-hist-row"><span>Mulongo Hardware &mdash; <i>chased 7 times, paid inside 3 days 5 of them</i></span><span>5 of 7</span></div>
+      <div class="mgr-hist-row bad"><span>Kato Construction Ltd &mdash; <i>chased 4 times, never paid inside a week</i></span><span>0 of 4</span></div>
+      <div class="mgr-hist-row"><span>Ssekitoleko Hardware &mdash; <i>rung 5 times, ordered within the fortnight 4 times</i></span><span>4 of 5</span></div>
+      <div class="mgr-hist-row bad"><span>Delivery runs under 400,000 &mdash; <i>advised 5 times, went out free every time</i></span><span>0 of 5</span></div>
+      <div class="mgr-why" style="margin-top:6px;">2 of these have never once worked. The manager is told to
+        say so and pull a different lever rather than advise them again.</div>
+    </div>
+
+    <div class="b-full">
+      <div class="mgr-sec-title">The playbook</div>
+      <div class="mgr-why" style="margin:0 0 10px;">The strategies this shop is working. A play is judgement,
+        not arithmetic &mdash; it becomes real only when you try it, and the manager never proposes one you
+        have set aside.</div>
+      <div class="mgr-play">
+        <div class="mgr-play-top"><span class="mgr-play-name">Sell cement by the half-pallet</span>
+          <span class="mgr-play-clock">no span named</span>
+          <span class="mgr-play-tag">priced by the bag &middot; proposed 2 Sep</span></div>
+        <div class="mgr-why" style="margin:3px 0 6px;">Twelve orders last month were between 20 and 40 bags.</div>
+        <div class="mgr-acts"><span class="btn btn-accent">Try it</span><span class="btn btn-ghost">Set aside</span></div>
+      </div>
+      <div class="mgr-sec-title" style="margin-top:14px;">Running</div>
+      <div class="mgr-play">
+        <div class="mgr-play-top"><span class="mgr-play-name">Charge for cutting</span>
+          <span class="mgr-play-clock">week 2 of 4</span>
+          <span class="mgr-play-tag">cutting given away &middot; yours</span></div>
+        <div class="mgr-play-sized">Worth about 340,000 a month at last month&rsquo;s volume</div>
+        <div class="mgr-play-moved good">Running 12 days &middot; cutting income 0 &rarr; 340,000 alongside it
+          &middot; so did Cash discount at 2%</div>
+        <div class="mgr-acts"><span class="mgr-play-tag">since 22 Aug</span>
+          <span class="btn btn-ghost">It worked</span><span class="btn btn-ghost">Stop it</span></div>
+      </div>
+      <div class="mgr-play">
+        <div class="mgr-play-top"><span class="mgr-play-name">Cash discount at 2%</span>
+          <span class="mgr-play-clock over">6 days past its 4 weeks</span>
+          <span class="mgr-play-tag">slow collection &middot; yours</span></div>
+        <div class="mgr-play-moved">Running 34 days &middot; days to collect 19 &rarr; 17 alongside it</div>
+        <div class="mgr-acts"><span class="mgr-play-tag">since 1 Aug</span>
+          <span class="btn btn-ghost">It worked</span><span class="btn btn-ghost">Stop it</span></div>
+      </div>
+      <div class="mgr-hist-row" style="margin-top:12px;"><span>Tried and set aside: Bundle nails with sheets,
+        Saturday half-day pricing</span><span></span></div>
+    </div>
+
+    <div>
+      <div class="mgr-sec-title">The standing rules</div>
+      <div class="mgr-policies">
+        <div class="mgr-pol-row"><span>Chasing debts</span><span>from 30 days old, resting 7 days between chases</span></div>
+        <div class="mgr-pol-row"><span>Restocking</span><span>4 standing rules &middot; default cover 21 days</span></div>
+        <div class="mgr-pol-row"><span>Order stages</span><span>Picking 45m &middot; Loading 30m &middot; alerts on</span></div>
+        <div class="mgr-why" style="margin:6px 0 0;">The app watches these daily on its own.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="b-fold"><span>1440 &times; 900 &mdash; the fold</span></div>
+</div>
+</x-dc>
+</body>
+</html>

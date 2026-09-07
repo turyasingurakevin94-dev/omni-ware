@@ -1,0 +1,672 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the day, in the page header ---- */
+    .dnav{display:flex;align-items:center;gap:6px;}
+    .dnav .db{width:28px;height:28px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);}
+    .dnav .db svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .dnav .db.off{opacity:.35;}
+    .dnav .dd{display:flex;align-items:center;gap:7px;height:28px;padding:0 11px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .dnav .dd .d{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      font-weight:600;letter-spacing:-.02em;}
+    .dnav .dd .r{font-size:11px;color:var(--ow-ink-600);}
+
+    /* ---- the strip: money on hand leads ---- */
+    .ow-strip.cbs{grid-template-columns:1.28fr 1fr 1fr 1fr 1.12fr;}
+    .ow-mt-v.big{font-size:27px;}
+    .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cb-mv .up{color:var(--ow-verdigris);font-weight:600;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-mv .dn{color:var(--ow-crimson);font-weight:600;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-mv .qt{color:var(--ow-ink-400);}
+    .ow-mt-s .sm{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- the entry line: always open, never a modal ---- */
+    .el{display:flex;flex-direction:column;gap:9px;padding:11px 12px;}
+    .el-row{display:flex;align-items:flex-end;gap:8px;}
+    .el-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .el-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .el-in{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .el-in .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;
+      font-weight:600;letter-spacing:-.02em;}
+    .el-in .u{font-size:11px;color:var(--ow-ink-400);margin-left:auto;flex:none;}
+    .el-in .cr{width:12px;height:12px;margin-left:auto;flex:none;color:var(--ow-ink-400);
+      fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+    .el-in .tx{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .el-in .tx.ph{color:var(--ow-ink-400);}
+    .el-seg{display:flex;height:34px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;background:var(--ow-paper);flex:none;}
+    .el-seg > span{display:inline-flex;align-items:center;gap:5px;padding:0 11px;font-size:13px;
+      font-weight:600;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);white-space:nowrap;}
+    .el-seg > span:first-child{border-left:0;}
+    .el-seg > span svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .el-seg > span.on{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .el-seg > span.on.out{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .el .btn{height:34px;padding:0 22px;font-size:13.5px;flex:none;}
+    .el-amt{width:132px;flex:none;}
+    .el-ac{width:118px;flex:none;}
+    .el-cat{flex:1;min-width:0;}
+    .el-at{width:72px;flex:none;}
+    .el-note{flex:1;min-width:0;}
+
+    /* ---- the day's movements: the table as it was, in a console panel.
+       Same columns, same rhythm, same running balance per account. The one
+       change is the row's actions, which are marks now rather than two
+       labelled buttons repeated nine times down the page. ---- */
+    .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+    .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+      color:var(--ow-ink-600);text-align:left;padding:10px 8px 8px;border-bottom:1px solid var(--ow-rule);
+      white-space:nowrap;}
+    .cb-ledger th.r{text-align:right;}
+    .cb-ledger td{padding:9px 8px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+    .cb-ledger td.price{text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cb-ledger .cb-led-time{font-family:var(--mono);font-size:12px;color:var(--ow-ink-600);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    /* WHO FIRST. The identifying thing leads the cell -- the client, the
+       supplier, or what was actually bought -- and the accounting category
+       drops to the quiet line under it. Scanning for the entry nobody made
+       is scanning a column of names; a column of the word "Sale" told you
+       nothing, and it was the half that never truncated. */
+    .cb-ledger .who{font-size:13px;font-weight:500;line-height:1.3;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-ledger .sub{display:flex;align-items:center;gap:5px;min-width:0;
+      font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;line-height:1.35;}
+    .cb-ledger .sub .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-ledger .sub .dot{color:var(--ow-ink-400);flex:none;}
+    /* The document number is the way back to the invoice or the bill. It is
+       not oxide: the accent belongs to the one act on the screen, and there
+       are two of these on nine rows. */
+    .cb-ledger .doc{display:inline-flex;align-items:center;gap:4px;flex:none;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11.5px;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);
+      border-bottom:1px dotted var(--ow-rule);}
+    /* The mark says the row was WRITTEN BY that document's screen rather than
+       typed at this desk -- so a row nobody can account for is traced to where
+       it came from instead of blamed on whoever was sitting here. A number
+       without the mark was typed here against a job it names. */
+    .cb-ledger .doc.posted svg{width:12px;height:12px;fill:none;stroke:var(--ow-ink-400);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
+    .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
+    .cb-ledger .cb-bal{font-weight:700;}
+    .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);border-bottom:0;font-weight:700;
+      font-size:12px;color:var(--ow-ink-600);}
+    .cb-ledger tr.hov td{background:var(--ow-paper-2);}
+    /* Icon only. Nine rows carrying the words Edit and Delete eighteen times
+       is eighteen labels for two acts nobody is looking for until they are. */
+    .rowa{display:flex;gap:4px;justify-content:flex-end;}
+    .rowa span{width:26px;height:26px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
+      display:inline-flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .rowa svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .cb-ledger tr.hov .rowa span{color:var(--ow-ink-600);border-color:var(--ow-rule);}
+    .cb-ledger tr.hov .rowa span.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
+
+    /* the account filter, as it was, sized for the panel header */
+    .cb-ledger-filters{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:7px;padding:2px;}
+    .cb-ledger-filters > span{padding:0 10px;height:22px;display:inline-flex;align-items:center;
+      border-radius:5px;font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .cb-ledger-filters > span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.08);}
+
+    /* ---- the two donuts, in the house palette ----
+       One hue per side, dark to light in size order, so the ring and the
+       list read the same way round and green still means in, red still
+       means out. A transfer is neither, so it is steel in both. ---- */
+    .dn-grid{display:grid;grid-template-columns:1fr 1fr;}
+    .dn{padding:14px 16px 12px;border-left:1px solid var(--ow-rule-soft);}
+    .dn:first-child{border-left:0;}
+    .dn-h{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:12px;}
+    .dn-body{display:flex;align-items:center;gap:16px;}
+    .dn-ring{position:relative;width:128px;height:128px;flex:none;}
+    .dn-ring svg{width:128px;height:128px;display:block;}
+    .dn-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:1px;}
+    .dn-mid-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.03em;}
+    .dn-mid-v.in{color:var(--ow-verdigris);}
+    .dn-mid-v.out{color:var(--ow-crimson);}
+    .dn-mid-l{font-size:11px;color:var(--ow-ink-400);}
+    .dn-lg{flex:1;min-width:0;}
+    .dn-r{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;}
+    .dn-r i{width:9px;height:9px;border-radius:50%;flex:none;}
+    .dn-r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dn-r .v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .dn-r .p{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);width:30px;
+      text-align:right;flex:none;letter-spacing:-.02em;}
+    .dn-note{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:12px 0 0;
+      padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
+    .dn-note b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+
+    /* ---- rail: closing ---- */
+    .cl{padding:11px 12px;}
+    .cl-s{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
+    .cl-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;
+      font-weight:500;letter-spacing:-.03em;}
+    .cl-t{font-size:12px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 10px;}
+    .cl-t b{color:var(--ow-ink-900);font-weight:600;}
+    .cl .btn{width:100%;height:36px;padding:0;font-size:13px;}
+    .cl-bars{display:flex;gap:4px;margin-bottom:9px;}
+    .cl-bars i{flex:1;height:4px;border-radius:2px;background:var(--ow-steel-100);}
+    .cl-bars i.ok{background:var(--ow-verdigris);}
+    .cl-bars i.off{background:var(--ow-crimson);}
+
+    /* ---- rail: what needs your eye ---- */
+    .ck{display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .ck:first-child{border-top:0;}
+    .ck-d{width:14px;height:14px;flex:none;margin-top:1px;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--ow-amber-ink);}
+    .ck.bad .ck-d{color:var(--ow-crimson);}
+    .ck.good .ck-d{color:var(--ow-verdigris);}
+    .ck-b{min-width:0;}
+    .ck-t{font-size:12px;font-weight:600;line-height:1.35;margin:0 0 2px;}
+    .ck-w{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
+    .ck-w b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ck-a{display:inline-flex;align-items:center;height:24px;padding:0 9px;margin-top:6px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+      font-size:11.5px;font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- rail: the last 7 days ---- */
+    .spn{display:flex;align-items:baseline;gap:8px;padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .spn:first-child{border-top:0;}
+    .spn.on{background:var(--ow-paper-2);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+    .spn-d{font-size:11.5px;color:var(--ow-ink-600);min-width:74px;flex:none;}
+    .spn.on .spn-d{color:var(--ow-ink-900);font-weight:600;}
+    .spn-m{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ow-verdigris);}
+    .spn-m.warn{background:var(--ow-amber);}
+    .spn-m.bad{background:var(--ow-crimson);}
+    .spn-m.none{background:var(--ow-steel-100);}
+    .spn-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .spn-lg{display:flex;flex-wrap:wrap;gap:4px 12px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);
+      font-size:10.5px;color:var(--ow-ink-600);}
+    .spn-lg span{display:inline-flex;align-items:center;gap:5px;}
+    .spn-lg i{width:6px;height:6px;border-radius:50%;display:inline-block;}
+
+    /* ---- rail: the ranking ---- */
+    .rk{padding:8px 12px 9px;border-top:1px solid var(--ow-rule-soft);}
+    .rk:first-child{border-top:0;}
+    .rk-t{display:flex;align-items:baseline;gap:8px;font-size:12px;margin-bottom:5px;}
+    .rk-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rk-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rk-p{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);width:30px;
+      text-align:right;flex:none;letter-spacing:-.02em;}
+    .rk-b{height:5px;border-radius:2px;background:var(--ow-steel-100);overflow:hidden;}
+    .rk-b i{display:block;height:100%;background:var(--ow-steel-800);border-radius:2px;}
+    .rk.in .rk-b i{background:var(--ow-verdigris);}
+    .rk.out .rk-b i{background:var(--ow-oxide-light);}
+
+    /* ---- the opening banner ---- */
+    .ob{display:flex;align-items:flex-start;gap:11px;background:var(--ow-amber-faint);
+      border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .ob.bad{background:var(--ow-crimson-soft);border-color:#EAC7C1;}
+    .ob-i{width:18px;height:18px;flex:none;margin-top:1px;fill:none;stroke:var(--ow-amber-ink);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ob.bad .ob-i{stroke:var(--ow-crimson);}
+    .ob-b{min-width:0;flex:1;}
+    .ob-t{font-size:13.5px;font-weight:600;color:var(--ow-amber-ink);margin:0 0 3px;}
+    .ob.bad .ob-t{color:var(--ow-crimson);}
+    .ob-w{font-size:12px;color:var(--ow-amber-ink);line-height:1.5;margin:0;max-width:var(--ow-measure);}
+    .ob.bad .ob-w{color:var(--ow-crimson);}
+    .ob-w b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+    .ob-a{display:flex;gap:7px;flex:none;align-self:center;}
+    .ob-a .btn{height:32px;padding:0 14px;font-size:12.5px;}
+    .ob-a .btn-ghost{background:var(--ow-paper);border-color:#E0C994;color:var(--ow-amber-ink);}
+    .ob.bad .ob-a .btn-ghost{border-color:#E3B5AE;color:var(--ow-crimson);}
+    .unc{font-style:normal;color:var(--ow-amber-ink);font-size:11px;font-weight:600;}
+
+    /* ---- counting the till ---- */
+    .ct{display:grid;grid-template-columns:170px 1fr 200px;align-items:start;gap:18px;
+      padding:14px 16px;border-top:1px solid var(--ow-rule-soft);}
+    .ct:first-of-type{border-top:0;}
+    .ct-h{min-width:0;}
+    .ct-n{font-size:15px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
+    .ct-s{font-size:11.5px;color:var(--ow-ink-600);margin:0;line-height:1.45;}
+    .ct-m{display:flex;flex-direction:column;gap:0;}
+    .ct-r{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+      padding:5px 0;font-size:12.5px;color:var(--ow-ink-600);}
+    .ct-r b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ct-r.tot{border-top:1px solid var(--ow-rule-soft);margin-top:3px;padding-top:8px;color:var(--ow-ink-900);}
+    .ct-r.tot b{font-weight:600;font-size:15px;}
+    .ct-r .up{color:var(--ow-verdigris);}
+    .ct-r .dn{color:var(--ow-crimson);}
+    .ct-c{min-width:0;}
+    .ct-cl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 5px;}
+    .ct-ci{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ct-ci .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:18px;
+      font-weight:600;letter-spacing:-.03em;}
+    .ct-ci .p{font-size:13px;color:var(--ow-ink-400);}
+    .ct-ci .u{font-size:11px;color:var(--ow-ink-400);margin-left:auto;}
+    .ct-ci.on{border-color:var(--ow-steel-800);box-shadow:0 0 0 2px rgba(37,42,49,.09);}
+    .ct-v{margin-top:8px;}
+    .ct-vd{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:17px;
+      font-weight:600;letter-spacing:-.03em;line-height:1.2;}
+    .ct-vd.short{color:var(--ow-crimson);}
+    .ct-vd.over{color:var(--ow-amber-ink);}
+    .ct-vw{font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;margin:3px 0 0;}
+    .ct-vw.ok{color:var(--ow-verdigris);font-weight:500;}
+    .ct-vb{display:inline-flex;align-items:center;height:30px;padding:0 12px;margin-top:8px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+    .ct-f{display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid var(--ow-rule);
+      background:var(--ow-paper-2);}
+    .ct-f p{margin:0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;max-width:64ch;}
+    .ct-f .ctsp{flex:1;}
+    .ct-f .btn{height:34px;padding:0 18px;font-size:13.5px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1130px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Money</span><span>/</span><span>Cash book</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Sell</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4L12 22l-9-9V3h10z"></path><circle cx="8" cy="8" r="1.3"></circle></svg><span>Quotes &amp; orders</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Invoices</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Debtors</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">Cash book</h1>
+      <p class="ow-ph-sub">Friday morning, before anything has moved.</p>
+      <span class="ow-ph-i">i</span>
+      <span class="ow-ph-sp"></span>
+      <div class="dnav">
+        <span class="db"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></span>
+        <span class="dd"><span class="d">Fri 5 Sep 2026</span><span class="r">today</span>
+          <svg style="width:12px;height:12px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></span>
+        <span class="db off"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg></span>
+      </div>
+      <button class="btn btn-ghost ow-sm">Print the day</button>
+    </div>
+
+    <div class="ob">
+      <svg class="ob-i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+      <div class="ob-b">
+        <p class="ob-t">Today has not been opened yet</p>
+        <p class="ob-w">It is carrying <b>1,800,000</b> from Thu 4 Sep &mdash; cash <b>930,000</b> counted, mobile money <b>490,000</b> counted, bank <b>380,000</b> calculated. Check it against what is actually there. Everything below is drawn from those three figures and is marked unconfirmed until you say they are right.</p>
+      </div>
+      <div class="ob-a">
+        <button class="btn btn-ghost">Change the figures</button>
+        <button class="btn btn-accent">Confirm and open</button>
+      </div>
+    </div>
+
+    <div class="ow-strip cbs">
+      <div class="ow-mt">
+        <p class="ow-mt-l">Money on hand</p>
+        <span class="ow-mt-v big" style="color:var(--ow-ink-600)">1,800,000</span>
+        <p class="ow-mt-s"><span class="unc">carried, unconfirmed</span> &middot; from Thu 4 Sep</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Cash</p>
+        <span class="ow-mt-v" style="color:var(--ow-ink-600)">930,000</span>
+        <p class="cb-mv"><span class="qt">counted last night</span></p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Mobile money</p>
+        <span class="ow-mt-v" style="color:var(--ow-ink-600)">490,000</span>
+        <p class="cb-mv"><span class="qt">counted last night</span></p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Bank</p>
+        <span class="ow-mt-v" style="color:var(--ow-ink-600)">380,000</span>
+        <p class="cb-mv"><span class="qt">never counted &mdash; calculated</span></p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Traded today</p>
+        <span class="ow-mt-v" style="color:var(--ow-ink-400)">&mdash;</span>
+        <p class="cb-mv"><span class="qt">nothing yet</span></p>
+      </div>
+    </div>
+
+    <div class="ow-grid" style="margin-top:16px;">
+      <div>
+      <div class="ow-pan" style="margin-bottom:16px;">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">Log a movement</span>
+          <span class="ow-pan-n">nothing logged yet &middot; 07:40</span>
+        </div>
+        <div class="el">
+          <div class="el-row">
+            <div class="el-seg">
+              <span class="on"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>Money in</span>
+              <span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>Money out</span>
+              <span><svg viewBox="0 0 24 24"><path d="M7 10h11l-3-3"></path><path d="M17 14H6l3 3"></path></svg>Transfer</span>
+            </div>
+            <div class="el-f el-amt">
+              <span class="el-l">Amount</span>
+              <span class="el-in"><span class="tx ph">0</span><span class="u">UGX</span></span>
+            </div>
+            <div class="el-f el-ac">
+              <span class="el-l">Into</span>
+              <span class="el-in"><span class="tx">Cash</span>
+                <svg class="cr" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></span>
+            </div>
+            <div class="el-f el-cat">
+              <span class="el-l">What for</span>
+              <span class="el-in"><span class="tx ph">Pick one</span>
+                <svg class="cr" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></span>
+            </div>
+            <div class="el-f el-at">
+              <span class="el-l">At</span>
+              <span class="el-in"><span class="v">07:40</span></span>
+            </div>
+          </div>
+          <div class="el-row">
+            <div class="el-f el-note">
+              <span class="el-in"><span class="tx ph">Who it was, or which document &mdash; so the entry can be found again</span></span>
+            </div>
+            <button class="btn btn-ghost">Add</button>
+          </div>
+        </div>
+        <p class="ow-mini">The line works before the day is opened &mdash; a sale at seven in the morning is not going to wait. It is logged against the carried figures and settles once you confirm them.</p>
+      </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">The day&#39;s movements</span>
+            <span class="ow-pan-n">nothing yet</span></div>
+          <div class="ow-empty" style="padding:26px 32px 22px;">
+            <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-ink-900);">Nothing has moved today</p>
+            <p style="margin:0 auto;max-width:56ch;line-height:1.55;">The first sale, the first expense, the first payment in &mdash; log it on the line above and it appears here with a running balance. Money taken through Invoices or paid on a supplier bill lands here by itself.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Closing the day</span></div>
+          <div class="cl">
+            <div class="cl-bars"><i></i><i></i><i></i></div>
+            <div class="cl-s"><span class="cl-v">0 of 3</span><span class="ow-cp">accounts counted</span></div>
+            <p class="cl-t">There is nothing to count against yet. This becomes the evening&#39;s job.</p>
+            <button class="btn btn-ghost" style="opacity:.45">Count the till</button>
+          </div>
+        </div>
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What needs your eye</span>
+            <span class="ow-pan-n">1</span></div>
+          <div class="ck">
+            <svg class="ck-d" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M2 11h20"></path></svg>
+            <div class="ck-b">
+              <p class="ck-t">The bank figure has never been counted</p>
+              <p class="ck-w">It has been carried by calculation since <b>26 Aug</b>. Ten days of arithmetic with nothing checking it.</p>
+              <span class="ck-a">Count it now</span>
+            </div>
+          </div>
+          <p class="ow-mini">Yesterday&#39;s shortfall is gone from this list: it was counted, booked, and the book came down to the drawer. That is what a cleared check looks like.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;border-top:1px solid var(--ow-rule);padding-top:16px;">
+      <p style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);margin:0 0 12px;">The same banner, in the two other states it has &mdash; only one is ever on screen</p>
+
+      <div class="ob bad">
+        <svg class="ob-i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+        <div class="ob-b">
+          <p class="ob-t">This day does not start where Thu 4 Sep ended</p>
+          <p class="ob-w">Cash: 4 Sep left <b>930,000</b>, but today was opened with <b>1,130,000</b> &mdash; an extra <b>200,000</b> that no entry accounts for. A wrong opening figure reconciles perfectly against itself, so nothing else on this screen will catch it. Either log the movement that put it there, or set the opening back to what 4 Sep left.</p>
+        </div>
+        <div class="ob-a">
+          <button class="btn btn-ghost">Log the 200,000</button>
+          <button class="btn btn-ghost">Use what 4 Sep left</button>
+        </div>
+      </div>
+
+      <div class="ob" style="margin-top:12px;margin-bottom:0;">
+        <svg class="ob-i" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8h14"></path><circle cx="12" cy="14" r="4"></circle></svg>
+        <div class="ob-b">
+          <p class="ob-t">The book starts here</p>
+          <p class="ob-w">There is nothing on file before today, so there is nothing to carry. Count what is in each account right now and enter it. Everything this book ever says afterwards is measured from those three figures, so it is worth counting twice.</p>
+        </div>
+        <div class="ob-a">
+          <button class="btn btn-accent">Enter the three figures</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

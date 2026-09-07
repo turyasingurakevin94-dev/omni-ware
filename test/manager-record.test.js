@@ -73,33 +73,103 @@ const src = read('index.html');
     'with the button on the right of the header rather than buried in the sections');
 }
 
-/* ---------- 2. two columns, and nothing restructured ---------- */
+/* ---------- 2. two beds, and every container still found by id ----------
+
+   WHAT THIS BLOCK USED TO SAY, and why it stopped being true.
+
+   It pinned twelve wraps in one .ow-rec grid, six of them .ow-half.
+   That assertion was the record of a cheap session: the twelve flat
+   sections were dropped into two columns WITHOUT opening
+   renderManager, and the test existed to prove nothing had been
+   restructured. It was the right test for that change.
+
+   The redesign is the opposite change. Twelve sections of equal weight
+   were the defect, not the arrangement of them: the screen was about
+   advice and never said whether the advice had been worth anything,
+   and three of the twelve — advice you passed on, advice that is not
+   landing, and what has worked — are the same question asked three
+   ways, which the source comment already admitted. So:
+
+     - two of the twelve are GONE. managerReviewWrap folded into the
+       journal, because a weekly review and a meeting are the same kind
+       of event on the same clock; managerPassedWrap folded into the
+       levers table, because "you passed on this" is a verdict column,
+       not a section.
+     - two are NEW. managerVerdictWrap carries the four figures that
+       say whether this manager has earned its credit — the thing the
+       old screen could not say at all — and managerViewWrap carries
+       the switch.
+     - the .ow-rec half-grid is gone with them. It laid flat siblings
+       into halves, so a short section left a 200px hole beside a tall
+       one and the reading order zig-zagged. The console's own
+       .ow-grid + .ow-side is what the rest of this app uses.
+
+   WHAT IS PINNED NOW is the part that mattered then and still does:
+   every container is a flat, classed, id-addressed div that
+   renderManager finds by getElementById, so no wrapper ever comes
+   between the render and its container; and every wrap belongs to
+   exactly one bed, so the switch can never leave a container showing
+   in both or in neither. */
 {
   const sec = src.slice(src.indexOf('<section id="tab-manager"'),
                         src.indexOf('<section id="tab-map"'));
-  const rec = (/<div class="ow-rec">([\s\S]*?)\n      <\/div>/.exec(sec) || ['', ''])[1];
-  t.check(!!rec, 'the twelve sections sit in one grid');
+  const kids = [...sec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
+  const ids = kids.map(k => k[1]);
+  t.check(ids.length === 11, `every container is a flat sibling div with an id (${ids.length})`);
 
-  const kids = [...rec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
-  t.check(kids.length === 12, `all twelve wraps are inside it (${kids.length})`);
-  const unclassed = kids.filter(k => !/class="ow-(full|half)"/.test(k[2])).map(k => k[1]);
-  t.check(unclassed.length === 0,
-    `and every one of them is classed${unclassed.length ? ' — bare: ' + unclassed.join(', ') : ''}`);
-  t.check(kids.filter(k => /ow-half/.test(k[2])).length === 6,
-    'six of them are lists and take one column each');
-
-  /* The wraps are STILL flat siblings and STILL carry their own ids:
-     that is the whole reason this session was cheap. renderManager was
-     not opened. */
-  ['managerPlanWrap', 'managerScoreWrap', 'managerPlaysWrap', 'managerPoliciesWrap'].forEach(id => {
-    t.check(new RegExp(`getElementById\\('${id}'\\)`).test(src),
-      `${id} is still found by id — no wrapper came between the render and its container`);
+  /* The two that were retired, and the two that replaced them. Named
+     rather than merely absent: a wrap that comes back by accident is a
+     section that renders into nothing. */
+  ['managerReviewWrap', 'managerPassedWrap'].forEach(id => {
+    t.check(!ids.includes(id) && !new RegExp(`getElementById\\('${id}'\\)`).test(src),
+      `${id} is gone from the markup AND from the render — it folded into another section`);
+  });
+  ['managerVerdictWrap', 'managerViewWrap'].forEach(id => {
+    t.check(ids.includes(id), `${id} has a place on the screen`);
   });
 
-  t.check(/\.ow-rec\{[^}]*display:grid/.test(src.replace(/\s*\n\s*/g, '')),
-    'the grid is real');
-  t.check(/\.ow-rec \.ow-full:empty,\.ow-rec \.ow-half:empty\{display:none;\}/.test(src),
-    'and an empty container is removed rather than left holding a row and a gap — several of these are empty on an ordinary week');
+  /* Every container the render fills must exist, and every container
+     that exists must be filled. Either half alone is a section that
+     silently does nothing. */
+  const filled = [...src.matchAll(/getElementById\('(manager[A-Za-z]+)'\)/g)].map(m => m[1]);
+  const orphanWrap = ids.filter(id => !filled.includes(id));
+  t.check(orphanWrap.length === 0,
+    `every wrap on the screen is filled by the render${orphanWrap.length ? ' — never: ' + orphanWrap.join(', ') : ''}`);
+  const orphanFill = [...new Set(filled)].filter(id => !ids.includes(id) && /Wrap$|Note$/.test(id));
+  t.check(orphanFill.length === 0,
+    `and nothing is rendered into a container that is not there${orphanFill.length ? ' — missing: ' + orphanFill.join(', ') : ''}`);
+
+  /* TWO BEDS, AND NOTHING IN BOTH. .mgr-bed-s is what still wants an
+     answer; .mgr-bed-r is the record. A wrap in neither would show on
+     both views; a wrap in both would show twice. */
+  const bedded = kids.filter(k => /class="mgr-bed mgr-bed-[sr]"/.test(k[2]));
+  t.check(bedded.length === ids.length - 3,
+    `every wrap but the three above the switch belongs to a bed (${bedded.length} of ${ids.length - 3})`);
+  t.check(kids.filter(k => /mgr-bed-s/.test(k[2]) && /mgr-bed-r/.test(k[2])).length === 0,
+    'and none of them is in both');
+  ['managerPlanWrap', 'managerPlaysWrap', 'managerScoreWrap', 'managerQuestionsWrap', 'managerPoliciesWrap']
+    .forEach(id => t.check(new RegExp(`id="${id}" class="mgr-bed mgr-bed-s"`).test(sec),
+      `${id} is standing — it wants an answer from the owner`));
+  ['managerHistoryWrap', 'managerTrackWrap', 'managerAccountWrap']
+    .forEach(id => t.check(new RegExp(`id="${id}" class="mgr-bed mgr-bed-r"`).test(sec),
+      `${id} is the record — it is what already happened`));
+
+  /* The switch is the ONLY thing that decides which bed shows, and it
+     decides it by a class on the section rather than by re-rendering:
+     a bed that had to be re-read on every tap would spend a query on a
+     view the owner may only be glancing at. */
+  const flat = src.replace(/\s*\n\s*/g, '');
+  t.check(/#tab-manager\.mgr-on-standing \.mgr-bed-s,#tab-manager\.mgr-on-record \.mgr-bed-r\{display:block;\}/.test(flat),
+    'the switch shows a bed with one class on the section, not with a second read of the journal');
+  t.check(/\.mgr-bed\{display:none;\}/.test(flat), 'and everything is hidden until it does');
+  t.check(/\.mgr-bed:empty\{display:none;\}/.test(flat),
+    'an empty container is removed rather than left holding a gap in the stack — several are empty on an ordinary week');
+
+  /* The console's own two-column layout, not a half-grid of flat
+     siblings: the main column is the work and the 304px rail is what
+     stands beside it. */
+  t.check(/<div class="ow-grid">[\s\S]*?<div class="ow-stack">[\s\S]*?<div class="ow-side">/.test(sec),
+    'the two columns are .ow-grid + .ow-side, the pair every other console screen uses');
 }
 
 /* ---------- 3. a heading is not a field label ---------- */

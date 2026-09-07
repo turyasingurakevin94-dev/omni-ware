@@ -161,7 +161,15 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
 
 /* ---------- 5. on the page ------------------------------------------- */
 {
-  t.check(/<select id="st_basis"/.test(src), 'the choice is on the toolbar');
+  /* It moved from the toolbar into the page header with the rest of the
+     period, and out of a <label> into a <div>: a label forwards its
+     click to the select it wraps, which opens the native list and shuts
+     it again in the same gesture. Mouse only; the keyboard always
+     worked, which is why it took three rounds to find the first time. */
+  t.check(/<select class="ow-f-sel" id="st_basis"/.test(src),
+    'the choice is on the period control, wearing the layer\'s field');
+  t.check(/<div class="ow-f st-f st-f-cmp">[\s\S]{0,200}?<select class="ow-f-sel" id="st_basis"/.test(src),
+    'and it is a div, never a label, so a click opens the list rather than toggling it shut');
   t.check(/stComparisonBasis = e\.target\.value;/.test(code), 'and drives the render');
   /* Left on "automatically", the control says which one that turned out
      to be, rather than leaving the reader to infer it from the note. */
@@ -180,10 +188,14 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
 {
   const src = read('index.html');
 
-  /* The roster's segmented control, reused rather than a fourth thing
-     that means "pick one of these". */
-  t.check(/<div class="rost-period">[\s\S]{0,400}?class="rost-per st-preset" data-preset="year"/.test(src),
+  /* The LAYER's segmented control now, not the roster's. Same rule --
+     the three periods are one control that says which of them the
+     figures cover -- and one fewer opinion in the file about what
+     "pick one of these" looks like. */
+  t.check(/<div class="ow-seg" id="st_presets">[\s\S]{0,400}?class="ow-seg-b st-preset" data-preset="year"/.test(src),
     'the three periods are one segmented control, not three separate buttons');
+  t.check(!/class="rost-per st-preset"/.test(src),
+    'and it is the layer\'s, so this screen no longer borrows the roster\'s');
   t.check(!/class="btn btn-ghost st-preset"/.test(src),
     'and no longer plain buttons with no selected state at all');
 
@@ -192,7 +204,7 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
      reload because the dates are what the screen is built from. */
   const sync = extractFunction(src, 'stSyncPresetButtons', 'index.html');
   t.check(/const d = stDefaultRange\(b\.dataset\.preset\);/.test(sync)
-    && /b\.classList\.toggle\('active', !!from && d\.from === from && d\.to === to\)/.test(sync),
+    && /b\.classList\.toggle\('ow-on', !!from && d\.from === from && d\.to === to\)/.test(sync),
     'the lit button is worked out from the dates on screen, not stored');
   t.check(/!!from &&/.test(sync),
     'and empty dates light nothing rather than matching a preset by accident');
@@ -206,6 +218,23 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
     'it runs before the backwards-range early return, so an error clears the buttons rather than leaving one lit');
   t.check(render.indexOf('statementsContext()') < syncAt,
     'and after the context, which seeds the dates on a first open — otherwise the screen it opens showing would light nothing');
+}
+
+/* ---------- a chip that says nothing changed, when nothing did --------
+ *
+ * Surfaced by the rent fix: a one-day statement beside the day before it
+ * showed the same rent, the same wages and the same loss, and the loss
+ * wore "changed". The only test was `now >= before`, which equal passes,
+ * and the negative branch has no percentage to fall back on -- so two
+ * identical figures were reported as movement.
+ */
+{
+  const src2 = read('index.html');
+  const chip = extractFunction(src2, 'stDeltaChip', 'index.html');
+  t.check(/Math\.round\(now\) === Math\.round\(before\)/.test(chip),
+    'two figures that print the same wear no chip at all');
+  t.check(chip.indexOf('Math.round(now) === Math.round(before)') < chip.indexOf('const up ='),
+    'and the check comes before the direction, which is what read equal as a rise');
 }
 
 process.exit(t.done() ? 1 : 0);

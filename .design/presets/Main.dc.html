@@ -1,0 +1,1025 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE SHOP — proposed =================
+       Every value below is lifted from index.html: the 23-colour
+       palette, the 11/12/13/14 ramp, Inter + Archivo Black + IBM Plex
+       Mono, and the .ow-* console components already shipping on
+       Inventory, Products, Debtors and Today. No new colour, no new
+       weight, no new type size, no fourteenth button family. */
+
+    .main{overflow:visible;}
+    .ow-ph-t .ow-ph-i{margin-left:6px;}
+
+    /* ---- the search, in the page header --------------------------
+       Forty-one settings behind one field. It is the header's only
+       control because the page has no single action -- and a page
+       whose action is "find the one you meant" should say so. */
+    .sf{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:268px;
+      box-sizing:border-box;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);}
+    .sf svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sf input{border:0;outline:0;background:none;font-family:'Inter',sans-serif;font-size:12px;
+      color:var(--ow-ink-900);width:100%;min-width:0;padding:0;}
+    .sf input::placeholder{color:var(--ow-ink-400);}
+    .sf-x{font-size:11px;color:var(--ow-ink-600);font-family:var(--mono);white-space:nowrap;}
+
+    /* ---- the standing band ---------------------------------------
+       Not a badge and not a banner: a decomposition. It names each
+       unset setting, what depends on it, and how many things that is,
+       so the sentence can be argued with. It is absent -- not empty,
+       not a green tick -- when there is nothing unset. */
+    .sb{display:flex;align-items:flex-start;gap:12px;background:var(--ow-amber-faint);
+      border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .sb-ic{width:18px;height:18px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .sb-b{min-width:0;flex:1;}
+    .sb-t{font-size:13px;font-weight:600;color:var(--ow-amber-ink);margin:0 0 5px;line-height:1.35;}
+    .sb-l{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;}
+    .sb-l li{font-size:12px;color:var(--ow-ink-600);line-height:1.45;max-width:88ch;}
+    .sb-l b{color:var(--ow-ink-900);font-weight:600;}
+    .sb-a{flex:none;align-self:center;}
+
+    /* ---- region heading — three regions, not twelve doors --------- */
+    .rg{display:flex;align-items:baseline;gap:12px;margin:6px 0 10px;
+      padding-bottom:7px;border-bottom:1px solid var(--ow-rule);}
+    .rg-t{font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:-.01em;
+      margin:0;white-space:nowrap;flex:none;}
+    .rg-s{flex:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;}
+
+    /* ---- the words: six lists on one screen, not six doors -------- */
+    .wd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;}
+    .wd-b{padding:12px 14px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .wd-b:nth-child(2n+1){border-left:0;}
+    /* Five lists into two columns leaves a hole; the longest list takes
+       the width instead, which is also where its eleven words fit on one
+       line. */
+    .wd-b:nth-child(5){grid-column:1 / -1;border-left:0;}
+    .wd-h{display:flex;align-items:baseline;gap:7px;margin-bottom:2px;}
+    .wd-n{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ow-ink-900);}
+    .wd-c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;color:var(--ow-ink-400);}
+    .wd-u{font-size:11px;color:var(--ow-ink-600);line-height:1.4;margin:0 0 8px;}
+    .wd-f{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+    .wc{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 3px 0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      font-size:11.5px;font-weight:500;color:var(--ow-ink-900);white-space:nowrap;max-width:100%;}
+    .wc-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .wc-x{display:flex;align-items:center;justify-content:center;width:15px;height:15px;
+      border-radius:3px;color:var(--ow-ink-400);cursor:pointer;flex:none;}
+    .wc-x:hover{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .wc-x svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;}
+    .wd-add{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;
+      border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);background:none;
+      font-family:'Inter',sans-serif;font-size:11.5px;font-weight:500;color:var(--ow-ink-600);cursor:pointer;}
+    .wd-add svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;}
+    .wd-in{height:22px;padding:0 7px;border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);
+      background:var(--ow-paper);font-family:'Inter',sans-serif;font-size:11.5px;font-weight:500;
+      color:var(--ow-ink-900);width:112px;outline:none;box-sizing:border-box;}
+    .wd-in:focus{border-style:solid;border-color:var(--ow-steel-950);}
+    .wd-in::placeholder{color:var(--ow-ink-400);}
+    .wd-at{padding:12px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .at-r{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;align-items:start;
+      padding:7px 0;border-top:1px solid var(--ow-rule-soft);}
+    .at-r:first-of-type{border-top:0;}
+    .at-n{font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the rules: one row each, with what it drives ------------- */
+    .rr{display:grid;grid-template-columns:minmax(0,1fr) 196px;column-gap:16px;align-items:center;
+      padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .rr:first-of-type{border-top:0;}
+    .rr-n{font-size:13px;font-weight:500;color:var(--ow-ink-900);line-height:1.3;}
+    .rr-d{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.4;margin-top:2px;max-width:64ch;}
+    .rr-d b{color:var(--ow-ink-900);font-weight:600;}
+    .rr-v{grid-column:2;grid-row:1 / span 2;justify-self:end;display:flex;align-items:center;gap:6px;}
+    .rr.rr-unset{background:var(--ow-amber-faint);}
+    .rr-w{grid-column:1;margin-top:5px;font-size:11px;color:var(--ow-amber-ink);line-height:1.45;max-width:64ch;}
+    .rr-w b{font-weight:600;}
+    .num{height:28px;width:74px;box-sizing:border-box;padding:0 8px;text-align:right;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      letter-spacing:-.02em;color:var(--ow-ink-900);outline:none;}
+    .num:focus{border-color:var(--ow-steel-950);}
+    .num.wide{width:94px;}
+    .sel{height:28px;box-sizing:border-box;padding:0 6px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-family:'Inter',sans-serif;
+      font-size:12px;color:var(--ow-ink-900);outline:none;}
+    .unit{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+    .door{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+      color:var(--ow-ink-600);white-space:nowrap;cursor:pointer;}
+    .door svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .door:hover{color:var(--ow-ink-900);}
+    .ro{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+
+    /* the six order steps, inside the rule row that owns them */
+    .st{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;
+      padding:10px 14px 12px;border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .st-f{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .st-l{font-size:11.5px;color:var(--ow-ink-600);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+
+    /* ---- switches ------------------------------------------------ */
+    .sw{display:flex;align-items:flex-start;gap:9px;padding:10px 14px;
+      border-top:1px solid var(--ow-rule-soft);cursor:pointer;}
+    .sw input{margin:1px 0 0;width:15px;height:15px;flex:none;accent-color:var(--ow-steel-950);}
+    .sw-b{min-width:0;}
+    .sw-t{font-size:12.5px;font-weight:600;color:var(--ow-ink-900);line-height:1.35;}
+    .sw-n{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:2px 0 0;max-width:76ch;}
+
+    /* ---- forms in the console vocabulary -------------------------- */
+    .fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;padding:12px 14px;}
+    .fg .w2{grid-column:1 / -1;}
+    .fl{display:block;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:4px;}
+    .fl .opt{font-weight:500;letter-spacing:0;text-transform:none;color:var(--ow-ink-400);}
+    .txt{height:30px;width:100%;box-sizing:border-box;padding:0 9px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-family:'Inter',sans-serif;
+      font-size:12.5px;color:var(--ow-ink-900);outline:none;}
+    .txt:focus{border-color:var(--ow-steel-950);}
+    .txt::placeholder{color:var(--ow-ink-400);}
+    .mono{font-family:var(--mono);letter-spacing:-.02em;}
+
+    /* ---- the locked panel ---------------------------------------- */
+    .lk{display:flex;align-items:flex-start;gap:9px;padding:12px 14px;}
+    .lk svg{width:16px;height:16px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .lk p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.5;max-width:72ch;}
+
+    /* ---- the receipt, drawn beside the fields that print it ------- */
+    .rcp{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:12px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.55;
+      color:var(--ow-ink-900);white-space:pre-wrap;}
+    .rcp .g{color:var(--ow-ink-400);}
+
+    /* ---- the index rail ------------------------------------------ */
+    .ix{display:flex;align-items:center;gap:8px;padding:7px 12px;width:100%;box-sizing:border-box;
+      border-top:1px solid var(--ow-rule-soft);cursor:pointer;background:none;text-align:left;}
+    .ix:hover{background:var(--ow-paper-2);}
+    .ix-n{flex:1;min-width:0;font-size:12px;color:var(--ow-ink-900);overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ix-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ix-v.warn{color:var(--ow-amber-ink);}
+    .ix-v.good{color:var(--ow-verdigris);}
+    .ix-g{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:10px 12px 4px;border-top:1px solid var(--ow-rule-soft);}
+    .ix-g:first-child{border-top:0;padding-top:8px;}
+
+    /* .ow-mini ships with max-width:76ch, which also cuts its own
+       hairline short inside an 820px panel. The measure moves to the
+       padding so the rule can run the full width of the region. */
+    .ow-pan > .ow-mini{max-width:none;padding-right:210px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:3760px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Setup</span><span>/</span><span data-where>The shop</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-section-label">Catalogue</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg><span>Products</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Price registry</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M3.3 8.5 12 13l8.7-4.5"></path></svg><span>Inventory</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 6h18v12H3z"></path><circle cx="12" cy="12" r="2.6"></circle></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16v11H7l-3 3z"></path><path d="M9 9h6"></path></svg><span>Chase debts</span><span class="nav-badge">4</span></div>
+    <div class="nav-section-label">Sell</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v7l9 9 7-7-9-9z"></path><circle cx="8" cy="8" r="1.3"></circle></svg><span>Counter</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path><path d="M7 15h5"></path></svg><span>Order tracking</span><span class="nav-badge">9</span></div>
+    <div class="nav-section-label">Insight</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3"></path></svg><span>The day</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg><span>Manager</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Analysis</span></div>
+    <div class="nav-section-label">Setup</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"></path><circle cx="14" cy="8" r="3.5"></circle><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"></path><circle cx="6" cy="8.5" r="2.3"></circle></svg><span>Staff</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path><path d="M11 11h2"></path></svg><span data-navtext>The shop</span></div>
+  </div>
+  <div class="main">
+
+    <div class="ow-ph">
+      <div>
+        <h1 class="ow-ph-t">The shop<span class="ow-ph-i">i</span></h1>
+        <p class="ow-ph-sub">Everything the app assumes about this shop until you tell it otherwise.</p>
+      </div>
+      <span class="ow-ph-sp"></span>
+      <div class="sf">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <input type="text" placeholder="Search 41 settings" value="{{ q }}" onInput="{{ onSearch }}">
+        <span class="sf-x">{{ hits }}</span>
+      </div>
+    </div>
+
+    <!-- THE STANDING BAND. Not a badge: a decomposition. It names each
+         unset setting, what depends on it, and how many things that is.
+         Absent entirely -- not empty, not a green tick -- once there is
+         nothing unset. The accent lives here and nowhere else on the
+         page, because this is the one thing to do next. -->
+    <sc-if value="{{ unset.any }}" hint-placeholder-val="{{ true }}">
+    <div class="sb">
+      <svg class="sb-ic" viewBox="0 0 24 24"><path d="M12 9v4.5"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+      <div class="sb-b">
+        <p class="sb-t">{{ unset.headline }}</p>
+        <ul class="sb-l">
+          <sc-if value="{{ unset.markup }}" hint-placeholder-val="{{ true }}">
+          <li><b>No default price rule.</b> 23 of 31 sellable lines have no rule of their own and nothing behind them, so they cannot be quoted, sold at the counter, or put on a catalogue.</li>
+          </sc-if>
+          <sc-if value="{{ unset.identity }}" hint-placeholder-val="{{ true }}">
+          <li><b>No shop name or address on file.</b> Every receipt printed since March has gone across the counter anonymous &mdash; 1,204 of them.</li>
+          </sc-if>
+          <sc-if value="{{ unset.limits }}" hint-placeholder-val="{{ true }}">
+          <li><b>No order step limits, and the alert is on.</b> Nothing can go past a limit that does not exist, so the alert has never fired.</li>
+          </sc-if>
+        </ul>
+      </div>
+      <div class="sb-a"><button class="btn btn-accent ow-sm" onClick="{{ fixNow }}">{{ unset.action }}</button></div>
+    </div>
+    </sc-if>
+
+    <div class="ow-grid">
+      <div class="ow-stack">
+
+        <!-- ============ REGION 1 — THE WORDS ============ -->
+        <sc-if value="{{ show.words }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The words the shop uses</h2>
+            <span class="rg-s">Typed into this shop&rsquo;s own forms. Nothing here moves a figure &mdash; a list only decides what a field suggests, and keeps one thing spelled one way.</span>
+          </div>
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Six lists</span>
+              <span class="ow-pan-n">{{ wordCount }} entries</span>
+            </div>
+            <div class="wd">
+              <sc-for list="{{ lists }}" as="l" hint-placeholder-count="6">
+                <div class="wd-b">
+                  <div class="wd-h"><span class="wd-n">{{ l.title }}</span><span class="wd-c">{{ l.n }}</span></div>
+                  <p class="wd-u">{{ l.used }}</p>
+                  <div class="wd-f">
+                    <sc-for list="{{ l.items }}" as="it" hint-placeholder-count="6">
+                      <span class="wc"><span class="wc-n">{{ it.name }}</span><span class="wc-x" onClick="{{ it.del }}"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"></path></svg></span></span>
+                    </sc-for>
+                    <input class="wd-in" type="text" placeholder="Add&hellip;" value="{{ l.draft }}" onInput="{{ l.onInput }}" onKeyDown="{{ l.onKey }}">
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div class="wd-at">
+              <div class="wd-h"><span class="wd-n">Attributes</span><span class="wd-c">3</span></div>
+              <p class="wd-u">Suggested when a product is built in variants. Values auto-fill when the name matches one on file.</p>
+              <div class="at-r">
+                <span class="at-n">Length</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">2 m</span></span><span class="wc"><span class="wc-n">2.5 m</span></span><span class="wc"><span class="wc-n">3 m</span></span><span class="wc"><span class="wc-n">3.5 m</span></span><span class="wc"><span class="wc-n">4 m</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <div class="at-r">
+                <span class="at-n">Gauge</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">G28</span></span><span class="wc"><span class="wc-n">G30</span></span><span class="wc"><span class="wc-n">G32</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <div class="at-r">
+                <span class="at-n">Colour</span>
+                <div class="wd-f"><span class="wc"><span class="wc-n">Red oxide</span></span><span class="wc"><span class="wc-n">Charcoal</span></span><span class="wc"><span class="wc-n">Green</span></span><span class="wc"><span class="wc-n">Blue</span></span><button class="wd-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Value</button></div>
+              </div>
+              <button class="wd-add" style="margin-top:8px;"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Attribute</button>
+            </div>
+            <p class="ow-mini">A word is renamed by clicking it, and renaming carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ============ REGION 2 — THE RULES ============ -->
+        <sc-if value="{{ show.rules }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The rules it works by</h2>
+            <span class="rg-s">Every number the app assumes, and the screen each one drives. Five of them are set on the screen that uses them; they are listed here so this page is the whole answer.</span>
+          </div>
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Set here</span>
+              <span class="ow-pan-n">6 rules</span>
+            </div>
+
+            <div class="rr {{ mk.cls }}">
+              <div class="rr-n">Default price rule</div>
+              <p class="rr-d">The selling rule for a product that has none of its own. Percent adds on top of the item&rsquo;s cheapest supplier cost; fixed adds a flat amount, per <b>pack</b> wholesale and per <b>piece</b> retail. A rule on the product always wins.</p>
+              <sc-if value="{{ mk.unset }}" hint-placeholder-val="{{ true }}">
+              <p class="rr-w"><b>Unset.</b> 23 lines fall through to this and find nothing. They cannot be quoted, sold, or catalogued until either they get a rule of their own or this one is set.</p>
+              </sc-if>
+              <sc-if value="{{ mk.set }}" hint-placeholder-val="{{ false }}">
+              <p class="rr-d" style="color:var(--ow-verdigris);margin-top:5px;"><b style="color:var(--ow-verdigris);">{{ mk.words }}</b> &mdash; 23 lines now price off this.</p>
+              </sc-if>
+              <div class="rr-v" style="flex-direction:column;align-items:flex-end;gap:5px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="unit">Wholesale</span>
+                  <select class="sel" value="{{ mk.wt }}" onChange="{{ mk.onWt }}"><option value="percent">+&thinsp;%</option><option value="fixed">+&thinsp;UGX</option></select>
+                  <input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ mk.w }}" onInput="{{ mk.onW }}">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="unit">Retail</span>
+                  <select class="sel" value="{{ mk.rt }}" onChange="{{ mk.onRt }}"><option value="percent">+&thinsp;%</option><option value="fixed">+&thinsp;UGX</option></select>
+                  <input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ mk.r }}" onInput="{{ mk.onR }}">
+                </div>
+              </div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Agent share of margin</div>
+              <p class="rr-d">A share of what you make on an item, not off its price. 50% gives an agent half your margin; 100% gives all of it and they pay your cost exactly. Below cost is not reachable whatever is set here. Any product can override it.</p>
+              <div class="rr-v" style="flex-direction:column;align-items:flex-end;gap:5px;">
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Wholesale</span><input class="num" type="text" value="40"><span class="unit">%</span></div>
+                <div style="display:flex;align-items:center;gap:6px;"><span class="unit">Retail</span><input class="num" type="text" value="30"><span class="unit">%</span></div>
+              </div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Cluster bonus wait</div>
+              <p class="rr-d">How long a product must already have sat in an agent&rsquo;s cluster before a sale of it earns the bonus. Stops an agent starring a high-bonus item right before checkout just to collect on it.</p>
+              <div class="rr-v"><input class="num" type="text" value="7"><span class="unit">days</span></div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Trust a price for</div>
+              <p class="rr-d">Drives <b>Prices to check</b> on Analysis. Where an item has enough dated invoices to show how fast its own price moves, that is used instead and this is ignored.</p>
+              <div class="rr-v"><input class="num" type="text" value="90"><span class="unit">days</span></div>
+            </div>
+
+            <div class="rr">
+              <div class="rr-n">Prices to check each month</div>
+              <p class="rr-d">How many the check list is allowed to hold before it stops being read. <b>41 prices</b> are currently older than the window above.</p>
+              <div class="rr-v"><input class="num" type="text" value="20"><span class="unit">prices</span></div>
+            </div>
+
+            <div class="rr {{ lim.cls }}">
+              <div class="rr-n">Order step limits</div>
+              <p class="rr-d">If an order sits in a step on the Order tracking board longer than its limit, its card raises a flag. Blank or 0 turns that step&rsquo;s warning off.</p>
+              <sc-if value="{{ lim.unset }}" hint-placeholder-val="{{ true }}">
+              <p class="rr-w"><b>No limit set on any step.</b> The alert below is on and has nothing to fire on.</p>
+              </sc-if>
+              <div class="rr-v"><span class="ro">{{ lim.n }}</span><span class="unit">of 6 set</span></div>
+            </div>
+            <div class="st">
+              <div class="st-f"><span class="st-l">Quoted</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.a }}" onInput="{{ lim.onA }}"></div>
+              <div class="st-f"><span class="st-l">Confirmed</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.b }}" onInput="{{ lim.onB }}"></div>
+              <div class="st-f"><span class="st-l">Picking</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;" value="{{ lim.c }}" onInput="{{ lim.onC }}"></div>
+              <div class="st-f"><span class="st-l">Packed</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+              <div class="st-f"><span class="st-l">Loaded</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+              <div class="st-f"><span class="st-l">Delivered</span><input class="num" style="width:62px;" type="text" placeholder="&mdash;"></div>
+            </div>
+            <label class="sw">
+              <input type="checkbox" checked>
+              <span class="sw-b">
+                <span class="sw-t">Tell me the moment an order goes past its limit</span>
+                <span class="sw-n">A notification instead of a flag only whoever is looking at the board can see. Each order is mentioned once per step. <b>It reaches this browser only while the app is open</b> &mdash; there is no other channel to an owner &mdash; so a closed browser cannot be told.</span>
+              </span>
+            </label>
+            <p class="ow-mini">Minutes, on every step. A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
+          </div>
+
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Set on the screen that uses them</span>
+              <span class="ow-pan-n">5 rules</span>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Restock cover</div>
+              <p class="rr-d">How many days of demand the buying plan refills to.</p>
+              <div class="rr-v"><span class="ro">14 days</span><span class="door">What to buy<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Target margin</div>
+              <p class="rr-d">The margin a line is judged thin against on the pricing console.</p>
+              <div class="rr-v"><span class="ro">10%</span><span class="door">Pricing<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Dead after</div>
+              <p class="rr-d">How long a line sits unsold before the pricing console calls it dead.</p>
+              <div class="rr-v"><span class="ro">60 days</span><span class="door">Pricing<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Chase a debt after</div>
+              <p class="rr-d">The grace period before a debtor joins the chase list.</p>
+              <div class="rr-v"><span class="ro">7 days</span><span class="door">Chase debts<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <div class="rr">
+              <div class="rr-n">Watch a supplier price for</div>
+              <p class="rr-d">How long a quoted price is watched before it is dropped from the registry&rsquo;s watch list.</p>
+              <div class="rr-v"><span class="ro">180 days</span><span class="door">Price registry<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            <p class="ow-mini">These five are read here and set there, beside the figures they change &mdash; so a number is never altered without its consequence on screen. Listing them here is what makes this page the whole answer to &ldquo;what does the app assume?&rdquo;</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ============ REGION 3 — THE SHOP ITSELF ============ -->
+        <sc-if value="{{ show.shop }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="rg">
+            <h2 class="rg-t">The shop itself</h2>
+            <span class="rg-s">Who this shop is on paper, how it takes money, and what is signed in to it. Owners and admins only &mdash; a counter login sees this region locked, and says so.</span>
+          </div>
+
+          <sc-if value="{{ show.identity }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">On paper</span>
+              <span class="ow-pan-n">prints on every receipt</span>
+            </div>
+            <div class="fg" style="grid-template-columns:minmax(0,1fr) 230px;">
+              <div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;">
+                  <div class="w2" style="grid-column:1/-1;"><label class="fl">Shop name</label><input class="txt" type="text" placeholder="e.g. Telagon Hardware" value="{{ id.name }}" onInput="{{ id.onName }}"></div>
+                  <div style="grid-column:1/-1;"><label class="fl">Address</label><input class="txt" type="text" placeholder="e.g. Jesco House, Room JHB08" value="{{ id.addr }}" onInput="{{ id.onAddr }}"></div>
+                  <div><label class="fl">Phone</label><input class="txt mono" type="text" value="0754 333419"></div>
+                  <div><label class="fl">TIN <span class="opt">optional</span></label><input class="txt mono" type="text" placeholder="blank omits the line"></div>
+                  <div style="grid-column:1/-1;"><label class="fl">Receipt footer</label><input class="txt" type="text" value="Goods once sold are not returnable."></div>
+                </div>
+              </div>
+              <div>
+                <label class="fl">What prints</label>
+                <div class="rcp">{{ id.line1 }}
+{{ id.line2 }}
+<span class="g">0754 333419</span>
+<span class="g">─────────────────</span>
+<span class="g">2× Iron sheet G28 3m   84,000</span>
+<span class="g">1× Cement 50kg         41,000</span>
+<span class="g">─────────────────</span>
+<span class="g">TOTAL             125,000</span>
+
+<span class="g">Goods once sold are not
+returnable.</span></div>
+              </div>
+            </div>
+            <label class="sw">
+              <input type="checkbox" checked>
+              <span class="sw-b">
+                <span class="sw-t">Print a receipt the moment a payment is recorded</span>
+                <span class="sw-n">Paper comes out the way a till does. Turn it off on a day spent reconciling rather than trading.</span>
+              </span>
+            </label>
+            <p class="ow-mini">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents. To print with no dialog, open the app from a Chrome shortcut carrying <b>--kiosk-printing</b>, with the thermal printer set as the Windows default.</p>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ show.momo }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Taking mobile money</span>
+              <span class="ow-cp">Owners only</span>
+              <span class="ow-pan-n">{{ momo.state }}</span>
+            </div>
+            <p class="ow-mini" style="border-top:0;">Lets an agent pay for their order from the Agent app through a real MTN or Airtel prompt to their phone, instead of you confirming cash by hand. Credentials are readable by owners only and are never sent to the Agent app.</p>
+            <label class="sw">
+              <input type="checkbox" checked="{{ momo.on }}" onChange="{{ momo.onToggle }}">
+              <span class="sw-b">
+                <span class="sw-t">MTN Mobile Money</span>
+                <span class="sw-n">A subscription key from MTN&rsquo;s developer portal, then one button here creates the API user and wires the payment callback.</span>
+              </span>
+            </label>
+            <sc-if value="{{ momo.on }}" hint-placeholder-val="{{ true }}">
+            <div class="fg">
+              <div><label class="fl">Environment</label>
+                <select class="sel" style="width:100%;height:30px;" value="{{ momo.env }}" onChange="{{ momo.onEnv }}">
+                  <option value="sandbox">Sandbox &mdash; testing</option>
+                  <option value="production">Production &mdash; real money</option>
+                </select></div>
+              <div><label class="fl">Subscription key</label><input class="txt mono" type="password" value="••••••••••••3f9a"></div>
+              <div><label class="fl">API user</label><input class="txt mono" type="password" value="••••••••••••7c21"></div>
+              <div><label class="fl">API key</label><input class="txt mono" type="password" value="••••••••••••b40e"></div>
+            </div>
+            <sc-if value="{{ momo.prod }}" hint-placeholder-val="{{ false }}">
+            <div class="sb" style="margin:0 14px 12px;">
+              <svg class="sb-ic" viewBox="0 0 24 24"><path d="M12 9v4.5"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+              <div class="sb-b">
+                <p class="sb-t">Production moves real money out of agents&rsquo; wallets.</p>
+                <ul class="sb-l"><li>Every prompt from this shop will debit a real phone. Sandbox keys do not work here &mdash; a production subscription key from MTN&rsquo;s go-live approval is required, and the wrong one fails every payment silently at the agent&rsquo;s end.</li></ul>
+              </div>
+              <div class="sb-a" style="display:flex;gap:6px;">
+                <button class="btn btn-ghost ow-sm" onClick="{{ momo.cancelProd }}">Stay on sandbox</button>
+                <button class="btn btn-accent ow-sm" onClick="{{ momo.confirmProd }}">Go live</button>
+              </div>
+            </div>
+            </sc-if>
+            <div class="rr">
+              <div class="rr-n">Last prompt</div>
+              <p class="rr-d">Sent to Namusoke Grace, 0772&thinsp;418&thinsp;003, 14 minutes ago &mdash; <b>still pending</b>. A prompt pending long after it was sent is worth re-checking before the same money is counted twice.</p>
+              <div class="rr-v"><span class="ro">146,000</span><span class="door">All prompts<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+            </div>
+            </sc-if>
+            <label class="sw">
+              <input type="checkbox">
+              <span class="sw-b">
+                <span class="sw-t">Airtel Money</span>
+                <span class="sw-n">Off. A client ID and secret from Airtel&rsquo;s developer portal turn it on.</span>
+              </span>
+            </label>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ show.devices }}" hint-placeholder-val="{{ true }}">
+          <div class="ow-pan" style="margin-top:12px;">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Signed in to this shop</span>
+              <span class="ow-cp">Owners only</span>
+              <span class="ow-pan-n">4 devices</span>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Kevin Turyasingura</span><span class="ow-cp ow-good">this device</span></div>
+              <div class="ow-lr-m">Chrome on Windows &middot; the counter machine &middot; heard from just now</div>
+              <div class="ow-lr-v"><span class="ow-lr-b">signed in 6 Sep</span></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Namusoke Grace</span><span class="ow-cp">agent</span></div>
+              <div class="ow-lr-m">Agent app on Android &middot; heard from 2 hours ago</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Okello Denis</span><span class="ow-cp">picker</span></div>
+              <div class="ow-lr-m">Worker app on Android &middot; heard from 20 minutes ago</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <div class="ow-lr">
+              <div class="ow-lr-n"><span class="ow-lr-nm">Unnamed device</span><span class="ow-cp ow-warn">not heard from in 71 days</span></div>
+              <div class="ow-lr-m">Chrome on Android &middot; last seen 27 June</div>
+              <div class="ow-lr-v"><button class="btn btn-ghost ow-sm">Sign out</button></div>
+            </div>
+            <p class="ow-mini">Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ show.none }}" hint-placeholder-val="{{ false }}">
+        <div class="ow-pan"><div class="ow-empty">Nothing here is called &ldquo;{{ q }}&rdquo;. Try the thing it changes &mdash; <b>receipt</b>, <b>margin</b>, <b>agent</b>, <b>late</b> &mdash; rather than the word the app uses for it.</div></div>
+        </sc-if>
+      </div>
+
+      <!-- ============ THE INDEX ============
+           Twelve doors became none. This is a map with state on every
+           row, not a set of tabs: it says what is already set without
+           opening anything, which is the one thing the old nav could
+           not do for six of its twelve entries. -->
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-n">41 settings</span></div>
+          <div class="ix-g">The words</div>
+          <sc-for list="{{ index.words }}" as="r" hint-placeholder-count="6">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="ix-v">{{ r.v }}</span></button>
+          </sc-for>
+          <div class="ix-g">The rules</div>
+          <sc-for list="{{ index.rules }}" as="r" hint-placeholder-count="6">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="{{ r.cls }}">{{ r.v }}</span></button>
+          </sc-for>
+          <div class="ix-g">The shop itself</div>
+          <sc-for list="{{ index.shop }}" as="r" hint-placeholder-count="3">
+            <button class="ix" onClick="{{ r.go }}"><span class="ix-n">{{ r.name }}</span><span class="{{ r.cls }}">{{ r.v }}</span></button>
+          </sc-for>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Lately</span><span class="ow-pan-n">last 30 days</span></div>
+          <div class="ix"><span class="ix-n">Trust a price for &middot; 120 &rarr; 90 d</span><span class="ix-v">2 Sep</span></div>
+          <div class="ix"><span class="ix-n">Locations &middot; Gayaza added</span><span class="ix-v">28 Aug</span></div>
+          <div class="ix"><span class="ix-n">Agent retail share &middot; 25 &rarr; 30%</span><span class="ix-v">19 Aug</span></div>
+          <p class="rl">Every change on this page is dated and attributed, so a figure that moved last Tuesday can be traced to the setting that moved it. Kevin made all three of these.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Who can change what</span></div>
+          <p class="rl">Everything here saves the moment you leave a field &mdash; one grammar for the whole page, no Save button, and no draft to lose. The one exception is going live on mobile money, which asks first, because it starts moving real money.</p>
+          <p class="rl"><b>Counter and picker logins</b> see the words and nothing else. <b>Admins</b> see the words and the rules. <b>Owners</b> see all three regions. A locked region is shown locked rather than hidden, so nobody concludes the shop cannot take mobile money.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.state = {
+      q: '',
+      lists: {
+        categories: ['Cement','Iron sheets','Nails','Paint','Plumbing','Timber','Tools'],
+        units:      ['bag','piece','box','kg','metre','bundle','roll','litre','tin'],
+        locations:  ['Nakawa','Kireka','Bweyogerere','Seeta','Mukono','Namugongo','Kyaliwajjala','Nansana','Kawempe','Ntinda','Naalya','Gayaza'],
+        income:     ['Sales','Agent float','Loan in','Rent received','Scrap','Other'],
+        expense:    ['Transport','Rent','Wages','Airtime','Fuel','Loading','Repairs','Licence','Bank charge','Meals','Other']
+      },
+      drafts: {categories:'', units:'', locations:'', income:'', expense:''},
+      mkW: '', mkR: '', mkWt: 'percent', mkRt: 'percent',
+      shopName: '', shopAddr: '',
+      lim: {a:'', b:'', c:''},
+      momoOn: true, momoEnv: 'sandbox', momoPending: false
+    };
+  }
+
+  // ---- the lists -------------------------------------------------
+  listSpec(){
+    return [
+      ['categories','Categories','Suggested in the Category and Sub-category fields on a product.'],
+      ['units','Units','Suggested in the Unit and Pack unit fields on a price entry.'],
+      ['locations','Locations','Chosen on a customer or an agent, and what groups orders going the same way on the board.'],
+      ['income','Money in','Suggested when logging Cash In, and what groups the income chart on the Cash book.'],
+      ['expense','Money out','Suggested when logging Cash Out, and what groups the expense chart on the Cash book.'],
+      ['attributes','Attributes','Suggested when a product is built in variants.']
+    ];
+  }
+  del(key, i){
+    const next = Object.assign({}, this.state.lists);
+    next[key] = next[key].filter((_, j) => j !== i);
+    this.setState({lists: next});
+  }
+  add(key){
+    const v = (this.state.drafts[key] || '').trim();
+    if(!v) return;
+    const lists = Object.assign({}, this.state.lists);
+    if(lists[key].some(x => x.toLowerCase() === v.toLowerCase())){
+      const d = Object.assign({}, this.state.drafts); d[key] = '';
+      this.setState({drafts: d}); return;
+    }
+    lists[key] = lists[key].concat([v]).sort((a,b) => a.localeCompare(b));
+    const drafts = Object.assign({}, this.state.drafts); drafts[key] = '';
+    this.setState({lists: lists, drafts: drafts});
+  }
+
+  // ---- what is unset, and what depends on it ---------------------
+  markupSet(){ return String(this.state.mkW).trim() !== '' || String(this.state.mkR).trim() !== ''; }
+  identitySet(){ return this.state.shopName.trim() !== '' && this.state.shopAddr.trim() !== ''; }
+  limitsN(){ return ['a','b','c'].filter(k => String(this.state.lim[k]).trim() !== '').length; }
+
+  markupWords(){
+    const side = (v, t, per) => {
+      const s = String(v).trim();
+      if(s === '') return null;
+      return t === 'percent' ? ('+' + s + '% on cost') : ('+' + s + ' UGX per ' + per);
+    };
+    const w = side(this.state.mkW, this.state.mkWt, 'pack');
+    const r = side(this.state.mkR, this.state.mkRt, 'piece');
+    if(w && r) return 'Wholesale ' + w + ', retail ' + r;
+    if(w) return 'Wholesale ' + w + '; no retail default';
+    if(r) return 'Retail ' + r + '; no wholesale default';
+    return '';
+  }
+
+  // ---- search ----------------------------------------------------
+  sections(){
+    return {
+      words: 'words categories category sub-category units unit pack locations location place delivery money in income money out expense cash book attributes attribute variants colour gauge length spelling list vocabulary',
+      rules: 'rules default price rule markup percent fixed margin agent share cluster bonus wait trust a price stale days prices to check order step limits late flag alert notification restock cover target margin dead after chase a debt watch supplier price',
+      identity: 'shop identity name address phone tin receipt footer print printing paper kiosk thermal 80mm on paper',
+      momo: 'mobile money momo mtn airtel merchant api key subscription client secret sandbox production credentials payment prompt agent pays',
+      devices: 'signed in devices device phone computer session sign out revoke stolen login'
+    };
+  }
+  show(){
+    const q = this.state.q.trim().toLowerCase();
+    const s = this.sections();
+    const hit = k => q === '' || s[k].indexOf(q) !== -1;
+    const identity = hit('identity'), momo = hit('momo'), devices = hit('devices');
+    const words = hit('words'), rules = hit('rules');
+    return {
+      words: words, rules: rules,
+      identity: identity, momo: momo, devices: devices,
+      shop: identity || momo || devices,
+      none: !(words || rules || identity || momo || devices)
+    };
+  }
+
+  jump(term){ return () => this.setState({q: term}); }
+
+  renderVals(){
+    const st = this.state;
+    const lists = this.listSpec().filter(sp => sp[0] !== 'attributes').map(sp => {
+      const key = sp[0];
+      return {
+        key: key, title: sp[1], used: sp[2],
+        n: String(st.lists[key].length),
+        draft: st.drafts[key],
+        items: st.lists[key].map((name, i) => ({name: name, del: () => this.del(key, i)})),
+        onInput: (e) => { const d = Object.assign({}, st.drafts); d[key] = e.target.value; this.setState({drafts: d}); },
+        onKey: (e) => { if(e.key === 'Enter') this.add(key); }
+      };
+    });
+
+    const mkSet = this.markupSet(), idSet = this.identitySet(), limN = this.limitsN();
+    const bad = [!mkSet, !idSet, limN === 0].filter(Boolean).length;
+    const headline = bad === 1
+      ? 'One setting is unset, and something depends on it.'
+      : bad + ' settings are unset, and something depends on each.';
+    const action = !mkSet ? 'Set the price rule' : (!idSet ? 'Name the shop' : 'Set a limit');
+
+    const show = this.show();
+    const wordCount = ['categories','units','locations','income','expense']
+      .reduce((n, k) => n + st.lists[k].length, 0) + 12;
+
+    const setV = (v, cls) => ({v: v, cls: cls});
+    const row = (name, v, cls, term) => ({name: name, v: v, cls: 'ix-v ' + (cls || ''), go: this.jump(term)});
+
+    return {
+      q: st.q,
+      onSearch: (e) => this.setState({q: e.target.value}),
+      hits: st.q.trim() === '' ? '' : (show.none ? '0' : ''),
+      show: show,
+      lists: lists,
+      wordCount: String(wordCount),
+
+      unset: {
+        any: bad > 0, markup: !mkSet, identity: !idSet, limits: limN === 0,
+        headline: headline, action: action
+      },
+      fixNow: () => this.setState({q: !mkSet ? 'default price rule' : (!idSet ? 'shop identity' : 'order step limits')}),
+
+      mk: {
+        unset: !mkSet, set: mkSet, cls: mkSet ? 'rr' : 'rr rr-unset',
+        words: this.markupWords(),
+        w: st.mkW, r: st.mkR, wt: st.mkWt, rt: st.mkRt,
+        onW: (e) => this.setState({mkW: e.target.value}),
+        onR: (e) => this.setState({mkR: e.target.value}),
+        onWt: (e) => this.setState({mkWt: e.target.value}),
+        onRt: (e) => this.setState({mkRt: e.target.value})
+      },
+
+      lim: {
+        unset: limN === 0, cls: limN === 0 ? 'rr rr-unset' : 'rr', n: String(limN),
+        a: st.lim.a, b: st.lim.b, c: st.lim.c,
+        onA: (e) => this.setState({lim: Object.assign({}, st.lim, {a: e.target.value})}),
+        onB: (e) => this.setState({lim: Object.assign({}, st.lim, {b: e.target.value})}),
+        onC: (e) => this.setState({lim: Object.assign({}, st.lim, {c: e.target.value})})
+      },
+
+      id: {
+        name: st.shopName, addr: st.shopAddr,
+        line1: st.shopName.trim() === '' ? '(no shop name on file)' : st.shopName,
+        line2: st.shopAddr.trim() === '' ? '(no address on file)' : st.shopAddr,
+        onName: (e) => this.setState({shopName: e.target.value}),
+        onAddr: (e) => this.setState({shopAddr: e.target.value})
+      },
+
+      momo: {
+        on: st.momoOn, env: st.momoEnv, prod: st.momoPending,
+        state: st.momoOn ? (st.momoEnv === 'production' ? 'MTN live' : 'MTN on sandbox') : 'off',
+        onToggle: (e) => this.setState({momoOn: e.target.checked}),
+        onEnv: (e) => {
+          if(e.target.value === 'production') this.setState({momoPending: true});
+          else this.setState({momoEnv: 'sandbox', momoPending: false});
+        },
+        confirmProd: () => this.setState({momoEnv: 'production', momoPending: false}),
+        cancelProd: () => this.setState({momoEnv: 'sandbox', momoPending: false})
+      },
+
+      index: {
+        words: [
+          row('Categories', String(st.lists.categories.length), '', 'categories'),
+          row('Units', String(st.lists.units.length), '', 'units'),
+          row('Locations', String(st.lists.locations.length), '', 'locations'),
+          row('Money in', String(st.lists.income.length), '', 'money in'),
+          row('Money out', String(st.lists.expense.length), '', 'money out'),
+          row('Attributes', '3', '', 'attributes')
+        ],
+        rules: [
+          row('Default price rule', mkSet ? 'set' : 'not set', mkSet ? 'good' : 'warn', 'default price rule'),
+          row('Agent share of margin', '40 / 30%', '', 'agent share'),
+          row('Cluster bonus wait', '7 d', '', 'cluster bonus'),
+          row('Trust a price for', '90 d', '', 'trust a price'),
+          row('Prices to check', '20 / mo', '', 'prices to check'),
+          row('Order step limits', limN === 0 ? 'none of 6' : limN + ' of 6', limN === 0 ? 'warn' : '', 'order step limits'),
+          row('Set on other screens', '5', '', 'restock cover')
+        ],
+        shop: [
+          row('On paper', idSet ? 'named' : 'not named', idSet ? 'good' : 'warn', 'shop identity'),
+          row('Mobile money', st.momoOn ? (st.momoEnv === 'production' ? 'MTN live' : 'sandbox') : 'off',
+              st.momoEnv === 'production' && st.momoOn ? 'good' : '', 'mobile money'),
+          row('Signed-in devices', '4', '', 'devices')
+        ]
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -111,9 +111,20 @@ const section = (/<section id="tab-compare"[\s\S]*?\n    <\/section>/.exec(src) 
   t.check(/more &rarr; /.test(render), 'and the row says it in those terms');
   /* What the whole order costs at each supplier, beside the unit price.
      Comparing 29,000 with 34,000 is arithmetic somebody should not have
-     to do while a lorry waits. */
-  t.check(/esc\(fmtUGX\(Math\.round\(r\.purchasePrice \* qty\)\)\) : '—'\}<\/td>/.test(render),
+     to do while a lorry waits.
+
+     WAS: the same expression followed by `</td>`. The old assertion
+     pinned the cell as well as the figure, and the row is no longer a
+     table cell -- it is an .ow-q console row that opens in place, so
+     the supplier's ladder and what they have actually billed can live
+     under it. The guarantee is unchanged and is what is checked here:
+     every row still carries the whole order, priced at that supplier,
+     and a row with no price at this quantity still says so rather than
+     showing a bare zero. */
+  t.check(/esc\(fmtUGX\(Math\.round\(r\.purchasePrice \* qty\)\)\) : '—'\}/.test(render),
     'and every row carries what the whole order would cost there');
+  t.check(/class="cmp-q-v cmp-q-(each|lot)\$\{r\.purchasePrice == null \? ' cmp-q-none' : ''\}"/.test(render),
+    'with a row that has no price at this quantity marked as having none, not as costing nothing');
 }
 
 /* ---------- 4. what the choice is worth ------------------------------ */
@@ -150,8 +161,16 @@ const section = (/<section id="tab-compare"[\s\S]*?\n    <\/section>/.exec(src) 
      the headline, raising the note, marking each row's own date — and
      pinning it loosely let the headline drift to its own number while
      the note kept the shared one and the check went on passing. */
-  eq((render.match(/PRICE_STALE_DAYS/g) || []).length, 3,
-    'with the headline, the note and every row reading the one threshold');
+  /* WAS: 3 -- the headline, the note and every row. There are four
+     readers now, and the fourth is the reason the count is pinned at
+     all: the account at the foot of the ranking counts how many of the
+     suppliers on file cannot be called current, and prints the
+     threshold it counted them against. A screen that says "2 of the 6
+     cannot be called current" while a row calls a different price stale
+     is worse than one that never made the claim, so the account reads
+     the same constant as the rest and is pinned with them. */
+  eq((render.match(/PRICE_STALE_DAYS/g) || []).length, 4,
+    'with the note, every row, and the account that counts them all reading the one threshold');
 
   /* No date is not a fresh date. */
   t.check(/priceAgeDays\(r\.date\) == null/.test(render) && /no date on file/.test(render),
@@ -171,8 +190,17 @@ const section = (/<section id="tab-compare"[\s\S]*?\n    <\/section>/.exec(src) 
   /* Units are singular labels ("Bag", "Ctn") and nothing here can
      pluralise them, so the headline does not try -- "100 Bag" was the
      best it could have managed. */
-  t.check(/Cheapest for \$\{esc\(String\(qty\)\)\}<\/span>/.test(render),
+  /* WAS: `Cheapest for ${qty}</span>`, the old headline's own label.
+     The headline is now the answer band, and its first figure is what
+     to SELL at rather than who is cheapest -- the owner's own reading
+     of this screen is that two of the three moments that open it are
+     pricing moments. The quantity moved into the Buy at tile, where it
+     reads "6,240,000 for the 120". The rule being defended is the same
+     one and is unchanged: a bare quantity, never a pluralised unit. */
+  t.check(/for the \$\{esc\(String\(qty\)\)\}\./.test(render),
     'the headline does not attempt to pluralise a unit it cannot');
+  t.check(!/\$\{esc\(String\(qty\)\)\} \$\{esc\(unitWord\)\}/.test(render),
+    'and never sets the quantity beside the singular unit label to make one');
   t.check(/id="cmp_qty_unit"/.test(section),
     'the unit sits beside the quantity box, where it reads correctly');
 

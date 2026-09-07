@@ -1,0 +1,698 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE MANAGER — console additions =================
+       Everything here is built from the 23-colour palette, the 11/12/13/14
+       ramp and the .ow-* components already shipping on Today, Debtors,
+       Creditors, Purchase invoices and the cash book. No new colour, no
+       new button family, no half-pixel type. */
+
+    /* ---- the verdict strip: what this manager has been worth ---- */
+    .ow-strip.mgs{grid-template-columns:1.16fr 1fr 1.1fr 1fr 1.06fr;}
+    .ow-mt-v.acc{font-size:24px;}
+    .ow-mt-v .of{color:var(--ow-ink-400);font-size:.62em;margin:0 .12em;letter-spacing:0;}
+    .mt-none .ow-mt-v{color:var(--ow-ink-400);}
+
+    /* ---- the view switch. Two beds of one ledger: what is live, and
+       what is the record. Steel ground, white pill, exactly the control
+       the cash book already uses for its account filter. ---- */
+    .mv{display:flex;align-items:center;gap:10px;margin:14px 0 14px;}
+    .mv-sw{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+      border-radius:7px;padding:2px;flex:none;}
+    .mv-sw > span{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 13px;
+      border-radius:5px;font-size:13px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .mv-sw > span.on{background:var(--ow-paper);color:var(--ow-ink-900);
+      box-shadow:0 1px 2px rgba(20,30,40,.08);}
+    .mv-sw .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-400);}
+    .mv-sw > span.on .n{color:var(--ow-ink-600);}
+    .mv-w{font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;min-width:0;max-width:64ch;}
+
+    /* ---- the one thing, at the head of the plan ---- */
+    .key{display:flex;align-items:baseline;gap:9px;padding:9px 12px;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule-soft);font-size:13px;line-height:1.45;}
+    .key-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);flex:none;}
+    .key-t{min-width:0;max-width:var(--ow-measure);}
+
+    /* ---- a move, as a console row ---- */
+    .ow-q-r.mq{grid-template-columns:18px minmax(0,1fr) 106px 146px;}
+    .ow-q-t .obj{color:var(--ow-ink-600);}
+    .ow-q.done .ow-q-t{color:var(--ow-ink-600);}
+    .ow-q.done .ow-q-f{color:var(--ow-ink-400);}
+    .mq-chip{justify-self:start;}
+    .ow-q-x .btn{height:30px;padding:0 14px;font-size:12.5px;}
+    .ow-q-x .btn-accent{font-weight:700;}
+    .qx-in{display:flex;align-items:center;height:30px;padding:0 10px;min-width:230px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12.5px;color:var(--ow-ink-400);}
+    .qx-ev{display:flex;flex-wrap:wrap;gap:4px 18px;margin:0 0 10px;padding:8px 10px;
+      background:var(--ow-paper-2);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);}
+    .qx-ev span{font-size:11.5px;color:var(--ow-ink-600);}
+    .qx-ev b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;color:var(--ow-ink-900);}
+    /* The state sentence of a move already acted on. Its own line, never
+       a flex item wedged between two buttons. */
+    .ow-q-st{font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 8px;max-width:var(--ow-measure);}
+
+    /* ---- the foot of a panel: the quiet second offer ---- */
+    .pfoot{display:flex;align-items:center;gap:12px;padding:9px 12px;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .pfoot p{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:70ch;}
+    .pfoot .sp{flex:1;}
+    .pfoot .btn{height:28px;padding:0 12px;font-size:12px;font-weight:600;flex:none;}
+
+    /* ---- the playbook ---- */
+    .pb{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:baseline;
+      padding:10px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+    .pb:last-child{border-bottom:0;}
+    .pb-n{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;font-weight:500;}
+    .pb-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pb-ck{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      letter-spacing:-.02em;color:var(--ow-ink-600);background:var(--ow-steel-050);
+      border-radius:var(--ow-r-pill);padding:2px 8px;flex:none;}
+    .pb-ck.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:600;}
+    .pb-m{grid-column:1;font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;margin-top:3px;
+      max-width:var(--ow-measure);}
+    .pb-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .pb-m.good b{color:var(--ow-verdigris);}
+    .pb-m.bad b{color:var(--ow-crimson);}
+    .pb-a{grid-column:2;grid-row:1 / span 2;display:flex;gap:5px;align-self:center;flex:none;}
+    .pb-a .btn{height:26px;padding:0 10px;font-size:11.5px;font-weight:600;}
+
+    /* ---- rail: the scoreboard ---- */
+    .tg{padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .tg:first-child{border-top:0;}
+    .tg-t{display:flex;align-items:baseline;gap:8px;}
+    .tg-n{font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tg-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12.5px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;flex:none;}
+    .tg-b{height:5px;border-radius:2px;background:var(--ow-steel-100);overflow:hidden;margin:6px 0 5px;}
+    .tg-b i{display:block;height:100%;background:var(--ow-steel-800);border-radius:2px;}
+    .tg.met .tg-b i{background:var(--ow-verdigris);}
+    .tg.behind .tg-b i{background:var(--ow-crimson);}
+    .tg-f{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
+    .tg-f.behind{color:var(--ow-crimson);}
+    .tg-f.met{color:var(--ow-verdigris);}
+    .tg-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+
+    /* ---- rail: an offer it wants an answer to (a target, a play, a question) ---- */
+    .of{padding:10px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .of:first-child{border-top:0;}
+    .of-q{font-size:12.5px;font-weight:600;line-height:1.4;margin:0 0 3px;}
+    .of-w{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 8px;}
+    .of-w b{color:var(--ow-ink-900);font-weight:600;}
+    .of-r{display:flex;gap:6px;}
+    .of-r .btn{height:28px;padding:0 11px;font-size:12px;font-weight:600;}
+    .of-in{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;flex:1;min-width:0;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12.5px;color:var(--ow-ink-400);}
+    .of-r.f .btn{height:34px;}
+    .of-when{font-size:11px;color:var(--ow-ink-400);margin:6px 0 0;}
+
+    /* ---- the journal: meetings and reviews, one list ---- */
+    .jr{border-bottom:1px solid var(--ow-rule-soft);}
+    .jr:last-child{border-bottom:0;}
+    .jr-r{display:grid;grid-template-columns:18px 86px minmax(0,1fr) 74px 92px;align-items:center;
+      column-gap:10px;min-height:44px;padding:6px 12px;box-sizing:border-box;}
+    .jr.open .jr-r{background:var(--ow-paper-2);}
+    .jr-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;fill:none;
+      stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .jr.open .jr-cr{transform:rotate(90deg);}
+    .jr-d{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap;}
+    .jr.open .jr-d{color:var(--ow-ink-900);font-weight:600;}
+    .jr-t{min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .jr-v{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12.5px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .jr-v.zero{color:var(--ow-ink-400);}
+    .jr-x{padding:2px 12px 14px 116px;}
+    .jr-les{font-size:12.5px;line-height:1.55;margin:0 0 2px;max-width:var(--ow-measure);}
+    .jr-les .ar{color:var(--ow-ink-400);margin-right:5px;}
+    .wk{width:100%;border-collapse:collapse;font-size:12.5px;margin:0 0 10px;max-width:520px;}
+    .wk td{padding:6px 0;border-bottom:1px solid var(--ow-rule-soft);}
+    .wk tr:last-child td{border-bottom:0;}
+    .wk td:first-child{color:var(--ow-ink-600);}
+    .wk td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .wk td.p{text-align:right;color:var(--ow-ink-400);font-size:11.5px;white-space:nowrap;padding-left:18px;}
+
+    /* ---- the levers table: what the advice has actually done ----
+       Three prose sections — passed on, not landing, what has worked —
+       are one question asked three ways. One table, one filter. ---- */
+    .fp{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule);border-radius:7px;padding:2px;flex:none;}
+    .fp > span{display:inline-flex;align-items:center;gap:6px;padding:0 9px;height:22px;
+      border-radius:5px;font-size:11.5px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .fp > span.on{background:var(--ow-paper);color:var(--ow-ink-900);box-shadow:0 1px 2px rgba(20,30,40,.08);}
+    .fp .n{font-family:var(--mono);font-size:11px;letter-spacing:-.02em;color:var(--ow-ink-400);}
+
+    .lv{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+    .lv th{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);text-align:left;padding:9px 8px 8px 12px;
+      border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
+    .lv th.r{text-align:right;padding-right:12px;}
+    .lv td{padding:9px 8px 9px 12px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+    .lv tr:last-child td{border-bottom:0;}
+    .lv .nm{font-size:13px;font-weight:500;line-height:1.3;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lv .kd{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lv .vd{font-size:12.5px;color:var(--ow-ink-600);line-height:1.45;}
+    .lv .vd b{color:var(--ow-ink-900);font-weight:600;}
+    .lv td.sc{text-align:right;padding-right:12px;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+    .lv td.sc .b{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .lv tr.never td.sc.w{color:var(--ow-crimson);}
+    .lv tr.works td.sc.w{color:var(--ow-verdigris);}
+    .lv td.sc.t{color:var(--ow-ink-600);font-weight:500;}
+    .lv td.cp{text-align:right;padding-right:12px;}
+
+    /* ---- rail: the running account of the relationship ---- */
+    .rf-v.good{color:var(--ow-verdigris);}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rf.hd{background:var(--ow-paper-2);}
+
+    /* ---- the memory-broken banner: a failure that names itself ---- */
+    .brk{display:flex;align-items:flex-start;gap:11px;background:var(--ow-crimson-soft);
+      border:1px solid #EAC7C1;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
+    .brk-i{width:18px;height:18px;flex:none;margin-top:1px;fill:none;stroke:var(--ow-crimson);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .brk-b{min-width:0;flex:1;}
+    .brk-t{font-size:13.5px;font-weight:600;color:var(--ow-crimson);margin:0 0 3px;}
+    .brk-w{font-size:12px;color:var(--ow-crimson);line-height:1.5;margin:0;max-width:var(--ow-measure);}
+    .brk-w code{font-family:var(--mono);font-size:11.5px;background:var(--ow-paper);
+      border:1px solid #EAC7C1;border-radius:var(--ow-r-sm);padding:1px 5px;}
+
+    /* ---- the empty state, when no meeting has been held ---- */
+    .emp{padding:30px 32px 32px;text-align:center;}
+    .emp-i{width:34px;height:34px;margin:0 auto 12px;display:block;fill:none;
+      stroke:var(--ow-ink-400);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+    .emp-t{font-size:15px;font-weight:600;margin:0 0 6px;}
+    .emp-w{font-size:12.5px;color:var(--ow-ink-600);line-height:1.55;margin:0 auto 14px;max-width:58ch;}
+    .emp .btn{height:34px;padding:0 20px;font-size:13.5px;}
+    .emp-n{font-size:11px;color:var(--ow-ink-400);margin:10px 0 0;}
+
+    /* the section label above a stacked artboard pair */
+    .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-400);margin:0 0 8px;}
+    .lbl.sp{margin-top:26px;}
+    .ow-pan-nt{font-size:11px;color:var(--ow-ink-400);}
+    .ow-pan-h .sp{flex:1;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1495px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Insight</span><span>/</span><span>Manager</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Debtors</span><span class="nav-badge">6</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-section-label">Insight</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3"></path></svg><span>The day</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg><span>Manager</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Analysis</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 15l4-5 3 3 5-7"></path></svg><span>Sales analytics</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"></path></svg><span>Map</span></div>
+  </div>
+<div class="main">
+  <div class="ow-ph">
+    <h1 class="ow-ph-t">The Manager</h1>
+    <p class="ow-ph-sub">Reads your books, keeps score on its own advice, and moves nothing without you.</p>
+    <span class="ow-ph-i">i</span>
+    <span class="ow-ph-sp"></span>
+    <span class="btn btn-ghost ow-sm">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      Talk to it
+    </span>
+  </div>
+
+  <div class="ow-strip mgs">
+    <div class="ow-mt">
+      <p class="ow-mt-l">Advice done</p>
+      <span class="ow-mt-v acc">23<span class="of">of</span>61</span>
+      <p class="ow-mt-s">last 30 days &middot; 11 skipped, 27 untouched</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Targets met</p>
+      <span class="ow-mt-v acc">3<span class="of">of</span>5</span>
+      <p class="ow-mt-s">one still running &middot; ends Friday</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Levers that work</p>
+      <span class="ow-mt-v acc">6<span class="of">of</span>11</span>
+      <p class="ow-mt-s">advised 3+ times &middot; 2 have never once worked</p>
+    </div>
+    <div class="ow-mt ow-warn">
+      <p class="ow-mt-l">Not landing</p>
+      <span class="ow-mt-v acc">4</span>
+      <p class="ow-mt-s">put to you 3+ times, never done and never refused</p>
+    </div>
+    <div class="ow-mt">
+      <p class="ow-mt-l">Meetings held</p>
+      <span class="ow-mt-v acc">31</span>
+      <p class="ow-mt-s">of the last 34 mornings &middot; today at 06:14</p>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mv-sw">
+      <span>Standing <b class="n">7</b></span>
+      <span class="on">The record <b class="n">31</b></span>
+    </div>
+    <p class="mv-w">Everything it has advised since 4&nbsp;June, and what the books say followed. Nothing
+      here has a button: it is a mirror, and the way to change a line is to do one of them.</p>
+  </div>
+
+
+  <div class="ow-grid">
+    <div class="ow-stack">
+
+      <!-- ONE JOURNAL. "The last meeting", "The weekly review" and "Earlier
+           meetings" were three sections asking one question in three
+           shapes. Meetings and reviews are the same kind of event on the
+           same clock, so they are one list, newest first, and a row opens
+           where it stands. -->
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The journal</span>
+          <span class="ow-pan-nt">meetings and reviews, newest first</span>
+          <span class="sp"></span>
+          <span class="btn btn-accent ow-sm">Hold the weekly review</span>
+          <span class="ow-pan-n">31 since 4 Jun</span>
+        </div>
+
+        <div class="jr">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">3 Sep</span>
+            <span class="jr-t">Get Mulongo&rsquo;s 1,420,000 in before Thursday&rsquo;s cement order</span>
+            <span></span>
+            <span class="jr-v">1 of 5 done</span>
+          </div>
+        </div>
+        <div class="jr">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">2 Sep</span>
+            <span class="jr-t">Clear the four quotes that have sat more than five days</span>
+            <span></span>
+            <span class="jr-v">3 of 4 done</span>
+          </div>
+        </div>
+        <div class="jr open">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">1 Sep</span>
+            <span class="jr-t">Weekly review &mdash; a good week on margin, a bad one on collection</span>
+            <span class="ow-cp">review</span>
+            <span class="jr-v">3 lessons</span>
+          </div>
+          <div class="jr-x">
+            <table class="wk"><tbody>
+              <tr><td>Sales</td><td class="n">18,420,000</td><td class="p">prior week 16,900,000</td></tr>
+              <tr><td>Gross profit</td><td class="n">3,206,000</td><td class="p">prior week 2,704,000</td></tr>
+              <tr><td>Collected</td><td class="n">4,120,000</td><td class="p">11 chases drafted, 6 sent</td></tr>
+              <tr><td>Advice</td><td class="n">7 of 14 done</td><td class="p">3 skipped &middot; 4 untouched</td></tr>
+            </tbody></table>
+            <p class="jr-les"><span class="ar">&rarr;</span>Margin held because you did not discount the
+              cement; collection slipped because six chases were drafted and never sent.</p>
+            <p class="jr-les"><span class="ar">&rarr;</span>Kato has now gone four chases without paying
+              inside a week. Stop chasing and put them on cash terms.</p>
+            <p class="jr-les"><span class="ar">&rarr;</span>Two mornings had no meeting and both were the
+              two worst collection days of the week.</p>
+          </div>
+        </div>
+        <div class="jr">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">31 Aug</span>
+            <span class="jr-t">Buy the iron sheets before Katende&rsquo;s price moves on the 1st</span>
+            <span></span>
+            <span class="jr-v zero">0 of 5 done</span>
+          </div>
+        </div>
+        <div class="jr">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">30 Aug</span>
+            <span class="jr-t">Stop the bleed on delivery &mdash; four runs last week lost money</span>
+            <span></span>
+            <span class="jr-v">2 of 4 done</span>
+          </div>
+        </div>
+        <div class="jr">
+          <div class="jr-r">
+            <svg class="jr-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="jr-d">25 Aug</span>
+            <span class="jr-t">Weekly review &mdash; the best week since June, on cement alone</span>
+            <span class="ow-cp">review</span>
+            <span class="jr-v">2 lessons</span>
+          </div>
+        </div>
+
+        <div class="pfoot">
+          <p>Three mornings in the last month had no meeting. A meeting is never held for you, so a gap
+            here is a gap, not a failure &mdash; but the review reads the same gaps you do.</p>
+          <span class="sp"></span>
+          <span class="btn btn-ghost">Show all 31</span>
+        </div>
+      </div>
+
+      <!-- THE LEVERS. "Advice you have passed on", "Advice that is not
+           landing" and "What has worked, and what has not" are the same
+           question asked three ways — did you turn it down, is it not
+           reaching you, and does it ever actually work. One table, one
+           filter, and the verdict column says which. -->
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">Every lever it has pulled</span>
+          <div class="fp">
+            <span class="on">All <b class="n">11</b></span>
+            <span>Works <b class="n">6</b></span>
+            <span>Never worked <b class="n">2</b></span>
+            <span>Not landing <b class="n">4</b></span>
+            <span>You passed on <b class="n">3</b></span>
+          </div>
+        </div>
+        <table class="lv">
+          <colgroup><col style="width:230px"><col><col style="width:112px"><col style="width:104px"></colgroup>
+          <thead><tr><th>What it advised on</th><th>What followed</th><th class="r">Times</th><th class="r">Worked</th></tr></thead>
+          <tbody>
+            <tr class="works">
+              <td><div class="nm">Mulongo Hardware</div><div class="kd">chase the balance</div></td>
+              <td><div class="vd">Chased <b>7</b> times since June; they paid inside three days on
+                <b>5</b> of them, and the two that did not were both in the week they were closed.</div></td>
+              <td class="sc t">7</td>
+              <td class="sc w">5 of 7<span class="b">works</span></td>
+            </tr>
+            <tr class="never">
+              <td><div class="nm">Kato Construction Ltd</div><div class="kd">chase the balance</div></td>
+              <td><div class="vd">Chased <b>4</b> times, never paid inside a week. The manager is told to
+                say so and pull a different lever rather than advise it again.</div></td>
+              <td class="sc t">4</td>
+              <td class="sc w">0 of 4<span class="b">never worked</span></td>
+            </tr>
+            <tr>
+              <td><div class="nm">Cement &mdash; Hima 50kg</div><div class="kd">raise the price</div></td>
+              <td><div class="vd">Put to you <b>6</b> times, never done and never turned down. Do one, or
+                skip one with a reason, and it stops.</div></td>
+              <td class="sc t">6</td>
+              <td class="cp"><span class="ow-cp ow-warn">not landing</span></td>
+            </tr>
+            <tr>
+              <td><div class="nm">Iron sheets &mdash; G28</div><div class="kd">reorder early</div></td>
+              <td><div class="vd">You passed <b>3</b> times &mdash; <i>&ldquo;Katende is out of stock&rdquo;</i>,
+                <i>&ldquo;waiting on the Kampala price&rdquo;</i>. It has stopped proposing this; doing one
+                brings it back.</div></td>
+              <td class="sc t">3</td>
+              <td class="cp"><span class="ow-cp">passed on</span></td>
+            </tr>
+            <tr class="works">
+              <td><div class="nm">Ssekitoleko Hardware</div><div class="kd">ring a quiet customer</div></td>
+              <td><div class="vd">Rung <b>5</b> times; they placed an order within the fortnight on
+                <b>4</b> of them, worth <b>3,880,000</b> between them.</div></td>
+              <td class="sc t">5</td>
+              <td class="sc w">4 of 5<span class="b">works</span></td>
+            </tr>
+            <tr class="never">
+              <td><div class="nm">Delivery runs under 400,000</div><div class="kd">charge for the run</div></td>
+              <td><div class="vd">Advised <b>5</b> times; the runs went out free every time and the margin
+                on them has not moved.</div></td>
+              <td class="sc t">5</td>
+              <td class="sc w">0 of 5<span class="b">never worked</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="ow-mini">Counted once per occasion &mdash; each one closed at the next time the same thing
+          was advised &mdash; so the same payment is never counted twice. Nine older moves name nothing the
+          books could follow, so they are not here. Showing 6 of 11.</p>
+      </div>
+
+    </div>
+
+    <div class="ow-side">
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">The account</span>
+          <span class="ow-pan-n">since 4 Jun</span></div>
+        <div class="rf" style="border-top:0"><span class="rf-l">Meetings held</span><span class="rf-v">31 of 91 days</span></div>
+        <div class="rf"><span class="rf-l">Moves proposed</span><span class="rf-v">142</span></div>
+        <div class="rf"><span class="rf-l">Done</span><span class="rf-v good">58</span></div>
+        <div class="rf"><span class="rf-l">Skipped, with a reason</span><span class="rf-v">27</span></div>
+        <div class="rf"><span class="rf-l">Never touched</span><span class="rf-v bad">57</span></div>
+        <div class="rf hd"><span class="rf-l">Weekly reviews</span><span class="rf-v">5</span></div>
+        <div class="rf"><span class="rf-l">Targets taken on</span><span class="rf-v">8</span></div>
+        <div class="rf"><span class="rf-l">Met</span><span class="rf-v good">5</span></div>
+        <div class="rf"><span class="rf-l">Missed</span><span class="rf-v bad">3</span></div>
+        <p class="rl">Fifty-seven moves neither done nor turned down is the largest single fact on this
+          page. It is a fact about the meeting, not about you: advice that reaches nobody is advice that
+          was not worth the credit it cost.</p>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">Plays tried and set aside</span>
+          <span class="ow-pan-n">2</span></div>
+        <div class="rf" style="border-top:0"><span class="rf-l">Bundle nails with sheets</span><span class="rf-v">ran 3 wks</span></div>
+        <div class="rf"><span class="rf-l">Saturday half-day pricing</span><span class="rf-v">ran 5 wks</span></div>
+        <p class="rl">It will not propose either again. A play you stopped is not a play that failed &mdash;
+          the books over those weeks are on each one&rsquo;s own card.</p>
+      </div>
+
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">What this cost</span></div>
+        <div class="rf" style="border-top:0"><span class="rf-l">Meetings this month</span><span class="rf-v">22</span></div>
+        <div class="rf"><span class="rf-l">Reviews this month</span><span class="rf-v">4</span></div>
+        <p class="rl">A meeting spends a little AI credit and it never runs itself. Every figure on this
+          page is counted from your own books &mdash; nothing here is the manager&rsquo;s opinion of itself.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

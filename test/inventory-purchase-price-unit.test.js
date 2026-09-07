@@ -192,7 +192,9 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote } = sco
 
   // Auto-fill has to speak the unit the field is asking in, or the trap
   // simply reverses: the per-unit figure sitting under a "per Ctn" label.
-  t.check(/selectedRow\.purchasePrice \* \(priceInPack \? packQty : 1\)/.test(stage),
+  // Through rowPerUnit first, because the row itself may be priced by
+  // the shelf's pack (see stock-ledger-one-unit.test.js).
+  t.check(/rowPerUnit\(selectedRow, selectedRow\.purchasePrice\) \* \(priceInPack \? packQty : 1\)/.test(stage),
     'the auto-filled price is restated in whichever unit the field is asking for');
   // And "which unit the field is asking in" is the PRICE mode, not the
   // quantity mode. The two agree by default, which is exactly why reading

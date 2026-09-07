@@ -52,7 +52,13 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 const data = { savedQuotes: [], suppliers: [] };
 const calls = { announced: [], rowOpened: null, toasts: [] };
 
-const NAMES = ['orderSupplierGroups', 'orderLinesWithNoSupplier', 'orderSupplierTerms',
+/* The message asks in the supplier's OWN unit now — they quote a carton,
+   so it asks for a carton — and quoteLinePack is what reads that off the
+   line. Compiled in rather than stubbed: what the supplier is asked for
+   is the whole subject of this message, and their bill comes back from
+   it. */
+const NAMES = ['quoteLinePack', 'quoteLineQtyText', 'quoteLineEach',
+  'orderSupplierGroups', 'orderLinesWithNoSupplier', 'orderSupplierTerms',
   'orderSupplierConfirmState', 'orderUnconfirmedSuppliers', 'orderDraftReady',
   'setOrderSupplierConfirm', 'markOrderSupplierAsked', 'supplierConfirmMessage',
   'setSavedQuoteStatus', 'stepSavedQuoteStatus', 'orderLeaveDraft', 'announceOrderToGroup'];

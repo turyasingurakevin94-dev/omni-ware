@@ -83,14 +83,96 @@ const { nameInitials } = compileScope(
   });
   const calls = (src.match(/nameInitials\(/g) || []).length;
   t.check(calls >= 4, `all three grids go through the one function (${calls} references)`);
-  ['sc-avatar">${esc(nameInitials(s.name))}', 'cc-avatar">${esc(nameInitials(c.name))}']
+  /* Both directory grids are registers now -- Customers first, then
+     Suppliers -- and a 13px table row has no width for a 38px square,
+     so both avatars went with their cards. The point of this section is
+     unchanged and is not about any one grid: ONE initials function,
+     never a private copy per screen. The count above still has to clear
+     four, and every avatar left in the app is lettered by it. */
+  ['rost-av${st.key===\'free\'?\' is-free\':\'\'}">${esc(nameInitials(s.name))}']
     .forEach((frag) => t.check(src.includes(frag), `the avatar is rendered from it: ${frag.slice(0, 12)}…`));
+  t.check(!/cc-avatar/.test(src),
+    'and the customer card\'s avatar is gone with the card, not left styling nothing');
+  /* Scoped to the register, not to the file: the agent roster still
+     wears .supplier-card and .sc-avatar, and those are its own. What
+     went is the SUPPLIERS screen's avatar -- 44 oxide marks on a screen
+     allowed one accent, lettering two characters that told a reader
+     nothing the name beside them did not. */
+  t.check(!/sc-avatar/.test(extractFunction(src, 'supplierRegisterRowHTML', 'index.html')),
+    'and the supplier register draws no avatar: 44 oxide marks on a screen allowed one accent');
 
-  /* waInitials stays its own function: it falls back to the last two
-     DIGITS of a bare phone number, which is a WhatsApp thread's problem
-     and not a directory card's. */
-  t.check(/function waInitials\(/.test(src),
-    'the WhatsApp one is left alone — it reads phone numbers, which these do not');
+  /* This used to pin that waInitials stayed its OWN function, because
+     it fell back to the last two DIGITS of a bare phone number -- a
+     WhatsApp thread's problem, not a directory card's. The pin has
+     nothing left to protect: the WhatsApp screen stopped drawing
+     avatars altogether when its imitation of a chat app became a work
+     queue, and waInitials went with the hue it was drawn in. What this
+     section still guards is the thing that mattered -- one initials
+     function for the three directory grids, never three copies. */
+  t.check(!/function waInitials\(/.test(src),
+    'and the WhatsApp copy is gone too, with the avatars it lettered');
+}
+
+/* ---------- 3b. the SHAPE, not just the three old names ---------------
+ *
+ * Banning supplierInitials, staffInitials and customerInitials BY NAME
+ * left the door open, and something walked through it: agentCardHTML
+ * carried the fault inline, with no function name to ban --
+ *
+ *     const initials = (a.name||'?').trim().split(/\s+/)
+ *       .slice(0,2).map(w=>w[0]).join('').toUpperCase();
+ *
+ * -- so "Reagan - Stuart" was lettered "R-", the exact bug section 3
+ * exists to prevent, sitting four hundred lines below the function that
+ * fixes it. Three more copies were doing it in the agent app and on the
+ * public catalogue, where the mark is the first thing a customer sees.
+ *
+ * So the pin is on the MISTAKE rather than on the names anybody happened
+ * to give it: nothing in any shipped file may take character zero of a
+ * word and call it an initial. Every file is checked, because agent.html
+ * and catalogue.html share no script with index.html and each needs its
+ * own copy of nameInitials -- and a copy is only safe while there is one
+ * of it.
+ */
+{
+  const FILES = ['index.html', 'agent.html', 'catalogue.html', 'worker.html'];
+  /* The shape, loosely: split a name on whitespace and take [0] of each
+     word. Written to match the four that shipped and anything close
+     enough to be the same mistake, not to be a general JS parser. */
+  const CHAR_ZERO = /split\(\/\\s\+\/\)[\s\S]{0,40}?map\(\s*w\s*=>\s*w\[0\]\s*\)/g;
+  FILES.forEach((f) => {
+    const text = read(f);
+    const hits = text.match(CHAR_ZERO) || [];
+    t.check(hits.length === 0,
+      `${f} computes no initials from character zero${hits.length ? ' — ' + hits[0].slice(0, 60) : ''}`);
+  });
+
+  /* And each app that letters an avatar has exactly ONE implementation
+     to fix when this is wrong again. */
+  ['index.html', 'agent.html', 'catalogue.html'].forEach((f) => {
+    const defs = (read(f).match(/function nameInitials\(/g) || []).length;
+    t.check(defs === 1, `${f} defines nameInitials exactly once (got ${defs})`);
+  });
+
+  /* The two helpers in the agent app are wrappers, not second opinions:
+     an agent's initials and a client's have to be the same letters for
+     the same name. */
+  const agent = read('agent.html');
+  t.check(/function clientInitials\(name\)\{ return nameInitials\(name\); \}/.test(agent),
+    "the agent app's client initials go through it");
+  t.check(/return nameInitials\(myAgent && myAgent\.name\);/.test(agent),
+    "and so do the agent's own");
+  /* The admin app's agent screen, which is where this was found. It was
+     agentCardHTML with the copy inline; the screen has since been
+     rebuilt as a console register and brought a NEW private copy with
+     it, under a new name -- agentInitials(name) -- which is precisely
+     why the check above is on the shape rather than on any call site.
+     There is no wrapper left: the one place that letters an agent goes
+     straight to the shared function. */
+  t.check(!/function agentInitials\(/.test(src),
+    'the admin app keeps no private initials function of its own');
+  t.check(/<span class="ow-av">\$\{esc\(nameInitials\(r\.who\)\)\}<\/span>/.test(src),
+    'and its agent avatar is lettered by the shared one');
 }
 
 /* ---------- 4. the figure strip sits on the card's bottom edge -------- */
@@ -110,37 +192,57 @@ const { nameInitials } = compileScope(
   t.check(/display:flex/.test(card) && /flex-direction:column/.test(card),
     'which requires the card to stay a column flex container');
 
-  /* The customer card has no figure strip -- it ends on the debt row,
-     which is the figure people opened the screen for and floated the
-     same way: 94px on one card, 115px on the one beside it, 3 of 12
-     rows out of step. Pinned identically, or the two grids look like
-     they were built by different people. */
-  const debt = rule('.cc-debt-row');
-  t.check(/margin-top:auto/.test(debt),
-    `the customer card's bottom line is pinned too (${debt})`);
-  const cCard = rule('.customer-card');
-  t.check(/display:flex/.test(cCard) && /flex-direction:column/.test(cCard),
-    'and that card is a column flex container as well');
+  /* THE CUSTOMER GRID SOLVED THIS BY NOT BEING A GRID.
+
+     Its balance floated the same way -- 94px from the card top on one,
+     115px on the one beside it, 3 of 12 rows out of step -- and
+     margin-top:auto pinned it, which fixed the symptom: the figures
+     lined up ACROSS a row and still could not be read DOWN one, because
+     a grid of cards has no columns. Customers is a table now, whose
+     tracks are declared once on the container and whose rows span them
+     with subgrid, so two figures cannot land on two lines. Alignment
+     stopped being something a rule has to defend, which is why the pin
+     is on the tracks instead.
+
+     The suppliers directory is still a grid, so the rule above still
+     matters and is still checked. */
+  t.check(!/\.customer-card\{/.test(src) && !/\.cc-debt-row\{/.test(src),
+    'the customer card and its pinned bottom line are gone from the file, not merely unused');
+  t.check(/\.ow-tbl\.cu-tbl\{--ow-tbl-cols:/.test(src),
+    'and the register declares its tracks once on the container');
+  t.check(/\.ow-tbl-n\{[\s\S]{0,300}?justify-self:end;text-align:right;white-space:nowrap/.test(src),
+    'with the figure cell that never gives way, so no money column can drift or be cut');
 }
 
 /* ---------- 5. a zero is not good news -------------------------------- */
 {
-  const card = (/function supplierCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/sc-stat best \$\{stats\.best \? '' : 'zero'\}/.test(card),
-    'a supplier who wins nothing is marked rather than shown a green zero');
-  t.check(/sc-stat \$\{stats\.priced \? '' : 'zero'\}/.test(card),
-    'and so is one with nothing priced');
+  /* This lived on .sc-stat: the supplier card showed "27 BEST PRICE" in
+     verdigris, and a supplier who won nothing showed a green 0 -- a
+     zero painted as good news. .sc-stat.zero fixed it by dropping such
+     a figure back to ordinary ink, and the whole argument was which of
+     two tying rules came LATER in the file.
 
-  /* .sc-stat.zero b and .sc-stat.best b tie on specificity (0,2,1), so
-     the only thing deciding the colour of a zero is which comes LATER.
-     The repo has been bitten by this before -- a media query adds no
-     specificity either. */
-  const bestAt = src.indexOf('.sc-stat.best b{');
-  const zeroAt = src.indexOf('.sc-stat.zero b{');
-  t.check(bestAt > -1 && zeroAt > -1, 'both rules exist');
-  t.check(zeroAt > bestAt,
-    'and the zero rule comes after the green one — they tie on specificity, so order is the whole argument');
-  t.check(/\.sc-stat\.zero b\{color:var\(--ink-soft\);\}/.test(src),
+     The card is a register row now and the figure is the column the
+     screen is RANKED on, so the same question is asked of the same
+     figure in its new home: green where they are winning lines, plain
+     ink where they win none, and a dash where they price nothing at all
+     and the app cannot say they win none. */
+  const row = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
+  t.check(/ow-fig su-win\$\{r\.wins \? '' : ' su-nil'\}/.test(row),
+    'a supplier who wins nothing is marked rather than shown a green zero');
+  t.check(/\$\{r\.priced\s*\n?\s*\?[\s\S]{0,120}?: dash\}/.test(row),
+    'and one with nothing priced shows a dash, because "cheapest on none" is a claim the app cannot make without a price');
+
+  /* .su-win and .su-win.su-nil do NOT tie -- the second is (0,2,0)
+     against (0,1,0) -- which is the lesson from .sc-stat.zero applied
+     rather than repeated: a rule whose only defence is document order
+     is one media query away from flipping. */
+  const winAt = src.indexOf('.su-win{');
+  const nilAt = src.indexOf('.su-win.su-nil{');
+  t.check(winAt > -1 && nilAt > -1, 'both rules exist');
+  t.check(nilAt > winAt,
+    'the quieter rule comes after the green one, and beats it on specificity as well as on order');
+  t.check(/\.su-win\.su-nil\{color:var\(--ow-ink-600\);\}/.test(src),
     'a zero reads as an ordinary count, leaving green for suppliers who actually win something');
 }
 

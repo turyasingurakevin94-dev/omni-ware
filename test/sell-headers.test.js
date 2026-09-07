@@ -61,6 +61,13 @@ const sectionOf = (tab) => {
   const today = sectionOf('dashboard');
   t.check(/<p class="ow-ph-sub" id="dash_asof">/.test(today),
     'Today\'s one-liner is a sub, not a help — it is the reading time, and it must stay on screen');
+  /* Same rule, same reason, on the screen where the fact rots fastest:
+     "The shop's online front desk" was as true of an empty inbox as of
+     nine unanswered customers. It names the queue now, and it is a sub
+     rather than a help so no fold can hide it. */
+  const wa = sectionOf('whatsapp');
+  t.check(/<p class="ow-ph-sub" id="wa_ph_sub">/.test(wa),
+    'and WhatsApp\'s is who is waiting — a fact that goes stale, so it never folds');
   t.check(!/ow-ph-help/.test(today), 'and Today has no folded help at all');
 
   t.check(/foldInstruction\(h1, p, 'What this screen is for'\)/.test(fn),
@@ -71,10 +78,19 @@ const sectionOf = (tab) => {
 {
   SELL.forEach(tab => {
     const sec = sectionOf(tab);
-    t.check(/<div class="ow-ph">/.test(sec), `${tab} has the console header`);
+    /* An id on the header itself is allowed, on the same grounds the
+       sub's id is two lines below: Customers renders two views into one
+       section -- the book and one customer's account -- and the book's
+       header is hidden by id while the account is open. What matters is
+       that the screen wears .ow-ph, not that nothing else is on the tag. */
+    t.check(/<div class="ow-ph"[ >]/.test(sec), `${tab} has the console header`);
     t.check(!/<div class="page-head"/.test(sec), `${tab} has no old header left behind`);
     t.check(/<h1 class="ow-ph-t">/.test(sec), `${tab} names itself in it`);
-    t.check(/<p class="ow-ph-sub">/.test(sec), `${tab} says in one line what it is`);
+    /* An id on the sub is allowed, and on two screens it is required:
+       Today's is the moment the figures were read at, and WhatsApp's is
+       how many people are waiting and how long the worst of them has
+       waited. Both go stale, so both are written by the render. */
+    t.check(/<p class="ow-ph-sub"[ >]/.test(sec), `${tab} says in one line what it is`);
     t.check(/<span class="ow-ph-sp"><\/span>/.test(sec),
       `${tab} carries the spacer, so anything on the right sits on the right`);
   });

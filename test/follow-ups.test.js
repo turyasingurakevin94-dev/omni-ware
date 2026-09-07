@@ -47,7 +47,8 @@ const ago = (days) => new Date(NOW - days * DAY).toISOString();
 const data = {};
 const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps',
   'followUpsForCustomer', 'followUpQuietDays', 'followUpSubject', 'followUpLastContact',
-  'followUpSinceMs', 'followUpPriceNow', 'followUpBackInStock', 'followUpSourcingProgress',
+  'followUpSinceMs', 'followUpPriceNow', 'stockCrossedInSince', 'followUpBackInStock',
+  'followUpCompanionIn', 'followUpSourcingProgress',
   'followUpPriceMoved', 'followUpGoneQuiet', 'followUpReasons', 'followUpClientsToContact',
   'followUpDigest', 'findFollowUp', 'addFollowUp', 'recordFollowUpContact',
   'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought', 'followUpStatePill'];
@@ -72,6 +73,9 @@ const scope = compileScope([
     return data.__sellPrice == null ? null : { price: data.__sellPrice };
   },
   rankedPurchaseRowsAtQty: () => (data.__purchaseRows || [{ purchasePrice: 1000, packQty: 0 }]),
+  /* What the shop wrote down about a product, as the one reader returns
+     it: nothing unless a check below writes some down. */
+  pairCompanionsFor: (pid, idx) => (data.__companions || {})[pid + '::' + (idx == null ? '' : idx)] || [],
   sourcingLeadById: (id) => (data.sourcingLeads || []).find((l) => l.id === id) || null,
   contactPhones: (c) => [c && c.phone, c && c.phone2].map((x) => String(x || '').trim()).filter(Boolean),
   waComposeUrl: (phone, msg) => `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,
@@ -547,7 +551,12 @@ const stockMove = (before, after, whenDays) => {
 
 /* ---------- 11. the three capture points ------------------------------ */
 {
-  t.check(/id="cstFollowBtn"/.test(code) && /openFollowUpListModal\(fup\.dataset\.id\)/.test(code),
+  /* The customer panel was a modal with its own button ids. It is a
+     screen now, and every control on it is delegated through one
+     listener -- so the capture point is the action rather than the id,
+     which is the same guarantee with one listener instead of forty. */
+  t.check(/data-cact="follow" data-cid=/.test(code)
+       && /if\(name === 'follow'\) return openFollowUpListModal\(id\);/.test(code),
     'a client’s own record opens their list');
   t.check(/id="sl_ask2_follow"/.test(code) && /addFollowUp\(asker\.customerId, \{leadId: l\.id\}/.test(code),
     'a sourcing ask can enrol the asker');

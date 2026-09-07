@@ -69,6 +69,8 @@ const makeData = () => ({
 });
 
 const env = (data, over) => ({
+  // productPackInfo reads the shelf's own unit now (stockUnitFor).
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
   data,
   todayISO: () => TODAY,
   daysSinceDate: (d) => Math.round((new Date(TODAY + 'T00:00:00Z') - new Date(d + 'T00:00:00Z')) / 86400000),
@@ -264,8 +266,8 @@ const build = (data, extraSrc, names, over) => compileScope(
     ] }];
     const MARKET = ['rivalMarketRows', 'rivalNeverChecked', 'buyKeyParts', 'stockKey',
       'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
-      'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty',
-    'productPackInfo', 'productUnitLabel'];
+      'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'stockOnHand', 'getStockQty',
+    'stockUnitFor', 'productPackInfo', 'productUnitLabel'];
     const s = compileScope(
       CHAIN.concat(MARKET).map((n) => extractFunction(src, n, 'index.html'))
         .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),

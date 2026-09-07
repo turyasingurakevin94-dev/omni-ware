@@ -1,0 +1,731 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ---- the Purchase invoices console ----
+       Built from the shipped .ow-* vocabulary plus the screen-local
+       classes below. No new colour, no new weight, no new type size,
+       no fourteenth button family. */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s b{font-weight:600;color:var(--ow-ink-900);}
+    .ow-mt-s .f{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* ---- WHAT NEEDS YOUR EYE ----
+       The band is the point of the screen, so it is a panel with a
+       header like every other region -- not a red slab. Each line is
+       ONE fault, named, with the money at stake and the one act. It
+       is amber where a person must look and crimson only where the
+       shop is out of pocket for goods it never got. */
+    .ck-h{background:var(--ow-amber-faint);border-bottom-color:#EBD9B4;}
+    .ck-h .ow-pan-t{color:var(--ow-amber-ink);}
+    .ck-h .ow-pan-n{color:#8A6520;}
+    .ck{display:grid;grid-template-columns:16px minmax(0,1fr) 146px 134px;align-items:center;
+      gap:12px;padding:9px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ck:last-child{border-bottom:0;}
+    .ck > .i{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;justify-self:center;color:var(--ow-amber);}
+    .ck.sev > .i{color:var(--ow-crimson);}
+    .ck-b{min-width:0;}
+    .ck-t{margin:0;font-size:13px;line-height:1.35;font-weight:500;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ck-w{margin:2px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.4;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ck-w b{color:var(--ow-ink-900);font-weight:600;}
+    .ck-v{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ck-v.bad{color:var(--ow-crimson);}
+    .ck-v .u{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .ck-a{display:flex;justify-content:flex-end;gap:6px;}
+    .ck-ok{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;}
+    .ck-ok > svg{width:15px;height:15px;fill:none;stroke:var(--ow-verdigris);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px;}
+    .ck-ok p{margin:0;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .ck-ok b{color:var(--ow-ink-900);font-weight:600;}
+    .ck-el{margin:0;padding:8px 12px;font-size:11px;color:var(--ow-ink-600);line-height:1.45;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);max-width:none;}
+    .ck-el a{font-weight:600;}
+    .ck-el b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* ---- the split: two kinds of bill, never one column with two meanings ---- */
+    .seg{display:inline-flex;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      overflow:hidden;background:var(--ow-paper);flex:none;}
+    .seg > span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;
+      font-size:12px;font-weight:500;color:var(--ow-ink-600);border-left:1px solid var(--ow-rule);
+      white-space:nowrap;}
+    .seg > span:first-child{border-left:0;}
+    .seg > span.on{background:var(--ow-steel-950);color:#fff;font-weight:600;}
+    .seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);}
+    .seg > span.on .n{color:rgba(255,255,255,.66);}
+
+    /* ---- a bill's row: 44px, opens to the LINES ----
+       Five tracks. The mark column is empty on a bill with nothing
+       wrong -- a device that marks everything marks nothing. */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 3px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-doc{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ow-q.void .ow-q-t{color:var(--ow-ink-400);}
+    .ow-q.void .ow-q-who{text-decoration:line-through;}
+    .ow-q.void .ow-q-f{color:var(--ow-ink-400);text-decoration:line-through;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ow-q-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    .ow-q-b.good{color:var(--ow-verdigris);font-weight:500;}
+    /* the date track */
+    .dt{font-size:12px;color:var(--ow-ink-900);white-space:nowrap;}
+    .dt span{display:block;font-size:11px;color:var(--ow-ink-400);}
+    /* the mark track: only where something is wrong, or where the bill
+       is what it is FOR -- the order it was raised against. */
+    .mk{min-width:0;font-size:11px;line-height:1.35;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mk b{display:block;font-size:12px;font-weight:600;}
+    .mk.bad{color:var(--ow-crimson);}
+    .mk.warn{color:var(--ow-amber-ink);}
+    .mk.ord{color:var(--ow-ink-600);}
+    .mk.ord b{color:var(--ow-ink-900);font-family:var(--mono);letter-spacing:-.02em;font-weight:600;
+      text-decoration:underline;text-decoration-color:var(--ow-rule);text-underline-offset:2px;}
+    .mk.none{color:var(--ow-ink-400);}
+    .mk.none b{color:var(--ow-ink-400);font-weight:500;}
+
+    /* ---- an open bill: what they billed you, against what you paid before ---- */
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .bl{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .bl caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .bl th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .bl th.l{text-align:left;padding-left:0;}
+    .bl td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .bl tr:last-child td{border-bottom:0;}
+    .bl td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .bl td.w{font-weight:600;}
+    .bl td.q{color:var(--ow-ink-400);}
+    /* the check column: what the same goods cost you last time */
+    .bl td.bf{color:var(--ow-ink-600);}
+    .bl td.bf i{font-style:normal;color:var(--ow-ink-400);font-family:'Inter',sans-serif;}
+    .bl td.up{color:var(--ow-crimson);font-weight:600;}
+    .bl td.up span,.bl td.dn span{display:block;font-family:'Inter',sans-serif;font-weight:400;
+      font-size:11px;letter-spacing:0;color:var(--ow-ink-600);}
+    .bl td.dn{color:var(--ow-verdigris);font-weight:600;}
+    .bl tr.hi td{background:var(--ow-crimson-soft);}
+    .bl tr.hi td.nm{box-shadow:inset 3px 0 0 var(--ow-crimson);padding-left:9px;}
+    .bl tfoot td{border-top:1px solid var(--ow-rule);border-bottom:0;font-weight:600;padding-top:8px;}
+    .bl tfoot td.nm{font-family:'Inter',sans-serif;color:var(--ow-ink-600);font-weight:500;}
+
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:58ch;}
+    .cf-n b{color:var(--ow-ink-900);font-weight:600;}
+    .cf-a{display:flex;gap:6px;flex:none;}
+
+    /* the money summary inside an open bill, above the acts */
+    .bs{display:flex;gap:22px;margin:0 0 10px;}
+    .bs > div{display:flex;flex-direction:column;gap:1px;}
+    .bs-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-400);}
+    .bs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.03em;}
+    .bs-v.bad{color:var(--ow-crimson);}
+    .bs-v.good{color:var(--ow-verdigris);}
+    .bs-s{font-size:11px;color:var(--ow-ink-600);}
+
+    /* ---- the rail ---- */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.bad{color:var(--ow-crimson);}
+    .rf-v span{font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:var(--ow-ink-400);margin-left:5px;}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    .rl a{font-weight:600;}
+    .ow-empty b{font-size:14px;color:var(--ow-ink-900);display:block;margin-bottom:5px;}
+    /* ---- the list toolbar: controls that look like controls ---- */
+    .tb2{display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .sb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;width:236px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      font-size:12px;color:var(--ow-ink-400);}
+    .sb svg{width:14px;height:14px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .sb.has{color:var(--ow-ink-900);}
+    .tg{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);background:var(--ow-paper);white-space:nowrap;}
+    .tg .bx{width:13px;height:13px;border-radius:3px;background:var(--ow-steel-950);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .tg .bx svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb2-sp{flex:1;}
+    /* the band filter, echoed where the rows it removed would have been */
+    .fc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 10px;box-sizing:border-box;
+      border:1px solid var(--ow-amber);border-radius:var(--ow-r);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);font-size:12px;font-weight:500;white-space:nowrap;}
+    .fc b{font-weight:600;}
+    .fc .x{width:18px;height:18px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+      justify-content:center;background:rgba(122,74,2,.11);}
+    .fc .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;}
+    /* .ow-empty's b is the headline; a b INSIDE a paragraph there is
+       an emphasis inside a sentence and must stay inline. */
+    .ow-empty p b{display:inline;font-size:inherit;color:var(--ow-ink-900);margin:0;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1730px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Buy</span><span>/</span><span>Purchase invoices</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"></path><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"></path></svg><span>Compare prices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"></path></svg><span>Sourcing</span><span class="nav-badge">3</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span><span class="nav-badge">4</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span><span class="nav-badge">9</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M8 15h3M14 15h2"></path></svg><span>What&#39;s coming</span></div>
+  </div>
+  <div class="main">
+    <div class="ow-ph">
+      <h1 class="ow-ph-t">Purchase invoices</h1>
+      <span class="ow-ph-i">i</span>
+      <p class="ow-ph-sub">Every bill a supplier has given you &mdash; what it was for, whether it is right, and what is still owed on it</p>
+      <span class="ow-ph-sp"></span>
+      <div class="ow-f">
+        <span class="ow-f-l">Range</span>
+        <span class="ow-f-in"><span class="ow-f-v">Last 30 days</span><span class="ow-f-u">&#9662;</span></span>
+      </div>
+    </div>
+
+    <div class="ow-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+      <div class="ow-mt">
+        <p class="ow-mt-l">Billed to you</p>
+        <span class="ow-mt-v">18,940,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s"><b>34</b> bills from <b>11</b> suppliers, last 30 days &middot; <span class="f">11,320,000</span> of it for the shelf</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Paid out against them</p>
+        <span class="ow-mt-v">12,660,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">What actually left the drawer for goods in this range &middot; <b>67%</b> of what was billed</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Still owed on them</p>
+        <span class="ow-mt-v">6,280,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s"><b>12</b> bills open &middot; who to pay first is <a href="#">Creditors</a>, and it counts every open bill, not just this range</p>
+      </div>
+      <div class="ow-mt ow-bad">
+        <p class="ow-mt-l">Needs your eye</p>
+        <span class="ow-mt-v">4<span class="ow-u">bills</span></span>
+        <p class="ow-mt-s">Billed twice, priced above what you have ever paid, nothing received, or overpaid &mdash; <span class="f">3,822,400</span> between them</p>
+      </div>
+    </div>
+
+
+      <div class="ow-pan" style="margin-bottom:16px">
+        <div class="ow-pan-h ck-h">
+          <span class="ow-pan-t">What needs your eye</span>
+          <span class="ow-pan-n">4 of 34 bills &middot; 3,822,400</span>
+        </div>
+
+        <div class="ck sev">
+          <svg class="i" viewBox="0 0 24 24"><path d="M8 6h11a2 2 0 0 1 2 2v11"></path><rect x="3" y="3" width="12" height="12" rx="1.6"></rect><path d="M6 7h6M6 11h4"></path></svg>
+          <div class="ck-b">
+            <p class="ck-t">One delivery billed twice &mdash; Roofings Rolling Mills, 21 Aug</p>
+            <p class="ck-w"><b>PINV&#8209;0244</b> and <b>PINV&#8209;0251</b> carry the same three lines, same day, same prices. Neither has money against it.</p>
+          </div>
+          <span class="ck-v bad">1,240,000<span class="u">owed twice</span></span>
+          <span class="ck-a"><span class="btn btn-ghost ow-sm">Compare them</span></span>
+        </div>
+
+        <div class="ck">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 20V7"></path><path d="M6 12l6-6 6 6"></path><path d="M4 4h16"></path></svg>
+          <div class="ck-b">
+            <p class="ck-t">Two lines priced above anything you have paid before</p>
+            <p class="ck-w"><b>PINV&#8209;0267</b> &middot; Mulongo Hardware &middot; iron sheets at <b>42,000</b> against <b>38,400</b> on 12 Jul, binding wire at <b>68,000</b> against <b>62,000</b> on 3 Aug</p>
+          </div>
+          <span class="ck-v">122,400<span class="u">over on this bill</span></span>
+          <span class="ck-a"><span class="btn btn-ghost ow-sm">Open the bill</span></span>
+        </div>
+
+        <div class="ck">
+          <svg class="i" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M9 15l6-6M9 9l6 6"></path></svg>
+          <div class="ck-b">
+            <p class="ck-t">A bill with nothing received against it</p>
+            <p class="ck-w"><b>PINV&#8209;0258</b> &middot; Bwambale Steel Works &middot; entered by hand on 26 Aug, and the stock record shows nothing arriving from them that week</p>
+          </div>
+          <span class="ck-v">680,000<span class="u">owed for goods not on the shelf</span></span>
+          <span class="ck-a"><span class="btn btn-ghost ow-sm">Open the bill</span></span>
+        </div>
+
+        <div class="ck sev">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.01"></path></svg>
+          <div class="ck-b">
+            <p class="ck-t">You paid more than you were billed</p>
+            <p class="ck-w"><b>PINV&#8209;0231</b> &middot; Tororo Cement Depot &middot; <b>1,900,000</b> left the drawer against a <b>1,720,000</b> bill on 12 Aug</p>
+          </div>
+          <span class="ck-v bad">180,000<span class="u">overpaid</span></span>
+          <span class="ck-a"><span class="btn btn-ghost ow-sm">Open the bill</span></span>
+        </div>
+
+        <p class="ck-el">Age is not checked here. <b>3 bills</b> are past a day you named, and who to pay first is <a href="#">Creditors</a>&#39; question &mdash; one screen owns it, so the two can never disagree.</p>
+      </div>
+
+
+    <div class="ow-grid">
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="ow-pan-t">The bills</span>
+          <span class="ow-pan-n">34 &middot; 18,940,000 &middot; newest first</span>
+        </div>
+
+        <div class="tb2">
+          <div class="seg">
+            <span class="on">All <span class="n">34</span></span>
+            <span>For an order <span class="n">12</span></span>
+            <span>For the shelf <span class="n">22</span></span>
+          </div>
+          <span class="tb2-sp"></span>
+          <div class="sb" style="width:186px">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+            <span>Doc No. or supplier</span>
+          </div>
+          <div class="tg"><span class="bx"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"></path></svg></span>Hide voided</div>
+          <div class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"></path><rect x="4" y="9" width="16" height="7" rx="1.5"></rect><path d="M8 13h8v7H8z"></path></svg>Print</div>
+          <div class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"></path><path d="M4 19h16"></path></svg>Export</div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Mulongo Hardware</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0267</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">4 lines</span></span>
+            <span class="mk warn"><b>Two lines priced up</b>against what you last paid</span>
+            <span class="dt">28 Aug<span>7 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">1,805,000</span><span class="ow-q-b">nothing paid yet</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q ow-open">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t" title="Ssekitoleko Hardware &amp; General Merchandise Ltd"><span class="ow-q-who">Ssekitoleko Hardware &amp; General Merchandise Ltd</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0264</span></span>
+            <span class="mk ord"><b>INV&#8209;0223</b>Kato Construction Ltd</span>
+            <span class="dt">27 Aug<span>8 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">2,140,000</span><span class="ow-q-b">860,000 still owed</span></span>
+          </div>
+          <div class="ow-q-x">
+            <p class="ow-q-why">Received in full on <b>27 Aug</b> against the stock record &mdash; 3 lines, 62 units, all of it out again on <b>INV&#8209;0223</b>. Every price matches or beats what you last paid them.</p>
+            <table class="bl">
+              <caption>What they billed you</caption>
+              <thead><tr>
+                <th class="l">Line</th><th>Qty</th><th>Unit price</th><th>You last paid</th><th>Difference</th><th>Line total</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td class="nm">Cement &mdash; Tororo 32.5N, 50kg</td>
+                  <td class="q">80</td><td>17,000</td>
+                  <td class="bf">17,000 <i>&middot; 14 Aug</i></td>
+                  <td class="bf">&mdash;</td><td class="w">1,360,000</td>
+                </tr>
+                <tr>
+                  <td class="nm">Steel bars &mdash; Y12 deformed, 12m</td>
+                  <td class="q">40</td><td>16,500</td>
+                  <td class="bf">17,200 <i>&middot; 2 Aug</i></td>
+                  <td class="dn">&minus;700 each<span>&minus;28,000 on this line</span></td><td class="w">660,000</td>
+                </tr>
+                <tr>
+                  <td class="nm">Binding wire &mdash; 20kg roll</td>
+                  <td class="q">2</td><td>60,000</td>
+                  <td class="bf">62,000 <i>&middot; 3 Aug</i></td>
+                  <td class="dn">&minus;2,000 each<span>&minus;4,000 on this line</span></td><td class="w">120,000</td>
+                </tr>
+              </tbody>
+              <tfoot><tr>
+                <td class="nm">3 lines &middot; 122 units</td><td></td><td></td><td></td>
+                <td class="dn">&minus;32,000</td><td class="w">2,140,000</td>
+              </tr></tfoot>
+            </table>
+
+            <div class="bs">
+              <div><span class="bs-l">Billed</span><span class="bs-v">2,140,000</span><span class="bs-s">27 Aug</span></div>
+              <div><span class="bs-l">Paid</span><span class="bs-v">1,280,000</span><span class="bs-s">two payments, last on 30 Aug</span></div>
+              <div><span class="bs-l">Still owed</span><span class="bs-v">860,000</span><span class="bs-s">no day named for it</span></div>
+            </div>
+
+            <div class="cf">
+              <p class="cf-n">Raised when <b>INV&#8209;0223</b> was marked invoiced. Un-invoicing that order takes this bill away again. A payment here settles this bill only &mdash; to pay everything <b>Ssekitoleko</b> is owed at once, use Creditors.</p>
+              <span class="cf-a">
+                <div class="btn btn-ghost ow-sm">Print (A5)</div>
+                <div class="btn btn-ghost ow-sm">Correct it</div>
+                <div class="btn btn-ghost ow-sm">Void</div>
+                <div class="btn btn-accent ow-sm">Record payment</div>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Kirinya Steel &amp; Hardware Ltd</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0262</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">2 lines</span></span>
+            <span class="mk ord"><b>INV&#8209;0221</b>Ssemwanga Bros</span>
+            <span class="dt">26 Aug<span>9 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">940,000</span><span class="ow-q-b">settled 29 Aug</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Bwambale Steel Works</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0258</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">1 line</span></span>
+            <span class="mk warn"><b>Nothing received</b>no delivery on the stock record</span>
+            <span class="dt">26 Aug<span>9 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">680,000</span><span class="ow-q-b">nothing paid yet</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Nakawa Paints &amp; Fittings</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0259</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">6 lines</span></span>
+            <span class="mk none"><b>For the shelf</b>a restock, not an order</span>
+            <span class="dt">25 Aug<span>10 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">412,000</span><span class="ow-q-b">settled 25 Aug</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Tororo Cement Depot</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0248</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">1 line</span></span>
+            <span class="mk none"><b>For the shelf</b>a restock, not an order</span>
+            <span class="dt">22 Aug<span>13 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">3,600,000</span><span class="ow-q-b">settled 30 Aug</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Roofings Rolling Mills</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0251</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">3 lines</span></span>
+            <span class="mk bad"><b>Same as PINV&#8209;0244</b>same day, lines and prices</span>
+            <span class="dt">21 Aug<span>14 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">1,240,000</span><span class="ow-q-b">nothing paid yet</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Roofings Rolling Mills</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0244</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">3 lines</span></span>
+            <span class="mk bad"><b>Same as PINV&#8209;0251</b>raised first, so the one to keep</span>
+            <span class="dt">21 Aug<span>14 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">1,240,000</span><span class="ow-q-b">nothing paid yet</span></span>
+          </div>
+        </div>
+
+        <div class="ow-q">
+          <div class="ow-q-r">
+            <svg class="ow-q-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="ow-q-t"><span class="ow-q-who">Tororo Cement Depot</span><span class="ow-q-sep">&middot;</span><span class="ow-q-doc">PINV&#8209;0231</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">1 line</span></span>
+            <span class="mk bad"><b>Paid 180,000 over</b>1,900,000 out on a 1,720,000 bill</span>
+            <span class="dt">12 Aug<span>23 days ago</span></span>
+            <span class="ow-q-v"><span class="ow-q-f">1,720,000</span><span class="ow-q-b">1,900,000 paid</span></span>
+          </div>
+        </div>
+
+        <p class="ow-mini">25 more bills in this range, <b>7,142,000</b> between them &mdash; all settled, and nothing on any of them to look at. Keep scrolling, or search a supplier.</p>
+      </div>
+
+      <div class="ow-side">
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">This screen, and Creditors</span></div>
+          <p class="rl">Here the unit is <b>one bill</b>: what a supplier billed you on one day, and whether it is right. On <a href="#">Creditors</a> the unit is <b>one supplier</b>: what you owe them altogether, and who to pay first.</p>
+          <p class="rl">A payment recorded on either shows on both. Nothing is counted twice, and nothing is decided in two places.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What is checked</span></div>
+          <p class="rl">Every bill in the range, every time this screen is drawn: the same delivery billed twice; a line priced above anything you have ever paid that supplier; a bill with no delivery behind it on the stock record; and money paid out beyond what was billed.</p>
+          <p class="rl">Not checked, because nothing on file can answer it: whether the goods that came were the ones ordered, and whether a price you have <b>never</b> paid before is a fair one. For that second question, <a href="#">Compare prices</a>.</p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Bought, last 30 days</span></div>
+          <div class="rf"><span class="rf-l">Billed to you</span><span class="rf-v">18,940,000</span></div>
+          <div class="rf"><span class="rf-l">Of it, for the shelf</span><span class="rf-v">11,320,000<span>60%</span></span></div>
+          <div class="rf"><span class="rf-l">Of it, against an order</span><span class="rf-v">7,620,000<span>40%</span></span></div>
+          <div class="rf"><span class="rf-l">Paid out</span><span class="rf-v">12,660,000</span></div>
+          <div class="rf"><span class="rf-l">Still owed on these</span><span class="rf-v">6,280,000</span></div>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Where it went</span><span class="ow-pan-n">11 suppliers</span></div>
+          <div class="rf"><span class="rf-l">Tororo Cement Depot</span><span class="rf-v">5,320,000<span>28%</span></span></div>
+          <div class="rf"><span class="rf-l">Roofings Rolling Mills</span><span class="rf-v">3,880,000<span>20%</span></span></div>
+          <div class="rf"><span class="rf-l">Ssekitoleko Hardware</span><span class="rf-v">2,940,000<span>16%</span></span></div>
+          <div class="rf"><span class="rf-l">Mulongo Hardware</span><span class="rf-v">2,110,000<span>11%</span></span></div>
+          <p class="rl">The other 7 took <b>4,690,000</b> between them. <a href="#">Open the purchase report</a></p>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">What voiding does</span></div>
+          <p class="rl">On a bill raised from one of <b>your own orders to a supplier</b>, voiding is not a flag &mdash; the goods come back off the shelf and the order goes back to waiting. On one raised from a customer&#39;s order it drops what is owed and leaves the stock alone.</p>
+          <p class="rl">The button says which of the two it is about to do before it does it, and a bill with money against it cannot be voided at all.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

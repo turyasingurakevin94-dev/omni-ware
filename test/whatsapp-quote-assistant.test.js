@@ -35,6 +35,7 @@ const hookSrc = read('supabase/functions/wa-webhook/index.ts');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 const sellFixture = new Map(); const breaksFixture = new Map(); const basisAsked = [];
+const companionFixture = new Map();  // 'P1' or 'P1::0' -> [{label, price, unit, ...}]
 const env = {
   data: { products: [] },
   WA_QUOTE_STOPWORDS_SRC: null,
@@ -43,6 +44,9 @@ const env = {
     return sellFixture.get(p.id + (idx==null ? '' : '::'+idx)) || null;
   },
   catalogueBreaks: (p, idx) => breaksFixture.get(p.id + (idx==null ? '' : '::'+idx)) || [],
+  /* What the shop wrote down about a product, as the one reader returns
+     it. Empty unless a check below puts something in. */
+  pairCompanionsFor: (id, idx) => companionFixture.get(id + (idx==null ? '' : '::'+idx)) || [],
   productVariantLabel: (p, idx) => {
     if (idx == null) return p.name;
     const v = (p.variants || [])[idx];
@@ -141,19 +145,49 @@ if (!scope) process.exit(1);
   t.check(reply.includes('Buy 10+ at UGX 43,500.'), 'and the volume break');
   t.check(reply.includes('Reply here to order'), 'and invites the order');
   t.check(!/[Mm]argin|[Cc]ost/.test(reply), 'no cost, no margin — the third surface held to the same line');
+  t.check(!/[Uu]sually taken with/.test(reply), 'and nothing is claimed to go with it where nothing is written down');
+
+  /* WHAT THE SHOP WROTE DOWN reaches the customer's reply, said as a
+     fact about the shop's own orders rather than as availability: only
+     the shop can say what is on the shelf, and it says that itself. */
+  const m = scope.waQuoteMatch('cement price', cands);
+  companionFixture.set(m.productId + (m.variantIdx == null ? '' : '::' + m.variantIdx),
+    [{ verbId: 'needs', label: 'River Sand', price: 30000, unit: 'trip', available: true, why: null }]);
+  const withCompanion = scope.waQuoteReply(m);
+  t.check(withCompanion.includes('Usually taken with River Sand: UGX 30,000 per trip.'),
+    'one companion is named, with its price');
+  t.check(!/stock|available/i.test(withCompanion), 'and nothing about the shelf is claimed');
+  companionFixture.clear();
 }
 
 /* ---------- 5. all of it is REACHED, and nothing sends itself -------- */
 {
-  t.check(/const m = waQuoteMatch\(lastIn\.body\|\|'', waQuoteCandidates\(\)\);/.test(src),
+  t.check(/const m = waQuoteMatch\(lastIn\.body \|\| '', waQuoteCandidates\(\)\);/.test(src),
     'the last inbound text is what gets matched');
   t.check(/const lastIn = \[\.\.\.waInbox\.msgs\]\.reverse\(\)\.find\(x=> x\.direction==='in' && x\.msg_type==='text'\);/.test(src),
     'and "last" means LAST — the newest inbound, not the first ever');
   // (dismissal is asserted with the unanswered-question gate in section 6)
-  t.check(/if\(w\.open\)\{\s*\n\s*const lastMsg/.test(src),
-    'no suggestion on a closed window — it could not be sent anyway');
-  t.check(/waSendReply\(replyText\);/.test(src),
-    'even "Send suggestion" travels the composer road, with the server\'s window check at the end');
+  /* THE SUGGESTION CARD IS GONE, AND THIS IS WHY.
+     It was an amber panel floating above the composer with its own
+     oxide "Send suggestion" and its own "Edit first" — a second send
+     button, a second copy of the reply, and the loudest thing on the
+     screen even when its guess was wrong. The draft-first decision it
+     existed to serve is now structural rather than a button: the match
+     is written straight INTO the composer, which the owner is already
+     reading and can already edit, and there is one Send.
+
+     So "Edit first" is not a road any more — it is the resting state.
+
+     One thing deliberately changed with it: a match is shown even when
+     the free window has closed. The old card hid, because it could not
+     be sent; the price is still the answer to "what did they ask for",
+     and the composer beside it is disabled and says why. Blanking the
+     one useful fact because a Meta deadline passed helped nobody. */
+  t.check(/if\(unanswered && !waInbox\.dismissed\[lastIn\.wamid\]\)\{/.test(src),
+    'a match is drawn for an unanswered question, and retired the moment anything goes back');
+  const bindFn = extractFunction(src, 'waBindOpenRow', 'index.html');
+  t.check(/waSendReply\(\);/.test(bindFn) && !/waSendReply\([^)]/.test(bindFn),
+    'and Send sends what is IN the composer — the owner\'s own words, whoever first wrote them');
   /* Four roads only, all of them through words the owner has SEEN or
      figures the owner has APPROVED: the composer (textOverride), the
      token-match card (replyText), the assistant draft (d.text —
@@ -165,22 +199,27 @@ if (!scope) process.exit(1);
      twins, where send-capable code now begins. */
   t.check(!/waSendReply\((?!textOverride|replyText|d\.text|textTwin|\))/.test(src.slice(src.indexOf('function waOrderReceiptText'))),
     'and nothing else calls the send with fabricated text');
-  t.check(/waInbox\.drafts\[String\(waInbox\.active\)\] = replyText;/.test(src),
-    '"Edit first" hands the text to the composer as a draft');
-  t.check(/if\(taNow\) taNow\.value = replyText;/.test(src),
-    'and into the LIVE textarea before the re-render, or the rebuild\'s draft-capture stomps it');
-  /* The ambiguity card. */
-  t.check(/Which one did they mean\? Tap to draft its quote/.test(src),
-    'a tie renders as a question with the options on the card');
-  t.check(/\$\{m\.options\.map\(\(o,i\)=>/.test(src),
-    'every tied option becomes a button');
+  t.check(/waInbox\.drafts\[convId\] = suggested;/.test(src),
+    'the match lands in the composer as an editable draft, never as a sent message');
+  /* The pre-fill's one real risk, and its guard: it may replace only
+     what THIS screen last wrote, so a newer question refreshes a stale
+     suggestion and a hand-typed reply is never touched. */
+  t.check(/if\(!held \|\| \(mine && held === mine\.text\)\)\{/.test(src),
+    'and it never overwrites words the owner typed themselves');
+  /* The tie. Still a QUESTION rather than a guess or a silence — now
+     asked as rows in the priced table, so the owner picks by reading
+     the two prices side by side instead of by reading two names. */
+  t.check(/\$\{options\.length\} things match — pick one/.test(src),
+    'a tie renders as a question, with each option priced');
+  t.check(/options\.map\(\(o,i\)=>/.test(src) && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}"/.test(src),
+    'every tied option becomes a row you can take');
   const optHandler = (/wa-suggest-opt'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{[\s\S]*?\}\)\);/.exec(src) || [''])[0];
-  t.check(/waInbox\.drafts\[String\(waInbox\.active\)\] = text;/.test(optHandler)
+  t.check(/waInbox\.drafts\[convId\] = text;/.test(optHandler)
     && /if\(taNow\) taNow\.value = text;/.test(optHandler)
     && !/waSendReply/.test(optHandler),
-    'tapping an option DRAFTS its quote — the edit-first road, never a direct send');
-  t.check(/\(partial match, check it\)/.test(src),
-    'a partial match is labelled as one on the card');
+    'tapping an option DRAFTS its quote — never a direct send');
+  t.check(/a partial match — check it before it goes/.test(src),
+    'a partial match says so, above the price it is offering');
 }
 
 /* ---------- 6. the server mirror: autonomy is EXACT AND ALONE -------- */
@@ -235,10 +274,16 @@ if (!scope) process.exit(1);
   /* The client's side of the bargain. */
   t.check(/update\(\{ auto_quote: on \}\)\.eq\('shop_id', currentShopId\)/.test(src),
     'the toggle writes the shop\'s own opt-in row');
-  t.check(/\$\{m\.payload && m\.payload\.auto \? '<span class="wm-auto">auto<\/span>' : ''\}/.test(src),
-    'the thread shows which words the system said in the shop\'s name');
-  t.check(/if\(lastIn && lastMsg === lastIn && !waInbox\.dismissed\[lastIn\.wamid\]\)/.test(src),
-    'the suggestion card shows only for UNANSWERED questions — an auto-reply retires it');
+  t.check(/\$\{m\.payload && m\.payload\.auto \? ' · auto' : ''\}/.test(src),
+    'the transcript shows which words the system said in the shop\'s name');
+  /* And now on the QUEUE row too, in amber, which the thread-only mark
+     could not do: a shop that never opens the chat still sees that a
+     machine answered in its name. */
+  t.check(/class="ow-cp wa-cp-auto">Answered by the system/.test(src)
+    && /\.wa-cp-auto\{background:var\(--ow-amber-soft\);color:var\(--ow-amber-ink\);\}/.test(src),
+    'and the queue says so without the chat having to be opened');
+  t.check(/const unanswered = !!\(lastIn && lastMsg === lastIn\);/.test(src),
+    'the match is drawn only for UNANSWERED questions — an auto-reply retires it');
 }
 
 process.exit(t.done() ? 1 : 0);

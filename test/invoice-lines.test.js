@@ -48,6 +48,14 @@ const scope = compileScope([
   /* The real pricing chain, not a stand-in. The whole point of `priced`
      is that it distinguishes a typed price from a rule's price, and a
      stubbed sell price cannot tell those apart. */
+  /* Which side of the trade a line is sold at, and the two functions
+     behind that reading. Compiled in rather than stubbed: whether the
+     wholesale markup is the one that applies is the whole subject of
+     this file, and a stub would answer it before the test does. */
+  extractFunction(src, 'tiersForKind', 'index.html'),
+  extractFunction(src, 'tieredUnitPrice', 'index.html'),
+  extractFunction(src, 'purchaseSideAtQty', 'index.html'),
+  extractFunction(src, 'sellSideFor', 'index.html'),
   extractFunction(src, 'effectiveMarkupRule', 'index.html'),
   extractFunction(src, 'effectiveStockMarkupRule', 'index.html'),
   extractFunction(src, 'suggestedSellingPrice', 'index.html'),

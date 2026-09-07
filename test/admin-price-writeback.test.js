@@ -353,7 +353,10 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
   t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
-  t.check(calls.some((c) => /,\s*q,\s*\{confirms: true, unit\}$/.test(c.trim())),
+  /* In the supplier's own words: `said` is the typed figure restated in
+     the ROW's unit, which is the shelf's or, for a supplier priced by the
+     shelf's pack, the pack. See stock-ledger-one-unit.test.js. */
+  t.check(calls.some((c) => /said\.price,\s*said\.qty,\s*\{confirms: true, unit: said\.unit\}$/.test(c.trim())),
     'the restock passes what was actually bought');
   /* THE FOURTH PURCHASE: a delivery received against a buy order.
 

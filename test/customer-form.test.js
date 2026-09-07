@@ -385,10 +385,24 @@ if (scope) {
     'and so does the supplier one');
 
   /* Read through the one helper everywhere, so a number the shop can
-     see on the card is a number the duplicate check and the WhatsApp
-     match can see too. */
-  t.check(/\$\{contactPhones\(c\)\.map\(ph=>/.test(src) && /\$\{contactPhones\(s\)\.map\(ph=>/.test(src),
-    'both cards list every number on the record, not just the first');
+     see on screen is a number the duplicate check and the WhatsApp
+     match can see too.
+
+     The supplier side no longer says contactPhones(s) at the point of
+     drawing: the card became a register row, and the row's account
+     reads every number ONCE into supplierBookRow -- through the same
+     helper -- and lists them from there. So the check follows it: the
+     helper is still the only source, and the account still lists all of
+     them rather than the first. Asserting the old call site would have
+     asked for the shape rather than the guarantee. */
+  t.check(/\$\{contactPhones\(c\)\.map\(ph=>/.test(src),
+    'the customer account lists every number on the record, not just the first');
+  const supRow = extractFunction(src, 'supplierBookRow', 'index.html');
+  t.check(/phones: contactPhones\(s\),/.test(supRow),
+    'and the supplier row reads its numbers through the same one helper');
+  const supRail = extractFunction(src, 'supplierAccountRailHTML', 'index.html');
+  t.check(/r\.phones\.map\(ph=>/.test(supRail),
+    'so the supplier account lists all of them too, and not only the first');
   t.check(/\$\{\(!contactPhones\(c\)\.length && !c\.location && !c\.notes\)/.test(src),
     'and "no contact details" counts the second number as contact details');
 }

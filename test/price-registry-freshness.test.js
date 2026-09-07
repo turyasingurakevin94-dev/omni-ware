@@ -49,7 +49,7 @@ const data = { prices: [], products: [], stock: {}, stockLog: [], savedQuotes: [
 const DECLS = ['PRICE_STALE_DAYS', 'PRICE_REVIEW_DEMAND_DAYS', 'PRICE_REVIEW_TARGET_DEFAULT',
   'PRICE_REVIEW_CONFIRMING_SOURCES', 'PRICE_DRIFT_TARGET', 'PRICE_LEARN_MIN_INTERVALS',
   'PRICE_LEARN_MIN_SPAN_DAYS', 'PRICE_LEARN_MIN_DAYS', 'PRICE_LEARN_MAX_DAYS'];
-const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getStockQty',
+const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'priceReviewTarget', 'priceReviewStaleDays',
   'priceReviewPeriod', 'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview',
   'priceReviewCandidates', 'priceReviewProgress', 'confirmPriceUnchanged',
@@ -452,8 +452,21 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const pred = extractFunction(src, 'priceRowMatchesAge', 'index.html');
   t.check(!/priceNeedsReview|priceReviewFacts/.test(pred),
     'the age predicate reads only the row it was handed, never the shop around it');
-  t.check(/if\(!ageFilter \|\| ageFilter === 'review'\) return true;/.test(pred),
-    'and passes the worklist key through untouched rather than pretending to apply it');
+  /* Was pinned to the single literal `ageFilter === 'review'`. There is
+     a second non-age key now -- `odd`, the rows whose figure does not
+     fit the evidence around it -- and it is decided the same way, in
+     getFilteredPriceRows where the other quotes on the line and the
+     purchase invoices are already open. The assertion's MEANING is
+     unchanged and is what is pinned here instead: every key this
+     predicate cannot decide from one row alone passes straight through
+     rather than being half-applied. */
+  const worklistKeys = ['review', 'odd'];
+  worklistKeys.forEach(k=>{
+    t.check(new RegExp(`ageFilter === '${k}'`).test(pred),
+      `and passes the ${k} worklist key through untouched rather than pretending to apply it`);
+    t.check(new RegExp(`ageFilter === '${k}'[^\\n]*return true;`).test(pred),
+      `— through the same early return, so ${k} is never measured as an age`);
+  });
 }
 
 /* ---------- 10. asking one supplier ----------------------------------
@@ -1118,10 +1131,27 @@ const sold = (productId, qty, date) => data.stockLog.push({
   t.check(/triggerPricesRender\(\);/.test(save), 'the registry is redrawn');
   t.check(/renderDashPriceReview\(\);/.test(save),
     'and so is the report, which would otherwise still be asking for what was just answered');
+  /* And the suppliers screen, whose band, strip and Standing chips are
+     all counts of exactly what was just answered. Left out, entering a
+     reply on that screen leaves it insisting the prices are still to be
+     confirmed. */
+  t.check(/renderSuppliers\(/.test(save),
+    'and the buying book, which counts the very prices the sheet just settled');
 
-  // Reachable beside the ask, since the two halves are one errand.
-  t.check(/id="sstReplyBtn"/.test(src) && /openSupplierReply\(replyBtn\.dataset\.id\)/.test(src),
-    'the supplier panel offers it next to the ask');
+  /* Reachable beside the ask, since the two halves are one errand.
+
+     It used to be #sstReplyBtn in the supplier modal, wired by id after
+     the dialog was written. The modal is gone -- the supplier account
+     is a screen now -- so the button lives at the foot of the list of
+     prices worth asking about, and goes through the register's one
+     delegated listener like every other control on that screen. The
+     guarantee is unchanged: whatever draws the ask also offers the way
+     to write down the answer. */
+  const askBlock = extractFunction(src, 'supplierAskBlockHTML', 'index.html');
+  t.check(/data-sact="reply"/.test(askBlock),
+    'the list of prices to ask about offers the reply sheet at its foot');
+  t.check(/if\(name === 'reply'\) return openSupplierReply\(id\);/.test(src),
+    'and the suppliers screen wires it to the sheet');
 
   /* NOT renderPrBulkVariantRows, which the plan for this named. That
      renders VARIANTS OF ONE PRODUCT, indexed into p.variants with shared

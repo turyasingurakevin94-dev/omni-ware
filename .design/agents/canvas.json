@@ -1,0 +1,104 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The redesign"
+    },
+    {
+      "id": "page-2",
+      "name": "States, and where the credentials go"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Before.dc.html",
+      "title": "As it stands today \u2014 twelve faults, ten of them on the drawing",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1530,
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Proposed \u2014 one screen: what is at risk, who needs you, the roster, and the two tabs that earned their place",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1990,
+      "page": "page-1"
+    },
+    {
+      "file": "States.dc.html",
+      "title": "Proposed \u2014 nobody yet, one agent, and a read that failed",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 790,
+      "page": "page-2"
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Proposed \u2014 the MTN/Airtel credentials, moved to Settings",
+      "x": 0,
+      "y": 910,
+      "w": 1440,
+      "h": 880,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": -820,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT THIS SCREEN IS FOR\n\nYou settled four things when I asked, and everything on the drawing follows from them.\n\n1. IT IS ONE SCREEN, NOT FOUR. Today \"Sales agents\" is four unrelated screens wearing one name: a roster, a supplier promotions register, a payout ledger, and a page of MTN/Airtel merchant API keys. Promotions and claims now fold into the roster where they are ACTIONABLE -- a claim somebody is waiting on, a promotion nobody is selling on -- and the credentials move to Settings, because a sandbox switch and a callback URL are not a view of your agents.\n\n2. THE FIRST 200px IS MONEY AT RISK. The screen opens on 2,500,000 sitting out on trust with one agent who has not ordered in 74 days. Not \"eight agents\". Not a search box. The one figure that can cost you.\n\n3. THE ACCENT IS \"SETTLE 2 CLAIMS\". You chose the one thing you owe somebody else as the screen's single oxide element. That is why Invite an agent is a ghost, and why every action inside an open row is a ghost -- four oxide buttons on a screen allowed one accent is no accent.\n\n4. DESK ONLY. You said agents are administered sitting down, so there is no phone artboard and no compromise made for one. 820px is a switch, and this design takes the desktop half of it without apology.\n\nEverything is drawn from index.html's own values: the 23-colour palette, the 11/12/13/14 ramp, Inter + Archivo Black + IBM Plex Mono, and the .ow-* console components already shipping on Today, Debtors, Chase debts, Follow-ups, Consignment, Creditors, Pricing, Inventory, Compare Prices and Customers. No new colour, no new weight, no new type size, no fourteenth button family.\n\nNOT ONE FIGURE HERE IS NEW. agentStanding(), agentRosterPosition(), promotionEarnings(), promotionClashes() and agentPhantomCustomer() already compute every number on the drawing. They were spread across four tabs and ninety cards. This puts them where they can be compared."
+    },
+    {
+      "id": "faults",
+      "x": -820,
+      "y": 900,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT IS WRONG WITH IT AS IT STANDS >\n\n1. FOUR SCREENS UNDER ONE NAME. Agents / Promotions / Commission Claims / Mobile Money. Three of them are things you do; the fourth is a page of live payment credentials. Nothing about a merchant API key belongs one tap away from the list you open every morning -- and the sub-tab row means the two claims somebody is waiting on are INVISIBLE from the roster.\n\n2. A SECOND PAGE TITLE, 60px LOWER. The console header says \"Sales agents\". Then a panel says \"ALL AGENTS\". One screen, two headings, and the second one carries no information at all. Customers had exactly this and it went.\n\n3. THE ACCENT IS ON INVITE AGENT -- the only oxide element on the screen, spent on growing a roster where three of eight have never sold anything, while two agents wait on money you owe them. The accent is meant to be the one thing to do next.\n\n4. THE SEARCH PROMISES LESS THAN THE APP KNOWS. renderAgents builds its haystack from name + phone + id. Not location -- although every agent must have one, the invite form REFUSES to save without it, and \"who do I have in Jinja\" is the question a shop actually asks. Not email either. The placeholder is honest about being poor, which is not the same as being right.\n\n5. A FOURTH SURFACE STYLE. .ag-pos is a grey box with a 1px border and radius 12 inside a white panel with a 1px border and radius 12, inside a page. Three nested boxes to hold three numbers. The house has .ow-strip for exactly this, at 64px with hairline dividers and no per-tile borders.\n\n6. THE SAME SENTENCE, SIX TIMES, IN A COLOURED BOX. \"Their orders cannot be prepared until the money is in. Nothing leaves the shop on trust.\" appears on EVERY prepay card -- five of six here, in verdigris, taking about a fifth of the screen. It is the default. A device that marks everything marks nothing, and this one marks normality in the colour reserved for good news. The one card it does not appear on is the one that matters, and that card's warning is one of nine boxes competing with it.\n\n7. NOTHING LINES UP, SO NOTHING CAN BE COMPARED. Six cards, six different heights, because each one has a different number of notes. Joan's 9,120,000 and Peter's 4,270,000 sit at different heights in different columns at the same size and weight. The sort is CAREFUL -- money owed, then recency, retired last -- and the grid throws all of it away: card 1 and card 6 look identical, and left-to-right-then-down is not a ranking anyone perceives.\n\n8. 28px PAUSE AND DELETE, SIDE BY SIDE. .pc-icon-btn is 28x28 against the house's 44px tap floor, and Retire -- permanent, closes access everywhere, burns the Agent ID for ever -- sits immediately beside Pause looking like the harder version of the same control. At eight agents that is sixteen of them.\n\n9. A ZERO AT THE WEIGHT OF A MILLION. Sarah has never sold anything, so her card reads 0 / 0 / 0 at 15px mono, the same size as Moses's 14,860,000. Three zeros claim she has been measured and found to be worth nothing. She has not been measured; she has never started. The code KNOWS this -- idleDays is null, never a big number, and the comment says exactly why -- and the figures throw the distinction away.\n\n10. THE PROMOTIONS AND CLAIMS TABS ARE WHERE THE REAL FAULTS HIDE. promotionClashes() detects two live promotions on one product, where only one pays and NOTHING DECIDES WHICH -- a genuine money bug, and it is behind a tab. Two agents have been waiting 33 and 4 days for bonus you owe them -- behind another tab. Neither is visible from the screen you actually open.\n\nAND OFF THE DRAWING:\n\n11. AGENT CREDIT IS LIVING IN YOUR RETAIL DEBTORS. agentPhantomCustomer() already finds it: invoicing an agent order matches on the name on the order, finds no customer, and CREATES one -- so Joan Akello's 2,500,000 appears in the Debtors list as a customer with no location, who then lands in the delivery clusters' \"No address yet\" bucket. The card mentions this in a grey note under two other notes. It deserves better placement, which it gets.\n\n12. NO FAILURE STATE. If the order history does not load, agentStanding returns zeros for everybody and the screen renders them as facts. \"Brought in 0. Owed 0.\" reads as a healthy channel. Your app's own law is that a failure must name itself."
+    },
+    {
+      "id": "proposal",
+      "x": 3120,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "THE PROPOSAL -- what changed, and why\n\nTHE STRIP OPENS ON WHAT IS AT RISK. Out on trust 2,500,000, with the one sentence that makes it frightening: one agent takes goods before paying, and has not ordered in 74 days. Then what is owed in total, what agents have brought in, how many still sell, and what you owe them. Five figures, 64px, hairline dividers, no per-tile borders. Only ONE is coloured, and it is the only one that is genuinely bad.\n\n\"NEEDS YOU TODAY\" IS THE SCREEN'S REASON TO EXIST -- and it is what the four tabs were hiding. Six things, worst first, and they are not all agents: a clashing promotion and a dead invite are on the same list as the money, because they are all \"somebody has to do something about this\". The arithmetic is IN the line. \"Holds 2,500,000 of your stock on trust and has not placed an order in 74 days\" is a fact you can argue with; a chip reading \"At risk\" is not.\n\nTHE KEY IS THREE COLOURS AND A 3px BAR. Crimson where your money is at risk, amber where somebody is late -- them or you -- and nothing at all where a thing has simply stopped moving. There is no fourth state colour, because the house says there is no fourth.\n\nTHE ROW OPENS IN PLACE AND IS THE WHOLE CASE. Joan's four open invoices with what is still due on each, the sentence about 19 July, and the phantom-customer note promoted to the place a person reading about her money would look. The figures in \"still due\" are ORDINARY INK, not crimson: money is a size, not a warning, and the row is already keyed crimson.\n\nTHE ROSTER IS A TABLE, AND THAT IS THE WHOLE POINT. Nine columns, money right-aligned and tabular, in the order the code already sorts. Now Moses at 14,860,000 and Peter at 4,270,000 are visibly different sizes, which in a grid of equal cards they were not. Names give way when space runs short; no money column ever truncates, because \"1,240,00\" is a tenth of \"1,240,000\" and looks entirely plausible.\n\nDASHES, NOT ZEROS. Sarah, Esther and Alice have never sold, so their figures are dashes and their last-order cell says \"never - invited 12 Mar\". A zero would claim they were measured. And the six green boxes are gone: the terms column says \"Prepay\" or carries one crimson chip for \"Pay on delivery\", which is the one case where the terms are news.\n\nTHE FOOT OF THE BAND IS WHAT LETS YOU TRUST IT. \"3 owe you money, two of them past 40 days - 2 bonus claims are waiting on you - 2 running promotions nobody has sold on, one of them a clash - 3 invites that never took.\" Then it names who is DELIBERATELY not counted: Ronald is retired; Esther and Alice were invited inside six weeks, which is too soon to call. A ranked list is only readable when it tells you what it is not saying.\n\nTHE TWO PANELS AT THE FOOT ARE THE OLD TABS, EARNING THEIR PLACE. Promotions as a table where the clash is visible as a clash -- the same bag of cement, funded by two different suppliers, both running, only one paying. Claims as a table with what you owe, how long they have waited, and the line that keeps the app honest: nothing is paid until you tap it.\n\nTHE LINE UNDER THE ROSTER IS THE MOST IMPORTANT SENTENCE ON THE SCREEN. \"Brought in\" is the shop's money. \"They earned\" is the agent's own margin, collected from their client, not in your books. The only money you owe an agent is the supplier-funded bonus. Those three facts were nowhere on the old screen and they are what the whole page is about."
+    },
+    {
+      "id": "open",
+      "x": 3120,
+      "y": 1120,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT I HAVE NOT DECIDED FOR YOU\n\n1. WHAT \"SETTLE 2 CLAIMS\" DOES ON THE FIRST TAP. I have drawn it as the screen's one accent. Settling a claim has to ask which till the money leaves, and there are two claims. Either it opens one dialog listing both and one till choice, or it walks them one at a time. I would do the first. One decision.\n\n2. WHETHER THE ATTENTION BAND SHOULD MIX AGENTS AND PROMOTIONS. It reads well at six. At thirty it might want splitting -- people in one band, arrangements in another. My instinct is that it stays mixed and stays capped at six, with the foot line telling the truth about the rest, because a queue that is always full stops being a queue.\n\n3. THE 60-DAY QUIET LINE. AGENT_IDLE_DAYS is already 60 in your code and I have kept it. But an agent selling iron sheets to contractors and one selling nails to a village shop do not have the same rhythm, and Customers measures lateness against each customer's OWN gap. Agents could do the same. That is a real change and I have not made it.\n\n4. WHETHER PROMOTIONS SHOULD BE ON THIS PAGE AT ALL, long term. They are a supplier arrangement that happens to pay agents. Folded in here they are visible; on their own page they would have room for the funder relationship. I have folded them in because that is what you chose, and because the clash bug needs to be visible from somewhere you actually look.\n\n5. WHERE SETTINGS PUTS MOBILE MONEY. I have drawn it as a Settings page under Setup. If your Settings screen is organised some other way, the artboard is the content, not the placement.\n\n6. WHAT I HAVE NOT TOUCHED. agentStanding, agentRosterPosition, orderEarnings, promotionEarnings, promotionClashes, invoiceBalanceDue, the retire/pause distinction, the pay-on-delivery confirmation, or any figure anywhere. Same data, computed the same way, drawn differently.\n\n7. THREE THINGS THAT ARE BUGS WHATEVER YOU DECIDE ABOUT THE DRAWING:\n   - The clash. Two live promotions on one product, and promotionClashes() detects it while the query that reads it has no ORDER BY. Which one pays is whatever Postgres returns first.\n   - The search ignores location, on a screen where the invite form refuses to save an agent without one.\n   - Agent credit creating phantom customer records in Debtors. Naming it on screen is not fixing it."
+    },
+    {
+      "id": "states-note",
+      "x": 1560,
+      "y": 0,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE THREE STATES\n\n1. NOBODY INVITED YET. No strip -- four figures of zero are four figures that mean nothing. Instead the empty screen explains what an agent IS, since this is the one place somebody meets the idea: they sell your stock at your prices, keep their own margin, and their clients stay private to them. And it says the two things that go wrong later: the Agent ID is issued by the server so it can never collide with one that has history behind it, and the terms decision is made BEFORE anyone is invited, not from a bare dropdown afterwards.\n\n2. ONE AGENT, THREE WEEKS IN. \"Needs you today\" says nothing needs you, and says WHY -- he owes nothing, ordered two days ago, has no claim outstanding. Two tiles instead of five. No ranking band, because there is no ranking on one row and a band pretending there is would be a lie. Three orders is not yet a pattern and the screen says so.\n\n3. THE ORDER HISTORY DID NOT LOAD. This state does not exist today; the screen renders zeros and a shop reads them as facts. So: it names what failed, states that the missing figures are MISSING RATHER THAN ZERO, shows dashes, and keeps the names, places, terms and Agent IDs -- because those read fine and withholding them would be its own lie. Needs you today is switched OFF, not shortened: it ranks by money at risk and by how long somebody has waited, and it can do neither without the orders. A ranked list that quietly leaves people out is worse than no list. Bonus claims still show, because they read from their own table and it loaded."
+    },
+    {
+      "id": "settings-note",
+      "x": 1560,
+      "y": 910,
+      "w": 700,
+      "page": "page-2",
+      "text": "WHERE THE CREDENTIALS WENT\n\nThe fourth sub-tab held your MTN and Airtel merchant API keys, a sandbox/production switch, and a button that provisions an API user against a live payment provider. It is configuration: set up once, changed almost never, readable only by an owner. It was sitting one tap away from the list you open every morning, and it was making the agents screen four unrelated screens wearing one name.\n\nHere it is a Settings page. Same fields, same provisioning button, same warnings -- drawn in the console vocabulary, with the secrets masked and the environment stated in words rather than implied by a select nobody re-reads.\n\nThe payment ledger comes with it, and it earns its place by saying something: one prompt at 15:58 is still pending after eighteen hours and a second one for the same amount went through four minutes later. The agent retried. Today that ledger is eight columns of raw rows with a Re-check button and no reading of them at all -- so the one thing worth noticing, a double payment about to be counted twice, is left entirely to you to spot."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

@@ -325,17 +325,26 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         extractFunction(read('shared-worker.js'), 'quoteLineReceived', 'shared-worker.js'),
         extractFunction(read('shared-worker.js'), 'quoteLineComesOffShelf', 'shared-worker.js'),
         extractFunction(indexHtml, 'applyQuoteStockDeduction', 'index.html'),
+        extractFunction(indexHtml, 'stockUnitFor', 'index.html'),
+        extractFunction(indexHtml, 'stockMoveOnRowUnit', 'index.html'),
         extractFunction(indexHtml, 'amendOrderToPickedQuantities', 'index.html'),
         extractFunction(indexHtml, 'pickShortfallLabel', 'index.html'),
         /* Un-invoicing names the document it just unmade, because from
            the Invoices register the row disappears when it does. */
         extractFunction(indexHtml, 'invoiceNumberLabel', 'index.html'),
+        /* The label counts in the unit the line was chosen in, through
+           the same reader every document uses; a loose line reads as
+           before. */
+        extractFunction(indexHtml, 'quoteLinePack', 'index.html'),
+        extractFunction(indexHtml, 'quoteLineCountPer', 'index.html'),
+        extractFunction(indexHtml, 'quoteLineCount', 'index.html'),
       ], {
         data: data3,
         document: { getElementById: () => null },
         openPickShortfallModal: (id, from) => { seen.modalFor = id; seen.fromInvoice = from; },
         quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
         getStockQty: () => 100,
+        cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
         applyStockDelta: (productId, variantIdx, delta) => { seen.stockDeltas.push({ productId, delta }); },
         generatePurchaseInvoicesForQuote: async () => {},
         reverseQuoteStockDeduction: () => {},

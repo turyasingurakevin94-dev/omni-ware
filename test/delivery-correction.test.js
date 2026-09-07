@@ -36,14 +36,14 @@
  *
  * Run: node test/delivery-correction.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('correcting a delivery');
 const src = read('index.html');
 
 const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow', 'stockCostsEqual',
   'effectiveStockPurchase', 'stockPurchaseMinQty', 'takeBackPurchaseLots', 'stockPurchaseInvoiceFor',
-  'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'ipeFillBillOptions',
+  'applyStockPurchaseEdit', 'prVerbsFor', 'prOwnedElsewhere', 'ipeFillBillOptions',
   'samePiLineTarget', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
   /* The whole-delivery undo, which is the other half of this: a line
      cannot be corrected to nothing, so "none of it came" is its own
@@ -55,7 +55,8 @@ const syncCalls = [];
 let nextId = 100;
 
 const scope = compileScope(
-  FNS.map((n) => extractFunction(src, n, 'index.html')),
+  [extractDeclaration(src, 'PR_VERBS', 'index.html')]
+    .concat(FNS.map((n) => extractFunction(src, n, 'index.html'))),
   {
     data,
     STOCK_PURCHASE_NOTE_RE: /^Purchased\b/,
@@ -82,7 +83,8 @@ const dom = {
   ipe_bill_note: { style: { display: '' }, textContent: '' },
   ipe_supplier: { value: 'S1' },
 };
-const { applyStockPurchaseEdit, isStockPurchaseRow, stockLogEditButtonHTML, effectiveStockPurchase } = scope;
+const { applyStockPurchaseEdit, isStockPurchaseRow, prVerbsFor, effectiveStockPurchase } = scope;
+const verbIds = (e) => prVerbsFor(e).map((v) => v.id);
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 /* One lorry from ABC: 30 bags of cement at 27,000 and 200 wall angle at
@@ -133,8 +135,8 @@ const line = (pid) => bill().items.find((it) => it.productId === pid);
   freshDelivery();
   t.check(isStockPurchaseRow(data.stockLog[0]),
     'A DELIVERY ROW IS A PURCHASE THIS SCREEN CAN CORRECT — it was kept out while the screen could only repair a bill of one line, and the owner’s only way out of a mistyped lorry was to void the whole bill');
-  t.check(/stock-log-edit/.test(stockLogEditButtonHTML(data.stockLog[0])),
-    'so the row offers the Edit door, where before it offered nothing');
+  t.check(verbIds(data.stockLog[0]).indexOf('figures') > -1,
+    'so Put it right offers it the figures verb, where before the row offered nothing');
 }
 
 /* ---------- 2. and it corrects the RIGHT line ------------------------ */
@@ -262,7 +264,13 @@ const line = (pid) => bill().items.find((it) => it.productId === pid);
     note: 'Received against order INV-0004', date: '2026-08-30', source: 'order-receipt' };
   t.check(!isStockPurchaseRow(receipt),
     'A RECEIPT AGAINST A CUSTOMER’S ORDER STAYS OUT — those goods belong to somebody’s job, the order screen corrects them, and two screens correcting one delivery is how the two come to hold different truths about it');
-  eq(stockLogEditButtonHTML(receipt), '', 'so it offers no Edit door here');
+  eq(verbIds(receipt).indexOf('figures'), -1, 'so Put it right does not offer to correct its figures here');
+  /* Nor to un-record it. Taking the goods off here would leave the order
+     still claiming they arrived — the same divergence, through the door
+     that was added after this test was written. */
+  eq(verbIds(receipt).indexOf('never'), -1, 'nor to say it never happened — the order screen undoes its own receipts');
+  t.check(verbIds(receipt).indexOf('shelf') > -1 && verbIds(receipt).indexOf('cost') > -1,
+    'what stands on the shelf today, and what it is said to have cost, are still this screen\'s to state');
 }
 
 /* ---------- 10. and the form says WHICH line it will change ---------- *

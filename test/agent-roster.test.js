@@ -51,7 +51,28 @@ try {
 t.check(!!scope, `the roster helpers compile${err ? ` (${err.message})` : ''}`);
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
-const card = (/function agentCardHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* THE CARD BECAME A ROW, AND THE ROW OPENS.
+ *
+ * agentCardHTML built one card in a grid of equal cards, and that grid
+ * was the fault: the agent holding 2,500,000 of the shop's stock and the
+ * one who has never sold anything rendered at the same size, in cards of
+ * different heights, so the careful sort below could not be seen at all.
+ *
+ * It is now agentRowHTML -- a row in a table whose figure columns line
+ * up, and which .ow-tbl turns back into a card on a phone from the SAME
+ * call, so the two can never say different things. What does not fit a
+ * row -- the case for the figure, the invoices behind it, the credit
+ * decision and the two acts -- moved into agentOpenHTML, which the row
+ * opens in place and which the queue at the top of the screen renders
+ * from the same builder.
+ *
+ * So the checks below are split by where the thing genuinely lives now,
+ * and `card` is kept as the name for both halves together: every
+ * assertion that was true of the card is still asserted, none is
+ * dropped. */
+const row = (/function agentRowHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+const body = (/function agentOpenHTML\(a, s\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+const card = row + body;
 const render = (/function renderAgents\(filter=''\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const posHTML = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const retire = (/function retireAgent\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
@@ -118,9 +139,15 @@ if (scope) {
   eq(s.idleDays, null, 'an agent who has never sold has no age, rather than an age of zero');
   eq(s.lastAt, null, 'and no last date invented for them');
   eq(s.revenue, 0, 'while the money really is nothing');
-  t.check(/s\.idleDays == null/.test(card) && /Has never sold anything/.test(card),
-    'and the card says which of the two it is');
-  t.check(/Last order \$\{esc\(agingDaysLabel\(s\.idleDays\)\)\}/.test(card),
+  /* The distinction survives the move to a row: the Last order cell
+     prints "never" for one and an age for the other, and the open body
+     says in words that a dead invite and a relationship going cold are
+     different conversations. */
+  t.check(/const never = s\.idleDays == null;/.test(card) && /never \? 'never'/.test(card),
+    'and the row says which of the two it is');
+  t.check(/They have never placed an order/.test(card),
+    'in words as well, where there is room for them');
+  t.check(/esc\(agingDaysLabel\(s\.idleDays\)\) \+ \(s\.idleDays===0\?'':' ago'\)/.test(card),
     'against a plain age for somebody who has sold');
 }
 
@@ -153,7 +180,13 @@ if (scope) {
   t.check(/const p = agentRosterPosition\(\);/.test(posHTML), 'the header is drawn from it');
   t.check(/sold in the last \$\{AGENT_IDLE_DAYS\} days/.test(posHTML),
     'saying how many of the roster is actually working');
-  t.check(/of that is with the \$\{p\.onCredit\} agent\$\{p\.onCredit===1\?' who takes':'s who take'\}/.test(posHTML),
+  /* It used to be a follow-on line under a total: "X of that is with the
+     N agents who take goods before paying". Out on trust is now the
+     FIRST tile of the strip and the leading figure on the screen, so the
+     sentence is that tile's own basis rather than a footnote to another
+     one -- same pluralisation, same claim, no longer subordinate to a
+     figure it is more important than. */
+  t.check(/with the \$\{p\.onCredit\} agent\$\{p\.onCredit===1\?' who takes':'s who take'\} goods before paying/.test(posHTML),
     'and reading as English for one agent as well as several');
 }
 
@@ -282,7 +315,7 @@ if (scope) {
   data.customers = [];
   t.check(scope.agentPhantomCustomer(data.agents[0]) === null, 'with nothing claimed when there is no such record');
 
-  t.check(/This money also shows in the Debtors list under/.test(card),
+  t.check(/also appears on <b>Debtors<\/b>, under a customer record called/.test(card),
     'and the roster says where else that money appears, rather than leaving two screens disagreeing in silence');
   t.check(/s\.owed > 0 \? agentPhantomCustomer\(a\) : null/.test(card),
     'only when there is money to explain');
@@ -290,14 +323,17 @@ if (scope) {
 
 /* ---------- 9. the card answers the four questions -------------------- */
 {
-  t.check(/brought in<\/span>/.test(card) && /owed to you<\/span>/.test(card) && /in flight<\/span>/.test(card),
-    'the card leads with what they brought, what they owe and what is still moving');
+  t.check(/data-l="Brought in"/.test(card) && /data-l="Owed to you"/.test(card) && /data-l="In flight"/.test(card),
+    'the row leads with what they brought, what they owe and what is still moving');
   /* Money owed reads differently depending on how it came to be owed:
      unpaid on prepay terms is a hiccup, unpaid on credit terms is the
      shop's own decision coming due. */
-  t.check(/s\.owed > 0 \? \(s\.onCredit\?'bad':'warn'\) : ''/.test(card),
+  t.check(/s\.onCredit\?'ow-bad':'ow-warn'/.test(card),
     'with what is owed marked by how it came to be owed');
-  t.check(/is out on trust — they take goods before paying/.test(card),
+  /* It was a coloured note stacked under four others on the card. It is
+     now the first sentence of the case the row opens into, which is
+     where somebody deciding what to do about the money is reading. */
+  t.check(/They take goods before paying, so their orders are prepared and handed over before any money arrives/.test(card),
     'and credit exposure named as exposure');
   t.check(/They made <b>\$\{money\(s\.earned\)\}<\/b> of their own on top of your prices/.test(card),
     'while the agent\'s own margin is shown as theirs, not as the shop\'s takings');

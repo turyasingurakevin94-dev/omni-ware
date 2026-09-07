@@ -69,7 +69,15 @@ const sharedJs = read('shared-worker.js');
  */
 {
   const data = { customers: [{ id: 'C1', name: 'Musa Hardware', debt: 400000 }] };
-  const scope = compileScope([extractFunction(src, 'orderInvoiceCheckHTML', 'index.html')], {
+  const scope = compileScope([
+    extractFunction(src, 'orderInvoiceCheckHTML', 'index.html'),
+    /* The check says each count in the unit the line was chosen in --
+       the same reader every document uses -- so it is compiled in. A
+       loose line reads exactly as before. */
+    extractFunction(src, 'quoteLinePack', 'index.html'),
+    extractFunction(src, 'quoteLineCountPer', 'index.html'),
+    extractFunction(src, 'quoteLineCount', 'index.html'),
+  ], {
     data,
     esc: (s) => String(s == null ? '' : s),
     fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
