@@ -241,8 +241,8 @@ const fns = compileScope([
   t.check(/Price Registry is not what is wrong/.test(leftOff), 'and they say the registry is not the fault');
   t.check(/pickVariant:[^}]*choose the size/.test(leftOff), 'the size words point at a chooser that now exists');
   t.check(/pickVariant:[^}]*name the sizes alike/.test(leftOff), 'and say how the match is earned');
-  t.check(/data-pf="\$\{from \? 'fromv' : 'tov'\}"/.test(src), 'the pairing editor carries the size chooser');
-  t.check(/field === 'tov' \? \{ toVariantIdx:/.test(src), 'and the change handler writes it');
+  t.check(/data-cell="\$\{ref\}:/.test(src), 'the pairing editor carries a size grid');
+  t.check(/pairSetCell\(rule, c\.i, c\.j, on\)/.test(src), 'and a square of it writes the size pair');
   t.check(/linkSizeColumn \? \{ to_variant_idx:/.test(src), 'the column is written only where it exists');
   t.check(/toVariantIdx: r\.to_variant_idx==null \? null : Number\(r\.to_variant_idx\)/.test(src), 'and read back as a number');
   t.check(/sb\.from\('product_links'\)\.select\('to_variant_idx, from_variant_idx'\)\.limit\(1\)/.test(src), 'after a probe for it');

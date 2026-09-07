@@ -950,7 +950,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     pairings: {
       retired: [],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-sm'],
-      renders: ['renderPairings', 'pairRowHTML', 'pairEditorHTML',
+      /* Two panes now: the product list and the product's rules are
+         drawn by their own builders beside the screen builder, and the
+         size grid and the draft by theirs. */
+      renders: ['renderPairings', 'pairListHTML', 'pairProductHTML', 'pairRowHTML',
+                'pairEditorHTML', 'pairGridHTML', 'pairDraftHTML',
                 'pairObservedHTML', 'pairOffHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',

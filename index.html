@@ -10843,15 +10843,53 @@
   /* the pairings register */
   .ow-tbl.pr-tbl{--ow-tbl-cols:minmax(0,1fr) 112px 152px 92px 18px;}
   .pr-tbl .ow-tbl-h,.pr-tbl .ow-tbl-r{gap:var(--ow-sp-10);}
-  /* A PAIRING IS A SENTENCE, so it gets one cell and is read as one --
-     product, verb, product -- rather than cut into three columns that
-     each truncate to nothing beside a 304px rail. */
+  /* TWO PANES. The product is the unit the owner thinks in, so the left
+     is a product list and the right is everything about one product.
+     The rail is 320 wide -- a product name and its sizes -- and the
+     right takes the rest. */
+  .pr-panes{display:grid;grid-template-columns:320px minmax(0,1fr);gap:var(--ow-sp-16);align-items:start;}
+  .pr-left{display:flex;flex-direction:column;min-width:0;}
+  .pr-right{min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .pr-find-w{position:relative;display:flex;align-items:center;margin:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);}
+  .pr-find-w svg{position:absolute;left:10px;width:16px;height:16px;fill:none;stroke:var(--ow-ink-400);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+  .pr-find{all:unset;box-sizing:border-box;width:100%;height:34px;padding:0 var(--ow-sp-10) 0 32px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .pr-find:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pr-find::placeholder{color:var(--ow-ink-400);}
+  .pr-flt{display:flex;gap:var(--ow-sp-6);padding:0 var(--ow-sp-12) var(--ow-sp-10);flex-wrap:wrap;
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .btn.pr-on{background:var(--ow-steel-950);color:var(--ow-paper);border-color:var(--ow-steel-950);}
+  .pr-prod{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);border-left:2px solid transparent;cursor:pointer;min-height:var(--ow-tap);}
+  .pr-prod:hover{background:var(--ow-paper-2);}
+  .pr-prod.pr-cur{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+  .pr-prod-t{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .pr-prod-n{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-prod-s{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  .pr-gap{flex:none;width:8px;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-amber);}
+  .pr-more{padding:var(--ow-sp-8) var(--ow-sp-12);}
+  .pr-obs-w{border-top:1px solid var(--ow-rule-soft);}
+  .pr-obs-w .ow-mini{padding:var(--ow-sp-8) var(--ow-sp-12);}
+  /* the product at the head of the right pane */
+  .pr-head{display:flex;align-items:center;gap:var(--ow-sp-16);padding:var(--ow-sp-12) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .pr-head-t{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .pr-head-n{font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);}
+  .pr-head-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pr-head .pr-back{display:none;}
+  .pr-foot{padding:var(--ow-sp-10) var(--ow-sp-16);}
+  /* A RULE IS A SENTENCE, so it gets one cell and is read as one --
+     verb, product, and how far its sizes are settled. */
   .pr-sent{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
   .pr-sent .pr-p{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-sent svg{width:13px;height:13px;flex:none;fill:none;stroke:var(--ow-ink-400);
     stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  /* The verb is the grammar of the pairing, so it is the one word set
+  .pr-sizes{flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-sizes-open{color:var(--ow-amber-ink);}
+  /* The verb is the grammar of the rule, so it is the one word set
      apart -- and the one that changes what a picture may say. */
   .pr-vb{flex:none;font-family:'Archivo Black',sans-serif;font-size:var(--ow-t-11);
     letter-spacing:.03em;text-transform:uppercase;color:var(--ow-ink-600);}
@@ -10862,26 +10900,28 @@
 
   /* the sentence, being written */
   .pr-lbl{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
-    text-transform:uppercase;color:var(--ow-ink-600);margin:var(--ow-sp-8) 0 var(--ow-sp-6);}
-  .pr-sb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
-    padding:var(--ow-sp-12);background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
-    border-radius:var(--ow-r-lg);}
+    text-transform:uppercase;color:var(--ow-ink-600);margin:var(--ow-sp-12) 0 var(--ow-sp-6);}
+  .pr-sb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;padding:var(--ow-sp-12) 0;}
   .pr-w{font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .pr-hint{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0;line-height:1.5;max-width:var(--ow-measure);}
+  .pr-fixed{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
   .pr-pick{display:inline-flex;align-items:center;height:34px;box-sizing:border-box;
     border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
-    max-width:280px;min-width:0;}
+    max-width:240px;min-width:0;}
   .pr-pick.pr-verb{background:var(--ow-oxide-soft);}
   .pr-pick.pr-num{width:82px;}
+  .pr-pick.pr-per{width:110px;}
   .pr-sel,.pr-in{all:unset;box-sizing:border-box;height:32px;padding:0 var(--ow-sp-10);
     min-width:0;max-width:100%;font-family:'Inter',system-ui,sans-serif;
     font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
   .pr-pick.pr-verb .pr-sel{color:var(--ow-oxide-deep);}
   .pr-pick.pr-num .pr-in{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;text-align:right;cursor:text;}
+  .pr-pick.pr-per .pr-in{cursor:text;}
   .pr-sel:focus-visible,.pr-in:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
-  .pr-note{margin-bottom:var(--ow-sp-12);}
+  .pr-note{margin-bottom:0;}
   .pr-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-    gap:var(--ow-sp-20);align-items:start;margin-bottom:var(--ow-sp-12);}
+    gap:var(--ow-sp-20);align-items:start;margin:var(--ow-sp-12) 0;}
   .pr-chk{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
     background:var(--ow-paper);overflow:hidden;}
   .pr-chk-h{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
@@ -10896,36 +10936,68 @@
   .pr-v-argue{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .pr-v-unseen{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .pr-v-nothing,.pr-v-self{color:var(--ow-ink-600);}
-  .pr-verbs{padding-left:0;padding-right:0;}
+  .pr-law{padding:0;margin:0 0 var(--ow-sp-8);}
   .pr-obs{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--ow-sp-10);
     padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);align-items:center;}
   .pr-obs .p{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-obs .s{grid-column:1;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pr-obs .a{grid-column:2;grid-row:1 / span 2;display:flex;gap:var(--ow-sp-4);}
-  /* A sentence pinned to one size is the exception under its rule: set
-     in from the margin with a corner mark, so the rule and its
-     exceptions read as one paragraph. */
-  .pr-pin .pr-sent{padding-left:var(--ow-sp-20);}
-  .pr-pinmark{margin-left:calc(-1 * var(--ow-sp-20));}
-  .pr-pick.pr-size .pr-sel{font-weight:var(--ow-fw-500);}
-  /* Sized so the whole sentence, sizes and all, holds one line beside
-     the rail: two products, two sizes, a verb, a figure and its unit. */
-  .pr-sb .pr-pick{max-width:200px;}
-  .pr-pick.pr-per{width:100px;}
-  /* the sizes, lined up */
-  .pr-plan{margin:var(--ow-sp-12) 0;}
-  .pr-sz{display:grid;grid-template-columns:minmax(72px,auto) 13px minmax(0,1fr) auto;
-    gap:var(--ow-sp-8);align-items:center;padding:var(--ow-sp-6) var(--ow-sp-12);
-    border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);}
-  .pr-sz-f{font-weight:var(--ow-fw-600);}
-  .pr-sz-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pr-sz-t i{font-style:normal;color:var(--ow-ink-600);font-size:var(--ow-t-12);margin-left:var(--ow-sp-6);}
-  .pr-sz svg{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .pr-sz .pr-pick{height:30px;}
-  .pr-sz .pr-sel{height:28px;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
-  .pr-plan-n{padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+
+  /* THE SIZE GRID. 44px squares, the tap size; the figure in a ticked
+     square is the books' count. Amber only where nothing follows. */
+  .pr-grid-w{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;margin-top:var(--ow-sp-4);}
+  .pr-grid-h{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);
+    background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .pr-grid-h .pr-lbl{margin:0;flex:none;}
+  .pr-grid-k{flex:1 1 0;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-grid-s{overflow-x:auto;}
+  .pr-grid{display:grid;grid-template-columns:minmax(120px,160px) repeat(var(--pr-cols,1),44px) minmax(200px,1fr);
+    min-width:max-content;}
+  .pr-gc{display:flex;align-items:center;min-height:36px;padding:0 var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);min-width:0;}
+  .pr-gc-corner{font-size:var(--ow-t-11);color:var(--ow-ink-400);border-top:0;}
+  .pr-gc-col{justify-content:center;padding:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);border-top:0;border-left:1px solid var(--ow-rule-soft);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-gc-row{font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:36px;}
+  .pr-gc-say{gap:var(--ow-sp-8);border-left:1px solid var(--ow-rule-soft);overflow:hidden;white-space:nowrap;}
+  .pr-gc-say b{font-weight:var(--ow-fw-600);}
+  .pr-gc-say i{font-style:normal;font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;}
+  .pr-cell{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:2px;
+    height:36px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);cursor:pointer;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .pr-cell:hover{background:var(--ow-paper-2);}
+  .pr-cell:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .pr-cell .pr-box{width:18px;height:18px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);}
+  .pr-cell svg{width:16px;height:16px;fill:none;stroke:var(--ow-verdigris);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .pr-cell-on{background:var(--ow-verdigris-soft);}
+  .pr-cell-on:hover{background:var(--ow-verdigris-soft);}
+  .pr-cell-n{font-size:10px;color:var(--ow-ink-600);}
+  .pr-cell-on .pr-cell-n{color:var(--ow-verdigris);}
+
+  /* writing a rule */
+  .pr-draft{padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+  .pr-draft-h{display:flex;flex-direction:column;gap:2px;padding:var(--ow-sp-12) 0 var(--ow-sp-4);}
+  .pr-draft-t{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);}
+  .pr-draft-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pr-verbs2{display:flex;gap:var(--ow-sp-8);flex-wrap:wrap;margin-bottom:var(--ow-sp-6);}
+  .pr-find-d{margin:0;max-width:480px;}
+  .pr-find-d .pr-find{height:36px;background:var(--ow-paper);}
+  .pr-picked{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .pr-menu{margin-top:var(--ow-sp-4);max-width:480px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    background:var(--ow-paper);box-shadow:var(--ow-lift);overflow:hidden;}
+  .pr-menu-r{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:var(--ow-sp-10);width:100%;
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);cursor:pointer;min-height:var(--ow-tap);}
+  .pr-menu-r:first-child{border-top:0;}
+  .pr-menu-r:hover,.pr-menu-r:focus-visible{background:var(--ow-paper-2);}
+  .pr-menu-n{flex:1 1 0;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-menu-n mark{background:var(--ow-amber-soft);color:inherit;}
+  .pr-menu-s{flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-600);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-menu-e{padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pr-menu-f{padding:var(--ow-sp-6) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+  .pr-sb-d{padding-top:0;}
+  .pr-draft-a{margin-top:var(--ow-sp-12);}
 
   /* the site stage, on the customer form */
   .cf-stage{display:flex;gap:var(--ow-sp-8);align-items:center;}
@@ -10956,9 +11028,35 @@
     .tl-grid{grid-template-columns:minmax(0,1fr);}
     .pr-sent{grid-column:1/-1;flex-wrap:wrap;}
     .pr-sent .pr-p{white-space:normal;}
-    .pr-sz{grid-template-columns:auto 13px minmax(0,1fr);}
-    .pr-sz-t{white-space:normal;}
-    .pr-sz .pr-pick{grid-column:1/-1;}
+    /* ONE PANE AT A TIME. The list, then the product, with a back
+       button -- a two-pane console does not fold onto a phone, it
+       becomes two screens. */
+    .pr-panes{grid-template-columns:minmax(0,1fr);}
+    .pr-panes.pr-has .pr-left{display:none;}
+    .pr-panes:not(.pr-has) .pr-right{display:none;}
+    .pr-flt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);}
+    .pr-flt .btn{box-sizing:border-box;min-height:40px;padding-left:var(--ow-sp-8);padding-right:var(--ow-sp-8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    /* Back, then the name; the one action on its own line, thumb-sized. */
+    .pr-head{display:grid;grid-template-columns:auto minmax(0,1fr);padding:var(--ow-sp-12);gap:var(--ow-sp-10);}
+    .pr-head .pr-back{display:inline-flex;width:var(--ow-tap);min-width:var(--ow-tap);height:var(--ow-tap);padding:0;justify-content:center;}
+    .pr-head .btn-accent{grid-column:1/-1;width:100%;justify-content:center;min-height:var(--ow-tap);}
+    .pr-grid-h{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-8);}
+    .pr-grid-h .pr-lbl{grid-column:1/-1;}
+    .pr-grid-h .btn{min-height:40px;}
+    .pr-grid-k{display:none;}
+    .pr-gc-corner{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:32px;padding:0 var(--ow-sp-8);}
+    .pr-prod{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .pr-prod-n{font-size:16px;}
+    .pr-prod-s{font-size:var(--ow-t-13);}
+    .pr-find,.pr-find-d .pr-find{height:var(--ow-tap);font-size:15px;}
+    .pr-two{grid-template-columns:minmax(0,1fr);}
+    .pr-grid{grid-template-columns:56px repeat(var(--pr-cols,1),44px) minmax(120px,1fr);min-width:0;}
+    .pr-gc{min-height:var(--ow-tap);padding:0 var(--ow-sp-8);}
+    .pr-cell{height:auto;min-height:var(--ow-tap);align-self:stretch;}
+    .pr-gc-row{line-height:var(--ow-tap);}
+    .pr-gc-say{white-space:normal;flex-wrap:wrap;gap:var(--ow-sp-4);padding:var(--ow-sp-6) var(--ow-sp-8);}
+    .pr-gc-say i{white-space:normal;overflow:visible;}
+    .pr-menu-s{max-width:45%;}
     /* Five desk columns cannot each take a line of a 390 card. The
        sentence keeps the top, and the three things that judge it --
        the figure, where it came from, what the orders show -- are
@@ -15637,12 +15735,13 @@
     <section id="tab-pairings" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">What goes with what</h1>
-        <p class="ow-ph-sub">The pairings you know and the ones your orders found &mdash; and what a picture may say because of them.</p>
-        <p class="ow-ph-help">A pairing is one sentence: this product needs that one, so many per one &mdash; for every size of the product, or for one size, and pointing at a size of the other where you say so. Where you leave the size open, a picture takes the size the customer already buys, the only size priced, or the size that matches; the table under a pairing shows that size by size and lets you pin any of them. Five verbs and no sixth &mdash; needs, goes with, instead of, runs out after, part of &mdash; because each one changes what a customer&rsquo;s picture is allowed to say. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named and shown with no quantity, because an invented one is worse than none. Underneath, your own invoices check every pairing you write and offer the pairs they keep seeing; saying no to one is as useful as keeping it. A pairing never changes a price, moves stock or places an order.</p>
+        <p class="ow-ph-sub">One product, every rule the shop knows about it &mdash; size by size, checked against your own orders.</p>
+        <p class="ow-ph-help">A rule is one sentence about one product: it goes with that, needs so many of this per one, is part of one job with those, runs out after so many days. Pick the product on the left and everything the shop knows about it is on the right. Where both products come in sizes, the grid under a rule says which size goes with which &mdash; a tick is a rule for that pair, the figure inside it is how many of your orders carried both, and Match by size fills the diagonal. A size with no tick and no match is marked open: that size&rsquo;s picture leaves the second thing off rather than guess. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named with no quantity. Your own invoices check every rule and offer the pairs they keep seeing. A rule never changes a price, moves stock or places an order.</p>
         <span class="ow-ph-sp"></span>
+        <button type="button" class="btn btn-ghost ow-sm" id="pair_add_btn">        <span class="ow-ph-sp"></span>
         <button type="button" class="btn btn-accent ow-sm" id="pair_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Write a pairing
+          Write a rule
         </button>
       </div>
       <div id="pairStripWrap"></div>
@@ -47187,65 +47286,143 @@ function pairSideLabel(id, variantIdx){
 function productLinkLabel(l){ return pairSideLabel(l.toId, l.toVariantIdx); }
 function productLinkFromLabel(l){ return pairSideLabel(l.fromId, l.fromVariantIdx); }
 
-/* THE PAIRINGS THAT APPLY to one product at one size: every live
-   sentence written for the product, at every size or at this size --
-   and where both exist for the same companion, the one written for
-   this size is the one meant. "Runners -- 16\" goes with Soft Close --
-   18\"" is the exception the general rule was written to have. */
+/* THE PAIRINGS THAT APPLY to one product at one size. A RULE is one
+   sentence -- product, verb, product -- and it may be written down as
+   several rows: the general one (no size at either end) and the ticks
+   in its size grid (a size at one end or both). At a given size of the
+   first product the most specific rows are the ones meant:
+     1. rows ticked for THIS size of the first product;
+     2. else rows written for every size of the first product that
+        name a size of the second;
+     3. else the general row.
+   "Runners 16" goes with Soft Close 18"" is the exception the general
+   rule was written to have, and it is read before the rule. */
 function pairingsFor(productId, variantIdx){
   const vi = pairSizeIdx(variantIdx);
   const mine = productLinksAll().filter(l=> l.active !== false && l.fromId === productId
     && !(pairVerb(l.verb) || {}).self
     && (pairSizeIdx(l.fromVariantIdx) == null || pairSizeIdx(l.fromVariantIdx) === vi));
-  const byTo = new Map();
+  const byRule = new Map();
   mine.forEach(l=>{
     const k = l.verb + ' ' + l.toId;
-    const have = byTo.get(k);
-    if(!have || (pairSizeIdx(have.fromVariantIdx) == null && pairSizeIdx(l.fromVariantIdx) != null))
-      byTo.set(k, l);
+    if(!byRule.has(k)) byRule.set(k, []);
+    byRule.get(k).push(l);
   });
-  return [...byTo.values()];
+  const out = [];
+  byRule.forEach(rows=>{
+    const atSize = vi != null ? rows.filter(l=> pairSizeIdx(l.fromVariantIdx) === vi) : [];
+    if(atSize.length){ out.push(...atSize); return; }
+    const named = rows.filter(l=> pairSizeIdx(l.fromVariantIdx) == null && pairSizeIdx(l.toVariantIdx) != null);
+    if(named.length){ out.push(...named); return; }
+    out.push(...rows.filter(l=> pairSizeIdx(l.fromVariantIdx) == null && pairSizeIdx(l.toVariantIdx) == null));
+  });
+  return out;
 }
-/* HOW THE SIZES LINE UP under a general pairing: for each size of the
-   first product, the size of the second a picture would take today and
-   why, and the pinned sentence for that size where one is written.
-   This is the table the owner reads to see where a pairing is still
-   guessing nothing, and where to pin. Read with no customer, so "the
-   size they already buy" never appears here -- that is a fact about a
-   customer, and this is a fact about the shop. */
-function pairSizePlan(l){
-  const fp = productById(l.fromId), tp = productById(l.toId);
-  const fvs = fp && Array.isArray(fp.variants) ? fp.variants : [];
-  const tvs = tp && Array.isArray(tp.variants) ? tp.variants : [];
-  if(!fp || !tp || !fvs.length || !tvs.length || pairSizeIdx(l.fromVariantIdx) != null) return null;
-  return fvs.map((v, i)=>{
-    const pin = productLinksAll().find(x=> x.id !== l.id && x.active !== false && x.fromId === l.fromId
-      && x.toId === l.toId && x.verb === l.verb && pairSizeIdx(x.fromVariantIdx) === i) || null;
-    const r = briefVariantForLine(l.toId, [], { toVariantIdx: pin ? pin.toVariantIdx : l.toVariantIdx,
-      from: { productId: l.fromId, variantIdx: i } });
-    return { fromIdx: i, fromLabel: variantLabel(v.combo || {}), pin,
-      toIdx: r.variantIdx == null ? null : r.variantIdx, by: r.by || null, why: r.why || null,
-      toLabel: r.variantIdx != null && tvs[r.variantIdx] ? variantLabel(tvs[r.variantIdx].combo || {}) : '' };
+/* THE RULES a product carries: its rows grouped into sentences. Each
+   rule hands back its general row (where there is one), its ticks, and
+   whether any of it is still in use. */
+function pairRuleKey(l){ return l.fromId + ' ' + l.verb + ' ' + l.toId; }
+function pairRulesOf(productId){
+  const groups = new Map();
+  productLinksAll().filter(l=> l.fromId === productId).forEach(l=>{
+    const k = pairRuleKey(l);
+    if(!groups.has(k)) groups.set(k, { key: k, fromId: l.fromId, verb: l.verb, toId: l.toId, rows: [] });
+    groups.get(k).rows.push(l);
+  });
+  return [...groups.values()].map(r=>{
+    r.general = r.rows.find(l=> pairSizeIdx(l.fromVariantIdx) == null && pairSizeIdx(l.toVariantIdx) == null) || null;
+    r.ticks = r.rows.filter(l=> l !== r.general);
+    r.active = r.rows.some(l=> l.active !== false);
+    r.lead = r.general || r.rows[0];
+    return r;
   });
 }
-/* Pin one size: the sentence for that size alone, beside the general
-   one, carrying the general one's figure. Unpinning deletes it -- an
-   exception withdrawn is no sentence at all. */
-function pinPairSize(generalId, fromIdx, toIdx){
-  const g = productLinksAll().find(x=> x.id === generalId);
-  if(!g) return { ok:false, why:'That pairing is no longer on file.' };
-  const have = productLinksAll().find(x=> x.id !== g.id && x.fromId === g.fromId && x.toId === g.toId
-    && x.verb === g.verb && pairSizeIdx(x.fromVariantIdx) === pairSizeIdx(fromIdx));
-  const to = pairSizeIdx(toIdx);
-  if(to == null){
+function pairRuleById(id){
+  const l = productLinksAll().find(x=> x.id === id);
+  return l ? pairRulesOf(l.fromId).find(r=> r.key === pairRuleKey(l)) || null : null;
+}
+/* THE SIZE GRID of a rule: rows are the first product's sizes (or one
+   row, where it has none), columns the second's (or one column). A
+   cell is ticked where a row is written for that pair. The figure in
+   a cell is how many orders carried both, at those sizes -- the books
+   answering the grid square by square. An unticked row says what a
+   picture would take today, or that nothing follows. */
+function pairGrid(rule){
+  const fp = productById(rule.fromId), tp = productById(rule.toId);
+  if(!fp || !tp) return null;
+  const fvs = Array.isArray(fp.variants) && fp.variants.length ? fp.variants : null;
+  const tvs = Array.isArray(tp.variants) && tp.variants.length ? tp.variants : null;
+  if(!tvs && !fvs) return null;
+  const rows = fvs ? fvs.map((v, i)=> ({ idx: i, label: variantLabel(v.combo || {}) })) : [{ idx: null, label: fp.name }];
+  const cols = tvs ? tvs.map((v, j)=> ({ idx: j, label: variantLabel(v.combo || {}) })) : [{ idx: null, label: tp.name }];
+  /* Evidence, counted once per order per pair of sizes. */
+  const seen = new Map();
+  invoicedOrders().forEach(q=>{
+    const items = q.items || [];
+    const a = new Set(items.filter(it=> it.productId === rule.fromId).map(it=> fvs ? pairSizeIdx(it.variantIdx) : null));
+    const b = new Set(items.filter(it=> it.productId === rule.toId).map(it=> tvs ? pairSizeIdx(it.variantIdx) : null));
+    a.forEach(i=> b.forEach(j=> { const k = i + ':' + j; seen.set(k, (seen.get(k) || 0) + 1); }));
+  });
+  const tick = (i, j)=> rule.ticks.find(l=> l.active !== false && pairSizeIdx(l.fromVariantIdx) === i && pairSizeIdx(l.toVariantIdx) === j) || null;
+  const grid = rows.map(r=>{
+    const cells = cols.map(c=> ({ i: r.idx, j: c.idx, link: tick(r.idx, c.idx), orders: seen.get(r.idx + ':' + c.idx) || 0 }));
+    const ticked = cells.filter(c=> c.link);
+    /* What a picture takes for this size where nothing is ticked: the
+       size that follows, by the same reading the picture makes. */
+    let follows = null;
+    if(!ticked.length && tvs){
+      const v = briefVariantForLine(rule.toId, [], { from: { productId: rule.fromId, variantIdx: r.idx } });
+      follows = v.variantIdx != null ? { idx: v.variantIdx, label: cols[v.variantIdx] ? cols[v.variantIdx].label : '', by: v.by } : { gap: true };
+    }
+    return { idx: r.idx, label: r.label, cells, ticked, follows,
+      open: !!(follows && follows.gap) };
+  });
+  return { rows: grid, cols, fromSized: !!fvs, toSized: !!tvs,
+    open: grid.filter(r=> r.open).length, settled: grid.filter(r=> !r.open).length };
+}
+/* One square of the grid, on or off. On writes the row for that pair
+   of sizes with the rule's figure; off deletes it. The general row is
+   never touched from here. */
+function pairSetCell(rule, i, j, on){
+  const have = rule.ticks.find(l=> pairSizeIdx(l.fromVariantIdx) === pairSizeIdx(i) && pairSizeIdx(l.toVariantIdx) === pairSizeIdx(j));
+  if(!on){
     if(have){ data.productLinks = productLinksAll().filter(x=> x.id !== have.id); saveData(); }
     return { ok:true };
   }
-  if(have) return updateProductLink(have.id, { toVariantIdx: to, active: true });
-  return addProductLink(g.fromId, g.verb, g.toId, g.qty, g.per, '', { fromVariantIdx: fromIdx, toVariantIdx: to });
+  if(have){ if(have.active === false){ have.active = true; saveData(); } return { ok:true }; }
+  const g = rule.general || rule.lead;
+  return addProductLink(rule.fromId, rule.verb, rule.toId, g ? g.qty : null, g ? g.per : '', '', { fromVariantIdx: i, toVariantIdx: j });
 }
-function deleteProductLink(id){
-  data.productLinks = productLinksAll().filter(x=> x.id !== id);
+/* The diagonal: every row with no tick gets the same size where the
+   second product has one. Nothing already ticked is touched. */
+function pairMatchBySize(rule){
+  const grid = pairGrid(rule);
+  if(!grid || !grid.toSized) return { ok:false, why:'Only a product that comes in sizes can be matched by size.' };
+  const tp = productById(rule.toId);
+  let n = 0;
+  grid.rows.forEach(r=>{
+    if(r.ticked.length || r.idx == null) return;
+    const j = briefSameSizeAs({ productId: rule.fromId, variantIdx: r.idx }, tp.variants, tp.variants.map((v, k)=> k));
+    if(j != null){ pairSetCell(rule, r.idx, j, true); n++; }
+  });
+  return { ok:true, matched: n };
+}
+function pairClearCells(rule){
+  const ids = new Set(rule.ticks.map(l=> l.id));
+  if(!ids.size) return { ok:true };
+  data.productLinks = productLinksAll().filter(x=> !ids.has(x.id));
+  saveData();
+  return { ok:true };
+}
+/* A whole rule at once: switched off, on, or deleted, with every row
+   it was written as. */
+function pairRuleSet(rule, patch){
+  rule.rows.forEach(l=> Object.assign(l, patch));
+  saveData();
+}
+function pairRuleDelete(rule){
+  const ids = new Set(rule.rows.map(l=> l.id));
+  data.productLinks = productLinksAll().filter(x=> !ids.has(x.id));
   saveData();
 }
 
@@ -49075,28 +49252,45 @@ function tellingRowHTML(b){
 /* ---- WHAT GOES WITH WHAT --------------------------------------------- */
 let pairOpenId = null;
 let pairDraft = null;   // the row being written, before it has an id
+let pairSelectedId = null;   // the product whose rules are on the right
+let pairFilter = 'rules';    // rules | gaps | all
+let pairSearch = '';
+let pairRuleDraft = null;        // a rule being written, before it is written down
+
+/* The product is the unit the owner thinks in, so the screen is a
+   product list beside everything the shop knows about ONE product. A
+   rule is one row; opening it shows its size grid. */
+function pairProductRows(){
+  const orders = new Map();
+  invoicedOrders().forEach(q=> new Set((q.items||[]).map(it=> it.productId)).forEach(id=> orders.set(id, (orders.get(id) || 0) + 1)));
+  return (data.products || []).map(p=>{
+    const rules = pairRulesOf(p.id).filter(r=> r.active);
+    const gaps = rules.reduce((n, r)=> { const g = pairGrid(r); return n + (g ? g.open : 0); }, 0);
+    const sizes = Array.isArray(p.variants) ? p.variants.length : 0;
+    return { p, rules: rules.length, gaps, sizes, orders: orders.get(p.id) || 0 };
+  });
+}
 function renderPairings(){
   const wrap = document.getElementById('pairingsWrap');
   if(!wrap) return;
-  const links = productLinksAll().filter(l=> l.active !== false);
-  const off = productLinksAll().filter(l=> l.active === false);
+  const all = pairProductRows();
+  const withRules = all.filter(x=> x.rules);
+  const gaps = all.filter(x=> x.gaps);
   const observed = observedPairs();
-  const products = data.products || [];
-  const withAny = new Set(links.flatMap(l=> [l.fromId, l.toId]));
-  const stands = links.map(l=> ({ l, st: pairStanding(l) }));
-  const counts = stands.reduce((m, x)=> { m[x.st.key] = (m[x.st.key]||0)+1; return m; }, {});
-  const usable = links.filter(l=> l.qty != null).length;
+  const links = productLinksAll().filter(l=> l.active !== false);
+  const figures = new Set(links.filter(l=> l.qty != null).map(pairRuleKey)).size;
+  const rules = new Set(links.map(pairRuleKey)).size;
 
   const strip = document.getElementById('pairStripWrap');
   if(strip) strip.innerHTML = `<div class="ow-strip">
-    <div class="ow-mt"><p class="ow-mt-l">Pairings you wrote</p><span class="ow-mt-v">${links.length}</span>
-      <p class="ow-mt-s">${counts.agree || 0} the books agree with &middot; ${counts.nothing || 0} they have not seen &middot; ${counts.argue || 0} they argue with</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Products with rules</p><span class="ow-mt-v">${withRules.length} <span class="ow-u">of ${all.length}</span></span>
+      <p class="ow-mt-s">${rules} rule${rules === 1 ? '' : 's'} written down</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Sizes still open</p><span class="ow-mt-v">${gaps.reduce((n, x)=> n + x.gaps, 0)}</span>
+      <p class="ow-mt-s">a size whose picture leaves the second thing off</p></div>
     <div class="ow-mt"><p class="ow-mt-l">Found in the orders</p><span class="ow-mt-v">${observed.length}</span>
-      <p class="ow-mt-s">seen often enough to ask about, not yet judged${off.length ? ` &middot; ${off.length} said no to` : ''}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Carry a figure</p><span class="ow-mt-v">${usable} <span class="ow-u">of ${links.length}</span></span>
+      <p class="ow-mt-s">seen often enough to ask about, not yet judged</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Carry a figure</p><span class="ow-mt-v">${figures} <span class="ow-u">of ${rules}</span></span>
       <p class="ow-mt-s">only these can put a quantity on a picture</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Lines with nothing</p><span class="ow-mt-v">${products.filter(p=> !withAny.has(p.id)).length} <span class="ow-u">of ${products.length}</span></span>
-      <p class="ow-mt-s">no pairing either way &mdash; their pictures carry no second frame</p></div>
   </div>`;
 
   if(!productLinksTable){
@@ -49106,19 +49300,241 @@ function renderPairings(){
       ${observed.length ? pairObservedHTML(observed) : ''}</div>`;
     return;
   }
-  wrap.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Pairings</span>
-      <span class="ow-pan-n">${links.length} &middot; strongest first</span></div>
-    ${links.length ? `<div class="ow-tbl pr-tbl">
-      <div class="ow-tbl-h"><span>The pairing</span><span class="ow-tbl-n">How many</span>
+  /* Nothing chosen yet: the first product with a rule, so the screen
+     opens on something rather than on an instruction. */
+  if(pairSelectedId && !productById(pairSelectedId)) pairSelectedId = null;
+  if(!pairSelectedId && withRules.length && window.innerWidth > 820) pairSelectedId = withRules[0].p.id;
+  wrap.innerHTML = `<div class="pr-panes${pairSelectedId ? ' pr-has' : ''}">
+    <div class="ow-pan pr-left">
+      <div class="pr-find-w">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="pr-find" id="pair_find" type="search" placeholder="Find a product" value="${esc(pairSearch)}" autocomplete="off">
+      </div>
+      <div class="pr-flt">
+        ${[['rules', `With rules · ${withRules.length}`], ['gaps', `Gaps · ${gaps.length}`], ['all', `All · ${all.length}`]].map(([k, t])=>
+          `<button type="button" class="btn btn-ghost ow-sm${pairFilter === k ? ' pr-on' : ''}" data-pairfilter="${k}">${t}</button>`).join('')}
+      </div>
+      <div id="pairListWrap">${pairListHTML(all, observed)}</div>
+    </div>
+    <div class="pr-right">${pairSelectedId ? pairProductHTML(pairSelectedId) : `<div class="ow-pan"><div class="ow-empty">
+      <b>Pick a product.</b><span>Everything the shop knows about it &mdash; what it goes with, what it needs, what it is part of &mdash; is written and checked here, size by size.</span></div></div>`}</div>
+  </div>`;
+}
+function pairListHTML(all, observed){
+  const q = pairSearch.trim().toLowerCase();
+  let rows = pairFilter === 'rules' ? all.filter(x=> x.rules) : pairFilter === 'gaps' ? all.filter(x=> x.gaps) : all;
+  if(q) rows = all.filter(x=> x.p.name.toLowerCase().includes(q));
+  rows = rows.slice().sort((a, b)=> (b.rules - a.rules) || (b.orders - a.orders) || a.p.name.localeCompare(b.p.name));
+  const shown = rows.slice(0, 60);
+  return `${shown.length ? shown.map(x=> `<div class="pr-prod${x.p.id === pairSelectedId ? ' pr-cur' : ''}" role="button" tabindex="0" data-pairsel="${esc(x.p.id)}">
+      <div class="pr-prod-t"><span class="pr-prod-n" title="${esc(x.p.name)}">${esc(x.p.name)}</span>
+        <span class="pr-prod-s">${x.sizes ? `${x.sizes} sizes` : 'one size'}${x.orders ? ` &middot; ${x.orders} orders` : ''}${x.rules ? ` &middot; ${x.rules} rule${x.rules === 1 ? '' : 's'}` : ''}</span></div>
+      ${x.gaps ? `<span class="pr-gap" title="${x.gaps} size${x.gaps === 1 ? '' : 's'} whose picture leaves the second thing off"></span>` : ''}
+      <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </div>`).join('') : `<div class="ow-empty"><b>${q ? 'Nothing by that name.' : pairFilter === 'gaps' ? 'No size is open.' : 'No rules written yet.'}</b>
+      <span>${q ? 'Try fewer letters.' : pairFilter === 'gaps' ? 'Every rule settles every size it touches.' : 'Pick a product under Every product and add its first rule.'}</span></div>`}
+  ${rows.length > shown.length ? `<p class="ow-mini pr-more">${rows.length - shown.length} more &mdash; type a name to find one.</p>` : ''}
+  ${observed.length && !q ? pairObservedHTML(observed) : ''}`;
+}
+function pairProductHTML(productId){
+  const p = productById(productId);
+  const rules = pairRulesOf(productId);
+  const live = rules.filter(r=> r.active);
+  const off = rules.filter(r=> !r.active);
+  const sizes = Array.isArray(p.variants) ? p.variants : [];
+  const open = live.reduce((n, r)=> { const g = pairGrid(r); return n + (g ? g.open : 0); }, 0);
+  const stands = live.map(r=> ({ r, st: pairStanding(r.lead) }))
+    .sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree') || productLinkName(a.r.toId).localeCompare(productLinkName(b.r.toId)));
+  return `<div class="ow-pan">
+    <div class="pr-head">
+      <button type="button" class="btn btn-ghost ow-sm pr-back" data-pair="back" aria-label="Back to the products"><svg class="icon" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="pr-head-t"><span class="pr-head-n">${esc(p.name)}</span>
+        <span class="pr-head-s">${esc(p.category || '')}${p.category ? ' &middot; ' : ''}${sizes.length ? `${sizes.length} sizes: ${esc(sizes.map(v=> variantLabel(v.combo || {})).join(', '))}` : 'one size'}${live.length ? ` &middot; ${live.length} rule${live.length === 1 ? '' : 's'}` : ''}${open ? ` &middot; <b>${open} size${open === 1 ? '' : 's'} still open</b>` : ''}</span></div>
+      ${pairRuleDraft ? '' : `<button type="button" class="btn btn-accent ow-sm" data-pair="draft"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for ${esc(briefShortName(p.name))}</button>`}
+    </div>
+    ${pairRuleDraft && pairRuleDraft.fromId === productId ? pairDraftHTML(pairRuleDraft) : ''}
+    ${live.length ? `<div class="ow-tbl pr-tbl">
+      <div class="ow-tbl-h"><span>The rule</span><span class="ow-tbl-n">How many</span>
         <span>Where it came from</span><span class="ow-tbl-n">In orders</span><span></span></div>
-      ${pairRowsInOrder(stands).map(x=> pairRowHTML(x.l, x.st)).join('')}
-    </div>` : `<div class="ow-empty"><b>Nothing written down yet.</b>
-      <span>A pairing is one sentence: this product needs that one, so many per one. Write the first, or take one of the pairs your own orders keep showing.</span></div>`}
-    <p class="ow-mini">A pairing changes nothing about prices, stock or orders. It only lets a picture say a second thing, and it only ever says a quantity where you gave one &mdash; where you did not, the thing is named and shown and no number appears.</p>
+      ${stands.map(x=> pairRowHTML(x.r, x.st)).join('')}
+    </div>` : (pairRuleDraft && pairRuleDraft.fromId === productId) ? '' : `<div class="ow-empty"><b>Nothing written about ${esc(p.name)} yet.</b>
+      <span>A rule is one sentence: ${esc(p.name)} goes with that, needs so many of this, is part of one job with those. Write the first, and the grid under it settles the sizes.</span></div>`}
+    <p class="ow-mini pr-foot">A rule changes nothing about prices, stock or orders. It only lets a customer&rsquo;s picture say a second thing &mdash; and it only ever says a quantity where you gave one.</p>
   </div>
-  ${observed.length ? pairObservedHTML(observed) : ''}
   ${off.length ? pairOffHTML(off) : ''}`;
+}
+/* A rule, in one row: the sentence, its figure, where it came from,
+   what the orders show. Opened, the grid and the rest follow. */
+function pairRowHTML(rule, st){
+  const l = rule.lead;
+  const open = rule.lead.id === pairOpenId;
+  const v = pairVerb(rule.verb) || { label: rule.verb, say: rule.verb };
+  const ev = st.ev;
+  const grid = v.self ? null : pairGrid(rule);
+  const sizesNote = v.self ? `about ${l.qty != null ? l.qty : '?'} days, then the picture comes back`
+    : !grid ? 'one size each'
+    : grid.open ? `${grid.settled} of ${grid.rows.length} sizes settled &middot; ${grid.open} open`
+    : grid.rows.length > 1 ? `every size settled` : `${grid.cols.length} sizes`;
+  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}" role="button" tabindex="0"
+      data-pairopen="${esc(String(l.id))}" aria-expanded="${open}">
+    <div class="pr-sent">
+      <span class="pr-vb pr-${esc(rule.verb)}">${esc(v.label)}</span>
+      ${v.self ? '' : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
+      <span class="pr-p" title="${esc(productLinkName(rule.toId))}">${esc(productLinkName(rule.toId))}</span>`}
+      <span class="pr-sizes${grid && grid.open ? ' pr-sizes-open' : ''}">${sizesNote}</span>
+    </div>
+    <span class="ow-tbl-n">${l.qty != null
+      ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">${v.self ? 'days' : `per ${esc(l.per || 'one')}`}</span>`
+      : '<span class="pr-nofig">no figure</span>'}</span>
+    <span><span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span></span>
+    <span class="ow-tbl-n">${ev.withFrom && !v.self
+      ? `<span class="ow-fig">${ev.andTo}</span><span class="ow-fig-b">of ${ev.withFrom} orders</span>`
+      : '<span class="cu-dash">&mdash;</span>'}</span>
+    <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  ${open ? pairEditorHTML(rule, st) : ''}`;
+}
+/* THE SIZE GRID. Rows the first product's sizes, columns the second's;
+   a tick is a rule for that pair, and the figure in a ticked square is
+   how many orders carried both. Amber only on a row where nothing
+   follows -- that is the one square of the shop that is still a gap,
+   and colouring the rest would mark nothing. `cells` is the tick set
+   for a draft that is not written yet; a written rule reads its own. */
+function pairGridHTML(rule, grid, draft){
+  if(!grid) return '';
+  const fp = productById(rule.fromId), tp = productById(rule.toId);
+  const on = (c)=> draft ? draft.cells.has(c.i + ':' + c.j) : !!c.link;
+  const ref = draft ? 'draft' : String(rule.lead.id);
+  const words = (r)=>{
+    if(r.ticked.length || (draft && r.cells.some(on))){
+      const picked = r.cells.filter(on);
+      return `<b>${esc(picked.map(c=> grid.cols[c.j == null ? 0 : c.j].label).join(', '))}</b><i>you said so${picked.some(c=> c.orders) ? ` &middot; books agree, ${picked.reduce((n, c)=> n + c.orders, 0)} order${picked.reduce((n, c)=> n + c.orders, 0) === 1 ? '' : 's'}` : ''}</i>`;
+    }
+    if(!grid.toSized) return `<i>every size, ${esc(l => l)('') || 'as written'}</i>`;
+    if(r.follows && !r.follows.gap) return `<b>${esc(r.follows.label)}</b><i>${r.follows.by === 'size' ? 'the same size' : r.follows.by === 'only' ? 'the only size priced and on the shelf' : 'follows'}</i>`;
+    return `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>nothing follows</span><i>no match &mdash; tick one, or leave it off</i>`;
+  };
+  return `<div class="pr-grid-w">
+    <div class="pr-grid-h">
+      <span class="pr-lbl">Which size goes with which</span>
+      <span class="pr-grid-k">tick = a rule for that pair &middot; figure = orders with both</span>
+      ${grid.toSized && grid.fromSized ? `<button type="button" class="btn btn-ghost ow-sm" data-pair="match" data-ref="${ref}">Match by size</button>` : ''}
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="clear" data-ref="${ref}">Clear</button>
+    </div>
+    <div class="pr-grid-s"><div class="pr-grid" style="--pr-cols:${grid.cols.length}">
+      <div class="pr-gc pr-gc-corner">${grid.fromSized ? esc(briefShortName(fp.name)) + ' &darr;' : ''}${grid.toSized ? ` &middot; ${esc(briefShortName(tp.name))} &rarr;` : ''}</div>
+      ${grid.cols.map(c=> `<div class="pr-gc pr-gc-col" title="${esc(c.label)}">${esc(c.label)}</div>`).join('')}
+      <div class="pr-gc pr-gc-corner">What a picture takes today</div>
+      ${grid.rows.map(r=> `<div class="pr-gc pr-gc-row" title="${esc(r.label)}">${esc(r.label)}</div>
+        ${r.cells.map(c=> `<button type="button" class="pr-cell${on(c) ? ' pr-cell-on' : ''}" data-cell="${ref}:${c.i == null ? '' : c.i}:${c.j == null ? '' : c.j}"
+            aria-pressed="${on(c)}" title="${esc(fp.name)} ${esc(r.label)} &rarr; ${esc(tp.name)} ${esc(grid.cols[c.j == null ? 0 : c.j].label)}${c.orders ? ` &middot; ${c.orders} order${c.orders === 1 ? '' : 's'} carried both` : ''}">
+          ${on(c) ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}` : `<span class="pr-box"></span>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}`}
+        </button>`).join('')}
+        <div class="pr-gc pr-gc-say">${words(r)}</div>`).join('')}
+    </div></div>
+  </div>`;
+}
+function pairEditorHTML(rule, st){
+  const l = rule.lead;
+  const ev = st.ev;
+  const v = pairVerb(rule.verb) || {};
+  const per = productUnitLabel(rule.fromId) || (productById(rule.fromId) || {}).unit || 'one';
+  const grid = v.self ? null : pairGrid(rule);
+  return `<div class="tl-x">
+    <div class="pr-sb">
+      <span class="pr-fixed">${esc(productLinkName(rule.fromId))}</span>
+      <div class="pr-pick pr-verb"><select class="pr-sel" data-pf="verb" data-id="${esc(String(l.id))}">${
+        PAIR_VERBS.filter(x=> !!x.self === !!v.self).map(x=> `<option value="${x.id}"${x.id === rule.verb ? ' selected' : ''}>${esc(x.say)}</option>`).join('')}</select></div>
+      ${v.self ? '' : `<span class="pr-fixed">${esc(productLinkName(rule.toId))}</span><span class="pr-w">&mdash;</span>`}
+      <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-pf="qty" data-id="${esc(String(l.id))}" value="${l.qty == null ? '' : l.qty}" placeholder="—"></div>
+      <span class="pr-w">${v.self ? 'days' : 'per'}</span>
+      ${v.self ? '' : `<div class="pr-pick pr-per"><input class="pr-in" data-pf="per" data-id="${esc(String(l.id))}" value="${esc(l.per || '')}" placeholder="${esc(per)}"></div>`}
+    </div>
+    ${pairGridHTML(rule, grid, null)}
+    <div class="pr-two">
+      <div>
+        <p class="pr-lbl">Why, for whoever reads this next</p>
+        <textarea class="ow-msg pr-note" rows="2" data-pf="note" data-id="${esc(String(l.id))}"
+          placeholder="What you know that the orders cannot show.">${esc(l.note || '')}</textarea>
+      </div>
+      <div class="pr-chk">
+        <div class="pr-chk-h">What your own orders say</div>
+        <div class="ow-sr"><span class="ow-sr-k">Orders with ${esc(briefShortName(productLinkName(rule.fromId)))}</span><span class="ow-sr-v">${ev.withFrom}</span></div>
+        ${v.self ? '' : `<div class="ow-sr"><span class="ow-sr-k">&hellip; that also had ${esc(briefShortName(productLinkName(rule.toId)))}</span><span class="ow-sr-v">${ev.andTo}</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Per one, on average</span><span class="ow-sr-v">${ev.perUnit == null ? '&mdash;' : ev.perUnit.toFixed(1)}</span></div>`}
+        <div class="ow-sr"><span class="ow-sr-k">Your figure</span><span class="ow-sr-v">${l.qty == null ? 'none given' : Number(l.qty).toFixed(1)}</span></div>
+        <p class="pr-verdict pr-v-${esc(st.key)}">${pairVerdictWords(l, st)}</p>
+      </div>
+    </div>
+    <p class="ow-mini pr-law"><b>A rule holds for every size unless the grid says otherwise.</b> A customer who already buys a size of the second thing is shown that size whatever is ticked. Where a row has no tick and no match, that customer&rsquo;s picture leaves it off rather than guess.</p>
+    <div class="ow-tbl-a tl-acts">
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="done" data-id="${esc(String(l.id))}">Done</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="off" data-id="${esc(String(l.id))}">Stop using it in pictures</button>
+      <span class="cu-sp"></span>
+      <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(l.id))}">Delete</button>
+    </div>
+  </div>`;
+}
+/* WRITING A RULE, in the order it is said: the verb, then which
+   product, then how many, then which sizes. Nothing is written until
+   the last button; the grid is ticked on a draft and written all at
+   once, as one rule. */
+function pairDraftHTML(d){
+  const fp = productById(d.fromId);
+  const tp = d.toId ? productById(d.toId) : null;
+  const verb = pairVerb(d.verb) || {};
+  const q = String(d.search || '').trim().toLowerCase();
+  const hits = !tp && q ? (data.products || []).filter(p=> p.id !== d.fromId && p.name.toLowerCase().includes(q)).slice(0, 8) : [];
+  const already = new Set(pairRulesOf(d.fromId).map(r=> r.verb + ' ' + r.toId));
+  const ev = tp ? pairEvidence(d.fromId, d.toId) : null;
+  const rule = tp ? { fromId: d.fromId, verb: d.verb, toId: d.toId, rows: [], ticks: [], general: null, lead: { id: 'draft', qty: d.qty, per: d.per } } : null;
+  const grid = rule && !verb.self ? pairGrid(rule) : null;
+  if(grid) grid.rows.forEach(r=> { r.ticked = r.cells.filter(c=> d.cells.has(c.i + ':' + c.j)); });
+  const mark = (name)=> { const i = name.toLowerCase().indexOf(q); return i < 0 ? esc(name) : `${esc(name.slice(0, i))}<mark>${esc(name.slice(i, i + q.length))}</mark>${esc(name.slice(i + q.length))}`; };
+  return `<div class="pr-draft">
+    <div class="pr-draft-h"><span class="pr-draft-t">A new rule for ${esc(fp.name)}</span>
+      <span class="pr-draft-s">Say it the way you would at the counter. Nothing is written until you press Write it down.</span></div>
+    <p class="pr-lbl">1 &middot; ${esc(fp.name)} &hellip;</p>
+    <div class="pr-verbs2">${PAIR_VERBS.map(x=> `<button type="button" class="btn btn-ghost ow-sm${x.id === d.verb ? ' pr-on' : ''}" data-verb="${x.id}">${esc(x.say)}</button>`).join('')}</div>
+    <p class="pr-hint">${esc(PAIR_VERB_WORDS[d.verb] || '')}</p>
+    ${verb.self ? '' : `<p class="pr-lbl">2 &middot; &hellip; which product</p>
+    ${tp ? `<div class="pr-picked"><span class="pr-fixed">${esc(tp.name)}</span><span class="pr-w">${Array.isArray(tp.variants) && tp.variants.length ? `${tp.variants.length} sizes` : 'one size'}</span><button type="button" class="btn btn-ghost ow-sm" data-pair="unpick">Change</button></div>`
+      : `<div class="pr-find-w pr-find-d"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="pr-find" id="pair_pick" type="search" placeholder="Type a product name" value="${esc(d.search || '')}" autocomplete="off"></div>
+      ${q ? `<div class="pr-menu">${hits.length ? hits.map(p=> `<button type="button" class="pr-menu-r" data-pick="${esc(p.id)}"><span class="pr-menu-n">${mark(p.name)}</span>
+          <span class="pr-menu-s">${Array.isArray(p.variants) && p.variants.length ? `${p.variants.length} sizes &middot; ${esc(p.variants.map(v=> variantLabel(v.combo || {})).join(', '))}` : 'one size'}${already.has(d.verb + ' ' + p.id) ? ' &middot; already written' : ''}</span></button>`).join('')
+        : `<div class="pr-menu-e">Nothing by that name.</div>`}
+        <div class="pr-menu-f">${hits.length} of ${(data.products || []).length - 1} match &middot; sizes are shown so you know what the grid will ask</div></div>` : ''}`}`}
+    ${(tp || verb.self) ? `<p class="pr-lbl">${verb.self ? '2' : '3'} &middot; ${verb.self ? 'how many days it lasts' : 'how many, per one'}</p>
+    <div class="pr-sb pr-sb-d">
+      <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-df="qty" value="${d.qty == null ? '' : d.qty}" placeholder="—"></div>
+      <span class="pr-w">${verb.self ? 'days' : 'per'}</span>
+      ${verb.self ? '' : `<div class="pr-pick pr-per"><input class="pr-in" data-df="per" value="${esc(d.per || '')}" placeholder="${esc(productUnitLabel(d.fromId) || fp.unit || 'one')}"></div>
+      <span class="pr-hint">Leave it blank and the picture names the thing with no number.${ev && ev.perUnit != null ? ` Your orders average <b>${ev.perUnit.toFixed(1)}</b> per one.` : ''}</span>`}
+    </div>` : ''}
+    ${grid ? `<p class="pr-lbl">4 &middot; which sizes</p>${pairGridHTML(rule, grid, d)}` : ''}
+    <div class="ow-tbl-a tl-acts pr-draft-a">
+      <button type="button" class="btn btn-accent ow-sm" data-pair="write" ${(tp || verb.self) ? '' : 'disabled'}>Write it down</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-pair="cancel">Not now</button>
+      <p class="cu-note">${(tp || verb.self) ? `Writes one rule: ${esc(fp.name)} ${esc(verb.say || '')}${verb.self ? '' : ` ${esc(tp.name)}`}${grid && d.cells.size ? `, ${d.cells.size} size pair${d.cells.size === 1 ? '' : 's'} ticked` : ''}.` : 'Pick the product it is about.'}</p>
+    </div>
+  </div>`;
+}
+const PAIR_VERB_WORDS = {
+  needs: 'It cannot be used without it, and the picture says so.',
+  with: 'Usually bought together — offered on a picture, not insisted on.',
+  instead: 'A swap when the first is out of stock.',
+  after: 'It will be finished in about so many days, and the picture comes back then.',
+  part: 'Both belong to one job.',
+};
+function pairVerdictWords(l, st){
+  const ev = st.ev;
+  if(st.key === 'self') return 'This one is a rhythm rather than a companion: there is nothing to compare it against.';
+  if(st.key === 'unseen') return 'You do not sell the second thing, so your orders can never show it. The rule still stands at the counter; it simply never reaches a picture.';
+  if(st.key === 'nothing') return 'Nothing on file has carried the first thing yet, so there is nothing to check this against. It stands until there is.';
+  if(st.key === 'argue') return `Your orders show these together in only ${ev.andTo} of ${ev.withFrom}. The rule still stands — you have stood at the counter and the books have not — but you are told, once, here.`;
+  const close = (l.qty != null && ev.perUnit != null && Math.abs(ev.perUnit - l.qty) <= Math.max(0.2, l.qty * 0.25));
+  return `The books agree with you${close ? ', and closely' : ''}. A picture built on this rule is on firm ground.`;
 }
 /* Turned off rather than deleted: the sentence is still true at the
    counter, it simply stopped reaching pictures. Kept visible so that
@@ -49126,197 +49542,18 @@ function renderPairings(){
 function pairOffHTML(off){
   return `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Not used in pictures</span><span class="ow-pan-n">${off.length}</span></div>
-    ${off.map(l=> `<div class="pr-obs">
-      <span class="p">${esc(productLinkFromLabel(l))} &rarr; ${esc(productLinkLabel(l))}</span>
-      <span class="s">${esc((pairVerb(l.verb)||{say:l.verb}).say)}${l.qty != null ? ` &middot; ${l.qty} per ${esc(l.per || 'one')}` : ''}</span>
+    ${off.map(r=> `<div class="pr-obs">
+      <span class="p">${esc(productLinkName(r.fromId))} &rarr; ${esc((pairVerb(r.verb)||{say:r.verb}).say)} &rarr; ${esc(productLinkName(r.toId))}</span>
+      <span class="s">${r.lead.qty != null ? `${r.lead.qty} ${(pairVerb(r.verb)||{}).self ? 'days' : `per ${esc(r.lead.per || 'one')}`}` : 'no figure'}${r.ticks.length ? ` &middot; ${r.ticks.length} size pair${r.ticks.length === 1 ? '' : 's'}` : ''}</span>
       <span class="a">
-        <button type="button" class="btn btn-ghost ow-sm" data-pair="on" data-id="${esc(String(l.id))}">Use it again</button>
-        <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(l.id))}">Delete</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-pair="on" data-id="${esc(String(r.lead.id))}">Use it again</button>
+        <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(r.lead.id))}">Delete</button>
       </span></div>`).join('')}
   </div>`;
 }
-function pairRowHTML(l, st){
-  const open = l.id === pairOpenId;
-  const v = pairVerb(l.verb) || { label:l.verb, say:l.verb };
-  const ev = st.ev;
-  /* A sentence pinned to one size sits under the general one, marked as
-     the exception it is, so the rule and its exceptions read as one
-     paragraph rather than as five unrelated rows. */
-  const pinned = pairSizeIdx(l.fromVariantIdx) != null;
-  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}${pinned ? ' pr-pin' : ''}" role="button" tabindex="0"
-      data-pairopen="${esc(String(l.id))}" aria-expanded="${open}">
-    <div class="pr-sent">
-      ${pinned ? '<svg class="pr-pinmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h6M14 14l4 4-4 4"/></svg>' : ''}
-      <span class="pr-p" title="${esc(productLinkFromLabel(l))}">${esc(productLinkFromLabel(l))}</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
-      <span class="pr-vb pr-${esc(l.verb)}">${esc(v.label)}</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
-      <span class="pr-p" title="${esc(productLinkLabel(l))}">${esc(productLinkLabel(l))}</span>
-    </div>
-    <span class="ow-tbl-n">${l.qty != null
-      ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">${(v && v.self) ? 'days' : `per ${esc(l.per || 'one')}`}</span>`
-      : '<span class="pr-nofig">no figure</span>'}</span>
-    <span><span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span></span>
-    <span class="ow-tbl-n">${ev.withFrom
-      ? `<span class="ow-fig">${ev.andTo}</span><span class="ow-fig-b">of ${ev.withFrom} orders</span>`
-      : '<span class="cu-dash">&mdash;</span>'}</span>
-    <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-  </div>
-  ${open ? pairEditorHTML(l, st) : ''}`;
-}
-/* The general sentence first, strongest first as before; each one's
-   pinned sizes directly under it, in size order. A pin whose general
-   sentence has been deleted stands on its own where it falls. */
-function pairRowsInOrder(stands){
-  const general = stands.filter(x=> pairSizeIdx(x.l.fromVariantIdx) == null)
-    .sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree')
-      || String(productLinkName(a.l.fromId)).localeCompare(productLinkName(b.l.fromId)));
-  const pins = stands.filter(x=> pairSizeIdx(x.l.fromVariantIdx) != null)
-    .sort((a, b)=> pairSizeIdx(a.l.fromVariantIdx) - pairSizeIdx(b.l.fromVariantIdx));
-  const placed = new Set();
-  const out = [];
-  general.forEach(g=>{
-    out.push(g);
-    pins.filter(x=> x.l.fromId === g.l.fromId && x.l.toId === g.l.toId && x.l.verb === g.l.verb)
-      .forEach(x=> { if(!placed.has(x.l.id)){ placed.add(x.l.id); out.push(x); } });
-  });
-  pins.forEach(x=> { if(!placed.has(x.l.id)) out.push(x); });
-  return out;
-}
-function pairProductOptions(sel){
-  const ps = data.products || [];
-  const gone = sel && !ps.some(p=> p.id === sel)
-    ? `<option value="${esc(sel)}" selected>${esc(productLinkName(sel))}</option>` : '';
-  return gone + ps.map(p=>
-    `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
-}
-/* WHICH SIZE, at either end, where that product comes in sizes. Shown
-   only then: a plain product has nothing to choose, and a chooser with
-   one entry is a question with no answer. The blank entry on the first
-   product is "every size" -- the sentence holds for all of them. The
-   blank on the second is not "no size" but "the size that follows" --
-   the one the customer already buys, the only one priced, or the one
-   matching the first product's -- which a picture works out on its own,
-   and which the table under the sentence shows size by size. */
-function pairSizeSelect(l, side){
-  const from = side === 'from';
-  const p = productById(from ? l.fromId : l.toId);
-  const vs = p && Array.isArray(p.variants) ? p.variants : [];
-  if(!vs.length) return '';
-  /* A size chosen on a shop whose columns have not landed would be kept
-     on this device and lost on the next load, which is worse than no
-     chooser: said instead, once, in the words every other missing
-     migration is said in here. */
-  if(!linkSizeColumn) return from ? '' : `<span class="pr-w" title="Paste supabase/migrations/0093_product_link_size.sql into the Supabase SQL editor and reload to choose sizes here. Until then the picture takes the size that follows: the one they already buy, the only one priced, or the one matching the first product's.">any size &mdash; needs 0093</span>`;
-  const raw = from ? l.fromVariantIdx : l.toVariantIdx;
-  const cur = (pairSizeIdx(raw) != null && vs[pairSizeIdx(raw)]) ? pairSizeIdx(raw) : null;
-  const title = from
-    ? `Which size of ${p.name} this sentence is about. Every size, unless you pin one.`
-    : `Which size of ${p.name} this pairing means. Left open, the picture takes the size they already buy, the only size priced, or the size that matches the first product's.`;
-  return `<div class="pr-pick pr-size"><select class="pr-sel" data-pf="${from ? 'fromv' : 'tov'}" data-id="${esc(String(l.id))}" title="${esc(title)}">
-    <option value=""${cur == null ? ' selected' : ''}>${from ? 'every size' : 'the size that follows'}</option>
-    ${vs.map((v, i)=> `<option value="${i}"${cur === i ? ' selected' : ''}>${esc(variantLabel(v.combo || {}))}</option>`).join('')}
-  </select></div>`;
-}
-/* HOW THE SIZES LINE UP, size by size, under a sentence written for
-   every size of a product that comes in sizes. Each row is what a
-   picture would take today and why; the chooser at its end pins a
-   size, which writes the sentence for that size alone beside this one.
-   Amber only where nothing follows -- that is the one row that is a
-   gap, and colouring the rest would mark nothing. */
-function pairSizePlanHTML(l){
-  const plan = pairSizePlan(l);
-  if(!plan) return '';
-  const tp = productById(l.toId);
-  const tvs = tp && Array.isArray(tp.variants) ? tp.variants : [];
-  const gaps = plan.filter(r=> r.toIdx == null).length;
-  const words = (r)=>{
-    if(r.pin) return 'pinned here';
-    if(r.by === 'pairing') return 'the size this pairing names';
-    if(r.by === 'only') return 'the only size priced and on the shelf';
-    if(r.by === 'size') return 'the same size';
-    return '';
-  };
-  return `<div class="pr-chk pr-plan">
-    <div class="pr-chk-h">How the sizes line up &mdash; ${esc(productLinkName(l.fromId))} &rarr; ${esc(tp.name)}${
-      gaps ? ` &middot; ${gaps} of ${plan.length} still open` : ''}</div>
-    ${plan.map(r=> `<div class="pr-sz">
-      <span class="pr-sz-f">${esc(r.fromLabel)}</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
-      <span class="pr-sz-t">${r.toIdx != null
-        ? `${esc(r.toLabel)}<i>${esc(words(r))}</i>`
-        : `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>nothing follows</span><i>a customer who has not bought one gets no ${esc(tp.name)} on their picture</i>`}</span>
-      ${linkSizeColumn ? `<div class="pr-pick"><select class="pr-sel" data-pin="${esc(String(l.id))}" data-from="${r.fromIdx}"
-          title="Pin which size of ${esc(tp.name)} goes with ${esc(productLinkName(l.fromId))} ${esc(r.fromLabel)}.">
-        <option value=""${!r.pin ? ' selected' : ''}>${r.toIdx != null && !r.pin ? 'as it follows' : 'not pinned'}</option>
-        ${tvs.map((v, i)=> `<option value="${i}"${r.pin && pairSizeIdx(r.pin.toVariantIdx) === i ? ' selected' : ''}>${esc(variantLabel(v.combo || {}))}</option>`).join('')}
-      </select></div>` : ''}
-    </div>`).join('')}
-    <p class="ow-mini pr-plan-n">Pinning a size writes the sentence for that size alone, under this one, with this figure. A customer who already buys a size of ${esc(tp.name)} is shown that size whatever is written here.</p>
-  </div>`;
-}
-function pairEditorHTML(l, st){
-  const ev = st.ev;
-  const per = productUnitLabel(l.fromId, pairSizeIdx(l.fromVariantIdx)) || (productById(l.fromId) || {}).unit || 'one';
-  const self = !!(pairVerb(l.verb) || {}).self;
-  return `<div class="tl-x">
-    <p class="pr-lbl">The pairing, as you would say it</p>
-    <div class="pr-sb">
-      <div class="pr-pick"><select class="pr-sel" data-pf="from" data-id="${esc(String(l.id))}">${pairProductOptions(l.fromId)}</select></div>
-      ${pairSizeSelect(l, 'from')}
-      <div class="pr-pick pr-verb"><select class="pr-sel" data-pf="verb" data-id="${esc(String(l.id))}">${
-        PAIR_VERBS.map(v=> `<option value="${v.id}"${v.id === l.verb ? ' selected' : ''}>${esc(v.say)}</option>`).join('')}</select></div>
-      ${self
-        ? `<span class="pr-w" title="Runs out after is about the one product: it will be finished in about so many days, and the picture comes back then.">itself, in about</span>`
-        : `<div class="pr-pick"><select class="pr-sel" data-pf="to" data-id="${esc(String(l.id))}">${pairProductOptions(l.toId)}</select></div>
-      ${pairSizeSelect(l, 'to')}
-      <span class="pr-w">&mdash;</span>`}
-      <div class="pr-pick pr-num"><input class="pr-in" type="number" min="0" step="any" data-pf="qty" data-id="${esc(String(l.id))}" value="${l.qty == null ? '' : l.qty}" placeholder="—"></div>
-      <span class="pr-w">${self ? 'days' : 'per'}</span>
-      ${self ? '' : `<div class="pr-pick pr-per"><input class="pr-in" data-pf="per" data-id="${esc(String(l.id))}" value="${esc(l.per || '')}" placeholder="${esc(per)}"></div>`}
-    </div>
-    ${self ? '' : pairSizePlanHTML(l)}
-    <p class="pr-lbl">Why, for whoever reads this next</p>
-    <textarea class="ow-msg pr-note" rows="2" data-pf="note" data-id="${esc(String(l.id))}"
-      placeholder="What you know that the orders cannot show.">${esc(l.note || '')}</textarea>
-    <div class="pr-two">
-      <div class="pr-chk">
-        <div class="pr-chk-h">What your own orders say</div>
-        <div class="ow-sr"><span class="ow-sr-k">Orders with ${esc(briefShortName(productLinkFromLabel(l)))}</span><span class="ow-sr-v">${ev.withFrom}</span></div>
-        <div class="ow-sr"><span class="ow-sr-k">&hellip; that also had ${esc(briefShortName(productLinkLabel(l)))}</span><span class="ow-sr-v">${ev.andTo}</span></div>
-        <div class="ow-sr"><span class="ow-sr-k">Per one, on average</span><span class="ow-sr-v">${ev.perUnit == null ? '&mdash;' : ev.perUnit.toFixed(1)}</span></div>
-        <div class="ow-sr"><span class="ow-sr-k">Your figure</span><span class="ow-sr-v">${l.qty == null ? 'none given' : Number(l.qty).toFixed(1)}</span></div>
-        <p class="pr-verdict pr-v-${esc(st.key)}">${pairVerdictWords(l, st)}</p>
-      </div>
-      <p class="ow-mini pr-verbs"><b>The five verbs, and they are the whole vocabulary.</b>
-        <b>Needs</b> &mdash; it cannot be used without it, and the picture says so.
-        <b>Goes with</b> &mdash; usually bought together, offered but not insisted on.
-        <b>Instead of</b> &mdash; a swap when the first is out of stock.
-        <b>Runs out after</b> &mdash; it will be finished in about so many days, and the picture comes back then.
-        <b>Part of</b> &mdash; both belong to one job.
-        <b>And a size at either end</b> &mdash; a sentence for every size of a product, or for one; the table under it shows which size of the second a picture takes for each size of the first, and lets you pin one.</p>
-    </div>
-    <div class="ow-tbl-a tl-acts">
-      <button type="button" class="btn btn-ghost ow-sm" data-pair="save" data-id="${esc(String(l.id))}">Save the pairing</button>
-      <button type="button" class="btn btn-ghost ow-sm" data-pair="off" data-id="${esc(String(l.id))}">Stop using it in pictures</button>
-      <span class="cu-sp"></span>
-      <button type="button" class="btn btn-ghost ow-sm cu-del" data-pair="delete" data-id="${esc(String(l.id))}">Delete</button>
-      <p class="cu-note">A pairing only ever adds a frame to a picture. It never changes a price, moves stock or places an order.</p>
-    </div>
-  </div>`;
-}
-function pairVerdictWords(l, st){
-  const ev = st.ev;
-  if(st.key === 'self') return 'This one points the product back at itself, so there is nothing to compare it against — it is a rhythm rather than a companion.';
-  if(st.key === 'unseen') return 'You do not sell the second thing, so your orders can never show it. The pairing still stands at the counter; it simply never reaches a picture.';
-  if(st.key === 'nothing') return 'Nothing on file has carried the first thing yet, so there is nothing to check this against. It stands until there is.';
-  if(st.key === 'argue') return `Your orders show these together in only ${ev.andTo} of ${ev.withFrom}. The pairing still stands — you have stood at the counter and the books have not — but you are told, once, here.`;
-  const close = (l.qty != null && ev.perUnit != null && Math.abs(ev.perUnit - l.qty) <= Math.max(0.2, l.qty * 0.25));
-  return `The books agree with you${close ? ', and closely' : ''}. A picture built on this pairing is on firm ground.`;
-}
 function pairObservedHTML(list){
-  return `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Found in your orders</span><span class="ow-pan-n">${list.length} waiting</span></div>
+  return `<div class="pr-obs-w">
+    <div class="ow-pan-h"><span class="ow-pan-t">Found in your orders</span><span class="ow-pan-n">${list.length} to judge</span></div>
     ${list.slice(0, 8).map(o=> `<div class="pr-obs">
       <span class="p">${esc(productLinkName(o.fromId))} &rarr; ${esc(productLinkName(o.toId))}</span>
       <span class="s">${o.ev.andTo} of ${o.ev.withFrom} orders${o.ev.perUnit != null ? ` &middot; ${o.ev.perUnit.toFixed(1)} per one` : ''}</span>
@@ -49324,10 +49561,9 @@ function pairObservedHTML(list){
         <button type="button" class="btn btn-ghost ow-sm" data-obs="keep" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">Keep</button>
         <button type="button" class="btn btn-ghost ow-sm" data-obs="no" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">No</button>
       </span></div>`).join('')}
-    <p class="ow-mini">These are pairs that keep turning up on the same invoice. The books can see WHAT happens together; only you know WHY, and whether it is a rule or a coincidence. Saying no is as useful as saying keep &mdash; it stops being offered.</p>
+    <p class="ow-mini">Pairs that keep turning up on the same invoice. The books can see WHAT happens together; only you know WHY. Saying no is as useful as keeping &mdash; it stops being offered.</p>
   </div>`;
 }
-
 
 /* ---- the site-stage field on the customer form ------------------------
    The stage is a choice from a closed list; the date is when somebody
@@ -49472,7 +49708,17 @@ async function saveBriefGif(customerId){
   const wrap = document.getElementById('pairingsWrap');
   if(!wrap) return;
   const idOf = (el)=> Number(el.dataset.id);
+  const ruleOf = (el)=> pairRuleById(idOf(el));
+  const cellOf = (el)=>{
+    const [ref, i, j] = el.dataset.cell.split(':');
+    return { ref, i: i === '' ? null : Number(i), j: j === '' ? null : Number(j) };
+  };
   wrap.addEventListener('click', (e)=>{
+    /* the product list */
+    const sel = e.target.closest('[data-pairsel]');
+    if(sel){ pairSelectedId = sel.dataset.pairsel; pairOpenId = null; pairRuleDraft = null; renderPairings(); return; }
+    const flt = e.target.closest('[data-pairfilter]');
+    if(flt){ pairFilter = flt.dataset.pairfilter; renderPairings(); return; }
     const obs = e.target.closest('[data-obs]');
     if(obs){
       const { from, to } = obs.dataset;
@@ -49480,77 +49726,183 @@ async function saveBriefGif(customerId){
         const r = dismissObservedPair(from, to);
         if(!r.ok){ toast(r.why, 6000); return; }
       } else {
-        /* Kept as a pairing with no figure: the books found THAT they go
+        /* Kept as a rule with no figure: the books found THAT they go
            together, never how many, and only the owner can say. */
         const r = addProductLink(from, 'with', to, null, '', '');
+        if(!r.ok && !r.existing){ toast(r.why, 6000); return; }
+        pairSelectedId = from; pairOpenId = r.ok ? r.link.id : r.existing.id; pairRuleDraft = null;
+      }
+      renderPairings();
+      return;
+    }
+    /* a square of the grid */
+    const cell = e.target.closest('[data-cell]');
+    if(cell){
+      const c = cellOf(cell);
+      const on = cell.getAttribute('aria-pressed') !== 'true';
+      if(c.ref === 'draft'){
+        if(!pairRuleDraft) return;
+        const k = c.i + ':' + c.j;
+        if(on) pairRuleDraft.cells.add(k); else pairRuleDraft.cells.delete(k);
+      } else {
+        const rule = pairRuleById(Number(c.ref));
+        if(!rule) return;
+        const r = pairSetCell(rule, c.i, c.j, on);
         if(!r.ok){ toast(r.why, 6000); return; }
-        pairOpenId = r.link.id;
+      }
+      renderPairings();
+      return;
+    }
+    /* the draft's verb and product */
+    const vb = e.target.closest('[data-verb]');
+    if(vb && pairRuleDraft){
+      pairRuleDraft.verb = vb.dataset.verb;
+      if((pairVerb(pairRuleDraft.verb) || {}).self){ pairRuleDraft.toId = null; pairRuleDraft.cells.clear(); }
+      renderPairings();
+      const f = document.getElementById('pair_pick'); if(f) f.focus();
+      return;
+    }
+    const pick = e.target.closest('[data-pick]');
+    if(pick && pairRuleDraft){
+      pairRuleDraft.toId = pick.dataset.pick; pairRuleDraft.search = '';
+      /* Start from the match by size: it is right far more often than
+         it is wrong, and a wrong square is one tap. */
+      const tp = productById(pairRuleDraft.toId), fp = productById(pairRuleDraft.fromId);
+      pairRuleDraft.cells = new Set();
+      if(tp && fp && Array.isArray(fp.variants) && fp.variants.length && Array.isArray(tp.variants) && tp.variants.length){
+        fp.variants.forEach((v, i)=>{
+          const j = briefSameSizeAs({ productId: fp.id, variantIdx: i }, tp.variants, tp.variants.map((x, k)=> k));
+          if(j != null) pairRuleDraft.cells.add(i + ':' + j);
+        });
       }
       renderPairings();
       return;
     }
     const b = e.target.closest('[data-pair]');
     if(b){
-      const id = idOf(b);
-      if(b.dataset.pair === 'delete'){
-        if(!confirm('Delete this pairing? What the orders show about the two is not affected.')) return;
-        deleteProductLink(id); pairOpenId = null;
+      const what = b.dataset.pair;
+      if(what === 'back'){ pairSelectedId = null; pairOpenId = null; pairRuleDraft = null; renderPairings(); return; }
+      if(what === 'draft'){
+        pairRuleDraft = { fromId: pairSelectedId, verb: 'with', toId: null, search: '', qty: null, per: '', cells: new Set() };
+        pairOpenId = null; renderPairings();
+        const f = document.getElementById('pair_pick'); if(f) f.focus();
+        return;
       }
-      if(b.dataset.pair === 'off'){ updateProductLink(id, { active:false }); pairOpenId = null; }
-      if(b.dataset.pair === 'on'){ updateProductLink(id, { active:true }); }
-      if(b.dataset.pair === 'save'){ pairOpenId = null; toast('Saved.'); }
+      if(what === 'cancel'){ pairRuleDraft = null; renderPairings(); return; }
+      if(what === 'unpick'){ if(pairRuleDraft){ pairRuleDraft.toId = null; pairRuleDraft.cells.clear(); } renderPairings(); const f = document.getElementById('pair_pick'); if(f) f.focus(); return; }
+      if(what === 'write'){
+        const d = pairRuleDraft; if(!d) return;
+        const r = addProductLink(d.fromId, d.verb, d.toId, d.qty, d.per, '');
+        if(!r.ok){ toast(r.why, 6000); if(r.existing){ pairOpenId = r.existing.id; pairRuleDraft = null; renderPairings(); } return; }
+        const rule = pairRuleById(r.link.id);
+        let bad = null;
+        d.cells.forEach(k=>{ const [i, j] = k.split(':'); const c = pairSetCell(rule, i === '' ? null : Number(i), j === '' ? null : Number(j), true); if(!c.ok) bad = c.why; });
+        if(bad) toast(bad, 6000);
+        pairRuleDraft = null; pairOpenId = r.link.id; renderPairings();
+        toast('Written down.');
+        return;
+      }
+      if(what === 'match' || what === 'clear'){
+        if(b.dataset.ref === 'draft'){
+          if(!pairRuleDraft) return;
+          if(what === 'clear') pairRuleDraft.cells.clear();
+          else {
+            const tp = productById(pairRuleDraft.toId), fp = productById(pairRuleDraft.fromId);
+            fp.variants.forEach((v, i)=>{
+              if([...pairRuleDraft.cells].some(k=> k.startsWith(i + ':'))) return;
+              const j = briefSameSizeAs({ productId: fp.id, variantIdx: i }, tp.variants, tp.variants.map((x, k)=> k));
+              if(j != null) pairRuleDraft.cells.add(i + ':' + j);
+            });
+          }
+        } else {
+          const rule = pairRuleById(Number(b.dataset.ref)); if(!rule) return;
+          const r = what === 'clear' ? pairClearCells(rule) : pairMatchBySize(rule);
+          if(!r.ok) toast(r.why, 6000);
+          else if(what === 'match') toast(r.matched ? `${r.matched} size${r.matched === 1 ? '' : 's'} matched.` : 'Nothing left to match: every open row has no size of the same name.', 5000);
+        }
+        renderPairings();
+        return;
+      }
+      const rule = ruleOf(b);
+      if(!rule) return;
+      if(what === 'delete'){
+        if(!confirm(`Delete this rule${rule.ticks.length ? ` and its ${rule.ticks.length} size pair${rule.ticks.length === 1 ? '' : 's'}` : ''}? What the orders show about the two is not affected.`)) return;
+        pairRuleDelete(rule); pairOpenId = null;
+      }
+      if(what === 'off'){ pairRuleSet(rule, { active:false }); pairOpenId = null; }
+      if(what === 'on'){ pairRuleSet(rule, { active:true }); pairOpenId = rule.lead.id; }
+      if(what === 'done'){ pairOpenId = null; toast('Saved.'); }
       renderPairings();
       return;
     }
-    if(e.target.closest('a, button, select, input, textarea')) return;
+    if(e.target.closest('a, button, select, input, textarea, label')) return;
     const row = e.target.closest('[data-pairopen]');
     if(row){
       const id = Number(row.dataset.pairopen);
       pairOpenId = pairOpenId === id ? null : id;
+      pairRuleDraft = null;
       renderPairings();
+    }
+  });
+  /* Typing: the list redraws under a search box that is not redrawn,
+     so the cursor stays where it is. The draft's product search is the
+     same, except that the menu under it is what changes. */
+  wrap.addEventListener('input', (e)=>{
+    if(e.target.id === 'pair_find'){
+      pairSearch = e.target.value;
+      const list = document.getElementById('pairListWrap');
+      if(list) list.innerHTML = pairListHTML(pairProductRows(), observedPairs());
+      return;
+    }
+    if(e.target.id === 'pair_pick' && pairRuleDraft){
+      pairRuleDraft.search = e.target.value;
+      const menu = wrap.querySelector('.pr-menu');
+      const html = pairDraftHTML(pairRuleDraft);
+      const tmp = document.createElement('div'); tmp.innerHTML = html;
+      const fresh = tmp.querySelector('.pr-menu');
+      if(menu && fresh) menu.replaceWith(fresh);
+      else if(menu && !fresh) menu.remove();
+      else if(!menu && fresh) e.target.closest('.pr-find-w').insertAdjacentElement('afterend', fresh);
+      return;
+    }
+    const df = e.target.closest('[data-df]');
+    if(df && pairRuleDraft){
+      if(df.dataset.df === 'qty'){ const n = Number(df.value); pairRuleDraft.qty = n > 0 ? n : null; }
+      else pairRuleDraft.per = df.value;
+    }
+  });
+  wrap.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && e.target.id === 'pair_pick'){
+      const first = wrap.querySelector('[data-pick]');
+      if(first){ e.preventDefault(); first.click(); }
+    }
+    if(e.key === 'Enter' && e.target.closest('[data-pairsel], [data-pairopen]') && !e.target.closest('input, select, textarea, button')){
+      e.preventDefault(); e.target.click();
     }
   });
   /* Selects redraw the row, because the sentence at the top of it is
      what they change. Typed fields do not: a redraw on every keystroke
      takes the cursor with it. */
   wrap.addEventListener('change', (e)=>{
-    /* A pin in the sizes table writes or withdraws the sentence for
-       that one size; the general sentence it sits under is untouched. */
-    const pin = e.target.closest('[data-pin]');
-    if(pin){
-      const r = pinPairSize(Number(pin.dataset.pin), Number(pin.dataset.from), pin.value);
-      if(!r.ok){ toast(r.why, 6000); }
-      renderPairings();
-      return;
-    }
     const el = e.target.closest('[data-pf]');
     if(!el) return;
-    const id = idOf(el), field = el.dataset.pf;
-    const patch = field === 'from' ? { fromId: el.value }
-      : field === 'fromv' ? { fromVariantIdx: el.value === '' ? null : Number(el.value) }
-      : field === 'to' ? { toId: el.value }
-      : field === 'tov' ? { toVariantIdx: el.value === '' ? null : Number(el.value) }
-      : field === 'verb' ? { verb: el.value }
-      : field === 'qty' ? { qty: el.value }
-      : field === 'per' ? { per: el.value }
-      : { note: el.value };
-    const r = updateProductLink(id, patch);
-    if(!r.ok){ toast(r.why, 6000); return; }
-    if(['from','fromv','to','tov','verb','qty'].includes(field)) renderPairings();
+    const rule = ruleOf(el); if(!rule) return;
+    const field = el.dataset.pf;
+    const patch = field === 'verb' ? { verb: el.value } : field === 'qty' ? { qty: el.value } : field === 'per' ? { per: el.value } : { note: el.value };
+    /* The figure and the verb belong to the whole rule, every row of
+       it; the note to the general row alone. */
+    if(field === 'note'){ const r = updateProductLink(rule.lead.id, patch); if(!r.ok) toast(r.why, 6000); return; }
+    let bad = null;
+    rule.rows.forEach(l=> { const r = updateProductLink(l.id, patch); if(!r.ok) bad = r.why; });
+    if(bad){ toast(bad, 6000); }
+    if(field === 'verb' || field === 'qty') renderPairings();
   });
   const add = document.getElementById('pair_add_btn');
   if(add) add.addEventListener('click', ()=>{
-    const ps = data.products || [];
-    if(ps.length < 2){ toast('Two products are needed before anything can be paired.'); return; }
-    /* A fresh sentence opens ready to be changed. Where the same two
-       products are already paired, that one opens instead of a second
-       copy being refused with a message. */
-    const r = addProductLink(ps[0].id, 'with', ps[1].id, null, '', '');
-    if(!r.ok && !r.existing){ toast(r.why, 6000); return; }
-    pairOpenId = r.ok ? r.link.id : r.existing.id;
-    renderPairings();
-    const row = wrap.querySelector(`[data-pairopen="${pairOpenId}"]`);
-    if(row) row.scrollIntoView({ block: 'center' });
+    if(!pairSelectedId){ toast('Pick a product on the left first: a rule is written about one product.', 5000); const f = document.getElementById('pair_find'); if(f) f.focus(); return; }
+    pairRuleDraft = { fromId: pairSelectedId, verb: 'with', toId: null, search: '', qty: null, per: '', cells: new Set() };
+    pairOpenId = null; renderPairings();
+    const f = document.getElementById('pair_pick'); if(f) f.focus();
   });
 })();
 /* The account screen carries a picture too, and its buttons are the

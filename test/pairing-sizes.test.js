@@ -62,8 +62,8 @@ const env = {
 };
 const NAMES = ['pairVerb', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
   'updateProductLink', 'pairSideLabel', 'productLinkLabel', 'productLinkFromLabel', 'pairingsFor',
-  'pairSizePlan', 'pinPairSize', 'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders', 'pairEvidence',
-  'pairStanding', 'pairRowsInOrder'];
+  'pairRuleKey', 'pairRulesOf', 'pairRuleById', 'pairGrid', 'pairSetCell', 'pairMatchBySize', 'pairClearCells',
+  'pairRuleDelete', 'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders', 'pairEvidence', 'pairStanding'];
 const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), env, NAMES);
 
 /* ---- 1. writing a sentence, and what is refused ---------------------- */
@@ -125,43 +125,76 @@ const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')),
   eq(at12[0].fromVariantIdx, null, 'and it is the general one');
   const at16 = fns.pairingsFor('P-RUN', 2);
   eq(at16.length, 1, 'at 16" one sentence applies');
-  eq(at16[0].fromVariantIdx, 2, 'and it is the pinned one, not both');
+  eq(at16[0].fromVariantIdx, 2, 'and it is the ticked one, not both');
   eq(at16[0].toVariantIdx, 2, 'which names 18"');
   eq(fns.pairingsFor('P-RUN', null).length, 1, 'with no size known only the general sentence applies');
   eq(fns.pairingsFor('P-SCR', null).length, 0, 'runs out after is never a companion');
   data.productLinks[0].active = false;
   eq(fns.pairingsFor('P-RUN', 1).length, 0, 'a sentence switched off applies nowhere');
   data.productLinks[0].active = true;
+  const named = fns.addProductLink('P-RUN', 'with', 'P-SOFT', 1, 'Pair', '', { toVariantIdx: 1 }).link;
+  eq(fns.pairingsFor('P-RUN', 1)[0].id, named.id, 'a row naming a size of the second, for every size of the first, beats the general one');
+  eq(fns.pairingsFor('P-RUN', 2)[0].fromVariantIdx, 2, 'but not the row ticked for this exact size');
+  data.productLinks = data.productLinks.filter(x=> x.id !== named.id);
 }
 
-/* ---- 4. how the sizes line up ---------------------------------------- */
+/* ---- 4. the size grid ------------------------------------------------ */
 {
-  const g = data.productLinks[0];
-  const plan = fns.pairSizePlan(g);
-  eq(plan.length, 3, 'one row per size of the first product');
-  eq(plan[0].toIdx, null, '10" runners: no soft close matches, nothing follows');
-  eq(plan[0].why, 'pickVariant', 'said as the gap it is');
-  eq(plan[1].toIdx, 0, '12" runners take the 12" soft close');
-  eq(plan[1].by, 'size', 'because the sizes match');
-  eq(plan[2].toIdx, 2, '16" runners take 18", because that size is pinned');
-  eq(plan[2].pin && plan[2].pin.fromVariantIdx, 2, 'and the pin is handed back with the row');
-  eq(fns.pairSizePlan(data.productLinks[2]), null, 'a pinned sentence has no table of its own');
-  const plain = fns.addProductLink('P-RUN', 'needs', 'P-SCR', 2, 'Pair', '').link;
-  eq(fns.pairSizePlan(plain), null, 'nor does a sentence whose second product has no sizes');
-  data.productLinks = data.productLinks.filter(x=> x.id !== plain.id);
+  const rules = fns.pairRulesOf('P-RUN');
+  eq(rules.length, 2, 'runners carry two rules: goes with soft close, runs out after');
+  const rule = rules.find(r=> r.toId === 'P-SOFT');
+  eq(rule.rows.length, 2, 'the soft close rule is two rows: the general one and one tick');
+  eq(rule.general && rule.general.fromVariantIdx, null, 'the general row has no size');
+  eq(rule.ticks.length, 1, 'and one tick');
+  eq(fns.pairRuleById(rule.ticks[0].id).key, rule.key, 'a rule is found from any of its rows');
 
-  const pin = fns.pinPairSize(g.id, 0, '1');
-  eq(pin.ok, true, '10" can be pinned to 14"');
-  const after = fns.pairSizePlan(g);
-  eq(after[0].toIdx, 1, 'and the table shows it');
-  eq(after[0].pin && after[0].pin.qty, 1, 'the pin carries the general sentence\'s figure');
-  eq(fns.pinPairSize(g.id, 0, '2').ok, true, 'a pin can be moved');
-  eq(fns.pairSizePlan(g)[0].toIdx, 2, 'to another size');
-  eq(data.productLinks.length, 4, 'moving it does not write a second sentence');
-  eq(fns.pinPairSize(g.id, 0, '').ok, true, 'and withdrawn');
-  eq(data.productLinks.length, 3, 'which deletes the sentence for that size');
-  eq(fns.pairSizePlan(g)[0].toIdx, null, 'so nothing follows again');
-  eq(fns.pinPairSize(999, 0, '1').ok, false, 'a pin under a sentence that is gone is refused');
+  const grid = fns.pairGrid(rule);
+  eq(grid.rows.length, 3, 'one row per size of the first product');
+  eq(grid.cols.length, 3, 'one column per size of the second');
+  eq(grid.rows[0].follows && grid.rows[0].follows.gap, true, '10" runners: no soft close matches, nothing follows');
+  eq(grid.rows[0].open, true, 'which is an open row');
+  eq(grid.rows[1].follows && grid.rows[1].follows.idx, 0, '12" runners take the 12" soft close');
+  eq(grid.rows[1].follows.by, 'size', 'because the sizes match');
+  eq(grid.rows[2].ticked.length, 1, '16" runners have a tick');
+  eq(grid.rows[2].ticked[0].j, 2, 'on 18"');
+  eq(grid.rows[2].cells[2].orders, 1, 'and one order carried both at those sizes');
+  eq(grid.rows[1].cells[0].orders, 1, 'as one carried 12" with 12"');
+  eq(grid.rows[1].cells[1].orders, 0, 'and none carried 12" with 14"');
+  eq(grid.open, 1, 'one size is open');
+  eq(grid.settled, 2, 'two are settled');
+
+  eq(fns.pairSetCell(rule, 0, 1, true).ok, true, '10" can be ticked against 14"');
+  const rule2 = fns.pairRuleById(rule.lead.id);
+  eq(rule2.ticks.length, 2, 'which writes a second tick');
+  eq(rule2.ticks.find(l=> l.fromVariantIdx === 0).qty, 1, 'carrying the rule\'s figure');
+  eq(fns.pairGrid(rule2).open, 0, 'and no size is open');
+  eq(fns.pairSetCell(rule2, 0, 1, true).ok, true, 'ticking a ticked square is not a second row');
+  eq(fns.pairRuleById(rule.lead.id).ticks.length, 2, 'still two');
+  eq(fns.pairSetCell(fns.pairRuleById(rule.lead.id), 0, 1, false).ok, true, 'and it can be unticked');
+  eq(fns.pairRuleById(rule.lead.id).ticks.length, 1, 'which deletes that row');
+
+  const m = fns.pairMatchBySize(fns.pairRuleById(rule.lead.id));
+  eq(m.ok && m.matched, 1, 'match by size ticks the one row with a same-size match and no tick');
+  const g3 = fns.pairGrid(fns.pairRuleById(rule.lead.id));
+  eq(g3.rows[1].ticked.length === 1 && g3.rows[1].ticked[0].j === 0, true, '12" to 12"');
+  eq(g3.rows[2].ticked[0].j, 2, 'while the 16" tick is left as it was');
+  eq(fns.pairClearCells(fns.pairRuleById(rule.lead.id)).ok, true, 'clear takes every tick off');
+  const g4 = fns.pairGrid(fns.pairRuleById(rule.lead.id));
+  eq(g4.rows.every(r=> !r.ticked.length), true, 'leaving the general row alone');
+  eq(fns.pairRuleById(rule.lead.id).general != null, true, 'which is still there');
+  fns.pairSetCell(fns.pairRuleById(rule.lead.id), 2, 2, true);
+
+  const plain = fns.addProductLink('P-RUN', 'needs', 'P-SCR', 2, 'Pair', '').link;
+  const gp = fns.pairGrid(fns.pairRuleById(plain.id));
+  eq(gp.cols.length, 1, 'a second product with no sizes is one column');
+  eq(gp.toSized, false, 'and the grid says so');
+  eq(gp.rows.length, 3, 'against every size of the first');
+  fns.pairRuleDelete(fns.pairRuleById(plain.id));
+  eq(fns.pairRulesOf('P-RUN').length, 2, 'deleting a rule takes every row of it');
+  data.products.push({ id: 'P-NAIL', name: 'Wire Nails', type: 'simple', unit: 'Kg' });
+  const flat = fns.addProductLink('P-SCR', 'with', 'P-NAIL', null, '', '').link;
+  eq(fns.pairGrid(fns.pairRuleById(flat.id)), null, 'two products with no sizes have no grid');
+  fns.pairRuleDelete(fns.pairRuleById(flat.id));
 }
 
 /* ---- 5. the books check a sentence at its size ----------------------- */
@@ -177,21 +210,12 @@ const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')),
   eq(fns.pairStanding(g).key, 'argue', 'and argue with the general one');
 }
 
-/* ---- 6. the list keeps a rule and its exceptions together ------------ */
+/* ---- 6. the screen ---------------------------------------------------- */
 {
-  const stands = data.productLinks.map(l=> ({ l, st: fns.pairStanding(l) }));
-  const order = fns.pairRowsInOrder(stands).map(x=> x.l.id);
-  const g = data.productLinks[0].id, pinned = data.productLinks[2].id;
-  eq(order.indexOf(pinned), order.indexOf(g) + 1, 'a pinned sentence sits directly under its general one');
-  eq(order.length, 3, 'and nothing is listed twice or lost');
-}
-
-/* ---- 7. the screen carries the chooser at both ends ------------------ */
-{
-  t.check(/data-pf="\$\{from \? 'fromv' : 'tov'\}"/.test(src), 'one size chooser serves both ends');
-  t.check(/field === 'fromv' \? \{ fromVariantIdx:/.test(src), 'and the first product\'s is written');
-  t.check(/data-pin="\$\{esc\(String\(l\.id\)\)\}" data-from="\$\{r\.fromIdx\}"/.test(src), 'the sizes table pins by size');
-  t.check(/pinPairSize\(Number\(pin\.dataset\.pin\), Number\(pin\.dataset\.from\), pin\.value\)/.test(src), 'and the change handler writes the pin');
+  t.check(/data-cell="\$\{ref\}:\$\{c\.i == null \? '' : c\.i\}:\$\{c\.j == null \? '' : c\.j\}"/.test(src), 'every square of the grid is a button that names its pair');
+  t.check(/data-pair="match"/.test(src) && /data-pair="clear"/.test(src), 'with match by size and clear beside it');
+  t.check(/data-pairsel=/.test(src), 'the product list selects a product');
+  t.check(/id="pair_pick"/.test(src) && /data-pick=/.test(src), 'and a rule is written by finding the second product by name');
   t.check(/from_variant_idx: x\.fromVariantIdx==null \? null : Number\(x\.fromVariantIdx\)/.test(src), 'the first size reaches the server');
   t.check(/select\('to_variant_idx, from_variant_idx'\)/.test(src), 'after a probe for both columns');
   const mig = read('supabase/migrations/0093_product_link_size.sql');
