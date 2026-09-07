@@ -361,9 +361,13 @@ const src = read('index.html');
     'Add to quote is the same primary as Save quote — one grammar for the commit');
   t.check(/\.q-add-row \.qbar-save\{margin-left:auto;\}/.test(src),
     'sitting against the right edge like Save does on the bar');
-  t.check(/<label>Sell price each \(UGX\)<\/label>/.test(src),
+  /* The field still names itself the SELL price; what changed is that it
+     also names the unit it counts in. "Each" when the quantity is typed
+     loose, "per Ctn" when it is typed in cartons -- the box, the card
+     above it and the line it writes all count in the same unit. */
+  t.check(/<label>Sell price \$\{chosenIsPack \? `per \$\{esc\(packUnit\)\}` : 'each'\} \(UGX\)<\/label>/.test(src),
     'the one price field names itself the SELL price — sell and buy kept trading clothes');
-  t.check(/title="What the client pays per \$\{esc\(unit\|\|'unit'\)\} — the buy cost is recorded automatically/.test(src),
+  t.check(/title="What the client pays per \$\{esc\(chosenUnit\|\|'unit'\)\} — the buy cost is recorded automatically/.test(src),
     'and its tooltip says where the buy cost comes from, so nobody types a cost into it');
   t.check(/\.q-stage-summary\{[\s\S]{0,200}?background:var\(--ow-steel-050\)/.test(src)
     && !/#EAF3FC/.test(src),

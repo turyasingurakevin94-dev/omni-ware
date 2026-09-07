@@ -5824,7 +5824,13 @@
      foot's larger total sizes the same track for every row above it.
      The first cut fixed it at 104px and the foot's figure overflowed
      leftwards into its own label -- found by looking, not by a test. */
-  .q-doc .ow-tbl{--ow-tbl-cols:30px minmax(0,1fr) 52px 92px minmax(112px,auto) 156px 88px 76px;}
+  /* The count carries its unit -- "1 Ctn", "100 Pair" -- so its track
+     is wide enough for a four-digit box and a word beside it. And a
+     line counted in cartons carries the CARTON price, six digits and a
+     reset arrow, so Price each is sized for that: money never truncates,
+     and a box that showed "1650" of 165,000 was a wrong figure, not a
+     short one. */
+  .q-doc .ow-tbl{--ow-tbl-cols:30px minmax(0,1fr) 88px 116px minmax(112px,auto) 156px 88px 76px;}
   .q-doc .ow-tbl-h,.q-doc .ow-tbl-r,.q-doc .ow-tbl-f{gap:var(--ow-sp-8);}
   .q-doc .ow-tbl-r{padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);min-height:42px;}
   .q-doc .ow-tbl-r:hover{background:var(--ow-paper-2);}
@@ -5854,6 +5860,11 @@
   .q-qty-pack{display:block;margin-top:2px;font-size:11px;color:var(--ow-ink-400);
     text-align:right;max-width:92px;margin-left:auto;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The count and the unit it is counted in, side by side: the box
+     gives way, the word never does, because "1 Ct" is not a unit. */
+  .q-qty-cell{display:flex;align-items:center;justify-content:flex-end;gap:var(--ow-sp-4);min-width:0;}
+  .q-qty-cell .ow-gi{flex:1 1 auto;min-width:0;}
+  .q-qty-unit{flex:0 0 auto;font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
   .q-sell-cell{display:flex;align-items:center;gap:2px;min-width:0;justify-content:flex-end;width:100%;}
   .q-sell-cell .ow-gi{flex:1 1 auto;min-width:0;}
   /* Set by hand: underlined, not boxed in amber. Amber is this app's
@@ -30661,7 +30672,12 @@ function ipCashHint(o){
   if(!out) return null;
 
   const money = (n)=> fmtUGX(Math.round(n));
-  const amt = (n)=> `${Number(Math.round(n * 100) / 100).toLocaleString('en-UG')} ${o.unit || 'unit'}`;
+  /* Said in the unit the quantity was typed in: o.per is the pack size
+     when the box counts in packs, so "for 50 Kg" becomes "for 2 Bag"
+     under a box that says 2 Bag. The arithmetic above stays in the base
+     unit; only the sentence is converted. */
+  const per = Number(o.per) > 0 ? Number(o.per) : 1;
+  const amt = (n)=> `${Number(Math.round(n / per * 100) / 100).toLocaleString('en-UG')} ${o.unit || 'unit'}`;
   const packName = sel.packUnit || 'pack';
 
   // Everyone else who could fill the same order, cheapest cash first --
@@ -31024,15 +31040,33 @@ function quoteLinePack(it){
   const packQty = Number(it && it.packQty) || 0;
   const packUnit = String((it && it.packUnit) || '').trim();
   const qty = Number(it && it.qty) || 0;
+  const unit = String((it && it.unit) || '').trim();
+  const n = (x)=> Number(x).toLocaleString('en-UG');
+  /* SAID IN THE UNIT IT WAS CHOSEN IN. The picker offers the quantity
+     box in the base unit or in the pack, and which one the rep picked
+     is a decision, not a rounding: a client who is quoted 100 Pair was
+     quoted 100 Pair, and one who is quoted 1 Ctn was quoted a carton,
+     however many pairs are in it. qtyIn records that choice on the
+     line. 'unit' means no pack is ever folded, whole or not; 'pack'
+     means the count is in packs, and a pack and a half is said as 1.5
+     rather than forced back into the piece. Lines written before the
+     choice was recorded fall through to the old reading below. */
+  const qtyIn = it && it.qtyIn;
+  if(qtyIn === 'unit') return null;
+  if(!(packQty > 0) || !packUnit) return null;
+  if(unit.toLowerCase() === packUnit.toLowerCase()) return null;
+  if(qtyIn === 'pack'){
+    if(!(qty > 0)) return null;
+    const packs = Math.round(qty / packQty * 1e6) / 1e6;
+    return { packs, loose: 0, packQty, packUnit, unit, whole: true, chosen: true,
+      text: `${n(packs)} ${packUnit}`, short: `${n(packs)} ${packUnit}` };
+  }
   /* A line already counted in cartons cannot also be 25 to the carton:
      that reads as cartons of cartons. Guarded here as well as cleared on
      the write, because old rows on file may still carry both. */
-  if(!(packQty > 0) || !packUnit || !(qty >= packQty)) return null;
-  if(String((it && it.unit) || '').trim().toLowerCase() === packUnit.toLowerCase()) return null;
+  if(!(qty >= packQty)) return null;
   const packs = Math.floor(qty / packQty), loose = Math.round((qty - packs * packQty) * 1e6) / 1e6;
-  const unit = String((it && it.unit) || '').trim();
-  const n = (x)=> Number(x).toLocaleString('en-UG');
-  return { packs, loose, packQty, packUnit, unit, whole: loose === 0,
+  return { packs, loose, packQty, packUnit, unit, whole: loose === 0, chosen: false,
     /* `text` is for paper, where there is room to say it properly.
        `short` is for the quote row, where the column is as wide as a
        four-digit box: the remainder is still THERE, as +5, and the
@@ -31050,6 +31084,14 @@ function quoteLineQtyText(it){
   const base = `${Number(qty).toLocaleString('en-UG')} ${String((it && it.unit) || '').trim()}`.trim();
   const p = quoteLinePack(it);
   return { text: p ? p.text : base, base: p ? base : '', pack: p };
+}
+/* The factor between what the quote row SHOWS and what the line KEEPS:
+   the pack size when the line is counted in packs, else 1. Every box on
+   the row is drawn through it and every edit is divided or multiplied
+   back through it, so the two cannot drift. */
+function quoteLineCountPer(it){
+  const p = quoteLinePack(it);
+  return (p && p.whole) ? p.packQty : 1;
 }
 /* And the rate beside it. Per pack ONLY when the quantity is whole
    packs: a line with a remainder carries two rates and a "price each"
@@ -32396,6 +32438,17 @@ function renderIpStage(){
   const hasPack = packQty>0 && !!packUnit;
   if(ipQtyUnitMode==='pack' && !hasPack) ipQtyUnitMode = 'unit';
   const qty = ipComputeQty(ipQtyRaw, ipQtyUnitMode, packQty);
+  /* THE UNIT THE REP CHOSE IS THE UNIT THE SCREEN SPEAKS. A quantity
+     typed as 1 Ctn used to be met with a price box counting per Pair,
+     so the box said 2,400 under a card saying 240,000/Ctn, and the line
+     then arrived on the quote as 10 Pair. Everything is still RESOLVED
+     in the base unit -- tiers, markup, cost, the stock ledger -- but the
+     price box, the cards' "Use" and the line that is written all count
+     in whatever the quantity box counts in. perChosen is the factor
+     between the two: the pack size in pack mode, 1 otherwise. */
+  const chosenIsPack = ipQtyUnitMode==='pack' && hasPack;
+  const perChosen = chosenIsPack ? packQty : 1;
+  const chosenUnit = chosenIsPack ? packUnit : unit;
 
   // Now that there IS a quantity, rank suppliers by what each would actually
   // charge for it -- their own volume tiers included -- rather than by their
@@ -32566,7 +32619,7 @@ function renderIpStage(){
   const cashKnown = (data.cashTxns||[]).length > 0
     || Object.values(data.cashDays||{}).some(rec=>
         [rec && rec.opening, rec && rec.actual].some(m=> m && Object.values(m).some(v=> Number(v) > 0)));
-  const cashHint = ipCashHint({ rows: ranked, selectedId: ipSelectedSupplierId, qty, unit,
+  const cashHint = ipCashHint({ rows: ranked, selectedId: ipSelectedSupplierId, qty, unit: chosenUnit, per: perChosen,
     available: cashKnown ? cashPositionForBuying().after : 0,
     // What the basket on screen has already spoken for. Every line added
     // reduces what is left for the next one.
@@ -32591,8 +32644,8 @@ function renderIpStage(){
         </div>
       </div>
       <div class="field q-qty-field">
-        <label>Sell price each (UGX)</label>
-        <input type="number" id="ip_price" min="0" step="any" value="${sellStart}" title="What the client pays per ${esc(unit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
+        <label>Sell price ${chosenIsPack ? `per ${esc(packUnit)}` : 'each'} (UGX)</label>
+        <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
       </div>
     </div>
 
@@ -32707,8 +32760,10 @@ function renderIpStage(){
       : null;
     if(val==null) return;
     // Recommended prices advise what to charge the client — they set
-    // this popup's one price field, which is saved as Sell @.
-    document.getElementById('ip_price').value = Math.round(val);
+    // this popup's one price field, which is saved as Sell @. In the
+    // unit the box counts in: a carton card "used" into a per-carton
+    // box puts the carton figure there, not the pair figure.
+    document.getElementById('ip_price').value = Math.round(val * perChosen);
     ipSelectedRecType = type;
     wrap.querySelectorAll('.q-rec-card').forEach(c=>{
       c.classList.toggle('selected', c===card);
@@ -32731,7 +32786,10 @@ function renderIpStage(){
     const rawQty = document.getElementById('ip_qty').value;
     const qtyUnitMode = document.getElementById('ip_qty_unit').value;
     const qty = ipComputeQty(rawQty, qtyUnitMode, packQty);
-    const sellPrice = Number(document.getElementById('ip_price').value) || 0;
+    const inPacks = qtyUnitMode==='pack' && hasPack;
+    // The box counts per chosen unit; the line is always priced per
+    // base unit, so a per-carton figure is divided back down here.
+    const sellPrice = (Number(document.getElementById('ip_price').value) || 0) / (inPacks ? packQty : 1);
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
@@ -32741,6 +32799,8 @@ function renderIpStage(){
       lineId: data.nextQuoteLineId++,
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
       packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
+      /* How it was counted when it was chosen -- see quoteLinePack. */
+      qtyIn: inPacks ? 'pack' : 'unit',
       qty, supplierId, supplierName: supplierName(supplierId),
       price: buyPrice, sellPrice
     });
@@ -32823,9 +32883,21 @@ function renderQuoteItems(){
        pack too: the rep sees on the call exactly what the client will
        read, instead of finding out from the invoice. */
     const packView = quoteLinePack(it);
+    /* THE ROW COUNTS IN THE UNIT THE LINE WAS CHOSEN IN. A line added
+       as 1 Ctn is 1 Ctn here -- in the box, with the carton price
+       beside it and the carton cost under Buy @ -- not 10 Pair with a
+       caption saying it is really a carton. The rep chose the carton;
+       the client will read a carton; the row says a carton. The base
+       count is the caption instead, for anyone checking the arithmetic.
+       Everything on the line is STORED per base unit, so `per` is the
+       factor between what is shown and what is kept. */
+    const asPack = !!(packView && packView.whole);
+    const per = asPack ? packView.packQty : 1;
+    const countUnit = asPack ? packView.packUnit : (it.unit || '');
+    const qtyShown = asPack ? packView.packs : it.qty;
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
-        <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}">
+        <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
         ${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
@@ -32838,12 +32910,13 @@ function renderQuoteItems(){
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit">${esc(it.unit)}</span>${consignTag}</span>
       </div>
-      <div class="ow-tbl-n" data-l="Qty"><input type="number" class="ow-gi qty-input q-qty" min="1" step="any" value="${it.qty}" aria-label="Quantity">${
-        packView ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
+      <div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${countUnit ? `Counted in ${esc(countUnit)}` : ''}">${esc(countUnit)}</span></div>${
+        asPack ? `<span class="q-qty-pack" title="${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(String(Number(it.qty).toLocaleString('en-UG')))} ${esc(it.unit || '')}</span>`
+        : packView ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
       <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price)}" aria-label="Buy price"></div>
+      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%</span></div>
     </div>`;
   }).join('');
@@ -32924,8 +32997,19 @@ function renderQuoteItems(){
     const lineId = Number(row.dataset.line);
     const item = data.quote.items.find(x=>x.lineId===lineId);
     row.querySelector('.q-qty').addEventListener('change', (e)=>{
+      /* The same factor the row was drawn with: what is typed into a
+         box counting cartons is cartons, and is multiplied back to the
+         base unit before it is kept. Read off the line rather than the
+         DOM so the two cannot disagree. */
+      const per = quoteLineCountPer(item);
       const oldQty = item.qty;
-      const newQty = Number(e.target.value) || 1;
+      /* A blank or zero entry falls back to ONE of whatever the box
+         counts in -- one carton on a carton line, not one pair. */
+      const typed = Number(e.target.value) || 1;
+      const newQty = Math.max(1, Math.round(typed * per * 1e6) / 1e6);
+      /* An edited count is a chosen count: the unit the box was in is
+         now the unit this line is said in, whatever it was written as. */
+      item.qtyIn = per > 1 ? 'pack' : 'unit';
       // Follow this item's volume tiers to the new quantity, but only when
       // Buy @ still matches what the tiers themselves produced for the old
       // quantity -- if it had already been hand-edited away from that
@@ -32946,7 +33030,8 @@ function renderQuoteItems(){
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
-      item.price = Number(e.target.value) || 0;
+      // Typed per the unit the row counts in; kept per base unit.
+      item.price = (Number(e.target.value) || 0) / quoteLineCountPer(item);
       // At THIS line's quantity -- the price was agreed for this many, and
       // the price book records it against that.
       /* item.unit was snapshotted from whoever this line was quoted
@@ -32956,7 +33041,8 @@ function renderQuoteItems(){
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
-      item.sellPrice = Number(e.target.value) || 0;
+      // Typed per the unit the row counts in; kept per base unit.
+      item.sellPrice = (Number(e.target.value) || 0) / quoteLineCountPer(item);
       // Never blocked, only said. See sellBelowCostClause.
       const below = sellBelowCostClause(item);
       if(below) toast(`Saved — but ${below}.`, 7000);
@@ -48056,10 +48142,18 @@ function customerProductHabits(customerId){
       const h = byProduct.get(key) || { key, productId: it.productId, variantIdx: vIdx,
         dates: [], qty: [], price: [], line: [] };
       const line = habitLineOnRowUnit(it);
+      /* HOW THEY BOUGHT IT, kept beside how much. A line sold as 2 Ctn
+         is a fact about this customer as much as the 200 Pair it comes
+         to, and the one they remember is the carton. Either the line
+         was written in the pack (older lines, converted above) or it
+         was counted in the pack by choice (quoteLinePack). */
+      const lp = typeof quoteLinePack === 'function' ? quoteLinePack(it) : null;
+      const asPack = line.converted ? { packQty: line.packQty, packUnit: line.packUnit }
+        : (lp && lp.whole) ? { packQty: lp.packQty, packUnit: lp.packUnit } : null;
       h.dates.push(when);
       h.qty.push(line.qty);
       h.price.push(line.price);
-      h.line.push({ unit: line.unit, unitKnown: line.unitKnown, order: q });
+      h.line.push({ unit: line.unit, unitKnown: line.unitKnown, order: q, asPack });
       byProduct.set(key, h);
     });
   });
@@ -48098,6 +48192,10 @@ function customerProductHabits(customerId){
          figure can be named by where it was written. */
       lastAt: last.d, lastQty: last.q, lastPrice: last.l.unitKnown ? last.p : null, sinceLast,
       unit: last.l.unit, unitKnown: last.l.unitKnown, lastOrder: last.l.order,
+      /* The pack their LAST line was counted in, or null when it was
+         counted loose: the way they bought it last is the way they will
+         ask for it next. */
+      asPack: last.l.asPack || null,
       /* Negative means it is already overdue, which is still "due". */
       dueIn: everyDays === null ? null : everyDays - sinceLast,
       typicalQty: Math.round(order.reduce((s, o)=> s + o.q, 0) / order.length),
@@ -49008,6 +49106,11 @@ function briefGroups(c, habits){
       ? variantLabel(p.variants[variantIdx].combo) : '';
     return Object.assign({ productId, name: p.name, variant: vv,
       packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind,
+      /* The pack today's row comes in, and whether THIS customer buys
+         by it -- read off their own last invoice. Said as bought at the
+         end of briefGroups, once every per-unit comparison is done. */
+      packQty: px.packQty || 0, packUnit: px.packUnit || '',
+      asPack: !!(habit && habit.asPack),
       /* Not on OUR shelf, and orderable: the SHOP is told, so nobody
          promises today what arrives on Thursday. The picture itself is
          a price list and claims nothing either way. */
@@ -49159,6 +49262,43 @@ function briefGroups(c, habits){
   dropped.rows = dropped.rows.filter(r=> !seen.has(r.id));
   dropped.noPrice = dropped.rows.filter(r=> !String(r.why).startsWith('noRule')).length;
   dropped.noRule = dropped.rows.filter(r=> String(r.why).startsWith('noRule')).length;
+  /* SAID THE WAY THEY BOUGHT IT. Every figure above is worked out per
+     base unit, because that is the unit the registry, the markup rules
+     and the receipt comparisons all run on. But a customer who takes two
+     cartons does not remember 200 pairs, and a list that says "Pair*
+     2,400 · you take 200" makes them do the sum the invoice already did
+     for them. Where their own last line was counted in the pack, the row
+     is turned into the pack once, here, after every comparison: the
+     price, what they paid, and what they take, all times the pack, and
+     the PER column names the pack. The packing column still says what a
+     pack holds, so nothing is hidden -- only the arithmetic is done for
+     them. A pack and a half stays 1.5, never rounded to 2. */
+  const asBought = (r)=>{
+    if(!r || !r.asPack) return r;
+    const pk = Number(r.packQty) || 0;
+    const packUnit = String(r.packUnit || '').trim();
+    if(!(pk > 0) || !packUnit) return r;
+    if(String(r.unit || '').trim().toLowerCase() === packUnit.toLowerCase()) return r;
+    const x = (v)=> (v == null ? v : Math.round(v * pk));
+    r.perUnit = { price: r.price, unit: r.unit, theirQty: r.theirQty };
+    r.price = x(r.price);
+    if(r.was != null) r.was = x(r.was);
+    if(r.wasPaid != null) r.wasPaid = x(r.wasPaid);
+    if(r.upFrom != null) r.upFrom = x(r.upFrom);
+    if(r.fall != null) r.fall = r.fall * pk;
+    /* One decimal: a habit is an average, and 58 Kg over three orders
+       of a 25 Kg bag is 2.3 bags, not 2.32 -- the second decimal is the
+       rounding of the base count, not anything they did. Two decimals
+       only where one would say 0, which is not a quantity. */
+    if(r.theirQty != null){
+      let n = Math.round(r.theirQty / pk * 10) / 10;
+      if(n === 0) n = Math.round(r.theirQty / pk * 100) / 100;
+      r.theirQty = n;
+    }
+    r.unit = packUnit;
+    return r;
+  };
+  groups.forEach(g=> g.rows.forEach(asBought));
   return groups;
 }
 
@@ -49710,7 +49850,9 @@ function briefPaintList(ctx, fr){
     } else if(it.theirQty != null){
       ctx.fillStyle = BRIEF_INK.ink600;
       ctx.font = `15px ${BRIEF_MONO}`;
-      ctx.fillText(f(it.theirQty), cellR(4), mid + 5);
+      /* Not through f(): a count in cartons can be 1.5, and rounding
+         it to 2 tells the customer they take more than they do. */
+      ctx.fillText(Number(it.theirQty).toLocaleString('en-UG'), cellR(4), mid + 5);
     }
 
     ctx.fillStyle = BRIEF_INK.rule; ctx.fillRect(L, y + rowH - 1, R - L, 1);
@@ -49906,7 +50048,7 @@ function briefStripHTML(b){
               esc(it.unit || '—')}${it.side === 'wholesale' ? '*' : ''}</span>
             <span class="bf-v">${f(it.price)}</span>
             <span class="bf-x">${it.was != null ? f(it.was - it.price)
-              : it.theirQty != null ? f(it.theirQty) : ''}</span>
+              : it.theirQty != null ? Number(it.theirQty).toLocaleString('en-UG') : ''}</span>
             ${(it.was != null || it.wasPaid != null)
               ? `<span class="bf-was"><s>${f(it.was != null ? it.was : it.wasPaid)}</s></span>` : ''}
             ${it.upFrom != null ? `<span class="bf-up" title="Quoted above what they last paid">was ${f(it.upFrom)}</span>` : ''}

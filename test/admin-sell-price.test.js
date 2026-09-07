@@ -267,6 +267,12 @@ const line = (over) => Object.assign({
       extractFunction(src, 'consignedForLine', 'index.html'),
       extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
       extractFunction(src, 'sellBelowCostClause', 'index.html'),
+      /* The handler now reads which unit the row counts in -- a price
+         typed beside a carton count is a carton price, divided back to
+         the base unit before it is kept. A loose line divides by 1, so
+         every case below still saves exactly what was typed. */
+      extractFunction(src, 'quoteLinePack', 'index.html'),
+      extractFunction(src, 'quoteLineCountPer', 'index.html'),
       handler,
       'function setItem(i){ box.item = i; item = i; }',
       'let item = null;',
