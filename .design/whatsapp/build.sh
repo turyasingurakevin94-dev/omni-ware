@@ -2,7 +2,7 @@
 # Assembles each artboard from the shared chrome CSS plus its own body.
 set -e
 cd "$(dirname "$0")"
-build(){ # $1 out  $2 body  $3 w  $4 h
+build(){ # $1 out  $2 body  $3 w  $4 h  $5 extra css files
   { echo '<!doctype html>'
     echo '<html>'
     echo '<head>'
@@ -18,6 +18,7 @@ build(){ # $1 out  $2 body  $3 w  $4 h
     cat _extra.css
     X="_extra_$(echo "$(basename "$1" .dc.html)" | tr 'A-Z' 'a-z').css"
     if [ -f "$X" ]; then cat "$X"; fi
+    for f in $5; do cat "$f"; done
     echo '  </style>'
     echo '</helmet>'
     echo "<div class=\"app\" style=\"width:${3}px;height:${4}px\">"
@@ -42,4 +43,7 @@ build Main.dc.html    body_main.html    1440 "${H_MAIN:-1150}"
 build Rooms.dc.html   body_rooms.html   1440 "${H_ROOMS:-850}"
 build States.dc.html  body_states.html  1440 "${H_STATES:-830}"
 build Before.dc.html  body_before.html  1440 "${H_BEFORE:-960}"
-build Rail.dc.html    body_rail.html    "${W_RAIL:-820}" "${H_RAIL:-1500}"
+build Rail.dc.html    body_rail.html    "${W_RAIL:-820}" "${H_RAIL:-1230}"
+build Post.dc.html    body_post.html    1440 "${H_POST:-1180}"
+build Rank.dc.html    body_rank.html    "${W_RANK:-620}" "${H_RANK:-1440}" _extra_post.css
+build Cold.dc.html    body_cold.html    "${W_COLD:-620}" "${H_COLD:-760}" _extra_post.css
