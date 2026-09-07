@@ -6386,7 +6386,12 @@
      THE FIGURES TAKE WHAT THEY NEED AND THE NAME GIVES WAY -- 156px
      holds "12,480,000 UGX" without wrapping, which is the whole reason
      the old table was unreadable: its money broke across two lines. */
-  .ow-tbl.inv-tbl{--ow-tbl-cols:34px 82px 80px minmax(150px,520px) 132px 150px 168px auto;}
+  /* Sized from what the cells actually render, measured rather than
+     judged: a doc number is 56px, an ISO date 70, and the widest figure
+     this shop could plausibly raise -- a hundred and nineteen million --
+     is 114. The slack left over is the fifth act's, and the money keeps
+     enough that it can never be the thing that gives way. */
+  .ow-tbl.inv-tbl{--ow-tbl-cols:34px 68px 74px minmax(150px,520px) 126px 148px 168px auto;}
   .inv-tbl .ow-tbl-r{align-items:center;}
   .inv-tbl .ow-tbl-h,.inv-tbl .ow-tbl-r,.inv-tbl .ow-tbl-f{gap:var(--ow-sp-10);}
   .inv-c-ck{display:flex;align-items:center;}
@@ -11524,7 +11529,7 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">Invoices</h1>
         <p class="ow-ph-sub">Every invoice the shop has raised, open money first.</p>
-        <p class="ow-ph-help">Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it &mdash; it stays visible on the Order tracking board for 24 hours, then moves here only. This is the register of documents: find one, print it, take a payment against it, and read what the range was billed. What each customer owes in total, and how old it is, is a different question and has its own screen &mdash; Debtors; asking them for it is Chase debts, where the words are already written. A voided invoice is kept, never deleted, because a cancelled document that vanishes cannot be explained to anybody later.</p>
+        <p class="ow-ph-help">Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it &mdash; it stays visible on the Order tracking board for 24 hours, then moves here only. This is the register of documents: find one, print it, take a payment against it, and read what the range was billed. What each customer owes in total, and how old it is, is a different question and has its own screen &mdash; Debtors; asking them for it is Chase debts, where the words are already written. A voided invoice is kept, never deleted, because a cancelled document that vanishes cannot be explained to anybody later. Two different things can be done to a document that is wrong, and they are not interchangeable: <b>void</b> cancels the paper &mdash; the goods went, money already received stays in the Cash Book, and the customer stops owing for it; <b>undo invoice</b> says it should never have been raised &mdash; the stock goes back on the shelf, the payments and their Cash Book entries are reversed, the purchase invoices it raised are removed, and the order returns to Order tracking where a wrong quantity can be corrected and the invoice raised again. Both ask first and name what they are about to remove.</p>
         <span class="ow-ph-sp"></span>
         <!-- SEARCH IS THE FIRST CONTROL, not the last. At this volume the
              list is never read whole: it is narrowed to a question and
@@ -29660,7 +29665,12 @@ async function toggleQuoteInvoiced(id){
   syncInvoiceDebtCharge(q);
   saveData();
   renderSavedQuotes();
-  renderInvoices();
+  /* Read from the box, like every other caller. Bare, it redrew the
+     register with an empty filter -- harmless while this was only ever
+     reached from the Order tracking board, and a screen wiping its own
+     search the moment you use it now that the act lives on the register
+     itself. */
+  renderInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
@@ -29675,7 +29685,13 @@ async function toggleQuoteInvoiced(id){
     shortfall ? ' (some items had less on hand than quoted)' : '',
     surplusStocked ? ` · ${surplusStocked} left over from packs added to stock` : '',
   ].join(''), surplusStocked ? 6000 : undefined);
-  else toast(hadPayments ? 'Marked as not invoiced — stock, customer and supplier payments, and their Cash Book entries reversed' : 'Marked as not invoiced — stock restored');
+  /* NAME WHERE IT WENT. Undone from the Order tracking board the order
+     is still in front of you; undone from the Invoices register the row
+     disappears -- it is no longer an invoice -- and a document vanishing
+     with no word about where it has gone reads as data lost. */
+  else toast(`${invoiceNumberLabel(q)} is no longer invoiced — ${hadPayments
+    ? 'stock, customer and supplier payments, and their Cash Book entries reversed'
+    : 'stock restored'}. The order is back on Order tracking, where its quantities can be edited.`, 7000);
   } finally {
     togglingInvoiced.delete(id);
   }
@@ -31091,10 +31107,31 @@ function renderInvoices(filter=''){
         : '')
       + icon('inv-doc-print', q.id, 'Print invoice (A5)', '<path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/>')
       + icon('inv-doc-receipt', q.id, 'Print 80mm receipt', '<path d="M6 2h12v18l-2.5-1.6L13 20l-2.5-1.6L8 20l-2-1.3V2Z"/><path d="M9 7h6M9 11h6M9 15h3"/>')
-      /* Voiding cancels a document and re-writes the customer's debt.
-         It is one tap when it is needed, and it is the LAST tap on the
-         row, held off from the printing beside it. */
+      /* THE TWO WAYS TO UNMAKE A DOCUMENT, held off from the printing
+         beside them because both are destructive and neither is what
+         the hand came here for.
+
+         They are not the same act and the shop should not have to guess
+         which is which. VOID cancels the paper: the goods went, the
+         money that came in stays in the Cash Book, and the customer
+         simply stops owing for it. UNDO INVOICE says the invoice should
+         never have existed -- stock goes back on the shelf, payments
+         and their Cash Book entries are reversed, the purchase invoices
+         it raised are removed, and the order returns to Order tracking
+         where its quantities can be edited.
+
+         Undo is here because it had nowhere else to be. It lives on the
+         Order tracking board, and an invoiced order LEAVES that board a
+         day after invoicing -- so a shop that noticed a wrong quantity
+         on the third day had no way in at all, and the only thing left
+         on this screen was Void, which cancels the sale rather than
+         correcting it. A cancelled-and-rewritten sale is not the same
+         document to anyone reading the books later.
+
+         Not offered on a voided row: that document is already cancelled,
+         and Unvoid is the act that belongs to it. */
       + `<span class="inv-act-gap"></span>`
+      + (q.voided ? '' : icon('inv-doc-unbill', q.id, 'Undo invoice — puts the stock, the payments and their Cash Book entries back, and returns the order to Order tracking so its quantities can be edited', '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12H9"/>'))
       + icon('inv-doc-void danger', q.id, q.voided ? 'Unvoid invoice' : 'Void invoice', '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>');
     /* NOBODY OWES A CANCELLED DOCUMENT. Its total stands as the record
        of what was once asked for; its balance is not a debt and must
@@ -31170,6 +31207,14 @@ function renderInvoices(filter=''){
   }));
   wrap.querySelectorAll('.inv-doc-void').forEach(btn=>btn.addEventListener('click', ()=>{
     toggleInvoiceVoided(Number(btn.dataset.id));
+  }));
+  /* The same call the Order tracking board makes, and deliberately so:
+     one function reverses stock, payments, Cash Book entries and the
+     purchase invoices together, and it already asks for confirmation
+     naming every one of them. A second way of undoing an invoice is how
+     two paths come to reverse different things. */
+  wrap.querySelectorAll('.inv-doc-unbill').forEach(btn=>btn.addEventListener('click', ()=>{
+    toggleQuoteInvoiced(Number(btn.dataset.id));
   }));
   invSyncStickyOffset();
   const selectAllTh = document.getElementById('inv_doc_select_all_th');

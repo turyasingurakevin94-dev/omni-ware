@@ -327,6 +327,9 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         extractFunction(indexHtml, 'applyQuoteStockDeduction', 'index.html'),
         extractFunction(indexHtml, 'amendOrderToPickedQuantities', 'index.html'),
         extractFunction(indexHtml, 'pickShortfallLabel', 'index.html'),
+        /* Un-invoicing names the document it just unmade, because from
+           the Invoices register the row disappears when it does. */
+        extractFunction(indexHtml, 'invoiceNumberLabel', 'index.html'),
       ], {
         data: data3,
         document: { getElementById: () => null },
