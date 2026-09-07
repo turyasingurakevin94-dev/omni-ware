@@ -411,14 +411,15 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   eq(r.briefNeedsReason([habitRun], null).productId, 'P-SCR', 'and what the shelf has not got is never the reason');
   data.productLinks = data.productLinks.filter(x=> x.id !== glue.id);
 
-  /* Due, and the shelf has none, and the owner wrote down a swap. */
+  /* Due, and NOBODY can send it -- our shelf being empty is no longer
+     enough, because such a line is now offered and ordered in. */
   const dueOut = [{ productId: 'P-SOFT', variantIdx: 1, typicalQty: 4, sinceLast: 30, orders: 3, lastPrice: 10000 }];
   const swap = r.briefSwapReason(dueOut);
   eq(swap && swap.key, 'swap', 'a customer due for something that is out is still worth telling');
   eq(swap.productId, 'P-QUIET', 'with the swap the owner wrote down');
   eq(swap.qty, 4, 'at the quantity they take');
   eq(swap.unit, 'Pair', 'in the unit it is priced in');
-  t.check(/shelf has none/.test(swap.why) && /stands in/.test(swap.why), 'and the sentence says both halves');
+  t.check(/nobody can send it/.test(swap.why) && /stands in/.test(swap.why), 'and the sentence says both halves');
   /* A plain board, out of stock, with nothing written down for it. */
   data.products.push({ id: 'P-BOARD', name: 'Plain Board', type: 'simple', unit: 'Sheet' });
   stock.set('P-BOARD', 0);
@@ -472,6 +473,10 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     BRIEF_PACK_FIGURE_PCT: 15, BRIEF_ROWS_PER_GROUP: 5, BRIEF_MAX_ROWS: 16,
     briefPaidFigure: ()=> null,
     invoiceNumberLabel: (q)=> 'INV-' + q.id,
+    /* Reached now that a line we hold none of still goes through
+       rowFor: only a row the SUPPLIER has marked is left off, and it is
+       named with the mark that put it there. */
+    briefMarkedOutWords: (id, vi)=> supplierOut.has(key(id, vi)) ? 'Kirumira, marked 2 days ago' : '',
   });
   const G2 = compileScope([
     ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
@@ -488,16 +493,32 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   t.check(!!or && or.rows.some(x=> x.productId === 'P-QUIET'),
     'a customer whose own line is out is offered what stands in for it');
   eq(or && or.rows[0].theirQty, 4, 'at the quantity they take');
-  /* And where nothing stands in, the picture says so to the shop
-     rather than dropping the line without a word -- in the words of OUR
-     shelf, which is what counted zero. The Plain Board's registry row is
-     healthy, so telling the owner "every price marked out of stock"
-     would send them to fix something that is not broken. */
+  /* AN EMPTY SHELF OF OURS IS NOT A REFUSAL. The 18" soft close is one
+     we hold none of and the supplier still has: it goes on the list,
+     priced, carrying the fact that it would be ordered in. This shop
+     buys to order, so keeping it off was keeping a customer from a
+     thing the shop can plainly sell them. */
+  const orderIn = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-SOFT', variantIdx: 2, typicalQty: 4, sinceLast: 6, orders: 3, lastPrice: 12000 }]);
+  const row18 = orderIn.flatMap(g=> g.rows).find(x=> x.productId === 'P-SOFT');
+  t.check(!!row18, 'a thing we hold none of, that a supplier still has, is offered');
+  eq(row18 && row18.toOrder, true, 'carrying the fact that it is not on the shelf');
+  eq(row18 && row18.price, 10500, 'at the price the registry gives');
+  t.check(!orderIn.dropped.rows.some(x=> x.id === 'P-SOFT'),
+    'and it is left off nothing -- an empty shelf of ours is not a reason');
+
+  /* What NOBODY can supply is still left off, under the supplier's own
+     reason and named with the mark that put it there. */
+  const nobody = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-SOFT', variantIdx: 1, typicalQty: 4, sinceLast: 6, orders: 3, lastPrice: 12000 }]);
+  const out14 = nobody.dropped.rows.find(x=> x.id === 'P-SOFT');
+  eq(out14 && out14.why, 'outOfStock', 'a product every supplier has marked is left off as theirs');
+  t.check(/Kirumira, marked 2 days ago/.test((out14 || {}).name || ''),
+    'with the row carrying the mark said out loud');
+
+  /* And a product with no price on file at all is left off for THAT,
+     which is a different errand on a different screen. */
   const boardOnly = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-BOARD', variantIdx: null, typicalQty: 2, sinceLast: 6, orders: 3, lastPrice: 5000 }]);
-  t.check(boardOnly.dropped.rows.some(x=> x.id === 'P-BOARD' && x.why === 'shelfOut'),
-    'and one with nothing to stand in for it is named as left off, on our own shelf');
-  eq(boardOnly.dropped.noPrice, 0, 'a line at a zero on the shelf is not a line that cannot be priced');
-  eq(boardOnly.dropped.shelfOut, 1, 'it is counted as the empty shelf it is');
+  t.check(boardOnly.dropped.rows.some(x=> x.id === 'P-BOARD' && x.why === 'noRow'),
+    'a product nobody has priced is named as left off, for the missing row');
 }
 
 /* ---- 16. what the screen itself says --------------------------------- */

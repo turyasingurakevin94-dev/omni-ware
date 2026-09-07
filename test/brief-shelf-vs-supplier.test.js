@@ -18,7 +18,12 @@
  * errand with nothing to do at the end of it.
  *
  * A shelf at zero also is not a line that "cannot be priced": it prices
- * fine, it is just not there today, so it is counted apart.
+ * fine, it is just not there today. So it is no longer left off at all
+ * -- this shop buys most of what it sells to order, and such a line now
+ * goes on the customer's list at the registry's price, carrying
+ * `toOrder` so the SHOP knows what is not standing here before a
+ * customer asks for it this afternoon. Only what NOBODY can send is
+ * left off, under the supplier's own reason.
  *
  * briefGroups itself is run here, extracted from index.html.
  */
@@ -52,7 +57,8 @@ const env = {
     ? { why: 'outOfStock' }
     : { price: 9750, cost: 8000, unit: 'Pc', kind: 'wholesale' },
   briefMarkedOutWords: (id, vi)=> supplierOut.has(key(id, vi)) ? 'Kirumira, marked 3 days ago' : '',
-  briefSupply: ()=> ({ shelf: 0, onShelf: false, supplier: true, lead: 3, can: true, how: 'order' }),
+  briefPriceRows: (id, vi)=> supplierOut.has(key(id, vi)) ? [] : [{ productId: id, supplierId: 'S1' }],
+  supplierLeadDays: ()=> 3,
   briefPackText: ()=> '',
   briefPaidFigure: ()=> null,
   briefVariantForLine: ()=> ({ variantIdx: null, why: 'noVariants' }),
@@ -70,7 +76,7 @@ const env = {
 };
 /* The REAL verb table and the REAL reader of it: a stub here would let
    the brief's blocks fall behind the words the shop actually writes. */
-const NAMES = ['briefGroups', 'pairVerb'];
+const NAMES = ['briefGroups', 'pairVerb', 'briefSupply'];
 const fns = compileScope([
   extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
   extractDeclaration(src, 'TELL_PRICE_FALL_CEILING_PCT', 'index.html'),
@@ -82,67 +88,72 @@ const fns = compileScope([
 
 const habit = (productId, variantIdx)=> ({ productId, variantIdx, typicalQty: 10, lastOrder: null });
 
-/* ---- 1. an empty shelf is reported as an empty shelf ----------------- */
+/* ---- 1. an empty shelf of ours keeps nothing off the list ------------ */
 {
   const groups = fns.briefGroups({ id: 'C1' }, [habit('P-WASH', 0), habit('P-SCRW', 0)]);
-  const rows = groups.dropped.rows;
-  eq(rows.length, 2, 'both of their lines are named rather than dropped');
-  eq(rows.every(r=> r.why === 'shelfOut'), true,
-    'and both say the SHELF is empty, not that a supplier is out');
-  eq(rows.some(r=> r.why === 'outOfStock'), false,
-    'no healthy Price Registry row is reported as marked out of stock');
-  eq(rows.map(r=> r.name).sort().join(' | '),
+  eq(groups.dropped.rows.length, 0,
+    'neither of Musisi\'s lines is left off -- the suppliers have both');
+  eq(groups.dropped.noPrice, 0, 'and nothing is reported as unpriceable');
+  const rows = groups.flatMap(g=> g.rows);
+  eq(rows.map(r=> `${r.name}${r.variant ? ' — ' + r.variant : ''}`).sort().join(' | '),
     'Washer — M20*30*4 | Wood Screws — 6*50 / 25kgs',
-    'each is named the way the shop reads it');
-  eq(groups.dropped.shelfOut, 2, 'counted as shelf-empty');
-  eq(groups.dropped.noPrice, 0, 'and never as lines that cannot be priced -- these price fine');
-  eq(groups.dropped.noRule, 0, 'nor as a missing markup rule');
+    'both are ON the list, named the way the shop reads them');
+  eq(rows.every(r=> r.toOrder === true), true,
+    'each carrying the fact that it is not on our shelf');
+  eq(rows.every(r=> r.lead === 3), true, 'and the wait the supplier has actually managed');
+  eq(rows.every(r=> r.price === 9750), true, 'priced from the registry, which was never the problem');
 }
 
-/* ---- 2. a real supplier mark still reads as one ---------------------- */
+/* ---- 2. what nobody can send is still left off, and says whose ------ */
 {
-  /* Empty shelf AND marked out at the supplier. The shelf is what the
-     owner meets first, and it is the one thing they can put right by
-     counting, so that is what they are told. */
-  const both = fns.briefGroups({ id: 'C1' }, [habit('P-SOFT', null)]);
-  eq(both.dropped.rows.length, 1, 'the marked product is named too');
-  eq(both.dropped.rows[0].why, 'shelfOut',
-    'where the shelf is empty as well, the shelf is what the owner is sent to');
-
-  /* On the shelf, and the supplier is out: now the registry really is
-     the thing to look at, and the row that carries the mark is named. */
-  shelf.set('P-SOFT::', 6);
   const marked = fns.briefGroups({ id: 'C1' }, [habit('P-SOFT', null)]);
-  shelf.set('P-SOFT::', 0);
   eq(marked.dropped.rows.length, 1, 'a supplier-marked product is left off and named');
   eq(marked.dropped.rows[0].why, 'outOfStock', 'under the supplier\'s own reason');
   eq(marked.dropped.rows[0].name, 'Soft Close Mulper (Kirumira, marked 3 days ago)',
     'with the row that carries the mark said out loud');
   eq(marked.dropped.noPrice, 1, 'and counted as a line that cannot be priced, because it cannot');
-  eq(marked.dropped.shelfOut, 0, 'never as an empty shelf -- ours has six on it');
+  eq(marked.flatMap(g=> g.rows).length, 0, 'nothing of it reaches the list');
 }
 
-/* ---- 3. something on the shelf is still just a row ------------------- */
+/* ---- 3. what we are holding is not marked to order ------------------- */
 {
   const groups = fns.briefGroups({ id: 'C1' }, [habit('P-NAIL', null)]);
   eq(groups.dropped.rows.length, 0, 'a product we are holding is left off nothing');
-  eq(groups.length > 0, true, 'it goes on the list');
+  const row = groups.flatMap(g=> g.rows)[0];
+  eq(!!row, true, 'it goes on the list');
+  eq(row.toOrder, false, 'and is not claimed to need ordering in');
+}
+
+/* ---- 3b. the shelf spends the cap first ------------------------------ */
+{
+  /* Five to a block. Six lines, five of them orderable and one on the
+     shelf, and the one we can hand over today must survive the cut
+     however its own block ranked it. */
+  ['P-A','P-B','P-C','P-D','P-E'].forEach((id, i)=>{
+    PRODUCTS.push({ id, name: 'Filler ' + i, type: 'simple', unit: 'Pc' });
+    shelf.set(id + '::', 0);
+  });
+  const many = fns.briefGroups({ id: 'C1' },
+    ['P-A','P-B','P-C','P-D','P-E'].map(id=> habit(id, null)).concat([habit('P-NAIL', null)]));
+  const usual = many.find(g=> g.key === 'usual');
+  eq(usual.rows.length, 5, 'the block is still capped at five');
+  eq(usual.rows[0].productId, 'P-NAIL', 'and the shelf takes the first place');
+  eq(usual.rows.slice(1).every(r=> r.toOrder), true, 'the order book fills the rest');
+  PRODUCTS.length = 4;
 }
 
 /* ---- 4. the words the owner reads ------------------------------------ */
 {
   const leftOff = extractDeclaration(src, 'BRIEF_LEFT_OFF', 'index.html');
-  t.check(/shelfOut:\s*\{/.test(leftOff), 'the empty shelf has words of its own');
-  t.check(/shelfOut:[^}]*none of our own on the shelf/.test(leftOff),
-    'and they say whose stock is missing');
-  t.check(/shelfOut:[^}]*OUR count, not a supplier mark/.test(leftOff),
-    'and say plainly that the Price Registry is not the thing to go and fix');
+  t.check(!/shelfOut/.test(src),
+    'an empty shelf of ours is no longer a reason to leave anything off, anywhere');
   t.check(/outOfStock:[^}]*about the SUPPLIER/.test(leftOff),
     'while the supplier mark keeps saying it is about the supplier');
-  t.check(/nShelf[\s\S]{0,400}at a zero on our own shelf/.test(src),
-    'the empty brief panel counts the two apart');
-  t.check(/allShelf[\s\S]{0,200}Nothing of theirs is on the shelf today/.test(src),
-    'and the picture builder does not claim they cannot be priced');
+  t.check(/NO SHELF GATE/.test(src), 'the gate that dropped them is gone, and says why');
+  t.check(/toOrder: !sup\.onShelf, lead: sup\.lead/.test(src),
+    'and every row carries whether it would be ordered in');
+  t.check(/on this list[\s\S]{0,60}not on the shelf and would be ordered in/.test(src),
+    'which the owner is told before sending, though the picture names no day');
 }
 
 process.exit(t.done() ? 1 : 0);

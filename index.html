@@ -48084,7 +48084,12 @@ function briefInStock(productId, variantIdx){
    The job only widens what the stage already reaches; it never reaches
    for a customer whose stage nobody has dated. */
 function briefStageProducts(stage, habits){
-  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
+  /* A stage is the one reason that speaks before the customer has
+     bought any of it, so gating it on our own shelf was the narrowest
+     reading of all: a site that has reached roofing is offered what the
+     shop can GET for a roof, not the corner of it we happen to be
+     holding this morning. */
+  const canGet = (id)=> briefSupply(id, null).can;
   const byCategory = (data.products||[]).filter(p=> stage.buys.includes(p.category));
   const out = byCategory.slice();
   const have = new Set(out.map(p=> p.id));
@@ -48096,7 +48101,7 @@ function briefStageProducts(stage, habits){
       out.push(other);
     });
   });
-  return out.filter(p=> inStock(p.id));
+  return out.filter(p=> canGet(p.id));
 }
 
 /* WHAT THE SHOP CAN GIVE, which is not the same as what is on the shelf.
@@ -48212,14 +48217,16 @@ function briefNeedsReason(habits, customerId){
       + (ev.withFrom ? ` Your orders carry both in ${ev.andTo} of ${ev.withFrom}.` : '')
       + (mine && mine.withFrom ? ` Theirs, in ${mine.andTo} of ${mine.withFrom}.` : '') };
 }
-/* DUE, AND THE SHELF HAS NONE. The rhythm rule skipped these: a
+/* DUE, AND NOBODY CAN SEND IT. The rhythm rule skipped these: a
    customer due for something that is out fell through every reason and
    was told nothing, however good the swap the owner had written down.
-   Offered as the swap it is, at the quantity they take. */
+   Offered as the swap it is, at the quantity they take. An empty shelf
+   of ours no longer reaches here -- that line is offered and ordered in
+   -- so what is left is a thing the supplier has none of either. */
 function briefSwapReason(dueOut){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   for(const h of dueOut || []){
-    const sub = pairSubstitutesFor(h.productId, h.variantIdx)[0];
+    const sub = pairSubstitutesFor(h.productId, h.variantIdx).find(x=> x.usable);
     if(!sub) continue;
     const p = productById(h.productId);
     return { key:'swap', chip:'Theirs is out', tone:'ow-warn',
@@ -48228,48 +48235,73 @@ function briefSwapReason(dueOut){
       from: { productId: h.productId, variantIdx: h.variantIdx,
         label: p ? productVariantLabel(p, h.variantIdx) : h.productId },
       why: `Due for <b>${f(h.typicalQty)}</b> ${esc(p ? productVariantLabel(p, h.variantIdx) : h.productId)}`
-        + ` and the shelf has none. You wrote down that <b>${esc(sub.label)}</b> stands in for it`
-        + `${sub.stock === null ? '' : ` &mdash; <b>${f(sub.stock)}</b> on the shelf`}.` };
+        + ` and nobody can send it just now. You wrote down that <b>${esc(sub.label)}</b> stands in for it`
+        + `${sub.onShelf === false ? ` &mdash; ${esc(sub.supply || 'ordered in')}`
+            : sub.stock === null ? '' : ` &mdash; <b>${f(sub.stock)}</b> on the shelf`}.` };
   }
   return null;
 }
 function briefReasonFor(r, habits){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
+  /* WHETHER THE SHOP CAN GIVE IT, not whether it is standing here. Each
+     of these reasons used to ask the shelf, so a customer was worth
+     telling nothing about a thing we sell every week and happened to be
+     out of on the day the queue was built. The shelf still decides what
+     the sentence SAYS -- "on the shelf, 40" against "about 3 days to
+     order in" -- because a reason that hides the wait would have the
+     owner promise a day the yard cannot keep. */
+  const canGet = (id, v)=> briefSupply(id, v == null ? null : v).can;
+  const waitWords = (sup)=> sup.lead != null
+    ? ` &mdash; about <b>${sup.lead}</b> day${sup.lead === 1 ? '' : 's'} to order in`
+    : ' &mdash; ordered in';
 
   /* 1. THEY ASKED. A follow-up they took out themselves, for something
         that has since come in. The highest priority there is: it is a
         recommendation the customer requested. */
+  /* A follow-up is most often taken out for the very thing the shop
+     did NOT have that day, so the shelf was the wrong question to ask
+     of it: the customer asked to be told, and "we can get it" is the
+     answer they asked for. */
   const asked = followUpsForCustomer(r.id).filter(followUpIsOpen).map(fu=>{
     const s = followUpSubject(fu);
-    return s.product && inStock(s.product.id) ? { fu, product: s.product } : null;
+    if(!s.product) return null;
+    const sup = briefSupply(s.product.id, null);
+    return sup.can ? { fu, product: s.product, sup } : null;
   }).find(Boolean);
   if(asked){
-    const stock = briefInStock(asked.product.id);
+    const sup = asked.sup;
     return { key:'asked', chip:'They asked', tone:'ow-mg',
       productId: asked.product.id, variantIdx: null, qty: null,
       weight: r.stats.average || 1,
-      why: `Asked to be told about <b>${esc(asked.product.name)}</b>, and it is ${stock === null ? 'back on the shelf' : `on the shelf &mdash; <b>${f(stock)}</b>`}.` };
+      why: `Asked to be told about <b>${esc(asked.product.name)}</b>, and ${sup.onShelf
+        ? (sup.shelf === null ? 'it is back on the shelf' : `it is on the shelf &mdash; <b>${f(sup.shelf)}</b>`)
+        : `the shop can get it${waitWords(sup)}`}.` };
   }
 
   /* 2. DUE BY RHYTHM, and by THEIR OWN gap rather than the calendar. */
   const dueAll = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN)
     .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)));
-  const due = dueAll.find(h=> inStock(h.productId, h.variantIdx));
+  const due = dueAll.find(h=> canGet(h.productId, h.variantIdx));
   if(due){
     const p = productById(due.productId);
+    const dueSup = briefSupply(due.productId, due.variantIdx);
     return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
       productId: due.productId, variantIdx: due.variantIdx, qty: due.typicalQty,
       weight: due.typicalQty * (due.lastPrice || 0),
       why: `Takes <b>${f(due.typicalQty)}</b> ${due.unit ? `${esc(due.unit)} of ` : ''}${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} ${
         due.rhythmBy === 'rule'
           ? `once, on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago &mdash; and it runs out after about <b>${due.everyDays}</b> days by your own rule.`
-          : `about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.`}` };
+          : `about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.`}${
+        dueSup.onShelf ? '' : ` None on our own shelf${waitWords(dueSup)}, so say no day you cannot keep.`}` };
   }
 
   /* 2b. DUE, BUT OUT, AND SOMETHING STANDS IN FOR IT. Ahead of a price
          story, because a customer who is due is about to buy. */
-  const swap = briefSwapReason(dueAll.filter(h=> !inStock(h.productId, h.variantIdx)));
+  /* Now that a thing we hold none of is offered and ordered in, "due
+     but out" means due and NOBODY can send it -- the supplier has none
+     either, or there is no row at all. That is the only case where the
+     stand-in is the story rather than a line further down the picture. */
+  const swap = briefSwapReason(dueAll.filter(h=> !canGet(h.productId, h.variantIdx)));
   if(swap) return swap;
 
   /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
@@ -48277,7 +48309,7 @@ function briefReasonFor(r, habits){
         against what the shop used to charge. */
   const cheaper = habits.map(h=>{
     const now = briefPriceNow(h.productId, h.variantIdx, h.typicalQty);
-    if(now === null || !h.lastPrice || !inStock(h.productId, h.variantIdx)) return null;
+    if(now === null || !h.lastPrice || !canGet(h.productId, h.variantIdx)) return null;
     const drop = (h.lastPrice - now) / h.lastPrice * 100;
     return drop >= TELL_PRICE_DROP_PCT ? { h, now, drop } : null;
   }).filter(Boolean).sort((a, b)=> b.drop - a.drop)[0];
@@ -48320,7 +48352,7 @@ function briefReasonFor(r, habits){
   if(r.stats.orderCount === 1 && r.stats.daysSinceLast !== null
      && r.stats.daysSinceLast > TELL_FIRST_SILENCE && habits.length){
     const h = habits[0];
-    if(inStock(h.productId)){
+    if(canGet(h.productId, null)){
       const p = productById(h.productId);
       return { key:'return', chip:'Came once', tone:'', productId: h.productId,
         variantIdx: h.variantIdx, qty: h.lastQty,
@@ -48873,10 +48905,9 @@ function briefPaidFigure(px, lastPaid, habit){
   return { why: 'checkRow' };
 }
 function briefGroups(c, habits){
-  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
   const seen = new Set();
   const groups = [];
-  const dropped = { noPrice: 0, noRule: 0, shelfOut: 0, rows: [] };
+  const dropped = { noPrice: 0, noRule: 0, rows: [] };
   let total = 0;
   groups.dropped = dropped;
 
@@ -48885,11 +48916,7 @@ function briefGroups(c, habits){
      default. Where nothing can be derived the line is left off rather
      than shown at a made-up figure. */
   const leaveOff = (productId, variantIdx, name, why)=>{
-    /* Three buckets, not two. A line at a zero on our own shelf CAN be
-       priced -- the registry is fine and we simply hold none -- so
-       counting it as unpriceable sends the owner to the wrong screen. */
-    dropped[why === 'shelfOut' ? 'shelfOut'
-      : String(why).startsWith('noRule') ? 'noRule' : 'noPrice']++;
+    dropped[String(why).startsWith('noRule') ? 'noRule' : 'noPrice']++;
     if(!dropped.rows.some(r=> r.id === productId && r.variantIdx === variantIdx))
       dropped.rows.push({ id: productId, variantIdx: variantIdx == null ? null : variantIdx,
         name, why });
@@ -48898,7 +48925,15 @@ function briefGroups(c, habits){
   const rowFor = (productId, extra, variantIdx, qty, lastPaid, habit)=>{
     const p = productById(productId);
     if(!p) return null;
-    if(!inStock(productId, variantIdx)) return null;
+    /* NO SHELF GATE. This shop buys most of what it sells to order, so
+       "we are holding none today" was never a reason to keep a thing
+       off a customer's price list -- an empty shelf decides WHEN, and
+       the picture names no day at all. What the shop can actually give
+       is settled by briefPriceFor below: a live registry row IS a
+       supplier who can still send it, and where nobody can, the line is
+       left off under that supplier's own reason. The row carries
+       toOrder so the SHOP knows which lines are not here, before a
+       customer asks for one this afternoon. */
     const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
     if(!px || px.price == null){
       const why = (px && px.why) || 'noRow';
@@ -48936,7 +48971,14 @@ function briefGroups(c, habits){
   };
   const take = (key, head, rows)=>{
     const keep = [];
-    rows.forEach(r=>{
+    /* WHAT WE CAN HAND OVER TODAY COMES FIRST. Every block is capped at
+       five, so once a list may carry things that would be ordered in,
+       the cap has to spend itself on the shelf before the order book. A
+       stable partition, not a re-sort: each half keeps the ranking its
+       own block worked out -- biggest fall, biggest order -- and only
+       the shelf jumps the queue. */
+    const ranked = (rows || []).filter(Boolean);
+    ranked.filter(r=> !r.toOrder).concat(ranked.filter(r=> r.toOrder)).forEach(r=>{
       if(!r || seen.has(r.productId)) return;
       if(keep.length >= BRIEF_ROWS_PER_GROUP || total >= BRIEF_MAX_ROWS) return;
       seen.add(r.productId); keep.push(r); total++;
@@ -49001,18 +49043,19 @@ function briefGroups(c, habits){
   const byVerb = new Map();
   const swaps = [];
   habits.forEach(h=>{
-    /* WHAT THEY THEMSELVES TAKE, when the shelf has run out of it. The
-       usual-takes block above simply skipped it -- no row, no mention,
-       nothing for the owner to see -- so a customer whose one line was
-       out got a picture that never named it. Offered as the swap the
-       owner wrote down, or said plainly as left off. */
-    if(!inStock(h.productId, h.variantIdx)){
+    /* WHAT THEY THEMSELVES TAKE, when it is not on the shelf today. The
+       line itself is still offered -- the blocks below price it from a
+       supplier who can send it, marked to order. What is added here is
+       the stand-in the owner wrote down, for the customer who wants it
+       this afternoon rather than on Thursday, and it is offered only
+       where it can actually be filled. Nothing is left off for an empty
+       shelf any more: a thing NOBODY can supply is named by rowFor,
+       under the supplier's own reason. */
+    if(!briefSupply(h.productId, h.variantIdx).onShelf){
       const hp = productById(h.productId);
-      const mine = hp ? pairSubstitutesFor(h.productId, h.variantIdx)[0] : null;
-      const label = hp ? productVariantLabel(hp, h.variantIdx) : h.productId;
+      const mine = hp ? pairSubstitutesFor(h.productId, h.variantIdx).find(x=> x.usable) : null;
       if(mine) swaps.push({ toId: mine.productId, variantIdx: mine.variantIdx, qty: h.typicalQty,
-        insteadOf: label, h });
-      else if(hp) leaveOff(h.productId, h.variantIdx == null ? null : h.variantIdx, label, 'shelfOut');
+        insteadOf: productVariantLabel(hp, h.variantIdx), h });
     }
     pairCompanionsFor(h.productId, h.variantIdx, h.typicalQty, { habits, substitute: true }).forEach(c=>{
       if(c.verbId === 'instead') return;   // a swap is not a companion
@@ -49020,10 +49063,12 @@ function briefGroups(c, habits){
         /* What they asked for is out, and the owner has already written
            down what stands in for it. Offered under its own heading,
            at the quantity the companion would have been. */
-        const sub = c.substitutes[0];
-        swaps.push({ toId: sub.productId, variantIdx: sub.variantIdx, qty: c.qty,
-          insteadOf: c.label, h });
-        return;
+        const sub = c.substitutes.find(x=> x.usable);
+        if(sub){
+          swaps.push({ toId: sub.productId, variantIdx: sub.variantIdx, qty: c.qty,
+            insteadOf: c.label, h });
+          return;
+        }
       }
       if(c.why) return leaveOff(c.productId, c.variantIdx == null ? null : c.variantIdx, c.label, c.why);
       if(!byVerb.has(c.verbId)) byVerb.set(c.verbId, []);
@@ -49067,8 +49112,7 @@ function briefGroups(c, habits){
      not broken. Anything that reached the list is struck from the
      report, and the counts are taken from what survives. */
   dropped.rows = dropped.rows.filter(r=> !seen.has(r.id));
-  dropped.shelfOut = dropped.rows.filter(r=> r.why === 'shelfOut').length;
-  dropped.noPrice = dropped.rows.filter(r=> r.why !== 'shelfOut' && !String(r.why).startsWith('noRule')).length;
+  dropped.noPrice = dropped.rows.filter(r=> !String(r.why).startsWith('noRule')).length;
   dropped.noRule = dropped.rows.filter(r=> String(r.why).startsWith('noRule')).length;
   return groups;
 }
@@ -49160,7 +49204,6 @@ function briefWordCount(frames){
 const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
   outOfStock: { head: 'every supplier row marked out of stock', fix: 'That mark is about the SUPPLIER, not our own shelf: a thing we are simply holding none of is still offered and ordered in. So this says nobody can send it. Clear the mark in the Price Registry for any supplier who can supply again, or leave them off until they are back.' },
-  shelfOut: { head: 'none of our own on the shelf', fix: 'This is OUR count, not a supplier mark \u2014 the Price Registry is fine. Count it in when it lands, or write down what stands in for it under Pairings so the brief offers that instead.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Open the pairing under Pairings and choose the size it means \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Where the two products come in the same sizes, name the sizes alike on both and the picture takes the size they already buy. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
   packFigure: { head: 'a receipt that carries the PACK price on a line counted in the piece', fix: 'The Price Registry is not what is wrong here: the figure they paid is the pack price to the shilling. Open that order \u2014 where they really took packs, the line should be counted in packs; where they truly paid that much a piece, the row is what needs a look. Until one of them is put right, nothing about this line is claimed to the customer.' },
@@ -49696,14 +49739,8 @@ async function buildBriefGif(customerId){
   const b = customerBrief(customerId);
   if(!b || !(b.groups || []).length){
     const d = (b && b.pricing) || {};
-    const rows = d.rows || [];
-    const named = rows.map(r=> r.name).join(', ');
-    /* A shelf at zero is not a book that cannot be priced, and the
-       owner is not sent to the registry to fix a row that is right. */
-    const allShelf = rows.length > 0 && rows.every(r=> r.why === 'shelfOut');
-    return { ok:false, why: allShelf
-      ? `Nothing of theirs is on the shelf today: ${named}. The prices are on file — count them in when they land, or write down what stands in for them under Pairings.`
-      : named
+    const named = (d.rows || []).map(r=> r.name).join(', ');
+    return { ok:false, why: named
       ? `Nothing of theirs can be priced yet: ${named}. Their account says what each one is waiting on.`
       : 'There is nothing on file to build a price list from yet — their own dealings with the shop are what fills it, and a product with no price recorded cannot go on one.' };
   }
@@ -50450,29 +50487,22 @@ function customerBriefPanelHTML(customerId){
   if(!b) return '';
   if(!(b.groups || []).length){
     const d = b.pricing || { noRule: 0, noPrice: 0 };
-    /* Three empty screens that mean different things. One is "we do not
-       know them yet"; one is "we know them, and the shop has not said
-       what it charges", which is a setting away from working; one is
-       "we know them and the price is on file, the shelf is simply
-       empty", which is a delivery away and not a fault in the books.
-       Sending the owner to the Price Registry for the last of those is
-       an errand with nothing to do at the end of it. */
-    const nShelf = (d.rows || []).filter(r=> r.why === 'shelfOut').length;
-    const nPrice = (d.rows || []).length - nShelf;
+    /* Two empty screens that mean opposite things. One is "we do not
+       know them yet"; the other is "we know them, and the shop has not
+       said what it charges" -- which is a setting away from working
+       and must never be reported as the first. An empty shelf is
+       neither: those lines are on the list now, priced and marked to
+       order. */
+    const nPrice = (d.rows || []).length;
     const line = (k)=> `${k} line${k === 1 ? '' : 's'}`;
     const why = nPrice
-      ? `<b>${line(nPrice)} of theirs cannot be priced${nShelf ? `, and ${line(nShelf)} ${nShelf === 1 ? 'is' : 'are'} at a zero on our shelf` : ''}.</b>
+      ? `<b>${line(nPrice)} of theirs cannot be priced.</b>
          <span>They buy from you; the shop just cannot work out what to charge for these yet. Each one is named below with what it is waiting on.</span>`
-      : nShelf
-      ? `<b>${line(nShelf)} of theirs ${nShelf === 1 ? 'is' : 'are'} at a zero on our own shelf.</b>
-         <span>Nothing is wrong with the books: they buy these from you and the prices are on file. We are simply holding none today, and a picture is not built around what cannot be handed over. Count them in when they land, or write down under Pairings what stands in for them and the picture offers that instead.</span>`
       : `<b>There is nothing on file to make a price list from.</b>
          <span>The list is built from their own dealings with the shop &mdash; what they buy, how it is packed, what they pay. One invoiced order for a product that carries a price is enough. Until then anything shown here would be about the shop rather than about them.</span>`;
     return `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span><span class="ow-pan-n">${
-        nPrice ? 'nothing here can be priced yet'
-        : nShelf ? 'nothing of theirs is on the shelf'
-        : 'nothing to build one from yet'}</span></div>
+        nPrice ? 'nothing here can be priced yet' : 'nothing to build one from yet'}</span></div>
       <div class="ow-empty">${why}</div>
       ${briefLeftOffHTML(d)}
     </div>`;
