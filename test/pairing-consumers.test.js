@@ -558,5 +558,31 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     'named on the second product, with the word it was written in');
 }
 
+/* ---- 18. the mark is about the supplier, and says so ----------------- */
+{
+  const mEnv = Object.assign({}, env, {
+    productPriceRows: (id, vi)=> id === 'P-SOFT' && vi === 1
+      ? [{ supplierId: 'S1', outOfStock: true, outOfStockSince: '2026-08-20' },
+         { supplierId: 'S2', outOfStock: true, outOfStockSince: '2026-09-01' }]
+      : id === 'P-SCR' ? [{ supplierId: 'S1', outOfStock: false }] : [],
+    supplierName: (id)=> id === 'S1' ? 'Karddia' : 'SJS Enersol',
+    daysSinceDate: (d)=> d === '2026-08-20' ? 21 : 9,
+  });
+  const M = compileScope([extractFunction(src, 'briefMarkedOutWords', 'index.html')], mEnv, ['briefMarkedOutWords']);
+  const words = M.briefMarkedOutWords('P-SOFT', 1);
+  t.check(/Karddia and SJS Enersol/.test(words), 'the rows carrying the mark are named');
+  t.check(/marked 9 days ago/.test(words), 'and the most recent mark is dated');
+  eq(M.briefMarkedOutWords('P-SCR', null), '', 'a row nobody marked says nothing');
+
+  const left = extractDeclaration(src, 'BRIEF_LEFT_OFF', 'index.html');
+  t.check(/every supplier row marked out of stock/.test(left),
+    'the words say WHOSE stock the mark is about');
+  t.check(/not our own shelf/.test(left),
+    'and that a thing we simply hold none of is offered and ordered in');
+  const groups = extractFunction(src, 'briefGroups', 'index.html');
+  t.check(/briefMarkedOutWords\(productId, variantIdx\)/.test(groups),
+    'and the line names the row so the owner can see the mark rather than guess');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);

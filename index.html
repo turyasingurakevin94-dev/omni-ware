@@ -48126,6 +48126,23 @@ function briefSupply(productId, variantIdx){
     can: onShelf || supplier,
     how: onShelf ? 'shelf' : supplier ? 'order' : 'none' };
 }
+/* WHOSE STOCK THE MARK IS ABOUT. A row marked out of stock in the
+   registry is a statement about the SUPPLIER -- they have none -- and
+   the owner reading "out of stock" about a thing they can see on the
+   supplier's shelf needs the evidence, not the verdict: which rows
+   carry the mark, and since when. */
+function briefMarkedOutWords(productId, variantIdx){
+  const rows = productPriceRows(productId, variantIdx == null ? null : Number(variantIdx))
+    .filter(r=> r.outOfStock);
+  if(!rows.length) return '';
+  const names = [...new Set(rows.map(r=> supplierName(r.supplierId) || 'a supplier'))];
+  const days = rows.map(r=> r.outOfStockSince ? daysSinceDate(r.outOfStockSince) : null)
+    .filter(d=> d != null).sort((a, b)=> a - b)[0];
+  const who = names.length === 1 ? names[0]
+    : names.length === 2 ? `${names[0]} and ${names[1]}`
+    : `${names[0]} and ${names.length - 1} others`;
+  return `${who}${days != null ? `, marked ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}` : ''}`;
+}
 /* How a line would reach the customer, in the owner's words. */
 function briefSupplyWords(sup){
   if(!sup || !sup.can) return 'nobody can supply it';
@@ -48456,9 +48473,10 @@ function customerBrief(customerId){
            must not read as "nothing was written": the owner made the
            rule, watched the picture stay silent, and needs to be told
            which of the three things to put right. */
+        const who = briefMarkedOutWords(c.productId, c.variantIdx);
         return { name: c.label, why: c.substitutes.length
           ? `no supplier has it, and ${pairSwapFault(c.substitutes[0])}`
-          : 'no supplier has it' };
+          : `no supplier has it${who ? ` (${who})` : ''}` };
       }).filter(Boolean) };
 }
 
@@ -48870,9 +48888,15 @@ function briefGroups(c, habits){
     if(!p) return null;
     if(!inStock(productId, variantIdx)) return null;
     const px = briefPriceFor(productId, variantIdx == null ? null : variantIdx, qty);
-    if(!px || px.price == null)
-      return leaveOff(productId, variantIdx, productVariantLabel(p, variantIdx),
-        (px && px.why) || 'noRow');
+    if(!px || px.price == null){
+      const why = (px && px.why) || 'noRow';
+      /* The mark is about the supplier, so the row that carries it is
+         named: the owner can see at a glance whether it is a mark they
+         made when THEY ran out, which is a different thing. */
+      const who = why === 'outOfStock' ? briefMarkedOutWords(productId, variantIdx) : '';
+      return leaveOff(productId, variantIdx,
+        `${productVariantLabel(p, variantIdx)}${who ? ` (${who})` : ''}`, why);
+    }
     /* Against their own receipt, wherever there is one. A derived price
        this far under what they actually paid is not a price -- and
        WHICH of the two is wrong is said, because the two fixes live on
@@ -49122,7 +49146,7 @@ function briefWordCount(frames){
    marker, the markup rule -- so they are never merged into one line. */
 const BRIEF_LEFT_OFF = {
   noRow: { head: 'no price on file', fix: 'Add what you pay for them in the Price Registry.' },
-  outOfStock: { head: 'every price marked out of stock', fix: 'Clear the out-of-stock mark in the Price Registry, or leave them off until they are back.' },
+  outOfStock: { head: 'every supplier row marked out of stock', fix: 'That mark is about the SUPPLIER, not our own shelf: a thing we are simply holding none of is still offered and ordered in. So this says nobody can send it. Clear the mark in the Price Registry for any supplier who can supply again, or leave them off until they are back.' },
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Open the pairing under Pairings and choose the size it means \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Where the two products come in the same sizes, name the sizes alike on both and the picture takes the size they already buy. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
   packFigure: { head: 'a receipt that carries the PACK price on a line counted in the piece', fix: 'The Price Registry is not what is wrong here: the figure they paid is the pack price to the shilling. Open that order \u2014 where they really took packs, the line should be counted in packs; where they truly paid that much a piece, the row is what needs a look. Until one of them is put right, nothing about this line is claimed to the customer.' },
@@ -63111,7 +63135,7 @@ function priceCardHTML(r, tokens){
     <div class="ow-sigs">${sigs.join('')}</div>
     <div class="ow-card-f">
       <button type="button" class="pc-icon-btn pr-act-still" title="Still this price — mark it checked today" onclick="confirmPriceStillRight(${r.id})">${ICON_CHECK}<span class="pr-act-t">Still this price</span></button>
-      <button type="button" class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock — left out of best-supplier recommendations'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
+      <button type="button" class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock — this supplier can send it again':'Mark out of stock — THIS SUPPLIER has none. Not for our own empty shelf: what we hold none of is still quoted and ordered in.'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
       <button type="button" class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
       <button type="button" class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
       <span class="pr-acts-sp"></span>
@@ -63446,7 +63470,9 @@ function toggleOutOfStock(id){
      rather than a made-up zero days. */
   r.outOfStockSince = r.outOfStock ? todayISO() : null;
   saveData(); triggerPricesRender();
-  toast(r.outOfStock ? 'Marked out of stock — hidden from best-supplier recommendations' : 'Marked back in stock');
+  toast(r.outOfStock
+    ? 'Marked out of stock — this SUPPLIER has none, so they are left out of best-supplier recommendations. Our own empty shelf is a different thing and needs no mark.'
+    : 'Marked back in stock — this supplier can send it again.', 6000);
 }
 document.getElementById('pr_add_btn').addEventListener('click', ()=>{ refreshPriceDropdowns(); resetPriceForm(); openModal('priceModal'); });
 document.getElementById('pr_save').addEventListener('click', ()=>{
