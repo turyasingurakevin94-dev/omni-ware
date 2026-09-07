@@ -61160,6 +61160,70 @@ function stockPurchaseMinQty(e){
   const onHand = Number(data.stock[e.key]) || 0;
   return Math.max(0, eff.qty - onHand);
 }
+/* SAYING A MOVEMENT NEVER HAPPENED — the verb this app has never had.
+
+   Every repair here corrects a movement to a NEW figure:
+   applyStockPurchaseEdit refuses a quantity of nothing ("a purchase
+   cannot be for nothing"), the count screen moves a count, and the log
+   offers no reversal at all. So a delivery entered by mistake could
+   only be disguised as a smaller delivery — and on this shop's real
+   books a phantom 16 cartons was "corrected" to 0.85, given a supplier
+   it never came from, and hung on a settled bill belonging to another
+   delivery. Three wrong rows out of one, because the right sentence was
+   not sayable.
+
+   It is sayable here. What went on comes off, in the unit it went on
+   in, and the money with it.
+
+   POSTED, NEVER ERASED. A reversal is a new movement and the original
+   row stays exactly as written, marked — which is how this ledger
+   corrects anything, and what keeps every later qtyAfter still true.
+
+   WHAT HAS BEEN SOLD ON CANNOT BE UN-BOUGHT. Sixteen delivered and
+   fourteen sold leaves two to take back, and this takes those two and
+   says so rather than driving the shelf negative or refusing outright:
+   the goods really did leave, whatever the delivery claimed. The caller
+   is told, so the screen can say it before the press.
+
+   THE BILL IS NOT TOUCHED. Goods coming off the shelf is a different
+   act from money being un-owed: a bill raised for a delivery that never
+   came is voided on the Purchase invoices screen, where voiding a bill
+   is what that screen is for, and doing both from here would move
+   somebody's money out of a screen they were not looking at. Named in
+   the result so the caller can point at it. */
+function stockMovementReversalPlan(logId){
+  const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
+  if(!e) return null;
+  const delta = Number(e.delta) || 0;
+  if(!(delta > 0)) return null;
+  const onHand = Number((data.stock || {})[e.key]) || 0;
+  const takeBack = Math.min(delta, onHand);
+  const pi = (data.purchaseInvoices || []).find(x => x.id === e.piId && !x.voided) || null;
+  return { row: e, delta, onHand, takeBack, soldOn: delta - takeBack,
+    bill: pi, already: !!e.reversedBy };
+}
+function reverseStockMovement(logId, note){
+  const plan = stockMovementReversalPlan(logId);
+  if(!plan) return {ok: false, error: 'That movement cannot be taken back — only something that PUT goods on the shelf can be.'};
+  if(plan.already) return {ok: false, error: 'That movement has already been taken back.'};
+  if(plan.takeBack <= 0) return {ok: false,
+    error: `Every one of these ${plan.delta} has already been sold or written off, so there is nothing left to take back. Correct the movements that took them instead.`};
+  /* Through the one writer, so the lots, the log and the count move
+     together exactly as they do for every other movement. */
+  const after = applyStockDelta(plan.row.productId, plan.row.variantIdx, -plan.takeBack, 'reversal',
+    `Never happened — ${STOCK_TYPE_LABELS[plan.row.type] || plan.row.type} of ${plan.delta} on ${plan.row.date} taken back`
+      + (plan.soldOn > 0 ? `, less ${plan.soldOn} already gone` : '')
+      + (note ? ` — ${note}` : ''),
+    null, null);
+  const row = data.stockLog[data.stockLog.length - 1];
+  /* The two halves of the marker: the reversal says what it undid, and
+     the original says it was undone, so neither row can be read alone
+     and believed. */
+  if(row){ row.reverses = plan.row.id; row.source = 'never-happened'; }
+  plan.row.reversedBy = row ? row.id : true;
+  return {ok: true, took: plan.takeBack, soldOn: plan.soldOn, after,
+    bill: plan.bill, row};
+}
 /* Takes units back off the shelf for a purchase being corrected.
 
    consumeStockLots() eats from the FRONT, which is right for a sale and
@@ -70436,6 +70500,22 @@ function stockLogEditButtonHTML(e){
   if(!isStockPurchaseRow(e)) return '';
   return `<button type="button" class="btn btn-ghost stock-log-edit" data-edit-log="${esc(String(e.id))}">Edit</button>`;
 }
+/* NEVER HAPPENED, on every row that put goods on the shelf -- not only
+   the purchases this screen can Edit. A receipt against an order and
+   the leftovers of a broken pack are deliveries too, and a delivery
+   entered by mistake is the same mistake whichever door it came
+   through. It takes goods back off the shelf and touches no money, so
+   it is offered where Edit is refused. */
+function stockLogNeverButtonHTML(e){
+  if(!e || !((Number(e.delta) || 0) > 0) || e.reversedBy) return '';
+  return `<button type="button" class="btn btn-ghost" data-never-log="${esc(String(e.id))}">Never happened</button>`;
+}
+/* And the row says it was taken back, so it cannot be read alone and
+   believed -- the same reason a corrected row carries its tag. */
+function stockLogReversedTagHTML(e){
+  if(!e || !e.reversedBy) return '';
+  return ` <span class="lc-none" title="Taken back — this row is kept as it was written">taken back</span>`;
+}
 /* The row that was wrong stays on the log saying what it said. Without
    this tag it would go on claiming to be the current figure, which is the
    one thing a corrected record must not do. Decided by the healed chain,
@@ -70568,8 +70648,48 @@ function openStockPurchaseEdit(logId){
 }
 document.getElementById('invLogWrap').addEventListener('click', (ev)=>{
   const btn = ev.target.closest('[data-edit-log]');
-  if(btn) openStockPurchaseEdit(btn.dataset.editLog);
+  if(btn){ openStockPurchaseEdit(btn.dataset.editLog); return; }
+  const nev = ev.target.closest('[data-never-log]');
+  if(nev) confirmNeverHappened(nev.dataset.neverLog);
 });
+/* SAID IN FULL BEFORE IT IS DONE, because this is the one repair that
+   takes goods off a shelf on the strength of somebody remembering. The
+   figures come from the plan rather than the press, so what is
+   confirmed is what will happen -- including the part that cannot
+   happen, where some have already been sold on. */
+function confirmNeverHappened(logId){
+  const plan = stockMovementReversalPlan(logId);
+  if(!plan){ toast('That movement cannot be taken back — only something that put goods on the shelf can be.'); return; }
+  if(plan.already){ toast('That movement has already been taken back.'); return; }
+  if(plan.takeBack <= 0){
+    toast(`Every one of these ${plan.delta} has already been sold or written off, so there is nothing left to take back.`, 7000);
+    return;
+  }
+  const unit = productUnitLabel(plan.row.productId, plan.row.variantIdx) || 'unit';
+  const lines = [
+    `Say this never happened?`,
+    ``,
+    `${plan.row.label || plan.row.productId}`,
+    `${STOCK_TYPE_LABELS[plan.row.type] || plan.row.type} of ${plan.delta} ${unit} on ${plan.row.date}${plan.row.note ? ` — ${plan.row.note}` : ''}`,
+    ``,
+    `${plan.takeBack} ${unit} come back off the shelf.`,
+  ];
+  if(plan.soldOn > 0) lines.push(`${plan.soldOn} of them have already gone and cannot be un-bought — those stay sold.`);
+  if(plan.bill) lines.push(``,
+    `${purchaseInvoiceNumberLabel(plan.bill)} is still owed for these goods. Money is not touched here — void that bill on Purchase invoices if nothing was ever bought.`);
+  lines.push(``, `Nothing is erased: the row stays, marked, and a reversal is posted.`);
+  if(!confirm(lines.join('\n'))) return;
+  const why = prompt('Why did it never happen? (kept on the reversal)', '') ;
+  if(why === null) return;
+  const res = reverseStockMovement(logId, String(why || '').trim());
+  if(!res.ok){ toast(res.error, 7000); return; }
+  saveData();
+  renderStockLog();
+  renderInventory();
+  toast(`Taken back — ${res.took} ${unit} off the shelf`
+    + (res.soldOn > 0 ? `, ${res.soldOn} already gone and left sold` : '')
+    + (res.bill ? `. ${purchaseInvoiceNumberLabel(res.bill)} is untouched — void it there if nothing was bought.` : ''), 8000);
+}
 document.getElementById('invPurchaseEditClose').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
 document.getElementById('ipe_cancel').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
 /* Choosing who it was bought from re-reads the money side: the bill
@@ -70792,13 +70912,13 @@ function renderStockLog(){
       </div>
       <div class="pi-card-meta">
         <div>${esc(e.label||e.productId)}</div>
-        ${e.note ? `<div>${esc(e.note)}${stockLogCorrectedTagHTML(e)}</div>` : ''}
+        ${e.note ? `<div>${esc(e.note)}${stockLogCorrectedTagHTML(e)}${stockLogReversedTagHTML(e)}</div>` : ''}
       </div>
       <div class="sc-stats">
         <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</b><span>Change</span></div>
         <div class="sc-stat"><b>${fmtStockQty(e.qtyAfter)}</b><span>Resulting stock</span></div>
       </div>
-      ${isStockPurchaseRow(e) ? `<div class="pi-card-foot">${stockLogEditButtonHTML(e)}</div>` : ''}
+      ${(isStockPurchaseRow(e) || stockLogNeverButtonHTML(e)) ? `<div class="pi-card-foot">${stockLogEditButtonHTML(e)}${stockLogNeverButtonHTML(e)}</div>` : ''}
     </div>`).join('');
   wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th><th></th></tr></thead><tbody>
     ${entries.map(e=>`<tr>
@@ -70807,8 +70927,8 @@ function renderStockLog(){
       <td>${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</td>
       <td class="price" style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</td>
       <td class="price">${fmtStockQty(e.qtyAfter)}</td>
-      <td>${esc(e.note||'')}${stockLogCorrectedTagHTML(e)}</td>
-      <td>${stockLogEditButtonHTML(e)}</td>
+      <td>${esc(e.note||'')}${stockLogCorrectedTagHTML(e)}${stockLogReversedTagHTML(e)}</td>
+      <td>${stockLogEditButtonHTML(e)}${stockLogNeverButtonHTML(e)}</td>
     </tr>`).join('')}
   </tbody></table></div>
   <div class="pi-cards">${cardsHtml}</div>

@@ -33,7 +33,7 @@ build(){ # $1 out $2 body $3 extracss $4 w $5 h $6 railfile $7 logic
   } > "$1"
   echo "built $1"
 }
-build Main.dc.html  body_main.html  "_extra_main.css"                  1440 1180 _rail.html "_logic_main.js"
+build Main.dc.html  body_main.html  "_extra_main.css"                  1440 1320 _rail.html "_logic_main.js"
 build Entry.dc.html body_entry.html "_extra_main.css"                  1440 1000 _rail.html "_logic_entry.js"
 build Phone.dc.html body_phone.html "_extra_main.css _extra_phone.css"  390  844 ""         "_logic_phone.js"
 exit 0

@@ -18,7 +18,8 @@ class Component extends DCLogic {
     const V = [
       { id:'never',   title:'It never happened',     sub:'I recorded goods that never arrived. Take it back off entirely.' },
       { id:'figures', title:'The figures are wrong', sub:'It happened, but the count, the cost, the supplier or the bill is wrong.' },
-      { id:'shelf',   title:'The shelf disagrees',   sub:'The record is right. What is standing there is different.' }
+      { id:'shelf',   title:'The shelf disagrees',   sub:'The record is right. What is standing there is different.' },
+      { id:'cost',    title:'The cost is wrong',     sub:'The count is right. What the goods are said to have cost is not.' }
     ];
     const verbs = V.map((v)=> ({ ...v, cls: s.verb === v.id ? 'on' : '', pick: ()=> this.setState({ verb: v.id }) }));
 
@@ -49,7 +50,7 @@ class Component extends DCLogic {
       footNote = billClash
         ? 'This cannot be saved while it points at another delivery’s bill.'
         : 'The old figures stay in the log; a correction is posted over them.';
-    } else {
+    } else if(s.verb === 'shelf'){
       effects = [
         { label:'On the shelf',                 before:'16 Ctn',    after:'16 Ctn',    col: DIM },
         { label:'What the stock here is worth', before:'4,960,000', after:'4,960,000', col: DIM },
@@ -58,10 +59,19 @@ class Component extends DCLogic {
       ];
       cta = 'Post the count';
       footNote = 'A count never rewrites a purchase — it is its own movement.';
+    } else {
+      effects = [
+        { label:'On the shelf',                 before:'16 Ctn',    after:'16 Ctn',    col: DIM },
+        { label:'What one is said to have cost',before:'310,000',   after:'310,000',   col: DIM },
+        { label:'What the stock here is worth', before:'4,960,000', after:'4,960,000', col: DIM },
+        { label:'The movement log',             before:'6 rows',    after:'7 rows',    col: INK }
+      ];
+      cta = 'Correct the cost';
+      footNote = 'The count never moves — a cost correction is not a stock correction.';
     }
 
     return { rows, verbs, effects, cta, footNote,
-      isNever: s.verb === 'never', isFigures: s.verb === 'figures', isShelf: s.verb === 'shelf',
+      isNever: s.verb === 'never', isFigures: s.verb === 'figures', isShelf: s.verb === 'shelf', isCost: s.verb === 'cost',
       qty: s.qty, cost: s.cost, billClash,
       setQty: (e)=> this.setState({ qty: e.target.value }),
       setQtyUnit: (e)=> this.setState({ qtyUnit: e.target.value }),

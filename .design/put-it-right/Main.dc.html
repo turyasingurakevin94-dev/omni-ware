@@ -235,7 +235,7 @@
 
     /* The three verbs. Selection is INK, not the accent: the accent on
        this screen is the one thing that writes to the books. */
-    .pr-verbs{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-bottom:16px;}
+    .pr-verbs{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px;margin-bottom:16px;}
     .pr-v{all:unset;cursor:pointer;display:block;padding:12px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);min-height:44px;}
     .pr-v.on{border-color:var(--ow-ink-900);background:var(--ow-paper-2);}
     .pr-v-h{display:flex;align-items:center;gap:8px;}
@@ -267,9 +267,23 @@
     .pr-foot{display:flex;align-items:center;gap:10px;margin-top:16px;}
     .pr-foot-n{font-size:12px;color:var(--ow-ink-400);line-height:1.45;max-width:56ch;}
     .pr-foot-a{margin-left:auto;display:flex;gap:10px;flex-shrink:0;}
+
+    /* THE POPUP ITSELF, at the app's real anatomy: overlay
+       rgba(20,26,33,.55) from 48px down, a 14px card at 760px with the
+       one house shadow, an 18px/22px head with the uppercase title, and
+       a 22px body. Nothing here is a new dialog vocabulary. */
+    .pr-ov{position:absolute;inset:0;background:rgba(20,26,33,0.55);display:flex;align-items:flex-start;justify-content:center;padding:48px 20px;overflow:hidden;}
+    .pr-modal{background:#fff;border-radius:14px;max-width:760px;width:100%;box-shadow:0 24px 64px rgba(10,15,20,0.3);}
+    .pr-mh{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line);}
+    .pr-mh h2{margin:0;font-size:14px;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;}
+    .pr-mx{all:unset;cursor:pointer;color:var(--ink-soft);display:flex;padding:5px;border-radius:6px;}
+    .pr-mb{padding:22px;}
+    /* Behind the popup: enough of Movements to place it, dimmed by the
+       overlay. It is context, not a second design. */
+    .pr-behind{padding:24px;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:1180px">
+<div class="app" style="width:1440px;height:1320px">
   <div class="topbar">
     <div class="brand">
       <div class="brand-mark">OW</div>
@@ -294,10 +308,29 @@
     <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
     <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span><span class="nav-badge">36</span></div>
   </div>
-  <div class="main">
+  <div class="main pr-behind">
+    <div class="pr-head"><h1 class="pr-h1">Movements</h1></div>
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Movements</span><span class="ow-pan-n">6 movements · +18 in · −18 out · net 0</span></div>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+        <div class="pr-tl-r">
+          <span class="pr-tl-d">{{r.date}}</span><span class="pr-tl-t">{{r.type}}</span>
+          <span class="pr-tl-q {{r.dir}}">{{r.delta}}</span><span class="pr-tl-a">{{r.after}}</span>
+          <span class="pr-tl-n">{{r.note}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div class="pr-ov">
+   <div class="pr-modal">
+    <div class="pr-mh">
+      <h2>Put it right</h2>
+      <button type="button" class="pr-mx"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+    </div>
+    <div class="pr-mb">
     <div class="pr-head">
-      <h1 class="pr-h1">Put it right</h1>
-      <span class="pr-sku">ELEPHANT King — Long / Single Lock · LONG-SINGLELOCK</span>
+      <h1 class="pr-h1" style="font-size:16px;">ELEPHANT King — Long / Single Lock</h1>
+      <span class="pr-sku">LONG-SINGLELOCK</span>
     </div>
     <p class="pr-lede">One recorded movement, and everything it touched — the shelf, what the goods cost, the bill — corrected together and named before you save.</p>
 
@@ -399,6 +432,25 @@
       </div>
     </sc-if>
 
+    <sc-if value="{{isCost}}" hint-placeholder-val="{{ true }}">
+      <div class="pr-pane">
+        <p class="pr-p" style="color:var(--ow-ink-600);font-size:12px;margin-bottom:12px;">The count is right; what the goods on the shelf are said to have COST is wrong. This re-prices what is standing there and never moves the count.</p>
+        <div class="pr-grid2">
+          <div class="ow-f">
+            <label class="ow-f-l">What they really cost, each</label>
+            <span style="display:flex;">
+              <input class="ow-f-in" value="310000" style="border-radius:6px 0 0 6px;border-right:0;">
+              <select class="ow-f-u"><option>per Ctn</option><option>per Dozen</option></select>
+            </span>
+          </div>
+          <div class="ow-f">
+            <label class="ow-f-l">Why</label>
+            <input class="ow-f-in" placeholder="e.g. a carton price typed against a line counted in dozens">
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
     <div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">What this will change</span><span class="ow-pan-n">before you save</span></div>
       <sc-for list="{{effects}}" as="e" hint-placeholder-count="4">
@@ -418,6 +470,8 @@
         <button type="button" class="btn btn-accent">{{cta}}</button>
       </span>
     </div>
+    </div>
+   </div>
   </div>
 </div>
 </x-dc>
@@ -442,7 +496,8 @@ class Component extends DCLogic {
     const V = [
       { id:'never',   title:'It never happened',     sub:'I recorded goods that never arrived. Take it back off entirely.' },
       { id:'figures', title:'The figures are wrong', sub:'It happened, but the count, the cost, the supplier or the bill is wrong.' },
-      { id:'shelf',   title:'The shelf disagrees',   sub:'The record is right. What is standing there is different.' }
+      { id:'shelf',   title:'The shelf disagrees',   sub:'The record is right. What is standing there is different.' },
+      { id:'cost',    title:'The cost is wrong',     sub:'The count is right. What the goods are said to have cost is not.' }
     ];
     const verbs = V.map((v)=> ({ ...v, cls: s.verb === v.id ? 'on' : '', pick: ()=> this.setState({ verb: v.id }) }));
 
@@ -473,7 +528,7 @@ class Component extends DCLogic {
       footNote = billClash
         ? 'This cannot be saved while it points at another delivery’s bill.'
         : 'The old figures stay in the log; a correction is posted over them.';
-    } else {
+    } else if(s.verb === 'shelf'){
       effects = [
         { label:'On the shelf',                 before:'16 Ctn',    after:'16 Ctn',    col: DIM },
         { label:'What the stock here is worth', before:'4,960,000', after:'4,960,000', col: DIM },
@@ -482,10 +537,19 @@ class Component extends DCLogic {
       ];
       cta = 'Post the count';
       footNote = 'A count never rewrites a purchase — it is its own movement.';
+    } else {
+      effects = [
+        { label:'On the shelf',                 before:'16 Ctn',    after:'16 Ctn',    col: DIM },
+        { label:'What one is said to have cost',before:'310,000',   after:'310,000',   col: DIM },
+        { label:'What the stock here is worth', before:'4,960,000', after:'4,960,000', col: DIM },
+        { label:'The movement log',             before:'6 rows',    after:'7 rows',    col: INK }
+      ];
+      cta = 'Correct the cost';
+      footNote = 'The count never moves — a cost correction is not a stock correction.';
     }
 
     return { rows, verbs, effects, cta, footNote,
-      isNever: s.verb === 'never', isFigures: s.verb === 'figures', isShelf: s.verb === 'shelf',
+      isNever: s.verb === 'never', isFigures: s.verb === 'figures', isShelf: s.verb === 'shelf', isCost: s.verb === 'cost',
       qty: s.qty, cost: s.cost, billClash,
       setQty: (e)=> this.setState({ qty: e.target.value }),
       setQtyUnit: (e)=> this.setState({ qtyUnit: e.target.value }),
