@@ -29015,6 +29015,7 @@ function orderPreviewLines(q){
     return {
       name: it.productName || 'Item',
       unit: it.unit || '',
+      line: it,
       qty, sell, lineTotal: qty * sell,
       picked, short: picked != null && picked < qty,
       fromStock,
@@ -29125,14 +29126,18 @@ function buildPackingChitHTML(q){
     ${who ? row('Picker', esc(who)) : ''}
     ${orderCustomerLocation(q) ? row('Deliver to', esc(orderCustomerLocation(q))) : ''}
     <div class="r-line"></div>
-    ${s.lines.map(l=>`<div class="pk-item">
+    ${s.lines.map(l=>{
+      /* In the words the order was written in: a line chosen as 2 Ctn
+         is gathered as 2 Ctn, not counted out as 200 Pair. */
+      const c = quoteLineCount(l.line, l.qty);
+      return `<div class="pk-item">
       <div class="pk-name"><span class="pk-box"></span>${esc(l.name)}</div>
       <div class="pk-detail">
-        <span>${esc(String(l.qty))}${l.unit ? ` ${esc(l.unit)}` : ''}${
-          l.picked != null ? ` — ${esc(String(l.picked))} already in` : ''}</span>
+        <span>${esc(c.n)}${c.unit ? ` ${esc(c.unit)}` : ''}${
+          l.picked != null ? ` — ${esc(quoteLineCount(l.line, l.picked).n)} already in` : ''}</span>
         <span>${l.fromStock ? 'stock' : esc(l.source)}</span>
       </div>
-    </div>`).join('')}
+    </div>`; }).join('')}
     <div class="r-rule"></div>
     ${row(`${s.lines.length} line${s.lines.length===1?'':'s'}`,
       `${s.fromStock} stock${s.toBuy ? ` · ${s.toBuy} to buy` : ''}`)}
@@ -31096,6 +31101,19 @@ function quoteLineQtyText(it){
 function quoteLineCountPer(it){
   const p = quoteLinePack(it);
   return (p && p.whole) ? p.packQty : 1;
+}
+/* A base count, said in the unit the line is counted in: 200 on a
+   line chosen in cartons of 100 is "2 Ctn"; 150 picked of it is "1.5
+   Ctn". For the packing list and the invoice check, which say what was
+   ordered and what was gathered and should say it in the words the
+   order was written in. The number and the unit come back apart, so a
+   "picked of ordered" pair can share one unit. */
+function quoteLineCount(it, n){
+  const per = quoteLineCountPer(it);
+  const q = Number(n) || 0;
+  const num = (x)=> Number(Math.round(x * 100) / 100).toLocaleString('en-UG');
+  if(per > 1) return { n: num(q / per), unit: quoteLinePack(it).packUnit };
+  return { n: num(q), unit: String((it && it.unit) || '').trim() };
 }
 /* And the rate beside it. Per pack ONLY when the quantity is whole
    packs: a line with a remainder carries two rates and a "price each"
@@ -36295,7 +36313,10 @@ function orderInvoiceCheckHTML(q){
     const ordered = Number(it.qty) || 0;
     const picked = it.pickStatus ? (itemPickedQty(it) == null ? ordered : itemPickedQty(it)) : null;
     const short = picked != null && picked < ordered;
-    return `<div class="ow-ot-ck-r"><span class="ow-ot-ck-n" title="${esc(itemDisplayName(it))}">${esc(itemDisplayName(it))}</span><span class="ow-ot-ck-q${short ? ' ow-warn' : ''}">${picked == null ? esc(String(ordered)) : `${esc(String(picked))} of ${esc(String(ordered))}`}${it.unit ? ' ' + esc(it.unit) : ''}</span></div>`;
+    /* Said in the unit the line was ordered in -- "1.5 of 2 Ctn" on a
+       carton line -- so the check reads like the invoice it is checking. */
+    const o = quoteLineCount(it, ordered);
+    return `<div class="ow-ot-ck-r"><span class="ow-ot-ck-n" title="${esc(itemDisplayName(it))}">${esc(itemDisplayName(it))}</span><span class="ow-ot-ck-q${short ? ' ow-warn' : ''}">${picked == null ? esc(o.n) : `${esc(quoteLineCount(it, picked).n)} of ${esc(o.n)}`}${o.unit ? ' ' + esc(o.unit) : ''}</span></div>`;
   }).join('');
   const total = savedQuoteTotal(q);
   const cust = q.customerId ? (data.customers || []).find(c=> String(c.id) === String(q.customerId)) : null;

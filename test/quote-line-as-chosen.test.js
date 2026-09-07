@@ -82,6 +82,42 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'under a carton it is loose, as before');
 }
 
+/* ---- 1b. the packing list and the invoice check say it the same way --- */
+{
+  const NAMES = ['quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
+  const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
+    data: { customers: [], suppliers: [] },
+    esc: (x)=> String(x == null ? '' : x),
+    fmtUGX: (n)=> Number(n || 0).toLocaleString('en-US') + ' UGX',
+    itemDisplayName: (it)=> it.productName,
+    itemPickedQty: (it)=> (it.pickedQty == null ? null : Number(it.pickedQty)),
+    savedQuoteTotal: ()=> 0,
+    quoteItemSellPrice: (it)=> Number(it.sellPrice) || 0,
+    supplierName: ()=> 'Jin Zhuang Le Ju',
+    shopIdentity: ()=> ({ name: 'Omni-Ware' }),
+    quoteClientName: ()=> 'Jackson',
+    staffName: (id)=> id,
+    orderCustomerLocation: ()=> '',
+    fmtShortDate: (d)=> d,
+    todayISO: ()=> '2026-09-07',
+    savedAgoLabel: ()=> '',
+  }, NAMES);
+  const ctn = { productName: 'Soft Close', unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200, supplierId: 'S1', price: 2150, sellPrice: 2400 };
+  const c = fns.quoteLineCount(ctn, 200);
+  eq(`${c.n} ${c.unit}`, '2 Ctn', 'a base count is said in the unit the line was chosen in');
+  eq(fns.quoteLineCount(ctn, 150).n, '1.5', 'and a part of it is a part of a carton');
+  const loose = fns.quoteLineCount({ unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'unit', qty: 200 }, 200);
+  eq(`${loose.n} ${loose.unit}`, '200 Pair', 'a line chosen in pairs stays in pairs');
+
+  const order = { id: 1, status: 'completed', invoiced: false, customerId: null, amountPaid: 0, client: { name: 'Jackson' },
+    items: [Object.assign({ pickStatus: 'short', pickedQty: 150 }, ctn)] };
+  const check = fns.orderInvoiceCheckHTML(order);
+  t.check(/1\.5 of 2 Ctn/.test(check) && !/200 Pair/.test(check),
+    `the invoice check says "1.5 of 2 Ctn", not "150 of 200 Pair" (${(check.match(/ow-ot-ck-q[^<]*>([^<]*)</) || [])[1]})`);
+  /* The packing list is pinned beside its own fixtures, in
+     order-preview.test.js. */
+}
+
 /* ---- 2. the picker counts in the chosen unit -------------------------- */
 {
   const stage = extractFunction(src, 'renderIpStage', 'index.html');
