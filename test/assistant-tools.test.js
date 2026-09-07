@@ -80,7 +80,7 @@ const NAMES = [
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId', 'ensurePresetCategory',
   'allProductVariantEntries', 'reorderRuleFor', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
   'shelfValueForKey', 'consignTally', 'consignedOnShelf',
-  'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
+  'getFIFOUnitCost', 'stockUnitFor', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   // The registry's own label builders: the dossier speaks its words,
   // not a second set of its own (see assistant-price-vocabulary).
   'prTierChipLabel', 'priceTierSummaryPart',
@@ -88,6 +88,9 @@ const NAMES = [
 ];
 const scope = compileScope([
   extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+  /* productPackInfo reads the shelf's own unit through stockUnitFor now,
+     and that compares unit words through this. */
+  extractDeclaration(src, 'cmpUnitKey', 'index.html'),
   extractDeclaration(src, 'AP_MAX_THREAD', 'index.html'),
   extractDeclaration(src, 'AP_MAX_STEPS', 'index.html'),
   extractDeclaration(src, 'apRound', 'index.html'),

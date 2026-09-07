@@ -62,6 +62,8 @@ const data = {
 };
 
 const env = {
+  // productPackInfo reads the shelf's own unit now (stockUnitFor).
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
   data,
   /* product_details also reads what the shop wrote down about what
      goes with what. This fixture is about the WORDS a price is said
@@ -96,6 +98,7 @@ const scope = compileScope([
   extractFunction(src, 'rivalPricesFor', 'index.html'),
   extractFunction(src, 'productPriceRows', 'index.html'),
   extractFunction(src, 'rankedPriceRows', 'index.html'),
+  extractFunction(src, 'stockUnitFor', 'index.html'),
   extractFunction(src, 'productPackInfo', 'index.html'),
   extractFunction(src, 'prTierChipLabel', 'index.html'),
   extractFunction(src, 'priceTierSummaryPart', 'index.html'),

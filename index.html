@@ -21730,6 +21730,26 @@ function agingDaysLabel(days){
 // Parsed and printed in UTC for the same reason daysSinceDate is: these
 // strings come from todayISO(), which is UTC, and letting the browser
 // read them as local time shifts the date by one for half the world.
+/* A COUNT, SAID THE WAY A COUNT READS.
+
+   Stock is not always whole -- 3.5 Kg of wire and 2.5 m of pipe are real
+   counts -- so a quantity cannot simply be rounded to a whole number.
+   What it must never do is print binary's working: 1.85 - 1 is
+   0.8500000000000001 in a double, and a movement column reading
+   "-0.8500000000000001" tells the owner their books are broken when it
+   is only the last bit of the arithmetic that is. A shop reading that
+   cannot tell a real fault from a rounding artefact, which is the whole
+   cost of it.
+
+   Cleaned at six decimal places -- past anything a shop counts in and
+   well short of where the error lives, the same window the pack readers
+   already use -- then said plainly, so a whole number still reads whole
+   and a real 0.85 still reads 0.85. */
+function fmtStockQty(n){
+  const v = Number(n);
+  if(!isFinite(v)) return '0';
+  return (Math.round(v * 1e6) / 1e6).toLocaleString('en-UG', { maximumFractionDigits: 6 });
+}
 function fmtShortDate(iso){
   if(!iso) return '';
   const d = new Date(iso+'T00:00:00Z');
@@ -26971,9 +26991,20 @@ function productUnitLabel(productId, variantIdx=null){
 // Pack size to show alongside stock counts (e.g. "25 Kg per Bag"), taken
 // from the cheapest price entry on file that has one set — mirrors the
 // best-supplier pack info shown in the purchase popup.
+/* THE SHELF'S PACK, through the shelf's own reader.
+
+   This used to take the cheapest row carrying any packQty at all, which
+   is not the same question and could answer it differently: a row
+   priced per Ctn and packed in "ctn" is a pack of cartons in cartons,
+   which stockUnitFor rejects and this accepted -- and being cheapest,
+   it won. The purchase-correction screen sizes its unit selector from
+   here, so on such a product it offered "Ctn of 12" for a shelf counted
+   in Dozens of 20, and switching the selector divided the quantity by
+   the wrong number. One reader, so the pack a screen offers is the pack
+   the ledger keeps. */
 function productPackInfo(productId, variantIdx=null){
-  const row = rankedPriceRows(productId, variantIdx).find(r=>r.packQty && r.packUnit);
-  return row ? {packQty:row.packQty, packUnit:row.packUnit, unit:row.unit} : null;
+  const shelf = stockUnitFor(productId, variantIdx);
+  return shelf.hasPack ? {packQty: shelf.packQty, packUnit: shelf.packUnit, unit: shelf.unit} : null;
 }
 
 // Cheapest-first FOR A GIVEN QUANTITY: every supplier's price row carrying
@@ -60820,7 +60851,15 @@ function stockOnHand(productId, variantIdx){
   const raw = (data.stock || {})[stockKey(productId, variantIdx)];
   return { qty: Number(raw) || 0, counted: raw != null };
 }
-function getStockQty(productId, variantIdx){ return stockOnHand(productId, variantIdx).qty; }
+/* Written open rather than on one line so that what follows it is not
+   swallowed by the test extractor, which brace-matches from the first
+   brace that ENDS a line -- a one-liner has none, so it walks on into
+   the next function and compiles it silently into the caller's scope.
+   That is how stockUnitFor came to be present in five test scopes that
+   never asked for it, and absent from the one that did. */
+function getStockQty(productId, variantIdx){
+  return stockOnHand(productId, variantIdx).qty;
+}
 
 /* ---- ONE UNIT PER SHELF -----------------------------------------------
    A shelf is one running count, and a count is only a number while every
@@ -60999,9 +61038,16 @@ function getFIFOUnitCost(productId, variantIdx){
 function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplierId, opts){
   const key = stockKey(productId, variantIdx);
   const before = Number(data.stock[key]) || 0;
-  const after = Math.max(0, before + delta);
+  /* CLEANED WHERE IT IS WRITTEN, not where it is read. A double cannot
+     hold 1.85, so 1.85 - 1 comes out 0.8500000000000001 and every reader
+     downstream inherits it -- the movement column, the shelf card, and
+     the next delta computed from it, which is how one artefact becomes
+     a column of them. Six decimals is past anything a shop counts in,
+     so nothing real is lost and the tail never starts. */
+  const clean = (n)=> Math.round(n * 1e6) / 1e6;
+  const after = Math.max(0, clean(before + delta));
   data.stock[key] = after;
-  const actualChange = after - before;
+  const actualChange = clean(after - before);
   if(actualChange>0){
     // restoreStockLots reports false when it was given nothing usable --
     // an order invoiced before lots were recorded has no list to restore,
@@ -61018,7 +61064,7 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
   const label = product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId;
   data.stockLog.push({
     id: allocRowId('stockLog'), key, productId, variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
-    label, type, delta: after-before, qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString(),
+    label, type, delta: clean(after - before), qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString(),
     /* A COUNT CAN CARRY A COST TOO. This read `type==='restock'` alone,
        so a stock count entered with what the goods cost put the figure
        on the lot and then dropped it from the only history that could
@@ -70204,7 +70250,7 @@ function invOpenHTML(l, name, key){
       const d = Number(e.delta)||0;
       return `<div class="iv-mv-r"><span class="iv-mv-d">${esc(String(e.date||'').slice(5))}</span>
         <span class="iv-mv-w">${esc(STOCK_TYPE_LABELS[e.type]||e.type||'Movement')}${e.note?` — ${esc(e.note)}`:''}</span>
-        <span class="iv-mv-q ${d>=0?'ow-good':'ow-bad'}">${d>=0?'+':'−'}${Math.abs(d)}</span></div>`;
+        <span class="iv-mv-q ${d>=0?'ow-good':'ow-bad'}">${d>=0?'+':'−'}${fmtStockQty(Math.abs(d))}</span></div>`;
     }).join('')}</div>` : '<p class="ow-q-note">No movement recorded against this line yet.</p>';
   return `<div class="ow-q-x">
     <div class="iv-ph">${photo}<div class="iv-ph-b">
@@ -70492,7 +70538,10 @@ document.getElementById('ipe_qty_unit').addEventListener('change', (ev)=>{
   if(!ipePack) return;
   const q = document.getElementById('ipe_qty');
   const v = Number(q.value) || 0;
-  q.value = ev.target.value === 'pack' ? (v / ipePack.packQty) : (v * ipePack.packQty);
+  /* Rounded, or switching the selector on an awkward pack writes a
+     float's tail straight into the box the shop is about to save. */
+  const conv = ev.target.value === 'pack' ? (v / ipePack.packQty) : (v * ipePack.packQty);
+  q.value = Math.round(conv * 1e6) / 1e6;
 });
 document.getElementById('ipe_save').addEventListener('click', ()=>{
   if(editingPurchaseLogId == null) return;
@@ -70670,9 +70719,9 @@ function renderStockLog(){
       // "-0" reads as a figure somebody worked out rather than the
       // absence of one, so a zero is written plain. Same reason the
       // statements stopped printing "-0 UGX".
-      `<span class="log-net"><b class="up">${t.inQty ? '+' : ''}${t.inQty}</b> in · ` +
-      `<b class="down">${t.outQty ? '-' : ''}${t.outQty}</b> out · ` +
-      `net ${t.net>0?'+':''}${t.net}</span>`;
+      `<span class="log-net"><b class="up">${t.inQty ? '+' : ''}${fmtStockQty(t.inQty)}</b> in · ` +
+      `<b class="down">${t.outQty ? '-' : ''}${fmtStockQty(t.outQty)}</b> out · ` +
+      `net ${t.net>0?'+':''}${fmtStockQty(t.net)}</span>`;
   }
 
   if(entries.length===0){
@@ -70699,8 +70748,8 @@ function renderStockLog(){
         ${e.note ? `<div>${esc(e.note)}${stockLogCorrectedTagHTML(e)}</div>` : ''}
       </div>
       <div class="sc-stats">
-        <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${e.delta}</b><span>Change</span></div>
-        <div class="sc-stat"><b>${e.qtyAfter}</b><span>Resulting stock</span></div>
+        <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</b><span>Change</span></div>
+        <div class="sc-stat"><b>${fmtStockQty(e.qtyAfter)}</b><span>Resulting stock</span></div>
       </div>
       ${isStockPurchaseRow(e) ? `<div class="pi-card-foot">${stockLogEditButtonHTML(e)}</div>` : ''}
     </div>`).join('');
@@ -70709,8 +70758,8 @@ function renderStockLog(){
       <td>${esc(e.date)}</td>
       <td>${esc(e.label||e.productId)}</td>
       <td>${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</td>
-      <td class="price" style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${e.delta}</td>
-      <td class="price">${e.qtyAfter}</td>
+      <td class="price" style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</td>
+      <td class="price">${fmtStockQty(e.qtyAfter)}</td>
       <td>${esc(e.note||'')}${stockLogCorrectedTagHTML(e)}</td>
       <td>${stockLogEditButtonHTML(e)}</td>
     </tr>`).join('')}
