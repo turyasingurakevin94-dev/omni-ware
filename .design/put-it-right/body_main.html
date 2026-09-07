@@ -1,0 +1,125 @@
+  <div class="main">
+    <div class="pr-head">
+      <h1 class="pr-h1">Put it right</h1>
+      <span class="pr-sku">ELEPHANT King — Long / Single Lock · LONG-SINGLELOCK</span>
+    </div>
+    <p class="pr-lede">One recorded movement, and everything it touched — the shelf, what the goods cost, the bill — corrected together and named before you save.</p>
+
+    <div class="ow-pan" style="margin-bottom:16px;">
+      <div class="ow-pan-h"><span class="ow-pan-t">This line, in order</span><span class="ow-pan-n">the one being corrected is marked</span></div>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+        <div class="pr-tl-r {{r.cls}}">
+          <span class="pr-tl-d">{{r.date}}</span>
+          <span class="pr-tl-t">{{r.type}}</span>
+          <span class="pr-tl-q {{r.dir}}">{{r.delta}}</span>
+          <span class="pr-tl-a">{{r.after}}</span>
+          <span class="pr-tl-n">{{r.note}}</span>
+          <sc-if value="{{r.here}}" hint-placeholder-val="{{ true }}">
+            <span class="ow-cp" style="margin-left:auto;flex-shrink:0;">correcting</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <p class="ow-pan-t" style="display:block;margin:0 0 8px;">What is wrong with it?</p>
+    <div class="pr-verbs">
+      <sc-for list="{{verbs}}" as="v" hint-placeholder-count="3">
+        <button type="button" class="pr-v {{v.cls}}" onClick="{{v.pick}}">
+          <span class="pr-v-h"><span class="pr-v-dot"></span><span class="pr-v-t">{{v.title}}</span></span>
+          <span class="pr-v-s">{{v.sub}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{isNever}}" hint-placeholder-val="{{ true }}">
+      <div class="pr-pane">
+        <p class="pr-p">The <b>16 Ctn</b> recorded on 28 Aug from <b>Shafik Katwe</b> come back off the shelf, and the cost that arrived with them comes off the books.</p>
+        <p class="pr-p">Nothing is erased. A reversal is posted and the original row stays in the log, marked — that is how this ledger has always corrected anything, and it is what keeps every later count still true.</p>
+        <div class="pr-note good">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C6B58" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+          <span>None of these 16 have been sold on, so all of them can come back. Where some had gone, only the rest could — and this would say so.</span>
+        </div>
+        <div class="ow-f" style="margin-top:12px;">
+          <label class="ow-f-l">Why — kept on the reversal</label>
+          <input class="ow-f-in" value="entered in error — nothing was ever bought from Shafik Katwe">
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isFigures}}" hint-placeholder-val="{{ true }}">
+      <div class="pr-pane">
+        <div class="pr-grid2">
+          <div class="ow-f">
+            <label class="ow-f-l">How many really arrived</label>
+            <span style="display:flex;">
+              <input class="ow-f-in" value="{{qty}}" onInput="{{setQty}}" style="border-radius:6px 0 0 6px;border-right:0;">
+              <select class="ow-f-u" onChange="{{setQtyUnit}}"><option>Ctn</option><option>Dozen</option></select>
+            </span>
+          </div>
+          <div class="ow-f">
+            <label class="ow-f-l">What one really cost</label>
+            <span style="display:flex;">
+              <input class="ow-f-in" value="{{cost}}" onInput="{{setCost}}" style="border-radius:6px 0 0 6px;border-right:0;">
+              <select class="ow-f-u"><option>per Ctn</option><option>per Dozen</option></select>
+            </span>
+          </div>
+          <div class="ow-f">
+            <label class="ow-f-l">Bought from</label>
+            <select class="ow-f-in" onChange="{{setSup}}"><option>Shafik Katwe</option><option>Jeff Kenyos</option><option>(not recorded)</option></select>
+          </div>
+          <div class="ow-f">
+            <label class="ow-f-l">The bill it is on</label>
+            <select class="ow-f-in" onChange="{{setBill}}">
+              <option>(no bill — what you owe will not change)</option>
+              <option>PINV-0102 · Jeff Kenyos · 620,000 · settled</option>
+            </select>
+          </div>
+        </div>
+        <sc-if value="{{billClash}}" hint-placeholder-val="{{ true }}">
+          <div class="pr-note bad">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7F1D1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            <span><b>PINV-0102 belongs to the 19 Aug delivery of 2 Ctn, and it is settled.</b> Putting this movement on it rewrites that bill and tells you that you owe Jeff Kenyos money you have already paid. Raise a bill for this delivery instead.</span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isShelf}}" hint-placeholder-val="{{ true }}">
+      <div class="pr-pane">
+        <p class="pr-p" style="color:var(--ow-ink-600);font-size:12px;margin-bottom:12px;">The record is right; the shelf is what disagrees. This posts a fresh count and leaves every movement above it exactly as written.</p>
+        <div class="pr-grid2">
+          <div class="ow-f">
+            <label class="ow-f-l">What is actually on the shelf</label>
+            <span style="display:flex;">
+              <input class="ow-f-in" value="16" style="border-radius:6px 0 0 6px;border-right:0;">
+              <select class="ow-f-u"><option>Ctn</option><option>Dozen</option></select>
+            </span>
+          </div>
+          <div class="ow-f">
+            <label class="ow-f-l">What the difference cost, each</label>
+            <input class="ow-f-in" placeholder="Leave blank if nobody knows">
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">What this will change</span><span class="ow-pan-n">before you save</span></div>
+      <sc-for list="{{effects}}" as="e" hint-placeholder-count="4">
+        <div class="pr-eff">
+          <span class="pr-eff-l">{{e.label}}</span>
+          <span class="pr-eff-b">{{e.before}}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A939C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+          <span class="pr-eff-a" style="color:{{e.col}};">{{e.after}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div class="pr-foot">
+      <span class="pr-foot-n">{{footNote}}</span>
+      <span class="pr-foot-a">
+        <button type="button" class="btn btn-ghost">Close</button>
+        <button type="button" class="btn btn-accent">{{cta}}</button>
+      </span>
+    </div>
+  </div>
