@@ -30223,11 +30223,14 @@ function wireBuyingListReceiving(){
       if(!isFinite(n) || n <= 0){ toast('Nothing received — enter how many arrived'); return; }
       const paid = prompt(`What did each ${unit} cost?`, String(topUp ? (Number(it.receivedPrice) || expPrice) : expPrice));
       if(paid === null) return;
+      /* The carton figure, if that is what was typed, divided down to
+         the unit the line is kept in -- see packFigureAtTheDoor. */
+      const paidEach = packFigureAtTheDoor(Number(paid), expPrice, Number(it.packQty) || 0, it.packUnit, unit);
       /* Only now. Written before the prompts, a cancelled receipt would
          still have moved the line's supplier -- a bill quietly
          reassigned by a question somebody backed out of. */
       const movedSupplier = setLineSupplier(it, boughtFrom);
-      const got = receiveQuoteLine(it, n, Number(paid), q);
+      const got = receiveQuoteLine(it, n, paidEach, q);
       if(!got){ toast('Nothing received'); return; }
       /* A supplier delivery is finished when its last line is in --
          there is no worker to hand it back, so nothing else would ever
@@ -48361,7 +48364,33 @@ function briefPriceFor(productId, variantIdx, qty){
      stock does. */
   const shelf = shelfValueForKey(stockKey(productId, variantIdx == null ? null : variantIdx));
   const onShelf = shelf.ownedQty > 0 && shelf.unitCost != null && shelf.unitCost > 0;
-  const cost = onShelf ? shelf.unitCost : (best ? best.base : null);
+  let cost = onShelf ? shelf.unitCost : (best ? best.base : null);
+  /* A LOT THAT CARRIES THE CARTON'S FIGURE PER DOZEN. Goods arrive by
+     the carton and the question at the door is "what did each Dozen
+     cost?" -- so 290,000, the carton, gets typed, and the lot says
+     290,000 a Dozen against a supplier row that says 14,500 for a
+     20-Dozen Ctn. Marked up off that, the picture offered a customer
+     290,500 a Dozen and warned the owner of a "rise" from the 15,000
+     they had paid. The same slip invPurchasePriceValue exists to catch,
+     through a door that had no unit selector.
+
+     Read against the registry: where the shelf's figure is the row's
+     times the pack, near enough, it is the carton figure and is divided
+     down. That is still the shelf's own cost -- the goods cost what
+     they cost, read in the unit the pack size says it was typed in --
+     and it is NAMED to the owner, because the same lot is costing every
+     sale of these at the carton and valuing the shelf at twenty times
+     what stands there, and neither of those is this picture's to
+     repair. */
+  let packCost = null;
+  if(onShelf && best && packQty > 1){
+    const per = packFigurePerUnit(shelf.unitCost, best.base, packQty);
+    if(per != null){
+      packCost = { held: Math.round(shelf.unitCost), packQty,
+        packUnit: String(best.row.packUnit || '').trim() || 'pack', unit: String(best.row.unit || product.unit || '').trim() };
+      cost = per;
+    }
+  }
   /* THE SIDE THE MONEY CAME OFF, not the side the quantity suggests. A
      carton-only line has no retail column at all, so every quantity is
      priced out of the wholesale one -- and asking the retail markup
@@ -48391,7 +48420,7 @@ function briefPriceFor(productId, variantIdx, qty){
      decide it for them. */
   if(Math.round(sell) < Math.round(cost)) return { why: 'belowCost', cost: Math.round(cost), sell: Math.round(sell) };
   return { price: Math.round(sell), kind, packQty, cost: Math.round(cost),
-    source: onShelf ? 'shelf' : 'registry',
+    source: onShelf ? 'shelf' : 'registry', packCost,
     packUnit: best ? String(best.row.packUnit || '').trim() : '',
     unit: String((best && best.row.unit) || product.unit || '').trim() };
 }
@@ -48524,13 +48553,39 @@ function briefSameSizeAs(from, vs, usable){
    price. Wide enough to cover a carton that has since moved a little in
    price; nowhere near wide enough to cover a digit. */
 const BRIEF_PACK_FIGURE_PCT = 15;
+/* A PACK'S FIGURE, READ PER UNIT. `figure` is the big number and
+   `perUnit` the small one; where the big one is the small one times the
+   pack, near enough, it comes back divided down, else null. One test
+   for every door a carton price can come through onto a line kept by
+   the dozen -- a receipt, a lot cost, a registry row, a number typed at
+   the delivery -- so the four cannot drift into four opinions of what
+   "about the carton price" means. */
+function packFigurePerUnit(figure, perUnit, packQty){
+  const pk = Number(packQty) || 0;
+  const big = Number(figure), small = Number(perUnit);
+  if(!(pk > 1) || !(big > 0) || !(small > 0)) return null;
+  if(Math.abs(big - small * pk) > big * BRIEF_PACK_FIGURE_PCT / 100) return null;
+  return big / pk;
+}
 function briefPaidFigure(px, lastPaid, habit){
   if(!px || px.price == null || !(lastPaid > 0)) return null;
-  if(px.price >= lastPaid * (1 - TELL_PRICE_FALL_CEILING_PCT / 100)) return null;
   const pk = Number(px.packQty) || 0;
-  if(pk > 1 && Math.abs(lastPaid - px.price * pk) <= lastPaid * BRIEF_PACK_FIGURE_PCT / 100)
-    return { why: 'packFigure', packQty: pk, packUnit: String(px.packUnit || '').trim() || 'pack',
-      unit: String((habit && habit.unit) || px.unit || '').trim(),
+  const packUnit = String(px.packUnit || '').trim() || 'pack';
+  const unit = String((habit && habit.unit) || px.unit || '').trim();
+  /* THE OTHER WAY UP. A derived price far ABOVE the receipt went
+     unremarked, and was sent: ELEPHANT King at 290,500 a Dozen against
+     the 15,000 they paid, on a 20-Dozen carton. That is 20 x 14,500
+     plus the markup -- the cost it was built from is the CARTON'S,
+     written per Dozen on a lot or a row. Not a rise to warn the owner
+     about quietly; a figure no customer could be shown. Which record
+     carries it is said by where the price came from, because the two
+     are put right on different screens. */
+  if(px.price > lastPaid && packFigurePerUnit(px.price, lastPaid, pk) != null)
+    return { why: px.source === 'shelf' ? 'packCostShelf' : 'packCostRow', packQty: pk, packUnit, unit,
+      cost: px.cost != null ? Math.round(px.cost) : null };
+  if(px.price >= lastPaid * (1 - TELL_PRICE_FALL_CEILING_PCT / 100)) return null;
+  if(packFigurePerUnit(lastPaid, px.price, pk) != null)
+    return { why: 'packFigure', packQty: pk, packUnit, unit,
       order: habit && habit.lastOrder ? habit.lastOrder : null };
   return { why: 'checkRow' };
 }
@@ -48570,13 +48625,16 @@ function briefGroups(c, habits){
       const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
       const name = odd.why === 'packFigure'
         ? `${productVariantLabel(p, variantIdx)} (${f(lastPaid)} paid is ${odd.packQty} × ${f(px.price)}, the ${odd.packUnit} price, on a line ${odd.order ? invoiceNumberLabel(odd.order) : 'the order'} counts in ${odd.unit || 'the piece'})`
+        : (odd.why === 'packCostShelf' || odd.why === 'packCostRow')
+        ? `${productVariantLabel(p, variantIdx)} (${f(px.price)} a ${odd.unit || 'unit'} is about ${odd.packQty} × the ${f(lastPaid)} they paid — the ${odd.packUnit} figure, built from a cost of ${odd.cost != null ? f(odd.cost) : 'the carton'} per ${odd.unit || 'unit'})`
         : `${productVariantLabel(p, variantIdx)} (${f(px.price)} against ${f(lastPaid)} paid)`;
       return leaveOff(productId, variantIdx, name, odd.why);
     }
     const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
       ? variantLabel(p.variants[variantIdx].combo) : '';
     return Object.assign({ productId, name: p.name, variant: vv,
-      packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind }, extra || {});
+      packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind,
+      packCost: px.packCost || null }, extra || {});
   };
   const take = (key, head, rows)=>{
     const keep = [];
@@ -48793,6 +48851,8 @@ const BRIEF_LEFT_OFF = {
   noBase: { head: 'a price row with no figure on it', fix: 'Fill in the wholesale or retail figure on their row in the Price Registry.' },
   pickVariant: { head: 'priced by size, and nothing on the pairing says which size', fix: 'Open the pairing under Pairings and choose the size it means \u2014 or, where only one size is really sold, leave the others out of the Price Registry. Where the two products come in the same sizes, name the sizes alike on both and the picture takes the size they already buy. Guessing a size for a customer who has never bought one would put a figure on a picture that nobody in the shop chose.' },
   packFigure: { head: 'a receipt that carries the PACK price on a line counted in the piece', fix: 'The Price Registry is not what is wrong here: the figure they paid is the pack price to the shilling. Open that order \u2014 where they really took packs, the line should be counted in packs; where they truly paid that much a piece, the row is what needs a look. Until one of them is put right, nothing about this line is claimed to the customer.' },
+  packCostShelf: { head: 'a stock lot that carries the PACK cost on a line kept in the piece', fix: 'The shelf says these cost, per piece, about what a whole pack costs \u2014 the carton figure typed at a per-piece question when they came in. Undo that receipt on the order, or correct the purchase under Inventory, and enter the price per piece (the pack price divided by the pack). Until then every sale off this lot is costed at the carton and the shelf is valued at many times what stands there \u2014 and check the Price Registry row says the same per-piece figure.' },
+  packCostRow: { head: 'a Price Registry row that carries the PACK price on a line kept in the piece', fix: 'The supplier\u2019s row says, per piece, about what a whole pack costs. Open it in the Price Registry and enter the price per piece, or switch the tier to per pack \u2014 the buying plan, every quote and this picture are all built from that row.' },
   noRuleWholesale: { head: 'no WHOLESALE markup rule, which is the side they are sold at', fix: 'Fill in the wholesale markup on the product, or a shop default, under Pricing \u2014 the retail box does not price these, because there is no retail figure on file to price. A buying price is never shown to a customer.' },
   noRuleRetail: { head: 'no RETAIL markup rule, which is the side they are sold at', fix: 'Fill in the retail markup on the product, or a shop default, under Pricing \u2014 the wholesale box does not price these at this quantity. A buying price is never shown to a customer.' },
   checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
@@ -49463,6 +49523,10 @@ function briefWhyHTML(b){
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
 ${briefLeftOffHTML(b.pricing)}
+    ${(()=>{ const pc = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.packCost);
+      return pc.length ? `<p class="ow-q-note"><b>${pc.length}</b> line${pc.length === 1 ? '' : 's'} priced off a stock lot that carries the PACK cost per piece:
+        ${pc.map(r=> `<b>${esc(r.name)}</b> (the shelf says ${f(r.packCost.held)} a ${esc(r.packCost.unit || 'piece')}, which is ${r.packCost.packQty} × your supplier\u2019s per-${esc(r.packCost.unit || 'piece')} figure &mdash; the ${esc(r.packCost.packUnit)} price)`).join(', ')}.
+        The picture prices ${pc.length === 1 ? 'it' : 'them'} from that cost divided by the pack, which agrees with the registry. The lot itself is still wrong: every sale off it is costed at the whole ${esc(pc[0].packCost.packUnit)} and the shelf is valued at ${pc[0].packCost.packQty}× what stands there. Undo the receipt on the order it came in on, or correct the purchase under Inventory, and enter the price per ${esc(pc[0].packCost.unit || 'piece')}.</p>` : ''; })()}
     ${(()=>{ const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
       return up.length ? `<p class="ow-q-note"><b>${up.length}</b> line${up.length === 1 ? '' : 's'} quoted ABOVE what they last paid:
         ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
@@ -60535,6 +60599,29 @@ function reverseQuoteStockDeduction(q){
    Costed at what was actually PAID rather than what was quoted, so a
    price that moved between quoting and buying reaches the margin figures
    instead of being silently absorbed. */
+/* A CARTON PRICE TYPED AT A PER-DOZEN QUESTION.
+
+   "What did each Dozen cost?" is asked of somebody holding a carton
+   whose price they know: 290,000. Typed there, it went onto the lot as
+   290,000 a Dozen, into the Price Registry as the same, and from there
+   onto a customer's picture at twenty times the real figure. The
+   purchase form has a per-pack selector for exactly this; the delivery
+   prompts had nothing.
+
+   The tell is arithmetic: the typed figure is the expected per-unit
+   figure times the pack, near enough. Asked rather than assumed --
+   the supplier may genuinely have put a dozen up to what a carton
+   used to cost, and the person at the door knows which -- and the
+   answer is recorded in the unit the line is kept in. */
+function packFigureAtTheDoor(typed, expectedEach, packQty, packUnit, unit){
+  const per = packFigurePerUnit(typed, expectedEach, packQty);
+  if(per == null) return typed;
+  const u = unit || 'unit';
+  const ok = confirm(`${fmtUGX(typed)} is about ${packQty} × ${fmtUGX(Math.round(expectedEach))} — the ${packUnit || 'pack'} price, on a line counted in ${u}.\n\n`
+    + `OK — record it as ${fmtUGX(Math.round(per))} per ${u} (the ${packUnit || 'pack'} price divided by ${packQty})\n`
+    + `Cancel — keep ${fmtUGX(typed)} per ${u}: they really charge that each`);
+  return ok ? per : typed;
+}
 function receiveQuoteLine(it, qty, price, q){
   const n = Math.max(0, Number(qty) || 0);
   if(!orderLineIsBoughtIn(it) || !(n > 0)) return 0;
@@ -78538,7 +78625,12 @@ __btn_buy_receive_save.addEventListener('click', saveOnceAtATime(__btn_buy_recei
   document.querySelectorAll('#buyReceiveRows .brc-cost').forEach(i=> cost.set(String(i.dataset.key), Number(i.value) || 0));
   const got = o.lines
     .map(l=> ({ ...l, qty: qty.has(String(l.key)) ? qty.get(String(l.key)) : l.qty,
-      unitCost: cost.has(String(l.key)) ? cost.get(String(l.key)) : l.unitCost }))
+      /* A carton figure typed in the Each column of a line the order
+         counts by the piece is asked about and divided down -- the
+         same question the delivery prompt asks. */
+      unitCost: cost.has(String(l.key))
+        ? packFigureAtTheDoor(cost.get(String(l.key)), l.unitCost, Number(l.packQty) || 0, l.packUnit, l.unit)
+        : l.unitCost }))
     .filter(l=> l.qty > 0);
   if(!got.length){ toast('Nothing came, so there is nothing to receive. Call the order off instead.', 7000); return; }
   const total = got.reduce((n, l)=> n + l.qty * l.unitCost, 0);

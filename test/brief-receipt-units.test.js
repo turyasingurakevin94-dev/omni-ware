@@ -82,7 +82,7 @@ const env = {
   pairLastsDays: ()=> null,
 };
 const NAMES = ['habitLineOnRowUnit', 'customerProductHabits', 'briefVariantForLine', 'briefSameSizeAs',
-  'briefPaidFigure', 'updateProductLink', 'productLinkLabel', 'pairSizeIdx', 'pairFault',
+  'packFigurePerUnit', 'briefPaidFigure', 'updateProductLink', 'productLinkLabel', 'pairSizeIdx', 'pairFault',
   'pairDuplicateOf', 'pairSideLabel'];
 const fns = compileScope([
   extractDeclaration(src, 'TELL_MIN_ORDERS', 'index.html'),
@@ -175,6 +175,37 @@ const fns = compileScope([
   eq(loose && loose.why, 'checkRow', 'with no pack there is nothing else it could be');
   eq(fns.briefPaidFigure(px, 0, habit), null, 'no receipt, nothing to compare');
   eq(fns.briefPaidFigure({ why: 'noRow' }, 85000, habit), null, 'no price, nothing to compare');
+}
+
+/* ---- 3b. and a figure far OVER the receipt: the carton cost per dozen -
+   ELEPHANT King — Short / Single Lock: 290,000 a 20-Dozen Ctn, 10,000
+   wholesale markup, 300,000 a Ctn, 15,000 a Dozen. The customer paid
+   15,000 a Dozen. The lot said 290,000 a Dozen, and the picture offered
+   290,500 a Dozen with a note about a "rise". */
+{
+  near(fns.packFigurePerUnit(290000, 14500, 20), 14500, '290,000 against 14,500 at 20 a Ctn is the Ctn figure, read back per Dozen');
+  near(fns.packFigurePerUnit(300000, 14500, 20), 15000, 'a carton that has moved a little is still the carton figure');
+  eq(fns.packFigurePerUnit(200000, 14500, 20), null, 'a figure a third off the carton is not it');
+  eq(fns.packFigurePerUnit(14500, 14500, 20), null, 'the per-unit figure itself is not the pack figure');
+  eq(fns.packFigurePerUnit(290000, 14500, 0), null, 'with no pack there is nothing to divide by');
+  eq(fns.packFigurePerUnit(290000, 14500, 1), null, 'a pack of one is no pack');
+  eq(fns.packFigurePerUnit(290000, 0, 20), null, 'nothing expected, nothing to measure against');
+
+  const habit = { unit: 'Dozen', lastOrder: { id: 201 } };
+  const shelf = { price: 290500, packQty: 20, packUnit: 'Ctn', unit: 'Dozen', source: 'shelf', cost: 290000 };
+  const s = fns.briefPaidFigure(shelf, 15000, habit);
+  eq(s && s.why, 'packCostShelf', '290,500 a Dozen against 15,000 paid, 20 to the Ctn, is the carton cost on the LOT');
+  eq(s && s.cost, 290000, 'with the cost it was built from');
+  eq(s && s.packQty, 20, 'and the pack that explains it');
+  eq(s && s.unit, 'Dozen', 'and the unit the line is kept in');
+  const row = Object.assign({}, shelf, { source: 'registry' });
+  eq((fns.briefPaidFigure(row, 15000, habit) || {}).why, 'packCostRow', 'the same figure off the registry names the ROW');
+  eq(fns.briefPaidFigure({ price: 15000, packQty: 20, packUnit: 'Ctn', unit: 'Dozen', source: 'shelf' }, 15000, habit), null,
+    'the right figure is no finding');
+  eq(fns.briefPaidFigure({ price: 16000, packQty: 20, packUnit: 'Ctn', unit: 'Dozen', source: 'shelf' }, 15000, habit), null,
+    'a real rise is not a fault -- it is recorded for the owner elsewhere');
+  eq(fns.briefPaidFigure({ price: 290500, packQty: 0, unit: 'Dozen', source: 'shelf' }, 15000, habit), null,
+    'with no pack on file a figure far over the receipt is not claimed to be anything');
 }
 
 /* ---- 4. which size a pairing means ----------------------------------- */

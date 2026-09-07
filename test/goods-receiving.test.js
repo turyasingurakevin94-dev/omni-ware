@@ -350,7 +350,7 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
      receipt still reassigns the bill. */
   const askAt = code.indexOf('const switching = String(boughtFrom)');
   const writeAt = code.indexOf('const movedSupplier = setLineSupplier(it, boughtFrom);');
-  const receiveAt = code.indexOf('const got = receiveQuoteLine(it, n, Number(paid), q);');
+  const receiveAt = code.indexOf('const got = receiveQuoteLine(it, n, paidEach, q);');
   const qtyCancelAt = code.indexOf("if(qty === null) return;");
   const priceCancelAt = code.indexOf("if(paid === null) return;");
   t.check(askAt > -1 && writeAt > askAt, 'the supplier is chosen before it is written');
