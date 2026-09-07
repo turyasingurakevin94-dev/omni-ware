@@ -47638,14 +47638,17 @@ function pairRuleDelete(rule){
 function invoicedOrders(){
   return (data.savedQuotes||[]).filter(q=> q.invoiced && !q.voided);
 }
-function pairEvidence(fromId, toId, fromVariantIdx, toVariantIdx){
+function pairEvidence(fromId, toId, fromVariantIdx, toVariantIdx, orders){
   let withFrom = 0, andTo = 0, fromQty = 0, toQty = 0;
   /* At the size the sentence names, where it names one: a pairing
      written for 12" runners is checked against orders of 12" runners,
      not against every runner the shop ever sold. */
   const fv = pairSizeIdx(fromVariantIdx), tv = pairSizeIdx(toVariantIdx);
   const atSize = (it, v)=> v == null || pairSizeIdx(it.variantIdx) === v;
-  invoicedOrders().forEach(q=>{
+  /* Over the shop's own invoices by default, or over the ones handed
+     in -- one customer's, where the question is what THEY do rather
+     than what the trade does. One counter, two questions. */
+  (orders || invoicedOrders()).forEach(q=>{
     const items = q.items || [];
     const a = items.filter(it=> it.productId === fromId && atSize(it, fv));
     if(!a.length) return;
@@ -47989,6 +47992,75 @@ function briefStageProducts(stage, habits){
    a guess. `weight` is what doing nothing costs, and severity does not
    enter into it here -- unlike the debt band on Customers, everything on
    this list is an opportunity rather than a problem. */
+/* ---- A RULE AS A REASON ----------------------------------------------
+   The rules said what goes with what, and until now they could only
+   decorate a picture some other reason had already earned. The most
+   valuable thing they know about one customer is the gap: they take
+   the sheets every fortnight and have never once taken the nails the
+   shop itself says the sheets NEED. Nobody was ever told.
+
+   Only 'needs' -- the verb that says the first thing cannot be used
+   without the second. 'Goes with' is an offer and belongs under a
+   picture; 'needs' is news.
+
+   THE BOOKS MAY BE SILENT, NEVER CONTRADICTING. A rule the invoices
+   argue with on four orders or more (PAIR_OBSERVED_MIN, the same floor
+   the observed pairs use) is not worth a customer's morning. Fewer than
+   that is an anecdote, and the sentence prints the sample either way so
+   the owner can see what it is built on. */
+function briefNeedsReason(habits, customerId){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const have = new Set((habits || []).map(h=> h.productId));
+  const found = [];
+  (habits || []).forEach(h=>{
+    if(h.sinceLast > TELL_PRICE_MEMORY_DAYS) return;
+    pairCompanionsFor(h.productId, h.variantIdx, h.typicalQty, { habits }).forEach(c=>{
+      if(c.verbId !== 'needs' || c.why || !c.inStock) return;
+      if(c.price == null || c.qty == null) return;         // no figure, nothing to weigh
+      if(have.has(c.productId)) return;                     // they already take it
+      if(c.standing.key === 'argue' && c.evidence.withFrom >= PAIR_OBSERVED_MIN) return;
+      found.push({ h, c, weight: c.qty * c.price });
+    });
+  });
+  const best = found.sort((a, b)=> b.weight - a.weight)[0];
+  if(!best) return null;
+  const { h, c } = best;
+  const p = productById(h.productId);
+  const ev = c.evidence;
+  const mine = customerId ? pairEvidence(h.productId, c.link.toId, h.variantIdx, c.link.toVariantIdx,
+    customerOrdersFor(customerId).filter(q=> q.invoiced && !q.voided)) : null;
+  return { key:'needs', chip:'Needs it too', tone:'ow-mg',
+    productId: c.productId, variantIdx: c.variantIdx, qty: c.qty, unit: c.unit,
+    weight: best.weight,
+    from: { productId: h.productId, variantIdx: h.variantIdx,
+      label: p ? productVariantLabel(p, h.variantIdx) : h.productId },
+    why: `Takes <b>${f(h.typicalQty)}</b> ${esc(p ? productVariantLabel(p, h.variantIdx) : h.productId)}`
+      + `, which needs <b>${c.link.qty}</b> ${esc(c.name)} per ${esc(c.link.per || 'one')} by your own rule`
+      + ` &mdash; and they have never taken ${esc(c.name)} from you.`
+      + (ev.withFrom ? ` Your orders carry both in ${ev.andTo} of ${ev.withFrom}.` : '')
+      + (mine && mine.withFrom ? ` Theirs, in ${mine.andTo} of ${mine.withFrom}.` : '') };
+}
+/* DUE, AND THE SHELF HAS NONE. The rhythm rule skipped these: a
+   customer due for something that is out fell through every reason and
+   was told nothing, however good the swap the owner had written down.
+   Offered as the swap it is, at the quantity they take. */
+function briefSwapReason(dueOut){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  for(const h of dueOut || []){
+    const sub = pairSubstitutesFor(h.productId, h.variantIdx)[0];
+    if(!sub) continue;
+    const p = productById(h.productId);
+    return { key:'swap', chip:'Theirs is out', tone:'ow-warn',
+      productId: sub.productId, variantIdx: sub.variantIdx, qty: h.typicalQty, unit: sub.unit,
+      weight: h.typicalQty * (sub.price || 0),
+      from: { productId: h.productId, variantIdx: h.variantIdx,
+        label: p ? productVariantLabel(p, h.variantIdx) : h.productId },
+      why: `Due for <b>${f(h.typicalQty)}</b> ${esc(p ? productVariantLabel(p, h.variantIdx) : h.productId)}`
+        + ` and the shelf has none. You wrote down that <b>${esc(sub.label)}</b> stands in for it`
+        + `${sub.stock === null ? '' : ` &mdash; <b>${f(sub.stock)}</b> on the shelf`}.` };
+  }
+  return null;
+}
 function briefReasonFor(r, habits){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
@@ -48009,8 +48081,9 @@ function briefReasonFor(r, habits){
   }
 
   /* 2. DUE BY RHYTHM, and by THEIR OWN gap rather than the calendar. */
-  const due = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN && inStock(h.productId, h.variantIdx))
-    .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)))[0];
+  const dueAll = habits.filter(h=> h.dueIn !== null && h.dueIn <= TELL_RHYTHM_WITHIN)
+    .sort((a, b)=> (b.typicalQty * (b.lastPrice||0)) - (a.typicalQty * (a.lastPrice||0)));
+  const due = dueAll.find(h=> inStock(h.productId, h.variantIdx));
   if(due){
     const p = productById(due.productId);
     return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
@@ -48021,6 +48094,11 @@ function briefReasonFor(r, habits){
           ? `once, on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago &mdash; and it runs out after about <b>${due.everyDays}</b> days by your own rule.`
           : `about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.`}` };
   }
+
+  /* 2b. DUE, BUT OUT, AND SOMETHING STANDS IN FOR IT. Ahead of a price
+         story, because a customer who is due is about to buy. */
+  const swap = briefSwapReason(dueAll.filter(h=> !inStock(h.productId, h.variantIdx)));
+  if(swap) return swap;
 
   /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
         and the only one measured against what THEY paid rather than
@@ -48038,6 +48116,11 @@ function briefReasonFor(r, habits){
       weight: cheaper.h.typicalQty * cheaper.now,
       why: `${esc(p ? productVariantLabel(p, cheaper.h.variantIdx) : '')} is <b>${f(cheaper.h.lastPrice - cheaper.now)}</b> cheaper than the <b>${f(cheaper.h.lastPrice)}</b> they paid on ${esc(fmtShortDate(cheaper.h.lastAt))} &mdash; and they take <b>${f(cheaper.h.typicalQty)}</b> at a time.` };
   }
+
+  /* 3b. WHAT THEY TAKE NEEDS SOMETHING THEY NEVER TAKE. The shop's own
+         rule against the shop's own invoices, per customer. */
+  const needs = briefNeedsReason(habits, r.id);
+  if(needs) return needs;
 
   /* 4. THEIR SITE MOVED. The one thing no figure in the books can do:
         say what comes NEXT, before they have bought any of it. Only
@@ -48170,8 +48253,18 @@ function customerBrief(customerId){
      the one this reason is about. */
   const habit = habits.find(h=> h.productId === pick
     && (h.variantIdx == null ? null : h.variantIdx) === pickVar) || null;
-  const priceNow = pick ? briefPriceNow(pick, pickVar, (habit && habit.typicalQty) || null) : null;
+  /* AT THE QUANTITY THE REASON WEIGHED. A reason may name something
+     this customer has never bought -- a companion their own line needs,
+     a swap for what is out -- and there is no habit behind it to size
+     from. Pricing that at "one" put the queue's figure on a different
+     side of the trade from the figure the reason ranked on. */
   const qty = (reason && reason.qty) || (habit && habit.typicalQty) || null;
+  const priceNow = pick ? briefPriceNow(pick, pickVar, qty) : null;
+  const pickUnit = (()=>{
+    const px = pick ? briefPriceFor(pick, pickVar, qty || 1) : null;
+    return (px && px.unit) || (reason && reason.unit) || productUnitLabel(pick, pickVar)
+      || (product && product.unit) || '';
+  })();
   /* "Your price" is a claim about THEM, so it is only made where the
      figure has not moved AND the memory of it is recent enough to mean
      something. A price they last paid a year ago is not their price. */
@@ -48186,6 +48279,7 @@ function customerBrief(customerId){
      quantity only where the owner wrote a ratio. */
   const also = (pick ? pairCompanionsFor(pick, pickVar, qty, { habits }) : [])
     .filter(c=> c.inStock && !c.why && c.verbId !== 'instead')
+    .filter(c=> !(reason && reason.from && c.productId === reason.from.productId))
     .map(c=> ({ link: c.link, product: productById(c.productId), standing: c.standing,
       variantIdx: c.variantIdx, label: c.label, qty: c.qty, verb: c.verb }))
     .slice(0, 2);
@@ -48195,7 +48289,7 @@ function customerBrief(customerId){
        pick above stays because the queue row, the message and the
        reasoning are all about the one thing that put them on the list. */
     groups: brGroups, pricing: brGroups.dropped,
-    product, qty, price: priceNow, sameAsTheirs, cheaperThanTheirs,
+    product, qty, unit: pickUnit, price: priceNow, sameAsTheirs, cheaperThanTheirs,
     lastPrice: habit ? habit.lastPrice : null, also,
     /* What was left out, and why. The shop sees this; the customer
        never does. */
@@ -48645,6 +48739,19 @@ function briefGroups(c, habits){
   const byVerb = new Map();
   const swaps = [];
   habits.forEach(h=>{
+    /* WHAT THEY THEMSELVES TAKE, when the shelf has run out of it. The
+       usual-takes block above simply skipped it -- no row, no mention,
+       nothing for the owner to see -- so a customer whose one line was
+       out got a picture that never named it. Offered as the swap the
+       owner wrote down, or said plainly as left off. */
+    if(!inStock(h.productId, h.variantIdx)){
+      const hp = productById(h.productId);
+      const mine = hp ? pairSubstitutesFor(h.productId, h.variantIdx)[0] : null;
+      const label = hp ? productVariantLabel(hp, h.variantIdx) : h.productId;
+      if(mine) swaps.push({ toId: mine.productId, variantIdx: mine.variantIdx, qty: h.typicalQty,
+        insteadOf: label, h });
+      else if(hp) leaveOff(h.productId, h.variantIdx == null ? null : h.variantIdx, label, 'outOfStock');
+    }
     pairCompanionsFor(h.productId, h.variantIdx, h.typicalQty, { habits, substitute: true }).forEach(c=>{
       if(c.verbId === 'instead') return;   // a swap is not a companion
       if(c.why === 'outOfStock' && c.substitutes.length){
@@ -49439,6 +49546,30 @@ function briefStripHTML(b){
 
 /* Everything the shop is allowed to know about why. It never leaves this
    side of the screen. */
+/* WHAT THIS CUSTOMER DOES, not what the trade does. pairStanding reads
+   the whole shop; a picture is about one person, and "your orders agree
+   in 30 of 40" says nothing about whether THIS customer has ever taken
+   the two together. Same counter, their invoices. */
+function briefOwnEvidence(customerId, product, variantIdx, a){
+  if(!customerId || !product || !a || !a.link) return null;
+  return pairEvidence(product.id, a.link.toId, variantIdx, a.link.toVariantIdx,
+    customerOrdersFor(customerId).filter(q=> q.invoiced && !q.voided));
+}
+/* The sentence under the picture's own heading. The verb IS the
+   heading, so the reasoning says the word the customer will read
+   rather than a fourth name for it. */
+function briefAlsoWords(a, mine){
+  const head = (a.verb && a.verb.brief) || 'ALSO TAKE';
+  const ev = a.standing.ev;
+  const theirs = !mine || !mine.withFrom ? ''
+    : mine.andTo ? ` They themselves took both together in ${mine.andTo} of their ${mine.withFrom} orders.`
+    : ` They have never taken the two together in ${mine.withFrom} orders of their own.`;
+  if(a.qty == null)
+    return `<b>${esc(a.label || a.product.name)}</b> is listed under <b>${esc(head)}</b> with no quantity:`
+      + ` you have not given a figure for that rule, and an invented one is worse than none.` + theirs;
+  return `Under <b>${esc(head)}</b> is your own rule &mdash; <b>${a.link.qty}</b> ${esc(a.product.unit || '')} per ${esc(a.link.per || 'one')}`
+    + `${ev.withFrom ? `, which your orders agree with in ${ev.andTo} of ${ev.withFrom} cases` : ''}.` + theirs;
+}
 function briefWhyHTML(b){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const words = briefWordCount(briefFrames(b));
@@ -49446,13 +49577,7 @@ function briefWhyHTML(b){
   if(b.reason) bits.push(b.reason.why);
   if(b.sameAsTheirs) bits.push(`The price has not moved since they last paid, so the picture may say <b>same price</b>.`);
   if(b.cheaperThanTheirs) bits.push(`It is <b>${f(b.lastPrice - b.price)}</b> below what they last paid, so the picture says the price is down.`);
-  b.also.forEach(a=>{
-    const ev = a.standing.ev;
-    bits.push(a.qty != null
-      ? `Under <b>Also buy</b> is your own pairing &mdash; <b>${a.link.qty}</b> ${esc(a.product.unit || '')} per ${esc(a.link.per || 'one')}${
-          ev.withFrom ? `, which your orders agree with in ${ev.andTo} of ${ev.withFrom} cases` : ''}.`
-      : `<b>${esc(a.label || a.product.name)}</b> is listed with no quantity: you have not given a figure for that pairing, and an invented one is worse than none.`);
-  });
+  b.also.forEach(a=> bits.push(briefAlsoWords(a, briefOwnEvidence(b.customer.id, b.product, b.pickVariant, a))));
   /* NAMED RATHER THAN DROPPED. The list is capped by what fits on four
      frames; anything past that is said here, because a line the shop
      thinks it sent and the customer never saw is the worst kind of
@@ -49460,7 +49585,15 @@ function briefWhyHTML(b){
   const frames = briefFrames(b);
   const shown = frames.reduce((s, fr)=> s + (fr.items || []).filter(i=> i.kind === 'row').length, 0);
   const cut = briefRowCount(b) - shown;
+  /* A REASON MUST BE ON THE PICTURE. The list is capped by what fits on
+     four frames, so a reason naming a companion or a swap can rank a
+     customer for something the picture then has no room to carry.
+     Said here rather than left for the owner to notice. */
+  const carried = (b.groups || []).some(g=> g.rows.some(r=> r.productId === (b.reason || {}).productId));
+  const missing = b.reason && (b.reason.key === 'needs' || b.reason.key === 'swap') && !carried
+    ? `<p class="ow-q-note">The reason names <b>${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '')}</b>, and the list has no room for it on ${BRIEF_MAX_LIST_FRAMES} pictures. Send it by hand, or say it in the message.</p>` : '';
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
+    ${missing}
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
 ${briefLeftOffHTML(b.pricing)}
     ${(()=>{ const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
@@ -49509,7 +49642,7 @@ function renderTelling(){
   if(!queue.length){
     wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">
       <b>Nobody is worth telling anything this fortnight.</b>
-      <span>${all ? `Nothing is due by anybody&rsquo;s own buying rhythm, no follow-up has come in, no price they pay has fallen by ${TELL_PRICE_DROP_PCT}% or more, and no site has moved on. ${held.length ? `${held.length} ${held.length === 1 ? 'customer is' : 'customers are'} held back for the reasons in the rail. ` : ''}Every customer still has a picture on their own account if you want to send one by hand.`
+      <span>${all ? `Nothing is due by anybody&rsquo;s own buying rhythm, no follow-up has come in, no price they pay has fallen by ${TELL_PRICE_DROP_PCT}% or more, no rule of yours names something they need and never take, nothing due is out with a swap on file, and no site has moved on. ${held.length ? `${held.length} ${held.length === 1 ? 'customer is' : 'customers are'} held back for the reasons in the rail. ` : ''}Every customer still has a picture on their own account if you want to send one by hand.`
         : 'There is nobody on the book yet. Add a customer and this fills itself as they buy.'}</span>
     </div></div>`;
     return;
@@ -49535,6 +49668,7 @@ function tellingRailHTML(queue, held, score, toAsk){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const pct = (a, b)=> b ? Math.round(a / b * 100) : 0;
   const names = { rhythm:'Due by rhythm', asked:'They asked', price:'Price fell',
+    needs:'Needs it too', swap:'Out — offered instead',
     stage:'Site stage', return:'Came once', hand:'Sent by hand' };
   const bar = (label, a, b)=> `<div class="tl-sc">
     <div class="tl-sc-l"><span>${esc(label)}</span><b>${a} of ${b}</b></div>
@@ -49549,6 +49683,11 @@ function tellingRailHTML(queue, held, score, toAsk){
       <div class="ow-sr"><span class="ow-sr-k">A price story needs a fall of</span><span class="ow-sr-v">${TELL_PRICE_DROP_PCT}<span class="ow-u">%</span></span></div>
       <div class="ow-sr"><span class="ow-sr-k">A fall past this is a bad row, not news</span><span class="ow-sr-v">${TELL_PRICE_FALL_CEILING_PCT}<span class="ow-u">%</span></span></div>
       <div class="ow-sr"><span class="ow-sr-k">A stage stops counting after</span><span class="ow-sr-v">${SITE_STAGE_STALE_DAYS} <span class="ow-u">days</span></span></div>
+      ${(()=>{ const live = productLinksAll().filter(l=> l.active !== false);
+        const rules = new Set(live.map(pairRuleKey)).size;
+        const figures = new Set(live.filter(l=> l.qty != null).map(pairRuleKey)).size;
+        return `<div class="ow-sr"><span class="ow-sr-k">Companions come from rules you wrote</span><span class="ow-sr-v">${rules}</span></div>
+        <p class="ow-mini">${figures} of ${rules} carry a figure &mdash; only those can put a quantity on a picture. What goes with what is where they are written.</p>`; })()}
       <p class="ow-mini">These are the whole algorithm. There is no model behind them &mdash; at ${(data.customers||[]).length} customers the rules are more accurate than anything trained, and you can read why every row is here.</p>
     </div>
     <div class="ow-pan">
@@ -49592,7 +49731,7 @@ function tellingRowHTML(b){
       <span class="ow-tbl-s">${b.reason.why.replace(/<[^>]+>/g, '')}</span></div>
     <span class="tl-c-r"><span class="ow-cp ${b.reason.tone}"><span class="ow-cp-d"></span>${esc(b.reason.chip)}</span></span>
     <div class="ow-tbl-c"><span class="ow-tbl-p">${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '—')}</span>
-      <span class="ow-tbl-s">${b.qty != null ? `${f(b.qty)} ${esc(b.product && b.product.unit || '')}` : 'no quantity on file'}${
+      <span class="ow-tbl-s">${b.qty != null ? `${f(b.qty)} ${esc(b.unit || (b.product && b.product.unit) || '')}` : 'no quantity on file'}${
         b.price != null ? ` &middot; ${f(b.price)}${b.sameAsTheirs ? ' &mdash; their price' : ''}` : ''}</span></div>
     <span class="ow-tbl-n">${b.row.stats.average ? `<span class="ow-fig">${f(b.row.stats.average)}</span><span class="ow-fig-b">UGX</span>` : '<span class="cu-dash">&mdash;</span>'}</span>
     <span class="ow-tbl-n tl-c-t">${told

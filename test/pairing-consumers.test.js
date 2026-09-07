@@ -327,5 +327,156 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     'because it is about the one product');
 }
 
+/* ---- 13. a rule as a REASON, on the worth-telling queue -------------- */
+{
+  /* The gap the rules know best about one customer: they take the
+     runners and have never once taken the screws those runners need. */
+  const rEnv = Object.assign({}, env, {
+    esc: (x)=> String(x == null ? '' : x),
+    customerOrdersFor: (cid)=> cid === 'C-BOTH' ? data.savedQuotes : [],
+    TELL_PRICE_MEMORY_DAYS: 90,
+  });
+  const RNAMES = ['briefNeedsReason', 'briefSwapReason', 'pairCompanionsFor', 'pairSubstitutesFor',
+    'pairEvidence', 'pairStanding', 'pairingsFor', 'productLinksAll', 'pairVerb', 'pairSizeIdx',
+    'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders'];
+  const r = compileScope([
+    extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
+    ...RNAMES.map((n)=> extractFunction(src, n, 'index.html')),
+  ], rEnv, RNAMES);
+
+  const habitRun = { productId: 'P-RUN', variantIdx: 1, typicalQty: 3, sinceLast: 5, orders: 4, lastPrice: 40000 };
+  const needs = r.briefNeedsReason([habitRun], null);
+  eq(needs && needs.key, 'needs', 'a customer who takes runners and never takes the screws they need is worth telling');
+  eq(needs.productId, 'P-SCR', 'and the thing to show them is the screws');
+  eq(needs.qty, 24, 'at the quantity their own line implies');
+  eq(needs.weight, 24 * 9000, 'weighed at what that order would be worth');
+  t.check(/never taken/.test(needs.why), 'the sentence says they have never taken it');
+  t.check(/Black Screws/.test(needs.why) && /Runners/.test(needs.why), 'and names both things');
+  t.check(/in 4 of 5/.test(needs.why), 'with the shop-wide sample it is built on');
+
+  const mine = r.briefNeedsReason([habitRun], 'C-BOTH');
+  t.check(/Theirs, in 2 of 3/.test(mine.why),
+    "and this customer's own orders, at the size they buy, where there are any");
+
+  eq(r.briefNeedsReason([habitRun, { productId: 'P-SCR', variantIdx: null, typicalQty: 1, sinceLast: 9, orders: 2 }], null),
+    null, 'a customer who already takes it is not told they need it');
+  eq(r.briefNeedsReason([Object.assign({}, habitRun, { sinceLast: 400 })], null), null,
+    'nor one whose habit is a year old');
+
+  /* A rule with no figure has no number to weigh, and an invented one
+     is worse than none. */
+  const noFig = add('P-RUN', 'needs', 'P-HINGE', null, '');
+  eq(r.briefNeedsReason([habitRun], null).productId, 'P-SCR', 'a rule with no figure never outranks one with');
+  data.productLinks = data.productLinks.filter(x=> x.id !== noFig.id);
+
+  /* Out of stock is not a reason to tell anybody anything. */
+  const glue = add('P-RUN', 'needs', 'P-GLUE', 2, 'Pair');
+  eq(r.briefNeedsReason([habitRun], null).productId, 'P-SCR', 'and what the shelf has not got is never the reason');
+  data.productLinks = data.productLinks.filter(x=> x.id !== glue.id);
+
+  /* Due, and the shelf has none, and the owner wrote down a swap. */
+  const dueOut = [{ productId: 'P-SOFT', variantIdx: 1, typicalQty: 4, sinceLast: 30, orders: 3, lastPrice: 10000 }];
+  const swap = r.briefSwapReason(dueOut);
+  eq(swap && swap.key, 'swap', 'a customer due for something that is out is still worth telling');
+  eq(swap.productId, 'P-QUIET', 'with the swap the owner wrote down');
+  eq(swap.qty, 4, 'at the quantity they take');
+  eq(swap.unit, 'Pair', 'in the unit it is priced in');
+  t.check(/shelf has none/.test(swap.why) && /stands in/.test(swap.why), 'and the sentence says both halves');
+  /* A plain board, out of stock, with nothing written down for it. */
+  data.products.push({ id: 'P-BOARD', name: 'Plain Board', type: 'simple', unit: 'Sheet' });
+  stock.set('P-BOARD', 0);
+  eq(r.briefSwapReason([{ productId: 'P-BOARD', variantIdx: null, typicalQty: 1 }]), null,
+    'where nothing stands in for it, nothing is claimed');
+
+  const reasonSrc = extractFunction(src, 'briefReasonFor', 'index.html');
+  t.check(/briefSwapReason\(dueAll\.filter/.test(reasonSrc), 'the queue reads the swap before it reads a price story');
+  t.check(/briefNeedsReason\(habits, r\.id\)/.test(reasonSrc), 'and the attach gap before the site stage');
+}
+
+/* ---- 14. one customer's own orders, and the words under a picture ---- */
+{
+  const eEnv = Object.assign({}, env, { invoicedOrders: ()=> data.savedQuotes });
+  const E = compileScope([extractFunction(src, 'pairEvidence', 'index.html'),
+    extractFunction(src, 'pairSizeIdx', 'index.html'), extractFunction(src, 'invoicedOrders', 'index.html')],
+    eEnv, ['pairEvidence']);
+  const all = E.pairEvidence('P-RUN', 'P-SCR', null, null);
+  eq(all.withFrom, 5, 'the shop-wide count reads every invoice');
+  const one = E.pairEvidence('P-RUN', 'P-SCR', null, null, data.savedQuotes.slice(0, 2));
+  eq(one.withFrom, 2, 'and the same counter, handed two orders, reads two');
+  eq(one.andTo, 1, 'counting only the one that carried both');
+
+  const W = compileScope([extractFunction(src, 'briefAlsoWords', 'index.html')],
+    { esc: (x)=> String(x == null ? '' : x) }, ['briefAlsoWords']);
+  const a = { verb: { brief: 'ALSO NEED' }, link: { qty: 8, per: 'Pair', toId: 'P-SCR' },
+    product: SCREWS, label: 'Black Screws', qty: 24, standing: { ev: { withFrom: 5, andTo: 4 } } };
+  const words = W.briefAlsoWords(a, { withFrom: 3, andTo: 2 });
+  t.check(/ALSO NEED/.test(words), 'the reasoning says the heading the customer will read');
+  t.check(/in 4 of 5 cases/.test(words), 'with what the shop as a whole shows');
+  t.check(/took both together in 2 of their 3/.test(words), 'and what this customer shows');
+  t.check(/never taken the two together in 4 orders/.test(W.briefAlsoWords(a, { withFrom: 4, andTo: 0 })),
+    'a customer who never has is said plainly');
+  t.check(!/orders of their own/.test(W.briefAlsoWords(a, { withFrom: 0, andTo: 0 })),
+    'and a customer with nothing on file is claimed nothing about');
+  t.check(/no quantity/.test(W.briefAlsoWords(Object.assign({}, a, { qty: null }), null)),
+    'a rule with no figure says so rather than inventing one');
+}
+
+/* ---- 15. the picture answers a habit the shelf has run out of ------- */
+{
+  const gEnv2 = Object.assign({}, env, {
+    briefPriceNow: (id, vi, qty)=> (prices.get(key(id, vi)) || {}).price ?? null,
+    briefPackText: ()=> 'Sold loose',
+    productPriceRows: (id, vi)=> env.rankedPriceRows(id, vi),
+    shelfValueForKey: ()=> ({ ownedQty: 0, unitCost: null }),
+    stockKey: (id, vi)=> (vi == null ? id : `${id}::${vi}`),
+    customerSiteStage: ()=> ({ fresh: false, stage: null }),
+    briefStageProducts: ()=> [],
+    TELL_PRICE_MEMORY_DAYS: 90, TELL_PRICE_DROP_PCT: 5, TELL_PRICE_FALL_CEILING_PCT: 40,
+    BRIEF_PACK_FIGURE_PCT: 15, BRIEF_ROWS_PER_GROUP: 5, BRIEF_MAX_ROWS: 16,
+    briefPaidFigure: ()=> null,
+    invoiceNumberLabel: (q)=> 'INV-' + q.id,
+  });
+  const G2 = compileScope([
+    ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
+    extractFunction(src, 'briefGroups', 'index.html'),
+  ], gEnv2, ['briefGroups']);
+  /* Their own line, the 14" soft close, is out; a Quiet Runner stands
+     in for it by the rule written the other way round. */
+  const out = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-SOFT', variantIdx: 1, typicalQty: 4, sinceLast: 6, orders: 3, lastPrice: 10000 }]);
+  const or = out.find(x=> x.key === 'instead');
+  t.check(!!or && or.rows.some(x=> x.productId === 'P-QUIET'),
+    'a customer whose own line is out is offered what stands in for it');
+  eq(or && or.rows[0].theirQty, 4, 'at the quantity they take');
+  /* And where nothing stands in, the picture says so to the shop
+     rather than dropping the line without a word. */
+  const boardOnly = G2.briefGroups({ id: 'C1' }, [{ productId: 'P-BOARD', variantIdx: null, typicalQty: 2, sinceLast: 6, orders: 3, lastPrice: 5000 }]);
+  t.check(boardOnly.dropped.rows.some(x=> x.id === 'P-BOARD' && x.why === 'outOfStock'),
+    'and one with nothing to stand in for it is named as left off');
+}
+
+/* ---- 16. what the screen itself says --------------------------------- */
+{
+  const rail = extractFunction(src, 'tellingRailHTML', 'index.html');
+  t.check(/needs:'Needs it too'/.test(rail) && /swap:'Out — offered instead'/.test(rail),
+    'the scoreboard has a name for each new reason rather than printing its key');
+  t.check(/Companions come from rules you wrote/.test(rail),
+    'and the panel that claims to be the whole algorithm counts the rules too');
+  const why = extractFunction(src, 'briefWhyHTML', 'index.html');
+  t.check(!/Under <b>Also buy<\/b>/.test(why), 'the reasoning no longer names a heading the picture stopped using');
+  t.check(/The reason names/.test(why),
+    'and says so where the list has no room for the very thing the reason is about');
+  const row = extractFunction(src, 'tellingRowHTML', 'index.html');
+  t.check(/b\.unit \|\| \(b\.product && b\.product\.unit\)/.test(row),
+    'the queue prints the unit the price was worked in');
+  const brief = extractFunction(src, 'customerBrief', 'index.html');
+  t.check(/briefPriceNow\(pick, pickVar, qty\)/.test(brief),
+    'and prices the pick at the quantity the reason weighed');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);
