@@ -94,11 +94,19 @@ const inv = (id, when, over) => Object.assign({
   const two = W.briefWhyHTML(brief);
   t.check(/They still owe <b>1,500,000<\/b> on 2 invoices/.test(two),
     'the total is the whole account, over every outstanding invoice');
-  t.check(/INV-0041<\/b> 1,200,000 \(2026-08-21, 17 days &mdash; past your terms\)/.test(two),
-    'each is named with its age, and past the shop\'s own terms is said');
-  t.check(/INV-0042<\/b> 300,000 \(2026-09-04, 3 days\)/.test(two) && !/3 days &mdash; past/.test(two),
-    'one inside the terms is not called late');
+  t.check(/INV-0041<\/b> 1,200,000 \(2026-08-21, 17 days\)/.test(two),
+    'each is named with its age');
+  t.check(/INV-0042<\/b> 300,000 \(2026-09-04, 3 days\)/.test(two), 'and so is the newer one');
   t.check(two.indexOf('INV-0041') < two.indexOf('INV-0042'), 'oldest first');
+
+  /* PAST THE TERMS, SAID ONCE. One of these two is past 7-day terms, so
+     the count is stated rather than the phrase being hung on the
+     invoice -- and never repeated per row. */
+  t.check(/<b>1<\/b> past your terms\./.test(two), 'how many are past the terms is said once');
+  eq((two.match(/past your terms/g) || []).length, 1,
+    'and exactly once, however many invoices carry the fault');
+  t.check(!/days &mdash; past your terms/.test(two),
+    'the phrase no longer hangs off each invoice');
 
   /* THE WHOLE ACCOUNT, not the invoices behind this list. The brief
      carries no habits at all here and the debt is still named -- which
@@ -116,6 +124,28 @@ const inv = (id, when, over) => Object.assign({
   t.check(/They still owe <b>6,000,000<\/b>/.test(many), 'as does the total');
   t.check(/and <b>2<\/b> more\./.test(many), 'and the ones not named are counted, never dropped');
   t.check(/INV-0041/.test(many) && !/INV-0045/.test(many), 'the oldest are the ones said');
+  /* All five are past terms, including the two never named -- which is
+     why the clause counts rather than pointing at the named rows. */
+  t.check(/All past your terms\./.test(many), 'when every one is late it is said in two words');
+  eq((many.match(/past your terms/g) || []).length, 1, 'still exactly once');
+
+  /* NONE late: nothing is said about terms at all. */
+  data.savedQuotes = [inv(50, '2026-09-06')];
+  const fresh = W.briefWhyHTML(brief);
+  t.check(/They still owe <b>1,200,000<\/b> on one invoice/.test(fresh), 'a single invoice is "one invoice"');
+  t.check(!/past your terms/.test(fresh), 'and one inside the terms says nothing about them');
+
+  // A lone late one reads as a statement, not a count.
+  data.savedQuotes = [inv(51, '2026-08-01')];
+  t.check(/ Past your terms\./.test(W.briefWhyHTML(brief)), 'a single late invoice says so plainly');
+
+  /* A DATELESS INVOICE cannot be judged late, and sorts to the front --
+     so the clause counts rather than naming a position in the list. */
+  data.savedQuotes = [inv(52, ''), inv(53, '2026-08-01')];
+  const undated = W.briefWhyHTML(brief);
+  t.check(/<b>1<\/b> past your terms\./.test(undated),
+    'an invoice with no date is not counted late, and the one that is still is');
+  t.check(!/oldest/.test(undated), 'nothing claims a position the ordering cannot support');
 
   // Nothing owed, nothing said.
   data.savedQuotes = [inv(41, '2026-08-21', { amountPaid: 1200000 })];
@@ -137,6 +167,8 @@ const inv = (id, when, over) => Object.assign({
     'and not under "where to fix it" -- there is nothing to correct, and chasing is its own screen');
   t.check(/a price list is not a demand/.test(why),
     'the sentence the owner reads says the picture stays a price list');
+  t.check(/const lateCount = owed\.filter\(/.test(why) && !/&mdash; past your terms/.test(why),
+    'past the terms is counted over the whole account, not hung on each named row');
 
   /* The customer never reads this: briefWhyHTML is the owner's panel and
      briefFrames builds the picture. */

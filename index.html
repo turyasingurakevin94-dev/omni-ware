@@ -50213,20 +50213,40 @@ function briefWhyHTML(b){
     const said = owed.slice(0, BRIEF_OWED_NAMED_MAX).map(oq=>{
       const when = String(oq.invoicedAt || oq.date || '').slice(0, 10);
       const age = when ? daysBetweenISO(when, todayISO()) : null;
-      /* Past the shop's OWN terms, not a number this screen invented.
-         A shop that chases from day one has terms of 0, and every
-         outstanding invoice is past them -- which is the setting doing
-         what it was set to do. */
-      const late = age != null && age > terms;
       return `<b>${esc(invoiceNumberLabel(oq))}</b> ${f(invoiceBalanceDue(oq))}${
-        when ? ` (${esc(fmtShortDate(when))}, ${age} day${age === 1 ? '' : 's'}${late ? ' &mdash; past your terms' : ''})` : ''}`;
+        when ? ` (${esc(fmtShortDate(when))}, ${age} day${age === 1 ? '' : 's'})` : ''}`;
     }).join(', ');
     const more = owed.length - Math.min(owed.length, BRIEF_OWED_NAMED_MAX);
+    /* PAST THE TERMS, SAID ONCE. Every invoice carried the phrase on a
+       shop whose terms most of them are past, and five words repeated
+       three times is noise in the second before the thumb presses send.
+       The ages are already beside each one, so the count is what the
+       repetition was actually carrying.
+
+       COUNTED, never placed. The list is oldest first and lateness is an
+       age threshold, so the late ones are a prefix of it and "the oldest
+       three" would usually be true -- but an invoice with no date on it
+       sorts to the front with no age to judge, and then it is not. A
+       count is true however the list is ordered and whatever is missing
+       from it.
+
+       Past the shop's OWN terms, not a number this screen invented. A
+       shop that chases from day one has terms of 0, and every
+       outstanding invoice is past them -- which is the setting doing
+       what it was set to do. */
+    const lateCount = owed.filter(oq=>{
+      const when = String(oq.invoicedAt || oq.date || '').slice(0, 10);
+      return !!when && daysBetweenISO(when, todayISO()) > terms;
+    }).length;
+    const lateSaid = lateCount === 0 ? ''
+      : lateCount === owed.length
+        ? (owed.length === 1 ? ' Past your terms.' : ' All past your terms.')
+        : ` <b>${lateCount}</b> past your terms.`;
     /* Two sentences, not three. The panel is read in the second before
        the thumb presses send, and an explanation of why a debt is a
        document rather than a line is worth reading once -- it is in the
        comment above, not on the screen every time. */
-    watch.push(`They still owe <b>${f(total)}</b> on ${owed.length === 1 ? 'one invoice' : `${owed.length} invoices`}: ${said}${more > 0 ? `, and <b>${more}</b> more` : ''}.
+    watch.push(`They still owe <b>${f(total)}</b> on ${owed.length === 1 ? 'one invoice' : `${owed.length} invoices`}: ${said}${more > 0 ? `, and <b>${more}</b> more` : ''}.${lateSaid}
       The picture says nothing about it &mdash; a price list is not a demand &mdash; but you are about to ask them to buy again.`);
   }
 
