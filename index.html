@@ -47486,11 +47486,118 @@ function pairStanding(link){
 /* Pairs that keep landing on the same invoice and that the owner has not
    ruled on. The books can see WHAT happens together; only the counter
    knows WHY, and whether it is a rule or a coincidence. */
-const PAIR_OBSERVED_MIN = 4;      // fewer than this is an anecdote
-const PAIR_OBSERVED_SHARE = 0.5;  // and it has to be the majority habit
-function observedPairs(){
+/* ---- ONE READING OF A RULE, for every counter, picture and plan -----
+   A rule was, until now, read in one place and re-derived there: which
+   size of the companion, how many, is it on the shelf, what does it
+   sell for. Every screen that reads a rule now reads it through here,
+   so the quote rail, the till, a WhatsApp reply and the picture cannot
+   name four different companions for the same line.
+
+   Nothing here decides anything. It returns what the books say and
+   leaves the tap to the owner. */
+const PAIR_VERB_ORDER = { needs: 0, with: 1, part: 2, instead: 3 };
+function pairCompanionsFor(productId, variantIdx, qty, opts){
+  const o = opts || {};
+  const p = productById(productId);
+  if(!p) return [];
+  const n = Number(qty) > 0 ? Number(qty) : 0;
+  const out = [];
+  pairingsFor(productId, variantIdx).forEach(l=>{
+    if(o.exclude && o.exclude.has(l.toId)) return;
+    if(l.toId === productId) return;
+    const tp = productById(l.toId);
+    if(!tp) return;
+    /* The size first, the shelf after: a companion whose size is out is
+       named as out, with what stands in for it, rather than reported as
+       a size nobody could settle. */
+    const v = briefVariantForLine(l.toId, o.habits || [], { toVariantIdx: l.toVariantIdx,
+      from: { productId, variantIdx }, anyStock: true });
+    if(v.gone) return;
+    const vi = v.variantIdx == null ? null : v.variantIdx;
+    /* The companion's quantity is the rule's ratio times the line --
+       eight nails a sheet against thirty sheets. No ratio, no figure:
+       an invented one is worse than none. */
+    const want = (l.qty && n > 0) ? Math.max(1, Math.round(l.qty * n)) : null;
+    const row = { link: l, verbId: l.verb, verb: pairVerb(l.verb), productId: l.toId, variantIdx: vi,
+      by: v.by || null, label: v.why ? tp.name : productVariantLabel(tp, vi), name: tp.name,
+      qty: want, unit: '', price: null, kind: null, stock: null, inStock: true,
+      standing: pairStanding(l), why: v.why || null, substitutes: [] };
+    row.evidence = row.standing.ev;
+    if(!v.why){
+      row.unit = productUnitLabel(l.toId, vi) || tp.unit || '';
+      row.stock = briefInStock(l.toId, vi);
+      row.inStock = row.stock === null || row.stock > 0;
+      const px = briefPriceFor(l.toId, vi, want || 1);
+      if(px && px.price != null){ row.price = px.price; row.kind = px.kind; row.unit = px.unit || row.unit; }
+      else row.why = (px && px.why) || 'noRow';
+      if(!row.inStock){
+        row.why = 'outOfStock';
+        if(o.substitute) row.substitutes = pairSubstitutesFor(l.toId, vi);
+      }
+    }
+    out.push(row);
+  });
+  return out.sort((a, b)=> ((b.standing.key === 'agree') - (a.standing.key === 'agree'))
+    || ((PAIR_VERB_ORDER[a.verbId] ?? 9) - (PAIR_VERB_ORDER[b.verbId] ?? 9)));
+}
+/* What can stand in when this is out: every "instead of" written in
+   EITHER direction -- "X instead of Y", written once, serves Y's
+   stock-out as well as X's -- sized the same way, and only where the
+   shelf has it and a price is on file. A swap the shop cannot fill or
+   price is not a swap. */
+function pairSubstitutesFor(productId, variantIdx){
+  const vi = pairSizeIdx(variantIdx);
+  const rows = [];
+  pairingsFor(productId, variantIdx).filter(l=> l.verb === 'instead').forEach(l=> rows.push({ l, other: l.toId, reverse: false }));
+  productLinksAll().filter(l=> l.active !== false && l.verb === 'instead' && l.toId === productId
+    && (pairSizeIdx(l.toVariantIdx) == null || pairSizeIdx(l.toVariantIdx) === vi))
+    .forEach(l=> rows.push({ l, other: l.fromId, reverse: true }));
+  const out = [];
+  rows.forEach(({ l, other, reverse })=>{
+    if(other === productId) return;
+    const tp = productById(other);
+    if(!tp) return;
+    const named = reverse ? l.fromVariantIdx : l.toVariantIdx;
+    const v = briefVariantForLine(other, [], { toVariantIdx: named, from: { productId, variantIdx }, anyStock: true });
+    if(v.gone || v.why) return;
+    const svi = v.variantIdx == null ? null : v.variantIdx;
+    const stock = briefInStock(other, svi);
+    if(!(stock === null || stock > 0)) return;
+    const px = briefPriceFor(other, svi, 1);
+    if(!px || px.price == null) return;
+    if(out.some(x=> x.productId === other && x.variantIdx === svi)) return;
+    out.push({ link: l, reverse, productId: other, variantIdx: svi, label: productVariantLabel(tp, svi),
+      name: tp.name, stock, price: px.price, unit: px.unit || productUnitLabel(other, svi) || tp.unit || '' });
+  });
+  return out;
+}
+/* How long one lasts, by the owner's own word: the "runs out after"
+   row's figure IS days -- the editor writes it and shows it as days --
+   and nothing is converted from anything. Null where none is written. */
+function pairLastsDays(productId){
+  const l = productLinksAll().find(x=> x.active !== false && x.verb === 'after' && x.fromId === productId
+    && Number(x.qty) > 0);
+  return l ? Number(l.qty) : null;
+}
+/* One job, both ways round: "ridge caps part of sheets" is as true of
+   the sheets as of the caps. Returns the OTHER product of each. */
+function pairPartsOf(productId){
+  const out = [];
+  productLinksAll().filter(l=> l.active !== false && l.verb === 'part'
+    && (l.fromId === productId || l.toId === productId)).forEach(l=>{
+      const other = l.fromId === productId ? l.toId : l.fromId;
+      if(other === productId || out.some(x=> x.productId === other)) return;
+      out.push({ link: l, productId: other, variantIdx: l.fromId === productId
+        ? pairSizeIdx(l.toVariantIdx) : pairSizeIdx(l.fromVariantIdx) });
+    });
+  return out;
+}
+/* Which products land on the same invoice, counted once per order per
+   pair, both directions. The one count the pairings screen and the
+   analytics both read, so they can never disagree about it. */
+function pairCooccurrence(orders){
   const seen = new Map();
-  invoicedOrders().forEach(q=>{
+  (orders || invoicedOrders()).forEach(q=>{
     const ids = [...new Set((q.items||[]).map(it=> it.productId).filter(Boolean))];
     ids.forEach(a=> ids.forEach(b=>{
       if(a === b) return;
@@ -47498,6 +47605,13 @@ function observedPairs(){
       seen.set(k, (seen.get(k) || 0) + 1);
     }));
   });
+  return seen;
+}
+
+const PAIR_OBSERVED_MIN = 4;      // fewer than this is an anecdote
+const PAIR_OBSERVED_SHARE = 0.5;  // and it has to be the majority habit
+function observedPairs(){
+  const seen = pairCooccurrence();
   /* Both directions of an already-judged pair count as judged: saying no
      to "cement goes with wheelbarrow" must not leave the shop asked the
      same question backwards a week later. */
@@ -48144,9 +48258,16 @@ function briefVariantForLine(productId, habits, opts){
   const mine = (habits || []).find(h=> h.productId === productId && h.variantIdx != null);
   if(mine) return { variantIdx: mine.variantIdx, by: 'habit' };
   if(!vs.length) return { variantIdx: null };
+  /* A PICTURE never offers a size the shelf has not got, so the sizes
+     it chooses between are the ones it could actually send. A COUNTER
+     is a different question: the owner standing in front of a customer
+     is better told "the 14 is out, and this stands in for it" than told
+     nothing at all, so `anyStock` lets the size be settled first and
+     the shelf answered afterwards. */
+  const anyStock = !!(opts && opts.anyStock);
   const usable = vs.map((v, i)=> i).filter(i=>{
     const s = briefInStock(productId, i);
-    return rankedPriceRows(productId, i).length && (s === null || s > 0);
+    return rankedPriceRows(productId, i).length && (anyStock || s === null || s > 0);
   });
   if(usable.length === 1) return { variantIdx: usable[0], by: 'only' };
   const same = briefSameSizeAs(opts && opts.from, vs, usable);
