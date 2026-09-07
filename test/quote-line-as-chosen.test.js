@@ -111,6 +111,8 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the quantity box shows the count in that unit — 1, not 100');
   t.check(/<span class="q-qty-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
     'with the unit beside it, so "1" reads as "1 Ctn"');
+  t.check(/class="ow-tbl-s q-item-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
+    'the unit under the product name is the one the line is counted in — "Ctn" under a carton line, not "Pair"');
   t.check(!/value="\$\{it\.qty\}"/.test(rows),
     'the base count is no longer what the box shows');
   t.check(/q-sell[^>]*value="\$\{Math\.round\(sell \* per\)\}"/.test(rows),
