@@ -48241,30 +48241,6 @@ function customerProductHabits(customerId){
          figure can be named by where it was written. */
       lastAt: last.d, lastQty: last.q, lastPrice: last.l.unitKnown ? last.p : null, sinceLast,
       unit: last.l.unit, unitKnown: last.l.unitKnown, lastOrder: last.l.order,
-      /* WHAT IS STILL OWED ON THE DOCUMENT THAT RECEIPT CAME OFF.
-
-         lastPrice is what the line was CHARGED at, and it is the most
-         precise figure the books hold: sellPrice is a stored snapshot of
-         the negotiated figure, frozen once the order is invoiced
-         (loadSavedQuote refuses to open one). What it is not is proof
-         the money arrived. A payment settles an INVOICE and never a
-         line -- q.payments carries an amount, a date and the cash
-         receipt it came in on, and no line at all -- so a per-line "what
-         they actually paid" is not a fact this app holds, and inventing
-         one by apportioning a part-payment across lines would be a
-         figure with nothing behind it.
-
-         The balance on the document is the honest answer, and it is
-         carried beside the price rather than folded into it: the two
-         say different things and the picture is priced off the first.
-         Zero once settled, and zero on a voided invoice, which is not a
-         debt. */
-      lastOwed: (()=>{
-        const o = last.l.order;
-        if(!o || !o.invoiced || o.voided) return 0;
-        if(typeof invoiceBalanceDue !== 'function') return 0;
-        return Math.max(0, Number(invoiceBalanceDue(o)) || 0);
-      })(),
       /* The pack their LAST line was counted in, or null when it was
          counted loose: the way they bought it last is the way they will
          ask for it next. */
@@ -50167,6 +50143,10 @@ function briefAlsoWords(a, mine){
   return `Under <b>${esc(head)}</b> is your own rule &mdash; <b>${a.link.qty}</b> ${esc(a.product.unit || '')} per ${esc(a.link.per || 'one')}`
     + `${ev.withFrom ? `, which your orders agree with in ${ev.andTo} of ${ev.withFrom} cases` : ''}.` + theirs;
 }
+/* How many outstanding invoices the brief NAMES before it starts
+   counting them. Three fits the phone; the total and the count always
+   cover the whole account. */
+const BRIEF_OWED_NAMED_MAX = 3;
 function briefWhyHTML(b){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const words = briefWordCount(briefFrames(b));
@@ -50198,44 +50178,55 @@ function briefWhyHTML(b){
     ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
     The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.`);
 
-  /* MONEY STILL OUT ON THE RECEIPTS THIS LIST IS PRICED AGAINST.
+  /* EVERYTHING STILL OUT ON THIS CUSTOMER.
 
-     Named per DOCUMENT and once each, because that is the level the
-     books settle at: one unpaid invoice carrying three of their
-     regulars is one thing to know, not three. Ordered oldest first, the
-     way the invoice picker and the debtors list already order money
-     that is out.
+     Through customerOutstandingInvoices -- the same reader the debtors
+     list and the payment picker settle against -- so the brief and the
+     counter can never come to different views of what one person owes.
+     It already excludes the voided and the settled, and already orders
+     oldest first.
+
+     THE WHOLE ACCOUNT, not merely the invoices behind today's list. A
+     debt is a fact about the person rather than about the goods on this
+     picture, and an unpaid invoice for something they have stopped
+     buying is exactly the one that would otherwise go unmentioned --
+     nothing on this list would carry it.
+
+     Per DOCUMENT, because that is the level the books settle at: a
+     payment allocates to an invoice and never to a line, so there is no
+     per-line "what they actually paid" to report and apportioning one
+     across lines would be a figure with nothing behind it.
 
      It is a thing to WEIGH rather than an errand, so it sits here and
      not under "where to fix it": there is nothing to correct, and
      chasing is its own screen with its own words. The picture stays a
      price list. */
-  const owed = [];
-  (b.habits || []).forEach(h=>{
-    if(!(h.lastOwed > 0) || !h.lastOrder) return;
-    if(owed.some(o=> o.q.id === h.lastOrder.id)) return;
-    owed.push({ q: h.lastOrder, amount: h.lastOwed });
-  });
-  owed.sort((a, b2)=> String((a.q.invoicedAt || a.q.date || '')).localeCompare(String(b2.q.invoicedAt || b2.q.date || '')));
+  const owed = (b.customer && typeof customerOutstandingInvoices === 'function')
+    ? customerOutstandingInvoices(b.customer.id) : [];
   if(owed.length){
-    const total = owed.reduce((s2, o)=> s2 + o.amount, 0);
+    const total = owed.reduce((s2, oq)=> s2 + invoiceBalanceDue(oq), 0);
     const terms = custTermsDays();
-    const said = owed.map(o=>{
-      const when = o.q.invoicedAt || o.q.date || '';
-      const age = when ? daysBetweenISO(String(when).slice(0, 10), todayISO()) : null;
+    /* NAMED RATHER THAN DROPPED. A customer deep in arrears would put a
+       wall of invoice numbers on a phone, so the oldest are said -- they
+       are the ones that matter -- and the rest are counted. The total
+       above is the whole account either way, never just what is named. */
+    const said = owed.slice(0, BRIEF_OWED_NAMED_MAX).map(oq=>{
+      const when = String(oq.invoicedAt || oq.date || '').slice(0, 10);
+      const age = when ? daysBetweenISO(when, todayISO()) : null;
       /* Past the shop's OWN terms, not a number this screen invented.
          A shop that chases from day one has terms of 0, and every
          outstanding invoice is past them -- which is the setting doing
          what it was set to do. */
       const late = age != null && age > terms;
-      return `<b>${esc(invoiceNumberLabel(o.q))}</b> ${f(o.amount)}${
-        age != null ? ` (${esc(fmtShortDate(String(when).slice(0, 10)))}, ${age} day${age === 1 ? '' : 's'}${late ? ' &mdash; past your terms' : ''})` : ''}`;
+      return `<b>${esc(invoiceNumberLabel(oq))}</b> ${f(invoiceBalanceDue(oq))}${
+        when ? ` (${esc(fmtShortDate(when))}, ${age} day${age === 1 ? '' : 's'}${late ? ' &mdash; past your terms' : ''})` : ''}`;
     }).join(', ');
+    const more = owed.length - Math.min(owed.length, BRIEF_OWED_NAMED_MAX);
     /* Two sentences, not three. The panel is read in the second before
        the thumb presses send, and an explanation of why a debt is a
        document rather than a line is worth reading once -- it is in the
        comment above, not on the screen every time. */
-    watch.push(`They still owe <b>${f(total)}</b> on ${owed.length === 1 ? 'the invoice' : `${owed.length} invoices`} behind this list: ${said}.
+    watch.push(`They still owe <b>${f(total)}</b> on ${owed.length === 1 ? 'one invoice' : `${owed.length} invoices`}: ${said}${more > 0 ? `, and <b>${more}</b> more` : ''}.
       The picture says nothing about it &mdash; a price list is not a demand &mdash; but you are about to ask them to buy again.`);
   }
 
