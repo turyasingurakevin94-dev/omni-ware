@@ -39526,7 +39526,17 @@ function piOpenBodyHTML(pi){
 
   const acts = [];
   acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-print" data-id="${pi.id}">Print (A5)</button>`);
-  if(linkedOrder) acts.push(`<button type="button" class="btn btn-ghost ow-sm" data-order-pi="${pi.id}">Open ${esc(invoiceNumberLabel(linkedOrder))}</button>`);
+  /* THE CONTROL THE EYE LOOKS FOR IS IN THE SAME PLACE, and it is named
+     for the job. On a standalone bill this slot is "Correct it"; on one
+     written from an order the slot used to say "Open INV-0307", which
+     is where you go but not what you came to do -- so somebody staring
+     at a bill they need to change reads a row of buttons and finds none
+     of them offering it. Same destination, and the label now answers
+     the question. A voided bill has nothing to correct, so it is only
+     the door. */
+  if(linkedOrder) acts.push(`<button type="button" class="btn btn-ghost ow-sm" data-order-pi="${pi.id}" title="${
+    pi.voided ? '' : `This bill is written from ${esc(invoiceNumberLabel(linkedOrder))} — corrections are made on the order and the bill is raised again from it`
+  }">${pi.voided ? 'Open' : 'Correct on'} ${esc(invoiceNumberLabel(linkedOrder))}</button>`);
   if(!pi.quoteId && !pi.voided) acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-edit" data-id="${pi.id}" title="Correct this bill (money only — no stock moves)">Correct it</button>`);
   acts.push(`<button type="button" class="btn btn-ghost ow-sm pi-doc-void" data-id="${pi.id}" title="${
     /* THE BUTTON SAYS WHAT IT WILL ACTUALLY DO. On a delivery bill it is
@@ -39577,11 +39587,62 @@ function piOpenBodyHTML(pi){
         : pi.buyOrderId
           ? 'This bill came off one of <b>your own orders to a supplier</b>. Undoing the delivery takes the goods back off the shelf and puts the order back to waiting; it is refused outright once money has been paid against it.'
           : linkedOrder
-            ? `Un-invoicing <b>${esc(invoiceNumberLabel(linkedOrder))}</b> takes this bill away again. A payment here settles this bill only &mdash; to pay everything ${esc(pi.supplierName || 'this supplier')} is owed at once, use Creditors.`
+            ? piCorrectionRouteHTML(pi, linkedOrder)
             : 'Correcting this bill changes what is owed and what the goods cost you. It moves nothing on or off the shelf, and it does not touch the price registry.'}</p>
       <span class="ow-q-a">${acts.join('')}</span>
     </div>
   </div>`;
+}
+
+/* HOW A BILL WRITTEN FROM AN ORDER IS PUT RIGHT, and what it costs.
+
+   The wrong quantity, the wrong item or the wrong supplier is usually
+   noticed days later, standing on this screen -- and this screen cannot
+   change any of them. An order's bill is GENERATED from the order, never
+   typed, so the order is the truth and the bill follows it;
+   applyPurchaseBillEdit refuses one outright for exactly that reason.
+
+   What was missing was the sentence. The correction is a walk across
+   three screens with a destructive step in the middle, and nothing said
+   so at the moment somebody needs it -- the "Correct it" button is
+   simply absent, which reads as "this cannot be changed" rather than
+   "it is changed over there".
+
+   THE COST IS THIS BILL'S OWN, not a general warning. It is read from
+   the same two functions the confirm dialog uses, so what is promised
+   here and what the dialog says can never disagree. */
+function piCorrectionRouteHTML(pi, order){
+  /* The button beside this note lands on the Invoices register with the
+     order already searched, and Undo invoice now lives on that row --
+     so the sentence names the tap that is actually next rather than a
+     screen somewhere. */
+  const route = `Written from <b>${esc(invoiceNumberLabel(order))}</b>, so it is corrected there rather than here: `
+    + `<b>Correct on ${esc(invoiceNumberLabel(order))}</b> lands on its row in Invoices, where <b>Undo invoice</b> takes the invoice back. `
+    + `Then fix the lines on Order tracking &mdash; quantity, item or supplier &mdash; and invoice it again. `
+    + `A fresh bill is raised per supplier, so a wrong supplier is put right by the same move. `
+    + `To change what was RECEIVED, step the order back to Being prepared first; the receipt is undone on the buying list in What to buy.`;
+  if(pi.voided) return route;
+  const parts = (typeof orderReversalParts === 'function' ? orderReversalParts(order) : []).map(esc);
+  const backAll = (typeof orderStockReturnParts === 'function' ? orderStockReturnParts(order) : []).map(esc);
+  const back = backAll.slice(0, 2).join(', ')
+    + (backAll.length > 2 ? ` and ${backAll.length - 2} more` : '');
+  let cost;
+  if(parts.length && backAll.length){
+    cost = `Undoing the invoice reverses ${parts.join(' and ')}, along with their cash book entries, and puts ${back} back on the shelf.`;
+  } else if(parts.length){
+    cost = `Undoing the invoice reverses ${parts.join(' and ')}, along with their cash book entries.`;
+  } else if(backAll.length){
+    cost = `Undoing the invoice puts ${back} back on the shelf, because the sale is being undone. Nothing has been paid on either side, so no money moves.`;
+  } else {
+    cost = `Nothing has been paid on either side and this order moved no stock, so undoing the invoice costs nothing.`;
+  }
+  /* The one instruction that has to be given BEFORE the destructive
+     step, because afterwards the figures are gone from the screen that
+     held them. */
+  const note = parts.length
+    ? ` Write down what was paid, and on what day, before you start &mdash; it has to be recorded again afterwards.`
+    : '';
+  return `${route} ${cost}${note}`;
 }
 
 function piWireRegister(wrap){
