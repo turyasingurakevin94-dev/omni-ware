@@ -11364,6 +11364,48 @@
      is a flex item wedged between Skip and Discuss, and it crowds them. */
   .ow-q-note{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0 0 var(--ow-sp-8);
     max-width:var(--ow-measure);}
+  /* THE THREE KINDS OF NOTE UNDER A BRIEF. Eight paragraphs in one grey
+     sat under every picture -- what the customer will see, what to weigh
+     before sending, and an errand waiting on another screen -- all in
+     the same 12px ink, so the one carrying work read exactly like the
+     one carrying a word count. They are three different demands on the
+     owner, so they are three blocks under their own heading:
+
+       FIX     something is NOT on the picture and a named screen can
+               put it back. Crimson: a customer short a line they buy
+               every fortnight is a fault in the books, not a nuance.
+       WATCH   it IS on the picture, and there is a judgement to make in
+               the moment of sending -- a day nobody promised, a price
+               that went up. Amber: caution, not fault.
+       NOTE    said rather than dropped, with nothing to do about it.
+               A heading, not a colour.
+
+     The accent is untouched: the one oxide thing on this screen is
+     still Share. */
+  /* The measure is in ch, so it is read against the element's OWN size.
+     The reason above is 13px; a block left at the inherited size took a
+     different right edge from it and the stack read as four columns. */
+  .ow-bn{font-size:var(--ow-t-13);max-width:var(--ow-measure);
+    margin:0 0 var(--ow-sp-10);border-radius:var(--ow-r-sm);}
+  .ow-bn-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.05em;
+    text-transform:uppercase;color:var(--ow-ink-900);margin:0 0 var(--ow-sp-4);}
+  .ow-bn-t{font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);color:var(--ow-ink-600);
+    margin:0 0 var(--ow-sp-6);}
+  .ow-bn-t:last-child{margin-bottom:0;}
+  .ow-bn-fix{background:var(--ow-crimson-soft);padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .ow-bn-fix .ow-bn-l{color:var(--ow-crimson);}
+  .ow-bn-fix .ow-bn-t{color:var(--ow-ink-900);}
+  .ow-bn-watch{background:var(--ow-amber-faint);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border:1px solid var(--ow-amber-soft);}
+  .ow-bn-watch .ow-bn-l{color:var(--ow-amber-ink);}
+  /* The quietest of the three: no ground, and a heading a shade back.
+     It carried the boldest heading on the screen for a while, which put
+     the block with nothing to do about it above the two that do. */
+  .ow-bn-note .ow-bn-l{color:var(--ow-ink-600);}
+  /* The last line is not a note at all -- it is the picture's own
+     measure, and it belongs under a rule with the rest above it. */
+  .ow-bn-f{font-size:var(--ow-t-13);max-width:var(--ow-measure);color:var(--ow-ink-600);
+    border-top:1px solid var(--ow-rule-soft);padding-top:var(--ow-sp-8);margin:var(--ow-sp-12) 0 0;}
   .ow-q-un{display:inline-block;font-size:var(--ow-t-11);color:var(--ow-amber-ink);
     background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);
     padding:2px var(--ow-sp-8);margin:0 0 var(--ow-sp-10);}
@@ -13849,6 +13891,9 @@
     .ow-q-x{padding:0 var(--ow-sp-12) var(--ow-sp-12);}
     .ow-q-why{font-size:14px;max-width:none;}
     .ow-q-note{font-size:13px;}
+    .ow-bn{max-width:none;}
+    .ow-bn-t{font-size:13px;}
+    .ow-bn-f{max-width:none;}
     .btn.ow-sm{min-height:var(--ow-tap);flex:1 1 auto;min-width:calc(50% - 3px);}
     .ow-pg{gap:var(--ow-sp-8);}
     .ow-pg-a{margin-left:0;flex:1 1 100%;}
@@ -49214,16 +49259,33 @@ const BRIEF_LEFT_OFF = {
   checkRow: { head: 'a price on file far below what they last paid you', fix: 'Open these in the Price Registry: one row is almost always typed per piece where the rest are per pack, or short a digit. The cheapest row on file is what every price is built from, so a wrong one prices the whole shop.' },
   belowCost: { head: 'the rule prices them UNDER what they cost you', fix: 'Raise the markup, or the price you are holding them at, before these go on anyone\u2019s list. Nothing is sent at a loss by accident.' },
 };
-function briefLeftOffHTML(pricing){
+/* One sentence per CAUSE, not per product: the owner goes to one screen
+   and fixes the lot. Handed back as lines so the caller can put them
+   under one heading with anything else that needs the same errand. */
+function briefLeftOffLines(pricing){
   const rows = (pricing && pricing.rows) || [];
-  if(!rows.length) return '';
   const by = {};
   rows.forEach(r=> { (by[r.why] = by[r.why] || []).push(r.name); });
   return Object.entries(by).map(([why, names])=>{
     const w = BRIEF_LEFT_OFF[why] || BRIEF_LEFT_OFF.noRow;
-    return `<p class="ow-q-note"><b>${names.length}</b> left off &mdash; ${esc(w.head)}:
-      ${names.map(n=> `<b>${esc(n)}</b>`).join(', ')}. ${esc(w.fix)}</p>`;
-  }).join('');
+    return `<b>${names.length}</b> left off &mdash; ${esc(w.head)}:
+      ${names.map(n=> `<b>${esc(n)}</b>`).join(', ')}. ${esc(w.fix)}`;
+  });
+}
+/* The inside of a note block: the heading, then a sentence per cause.
+   The heading is the DEMAND the block makes on the owner -- go and fix,
+   weigh before sending, or simply know -- so three kinds of sentence
+   that used to arrive in one grey are told apart before any of them is
+   read. The wrapper carries the kind and is written out at each call
+   site, spelled rather than composed, so a class this app uses can
+   always be found by looking for it. */
+function briefNoteBody(label, lines){
+  return `<p class="ow-bn-l">${esc(label)}</p>${lines.map(t=> `<p class="ow-bn-t">${t}</p>`).join('')}`;
+}
+function briefLeftOffHTML(pricing){
+  const lines = briefLeftOffLines(pricing);
+  return lines.length ? `<div class="ow-bn ow-bn-fix">${
+    briefNoteBody('Left off \u2014 and where to fix it', lines)}</div>` : '';
 }
 function briefRowCount(b){
   return (b.groups || []).reduce((s, g)=> s + g.rows.length, 0);
@@ -49894,35 +49956,48 @@ function briefWhyHTML(b){
   const frames = briefFrames(b);
   const shown = frames.reduce((s, fr)=> s + (fr.items || []).filter(i=> i.kind === 'row').length, 0);
   const cut = briefRowCount(b) - shown;
-  /* A REASON MUST BE ON THE PICTURE. The list is capped by what fits on
-     four frames, so a reason naming a companion or a swap can rank a
-     customer for something the picture then has no room to carry.
-     Said here rather than left for the owner to notice. */
-  /* WHAT WOULD HAVE TO BE ORDERED IN. The picture is a price list and
-     promises no day; the shop, sending it, should know which lines are
-     not on the shelf before a customer asks for them this afternoon. */
   const order = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.toOrder);
   const carried = (b.groups || []).some(g=> g.rows.some(r=> r.productId === (b.reason || {}).productId));
-  const missing = b.reason && (b.reason.key === 'needs' || b.reason.key === 'swap') && !carried
-    ? `<p class="ow-q-note">The reason names <b>${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '')}</b>, and the list has no room for it on ${BRIEF_MAX_LIST_FRAMES} pictures. Send it by hand, or say it in the message.</p>` : '';
+  const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
+  const pc = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.packCost);
+
+  /* WEIGH BEFORE SENDING. Both of these are ON the picture. Neither is
+     a fault, and neither can be fixed on another screen -- they are
+     things to know in the second before the thumb presses send. */
+  const watch = [];
+  if(order.length) watch.push(`<b>${order.length}</b> line${order.length === 1 ? '' : 's'} on this list ${order.length === 1 ? 'is' : 'are'} not on the shelf and would be ordered in:
+    ${order.map(r=> `<b>${esc(r.name)}</b>${r.lead != null ? ` (about ${r.lead} day${r.lead === 1 ? '' : 's'})` : ''}`).join(', ')}.
+    The picture names no day &mdash; say one only if you can keep it.`);
+  if(up.length) watch.push(`<b>${up.length}</b> line${up.length === 1 ? '' : 's'} quoted ABOVE what they last paid:
+    ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
+    The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.`);
+
+  /* GO AND FIX. Every one of these names a screen and an errand, and
+     until it is done a line the customer buys is missing from what they
+     will read. */
+  const fix = briefLeftOffLines(b.pricing);
+  if(pc.length) fix.push(`<b>${pc.length}</b> line${pc.length === 1 ? '' : 's'} priced off a stock lot that carries the PACK cost per piece:
+    ${pc.map(r=> `<b>${esc(r.name)}</b> (the shelf says ${f(r.packCost.held)} a ${esc(r.packCost.unit || 'piece')}, which is ${r.packCost.packQty} × your supplier\u2019s per-${esc(r.packCost.unit || 'piece')} figure &mdash; the ${esc(r.packCost.packUnit)} price)`).join(', ')}.
+    The picture prices ${pc.length === 1 ? 'it' : 'them'} from that cost divided by the pack, which agrees with the registry. The lot itself is still wrong: every sale off it is costed at the whole ${esc(pc[0].packCost.packUnit)} and the shelf is valued at ${pc[0].packCost.packQty}× what stands there. Undo the receipt on the order it came in on, or correct the purchase under Inventory, and enter the price per ${esc(pc[0].packCost.unit || 'piece')}.`);
+
+  /* NAMED RATHER THAN DROPPED, with nothing to do about it. A cap and a
+     thing nobody can supply are not errands: they are said so that a
+     line the shop thinks it sent and the customer never saw cannot pass
+     in silence. */
+  const note = [];
+  if(b.reason && (b.reason.key === 'needs' || b.reason.key === 'swap') && !carried)
+    note.push(`The reason names <b>${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '')}</b>, and the list has no room for it on ${BRIEF_MAX_LIST_FRAMES} pictures. Send it by hand, or say it in the message.`);
+  if(cut > 0) note.push(`<b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.`);
+  if(b.dropped.length) note.push(`Left out: ${b.dropped.map(d=>
+    `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shop cannot get.`);
+
+  /* The order is the order of the demand: what must be done, what must
+     be weighed, what is merely worth knowing. */
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
-    ${missing}
-    ${order.length ? `<p class="ow-q-note"><b>${order.length}</b> line${order.length === 1 ? '' : 's'} on this list ${order.length === 1 ? 'is' : 'are'} not on the shelf and would be ordered in:
-      ${order.map(r=> `<b>${esc(r.name)}</b>${r.lead != null ? ` (about ${r.lead} day${r.lead === 1 ? '' : 's'})` : ''}`).join(', ')}.
-      The picture names no day &mdash; say one only if you can keep it.</p>` : ''}
-    ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
-${briefLeftOffHTML(b.pricing)}
-    ${(()=>{ const pc = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.packCost);
-      return pc.length ? `<p class="ow-q-note"><b>${pc.length}</b> line${pc.length === 1 ? '' : 's'} priced off a stock lot that carries the PACK cost per piece:
-        ${pc.map(r=> `<b>${esc(r.name)}</b> (the shelf says ${f(r.packCost.held)} a ${esc(r.packCost.unit || 'piece')}, which is ${r.packCost.packQty} × your supplier\u2019s per-${esc(r.packCost.unit || 'piece')} figure &mdash; the ${esc(r.packCost.packUnit)} price)`).join(', ')}.
-        The picture prices ${pc.length === 1 ? 'it' : 'them'} from that cost divided by the pack, which agrees with the registry. The lot itself is still wrong: every sale off it is costed at the whole ${esc(pc[0].packCost.packUnit)} and the shelf is valued at ${pc[0].packCost.packQty}× what stands there. Undo the receipt on the order it came in on, or correct the purchase under Inventory, and enter the price per ${esc(pc[0].packCost.unit || 'piece')}.</p>` : ''; })()}
-    ${(()=>{ const up = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.upFrom != null);
-      return up.length ? `<p class="ow-q-note"><b>${up.length}</b> line${up.length === 1 ? '' : 's'} quoted ABOVE what they last paid:
-        ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
-        The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.</p>` : ''; })()}
-    ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
-      `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shop cannot get.</p>` : ''}
-    <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
+    ${fix.length ? `<div class="ow-bn ow-bn-fix">${briefNoteBody('Left off \u2014 and where to fix it', fix)}</div>` : ''}
+    ${watch.length ? `<div class="ow-bn ow-bn-watch">${briefNoteBody('Before you send', watch)}</div>` : ''}
+    ${note.length ? `<div class="ow-bn ow-bn-note">${briefNoteBody('Not on the picture', note)}</div>` : ''}
+    <p class="ow-bn-f">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
 }
 
 /* ---- WORTH TELLING --------------------------------------------------- */

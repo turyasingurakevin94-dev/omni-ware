@@ -933,12 +933,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
       renders: ['renderTelling', 'tellingRowHTML', 'tellingRailHTML',
-                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML'],
+                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
+                'briefNoteBody', 'briefLeftOffHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
                     'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-empty', 'ow-mini', 'ow-q-note', 'ow-grid', 'ow-side'],
+                    'ow-empty', 'ow-mini', 'ow-grid', 'ow-side',
+                    /* The reasoning under a picture makes three different
+                       demands on the owner -- go and fix, weigh before
+                       sending, simply know -- and they arrived in one grey.
+                       Three blocks under their own heading, plus the
+                       picture's own measure under a rule. */
+                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
+                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
     },
     /* What goes with what. New as well, and the one screen in the app
        whose register is a SENTENCE -- product, verb, product, in one
