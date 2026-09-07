@@ -80,6 +80,14 @@ const base = {
   eq(u.stockUnitFor('P-ODD', null).hasPack, false, 'a row packed in its own unit -- cartons of cartons -- is not a pack');
   eq(u.stockUnitFor('P-NONE', null).unit, '', 'and a product with no rows has no unit to be counted in');
 
+  /* The label beside every stock count reads the same shelf. It used to
+     take the first row with a unit -- Shafik's Ctn -- and stand that
+     word beside a count kept in dozens. */
+  const lbl = compileScope(['stockUnitFor', 'productUnitLabel'].map(fnOf), base, ['productUnitLabel']);
+  eq(lbl.productUnitLabel('P073', 0), 'Dozen', 'the unit label names the unit the shelf is counted in, not the first row\'s');
+  eq(lbl.productUnitLabel('P-WIRE'), 'Kg', 'and the first unit on file where nothing packs');
+  eq(lbl.productUnitLabel('P-NONE'), '', 'and nothing where there are no rows');
+
   /* The count screen and the purchase screen both read it from here.
      The supplier used to change the answer; it no longer can. */
   const asShafik = u.invPackContextFor('P073', 0, 'S-SHAFIK');

@@ -26958,12 +26958,14 @@ function ensureQuote(){
 function productPriceRows(productId, variantIdx=null){
   return data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx).map(p=>({...p, sname: supplierName(p.supplierId)}));
 }
-// The unit an item is sold/costed in (e.g. "kg", "Bag") — taken from
-// whichever price entry on file has one set, since unit isn't stored
-// directly on the product itself.
+// The unit an item is sold/costed in (e.g. "kg", "Bag"). Unit isn't
+// stored on the product itself, so it is read off the price rows -- and
+// off the SHELF'S row (stockUnitFor), not simply the first one with a
+// unit: where one supplier prices per Ctn and another per Dozen at
+// twenty to the carton, the ledger is kept in dozens, and a label that
+// said "Ctn" beside that count would be naming a number it is not.
 function productUnitLabel(productId, variantIdx=null){
-  const row = productPriceRows(productId, variantIdx).find(r=>r.unit);
-  return row ? row.unit : '';
+  return stockUnitFor(productId, variantIdx).unit;
 }
 
 // Pack size to show alongside stock counts (e.g. "25 Kg per Bag"), taken
