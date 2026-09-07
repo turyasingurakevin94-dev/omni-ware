@@ -47953,28 +47953,15 @@ function customerBrief(customerId){
   const cheaperThanTheirs = !!(habit && priceNow !== null && priceNow < habit.lastPrice
     && habit.sinceLast <= TELL_PRICE_MEMORY_DAYS);
 
-  /* What goes with it. Only active pairings, only to something the shelf
-     can actually give, and a quantity only where the owner wrote a
-     ratio -- an invented figure is worse than none. */
-  const also = pick ? pairingsFor(pick, pickVar)
-    .map(l=>{
-      const p = productById(l.toId);
-      if(!p) return null;
-      /* At the size the pairing names, where it names one: stock is
-         kept per size, and a product-level read of a variable product
-         is nobody's shelf. */
-      const vi = (l.toVariantIdx != null && p.variants && p.variants[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
-      const stock = briefInStock(p.id, vi);
-      if(stock !== null && stock <= 0) return null;
-      const st = pairStanding(l);
-      return { link: l, product: p, standing: st, variantIdx: vi, label: productVariantLabel(p, vi),
-        qty: (l.qty && qty) ? Math.max(1, Math.round(l.qty * qty)) : null,
-        verb: pairVerb(l.verb) };
-    }).filter(Boolean)
-    /* Where the owner and the books agree goes first: it is the
-       strongest thing this shop knows about its own goods. */
-    .sort((a, b)=> (b.standing.key === 'agree') - (a.standing.key === 'agree'))
-    .slice(0, 2) : [];
+  /* What goes with it -- through the one reading, so the reasoning the
+     shop sees and the blocks the picture carries cannot name different
+     companions for the same line. Only what the shelf can give, and a
+     quantity only where the owner wrote a ratio. */
+  const also = (pick ? pairCompanionsFor(pick, pickVar, qty, { habits }) : [])
+    .filter(c=> c.inStock && !c.why && c.verbId !== 'instead')
+    .map(c=> ({ link: c.link, product: productById(c.productId), standing: c.standing,
+      variantIdx: c.variantIdx, label: c.label, qty: c.qty, verb: c.verb }))
+    .slice(0, 2);
 
   return { customer: c, row: r, habits, habit, reason, held, told, pickVariant: pickVar,
     /* What the PICTURE carries: the whole list, in blocks. The single
@@ -47985,15 +47972,16 @@ function customerBrief(customerId){
     lastPrice: habit ? habit.lastPrice : null, also,
     /* What was left out, and why. The shop sees this; the customer
        never does. */
-    dropped: pick ? pairingsFor(pick, pickVar)
-      .map(l=>{
-        const p = productById(l.toId);
-        if(!p) return { name: productLinkName(l.toId), why:'not a product you sell' };
-        const vi = (l.toVariantIdx != null && p.variants && p.variants[l.toVariantIdx]) ? Number(l.toVariantIdx) : null;
-        const stock = briefInStock(p.id, vi);
-        if(stock !== null && stock <= 0) return { name: productVariantLabel(p, vi), why:'out of stock' };
-        return null;
-      }).filter(Boolean) : [] };
+    dropped: (pick ? pairCompanionsFor(pick, pickVar, qty, { habits, substitute: true }) : [])
+      .map(c=>{
+        if(!productById(c.productId)) return { name: c.name, why:'not a product you sell' };
+        if(c.why !== 'outOfStock') return null;
+        /* Out of stock, and whether anything was written down to stand
+           in for it: an owner who has already answered that question
+           should not be told only half of it. */
+        return { name: c.label, why: c.substitutes.length
+          ? `out of stock — ${c.substitutes[0].label} is offered instead` : 'out of stock' };
+      }).filter(Boolean) };
 }
 
 /* The queue: everybody with a reason and nothing holding them back,
@@ -48418,30 +48406,45 @@ function briefGroups(c, habits){
   /* 3. WHAT GOES WITH THOSE -- the owner's own pairings, from every
         product they buy rather than from one. A quantity only where a
         ratio was written down; an invented one is worse than none. */
-  const links = [];
+  /* THE VERB IS THE HEADING. A rule says which of five things it is --
+     needed, taken with, part of one job, or a swap -- and every one of
+     them arrived under a single "ALSO BUY". A customer reading ALSO
+     NEED knows the roof leaks without it; the same line under ALSO BUY
+     is an advertisement. The order is the order of the claim: what a
+     thing cannot be used without comes before what usually goes with
+     it, which comes before what shares its job. take()'s own rule that
+     nothing is listed twice then settles a product claimed by two
+     rules in favour of the stronger word. */
+  const byVerb = new Map();
+  const swaps = [];
   habits.forEach(h=>{
-    /* The sentences written for this product AT THIS SIZE: a general
-       one, or the one pinned for the size where the owner wrote it. */
-    pairingsFor(h.productId, h.variantIdx).forEach(l=>{
-      const st = pairStanding(l);
-      links.push({ l, h, agree: st.key === 'agree' });
+    pairCompanionsFor(h.productId, h.variantIdx, h.typicalQty, { habits, substitute: true }).forEach(c=>{
+      if(c.verbId === 'instead') return;   // a swap is not a companion
+      if(c.why === 'outOfStock' && c.substitutes.length){
+        /* What they asked for is out, and the owner has already written
+           down what stands in for it. Offered under its own heading,
+           at the quantity the companion would have been. */
+        const sub = c.substitutes[0];
+        swaps.push({ toId: sub.productId, variantIdx: sub.variantIdx, qty: c.qty,
+          insteadOf: c.label, h });
+        return;
+      }
+      if(c.why) return leaveOff(c.productId, c.variantIdx == null ? null : c.variantIdx, c.label, c.why);
+      if(!byVerb.has(c.verbId)) byVerb.set(c.verbId, []);
+      byVerb.get(c.verbId).push({ c, h, agree: c.standing.key === 'agree' });
     });
   });
-  take('also', 'ALSO BUY', links
-    .sort((a, b)=> (b.agree - a.agree))
-    .map(x=>{
-      /* A companion is quoted at the quantity the pairing implies --
-         eight nails a sheet against thirty sheets is a trade quantity,
-         and pricing it retail would misquote the very line the pairing
-         exists to sell. */
-      const q = (x.l.qty && x.h.typicalQty) ? Math.max(1, Math.round(x.l.qty * x.h.typicalQty)) : null;
-      const v = briefVariantForLine(x.l.toId, habits, { toVariantIdx: x.l.toVariantIdx,
-        from: { productId: x.h.productId, variantIdx: x.h.variantIdx } });
-      if(v.gone) return null;
-      if(v.why) return leaveOff(x.l.toId, null,
-        productVariantLabel(productById(x.l.toId) || { name: productLinkName(x.l.toId) }, null), v.why);
-      return rowFor(x.l.toId, { theirQty: q }, v.variantIdx, q);
-    }).filter(Boolean));
+  PAIR_VERBS.filter(v=> v.brief && !v.self && v.id !== 'instead').forEach(v=>{
+    const rows = (byVerb.get(v.id) || []).sort((a, b)=> b.agree - a.agree)
+      .map(x=> rowFor(x.c.productId, { theirQty: x.c.qty }, x.c.variantIdx, x.c.qty))
+      .filter(Boolean);
+    take(v.id, v.brief, rows);
+  });
+  /* And the swaps last: a customer is told what they can have instead
+     only after everything they can actually have. */
+  take('instead', (pairVerb('instead') || {}).brief || 'OR TAKE', swaps
+    .map(x=> rowFor(x.toId, { theirQty: x.qty, insteadOf: x.insteadOf }, x.variantIdx, x.qty))
+    .filter(Boolean));
 
   /* 4. WHAT THEIR SITE HAS REACHED, and only while somebody's word on
         that is fresh enough to believe. */

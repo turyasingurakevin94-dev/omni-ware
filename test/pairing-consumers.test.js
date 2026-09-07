@@ -180,5 +180,51 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   t.check(/const seen = pairCooccurrence\(\);/.test(src), 'and the pairings screen reads that same count');
 }
 
+/* ---- 8. the verb is the heading, in the picture ---------------------- */
+{
+  /* briefGroups is compiled with its own scope: the fixture above is a
+     shop of rules, and what matters here is which heading each row
+     lands under and that nothing is offered twice. */
+  const gEnv = Object.assign({}, env, {
+    customerSiteStage: ()=> ({ fresh: false, stage: { buys: [] } }),
+    briefPriceFor: env.briefPriceFor,
+    briefPackText: ()=> 'Sold loose',
+    productPriceRows: (id, vi)=> env.rankedPriceRows(id, vi),
+    shelfValueForKey: ()=> ({ ownedQty: 0, unitCost: null }),
+    stockKey: (id, vi)=> (vi == null ? id : `${id}::${vi}`),
+    TELL_PRICE_MEMORY_DAYS: 90, TELL_PRICE_DROP_PCT: 5, TELL_PRICE_FALL_CEILING_PCT: 40,
+    BRIEF_PACK_FIGURE_PCT: 15, BRIEF_ROWS_PER_GROUP: 5, BRIEF_MAX_ROWS: 16,
+    briefPaidFigure: ()=> null,
+    invoiceNumberLabel: (q)=> 'INV-' + q.id,
+  });
+  const GNAMES = ['briefGroups'];
+  const g = compileScope([
+    ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
+    extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
+    extractFunction(src, 'briefGroups', 'index.html'),
+  ], gEnv, GNAMES);
+  const habits = [{ productId: 'P-RUN', variantIdx: 1, typicalQty: 3, lastPrice: null, sinceLast: 5, orders: 3 }];
+  const groups = g.briefGroups({ id: 'C1' }, habits);
+  const head = (k)=> (groups.find(x=> x.key === k) || {}).head;
+  eq(head('needs'), 'ALSO NEED', 'what the line cannot be used without has its own heading');
+  eq(head('with'), 'ALSO TAKE', 'and what usually goes with it has another');
+  const names = groups.flatMap(x=> x.rows.map(r=> r.productId));
+  eq(new Set(names).size, names.length, 'and no product is offered under two headings');
+  eq(head('also'), undefined, 'the one heading that said nothing about the claim is gone');
+  eq(groups.filter(x=> x.key === 'needs')[0].rows.length, 1, 'the needed thing is on the list');
+  eq(groups.filter(x=> x.key === 'with')[0].rows[0].productId, 'P-SOFT', 'and so is what goes with it');
+
+  const at14 = [{ productId: 'P-RUN', variantIdx: 2, typicalQty: 2, lastPrice: null, sinceLast: 5, orders: 3 }];
+  const swapped = g.briefGroups({ id: 'C1' }, at14);
+  const or = swapped.find(x=> x.key === 'instead');
+  t.check(!!or && or.rows.some(r=> r.productId === 'P-QUIET'),
+    'a companion that is out of stock is answered with what stands in for it');
+  eq(or && or.head, 'OR TAKE', 'under the heading that says it is a swap');
+  t.check(!swapped.dropped.rows.some(r=> r.id === 'P-SOFT' && !r.name),
+    'and the shop is told which companion it replaced');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);
