@@ -436,6 +436,34 @@ const src = read('index.html');
     t.check(num(s.props['--tip-x']) === 8, 'and one pushed off the left comes back the same way');
   }
 
+  /* A PAGE BADGE NEAR THE BOTTOM OF THE WINDOW.
+   *
+   * "It has the page to grow into" held while every one of these was a
+   * heading at the top of a screen. The fold is used now by the footer
+   * inside an open purchase invoice, which sits wherever its row does --
+   * and a 370px bubble hanging off a badge near the bottom opens below
+   * the fold, with only the page scroll to reach it, which is exactly
+   * the failure the sideways clamp was written to stop.
+   *
+   * So it flips, on the same terms the modal path already used: only
+   * when there is no room below AND there is room above. A heading at
+   * the top of a page therefore behaves exactly as it did.
+   */
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: VH - 60, inModal: false });
+    placeInfoBubble(s.info);
+    t.check(s.bubbleClasses.has('tip-up'),
+      'a page bubble with no room below it opens upward instead of off the screen');
+  }
+  {
+    // No room below, and no room above either: flipping would only move
+    // which edge cuts it off, so it stays where it is.
+    const s = stub({ badgeLeft: 40, badgeTop: 40, h: VH, inModal: false });
+    placeInfoBubble(s.info);
+    t.check(!s.bubbleClasses.has('tip-up'),
+      'and one too tall for either side is not flipped into the top edge');
+  }
+
   /* ---- and a badge on the page rather than in a modal --------------
    *
    * These were excluded from placement entirely, on the reasoning that a
@@ -455,7 +483,9 @@ const src = read('index.html');
     t.check(!s.bubbleClasses.has('tip-fixed'),
       'a page bubble stays in the document flow rather than being pinned to the viewport');
     t.check(s.props['--tip-y'] === undefined && !s.classes.has('flip'),
-      'and is not moved vertically at all — it has the page to grow into');
+      'and is not pinned vertically — it has the page to grow into');
+    t.check(!s.bubbleClasses.has('tip-up'),
+      'and with room below it, it opens downward as it always has');
     const left = num(s.bubble.style.left);
     t.check(Math.round(s.badge.left + left + s.w) === VW - 8,
       `while sideways it slides back until its right edge clears the screen (${left})`);

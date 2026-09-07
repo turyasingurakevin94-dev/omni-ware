@@ -545,6 +545,13 @@
      MOVED it into the bubble, it is the bubble's whole content and has
      to come back. */
   .page-info-bubble .ow-ph-help{display:block;}
+  /* Same bargain for the purchase invoice footer: the walk that corrects
+     an order's bill is written into the markup and never shown there --
+     nine lines of route under a bill of one line is an explanation
+     bigger than the document -- and comes back once the fold has moved
+     it into the bubble. Hidden where it is written, so a footer whose
+     fold has not run shows a short sentence rather than a wall. */
+  .page-info-bubble .ow-pi-cf-h{display:block;}
   .page-title-row h1{margin-bottom:0;}
   .page-info{position:relative;display:inline-flex;}
   .page-info-btn{
@@ -570,6 +577,15 @@
     content:"";position:absolute;top:-5px;left:var(--tip-arrow, 11px);width:10px;height:10px;
     background:var(--navy);transform:rotate(45deg);
   }
+  /* OPENING UPWARD. A page heading has the whole page below it and never
+     needs this. The bubble is reused now by a footer inside an open row,
+     which can sit anywhere down a long list -- and a 370px bubble hanging
+     off a badge near the bottom of the window opens below the fold, with
+     only the page scroll to reach it. Set by placeInfoBubble, and only
+     when there is no room below and there is room above: flipping into a
+     top edge is not a fix. */
+  .page-info-bubble.tip-up{top:auto;bottom:calc(100% + 8px);}
+  .page-info-bubble.tip-up::before{top:auto;bottom:-5px;}
   /* Whatever was moved in has to read on the dark bubble, <p> or not --
      the price form folds a .field-hint div and two .pfx-note paragraphs
      that carry their own colour, width and case. */
@@ -13781,8 +13797,11 @@
   .ow-pi-bs-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-pi-cf{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-12);
     padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .ow-pi-cf-b{min-width:0;flex:1 1 42ch;}
   .ow-pi-cf-n{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
     line-height:var(--ow-lh-snug);max-width:58ch;min-width:0;}
+  /* Written into the markup, shown only from inside the "i" bubble. */
+  .ow-pi-cf-h{display:none;}
   /* ==================================================================
      SOURCING. Things a client asked for that the shop does not sell yet.
 
@@ -25948,11 +25967,21 @@ function placeInfoBubble(info){
      coordinate, which leaves the vertical behaviour untouched. */
   if(!info.closest('.modal-body')){
     const badge0 = info.getBoundingClientRect();
+    /* Measured with the flip OFF, so the height read here is the same
+       whichever way it ends up opening. */
+    bubble.classList.remove('tip-up');
     const b0 = bubble.getBoundingClientRect();
     const x = Math.max(TIP_EDGE_GAP, Math.min(badge0.left - 6, innerWidth - TIP_EDGE_GAP - b0.width));
     bubble.style.left = (x - badge0.left) + 'px';
     bubble.style.setProperty('--tip-arrow',
       Math.max(8, Math.min(b0.width - 18, badge0.left + badge0.width/2 - x - 5)) + 'px');
+    /* Up only when there is genuinely no room down and there is room up.
+       A heading at the top of a page therefore behaves exactly as it
+       always has, which is the point: this is for the badge that ended
+       up near the bottom of the window. */
+    const noRoomBelow = badge0.bottom + 8 + b0.height > innerHeight - TIP_EDGE_GAP;
+    const roomAbove = badge0.top - 8 - b0.height >= TIP_EDGE_GAP;
+    if(noRoomBelow && roomAbove) bubble.classList.add('tip-up');
     return;
   }
 
@@ -39582,6 +39611,7 @@ function piOpenBodyHTML(pi){
         over > 0 ? 'more than was asked for' : due > 0.5 ? 'Creditors decides who is paid first' : 'settled'}</span></div>
     </div>
     <div class="ow-pi-cf">
+      <div class="ow-pi-cf-b">
       <p class="ow-pi-cf-n">${pi.voided
         ? 'This bill is voided. It is kept and struck through rather than deleted &mdash; a cancelled document that vanishes cannot be explained to anybody later &mdash; and it counts towards nothing above.'
         : pi.buyOrderId
@@ -39589,6 +39619,9 @@ function piOpenBodyHTML(pi){
           : linkedOrder
             ? piCorrectionRouteHTML(pi, linkedOrder)
             : 'Correcting this bill changes what is owed and what the goods cost you. It moves nothing on or off the shelf, and it does not touch the price registry.'}</p>
+      ${linkedOrder ? piCorrectionRouteHelpHTML(pi, linkedOrder)
+        .map(para=> `<p class="ow-pi-cf-h">${para}</p>`).join('') : ''}
+      </div>
       <span class="ow-q-a">${acts.join('')}</span>
     </div>
   </div>`;
@@ -39602,50 +39635,81 @@ function piOpenBodyHTML(pi){
    typed, so the order is the truth and the bill follows it;
    applyPurchaseBillEdit refuses one outright for exactly that reason.
 
-   What was missing was the sentence. The correction is a walk across
-   three screens with a destructive step in the middle, and nothing said
-   so at the moment somebody needs it -- the "Correct it" button is
-   simply absent, which reads as "this cannot be changed" rather than
-   "it is changed over there".
+   ONE LINE ON THE BILL, THE WALK BEHIND THE "i". The first cut put the
+   whole route and the whole cost in the footer, and it ran to nine
+   lines under a bill of one -- the explanation was bigger than the
+   document. The fact you need at a glance is that this is corrected
+   somewhere else; the walk is what you read once, when you are about
+   to do it. Same mechanism as the page headers, and for the same
+   reason.
 
-   THE COST IS THIS BILL'S OWN, not a general warning. It is read from
-   the same two functions the confirm dialog uses, so what is promised
-   here and what the dialog says can never disagree. */
+   THE COST IS THIS BILL'S OWN, not a general warning, and each part is
+   worded for what it actually is. The confirm dialog lumps them into
+   one "along with their Cash Book entries", which is right for the two
+   payment lines and wrong for the third: money the customer still owes
+   is written off, and a debt has no Cash Book entry to remove. Same
+   arithmetic on the same fields, so the figures cannot disagree with
+   the dialog -- only the wording is more careful. */
 function piCorrectionRouteHTML(pi, order){
-  /* The button beside this note lands on the Invoices register with the
-     order already searched, and Undo invoice now lives on that row --
-     so the sentence names the tap that is actually next rather than a
-     screen somewhere. */
-  const route = `Written from <b>${esc(invoiceNumberLabel(order))}</b>, so it is corrected there rather than here: `
-    + `<b>Correct on ${esc(invoiceNumberLabel(order))}</b> lands on its row in Invoices, where <b>Undo invoice</b> takes the invoice back. `
+  return `Corrected on <b>${esc(invoiceNumberLabel(order))}</b>, not here.`;
+}
+function piCorrectionRouteHelpHTML(pi, order){
+  const money = (n)=> fmtUGX(Math.round(n));
+  const route = `<b>Correct on ${esc(invoiceNumberLabel(order))}</b> lands on its row in Invoices, `
+    + `where <b>Undo invoice</b> takes the invoice back. `
     + `Then fix the lines on Order tracking &mdash; quantity, item or supplier &mdash; and invoice it again. `
     + `A fresh bill is raised per supplier, so a wrong supplier is put right by the same move. `
-    + `To change what was RECEIVED, step the order back to Being prepared first; the receipt is undone on the buying list in What to buy.`;
-  if(pi.voided) return route;
-  const parts = (typeof orderReversalParts === 'function' ? orderReversalParts(order) : []).map(esc);
-  const backAll = (typeof orderStockReturnParts === 'function' ? orderStockReturnParts(order) : []).map(esc);
-  const back = backAll.slice(0, 2).join(', ')
-    + (backAll.length > 2 ? ` and ${backAll.length - 2} more` : '');
-  let cost;
-  if(parts.length && backAll.length){
-    cost = `Undoing the invoice reverses ${parts.join(' and ')}, along with their cash book entries, and puts ${back} back on the shelf.`;
-  } else if(parts.length){
-    cost = `Undoing the invoice reverses ${parts.join(' and ')}, along with their cash book entries.`;
-  } else if(backAll.length){
-    cost = `Undoing the invoice puts ${back} back on the shelf, because the sale is being undone. Nothing has been paid on either side, so no money moves.`;
-  } else {
-    cost = `Nothing has been paid on either side and this order moved no stock, so undoing the invoice costs nothing.`;
-  }
+    + `To change what was RECEIVED, step the order back to Being prepared first; `
+    + `the receipt is undone on the buying list in What to buy.`;
+  if(pi.voided) return [route];
+
+  const custPays = (order.payments||[]).filter(p=> (Number(p.amount)||0) > 0);
+  const custPaid = custPays.reduce((sum,p)=> sum + (Number(p.amount)||0), 0);
+  const supPis = (data.purchaseInvoices||[]).filter(x=> x.quoteId === order.id);
+  const supPays = supPis.reduce((n,x)=> n + (x.payments||[]).length, 0);
+  const supPaid = supPis.reduce((sum,x)=> sum + (x.payments||[]).reduce((t,p)=> t + (Number(p.amount)||0), 0), 0);
+  const owed = Number(order.debtCharged) || 0;
+  const backAll = ((order.items)||[]).filter(it=> (Number(it._stockTaken)||0) > 0)
+    .map(it=> `${Number(it._stockTaken)} &times; ${esc(it.productName || it.productId || 'item')}`);
+  const back = backAll.slice(0, 2).join(', ') + (backAll.length > 2 ? ` and ${backAll.length - 2} more` : '');
+
+  /* Payments and their entries first, because that is the part with a
+     Cash Book row behind it; the debt second, worded as the write-off
+     it is; the shelf last, because it is a count somebody has to do. */
+  const paid = [];
+  if(custPaid > 0) paid.push(`${custPays.length} customer payment${custPays.length===1?'':'s'} totalling <b>${money(custPaid)}</b>`);
+  if(supPaid > 0) paid.push(`${supPays} supplier payment${supPays===1?'':'s'} totalling <b>${money(supPaid)}</b>`);
+  const said = [];
+  if(paid.length) said.push(`reverses ${paid.join(' and ')}, along with their cash book entries`);
+  if(owed > 0) said.push(`clears the <b>${money(owed)}</b> ${esc((order.client && order.client.name) || 'the customer')} still owes on it &mdash; written off, not collected, and there is no cash book entry to remove for it`);
+  if(backAll.length) said.push(`puts ${back} back on the shelf`);
+  const cost = said.length
+    ? `Undoing the invoice ${said.join('; ')}.`
+    : `Nothing has been paid on either side and this order moved no stock, so undoing the invoice costs nothing.`;
   /* The one instruction that has to be given BEFORE the destructive
      step, because afterwards the figures are gone from the screen that
      held them. */
-  const note = parts.length
+  const write = paid.length
     ? ` Write down what was paid, and on what day, before you start &mdash; it has to be recorded again afterwards.`
     : '';
-  return `${route} ${cost}${note}`;
+  /* Two paragraphs, not one block: the walk is what to do and the cost
+     is what it takes, and run together they read as one long warning
+     nobody finishes. */
+  return [route, `${cost}${write}`];
 }
 
 function piWireRegister(wrap){
+  /* THE WALK GOES BEHIND AN "i", the same mechanism the page headers
+     use. foldInstruction MOVES the paragraph into the bubble, so it can
+     only run once per rendered footer -- and the footer is rebuilt every
+     time a bill is opened, which is exactly when this runs. */
+  wrap.querySelectorAll('.ow-pi-cf-b').forEach(box=>{
+    const line = box.querySelector('.ow-pi-cf-n');
+    const help = [...box.querySelectorAll('.ow-pi-cf-h')];
+    if(line && help.length && typeof foldInstruction === 'function'){
+      foldInstruction(line, help, 'How this bill is corrected');
+    }
+  });
   wrap.querySelectorAll('[data-piopen]').forEach(b=> b.addEventListener('click', ()=>{
     const id = Number(b.dataset.piopen);
     piOpenId = piOpenId === id ? null : id;
