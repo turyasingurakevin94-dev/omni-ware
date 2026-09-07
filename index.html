@@ -47901,6 +47901,29 @@ function briefInStock(productId, variantIdx){
   return s.counted ? s.qty : null;
 }
 
+/* WHAT A STAGE REACHES. A stage names CATEGORIES -- roofing buys
+   sheets and nails -- and a shop's own "part of one job" rules say the
+   same kind of thing product by product: ridge caps are part of the
+   sheets job whatever category they sit in. Both are read here, so the
+   reason and the picture cannot offer different things for one stage.
+   The job only widens what the stage already reaches; it never reaches
+   for a customer whose stage nobody has dated. */
+function briefStageProducts(stage, habits){
+  const inStock = (id, v)=> { const s = briefInStock(id, v); return s === null || s > 0; };
+  const byCategory = (data.products||[]).filter(p=> stage.buys.includes(p.category));
+  const out = byCategory.slice();
+  const have = new Set(out.map(p=> p.id));
+  byCategory.forEach(p=>{
+    pairPartsOf(p.id).forEach(part=>{
+      const other = productById(part.productId);
+      if(!other || have.has(other.id)) return;
+      have.add(other.id);
+      out.push(other);
+    });
+  });
+  return out.filter(p=> inStock(p.id));
+}
+
 /* ---- why this customer, this fortnight ------------------------------
    One reason each, the dearest, so nobody is listed twice and the
    ranking is money rather than alphabet. Every rule is derived; none is
@@ -47963,8 +47986,7 @@ function briefReasonFor(r, habits){
   const site = customerSiteStage(r.c);
   if(site.fresh && site.stage.buys.length){
     const bought = new Set(habits.filter(h=> h.lastAt >= site.at).map(h=> h.productId));
-    const want = (data.products||[]).filter(p=> site.stage.buys.includes(p.category)
-      && !bought.has(p.id) && inStock(p.id));
+    const want = briefStageProducts(site.stage, habits).filter(p=> !bought.has(p.id));
     if(want.length){
       /* Sized from what they took last time rather than from a number
          this screen invented. Where there is nothing to size from, the
@@ -48598,7 +48620,7 @@ function briefGroups(c, habits){
   if(site.fresh && site.stage.buys.length){
     const sized = habits.length ? Math.max(...habits.map(h=> h.typicalQty)) : null;
     take('stage', `FOR YOUR ${String(site.stage.label).toUpperCase()}`,
-      (data.products||[]).filter(p=> site.stage.buys.includes(p.category))
+      briefStageProducts(site.stage, habits)
         .map(p=>{
           /* A stage names a CATEGORY, so it reaches the whole catalogue
              and would otherwise report every variable product in it as
@@ -77533,7 +77555,8 @@ function buyLineWhy(l){
      assistant -- the card renders this. Adding the tail to only one of
      them is how a merge that was built, tested and correct still read
      on screen as though half of it had never happened. */
-  const also = buyLineAlsoReason(l);
+  const also = buyLineAlsoReason(l)
+    + (l.boughtWith ? ` ${l.name} cannot be used without — it is on this plan because ${l.boughtWith} is, and the two are bought together.` : '');
   if(l.kind === 'stock'){
     const head = 'Bought in order after order and never held here.';
     if(!l.allPriced || !(l.paid30 > 0) || l.bulkCost == null)
@@ -77683,6 +77706,42 @@ function purchasePlan(budget, coverDays, dateISO){
   candidates.sort((a,b)=> (b.profit30 - a.profit30)
     || ((a.daysLeft == null ? Infinity : a.daysLeft) - (b.daysLeft == null ? Infinity : b.daysLeft)));
 
+  /* WHAT CANNOT BE SOLD WITHOUT THE OTHER. Sheets bought without the
+     nails to fix them are sheets nobody can use, and this plan ranked
+     the two by what each earned alone -- so the nails could sit ten
+     lines below the sheets and fall off the end of the budget.
+
+     A rule NEVER buys anything. It only moves a line the plan had
+     already decided to buy up beside the line that needs it, so the
+     two are bought together or not at all; the spend is unchanged. And
+     a needed thing the shelf still has enough of is not bought at all
+     -- it is NAMED, under the plan, so the owner can see the pairing
+     was read and answered rather than missed. */
+  const alongside = [];
+  const planByKey = new Map(candidates.map(l=> [l.productId + '::' + (l.variantIdx == null ? '' : l.variantIdx), l]));
+  candidates.slice().forEach(l=>{
+    pairCompanionsFor(l.productId, l.variantIdx, l.buyQty).forEach(c=>{
+      if(c.verbId !== 'needs' || c.why) return;
+      const mate = planByKey.get(c.productId + '::' + (c.variantIdx == null ? '' : c.variantIdx));
+      if(mate){
+        if(mate === l || mate.boughtWith) return;
+        /* Ranked as though it earned what the line it serves earns,
+           so the greedy spend reaches both together. */
+        mate.boughtWith = l.name;
+        mate.rankWith = Math.max(l.profit30, mate.profit30);
+      } else if(!alongside.some(x=> x.productId === c.productId && x.variantIdx === c.variantIdx)){
+        alongside.push({ productId: c.productId, variantIdx: c.variantIdx, name: c.label,
+          qty: c.qty, unit: c.unit, with: l.name, stock: c.stock });
+      }
+    });
+  });
+  if(candidates.some(l=> l.boughtWith)){
+    candidates.forEach(l=> { if(l.rankWith == null) l.rankWith = l.profit30; });
+    candidates.sort((a,b)=> (b.rankWith - a.rankWith)
+      || ((b.boughtWith ? 0 : 1) - (a.boughtWith ? 0 : 1))
+      || (b.profit30 - a.profit30));
+  }
+
   const lines = []; const didNotFit = [];
   /* MONEY ALREADY SPOKEN FOR CANNOT BE OFFERED AGAIN.
 
@@ -77712,7 +77771,10 @@ function purchasePlan(budget, coverDays, dateISO){
        orders already out. A screen given only one of them cannot
        explain the other. */
     budgetBefore: budget == null ? null : Math.round(budget), onOrder,
-    lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice, coming };
+    lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice, coming,
+    /* Read and answered rather than bought: what the lines above cannot
+       be used without, and the shelf still has. */
+    alongside: alongside.filter(a=> lines.some(l=> l.name === a.with)) };
 }
 
 /* ================= WHAT COLLECTING WOULD PAY FOR =================
@@ -77984,6 +78046,14 @@ function renderPurchasePlanPanel(){
       plan.didNotFit.length > 3 ? `<p class="ow-mini">and ${plan.didNotFit.length - 3} more.</p>` : ''}
     </div>`;
   }
+  /* READ AND ANSWERED, NOT BOUGHT. What the lines above cannot be used
+     without and the shelf still holds: named so the owner can see the
+     pairing was read, and nothing is added to the spend for it. */
+  if(plan.alongside && plan.alongside.length) work += `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Goes with what is being bought</span><span class="ow-pan-n">${plan.alongside.length} &middot; already on the shelf</span></div>
+    ${plan.alongside.slice(0, 5).map(a=> `<div class="ow-sr"><span class="ow-sr-k">${esc(a.name)} &mdash; ${esc(a.with)} cannot be used without it</span><span class="ow-sr-v">${a.stock == null ? 'not counted' : num(Math.round(a.stock)) + ' on the shelf'}</span></div>`).join('')}
+    <p class="ow-mini">Nothing is bought for these: the shelf has them. They are named because what is being bought needs them, and running out of one empties the other.</p>
+  </div>`;
 
   /* ---- the rail: where the budget came from, and what would change it ---- */
   /* WHAT IS LATE AND WHAT IS NEXT ARE TWO DIFFERENT FACTS. cashCommitments
@@ -78649,13 +78719,23 @@ function dashAlerts(ctx){
        zero while looking perfectly well formed. */
     const rowKey = s.productId + '::' + (s.variantIdx == null ? '' : s.variantIdx);
     const row = (ctx.itemRows||[]).find(r=> r.key === rowKey);
+    /* WHAT TO SELL THEM WHILE IT IS OUT. Reordering takes days; the
+       customer is at the counter today, and the owner has already
+       written down what stands in for this. Named here rather than
+       remembered, and only where the shelf can actually give it. */
+    const subs = pairSubstitutesFor(s.productId, s.variantIdx);
+    const sub = subs[0] || null;
     add({
       id: 'stockout:'+s.key, kind: 'stockout',
       dueDays: s.daysLeft, money: row ? Math.max(0, row.profit) : 0,
+      substitute: sub,
       title: `${s.name} runs out in ${s.daysLeft < 1 ? 'under a day' : agingDaysLabel(Math.round(s.daysLeft))}`,
       detail: `${Math.round(s.qty)} left, selling about ${s.dailyRate.toFixed(1)} a day.${
-        row && row.profit > 0 ? ` It earned ${fmtUGX(Math.round(row.profit))} of profit this period.` : ''}`,
-      action: 'Reorder it — What to buy has the plan.',
+        row && row.profit > 0 ? ` It earned ${fmtUGX(Math.round(row.profit))} of profit this period.` : ''}${
+        sub ? ` You wrote down ${sub.label} instead of it, and the shelf has ${Math.round(sub.stock)}.` : ''}`,
+      action: sub
+        ? `Offer ${sub.label} while it is out — and reorder this, What to buy has the plan.`
+        : 'Reorder it — What to buy has the plan.',
     });
   });
 
@@ -78803,6 +78883,22 @@ function dashAlerts(ctx){
       detail: `From ${esc(f.supplierName||'this supplier')}: ${fmtUGX(Math.round(f.first))} on ${esc(fmtShortDate(f.since))}, ${fmtUGX(Math.round(f.last))} now. Check the selling price still covers it.`,
       action: 'Compare prices' });
   });
+
+  /* WHAT THE SHOP HAS NOT FINISHED SAYING about its own goods. No
+     deadline and no money at stake: a size nothing follows costs a line
+     on one customer's picture, and a pair the books keep seeing costs a
+     rule nobody wrote. Both are quiet, chronic and easily forgotten,
+     which is what this band is for. */
+  if(ctx.pairs && (ctx.pairs.open || ctx.pairs.unjudged)){
+    const bits = [];
+    if(ctx.pairs.open) bits.push(`${ctx.pairs.open} size${ctx.pairs.open === 1 ? '' : 's'} nothing follows`);
+    if(ctx.pairs.unjudged) bits.push(`${ctx.pairs.unjudged} pair${ctx.pairs.unjudged === 1 ? '' : 's'} your orders keep showing`);
+    add({ id:'pairs:open', kind:'pairs', dueDays: null, money: 0,
+      title: `What goes with what is unfinished — ${bits.join(', ')}`,
+      detail: `${ctx.pairs.open ? `A size with nothing following it leaves that size's picture without the second thing rather than guessing at one. ` : ''}${
+        ctx.pairs.unjudged ? 'The books can see what lands on one invoice; only you know whether it is a rule or a coincidence.' : ''}`,
+      action: 'What goes with what — tick the size, or say yes or no.' });
+  }
 
   // Customers going quiet, collapsed the same way the debtors are.
   const quiet = ctx.goingQuiet || [];
@@ -83239,20 +83335,27 @@ function followUpPriceNow(f){
    report it on every open forever. What makes this news is the moment it
    crossed from nothing to something -- which the stock log records
    exactly, since qtyAfter and delta together give what was there before. */
-function followUpBackInStock(f, nowMs){
-  const s = followUpSubject(f);
-  if(s.kind !== 'product' || !s.product) return null;
-  const key = stockKey(s.product.id, s.variantIdx);
-  const since = followUpSinceMs(f);
+/* WHEN A SHELF WENT FROM EMPTY TO NOT EMPTY, since a moment. One
+   reading, because two reasons now ask it: the thing they asked about
+   coming back, and the thing that goes with it coming back. */
+function stockCrossedInSince(key, sinceMs){
   let latest = null;
   (data.stockLog||[]).forEach(l=>{
     if(l.key !== key) return;
     const delta = Number(l.delta)||0, after = Number(l.qtyAfter)||0;
     if(!(delta > 0 && after > 0 && (after - delta) <= 0)) return;
     const t = new Date(l.at || l.date).getTime();
-    if(isNaN(t) || t <= since) return;
+    if(isNaN(t) || t <= sinceMs) return;
     if(!latest || t > latest.t) latest = {t, qty: after, at: l.at || l.date};
   });
+  return latest;
+}
+function followUpBackInStock(f, nowMs){
+  const s = followUpSubject(f);
+  if(s.kind !== 'product' || !s.product) return null;
+  const key = stockKey(s.product.id, s.variantIdx);
+  const since = followUpSinceMs(f);
+  const latest = stockCrossedInSince(key, since);
   // Still has to be there NOW. It can arrive and sell out again before
   // anybody looks, and telling a client to come for goods that went
   // yesterday is worse than saying nothing.
@@ -83264,6 +83367,35 @@ function followUpBackInStock(f, nowMs){
     text: `${s.label} is back in stock`,
     short: `Back in — ${getStockQty(s.product.id, s.variantIdx)} on hand`,
     detail: `${getStockQty(s.product.id, s.variantIdx)} on hand`};
+}
+
+/* ---- 1b. What it goes WITH came back ---------------------------------
+   A follow-up is taken out on one thing, and the shop knows what that
+   thing is bought with. When the companion lands, the client who is
+   waiting for the first is the client with a reason to hear about the
+   second -- and only where the thing they actually asked for is on the
+   shelf too, because "your nails are in" to somebody whose sheets are
+   not is not news, it is a wasted trip. */
+function followUpCompanionIn(f, nowMs){
+  const s = followUpSubject(f);
+  if(s.kind !== 'product' || !s.product) return null;
+  if(getStockQty(s.product.id, s.variantIdx) <= 0) return null;
+  const since = followUpSinceMs(f);
+  let found = null;
+  pairCompanionsFor(s.product.id, s.variantIdx, 0).forEach(c=>{
+    if(found || c.why || !c.inStock) return;
+    if(c.verbId !== 'needs' && c.verbId !== 'with') return;
+    const latest = stockCrossedInSince(stockKey(c.productId, c.variantIdx), since);
+    if(!latest) return;
+    if(getStockQty(c.productId, c.variantIdx) <= 0) return;
+    found = { c, latest };
+  });
+  if(!found) return null;
+  const say = found.c.verbId === 'needs' ? 'which it cannot be used without' : 'which goes with it';
+  return {kind:'companion_in', at: found.latest.at,
+    text: `${found.c.label}, ${say}, is back in stock`,
+    short: `Goes-with in — ${found.c.label}`,
+    detail: `${getStockQty(found.c.productId, found.c.variantIdx)} on hand, and ${s.label} is on the shelf too`};
 }
 
 /* ---- 2. The sourcing got further ------------------------------------
@@ -83338,6 +83470,7 @@ function followUpReasons(f, nowMs){
   const now = nowMs || Date.now();
   const news = [
     followUpBackInStock(f, now),
+    followUpCompanionIn(f, now),
     followUpSourcingProgress(f),
     followUpPriceMoved(f),
   ].filter(Boolean);
@@ -83535,6 +83668,7 @@ let fupAwaiting = null;
 
 const FUP_REASON_PILLS = {
   back_in_stock:     {label:'Back in stock',  cls:'good'},
+  companion_in:      {label:'Goes-with in',   cls:'good'},
   sourcing_progress: {label:'Sourcing moved', cls:'good'},
   price_moved:       {label:'Price changed',  cls:'warn'},
   gone_quiet:        {label:'Gone quiet',     cls:''},
