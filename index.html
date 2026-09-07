@@ -10952,15 +10952,29 @@
   .pr-grid-h .pr-lbl{margin:0;flex:none;}
   .pr-grid-k{flex:1 1 0;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-grid-s{overflow-x:auto;}
-  .pr-grid{display:grid;grid-template-columns:minmax(120px,160px) repeat(var(--pr-cols,1),44px) minmax(200px,1fr);
+  /* Columns are as wide as their names need, between the tap size and
+     a hundred pixels; a long name wraps onto two or three lines rather
+     than being cut to its first four letters. The row names and the
+     header stay put while the rest scrolls, so a grid twenty sizes
+     wide still says which row and which column a square is in. */
+  .pr-grid{display:grid;grid-template-columns:minmax(120px,160px) repeat(var(--pr-cols,1),minmax(44px,100px)) minmax(200px,1fr);
     min-width:max-content;}
   .pr-gc{display:flex;align-items:center;min-height:36px;padding:0 var(--ow-sp-12);
     border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);min-width:0;}
   .pr-gc-corner{font-size:var(--ow-t-11);color:var(--ow-ink-400);border-top:0;}
-  .pr-gc-col{justify-content:center;padding:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);border-top:0;border-left:1px solid var(--ow-rule-soft);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pr-gc-row{font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:36px;}
+  .pr-gc-col{justify-content:center;align-items:flex-end;text-align:center;padding:var(--ow-sp-6) var(--ow-sp-4);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-tight);color:var(--ow-ink-600);
+    border-top:0;border-left:1px solid var(--ow-rule-soft);white-space:normal;overflow-wrap:anywhere;
+    position:sticky;top:0;background:var(--ow-paper);z-index:1;}
+  .pr-gc-row{font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:36px;
+    position:sticky;left:0;background:var(--ow-paper);z-index:2;}
+  .pr-gc-corner:first-child{position:sticky;left:0;background:var(--ow-paper);z-index:3;}
+  .pr-grid.pr-wide{grid-template-columns:160px 220px repeat(var(--pr-cols,1),minmax(44px,100px));}
+  .pr-wide .pr-gc-say,.pr-wide .pr-gc-sayh{position:sticky;left:160px;background:var(--ow-paper);z-index:2;
+    border-left:0;border-right:1px solid var(--ow-rule);}
+  .pr-wide .pr-gc-say{white-space:normal;flex-wrap:wrap;gap:var(--ow-sp-4);padding:var(--ow-sp-4) var(--ow-sp-12);}
+  .pr-wide .pr-gc-say i{white-space:normal;overflow:visible;}
+  .pr-wide .pr-gc-sayh{z-index:3;}
   .pr-gc-say{gap:var(--ow-sp-8);border-left:1px solid var(--ow-rule-soft);overflow:hidden;white-space:nowrap;}
   .pr-gc-say b{font-weight:var(--ow-fw-600);}
   .pr-gc-say i{font-style:normal;font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;}
@@ -11050,7 +11064,9 @@
     .pr-prod-s{font-size:var(--ow-t-13);}
     .pr-find,.pr-find-d .pr-find{height:var(--ow-tap);font-size:15px;}
     .pr-two{grid-template-columns:minmax(0,1fr);}
-    .pr-grid{grid-template-columns:56px repeat(var(--pr-cols,1),44px) minmax(120px,1fr);min-width:0;}
+    .pr-grid{grid-template-columns:56px repeat(var(--pr-cols,1),minmax(44px,88px)) minmax(120px,1fr);min-width:0;}
+    .pr-grid.pr-wide{grid-template-columns:56px 130px repeat(var(--pr-cols,1),minmax(44px,88px));min-width:max-content;}
+    .pr-wide .pr-gc-say,.pr-wide .pr-gc-sayh{left:56px;}
     .pr-gc{min-height:var(--ow-tap);padding:0 var(--ow-sp-8);}
     .pr-cell{height:auto;min-height:var(--ow-tap);align-self:stretch;}
     .pr-gc-row{line-height:var(--ow-tap);}
@@ -15738,8 +15754,7 @@
         <p class="ow-ph-sub">One product, every rule the shop knows about it &mdash; size by size, checked against your own orders.</p>
         <p class="ow-ph-help">A rule is one sentence about one product: it goes with that, needs so many of this per one, is part of one job with those, runs out after so many days. Pick the product on the left and everything the shop knows about it is on the right. Where both products come in sizes, the grid under a rule says which size goes with which &mdash; a tick is a rule for that pair, the figure inside it is how many of your orders carried both, and Match by size fills the diagonal. A size with no tick and no match is marked open: that size&rsquo;s picture leaves the second thing off rather than guess. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named with no quantity. Your own invoices check every rule and offer the pairs they keep seeing. A rule never changes a price, moves stock or places an order.</p>
         <span class="ow-ph-sp"></span>
-        <button type="button" class="btn btn-ghost ow-sm" id="pair_add_btn">        <span class="ow-ph-sp"></span>
-        <button type="button" class="btn btn-accent ow-sm" id="pair_add_btn">
+        <button type="button" class="btn btn-ghost ow-sm" id="pair_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Write a rule
         </button>
@@ -49421,17 +49436,25 @@ function pairGridHTML(rule, grid, draft){
       ${grid.toSized && grid.fromSized ? `<button type="button" class="btn btn-ghost ow-sm" data-pair="match" data-ref="${ref}">Match by size</button>` : ''}
       <button type="button" class="btn btn-ghost ow-sm" data-pair="clear" data-ref="${ref}">Clear</button>
     </div>
-    <div class="pr-grid-s"><div class="pr-grid" style="--pr-cols:${grid.cols.length}">
-      <div class="pr-gc pr-gc-corner">${grid.fromSized ? esc(briefShortName(fp.name)) + ' &darr;' : ''}${grid.toSized ? ` &middot; ${esc(briefShortName(tp.name))} &rarr;` : ''}</div>
-      ${grid.cols.map(c=> `<div class="pr-gc pr-gc-col" title="${esc(c.label)}">${esc(c.label)}</div>`).join('')}
-      <div class="pr-gc pr-gc-corner">What a picture takes today</div>
-      ${grid.rows.map(r=> `<div class="pr-gc pr-gc-row" title="${esc(r.label)}">${esc(r.label)}</div>
-        ${r.cells.map(c=> `<button type="button" class="pr-cell${on(c) ? ' pr-cell-on' : ''}" data-cell="${ref}:${c.i == null ? '' : c.i}:${c.j == null ? '' : c.j}"
+    ${(()=>{
+      /* A grid many sizes wide scrolls sideways. The answer column then
+         sits beside the row names, and both stay put while the squares
+         scroll under them -- otherwise the one thing the grid exists to
+         say is two screens to the right of the question. */
+      const wide = grid.cols.length > 6;
+      const cells = (r)=> r.cells.map(c=> `<button type="button" class="pr-cell${on(c) ? ' pr-cell-on' : ''}" data-cell="${ref}:${c.i == null ? '' : c.i}:${c.j == null ? '' : c.j}"
             aria-pressed="${on(c)}" title="${esc(fp.name)} ${esc(r.label)} &rarr; ${esc(tp.name)} ${esc(grid.cols[c.j == null ? 0 : c.j].label)}${c.orders ? ` &middot; ${c.orders} order${c.orders === 1 ? '' : 's'} carried both` : ''}">
           ${on(c) ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}` : `<span class="pr-box"></span>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}`}
-        </button>`).join('')}
-        <div class="pr-gc pr-gc-say">${words(r)}</div>`).join('')}
-    </div></div>
+        </button>`).join('');
+      const corner = `<div class="pr-gc pr-gc-corner">${grid.fromSized ? esc(briefShortName(fp.name)) + ' &darr;' : ''}${grid.toSized ? ` &middot; ${esc(briefShortName(tp.name))} &rarr;` : ''}</div>`;
+      const heads = grid.cols.map(c=> `<div class="pr-gc pr-gc-col" title="${esc(c.label)}">${esc(c.label)}</div>`).join('');
+      const sayHead = `<div class="pr-gc pr-gc-corner pr-gc-sayh">What a picture takes today</div>`;
+      return `<div class="pr-grid-s"><div class="pr-grid${wide ? ' pr-wide' : ''}" style="--pr-cols:${grid.cols.length}">
+      ${wide ? corner + sayHead + heads : corner + heads + sayHead}
+      ${grid.rows.map(r=> `<div class="pr-gc pr-gc-row" title="${esc(r.label)}">${esc(r.label)}</div>
+        ${wide ? `<div class="pr-gc pr-gc-say">${words(r)}</div>${cells(r)}` : `${cells(r)}<div class="pr-gc pr-gc-say">${words(r)}</div>`}`).join('')}
+    </div></div>`;
+    })()}
   </div>`;
 }
 function pairEditorHTML(rule, st){
