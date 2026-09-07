@@ -31,6 +31,8 @@ const src = read('index.html');
 
 const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow', 'stockCostsEqual',
   'effectiveStockPurchase', 'stockPurchaseMinQty', 'takeBackPurchaseLots', 'stockPurchaseInvoiceFor',
+  // A correction may not adopt a bill another delivery already carries.
+  'stockPurchaseChainIds', 'purchaseInvoiceClaimedByOther',
   'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'stockLogCorrectedTagHTML',
   'samePiLineTarget', 'applyPurchaseBillEdit', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue'];
 

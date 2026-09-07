@@ -61202,6 +61202,44 @@ function samePiLineTarget(it, productId, vIdx){
   const b = (vIdx == null || vIdx === '') ? '' : String(vIdx);
   return a === b;
 }
+/* EVERY ROW THIS PURCHASE HAS EVER BEEN, by id. A purchase corrected
+   twice is three rows describing one delivery, and all three may carry
+   its piId -- so "is this bill somebody else's" cannot be asked without
+   first knowing which rows are this purchase's own. */
+function stockPurchaseChainIds(e){
+  const ids = new Set([e.id]);
+  let row = e, guard = 0;
+  while(row && guard++ < 200){
+    let next = row.correctedBy
+      ? (data.stockLog || []).find(x => x.id === row.correctedBy)
+      : null;
+    if(!next) next = (data.stockLog || []).find(x => x !== row && x.corrects === row.id) || null;
+    if(!next) break;
+    ids.add(next.id);
+    row = next;
+  }
+  return ids;
+}
+/* A BILL ALREADY SPOKEN FOR IS NOT A BILL TO ADOPT.
+
+   The correction screen offered every unvoided single-line bill for the
+   item, whoever it belonged to. So a delivery of 16 cartons could adopt
+   the SETTLED 620,000 bill raised for a different delivery of 2, three
+   weeks earlier, from a different supplier -- and adopting rewrites that
+   bill's only line, so a paid invoice silently became a bill for 0.85 at
+   15,500. The shop then owed the wrong supplier the wrong money for the
+   wrong goods, and the delivery that really happened had no bill at all.
+
+   A bill any OTHER purchase row already carries is therefore not
+   offered. Its own chain is excluded, because a purchase corrected twice
+   is three rows describing one delivery and every one of them may carry
+   its piId -- excluding only the row in hand would hide the very bill
+   this correction is meant to repair. */
+function purchaseInvoiceClaimedByOther(piId, chainIds){
+  if(piId == null) return false;
+  return (data.stockLog || []).some(l=> l.piId != null && String(l.piId) === String(piId)
+    && !chainIds.has(l.id));
+}
 function stockPurchaseInvoiceFor(e){
   const eff = effectiveStockPurchase(e);
   const all = data.purchaseInvoices || [];
@@ -61335,6 +61373,10 @@ function applyStockPurchaseEdit(logId, next){
      check that can fail belongs above the first write. */
   let billItem = null;
   if(pi){
+    /* REFUSED HERE TOO, not only left out of the list. A dropdown is a
+       convenience; this is the rule. */
+    if(billAdopted && purchaseInvoiceClaimedByOther(pi.id, stockPurchaseChainIds(e))) return {ok: false,
+      error: `${purchaseInvoiceNumberLabel(pi)} already belongs to another delivery of ${e.label || e.productId}. Linking it here would rewrite that delivery's bill. Raise a bill for this one, or correct the delivery that bill really belongs to.`};
     billItem = (pi.items || []).find(it=> samePiLineTarget(it, e.productId, vIdx)) || null;
     /* REFUSED, NEVER HALF-WRITTEN. A bill carrying no line for this
        item is a bill this correction has no business editing, and
@@ -70441,8 +70483,13 @@ function ipeFillBillOptions(e, vIdx){
     note.style.display = 'none'; note.textContent = '';
     return;
   }
+  /* Bills another delivery already carries are left out -- see
+     purchaseInvoiceClaimedByOther. A settled bill for somebody else's
+     lorry is not this purchase's to rewrite. */
+  const chainIds = stockPurchaseChainIds(e);
   const cands = (data.purchaseInvoices || []).filter(pi => !pi.voided && !pi.quoteId
-    && (pi.items || []).length === 1 && samePiLineTarget(pi.items[0], e.productId, vIdx));
+    && (pi.items || []).length === 1 && samePiLineTarget(pi.items[0], e.productId, vIdx)
+    && !purchaseInvoiceClaimedByOther(pi.id, chainIds));
   billSel.disabled = false;
   billSel.innerHTML = `<option value="">(no bill linked — what is owed will NOT change)</option>`
     + cands.map(pi => `<option value="${esc(String(pi.id))}">${esc(purchaseInvoiceNumberLabel(pi))} — ${esc(pi.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceTotal(pi))))}</option>`).join('');
