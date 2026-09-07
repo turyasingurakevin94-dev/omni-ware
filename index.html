@@ -24062,7 +24062,7 @@ function waQuoteReply(m){
      while "we have it" is a claim only the shop can make. */
   const goes = m.productId
     ? pairCompanionsFor(m.productId, m.variantIdx, 1)
-        .find(c=> c.verbId !== 'instead' && c.inStock && !c.why && c.price != null)
+        .find(c=> c.verbId !== 'instead' && c.available && !c.why && c.price != null)
     : null;
   if(goes) lines.push(`Usually taken with ${goes.label}: UGX ${Number(goes.price).toLocaleString('en-UG')}${goes.unit ? ' per ' + goes.unit : ''}.`);
   lines.push('Reply here to order, or ask about anything else.');
@@ -47793,15 +47793,18 @@ function pairCompanionsFor(productId, variantIdx, qty, opts){
     row.evidence = row.standing.ev;
     if(!v.why){
       row.unit = productUnitLabel(l.toId, vi) || tp.unit || '';
-      row.stock = briefInStock(l.toId, vi);
-      row.inStock = row.stock === null || row.stock > 0;
+      const sup = briefSupply(l.toId, vi);
+      row.stock = sup.shelf; row.onShelf = sup.onShelf; row.lead = sup.lead;
+      row.how = sup.how; row.supply = briefSupplyWords(sup);
       const px = briefPriceFor(l.toId, vi, want || 1);
       if(px && px.price != null){ row.price = px.price; row.kind = px.kind; row.unit = px.unit || row.unit; }
       else row.why = (px && px.why) || 'noRow';
-      if(!row.inStock){
-        row.why = 'outOfStock';
-        if(o.substitute) row.substitutes = pairSubstitutesFor(l.toId, vi);
-      }
+      /* THE PRICE IS THE ANSWER. briefPriceFor prices from the shelf or
+         from a live supplier row and fails with 'outOfStock' only when
+         neither can give it -- so a thing we hold none of but can order
+         is offered, and marked as one to order. */
+      row.inStock = row.available = !row.why;
+      if(row.why === 'outOfStock' && o.substitute) row.substitutes = pairSubstitutesFor(l.toId, vi);
     }
     out.push(row);
   });
@@ -47815,6 +47818,9 @@ function pairCompanionsFor(productId, variantIdx, qty, opts){
    price is not a swap. */
 function pairSubstitutesFor(productId, variantIdx){
   const out = [];
+  /* The swap for a thing that is out is offered even where the swap
+     itself is not on OUR shelf: the supplier still has it, and this
+     shop buys to order. */
   pairingsFor(productId, variantIdx).filter(l=> l.verb === 'instead').forEach(l=>{
     const other = l.toId;
     if(other === productId) return;
@@ -47835,12 +47841,16 @@ function pairSubstitutesFor(productId, variantIdx){
       label: v.why ? tp.name : productVariantLabel(tp, svi), name: tp.name,
       stock: null, price: null, unit: '', usable: false, why: v.why || null };
     if(!row.why){
-      row.stock = briefInStock(other, svi);
+      const sup = briefSupply(other, svi);
+      row.stock = sup.shelf; row.onShelf = sup.onShelf; row.lead = sup.lead;
+      row.how = sup.how; row.supply = briefSupplyWords(sup);
       row.unit = productUnitLabel(other, svi) || tp.unit || '';
       const px = briefPriceFor(other, svi, 1);
       if(px && px.price != null){ row.price = px.price; row.unit = px.unit || row.unit; }
-      if(!(row.stock === null || row.stock > 0)) row.why = 'outOfStock';
-      else if(row.price == null) row.why = (px && px.why) || 'noRow';
+      /* Our own shelf being empty is not what stops a swap: we order it
+         in, as we do most things. Only a swap nobody can supply, or one
+         with no price to quote, cannot be offered. */
+      if(row.price == null) row.why = (px && px.why) || 'noRow';
       else row.usable = true;
     }
     out.push(row);
@@ -47853,7 +47863,7 @@ function pairSubstitutesFor(productId, variantIdx){
    act on -- each names the screen that fixes it. */
 function pairSwapFault(s){
   if(!s) return '';
-  if(s.why === 'outOfStock') return `${s.label} is out too`;
+  if(s.why === 'outOfStock') return `nobody can supply ${s.label} either`;
   if(s.why === 'pickVariant') return `${s.name} comes in sizes and the rule does not say which`;
   if(s.why === 'noRow' || s.why === 'noBase') return `${s.label} has no price on file`;
   if(String(s.why || '').startsWith('noRule')) return `${s.label} has no markup rule, so it cannot be priced`;
@@ -48079,6 +48089,48 @@ function briefStageProducts(stage, habits){
     });
   });
   return out.filter(p=> inStock(p.id));
+}
+
+/* WHAT THE SHOP CAN GIVE, which is not the same as what is on the shelf.
+
+   This shop buys most of its goods to order. Two different facts were
+   being read as one:
+
+     THE SHELF is what we are holding this minute -- data.stock. Empty
+     means we have none HERE, and says nothing about the supplier.
+     THE REGISTRY says whether anybody can supply it: a price row the
+     supplier has marked out of stock is dropped by rankedPriceRows, so
+     a live row IS a supplier who can still sell it to us.
+
+   A shelf of zero was treated as "cannot give it", so a companion or a
+   swap we could have ordered in was struck off a customer's picture as
+   though it did not exist. What the shop can give is the shelf OR the
+   registry; the shelf only decides WHEN -- today, or on the next
+   delivery -- and that is a promise, not an offer. */
+function briefSupply(productId, variantIdx){
+  const shelf = briefInStock(productId, variantIdx);
+  const onShelf = shelf === null || shelf > 0;
+  const rows = briefPriceRows(productId, variantIdx);
+  const supplier = rows.length > 0;
+  /* The shortest wait any supplier who HAS it has actually managed, or
+     nothing where the books cannot say. A lead time is derived from
+     their own deliveries; an invented one is a promise nobody made. */
+  let lead = null;
+  if(!onShelf && supplier){
+    rows.forEach(r=>{
+      const d = typeof supplierLeadDays === 'function' ? supplierLeadDays(r.supplierId) : null;
+      if(d != null && (lead == null || d < lead)) lead = d;
+    });
+  }
+  return { shelf, onShelf, supplier, lead,
+    can: onShelf || supplier,
+    how: onShelf ? 'shelf' : supplier ? 'order' : 'none' };
+}
+/* How a line would reach the customer, in the owner's words. */
+function briefSupplyWords(sup){
+  if(!sup || !sup.can) return 'nobody can supply it';
+  if(sup.onShelf) return sup.shelf === null ? 'on the shelf' : `${Number(sup.shelf).toLocaleString('en-UG')} on the shelf`;
+  return sup.lead != null ? `none here, about ${sup.lead} day${sup.lead === 1 ? '' : 's'} to order in` : 'none here, ordered in';
 }
 
 /* ---- why this customer, this fortnight ------------------------------
@@ -48391,18 +48443,22 @@ function customerBrief(customerId){
     dropped: (pick ? pairCompanionsFor(pick, pickVar, qty, { habits, substitute: true }) : [])
       .map(c=>{
         if(!productById(c.productId)) return { name: c.name, why:'not a product you sell' };
+        /* Only what NOBODY can supply is left out now. A thing we hold
+           none of is on the list, ordered in, and named in the reasoning
+           rather than here. */
         if(c.why !== 'outOfStock') return null;
         /* Out of stock, and whether anything was written down to stand
            in for it: an owner who has already answered that question
            should not be told only half of it. */
         const ok = c.substitutes.find(x=> x.usable);
-        if(ok) return { name: c.label, why: `out of stock — ${ok.label} is offered instead` };
+        if(ok) return { name: c.label, why: `no supplier has it — ${ok.label} is offered instead${ok.onShelf ? '' : ', ordered in'}` };
         /* A SWAP WRITTEN DOWN THAT CANNOT BE USED is the one case that
            must not read as "nothing was written": the owner made the
            rule, watched the picture stay silent, and needs to be told
            which of the three things to put right. */
         return { name: c.label, why: c.substitutes.length
-          ? `out of stock, and ${pairSwapFault(c.substitutes[0])}` : 'out of stock' };
+          ? `no supplier has it, and ${pairSwapFault(c.substitutes[0])}`
+          : 'no supplier has it' };
       }).filter(Boolean) };
 }
 
@@ -48708,6 +48764,15 @@ function briefVariantForLine(productId, habits, opts){
   if(usable.length === 1) return { variantIdx: usable[0], by: 'only' };
   const same = briefSameSizeAs(opts && opts.from, vs, usable);
   if(same != null) return { variantIdx: same, by: 'size' };
+  /* AND THE SIZE IS SETTLED BEFORE THE SUPPLY, on the surfaces that
+     answer supply themselves. The sizes above are the ones with a live
+     supplier row, so a size NOBODY can supply could not be matched at
+     all -- and the line came back "which size?" when the true sentence
+     was "the 14 is one nobody has". Named here; the caller says so. */
+  if(anyStock){
+    const any = briefSameSizeAs(opts && opts.from, vs, vs.map((v, i)=> i));
+    if(any != null) return { variantIdx: any, by: 'size' };
+  }
   return { why: 'pickVariant', choices: usable.length };
 }
 /* The one live size of `vs` that shares an attribute value with the
@@ -48822,10 +48887,15 @@ function briefGroups(c, habits){
         : `${productVariantLabel(p, variantIdx)} (${f(px.price)} against ${f(lastPaid)} paid)`;
       return leaveOff(productId, variantIdx, name, odd.why);
     }
+    const sup = briefSupply(productId, variantIdx);
     const vv = (variantIdx != null && p.variants && p.variants[variantIdx])
       ? variantLabel(p.variants[variantIdx].combo) : '';
     return Object.assign({ productId, name: p.name, variant: vv,
       packing: briefPackText(px), unit: px.unit, price: px.price, side: px.kind,
+      /* Not on OUR shelf, and orderable: the SHOP is told, so nobody
+         promises today what arrives on Thursday. The picture itself is
+         a price list and claims nothing either way. */
+      toOrder: !sup.onShelf, lead: sup.lead,
       packCost: px.packCost || null }, extra || {});
   };
   const take = (key, head, rows)=>{
@@ -49747,11 +49817,18 @@ function briefWhyHTML(b){
      four frames, so a reason naming a companion or a swap can rank a
      customer for something the picture then has no room to carry.
      Said here rather than left for the owner to notice. */
+  /* WHAT WOULD HAVE TO BE ORDERED IN. The picture is a price list and
+     promises no day; the shop, sending it, should know which lines are
+     not on the shelf before a customer asks for them this afternoon. */
+  const order = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.toOrder);
   const carried = (b.groups || []).some(g=> g.rows.some(r=> r.productId === (b.reason || {}).productId));
   const missing = b.reason && (b.reason.key === 'needs' || b.reason.key === 'swap') && !carried
     ? `<p class="ow-q-note">The reason names <b>${esc(b.product ? productVariantLabel(b.product, b.pickVariant) : '')}</b>, and the list has no room for it on ${BRIEF_MAX_LIST_FRAMES} pictures. Send it by hand, or say it in the message.</p>` : '';
   return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
     ${missing}
+    ${order.length ? `<p class="ow-q-note"><b>${order.length}</b> line${order.length === 1 ? '' : 's'} on this list ${order.length === 1 ? 'is' : 'are'} not on the shelf and would be ordered in:
+      ${order.map(r=> `<b>${esc(r.name)}</b>${r.lead != null ? ` (about ${r.lead} day${r.lead === 1 ? '' : 's'})` : ''}`).join(', ')}.
+      The picture names no day &mdash; say one only if you can keep it.</p>` : ''}
     ${cut > 0 ? `<p class="ow-q-note"><b>${cut}</b> more line${cut === 1 ? '' : 's'} would not fit on ${BRIEF_MAX_LIST_FRAMES} pictures and ${cut === 1 ? 'is' : 'are'} not on this list.</p>` : ''}
 ${briefLeftOffHTML(b.pricing)}
     ${(()=>{ const pc = (b.groups || []).flatMap(g=> g.rows).filter(r=> r.packCost);
@@ -49763,7 +49840,7 @@ ${briefLeftOffHTML(b.pricing)}
         ${up.map(r=> `<b>${esc(r.name)}</b> ${f(r.upFrom)} &rarr; ${f(r.price)}`).join(', ')}.
         The picture does not say so &mdash; a price list that advertises its own rises is not one &mdash; but they may remember, so know it before you send.</p>` : ''; })()}
     ${b.dropped.length ? `<p class="ow-q-note">Left out: ${b.dropped.map(d=>
-      `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shelf cannot give.</p>` : ''}
+      `<b>${esc(d.name)}</b> (${esc(d.why)})`).join(', ')}. A picture never offers what the shop cannot get.</p>` : ''}
     <p class="ow-q-note">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
 }
 
@@ -66447,7 +66524,7 @@ function tillGoesWith(){
   if(!last || !last.productId) return null;
   const on = new Set(tillSaleLines.map(l=> l.productId).filter(Boolean));
   return pairCompanionsFor(last.productId, last.variantIdx, Number(last.qty) || 0, { exclude: on })
-    .find(c=> (c.verbId === 'needs' || c.verbId === 'with') && c.inStock && !c.why && c.price != null) || null;
+    .find(c=> (c.verbId === 'needs' || c.verbId === 'with') && c.available && !c.why && c.price != null) || null;
 }
 function tillGoesWithHTML(){
   const c = tillGoesWith();
@@ -83851,7 +83928,7 @@ function followUpCompanionIn(f, nowMs){
   const since = followUpSinceMs(f);
   let found = null;
   pairCompanionsFor(s.product.id, s.variantIdx, 0).forEach(c=>{
-    if(found || c.why || !c.inStock) return;
+    if(found || c.why || !c.available) return;
     if(c.verbId !== 'needs' && c.verbId !== 'with') return;
     const latest = stockCrossedInSince(stockKey(c.productId, c.variantIdx), since);
     if(!latest) return;

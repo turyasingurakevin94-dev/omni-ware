@@ -34,12 +34,16 @@ const GLUE = { id: 'P-GLUE', name: 'Wood Glue', type: 'simple', unit: 'Tin' };
 const HINGE = { id: 'P-HINGE', name: 'Hinges', type: 'simple', unit: 'Pc' };
 
 const stock = new Map([
-  ['P-SOFT::0', 20], ['P-SOFT::1', 0], ['P-SOFT::2', 5],
+  ['P-SOFT::0', 20], ['P-SOFT::1', 0], ['P-SOFT::2', 0],
   ['P-SCR', 40], ['P-QUIET', 12], ['P-GLUE', 0], ['P-HINGE', 9],
 ]);
+/* THE SHELF AND THE SUPPLIER ARE TWO FACTS. The 14" soft close is one
+   NOBODY can supply -- every registry row is marked out of stock, so
+   there is no live row and no price. The 18" is simply not on our own
+   shelf: the supplier still has it and it is ordered in. */
+const supplierOut = new Set(['P-SOFT::1']);
 const prices = new Map([
   ['P-SOFT::0', { price: 9500, unit: 'Pair', kind: 'retail' }],
-  ['P-SOFT::1', { price: 10000, unit: 'Pair', kind: 'retail' }],
   ['P-SOFT::2', { price: 10500, unit: 'Pair', kind: 'retail' }],
   ['P-SCR', { price: 9000, unit: 'Box', kind: 'retail' }],
   ['P-QUIET', { price: 8800, unit: 'Pair', kind: 'retail' }],
@@ -71,12 +75,15 @@ const env = {
   productLinkName: (id)=> (env.productById(id) || {}).name || `${id} — gone from the catalogue`,
   productUnitLabel: (id, vi)=> (env.productById(id) || {}).unit || '',
   briefInStock: (id, vi)=> { const v = stock.get(key(id, vi)); return v === undefined ? null : v; },
-  briefPriceFor: (id, vi, qty)=> prices.get(key(id, vi)) || { why: 'noRow' },
-  rankedPriceRows: (id, vi)=> prices.has(key(id, vi)) ? [{ productId: id }] : [],
+  briefPriceFor: (id, vi, qty)=> supplierOut.has(key(id, vi)) ? { why: 'outOfStock' }
+    : (prices.get(key(id, vi)) || { why: 'noRow' }),
+  rankedPriceRows: (id, vi)=> (prices.has(key(id, vi)) && !supplierOut.has(key(id, vi)))
+    ? [{ productId: id, supplierId: 'S1' }] : [],
+  supplierLeadDays: ()=> 3,
 };
-const NAMES = ['pairVerb', 'pairReversed', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
+const NAMES = ['pairVerb', 'pairReversed', 'briefPriceRows', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
   'pairingsFor', 'pairRuleKey', 'pairRulesOf', 'pairStanding', 'pairEvidence', 'invoicedOrders',
-  'briefVariantForLine', 'briefSameSizeAs', 'pairCompanionsFor', 'pairSubstitutesFor', 'pairSwapFault', 'pairLastsDays',
+  'briefVariantForLine', 'briefSameSizeAs', 'briefSupply', 'briefSupplyWords', 'pairCompanionsFor', 'pairSubstitutesFor', 'pairSwapFault', 'pairLastsDays',
   'pairPartsOf', 'pairCooccurrence', 'observedPairs'];
 const fns = compileScope([
   extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
@@ -110,19 +117,33 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   eq(typeof noRatio.evidence.withFrom, 'number', 'the books are carried with every companion');
 }
 
-/* ---- 2. out of stock is named, not dropped --------------------------- */
+/* ---- 2. the shelf and the supplier are two different facts ----------- */
 {
+  /* NOT ON OUR SHELF, AND ORDERED IN. This shop buys to order, so a
+     thing we hold none of is still a thing we can sell -- offered, and
+     marked as one to order rather than struck off. */
+  const at18 = fns.pairCompanionsFor('P-RUN', 2, 2, { habits: [{ productId: 'P-SOFT', variantIdx: 2 }] })
+    .find(c=> c.productId === 'P-SOFT');
+  eq(at18.variantIdx, 2, 'the size they buy');
+  eq(at18.available, true, 'is still offered');
+  eq(at18.onShelf, false, 'though we are holding none');
+  eq(at18.how, 'order', 'because the supplier can still send it');
+  eq(at18.why, null, 'so nothing is left off');
+  t.check(/day/.test(at18.supply), 'and the wait is said where the books know it');
+
+  /* NOBODY CAN SUPPLY IT. Every row is marked out of stock in the
+     registry, which is a different sentence altogether. */
   const at14 = fns.pairCompanionsFor('P-RUN', 2, 2);
   const soft = at14.find(c=> c.productId === 'P-SOFT');
   eq(soft.variantIdx, 1, 'a 14" runner matches the 14" soft close');
-  eq(soft.inStock, false, 'which is not on the shelf');
+  eq(soft.available, false, 'which nobody can supply');
   eq(soft.why, 'outOfStock', 'said as itself rather than dropped');
   eq(soft.substitutes.length, 0, 'and no swap is offered unless one is asked for');
   add('P-QUIET', 'instead', 'P-SOFT', null, '', { toVariantIdx: 1 });
   const withSub = fns.pairCompanionsFor('P-RUN', 2, 2, { substitute: true }).find(c=> c.productId === 'P-SOFT');
   eq(withSub.substitutes.length, 1, 'an instead-of written the other way round still answers this stock-out');
   eq(withSub.substitutes[0].productId, 'P-QUIET', 'naming the thing that can stand in');
-  eq(withSub.substitutes[0].usable, true, 'and one the shelf can actually give');
+  eq(withSub.substitutes[0].usable, true, 'and one the shop can actually give');
 }
 
 /* ---- 3. what can stand in --------------------------------------------- */
@@ -131,6 +152,7 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   eq(subs.length, 1, 'the 14" soft close has one substitute');
   eq(subs[0].usable, true, 'which the shop can actually give');
   eq(subs[0].stock, 12, 'with what is on the shelf');
+  eq(subs[0].how, 'shelf', 'and it can go out today');
   eq(subs[0].price, 8800, 'and a price to quote');
   eq(fns.pairSubstitutesFor('P-SOFT', 0).length, 0, 'a swap written for the 14" is not offered for the 12"');
   /* A SWAP IS TRUE FROM BOTH ENDS. "Quiet Runner instead of the 14"
@@ -142,10 +164,12 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   /* Written down, unusable, and SAID so rather than dropped: the owner
      needs to know which of the three things to put right. */
   add('P-GLUE', 'instead', 'P-SCR', null, '');
+  /* Wood glue is not on our shelf, but nothing says the supplier is
+     out of it -- so it IS a swap, ordered in. */
   const glue = fns.pairSubstitutesFor('P-SCR', null);
-  eq(glue.length, 1, 'a swap the shelf has not got is still handed back');
-  eq(glue[0].usable, false, 'marked as one that cannot be offered');
-  t.check(/out too/.test(fns.pairSwapFault(glue[0])), 'with the reason in the owner\'s words');
+  eq(glue.length, 1, 'a swap we hold none of is still a swap');
+  eq(glue[0].usable, false, 'unless nothing can price it');
+  t.check(/no price on file/.test(fns.pairSwapFault(glue[0])), 'and the reason says which');
   eq(fns.pairSubstitutesFor('P-HINGE', null).length, 0, 'and a product nothing stands in for has none');
 }
 
@@ -253,8 +277,8 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   t.check(/function tillGoesWith\(\)\{/.test(src), 'the till reads what goes with the last thing added');
   t.check(/data-tillwith=/.test(src), 'and offers it as a tap');
   t.check(/tillAddSaleLine\(el\.dataset\.tillwith, vi\);/.test(src), 'which adds it the way the till adds anything');
-  t.check(/\.find\(c=> \(c\.verbId === 'needs' \|\| c\.verbId === 'with'\) && c\.inStock && !c\.why && c\.price != null\)/.test(src),
-    'never offering what the shelf has not got or the registry cannot price');
+  t.check(/\.find\(c=> \(c\.verbId === 'needs' \|\| c\.verbId === 'with'\) && c\.available && !c\.why && c\.price != null\)/.test(src),
+    'never offering what the shop cannot get or the registry cannot price');
 
   const habitsSrc = extractFunction(src, 'customerProductHabits', 'index.html');
   t.check(/rhythmBy = 'rule'/.test(habitsSrc), 'a rule can stand in for a rhythm the invoices cannot show yet');
@@ -347,6 +371,7 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   });
   const RNAMES = ['briefNeedsReason', 'briefSwapReason', 'pairCompanionsFor', 'pairSubstitutesFor',
     'pairEvidence', 'pairStanding', 'pairingsFor', 'pairReversed', 'productLinksAll', 'pairVerb', 'pairSizeIdx',
+    'briefSupply', 'briefSupplyWords', 'briefPriceRows',
     'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders'];
   const r = compileScope([
     extractDeclaration(src, 'PAIR_VERBS', 'index.html'),

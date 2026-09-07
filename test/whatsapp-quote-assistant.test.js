@@ -152,7 +152,7 @@ if (!scope) process.exit(1);
      the shop can say what is on the shelf, and it says that itself. */
   const m = scope.waQuoteMatch('cement price', cands);
   companionFixture.set(m.productId + (m.variantIdx == null ? '' : '::' + m.variantIdx),
-    [{ verbId: 'needs', label: 'River Sand', price: 30000, unit: 'trip', inStock: true, why: null }]);
+    [{ verbId: 'needs', label: 'River Sand', price: 30000, unit: 'trip', available: true, why: null }]);
   const withCompanion = scope.waQuoteReply(m);
   t.check(withCompanion.includes('Usually taken with River Sand: UGX 30,000 per trip.'),
     'one companion is named, with its price');
