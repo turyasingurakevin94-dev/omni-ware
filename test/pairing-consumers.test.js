@@ -257,5 +257,28 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   t.check(/times running/.test(reason), 'the other sentence being about the invoices');
 }
 
+/* ---- 11. what lands on one invoice, as a screen ---------------------- */
+{
+  const anEnv = { data, productById: env.productById, PAIR_VERBS: env.PAIR_VERBS };
+  const a = compileScope([
+    extractFunction(src, 'pairVerb', 'index.html'),
+    extractFunction(src, 'productLinksAll', 'index.html'),
+    extractFunction(src, 'pairCooccurrence', 'index.html'),
+    extractFunction(src, 'invoicedOrders', 'index.html'),
+    extractFunction(src, 'anRowsByPair', 'index.html'),
+  ], anEnv, ['anRowsByPair']);
+  const rows = a.anRowsByPair(data.savedQuotes);
+  const runScr = rows.find(r=> r.name === 'Runners' && r.mate === 'Black Screws');
+  eq(runScr.count, 4, 'four orders carried runners and screws');
+  eq(runScr.qty, 5, 'out of five that carried runners');
+  eq(Math.round(runScr.margin), 80, 'which is an attach rate of 80%');
+  const back = rows.find(r=> r.name === 'Black Screws' && r.mate === 'Runners');
+  eq(back.count, 4, 'the same four, read the other way round');
+  eq(Math.round(back.margin), 100, 'and every screw order carried runners — one row cannot say both');
+  eq(runScr.rule, 'Needs', 'a pair the shop has ruled on says which rule');
+  eq(back.rule, 'not judged', 'and one it has not says so');
+  t.check(rows.every(r=> !r.sales && !r.profit), 'there is no money in this view to add up');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);

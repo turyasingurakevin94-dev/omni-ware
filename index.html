@@ -15229,6 +15229,7 @@
             <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-view="item">By item</button>
             <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-view="customer">By customer</button>
             <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-view="doc">By document</button>
+            <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-view="pair">Bought together</button>
           </div>
           <span class="ow-pan-nt" id="an_order"></span>
           <span class="ow-pan-n" id="an_count"></span>
@@ -39631,7 +39632,8 @@ let anLastInvoices = [];
 const anSortState = {
   doc: {key:'date', dir:-1},
   item: {key:'profit', dir:-1},
-  customer: {key:'profit', dir:-1}
+  customer: {key:'profit', dir:-1},
+  pair: {key:'count', dir:-1}
 };
 /* What is DRAWN, out of AN_COLUMNS. The table showed all nine columns of
    every view at 13px; the export still writes all nine (and the star as
@@ -39647,14 +39649,16 @@ const anSortState = {
 const AN_SCREEN = {
   item:     ['name','qty','sales','profit','margin'],
   customer: ['name','count','sales','profit','margin'],
-  doc:      ['date','doc','customer','sales','profit','margin']
+  doc:      ['date','doc','customer','sales','profit','margin'],
+  pair:     ['name','mate','count','margin','rule']
 };
 /* The grid tracks per view. The figure columns are fixed and never give
    way; the identity column is the minmax(0,1fr) that yields. */
 const AN_TRACKS = {
   item:     '36px minmax(0,1fr) 104px 152px 152px 88px',
   customer: '36px minmax(0,1fr) 96px 152px 152px 88px',
-  doc:      '36px 100px 108px minmax(0,1fr) 152px 152px 88px'
+  doc:      '36px 100px 108px minmax(0,1fr) 152px 152px 88px',
+  pair:     '36px minmax(0,1fr) minmax(0,1fr) 128px 96px 140px'
 };
 /* The head a column wears ON SCREEN. AN_COLUMNS' labels are written for
    the export, where a column called "Margin" in a file with no other
@@ -39669,7 +39673,8 @@ const AN_HEAD = {
 };
 const AN_ORDER_NOTE = {
   item: 'ranked by gross profit', customer: 'ranked by gross profit',
-  doc: 'newest first — a ledger, not a ranking'
+  doc: 'newest first — a ledger, not a ranking',
+  pair: 'most orders with both first — every pair read both ways round'
 };
 const AN_COLUMNS = {
   doc: [
@@ -39701,6 +39706,18 @@ const AN_COLUMNS = {
     {key:'cost', label:'Cost of item sold', numeric:true, money:true},
     {key:'profit', label:'Gross profit', numeric:true, money:true},
     {key:'margin', label:'Gross margin', numeric:true, pct:true}
+  ],
+  /* WHAT LANDS ON ONE INVOICE. Not money -- a share. This is the only
+     view here whose figures are about two products at once, and the
+     last column says whether the shop has ruled on the pair, so the
+     reading and the writing of a rule sit on one screen. */
+  pair: [
+    {key:'name', label:'Item name'},
+    {key:'mate', label:'Bought with'},
+    {key:'count', label:'Orders with both', numeric:true},
+    {key:'qty', label:'Orders with the first', numeric:true},
+    {key:'margin', label:'Attach rate', numeric:true, pct:true},
+    {key:'rule', label:'Your rule'}
   ]
 };
 
@@ -39907,7 +39924,38 @@ function anRowsByCustomer(invoices){
 function anRowsForView(){
   if(anView==='item') return anRowsByItem(anLastInvoices);
   if(anView==='customer') return anRowsByCustomer(anLastInvoices);
+  if(anView==='pair') return anRowsByPair(anLastInvoices);
   return anRowsByDoc(anLastInvoices);
+}
+/* WHAT THE ORDERS SHOW ABOUT PAIRS, and what the shop has said about
+   them. The count is orders carrying BOTH; the attach rate is that
+   against the orders carrying the first, which is the same arithmetic
+   pairEvidence does for one rule -- so the screen and the pairings
+   editor can never disagree about a share. Each direction is its own
+   row, deliberately: eight of ten cement orders carry sand while two of
+   forty sand orders carry cement, and one row cannot say both. */
+function anRowsByPair(invoices){
+  const co = pairCooccurrence(invoices);
+  const orders = new Map();
+  (invoices||[]).forEach(q=>{
+    new Set((q.items||[]).map(it=> it.productId).filter(Boolean))
+      .forEach(id=> orders.set(id, (orders.get(id) || 0) + 1));
+  });
+  const ruleFor = (a, b)=> productLinksAll().find(l=> l.active !== false && l.fromId === a && l.toId === b);
+  const rows = [];
+  co.forEach((both, k)=>{
+    const [a, b] = k.split(' ');
+    const pa = productById(a), pb = productById(b);
+    if(!pa || !pb) return;
+    const withFirst = orders.get(a) || 0;
+    if(!withFirst) return;
+    const rule = ruleFor(a, b);
+    rows.push({ key: a + '>' + b, name: pa.name, mate: pb.name,
+      count: both, qty: withFirst, margin: both / withFirst * 100,
+      sales: 0, cost: 0, profit: 0,
+      rule: rule ? (pairVerb(rule.verb) || {}).label || rule.verb : 'not judged' });
+  });
+  return rows.sort((a, b)=> (b.count - a.count) || (b.margin - a.margin));
 }
 
 /* ---- What is on the screen, and only that ---------------------------
@@ -40359,8 +40407,14 @@ function anCellHTML(col, row, isFoot){
    same as a lorry load. */
 function anFootRowHTML(cols, rows){
   if(!rows.length) return '';
+  /* NOTHING TO TOTAL. A pair view's figures are counts of orders and a
+     share of them; adding the shares would weight a pair seen twice
+     like one seen forty times, and there is no money in the view to
+     add at all. A row of zeroes under it would read as a total. */
+  if(anView === 'pair') return '';
   const t = anVisibleTotals(rows);
   const label = anView==='item' ? `All ${rows.length} item${rows.length===1?'':'s'}`
+    : anView==='pair' ? `All ${rows.length} pair${rows.length===1?'':'s'}`
     : anView==='customer' ? `All ${rows.length} customer${rows.length===1?'':'s'}`
     : `All ${rows.length} invoice${rows.length===1?'':'s'}`;
   /* The label spans the row number and every identity column, so it has
@@ -40407,7 +40461,12 @@ function renderAnTable(){
       <div class="ow-tbl-n">No.</div>
       ${cols.map(c=>{
         const on = sort.key===c.key;
+        /* A column key means different things in different views:
+           `count` is invoices by customer and orders-with-both by pair,
+           and a head that said "Invoices" over an attach rate would be
+           a wrong label on a right figure. The view's own label wins. */
         const head = (c.key==='name' && anView==='customer') ? 'Customer'
+          : anView==='pair' ? c.label
           : (AN_HEAD[c.key] || c.label);
         return `<div class="${c.numeric?'ow-tbl-n':'ow-tbl-c'} an-th${on?' an-on':''}"
           data-key="${c.key}" role="button" tabindex="0"
@@ -53004,13 +53063,18 @@ function renderPricing(){
         ? `<div class="ow-pr-vd ow-bad"><b class="ow-pr-fig">${fmtUGX(cl.shortEach)}</b> below what it cost you &mdash; <b class="ow-pr-fig">${fmtUGX(cl.shortAll)}</b> over the ${r.qty} you hold, and <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer. Cash now against stock forever is your call, and this will not stop you making it.</div>`
         : `<div class="ow-pr-vd ow-good">You would keep <b class="ow-pr-fig">${cl.keptPct}%</b> &mdash; <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer if the lot goes. Nothing on your shelf changes: this writes the offer only.</div>`;
 
-    const buyers = deadStockBuyers(r.key);
+    /* Who has taken this, and -- for a line nobody has taken -- who
+       has taken what it goes with. A shop clearing something with no
+       buyers had nobody to write to at all; the nearest thing to a
+       buyer is somebody who bought the other half of the job. */
+    const buyers = deadStockBuyers(r.key)
+      .concat(deadStockCompanionBuyers(r.key));
     const ident = shopIdentity();
     const offers = !cl ? '' : buyers.length
       ? `<div class="ow-pr-of">
           <div class="ow-pr-of-h">
             <span class="ow-pr-of-t">Who has taken this before</span>
-            <span class="ow-pr-of-n">most units first &mdash; a counter sale leaves nobody to write to</span>
+            <span class="ow-pr-of-n">${buyers.some(b=> b.via) ? 'those who took it, then those who took what it goes with' : 'most units first'} &mdash; a counter sale leaves nobody to write to</span>
           </div>
           <div class="ow-pr-of-l">${buyers.map((b, i)=>{
             const id = String(b.customerId != null ? b.customerId : 'name:' + b.name.toLowerCase());
@@ -53019,7 +53083,7 @@ function renderPricing(){
             const msg = clearanceOfferMessage(b, [{ line: r.line, clearance: r.clearance, qty: r.qty, wasPaid }], ident);
             return `<button type="button" class="ow-pr-of-r${open?' ow-on':''}" data-offer="${esc(id)}" aria-expanded="${open}">
                 <span class="ow-pr-of-nm">${esc(b.name)}<span class="ow-pr-of-ph${b.phone?'':' ow-pr-nonum'}">${b.phone ? esc(b.phone) : 'no number on file'}</span></span>
-                <span class="ow-pr-of-b"><b>${b.units}</b> taken before${b.lastBought ? ' &middot; last ' + esc(fmtShortDate(b.lastBought)) : ''}</span>
+                <span class="ow-pr-of-b">${b.via ? `took <b>${b.units}</b> ${esc(briefShortName(b.via))}, which this goes with` : `<b>${b.units}</b> taken before`}${b.lastBought ? ' &middot; last ' + esc(fmtShortDate(b.lastBought)) : ''}</span>
                 <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
               </button>
               ${open ? `<div class="ow-pr-of-x">
@@ -75838,6 +75902,40 @@ function deadStockBuyers(key, sinceISO){
     byId.set(id, row);
   });
   return [...byId.values()]
+    .sort((a, b)=> (b.units - a.units) || String(b.lastBought || '').localeCompare(String(a.lastBought || '')));
+}
+/* WHO ELSE TO ASK about a line nobody has bought in months.
+
+   deadStockBuyers finds the people who bought THIS -- and for stock
+   that has not moved, that list is short by definition. The shop knows
+   what the thing goes with, and the people who bought THAT are the
+   nearest thing to a buyer it has: somebody who took the sheets is a
+   better bet for the ridge caps than a stranger.
+
+   Each name carries `via`, the companion that found them, because an
+   owner ringing somebody deserves to know why this name and not
+   another. Anyone who has already bought the dead line itself is left
+   to that list rather than said twice. */
+function deadStockCompanionBuyers(key, sinceISO){
+  const [productId, rawVi] = String(key).split('::');
+  const variantIdx = rawVi === undefined || rawVi === '' ? null : Number(rawVi);
+  const direct = new Set(deadStockBuyers(key, sinceISO).map(b=> b.customerId == null ? 'name:' + String(b.name).toLowerCase() : String(b.customerId)));
+  const seen = new Map();
+  const mates = pairCompanionsFor(productId, variantIdx, 0)
+    .filter(c=> c.verbId !== 'instead')
+    .concat(pairPartsOf(productId).map(p=>{
+      const other = productById(p.productId);
+      return other ? { productId: p.productId, variantIdx: p.variantIdx,
+        label: productVariantLabel(other, p.variantIdx) } : null;
+    }).filter(Boolean));
+  mates.forEach(c=>{
+    deadStockBuyers(stockKey(c.productId, c.variantIdx), sinceISO).forEach(b=>{
+      const id = b.customerId == null ? 'name:' + String(b.name).toLowerCase() : String(b.customerId);
+      if(direct.has(id) || seen.has(id)) return;
+      seen.set(id, Object.assign({}, b, { via: c.label }));
+    });
+  });
+  return [...seen.values()]
     .sort((a, b)=> (b.units - a.units) || String(b.lastBought || '').localeCompare(String(a.lastBought || '')));
 }
 
