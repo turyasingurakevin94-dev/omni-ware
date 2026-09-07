@@ -27,11 +27,13 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const store = { prices: [], products: [] };
-const NAMES = ['invPurchaseQtyValue', 'invPackContextFor', 'invQtyInBothUnits'];
+// The count screen reads its unit off the shelf's one reader, stockUnitFor.
+const NAMES = ['stockUnitFor', 'invPurchaseQtyValue', 'invPackContextFor', 'invQtyInBothUnits'];
 let fns = null, err = null;
 try {
   fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')), {
     data: store,
+    cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
     // The two price-row helpers, stubbed at the boundary this reads them.
     productPriceRows: () => store.prices,
     rankedPriceRows: () => store.prices.filter(r => !r.outOfStock),

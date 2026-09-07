@@ -96,7 +96,9 @@ const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockO
   'placeBuyOrder', 'setBuyOrderExpected', 'markBuyOrderSent', 'cancelBuyOrder',
   'buyOrderMessage', 'buyOrderWaUrl', 'waComposeUrl', 'supplierWaNumber',
   'receiveBuyOrder', 'buyOrdersSweep',
-  'buyOrderToolLines', 'purchasePlan'];
+  'buyOrderToolLines', 'purchasePlan',
+  // A delivery goes on the shelf in the shelf's unit.
+  'stockUnitFor', 'stockMoveOnRowUnit'];
 const CONSTS = ['REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
   'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS', 'BUY_ORDER_STALE_DAYS', 'BUY_ORDER_KEEP_DAYS'];
 
@@ -120,6 +122,7 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
       ? p.variants.map((_v, i) => ({ p, variantIdx: i }))
       : [{ p, variantIdx: null }]),
     saveData: () => {},
+    cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
     contactPhones: (s) => [s && s.phone].filter(Boolean),
     CASH_AHEAD_DAYS: 30,
     cashAhead: () => ({ safeToSpend: 2000000 }),

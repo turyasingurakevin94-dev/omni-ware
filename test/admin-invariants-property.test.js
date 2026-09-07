@@ -84,11 +84,14 @@ const env = {
   confirm: () => true,
   toast: () => {},
   fmtUGX: (n) => `${Math.round(n)} UGX`,
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
 };
 
 const NAMES = [
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
   'applyStockDelta', 'stockOnHand', 'getStockQty', 'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  // A sale leaves in the shelf's unit, read through these two.
+  'stockUnitFor', 'stockMoveOnRowUnit',
   // applyQuoteStockDeduction now also deducts a bought-in line that has
   // been received, so the test for that comes with it.
   'quoteLineReceived', 'quoteLineComesOffShelf',

@@ -221,7 +221,7 @@ const env = {
   daysBetweenISO: (a, b)=> Math.round((Date.parse(b) - Date.parse(a)) / 86400000),
   pairLastsDays: ()=> 0,
 };
-const HN = ['habitLineOnRowUnit', 'customerProductHabits', 'quoteLinePack'];
+const HN = ['stockUnitFor', 'stockMoveOnRowUnit', 'habitLineOnRowUnit', 'customerProductHabits', 'quoteLinePack'];
 const H = compileScope([
   extractDeclaration(src, 'TELL_MIN_ORDERS', 'index.html'),
   ...HN.map((n)=> extractFunction(src, n, 'index.html')),

@@ -40,7 +40,9 @@ const CARTONS = { supplierId: 'S1', sname: 'Shafik Katwe', wholesale: 78333, ret
 const NAMES = ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn',
   'quoteLineUnitsBought', 'quoteLineSurplus', 'quoteLineReceived', 'quoteLineComesOffShelf',
   'quoteLineExpected', 'receiveQuoteLine', 'unreceiveQuoteLine',
-  'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock'];
+  'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock',
+  // Every movement is restated in the shelf's unit on its way on.
+  'stockUnitFor', 'stockMoveOnRowUnit'];
 
 let movements = [];
 /* Stubbed rather than compiled in: the price registry drags in tier
@@ -54,6 +56,7 @@ const build = () => compileScope(
   NAMES.map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
   {
     productPriceRows: (pid, vi) => (pid === 'P1' && vi === 0 ? [CARTONS] : []),
+    cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
     supplierName: (id) => (id === 'S1' ? 'Shafik Katwe' : id),
     applyStockDelta: (productId, variantIdx, delta, type, note, cost, supplierId) =>
       movements.push({ productId, variantIdx, delta, type, note, cost, supplierId }),

@@ -81,7 +81,7 @@ const env = {
      only come from the invoices — which is what these checks are about. */
   pairLastsDays: ()=> null,
 };
-const NAMES = ['habitLineOnRowUnit', 'customerProductHabits', 'briefVariantForLine', 'briefSameSizeAs',
+const NAMES = ['stockUnitFor', 'stockMoveOnRowUnit', 'habitLineOnRowUnit', 'customerProductHabits', 'briefVariantForLine', 'briefSameSizeAs',
   'packFigurePerUnit', 'briefPaidFigure', 'updateProductLink', 'productLinkLabel', 'pairSizeIdx', 'pairFault',
   'pairDuplicateOf', 'pairSideLabel'];
 const fns = compileScope([

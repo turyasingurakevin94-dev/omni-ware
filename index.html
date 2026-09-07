@@ -48158,27 +48158,23 @@ function habitLineOnRowUnit(it){
   const qty = Number(it.qty) || 0;
   const price = quoteItemSellPrice(it);
   const asIs = { qty, price, unit: String(it.unit || '').trim(), converted: false, unitKnown: true };
-  /* The pack, from the line where it still carries one, else from the
-     registry. A line counted in cartons has its own count cleared on the
-     write, so the registry is usually the only thing that knows. */
-  const rows = typeof productPriceRows === 'function' ? productPriceRows(it.productId, vIdx) : [];
-  const live = rows.filter(r=> !r.outOfStock);
-  const packed = (live.find(r=> Number(r.packQty) > 0 && r.packUnit)
-    || rows.find(r=> Number(r.packQty) > 0 && r.packUnit) || null);
-  const base = cmpUnitKey(packed ? packed.unit : (rows.find(r=> r.unit) || {}).unit);
-  const lineUnit = cmpUnitKey(it.unit);
-  if(!packed) return asIs;
-  const pack = cmpUnitKey(packed.packUnit);
-  const pk = (Number(it.packQty) > 0 && cmpUnitKey(it.packUnit) === lineUnit)
-    ? Number(it.packQty) : Number(packed.packQty);
-  if(!lineUnit){
-    if(!base) return asIs;
+  /* The shelf's unit and pack, from the one reader the ledger itself
+     uses (stockUnitFor): the row unit a receipt is read on and the unit
+     a restock lands in have to be the same word, or the picture and the
+     shelf drift apart the way they did on ELEPHANT King. The pack comes
+     from the line where it still carries one, else from the registry --
+     a line counted in cartons has its own count cleared on the write,
+     so the registry is usually the only thing that knows. */
+  const shelf = stockUnitFor(it.productId, vIdx);
+  if(!shelf.hasPack) return asIs;
+  if(!cmpUnitKey(it.unit)){
+    if(!shelf.unit) return asIs;
     return Object.assign(asIs, { unitKnown: false });
   }
-  if(lineUnit === pack && lineUnit !== base && pk > 0)
-    return { qty: qty * pk, price: price / pk, unit: String(packed.unit || '').trim(),
-      converted: true, unitKnown: true, packQty: pk, packUnit: String(packed.packUnit).trim() };
-  return asIs;
+  const move = stockMoveOnRowUnit(it.productId, vIdx, qty, it.unit, price, it);
+  if(!move.converted) return asIs;
+  return { qty: move.qty, price: move.cost, unit: shelf.unit,
+    converted: true, unitKnown: true, packQty: move.packQty, packUnit: move.packUnit };
 }
 function customerProductHabits(customerId){
   const today = todayISO();
@@ -48249,7 +48245,18 @@ function customerProductHabits(customerId){
       asPack: last.l.asPack || null,
       /* Negative means it is already overdue, which is still "due". */
       dueIn: everyDays === null ? null : everyDays - sinceLast,
-      typicalQty: Math.round(order.reduce((s, o)=> s + o.q, 0) / order.length),
+      /* ROUNDED ON THE PACK, where the habit is packed. The average of
+         1, 4, 1 and 1 cartons is 35 dozen -- whole in dozens, and shown
+         to the shop as "1.8 Ctn", a figure nobody has ever taken. Still
+         in the row's unit, so every weighting that multiplies it stays
+         comparable; only the rounding moves up to the unit the customer
+         actually asks in. Never below one pack: a packed habit of a
+         fraction of a pack would be the same fault the other way. */
+      typicalQty: (()=>{
+        const avg = order.reduce((s, o)=> s + o.q, 0) / order.length;
+        const pk = (last.l.asPack && Number(last.l.asPack.packQty)) || 0;
+        return pk > 0 ? Math.max(pk, Math.round(avg / pk) * pk) : Math.round(avg);
+      })(),
     };
   }).filter(h=> h.orders > 0);
 }
@@ -60733,6 +60740,62 @@ function stockOnHand(productId, variantIdx){
   return { qty: Number(raw) || 0, counted: raw != null };
 }
 function getStockQty(productId, variantIdx){ return stockOnHand(productId, variantIdx).qty; }
+
+/* ---- ONE UNIT PER SHELF -----------------------------------------------
+   A shelf is one running count, and a count is only a number while every
+   movement on it is in the same unit. It was not. A restock went on in
+   whatever unit the SUPPLIER'S price row is written in; a stock count
+   came off whichever row ranks cheapest; a sale left in the unit the
+   order line was written in. On a shelf two suppliers price per Ctn and
+   a third per Dozen, those are different rows.
+
+   ELEPHANT King, Short / Single Lock: twelve cartons went in, eight were
+   sold, four were left -- and then the shelf was "counted" at 76 dozen
+   on top of the 4 cartons, because the count screen offered dozens. 80
+   of nothing, valued at (4 x 290,000 + 76 x 14,000) / 80 = 27,800 each,
+   and the next customer picture quoted 566,000 a carton off that.
+
+   So a shelf has ONE unit, read here and nowhere else: the base unit of
+   the row that carries a pack -- the row the invoices are already read
+   on, see habitLineOnRowUnit -- or, where nothing packs, the first row
+   with a unit. Every movement that knows the unit it was said in is
+   restated in that unit on its way onto the ledger, through
+   stockMoveOnRowUnit below. A row whose unit IS its pack unit ("cartons
+   of cartons") is not a pack. */
+function stockUnitFor(productId, variantIdx){
+  const vIdx = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  const rows = typeof productPriceRows === 'function' ? productPriceRows(productId, vIdx) : [];
+  const packs = (r)=> Number(r.packQty) > 0 && !!r.packUnit && cmpUnitKey(r.packUnit) !== cmpUnitKey(r.unit);
+  const packed = rows.filter(r=> !r.outOfStock).find(packs) || rows.find(packs) || null;
+  const unit = String((packed ? packed.unit : (rows.find(r=> r.unit) || {}).unit) || '').trim();
+  const packQty = packed ? Number(packed.packQty) : 0;
+  const packUnit = packed ? String(packed.packUnit).trim() : '';
+  return { unit, packQty, packUnit, hasPack: packQty > 0 && !!packUnit };
+}
+/* A movement said in some unit, restated in the shelf's. qty and cost
+   are as the line says them, unit is the word written beside them. A
+   movement in the shelf's PACK multiplies up and its cost divides down;
+   one in the shelf's own unit, or with no unit at all, passes through
+   untouched. A unit that nothing on file joins to the shelf's also
+   passes through -- and is named (joined: false), because guessing a
+   conversion would put a confident face on a wrong figure. linePack is
+   a pack the line itself carries, preferred over the row's when it names
+   the same unit, as habitLineOnRowUnit has always done. */
+function stockMoveOnRowUnit(productId, variantIdx, qty, unit, cost, linePack){
+  const n = Number(qty) || 0;
+  const c = (cost == null || cost === '' || isNaN(cost)) ? null : Number(cost);
+  const shelf = stockUnitFor(productId, variantIdx);
+  const said = cmpUnitKey(unit);
+  const asIs = { qty: n, cost: c, unit: shelf.unit, converted: false, joined: true, packQty: 0, packUnit: '' };
+  if(!said || !shelf.unit || said === cmpUnitKey(shelf.unit)) return asIs;
+  if(shelf.hasPack && said === cmpUnitKey(shelf.packUnit)){
+    const pk = (linePack && Number(linePack.packQty) > 0 && cmpUnitKey(linePack.packUnit) === said)
+      ? Number(linePack.packQty) : shelf.packQty;
+    return { qty: n * pk, cost: c == null ? null : c / pk, unit: shelf.unit,
+      converted: true, joined: true, packQty: pk, packUnit: shelf.packUnit };
+  }
+  return Object.assign(asIs, { joined: false });
+}
 // Our-stock purchase cost — tracked as FIFO lots per stock item. Each lot is
 // {qty, cost} in the order it was purchased; a purchase pushes a new lot
 // onto the end, and any reduction in stock (sale, correction, damage, etc.)
@@ -61257,8 +61320,12 @@ function applyQuoteStockDeduction(q){
     if(!quoteLineComesOffShelf(it)) return;
     const have = getStockQty(it.productId, it.variantIdx);
     const want = Number(it.qty)||0;
-    const take = Math.min(have, want);
-    if(take < want) shortfall = true;
+    /* Off the shelf in the SHELF'S unit. A line sold as 1 Ctn off a
+       shelf counted in dozens takes twenty dozen, not one of something;
+       the restock that put the carton there was restated the same way. */
+    const need = stockMoveOnRowUnit(it.productId, it.variantIdx, want, it.unit, null, it).qty;
+    const take = Math.min(have, need);
+    if(take < need) shortfall = true;
     it._stockTaken = take;
     // The lots as well as the quantity. Un-invoicing used to add the units
     // back as one fresh lot with no cost on it, so a sale that cleared an
@@ -61377,9 +61444,20 @@ function receiveQuoteLine(it, qty, price, q){
   syncPriceRegistryFromPurchase(it.productId, it.variantIdx == null ? null : it.variantIdx,
     it.supplierId, it.receivedPrice, n, {confirms: true, unit: it.unit});
 
-  applyStockDelta(it.productId, it.variantIdx, n, 'restock',
-    `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
-    it.receivedPrice || null, it.supplierId);
+  /* ONTO THE SHELF IN THE SHELF'S UNIT. The line is written in the
+     supplier's unit and stays so -- receivedQty, the receipts, the
+     price told to the registry are all the supplier's words. The
+     ledger is not: two cartons received on a shelf counted in dozens
+     are forty dozen, at a twentieth of the carton price. What was put
+     on is remembered on the line, so undoing the receipt takes back
+     exactly that and not a re-conversion under a pack size that may
+     have been edited since. */
+  const put = stockMoveOnRowUnit(it.productId, it.variantIdx, n, it.unit, it.receivedPrice || null, it);
+  it.receivedOnShelf = (Number(it.receivedOnShelf) || 0) + put.qty;
+  applyStockDelta(it.productId, it.variantIdx, put.qty, 'restock',
+    `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`
+      + (put.converted ? ` — ${n} ${it.unit}` : ''),
+    put.cost, it.supplierId);
   return n;
 }
 /* Undoing a receipt, for the delivery that was recorded before it was
@@ -61388,9 +61466,14 @@ function receiveQuoteLine(it, qty, price, q){
 function unreceiveQuoteLine(it){
   if(!quoteLineReceived(it)) return 0;
   const n = Number(it.receivedQty) || 0;
-  applyStockDelta(it.productId, it.variantIdx, -n, 'reversal',
+  /* What the receipt put on the shelf, in the shelf's unit; a receipt
+     recorded before that was written down is restated the same way it
+     would be put on today. */
+  const onShelf = it.receivedOnShelf != null ? Number(it.receivedOnShelf) || 0
+    : stockMoveOnRowUnit(it.productId, it.variantIdx, n, it.unit, null, it).qty;
+  applyStockDelta(it.productId, it.variantIdx, -onShelf, 'reversal',
     `Receipt undone — ${supplierName(it.supplierId)}`, null, null);
-  delete it.receivedQty; delete it.receivedPrice; delete it.receivedAt;
+  delete it.receivedQty; delete it.receivedPrice; delete it.receivedAt; delete it.receivedOnShelf;
   // Every arrival goes with it, or the next receipt would append to a
   // history whose goods have just been taken back off the shelf.
   delete it.receipts;
@@ -61418,12 +61501,15 @@ function applyQuoteSurplusToStock(q){
     if(quoteLineReceived(it)) return;
     const surplus = quoteLineSurplus(it);
     if(!(surplus > 0)) return;
-    it._surplusStocked = surplus;
+    // In the shelf's unit, like every other movement; the line's own
+    // unit is the supplier's, and the two are not always the same word.
+    const put = stockMoveOnRowUnit(it.productId, it.variantIdx, surplus, it.unit, Number(it.price) || null, it);
+    it._surplusStocked = put.qty;
     const packName = it.packUnit || 'pack';
-    applyStockDelta(it.productId, it.variantIdx, surplus, 'restock',
+    applyStockDelta(it.productId, it.variantIdx, put.qty, 'restock',
       `Left over from ${(q.client && q.client.name) || 'a quote'} — ${supplierName(it.supplierId)} sells by the ${packName}`,
-      Number(it.price) || null, it.supplierId);
-    total += surplus;
+      put.cost, it.supplierId);
+    total += put.qty;
   });
   return total;
 }
@@ -70605,6 +70691,11 @@ let invPurchaseQtyUnitMode = 'unit';
 // So the price carries its own unit, exactly as the quantity does, and is
 // divided down before anything stores it.
 let invPurchasePriceUnitMode = 'unit';
+/* Which supplier the unit selectors were last defaulted for. A supplier
+   who prices by the shelf's pack opens the form in that pack -- see
+   renderInvPurchaseStage -- and this stops the default re-applying over
+   a choice the buyer has since made. */
+let invPurchasePackDefaultFor = null;
 
 function invRenderList(query){
   const tokens = searchTokens(query);
@@ -70639,7 +70730,7 @@ function invRenderList(query){
 function invShowSearchView(){
   invProductId = null; invVariantIdx = null; invPresetAction = null; invPurchaseSupplierId = null;
   invPurchaseConsign = false;
-  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit'; invPurchasePackDefaultFor = null;
   document.getElementById('invModalTitle').textContent = 'Adjust stock';
   document.getElementById('inv_stage_view').style.display = 'none';
   document.getElementById('inv_stage_view').innerHTML = '';
@@ -70671,7 +70762,7 @@ function invSelectProduct(id, variantIdx=null, action=null, preset=null){
   invPresetAction = action;
   invPurchaseSupplierId = null;
   invPurchaseConsign = false;
-  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit'; invPurchasePackDefaultFor = null;
   // After the resets, or they would wipe it. Quantity is always in
   // loose units: that is what the plan counts in.
   if(preset){
@@ -70867,17 +70958,17 @@ function renderInvStage(){
    weeks later by reading the movement log.
 
    The pack comes off a price row, because that is where a supplier's
-   packing is recorded. Given a supplier, theirs; otherwise the
-   best-priced row, which is the one the purchase screen would have
-   opened on anyway. */
+   packing is recorded -- but off the SHELF'S row, never a supplier's.
+   This used to take the supplier's row when given one and the cheapest
+   otherwise, and the purchase screen took the supplier's row always: on
+   a shelf where two suppliers price per Ctn and a third per Dozen, that
+   put restocks on the ledger in cartons and stock counts in dozens, on
+   the same running number. See stockUnitFor, which is now the one
+   reader for both screens. The supplier argument is kept for callers
+   and ignored: what a supplier packs in is their business, and what the
+   shelf is counted in is not theirs to change. */
 function invPackContextFor(productId, variantIdx, supplierId){
-  const rows = productPriceRows(productId, variantIdx).filter(r=> !r.outOfStock);
-  const row = (supplierId ? rows.find(r=> r.supplierId === supplierId) : null)
-    || rankedPriceRows(productId, variantIdx)[0] || null;
-  const packQty = row ? Number(row.packQty)||0 : 0;
-  const packUnit = row ? (row.packUnit||'') : '';
-  const unit = row ? (row.unit||'') : '';
-  return { packQty, packUnit, unit, hasPack: packQty > 0 && !!packUnit };
+  return stockUnitFor(productId, variantIdx);
 }
 // The same figure said the way the shop says it: "600 Pair · 6 Ctn".
 function invQtyInBothUnits(qty, ctx){
@@ -70934,21 +71025,28 @@ function invPurchasePriceNote(rawPrice, unit, packQty, unitMode){
 // at", which stays a normal editable field either way.
 let invPurchaseConsign = false;
 function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn){
-  const allRows = productPriceRows(invProductId, variantIdx).filter(r=>!r.outOfStock);
   const supplierLabelForConsign = invPurchaseSupplierId ? supplierName(invPurchaseSupplierId) : '';
 
   // A typed "3" means something different depending on whether it's 3
-  // loose units or 3 packs, and that depends on units-per-pack -- which
-  // varies by supplier. Use whichever supplier is currently selected
-  // (sticky across re-renders) to supply that context, falling back to
-  // the flat-cheapest row the very first time this stage renders for an
-  // item, before any quantity or selection has been made yet.
-  const staticRanked = rankedPriceRows(invProductId, variantIdx);
-  const contextRow = allRows.find(r=>r.supplierId===invPurchaseSupplierId) || staticRanked[0] || null;
-  const packQty = contextRow ? Number(contextRow.packQty)||0 : 0;
-  const packUnit = contextRow ? (contextRow.packUnit||'') : '';
-  const unit = contextRow ? (contextRow.unit||'') : '';
-  const hasPack = packQty>0 && !!packUnit;
+  // loose units or 3 packs, and that depends on units-per-pack. THE
+  // SHELF'S, not the selected supplier's: this used to read the pack off
+  // whichever supplier was ticked, so a supplier whose row is written
+  // per Ctn put cartons on a ledger the stock count keeps in dozens.
+  // One reader (stockUnitFor) for both screens, so a carton means the
+  // same thing whichever door it comes through.
+  const shelf = stockUnitFor(invProductId, variantIdx);
+  const packQty = shelf.packQty;
+  const packUnit = shelf.packUnit;
+  const unit = shelf.unit;
+  const hasPack = shelf.hasPack;
+  /* A supplier who prices BY THE SHELF'S PACK. Their row says 290,000
+     per Ctn where the shelf counts dozens at twenty to the carton; that
+     is one price, not two, and the row's figures are read as pack
+     figures: divided down to the shelf's unit for the ranking and the
+     ledger, offered back in the supplier's own words on the form. */
+  const rowInPack = (r)=> !!r && hasPack && cmpUnitKey(r.unit) === cmpUnitKey(packUnit)
+    && cmpUnitKey(r.unit) !== cmpUnitKey(unit);
+  const rowPerUnit = (r, p)=> p == null ? null : (rowInPack(r) ? p / packQty : p);
   if(invPurchaseQtyUnitMode==='pack' && !hasPack) invPurchaseQtyUnitMode = 'unit';
   if(invPurchasePriceUnitMode==='pack' && !hasPack) invPurchasePriceUnitMode = 'unit';
   const qty = invPurchaseQtyValue(invPurchaseQtyRaw, invPurchaseQtyUnitMode, packQty);
@@ -70957,19 +71055,43 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   // (their own volume tiers, if any) rather than by their flat qty-1 rate
   // -- the "best" one can change as the typed quantity crosses a
   // breakpoint, which is the whole point of asking "for this quantity".
-  const rankedForQty = rankedPurchaseRowsAtQty(invProductId, variantIdx, qty);
+  // A row priced by the pack is asked at the quantity IN PACKS, since
+  // that is what its tiers count in, and ranked on what one shelf unit
+  // costs -- 290,000 a carton of twenty is not dearer than 14,600 a
+  // dozen, and sorting the raw figures said it was.
+  const rankedForQty = rankedPurchaseRowsAtQty(invProductId, variantIdx, qty)
+    .map(r=> rowInPack(r) ? Object.assign({}, r, { purchasePrice: purchasePriceAtQty(r, qty / packQty) }) : r)
+    .sort((a,b)=>{
+      const ap = rowPerUnit(a, a.purchasePrice), bp = rowPerUnit(b, b.purchasePrice);
+      return (ap!=null ? ap : Infinity) - (bp!=null ? bp : Infinity);
+    });
   const top3 = rankedForQty.slice(0, 3);
 
   if(!invPurchaseSupplierId || !top3.some(r=>r.supplierId===invPurchaseSupplierId)){
     invPurchaseSupplierId = top3.length ? top3[0].supplierId : null;
   }
   const selectedRow = top3.find(r=>r.supplierId===invPurchaseSupplierId) || null;
+  /* IN THE SUPPLIER'S OWN WORDS BY DEFAULT. A supplier who sells by the
+     carton is answered in cartons: the form opens with both selectors
+     on the pack, so "2 @ 290,000" means what the buyer has in their
+     hand and lands on the shelf as 40 Dozen at 14,500. Once, per
+     supplier, and never over a choice already made. */
+  if(rowInPack(selectedRow) && invPurchasePackDefaultFor !== selectedRow.supplierId && invPurchaseQtyRaw === ''){
+    invPurchaseQtyUnitMode = 'pack'; invPurchasePriceUnitMode = 'pack';
+  }
+  invPurchasePackDefaultFor = selectedRow ? selectedRow.supplierId : null;
+  /* A supplier whose unit nothing on file joins to the shelf's: per Box
+     on a shelf of Pieces with no pack recorded. Nothing here can convert
+     that, so it is said rather than guessed, and what is typed goes on
+     the shelf in the shelf's unit as before. */
+  const unjoined = !!selectedRow && !!cmpUnitKey(selectedRow.unit) && !!unit
+    && cmpUnitKey(selectedRow.unit) !== cmpUnitKey(unit) && !rowInPack(selectedRow);
   // Auto-filled in whatever unit the price field is currently ASKING for.
   // Filling it with the per-unit figure while the label said "per Ctn"
   // would be the same trap wearing the opposite mask.
   const priceInPack = invPurchasePriceUnitMode==='pack' && packQty>0;
   const startPrice = selectedRow && selectedRow.purchasePrice!=null
-    ? Math.round(selectedRow.purchasePrice * (priceInPack ? packQty : 1)) : '';
+    ? Math.round(rowPerUnit(selectedRow, selectedRow.purchasePrice) * (priceInPack ? packQty : 1)) : '';
 
   const rankLabels = ['BEST', '2ND', '3RD'];
   const cardsHtml = top3.map((r,i)=>{
@@ -70992,12 +71114,13 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head"><div class="q-stage-name">${esc(displayName)}</div></div>
-    <div class="q-stage-summary" style="margin-top:0;">Currently in stock: <strong>${current}</strong></div>
+    <div class="q-stage-summary" style="margin-top:0;">Currently in stock: <strong>${esc(invQtyInBothUnits(current, shelf))}</strong></div>
 
     ${top3.length
       ? `<div class="q-section-label" style="margin-top:14px;">Cheapest suppliers for this quantity</div>
          <div class="q-supplier-cards-h">${cardsHtml}</div>`
       : `<div class="q-empty-hint" style="margin-top:14px;">No priced suppliers for this item yet — add prices in the Price Registry tab.</div>`}
+    ${unjoined ? `<div class="q-empty-hint" style="margin-top:6px;">${esc(selectedRow.sname)} prices per ${esc(selectedRow.unit)}, and this shelf is counted in ${esc(unit)} — nothing on file says how many ${esc(unit)} make a ${esc(selectedRow.unit)}. What you type here goes on the shelf as ${esc(unit)}. To have it converted, set the pack on that supplier's Price Registry row.</div>` : ''}
 
     <label class="sq-select-all-label" style="margin-top:14px;">
       <input type="checkbox" id="inv_purchase_consign" ${invPurchaseConsign ? 'checked' : ''}${stockLotConsignColumn ? '' : ' disabled'}>
@@ -71113,7 +71236,13 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
     // means their price has changed -- keep the Price Registry current
     // instead of letting it go stale. confirms, because this is a
     // purchase: buying at the SAME price is proof of it too.
-    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true, unit});
+    // Told in the ROW'S OWN UNIT: a supplier priced per Ctn is told the
+    // carton figure, or the registry refuses it as a Dozen price on a
+    // Ctn line -- which it should.
+    const said = rowInPack(selectedRow)
+      ? { price: price==null ? null : price * packQty, qty: q / packQty, unit: packUnit }
+      : { price, qty: q, unit };
+    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, said.price, said.qty, {confirms: true, unit: said.unit});
     /* Consignment: the goods arrive, the money does not move. No bill is
        raised, because nothing is owed until something sells -- what IS
        owed is read off the sales as they happen. The lot carries whose
@@ -71141,8 +71270,13 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
     const logRow = data.stockLog[data.stockLog.length - 1];
     if(logRow) logRow.source = 'inv-purchase';
     if(logRow && onConsignment) logRow.consign = invPurchaseSupplierId;
+    /* The bill carries what went on the shelf, in the shelf's unit and
+       pack -- 40 Dozen (20 Dozen per Ctn) at 14,500 -- so the purchase
+       correction screen, which reads the bill against the ledger row,
+       compares like with like. */
+    const billRow = selectedRow ? Object.assign({}, selectedRow, { unit, packUnit, packQty }) : null;
     const piId = onConsignment ? null
-      : await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
+      : await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, billRow);
     if(logRow && piId != null) logRow.piId = piId;
     saveData();
     closeModal('invModal');
@@ -77880,9 +78014,12 @@ async function receiveBuyOrder(id, received){
        reason: a registry that only learns from surprises goes stale. */
     syncPriceRegistryFromPurchase(l.productId, vi, o.supplierId, l.unitCost, l.qty,
       { confirms: true, unit: l.unit || '' });
-    applyStockDelta(l.productId, vi, l.qty, 'restock',
-      `Received from ${o.supplier} on order — ${fmtUGX(l.unitCost)} per ${l.unit || 'unit'}`,
-      l.unitCost, o.supplierId, null);
+    /* The bill and the registry keep the supplier's words; the shelf
+       keeps its own. See stockMoveOnRowUnit. */
+    const put = stockMoveOnRowUnit(l.productId, vi, l.qty, l.unit, l.unitCost, l);
+    applyStockDelta(l.productId, vi, put.qty, 'restock',
+      `Received from ${o.supplier} on order — ${put.converted ? `${l.qty} ${l.unit} at ` : ''}${fmtUGX(l.unitCost)} per ${l.unit || 'unit'}`,
+      put.cost, o.supplierId, null);
     /* The row applyStockDelta just pushed, tied to the bill it is on and
        marked as having come off an order.
 

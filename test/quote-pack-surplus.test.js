@@ -120,10 +120,12 @@ const line = (over) => Object.assign(
   const run = compileScope(
     ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn',
       'quoteLineUnitsBought', 'quoteLineSurplus', 'quoteLineReceived',
-      'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock']
+      'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock',
+      'stockUnitFor', 'stockMoveOnRowUnit']
       .map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
     {
       productPriceRows: (pid, vi) => ROWS[`${pid}::${vi == null ? '' : vi}`] || [],
+      cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
       supplierName: (id) => ({ S1: 'Cartons Only', S2: 'Loose Trader' }[id] || id),
       applyStockDelta: (productId, variantIdx, delta, type, note, cost, supplierId) =>
         movements.push({ productId, variantIdx, delta, type, note, cost, supplierId }),
