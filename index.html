@@ -11052,6 +11052,13 @@
     .pr-panes{grid-template-columns:minmax(0,1fr);}
     .pr-panes.pr-has .pr-left{display:none;}
     .pr-panes:not(.pr-has) .pr-right{display:none;}
+    /* The sentence takes the width and its one action sits under it:
+       a name cut to "Soft Close M..." beside a button is a row that
+       says nothing. */
+    .pr-obs{grid-template-columns:minmax(0,1fr);}
+    .pr-obs .a{grid-column:1;grid-row:auto;margin-top:var(--ow-sp-6);}
+    .pr-obs .a .btn{min-height:var(--ow-tap);}
+    .pr-obs .p{white-space:normal;}
     .pr-flt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);}
     .pr-flt .btn{box-sizing:border-box;min-height:40px;padding-left:var(--ow-sp-8);padding-right:var(--ow-sp-8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     /* Back, then the name; the one action on its own line, thumb-sized. */
@@ -15758,7 +15765,7 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">What goes with what</h1>
         <p class="ow-ph-sub">One product, every rule the shop knows about it &mdash; size by size, checked against your own orders.</p>
-        <p class="ow-ph-help">A rule is one sentence about one product: it goes with that, needs so many of this per one, is part of one job with those, runs out after so many days. Pick the product on the left and everything the shop knows about it is on the right. Where both products come in sizes, the grid under a rule says which size goes with which &mdash; a tick is a rule for that pair, the figure inside it is how many of your orders carried both, and Match by size fills the diagonal. A size with no tick and no match is marked open: that size&rsquo;s picture leaves the second thing off rather than guess. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named with no quantity. Your own invoices check every rule and offer the pairs they keep seeing. A rule never changes a price, moves stock or places an order.</p>
+        <p class="ow-ph-help">A rule is one sentence about one product: it goes with that, needs so many of this per one, is part of one job with those, runs out after so many days. <b>A rule counts from both ends</b> &mdash; cement goes with sand means sand goes with cement, so it is written once and read on both products; only <b>needs</b> softens on the way back, since sheets need nails while nails merely go with sheets. Pick the product on the left and everything the shop knows about it is on the right. Where both products come in sizes, the grid under a rule says which size goes with which &mdash; a tick is a rule for that pair, the figure inside it is how many of your orders carried both, and Match by size fills the diagonal. A size with no tick and no match is marked open: that size&rsquo;s picture leaves the second thing off rather than guess. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named with no quantity. Your own invoices check every rule and offer the pairs they keep seeing. A rule never changes a price, moves stock or places an order.</p>
         <span class="ow-ph-sp"></span>
         <button type="button" class="btn btn-ghost ow-sm" id="pair_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -47385,13 +47392,36 @@ function customerSiteStage(c){
    `self` marks the one that points a product back at itself -- paint
    runs out after paint -- which is a rhythm rather than a companion and
    never draws a second product. */
+/* A RULE IS TRUE FROM BOTH ENDS, and `reverse` is what it says when
+   read backwards. Cement goes with sand, so sand goes with cement --
+   nobody writes that sentence twice, and a customer buying the sand
+   would otherwise be offered nothing.
+
+   Only NEEDS changes word: iron sheets need roofing nails, but nails do
+   not need sheets -- nails are used for a hundred other things. Read
+   backwards it is the weaker, true claim, "goes with", so a nail buyer
+   is offered sheets under ALSO TAKE and never told their nails are
+   useless without them.
+
+   RUNS OUT AFTER has no reverse: it points a product at itself. */
 const PAIR_VERBS = [
-  { id:'needs',   label:'Needs',          say:'needs',          brief:'ALSO NEED' },
-  { id:'with',    label:'Goes with',      say:'goes with',      brief:'ALSO TAKE' },
-  { id:'instead', label:'Instead of',     say:'instead of',     brief:'OR TAKE' },
+  { id:'needs',   label:'Needs',          say:'needs',          brief:'ALSO NEED',    reverse:'with' },
+  { id:'with',    label:'Goes with',      say:'goes with',      brief:'ALSO TAKE',    reverse:'with' },
+  { id:'instead', label:'Instead of',     say:'instead of',     brief:'OR TAKE',      reverse:'instead' },
   { id:'after',   label:'Runs out after', say:'runs out after', brief:'', self:true },
-  { id:'part',    label:'Part of',        say:'part of',        brief:'FOR THE JOB' },
+  { id:'part',    label:'Part of',        say:'part of',        brief:'FOR THE JOB',  reverse:'part' },
 ];
+/* The same sentence, read from the other product. The figure does not
+   survive the turn: "8 nails per sheet" says nothing about how many
+   sheets go with a nail, and an invented figure is worse than none. */
+function pairReversed(l){
+  const rev = (pairVerb(l.verb) || {}).reverse;
+  if(!rev) return null;
+  return { id: l.id, reversed: true, authoredVerb: l.verb, active: l.active,
+    fromId: l.toId, fromVariantIdx: pairSizeIdx(l.toVariantIdx),
+    toId: l.fromId, toVariantIdx: pairSizeIdx(l.fromVariantIdx),
+    verb: rev, qty: null, per: '', note: l.note };
+}
 function pairVerb(id){ return PAIR_VERBS.find(v=> v.id === id) || null; }
 function productLinksAll(){ return data.productLinks || (data.productLinks = []); }
 function productById(id){ return (data.products||[]).find(p=> p.id === id) || null; }
@@ -47430,9 +47460,20 @@ function pairSizeIdx(v){
 /* Two sentences that say the same thing are one sentence written twice,
    and the second would be counted, listed and offered twice. */
 function pairDuplicateOf(l, exceptId){
-  return productLinksAll().find(x=> x.id !== exceptId && x.fromId === l.fromId && x.toId === l.toId
+  const same = productLinksAll().find(x=> x.id !== exceptId && x.fromId === l.fromId && x.toId === l.toId
     && x.verb === l.verb && pairSizeIdx(x.fromVariantIdx) === pairSizeIdx(l.fromVariantIdx)
-    && pairSizeIdx(x.toVariantIdx) === pairSizeIdx(l.toVariantIdx)) || null;
+    && pairSizeIdx(x.toVariantIdx) === pairSizeIdx(l.toVariantIdx));
+  if(same) return same;
+  /* AND THE SAME SENTENCE WRITTEN BACKWARDS. Cement goes with sand IS
+     sand goes with cement, so writing both would count one fact twice,
+     list it twice and offer it twice. Only for the words that mean the
+     same read either way: "sheets need nails" and "nails need sheets"
+     are two different claims, and a shop may hold both. */
+  const v = pairVerb(l.verb) || {};
+  if(v.reverse !== l.verb) return null;
+  return productLinksAll().find(x=> x.id !== exceptId && x.fromId === l.toId && x.toId === l.fromId
+    && x.verb === l.verb && pairSizeIdx(x.fromVariantIdx) === pairSizeIdx(l.toVariantIdx)
+    && pairSizeIdx(x.toVariantIdx) === pairSizeIdx(l.fromVariantIdx)) || null;
 }
 function pairFault(l){
   if(!l.fromId || !l.toId) return 'A pairing needs both products.';
@@ -47442,7 +47483,9 @@ function pairFault(l){
   if(!self && l.fromId === l.toId && pairSizeIdx(l.fromVariantIdx) === pairSizeIdx(l.toVariantIdx))
     return 'A product cannot go with itself. For a rhythm -- it will be finished in so many days -- use Runs out after.';
   const dup = pairDuplicateOf(l, l.id);
-  if(dup) return 'That pairing is already written. Open it rather than writing it twice.';
+  if(dup) return dup.fromId === l.fromId
+    ? 'That pairing is already written. Open it rather than writing it twice.'
+    : `Already written the other way round: ${productLinkName(dup.fromId)} ${(pairVerb(dup.verb) || {}).say || dup.verb} ${productLinkName(dup.toId)}. A rule counts from both ends, so it is the same sentence.`;
   return null;
 }
 function addProductLink(fromId, verb, toId, qty, per, note, sizes){
@@ -47507,9 +47550,17 @@ function productLinkFromLabel(l){ return pairSideLabel(l.fromId, l.fromVariantId
    rule was written to have, and it is read before the rule. */
 function pairingsFor(productId, variantIdx){
   const vi = pairSizeIdx(variantIdx);
-  const mine = productLinksAll().filter(l=> l.active !== false && l.fromId === productId
-    && !(pairVerb(l.verb) || {}).self
-    && (pairSizeIdx(l.fromVariantIdx) == null || pairSizeIdx(l.fromVariantIdx) === vi));
+  const live = productLinksAll().filter(l=> l.active !== false && !(pairVerb(l.verb) || {}).self);
+  const fits = (l)=> pairSizeIdx(l.fromVariantIdx) == null || pairSizeIdx(l.fromVariantIdx) === vi;
+  /* WRITTEN ON THIS PRODUCT, and written on the other one about this
+     one. A sentence is true from both ends, so both are read -- and
+     where the owner has written both, theirs wins, figure and all. */
+  const mine = live.filter(l=> l.fromId === productId).filter(fits);
+  const said = new Set(mine.map(l=> l.verb + ' ' + l.toId));
+  live.filter(l=> l.toId === productId && l.fromId !== productId)
+    .map(pairReversed).filter(Boolean)
+    .filter(l=> fits(l) && !said.has(l.verb + ' ' + l.toId))
+    .forEach(l=> mine.push(l));
   const byRule = new Map();
   mine.forEach(l=>{
     const k = l.verb + ' ' + l.toId;
@@ -47544,6 +47595,27 @@ function pairRulesOf(productId){
     r.lead = r.general || r.rows[0];
     return r;
   });
+}
+/* THE SENTENCES WRITTEN ON OTHER PRODUCTS THAT REACH THIS ONE. A rule
+   is true from both ends, so a picture for somebody buying the second
+   thing is built on a sentence written on the first -- and an owner
+   looking at the second product would otherwise see an empty screen
+   and no explanation of where the companion came from. Read-only here:
+   a sentence has one home, and two places to change it is how two
+   places come to disagree. */
+function pairReachingRules(productId){
+  const out = [];
+  productLinksAll().filter(l=> l.active !== false && l.toId === productId && l.fromId !== productId
+    && !(pairVerb(l.verb) || {}).self).forEach(l=>{
+      const rev = pairReversed(l);
+      if(!rev) return;
+      const k = rev.verb + ' ' + l.fromId;
+      if(out.some(x=> x.key === k)) return;
+      out.push({ key: k, verb: rev.verb, authoredVerb: l.verb, otherId: l.fromId,
+        rows: productLinksAll().filter(x=> x.active !== false && x.fromId === l.fromId
+          && x.toId === productId && x.verb === l.verb) });
+    });
+  return out;
 }
 function pairRuleById(id){
   const l = productLinksAll().find(x=> x.id === id);
@@ -47742,30 +47814,50 @@ function pairCompanionsFor(productId, variantIdx, qty, opts){
    shelf has it and a price is on file. A swap the shop cannot fill or
    price is not a swap. */
 function pairSubstitutesFor(productId, variantIdx){
-  const vi = pairSizeIdx(variantIdx);
-  const rows = [];
-  pairingsFor(productId, variantIdx).filter(l=> l.verb === 'instead').forEach(l=> rows.push({ l, other: l.toId, reverse: false }));
-  productLinksAll().filter(l=> l.active !== false && l.verb === 'instead' && l.toId === productId
-    && (pairSizeIdx(l.toVariantIdx) == null || pairSizeIdx(l.toVariantIdx) === vi))
-    .forEach(l=> rows.push({ l, other: l.fromId, reverse: true }));
   const out = [];
-  rows.forEach(({ l, other, reverse })=>{
+  pairingsFor(productId, variantIdx).filter(l=> l.verb === 'instead').forEach(l=>{
+    const other = l.toId;
     if(other === productId) return;
     const tp = productById(other);
     if(!tp) return;
-    const named = reverse ? l.fromVariantIdx : l.toVariantIdx;
-    const v = briefVariantForLine(other, [], { toVariantIdx: named, from: { productId, variantIdx }, anyStock: true });
-    if(v.gone || v.why) return;
+    const v = briefVariantForLine(other, [], { toVariantIdx: l.toVariantIdx,
+      from: { productId, variantIdx }, anyStock: true });
+    if(v.gone) return;
     const svi = v.variantIdx == null ? null : v.variantIdx;
-    const stock = briefInStock(other, svi);
-    if(!(stock === null || stock > 0)) return;
-    const px = briefPriceFor(other, svi, 1);
-    if(!px || px.price == null) return;
     if(out.some(x=> x.productId === other && x.variantIdx === svi)) return;
-    out.push({ link: l, reverse, productId: other, variantIdx: svi, label: productVariantLabel(tp, svi),
-      name: tp.name, stock, price: px.price, unit: px.unit || productUnitLabel(other, svi) || tp.unit || '' });
+    /* A SWAP THE SHOP CANNOT FILL IS STILL A SWAP THE OWNER WROTE. It
+       is handed back with the reason it cannot be offered -- no size
+       settled, none on the shelf, no price on file -- because a rule
+       that silently does nothing is the one thing worse than no rule:
+       the owner wrote it, watched a customer be told nothing, and had
+       no way of knowing which of the three to fix. */
+    const row = { link: l, reversed: !!l.reversed, productId: other, variantIdx: svi,
+      label: v.why ? tp.name : productVariantLabel(tp, svi), name: tp.name,
+      stock: null, price: null, unit: '', usable: false, why: v.why || null };
+    if(!row.why){
+      row.stock = briefInStock(other, svi);
+      row.unit = productUnitLabel(other, svi) || tp.unit || '';
+      const px = briefPriceFor(other, svi, 1);
+      if(px && px.price != null){ row.price = px.price; row.unit = px.unit || row.unit; }
+      if(!(row.stock === null || row.stock > 0)) row.why = 'outOfStock';
+      else if(row.price == null) row.why = (px && px.why) || 'noRow';
+      else row.usable = true;
+    }
+    out.push(row);
   });
-  return out;
+  /* The ones that can actually be sent first, so a caller taking [0]
+     takes a swap the shelf can fill. */
+  return out.sort((a, b)=> (b.usable - a.usable));
+}
+/* Why a written swap cannot be offered, in the words the owner needs to
+   act on -- each names the screen that fixes it. */
+function pairSwapFault(s){
+  if(!s) return '';
+  if(s.why === 'outOfStock') return `${s.label} is out too`;
+  if(s.why === 'pickVariant') return `${s.name} comes in sizes and the rule does not say which`;
+  if(s.why === 'noRow' || s.why === 'noBase') return `${s.label} has no price on file`;
+  if(String(s.why || '').startsWith('noRule')) return `${s.label} has no markup rule, so it cannot be priced`;
+  return `${s.label} cannot be priced`;
 }
 /* How long one lasts, by the owner's own word: the "runs out after"
    row's figure IS days -- the editor writes it and shows it as days --
@@ -48303,8 +48395,14 @@ function customerBrief(customerId){
         /* Out of stock, and whether anything was written down to stand
            in for it: an owner who has already answered that question
            should not be told only half of it. */
+        const ok = c.substitutes.find(x=> x.usable);
+        if(ok) return { name: c.label, why: `out of stock — ${ok.label} is offered instead` };
+        /* A SWAP WRITTEN DOWN THAT CANNOT BE USED is the one case that
+           must not read as "nothing was written": the owner made the
+           rule, watched the picture stay silent, and needs to be told
+           which of the three things to put right. */
         return { name: c.label, why: c.substitutes.length
-          ? `out of stock — ${c.substitutes[0].label} is offered instead` : 'out of stock' };
+          ? `out of stock, and ${pairSwapFault(c.substitutes[0])}` : 'out of stock' };
       }).filter(Boolean) };
 }
 
@@ -49897,7 +49995,7 @@ function pairListHTML(all, observed){
   const shown = rows.slice(0, 60);
   return `${shown.length ? shown.map(x=> `<div class="pr-prod${x.p.id === pairSelectedId ? ' pr-cur' : ''}" role="button" tabindex="0" data-pairsel="${esc(x.p.id)}">
       <div class="pr-prod-t"><span class="pr-prod-n" title="${esc(x.p.name)}">${esc(x.p.name)}</span>
-        <span class="pr-prod-s">${x.sizes ? `${x.sizes} sizes` : 'one size'}${x.orders ? ` &middot; ${x.orders} orders` : ''}${x.rules ? ` &middot; ${x.rules} rule${x.rules === 1 ? '' : 's'}` : ''}</span></div>
+        <span class="pr-prod-s">${x.sizes > 1 ? `${x.sizes} sizes` : 'one size'}${x.orders ? ` &middot; ${x.orders} orders` : ''}${x.rules ? ` &middot; ${x.rules} rule${x.rules === 1 ? '' : 's'}` : ''}</span></div>
       ${x.gaps ? `<span class="pr-gap" title="${x.gaps} size${x.gaps === 1 ? '' : 's'} whose picture leaves the second thing off"></span>` : ''}
       <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     </div>`).join('') : `<div class="ow-empty"><b>${q ? 'Nothing by that name.' : pairFilter === 'gaps' ? 'No size is open.' : 'No rules written yet.'}</b>
@@ -49914,11 +50012,12 @@ function pairProductHTML(productId){
   const open = live.reduce((n, r)=> { const g = pairGrid(r); return n + (g ? g.open : 0); }, 0);
   const stands = live.map(r=> ({ r, st: pairStanding(r.lead) }))
     .sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree') || productLinkName(a.r.toId).localeCompare(productLinkName(b.r.toId)));
+  const reach = pairReachingRules(productId);
   return `<div class="ow-pan">
     <div class="pr-head">
       <button type="button" class="btn btn-ghost ow-sm pr-back" data-pair="back" aria-label="Back to the products"><svg class="icon" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="pr-head-t"><span class="pr-head-n">${esc(p.name)}</span>
-        <span class="pr-head-s">${esc(p.category || '')}${p.category ? ' &middot; ' : ''}${sizes.length ? `${sizes.length} sizes: ${esc(sizes.map(v=> variantLabel(v.combo || {})).join(', '))}` : 'one size'}${live.length ? ` &middot; ${live.length} rule${live.length === 1 ? '' : 's'}` : ''}${open ? ` &middot; <b>${open} size${open === 1 ? '' : 's'} still open</b>` : ''}</span></div>
+        <span class="pr-head-s">${esc(p.category || '')}${p.category ? ' &middot; ' : ''}${sizes.length > 1 ? `${sizes.length} sizes: ${esc(sizes.map(v=> variantLabel(v.combo || {})).join(', '))}` : 'one size'}${live.length ? ` &middot; ${live.length} rule${live.length === 1 ? '' : 's'}` : ''}${open ? ` &middot; <b>${open} size${open === 1 ? '' : 's'} still open</b>` : ''}</span></div>
       ${pairRuleDraft ? '' : `<button type="button" class="btn btn-accent ow-sm" data-pair="draft"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for ${esc(briefShortName(p.name))}</button>`}
     </div>
     ${pairRuleDraft && pairRuleDraft.fromId === productId ? pairDraftHTML(pairRuleDraft) : ''}
@@ -49926,11 +50025,34 @@ function pairProductHTML(productId){
       <div class="ow-tbl-h"><span>The rule</span><span class="ow-tbl-n">How many</span>
         <span>Where it came from</span><span class="ow-tbl-n">In orders</span><span></span></div>
       ${stands.map(x=> pairRowHTML(x.r, x.st)).join('')}
-    </div>` : (pairRuleDraft && pairRuleDraft.fromId === productId) ? '' : `<div class="ow-empty"><b>Nothing written about ${esc(p.name)} yet.</b>
-      <span>A rule is one sentence: ${esc(p.name)} goes with that, needs so many of this, is part of one job with those. Write the first, and the grid under it settles the sizes.</span></div>`}
+    </div>` : (pairRuleDraft && pairRuleDraft.fromId === productId) ? '' : `<div class="ow-empty"><b>Nothing written ON ${esc(p.name)} yet.</b>
+      <span>A rule is one sentence: ${esc(p.name)} goes with that, needs so many of this, is part of one job with those. Write the first, and the grid under it settles the sizes.${
+        reach.length ? ` ${reach.length} rule${reach.length === 1 ? '' : 's'} written on other products already reach${reach.length === 1 ? 'es' : ''} it &mdash; they are listed below.` : ''}</span></div>`}
     <p class="ow-mini pr-foot">A rule changes nothing about prices, stock or orders. It only lets a customer&rsquo;s picture say a second thing &mdash; and it only ever says a quantity where you gave one.</p>
   </div>
+  ${pairReachHTML(productId, reach)}
   ${off.length ? pairOffHTML(off) : ''}`;
+}
+/* Read from this end, and pointing at where it was written. */
+function pairReachHTML(productId, reach){
+  if(!reach.length) return '';
+  const p = productById(productId);
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Also reaches ${esc(briefShortName(p.name))}</span>
+      <span class="ow-pan-n">${reach.length} written on other products</span></div>
+    ${reach.map(r=>{
+      const other = productById(r.otherId);
+      const v = pairVerb(r.verb) || {};
+      const av = pairVerb(r.authoredVerb) || {};
+      return `<div class="pr-obs">
+        <span class="p">${esc(p.name)} &rarr; ${esc(v.say || r.verb)} &rarr; ${esc(productLinkName(r.otherId))}</span>
+        <span class="s">written as &ldquo;${esc(productLinkName(r.otherId))} ${esc(av.say || r.authoredVerb)} ${esc(p.name)}&rdquo;${
+          r.verb !== r.authoredVerb ? ' &mdash; read back it is the weaker, true word' : ''}${
+          r.rows.some(x=> x.qty != null) ? ' &middot; its figure counts only the way it was written' : ''}</span>
+        <span class="a">${other ? `<button type="button" class="btn btn-ghost ow-sm" data-pairsel="${esc(r.otherId)}">Open ${esc(briefShortName(other.name))}</button>` : ''}</span>
+      </div>`; }).join('')}
+    <p class="ow-mini">A sentence is true from both ends: cement goes with sand, so sand goes with cement. These are read here and changed where they were written. <b>Needs</b> is the one word that softens on the way back &mdash; sheets need nails, but nails only <b>go with</b> sheets.</p>
+  </div>`;
 }
 /* A rule, in one row: the sentence, its figure, where it came from,
    what the orders show. Opened, the grid and the rest follow. */
@@ -50100,7 +50222,7 @@ function pairDraftHTML(d){
 const PAIR_VERB_WORDS = {
   needs: 'It cannot be used without it, and the picture says so.',
   with: 'Usually bought together — offered on a picture, not insisted on.',
-  instead: 'A swap when the first is out of stock.',
+  instead: 'A swap: when either is out of stock, the other is offered in its place.',
   after: 'It will be finished in about so many days, and the picture comes back then.',
   part: 'Both belong to one job.',
 };

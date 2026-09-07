@@ -73,19 +73,13 @@ const env = {
   briefInStock: (id, vi)=> { const v = stock.get(key(id, vi)); return v === undefined ? null : v; },
   briefPriceFor: (id, vi, qty)=> prices.get(key(id, vi)) || { why: 'noRow' },
   rankedPriceRows: (id, vi)=> prices.has(key(id, vi)) ? [{ productId: id }] : [],
-  PAIR_VERBS: [
-    { id:'needs', label:'Needs', say:'needs', brief:'ALSO NEED' },
-    { id:'with', label:'Goes with', say:'goes with', brief:'ALSO TAKE' },
-    { id:'instead', label:'Instead of', say:'instead of', brief:'OR TAKE' },
-    { id:'after', label:'Runs out after', say:'runs out after', brief:'', self:true },
-    { id:'part', label:'Part of', say:'part of', brief:'FOR THE JOB' },
-  ],
 };
-const NAMES = ['pairVerb', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
+const NAMES = ['pairVerb', 'pairReversed', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
   'pairingsFor', 'pairRuleKey', 'pairRulesOf', 'pairStanding', 'pairEvidence', 'invoicedOrders',
-  'briefVariantForLine', 'briefSameSizeAs', 'pairCompanionsFor', 'pairSubstitutesFor', 'pairLastsDays',
+  'briefVariantForLine', 'briefSameSizeAs', 'pairCompanionsFor', 'pairSubstitutesFor', 'pairSwapFault', 'pairLastsDays',
   'pairPartsOf', 'pairCooccurrence', 'observedPairs'];
 const fns = compileScope([
+  extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
   extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
   extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
   extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
@@ -128,18 +122,30 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   const withSub = fns.pairCompanionsFor('P-RUN', 2, 2, { substitute: true }).find(c=> c.productId === 'P-SOFT');
   eq(withSub.substitutes.length, 1, 'an instead-of written the other way round still answers this stock-out');
   eq(withSub.substitutes[0].productId, 'P-QUIET', 'naming the thing that can stand in');
-  eq(withSub.substitutes[0].reverse, true, 'and saying which way it was written');
+  eq(withSub.substitutes[0].usable, true, 'and one the shelf can actually give');
 }
 
 /* ---- 3. what can stand in --------------------------------------------- */
 {
   const subs = fns.pairSubstitutesFor('P-SOFT', 1);
   eq(subs.length, 1, 'the 14" soft close has one substitute');
+  eq(subs[0].usable, true, 'which the shop can actually give');
   eq(subs[0].stock, 12, 'with what is on the shelf');
   eq(subs[0].price, 8800, 'and a price to quote');
   eq(fns.pairSubstitutesFor('P-SOFT', 0).length, 0, 'a swap written for the 14" is not offered for the 12"');
+  /* A SWAP IS TRUE FROM BOTH ENDS. "Quiet Runner instead of the 14"
+     soft close" answers the soft close being out, and the soft close
+     answers the Quiet Runner being out. */
+  const back = fns.pairSubstitutesFor('P-QUIET', null);
+  eq(back.length, 1, 'the swap reads from the other end as well');
+  eq(back[0].productId, 'P-SOFT', 'naming what it was written against');
+  /* Written down, unusable, and SAID so rather than dropped: the owner
+     needs to know which of the three things to put right. */
   add('P-GLUE', 'instead', 'P-SCR', null, '');
-  eq(fns.pairSubstitutesFor('P-SCR', null).length, 0, 'a swap the shelf has not got is not a swap');
+  const glue = fns.pairSubstitutesFor('P-SCR', null);
+  eq(glue.length, 1, 'a swap the shelf has not got is still handed back');
+  eq(glue[0].usable, false, 'marked as one that cannot be offered');
+  t.check(/out too/.test(fns.pairSwapFault(glue[0])), 'with the reason in the owner\'s words');
   eq(fns.pairSubstitutesFor('P-HINGE', null).length, 0, 'and a product nothing stands in for has none');
 }
 
@@ -200,6 +206,7 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   const GNAMES = ['briefGroups'];
   const g = compileScope([
     ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
     extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
@@ -259,8 +266,9 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
 
 /* ---- 11. what lands on one invoice, as a screen ---------------------- */
 {
-  const anEnv = { data, productById: env.productById, PAIR_VERBS: env.PAIR_VERBS };
+  const anEnv = { data, productById: env.productById };
   const a = compileScope([
+    extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
     extractFunction(src, 'pairVerb', 'index.html'),
     extractFunction(src, 'productLinksAll', 'index.html'),
     extractFunction(src, 'pairCooccurrence', 'index.html'),
@@ -284,6 +292,7 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
 {
   const T = compileScope([
     ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
     extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
@@ -337,9 +346,10 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     TELL_PRICE_MEMORY_DAYS: 90,
   });
   const RNAMES = ['briefNeedsReason', 'briefSwapReason', 'pairCompanionsFor', 'pairSubstitutesFor',
-    'pairEvidence', 'pairStanding', 'pairingsFor', 'productLinksAll', 'pairVerb', 'pairSizeIdx',
+    'pairEvidence', 'pairStanding', 'pairingsFor', 'pairReversed', 'productLinksAll', 'pairVerb', 'pairSizeIdx',
     'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders'];
   const r = compileScope([
+    extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
     extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
@@ -440,6 +450,7 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   });
   const G2 = compileScope([
     ...NAMES.map((n)=> extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
     extractDeclaration(src, 'PAIR_VERB_ORDER', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_MIN', 'index.html'),
     extractDeclaration(src, 'PAIR_OBSERVED_SHARE', 'index.html'),
@@ -476,6 +487,50 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
   const brief = extractFunction(src, 'customerBrief', 'index.html');
   t.check(/briefPriceNow\(pick, pickVar, qty\)/.test(brief),
     'and prices the pick at the quantity the reason weighed');
+}
+
+/* ---- 17. a rule is true from both ends ------------------------------- */
+{
+  /* "Runners needs Black Screws" was written on the runners. Somebody
+     buying the screws is offered the runners -- under the weaker word,
+     because screws are used for a hundred other things. */
+  const back = fns.pairCompanionsFor('P-SCR', null, 2);
+  const run = back.find(c=> c.productId === 'P-RUN');
+  t.check(!!run, 'a rule written on the other product still reaches this one');
+  eq(run.verbId, 'with', 'read backwards, NEEDS softens to goes with');
+  eq(run.qty, null, 'and the figure does not survive the turn');
+  eq(run.link.reversed, true, 'the row says it was read backwards');
+
+  /* Goes with is the same word either way. */
+  const soft = fns.pairCompanionsFor('P-SOFT', 0, 1).find(c=> c.productId === 'P-RUN');
+  t.check(!!soft && soft.verbId === 'with', 'goes with reads the same from either end');
+
+  /* The owner's own sentence beats the one read backwards, figure and
+     all -- they wrote it, and it carries the ratio. */
+  const own = fns.addProductLink('P-SCR', 'with', 'P-RUN', 3, 'Box', '');
+  eq(own.ok, true, 'the shop may write the other end itself');
+  const both = fns.pairCompanionsFor('P-SCR', null, 2).filter(c=> c.productId === 'P-RUN');
+  eq(both.length, 1, 'and then the product is offered once, not twice');
+  eq(both[0].qty, 6, 'at the figure they wrote');
+  eq(!!both[0].link.reversed, false, 'from their own sentence');
+  data.productLinks = data.productLinks.filter(x=> x.id !== own.link.id);
+
+  /* Writing the mirror of a symmetric sentence is writing it twice. */
+  const mirror = fns.addProductLink('P-SOFT', 'with', 'P-RUN', null, '', '');
+  eq(mirror.ok, false, 'the same sentence backwards is refused');
+  t.check(/other way round/.test(mirror.why), 'and named as the sentence it already is');
+  /* But "needs" both ways is two different claims, and both may stand. */
+  const twoWay = fns.addProductLink('P-SCR', 'needs', 'P-RUN', 1, 'Box', '');
+  eq(twoWay.ok, true, 'while needs may be written in both directions');
+  data.productLinks = data.productLinks.filter(x=> x.id !== twoWay.link.id);
+
+  /* And the screen shows what reaches a product from elsewhere. */
+  const RE = ['pairReachingRules', 'pairReversed', 'pairVerb', 'productLinksAll', 'pairSizeIdx'];
+  const re = compileScope([extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
+    ...RE.map((n)=> extractFunction(src, n, 'index.html'))], env, RE);
+  const reach = re.pairReachingRules('P-SCR');
+  t.check(reach.some(x=> x.otherId === 'P-RUN' && x.verb === 'with' && x.authoredVerb === 'needs'),
+    'named on the second product, with the word it was written in');
 }
 
 t.check(saves > 0, 'every rule written was saved');

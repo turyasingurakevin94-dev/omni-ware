@@ -13,7 +13,7 @@
  * Extracted from index.html and run against fixtures: no copy of the
  * logic lives here.
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('pairing sizes');
 const src = read('index.html');
@@ -56,15 +56,13 @@ const env = {
     : `${p.name} — ${Object.values(p.variants[vi].combo).join(' / ')}`,
   variantLabel: (combo)=> Object.values(combo).join(' / '),
   productLinkName: (id)=> (env.productById(id) || {}).name || `${id} — gone from the catalogue`,
-  PAIR_VERBS: [
-    { id:'needs', self:false }, { id:'with' }, { id:'instead' }, { id:'after', self:true }, { id:'part' },
-  ],
 };
-const NAMES = ['pairVerb', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
+const NAMES = ['pairVerb', 'pairReversed', 'productLinksAll', 'pairSizeIdx', 'pairDuplicateOf', 'pairFault', 'addProductLink',
   'updateProductLink', 'pairSideLabel', 'productLinkLabel', 'productLinkFromLabel', 'pairingsFor',
   'pairRuleKey', 'pairRulesOf', 'pairRuleById', 'pairGrid', 'pairSetCell', 'pairMatchBySize', 'pairClearCells',
   'pairRuleDelete', 'briefVariantForLine', 'briefSameSizeAs', 'invoicedOrders', 'pairEvidence', 'pairStanding'];
-const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), env, NAMES);
+const fns = compileScope([extractDeclaration(src, 'PAIR_VERBS', 'index.html'),
+  ...NAMES.map((n)=> extractFunction(src, n, 'index.html'))], env, NAMES);
 
 /* ---- 1. writing a sentence, and what is refused ---------------------- */
 {
