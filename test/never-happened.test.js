@@ -131,30 +131,42 @@ const reset = (onHand) => {
 }
 
 /* ---------- 6. it is offered where the goods went on, and said ------- */
+/*
+ * The verb reaches the shop through Put it right rather than a button of
+ * its own: one door on every movement row, which asks which KIND of
+ * wrong it is. A second door to one verb would be the scattering this
+ * whole change exists to remove.
+ */
 {
-  const btn = extractFunction(src, 'stockLogNeverButtonHTML', 'index.html');
-  t.check(/!\(\(Number\(e\.delta\) \|\| 0\) > 0\)/.test(btn),
-    'offered only on a movement that PUT goods on the shelf');
-  t.check(/e\.reversedBy/.test(btn), 'and not on one already taken back');
-  t.check(!/isStockPurchaseRow/.test(btn),
-    'on every such row, not only the purchases Edit can reach — a receipt entered by mistake is the same mistake');
+  const verbs = extractFunction(src, 'prVerbsFor', 'index.html');
+  t.check(/\(Number\(e\.delta\) \|\| 0\) > 0 && !e\.reversedBy/.test(verbs),
+    'offered only on a movement that PUT goods on the shelf, and not on one already taken back');
+  t.check(!/never'\) return isStockPurchaseRow/.test(verbs),
+    'on every such row, not only the purchases the figures verb can reach — a receipt entered by mistake is the same mistake');
 
   const tag = extractFunction(src, 'stockLogReversedTagHTML', 'index.html');
   t.check(/taken back/.test(tag), 'and the row it undid says so, so it cannot be read alone and believed');
-
   const log = extractFunction(src, 'renderStockLog', 'index.html');
-  t.check(/stockLogNeverButtonHTML\(e\)/.test(log) && /stockLogReversedTagHTML\(e\)/.test(log),
-    'both reach the screen');
+  t.check(/stockLogReversedTagHTML\(e\)/.test(log) && /stockLogPutRightButtonHTML\(e\)/.test(log),
+    'the tag and the door both reach the screen');
 
-  /* Said in full before it is done: the confirmation is built from the
-     PLAN, so what is agreed to is what happens. */
-  const ask = extractFunction(src, 'confirmNeverHappened', 'index.html');
-  t.check(/stockMovementReversalPlan\(logId\)/.test(ask), 'the confirmation reads the plan, not the press');
-  t.check(/come back off the shelf/.test(ask), 'it says how many come off');
-  t.check(/cannot be un-bought/.test(ask), 'names what has already gone');
-  t.check(/Money is not touched here/.test(ask) && /purchaseInvoiceNumberLabel\(plan\.bill\)/.test(ask),
+  /* SAID IN FULL BEFORE IT IS DONE, from the PLAN rather than the press,
+     so what is agreed to is what happens — including the part that
+     cannot. */
+  const pane = extractFunction(src, 'prPaneHTML', 'index.html');
+  t.check(/stockMovementReversalPlan\(e\.id\)/.test(pane), 'the pane reads the plan, not the press');
+  t.check(/come back off the shelf/.test(pane), 'it says how many come off');
+  t.check(/cannot be un-bought/.test(pane), 'names what has already gone, and marks it a warning');
+  t.check(/Money is not touched here/.test(pane) && /purchaseInvoiceNumberLabel\(plan\.bill\)/.test(pane),
     'and names the bill it is deliberately not touching');
-  t.check(/Nothing is erased/.test(ask), 'and that the row stays');
+  t.check(/Nothing is erased/.test(pane), 'and that the row stays');
+
+  /* And the consequence panel says the same thing in figures, live. */
+  const eff = extractFunction(src, 'prRefreshEffects', 'index.html');
+  t.check(/prVerb === 'never'/.test(eff) && /On the shelf/.test(eff),
+    'the panel shows what the shelf becomes');
+  t.check(/nothing left to take back/.test(eff),
+    'and blocks the save where every one has already gone');
 }
 
 process.exit(t.done() ? 1 : 0);

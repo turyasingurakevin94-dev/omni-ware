@@ -33,7 +33,7 @@ const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow'
   'effectiveStockPurchase', 'stockPurchaseMinQty', 'takeBackPurchaseLots', 'stockPurchaseInvoiceFor',
   // A correction may not adopt a bill another delivery already carries.
   'stockPurchaseChainIds', 'purchaseInvoiceClaimedByOther',
-  'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'stockLogCorrectedTagHTML',
+  'applyStockPurchaseEdit', 'stockLogPutRightButtonHTML', 'stockLogCorrectedTagHTML',
   'samePiLineTarget', 'applyPurchaseBillEdit', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue'];
 
 /* compileScope copies each env value into a `var` once, so the extracted
@@ -64,7 +64,7 @@ const scope = compileScope(
 );
 
 const { applyStockPurchaseEdit, effectiveStockPurchase, isStockPurchaseRow,
-  stockPurchaseMinQty, stockLogEditButtonHTML, stockLogCorrectedTagHTML,
+  stockPurchaseMinQty, stockLogPutRightButtonHTML, stockLogCorrectedTagHTML,
   samePiLineTarget, applyPurchaseBillEdit } = scope;
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -273,14 +273,30 @@ const logRow = () => data.stockLog[0];
 /* ---------- 14. the button is offered on exactly the right rows --------
    The logic above is only reachable if the movement log actually draws a
    way in, and only on the rows it is safe for. */
+/* The way in is no longer an Edit button of this screen's own.
+
+   It used to be, and it reached ONLY the purchases this screen could
+   correct -- so a sale, a receipt and a count, each of which can be
+   recorded wrong, had no repair here at all and the shop went looking
+   on another screen. That scattering is what Put it right replaced: one
+   door on every row, which asks which KIND of wrong it is and offers
+   only the verbs that row can be asked. So what is pinned here now is
+   that the door exists on every row, and that the figures verb behind
+   it is still offered only where this correction is safe --
+   isStockPurchaseRow, tested directly above, is what decides that. */
 {
   freshShop();
-  const btn = stockLogEditButtonHTML(logRow());
-  t.check(/data-edit-log="1"/.test(btn), `a purchase row carries the button, tagged with its own id (${btn})`);
-  t.check(/>Edit</.test(btn), 'labelled Edit');
-  eq(stockLogEditButtonHTML({ type: 'sale', note: 'Quote for Musisi' }), '', 'a sale carries none');
-  eq(stockLogEditButtonHTML({ type: 'restock', note: 'Received from Kirinya Steel for Musisi', source: 'quote-receipt' }), '',
-    'nor goods received against an order');
+  const btn = stockLogPutRightButtonHTML(logRow());
+  t.check(/data-putright-log="1"/.test(btn), `every row carries the door, tagged with its own id (${btn})`);
+  t.check(/>Put it right</.test(btn), 'labelled Put it right');
+  t.check(stockLogPutRightButtonHTML({ id: 9, type: 'sale', note: 'Quote for Musisi' }) !== '',
+    'a sale carries it too — it can be recorded wrong like anything else, and had no repair here before');
+
+  const verbs = extractFunction(src, 'prVerbsFor', 'index.html');
+  t.check(/isStockPurchaseRow\(e\) && !e\.reversedBy/.test(verbs),
+    'and the figures verb behind the door is still offered only on a purchase this screen may correct');
+  t.check(/\(Number\(e\.delta\) \|\| 0\) > 0 && !e\.reversedBy/.test(verbs),
+    'while "it never happened" is offered on anything that put goods on the shelf');
 }
 
 /* ---------- 15. a corrected row says so where it is read ---------------
