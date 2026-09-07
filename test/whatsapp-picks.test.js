@@ -46,7 +46,13 @@ const workerSrc = read('shared-worker.js');
 
 const NAMES = ['waDaysBetween', 'waWeekday', 'waSalesByKey', 'waPriceTrail',
   'waStockIdle', 'waLastRestock', 'waAskersByProduct', 'waCustomerPriceAt',
-  'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats'];
+  'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats',
+  /* The picker is priced in shillings now, so what a post is expected
+     to move comes in with it: the outcome of every recorded post, the
+     table those outcomes are filed into, and the estimate read back
+     out of it. */
+  'waUnitsByKeyDate', 'waPostOutcomes', 'waLiftTable', 'waExpectedLift', 'waMedian',
+  'waInboxAsksByKey', 'waChannelOrdersByKey', 'waBroadcastCase'];
 
 // The pricing chain (catalogueSellAtQty, catalogueBreaks, ranked rows) is
 // already mutation-proven by the printed-catalogue suite; here it is
@@ -58,9 +64,12 @@ const breaksFixture = new Map(); // key -> [{qty, price}]
 const basisAsked = [];
 const env = {
   data: { products: [], presetCategories: [], savedQuotes: [], purchaseInvoices: [],
-    stock: {}, stockLog: [], waPosts: [], followUps: [], sourcingLeads: [] },
+    stock: {}, stockLog: [], waPosts: [], followUps: [], sourcingLeads: [],
+    rivalPrices: [], presetWaNeverPost: [] },
   WA_ROTATION_DAYS: 14, WA_SITTING_DAYS: 30, WA_PICK_COUNT: 3,
   WA_JUSTIN_DAYS: 7, WA_DEPTH_DAYS: 5,
+  WA_LIFT_DAYS: 7, WA_LIFT_MIN_POSTS: 10, WA_LIFT_MIN_KIND: 4,
+  esc: (x) => String(x == null ? '' : x),
   WA_DAY_NAMES: ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'],
   /* The demand record also carries what each line earned and where it
      came from, for the buying copilot. That arithmetic is proven
@@ -208,30 +217,52 @@ const THU = '2026-08-06', MON = '2026-08-03';
 
   const p1 = candidates.find((c) => c.key === 'P1');
   has(p1.reasons, /12 bag.* sitting 47 days/, 'the sitting claim carries quantity and days');
-  has(p1.reasons, /Margin 23%/, 'the margin claim is computed, for the shop’s eyes');
-  has(p1.reasons, /Costs the shop less/, 'the price drop is noticed');
+  /* MARGIN AND EARNER ARE NOT CHIPS ANY MORE, and that is the whole
+     rewrite in one line. Both used to be REASONS carrying scores --
+     "Margin 23%" for +1.2, "Earns about UGX 103,500 a month" for up to
+     +4 -- and both are now the quantity everything is ranked ON. A
+     chip saying "Margin 23%" beside a figure that IS the margin is the
+     screen telling the owner the same thing twice.
+
+     The earner term went further than being promoted: margin x THIS
+     MONTH'S PACE measured what a product already sells, which is the
+     opposite of what a post is for. It is margin x the extra units a
+     post is expected to move now. */
+  eq(p1.marginUnit, 10350, 'the margin is a FIGURE on the candidate, not a chip beside it');
+  t.check(!p1.reasons.some((r) => r.kind === 'margin' || r.kind === 'earner'),
+    'and neither margin nor the old earner term survives as a reason');
+  has(p1.reasons, /Costs the shop 10% less than last time/,
+    'the price drop is noticed, and says how far it fell');
   has(p1.reasons, /Never been posted/, 'and a fresh product says so');
   hasNot(p1.reasons, /Thursdays/, 'no weekday claim on a day the item does not favour');
-  /* The backbone: 10,350 margin × 10 sold this month = the money it earns. */
-  has(p1.reasons, /Earns about UGX 103,500 profit a month/,
-    'the earner claim multiplies margin by this month\'s pace');
-  eq(kindOf(p1.reasons, /Earns about/), 'earner', 'typed earner');
-  eq(p1.reasons[0].kind, 'earner', 'and it leads the chips — the backbone speaks first');
 
-  /* each claim wears its kind, so the board can colour it */
+  /* each claim wears its kind, because the kind is what this shop's own
+     posting record is filed under */
   eq(kindOf(p1.reasons, /sitting/), 'sitting', 'the sitting claim is typed sitting');
-  eq(kindOf(p1.reasons, /Margin/), 'margin', 'the margin claim is typed margin');
-  eq(kindOf(p1.reasons, /Costs the shop less/), 'drop', 'the drop claim is typed drop');
+  eq(kindOf(p1.reasons, /Costs the shop/), 'drop', 'the drop claim is typed drop');
   eq(kindOf(p1.reasons, /Never been posted/), 'fresh', 'the freshness claim is typed fresh');
 
   const p2 = candidates.find((c) => c.key === 'P2');
-  hasNot(p2.reasons, /Margin/, 'a 5% margin is not worth bragging about');
   eq(p2.dropped, false, 'a price that went UP is not a drop');
   hasNot(p2.reasons, /Costs the shop less/, 'and earns no lower-price line');
 
+  /* THE WEEKDAY CLAIM NEEDS A SAMPLE NOW, not a coincidence. It used to
+     fire on five lifetime units and a 25% share -- and with seven
+     weekdays, two Monday sales out of five cleared that bar and printed
+     "Sells on Mondays" as though it were a pattern. Twelve units and a
+     share well clear of an even split is a claim worth making out loud;
+     this fixture's ten sit under the new floor and say nothing, which
+     is the correct answer to a small sample. */
   const mon = scope.waPostCandidates(MON, []).candidates.find((c) => c.key === 'P1');
-  has(mon.reasons, /Sells on Mondays \(80% of its sales\)/, 'on Monday the weekday claim appears, with its share');
-  eq(kindOf(mon.reasons, /Sells on/), 'weekday', 'and it is typed weekday');
+  hasNot(mon.reasons, /Sells on/, 'ten lifetime units is not enough to claim a weekday pattern');
+  env.data.savedQuotes = env.data.savedQuotes.concat([
+    { invoiced: true, voided: false, date: '2026-07-27', items: [{ productId: 'P1', variantIdx: null, qty: 6 }] },
+  ]);
+  const mon2 = scope.waPostCandidates(MON, []).candidates.find((c) => c.key === 'P1');
+  has(mon2.reasons, /Sells on Mondays \(\d+% of its sales\)/,
+    'past the floor it appears, with its share');
+  eq(kindOf(mon2.reasons, /Sells on/), 'weekday', 'and it is typed weekday');
+  env.data.savedQuotes = env.data.savedQuotes.slice(0, -1);
 
   /* rotation */
   env.data.waPosts = [{ id: 1, date: '2026-08-01', productId: 'P1', variantIdx: null, name: 'x' }];
@@ -315,7 +346,14 @@ const THU = '2026-08-06', MON = '2026-08-03';
   const { candidates } = scope.waPostCandidates(THU, []);
   eq(candidates[0].key, 'L1', 'the photo-less lucrative line OUTRANKS the photographed slow one');
   t.check(candidates[0].needsPhoto === true, 'wearing its missing photo as information, not a sentence');
-  has(candidates[0].reasons, /Earns about UGX 160,000 profit a month/, 'because the money says so, out loud');
+  /* The money still wins; it is just no longer a sentence in a chip.
+     With no posting record to learn from, the ranking is margin
+     weighted by what has been asked for -- 4,000 a unit against 1,500
+     -- and `cold` says which regime decided it, so no screen has to
+     guess whether the figure beside a name is money or an estimate. */
+  eq(candidates[0].marginUnit, 4000, 'because the margin says so');
+  eq(candidates[0].cold, true, 'and with no posts behind it, it says it is ranking cold');
+  eq(candidates[0].expectedProfit, null, 'offering no expected figure it cannot stand behind');
 }
 
 /* ---------- 6c. depth: an ad for an empty shelf costs trust ----------- */
@@ -350,10 +388,19 @@ const THU = '2026-08-06', MON = '2026-08-03';
   const c = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
   has(c.reasons, /Restocked 2 days ago — new stock is news/, 'a fresh restock is news, dated');
   eq(kindOf(c.reasons, /Restocked/), 'justin', 'typed justin');
-  const scoreFresh = c.score;
+
+  /* THE DECAY IS GONE WITH THE SCORE IT SHADED. A restock five days
+     old used to be worth fractionally less than one two days old --
+     +3 x (1 - days/7) -- a curve nobody chose and nothing measured. A
+     restock is now a KIND, and how much a post saying "just restocked"
+     actually moves is read off this shop's own record instead of off a
+     constant. What survives is the thing that was always true: after a
+     week it is not news, and the claim stops. */
   env.data.stockLog = [{ key: 'J1', type: 'restock', delta: 50, date: '2026-07-31' }];
   const older = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
-  t.check(older.score < scoreFresh, 'and the news decays by the day');
+  has(older.reasons, /Restocked 6 days ago/, 'six days on it is still news, and says how old');
+  t.check(older.score === undefined,
+    'and no candidate carries a score any more — the ranking is money, not points');
   env.data.stockLog = [{ key: 'J1', type: 'restock', delta: 50, date: '2026-07-20' }];
   const stale = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
   hasNot(stale.reasons, /Restocked/, 'until it is not news at all');
@@ -381,13 +428,31 @@ const THU = '2026-08-06', MON = '2026-08-03';
   env.data.followUps = []; env.data.sourcingLeads = [];
 }
 
-/* ---------- 6f. the mix rule: a fresh arrival makes the board --------- */
+/* ---------- 6f. the guest slot, and why it went ----------------------
+ *
+ * WHAT THIS USED TO ASSERT: that a day with a fresh arrival always
+ * SHOWED the fresh arrival -- the mix rule swapped the strongest
+ * candidate wearing 'justin' or 'sitting' into the board over the
+ * weakest plain pick, by KIND, overriding rank.
+ *
+ * It made sense for a grid of six cards, where variety was the point
+ * and the owner chose among them. There is one post a day now, and the
+ * shop has said what it is for: earning. A kind may inform the estimate
+ * -- that is exactly what the lift table is -- but it may not override
+ * the answer, or the ranking the screen shows is not the ranking it
+ * used.
+ *
+ * What survives, and is asserted here instead: the ranking is the
+ * ranking, and the swap pool still has taste about shelves so that
+ * pressing "Pick another" twice does not offer three sizes of the same
+ * clamp.
+ */
 {
   env.data.products = [
     { id: 'S1', name: 'Star A', type: 'simple', category: 'C1', image: 'u' },
-    { id: 'S2', name: 'Star B', type: 'simple', category: 'C2', image: 'u' },
-    { id: 'S3', name: 'Star C', type: 'simple', category: 'C3', image: 'u' },
-    { id: 'S4', name: 'Fresh box', type: 'simple', category: 'C4', image: 'u' },
+    { id: 'S2', name: 'Star B', type: 'simple', category: 'C1', image: 'u' },
+    { id: 'S3', name: 'Star C', type: 'simple', category: 'C2', image: 'u' },
+    { id: 'S4', name: 'Fresh box', type: 'simple', category: 'C3', image: 'u' },
   ];
   env.data.stock = { S4: 30 }; env.data.savedQuotes = []; env.data.waPosts = [];
   env.data.stockLog = [{ key: 'S4', type: 'restock', delta: 30, date: '2026-08-01' }];
@@ -395,13 +460,120 @@ const THU = '2026-08-06', MON = '2026-08-03';
   sellFixture.set('S1', { price: 100 }); costFixture.set('S1', 40);
   sellFixture.set('S2', { price: 100 }); costFixture.set('S2', 45);
   sellFixture.set('S3', { price: 100 }); costFixture.set('S3', 50);
-  sellFixture.set('S4', { price: 100 });
-  const { picks } = scope.waDailyPicks(THU, []);
-  t.check(picks.some((p) => p.key === 'S4'),
-    'a day with a fresh arrival SHOWS the fresh arrival — the mix rule swaps it in over a stronger plain pick');
-  eq(picks[0].key, 'S1', 'without touching the top pick');
-  t.check(!picks.some((p) => p.key === 'S3'), 'the weakest plain pick made the room');
+  sellFixture.set('S4', { price: 100 }); costFixture.set('S4', 90);
+  const { picks, ranked } = scope.waDailyPicks(THU, []);
+  eq(ranked[0].key, 'S1', 'the ranking leads with the best margin, restock or no restock');
+  eq(ranked[3].key, 'S4', 'and the fresh arrival sits where its money puts it');
+  t.check(!picks.some((p, i) => i === 0 && p.key === 'S4'),
+    'no kind gets to jump the queue any more');
+  /* The taste that survives: S1 and S2 share a shelf, so the second
+     offer skips to another one rather than serving the same aisle. */
+  eq(picks[0].key, 'S1', 'the swap pool still opens on the true lead');
+  t.check(picks[1] && picks[1].category !== 'C1',
+    'and its second offer comes off a different shelf');
   env.data.stockLog = [];
+}
+
+/* ---------- 6g. WHAT A POST DID: the loop that was missing ------------
+ *
+ * The picker was open-loop. waPosts was read for exactly two purposes
+ * -- blocking a repeat for fourteen days and drawing the history list
+ * -- so a shop could post for a year and the algorithm would know
+ * nothing about what any of it achieved. Every weight was a constant
+ * somebody chose.
+ *
+ * Lift is units sold in the seven days after a post against the seven
+ * before, on invoiced orders. It is an ASSOCIATION on a small sample
+ * with no control, which the screens say out loud; what it is not is
+ * invented.
+ */
+{
+  const quotes = [
+    // P1 posted on the 10th: 2 sold in the week before, 9 in the week after
+    { invoiced: true, voided: false, date: '2026-08-06', items: [{ productId: 'P1', qty: 2 }] },
+    { invoiced: true, voided: false, date: '2026-08-10', items: [{ productId: 'P1', qty: 5 }] },  // the day itself
+    { invoiced: true, voided: false, date: '2026-08-12', items: [{ productId: 'P1', qty: 9 }] },
+    { invoiced: true, voided: false, date: '2026-08-25', items: [{ productId: 'P1', qty: 40 }] }, // outside both
+    { invoiced: false, voided: false, date: '2026-08-12', items: [{ productId: 'P1', qty: 99 }] }, // a draft is not a sale
+  ];
+  const posts = [{ id: 1, date: '2026-08-10', productId: 'P1', variantIdx: null, name: 'x', kinds: ['asked'] }];
+  const o = scope.waPostOutcomes(posts, quotes, '2026-08-30')[0];
+  eq(o.before, 2, 'the week before is counted');
+  eq(o.after, 9, 'the week after is counted');
+  eq(o.lift, 7, 'and lift is the difference');
+  /* The post's own day belongs to NEITHER window: a sale on the morning
+     before the picture went up is not an effect of it, and a date
+     cannot say which side of the post a sale fell on. */
+  t.check(o.after !== 14 && o.before !== 7, 'the post day itself counts on neither side');
+
+  /* A post younger than the window is not evidence yet. Counting it as
+     a zero would quietly drag every median down as the shop posts. */
+  const young = scope.waPostOutcomes(posts, quotes, '2026-08-13')[0];
+  eq(young.ripe, false, 'a post with less than a week behind it is not ripe');
+  eq(young.lift, undefined, 'and carries no lift at all, rather than a zero');
+
+  /* the table */
+  const many = [];
+  for (let i = 0; i < 6; i++) many.push({ id: 10 + i, date: '2026-07-0' + (i + 1),
+    productId: 'P1', variantIdx: null, name: 'x', kinds: ['asked', 'fresh'] });
+  many.push({ id: 99, date: '2026-07-08', productId: 'P1', variantIdx: null, name: 'x' }); // pre-kinds row
+  const table = scope.waLiftTable(scope.waPostOutcomes(many, [], '2026-08-30'));
+  eq(table.ripe, 7, 'every post with a week behind it counts');
+  eq(table.kindless, 1, 'and a row recorded before kinds were kept is NAMED, not dropped');
+  eq(table.kinds.asked.n, 6, 'a kind carries how many posts it rests on');
+
+  /* THE ESTIMATE. Null below the floor -- never a zero, never a guess. */
+  eq(scope.waExpectedLift(['asked'], { ripe: 3, kinds: {}, pooled: 1 }), null,
+    'under ten ripe posts there is no estimate at all');
+  eq(scope.waExpectedLift(['asked'], { ripe: 20, kinds: { asked: { n: 2, lift: 9 } }, pooled: 1 }).pooled, true,
+    'a kind with too few posts behind it does not get to speak; the pooled figure answers instead');
+  /* The MEDIAN of the reasons a post carries, not the best of them: a
+     post saying three things is not entitled to the strongest, and
+     taking the maximum would make every estimate optimistic by
+     construction. */
+  const est = scope.waExpectedLift(['asked', 'fresh', 'sitting'], { ripe: 20, pooled: 1, kinds: {
+    asked: { n: 6, lift: 9 }, fresh: { n: 8, lift: 1 }, sitting: { n: 5, lift: 5 } } });
+  eq(est.lift, 5, 'three reasons of 9, 1 and 5 estimate 5 — the middle, not the best');
+  eq(est.from.length, 3, 'and it says which reasons it used');
+}
+
+/* ---------- 6h. the shelf is the ceiling, and the shop has a veto ----- */
+{
+  env.data.products = [
+    { id: 'C1', name: 'Deep shelf', type: 'simple', category: 'A', image: 'u' },
+    { id: 'C2', name: 'Thin shelf', type: 'simple', category: 'B', image: 'u' },
+  ];
+  env.data.stock = { C1: 100, C2: 3 };
+  env.data.savedQuotes = []; env.data.stockLog = []; env.data.waPosts = [];
+  env.data.followUps = []; env.data.sourcingLeads = [];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('C1', { price: 1000, unit: 'pc' }); costFixture.set('C1', 500);
+  sellFixture.set('C2', { price: 1000, unit: 'pc' }); costFixture.set('C2', 500);
+  const table = { ripe: 20, pooled: 8, kinds: { fresh: { n: 12, lift: 8 } } };
+  const { candidates } = scope.waPostCandidates(THU, [], { liftTable: table });
+  const deep = candidates.find((c) => c.key === 'C1');
+  const thin = candidates.find((c) => c.key === 'C2');
+  eq(deep.expectedUnits, 8, 'a deep shelf carries the whole estimate');
+  eq(deep.expectedProfit, 4000, 'and 500 a unit times eight units is the money');
+  /* A post cannot sell what is not there, and an estimate that ignores
+     the yard is arithmetic on a wish. */
+  eq(thin.expectedUnits, 3, 'a thin shelf caps the estimate at what is actually on it');
+  eq(thin.cappedBy, 3, 'and says so, so the screen can show the ceiling');
+  eq(candidates[0].key, 'C1', 'so the deep shelf outranks the thin one on identical margins');
+
+  /* The shop's own veto: a loss-leader, a line being run down, goods
+     promised to one contract. None of these are in the books. */
+  const barred = scope.waPostCandidates(THU, [], { liftTable: table, neverPost: ['C1'] });
+  t.check(!barred.candidates.some((c) => c.key === 'C1'), 'a barred product is never offered');
+  eq(barred.barred[0].name, 'Deep shelf', 'and it is NAMED, so the veto can be undone');
+
+  /* The paid channel has to clear its own cost. This is the only place
+     money leaves the shop, so it is arithmetic, not a recommendation. */
+  eq(scope.waBroadcastCase(4000, 100, 10).worth, true, '4,000 expected against 1,000 to send: worth it');
+  eq(scope.waBroadcastCase(400, 100, 10).worth, false, '400 against 1,000: not worth it');
+  eq(scope.waBroadcastCase(null, 100, 10).worth, null,
+    'and with no estimate there is no verdict — the cost is still named');
+  eq(scope.waBroadcastCase(4000, 0, 10), null, 'no audience is no case at all');
 }
 
 /* ---------- 7. what leaves the building ------------------------------ */
@@ -457,50 +629,63 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'and its header states the fact rather than colouring a pill');
 }
 
-/* ---------- 9. the pick wears the evidence ---------------------------
-   WHAT THIS SECTION USED TO ASSERT. A two-column board: the lead pick
-   rendered large with a rank in words ("Today's pick", "Alternate 1"),
-   and every reason worn as a chip in one of TEN colours -- sitting,
-   margin, drop, weekday, fresh, earner, justin, asked, fast, nophoto.
+/* ---------- 9. the pick wears the evidence, and its arithmetic -------
+   WHAT THIS SECTION USED TO ASSERT, twice over. First a two-column
+   board: the lead rendered large with a rank in words, every reason
+   worn as a chip in one of TEN colours. Then, after that board became
+   a 304px rail panel, that the reasons still reached the owner as a
+   sentence.
 
-   Ten chip colours is the design system's own example of the disease:
-   a device that marks everything marks nothing, and none of those ten
-   was a state the shop could act on. They were reasons, which is prose.
-   So the reasons are a sentence now, the alternates live behind "Pick
-   another" (which is what the board's second column was for), and the
-   evidence still reaches the owner in the same words -- the reason
-   TEXT is unchanged and still travels into the post record.
-
-   What is asserted instead: that every one of those facts still
-   reaches the screen, and that the two gap wordings the shop most
-   needs are still exact. */
+   Both are gone because the panel is a co-lead now and the reasons are
+   no longer decoration on a recommendation -- they are the EVIDENCE
+   under it, each one carrying where it was read from. A shop owner who
+   cannot trace a claim about money has to take it on faith, and this
+   screen does not ask for faith about money.
+*/
 {
-  t.check(/lead\.reasons\.map\(r=> r\.text\)\.join\(' · '\)/.test(src),
-    'the reasons a pick was chosen still reach the owner, as a sentence rather than ten colours');
-  t.check(/\$\{others\.length \? `<button[^`]*id="wa_swap"/.test(src),
-    'and the alternates are one press away, which is what the second column was for');
-  t.check(/<span class="wa-pk-im">\$\{esc\(lead\.name\.slice\(0,2\)\.toUpperCase\(\)\)\}<\/span>/.test(src),
-    'a photo-less pick renders a lettered tile, not a broken image');
-  t.check(/go: 'media'/.test(src) && /go: 'products'/.test(src)
+  t.check(/waPostDeskStats\(data\.waPosts, today\)/.test(src) && /id="wa_post_pan"/.test(src),
+    'the post panel is derived at render, from the same rows as the rotation');
+  t.check(/\$\{desk\.postedTodayName \? 'sent' : 'not sent'\}/.test(src),
+    'and its header states the fact rather than colouring a pill');
+
+  /* Every reason, with its source. */
+  t.check(/lead\.reasons\.map\(r=> `<div class="po-ev">/.test(src)
+    && /WA_EVIDENCE_SOURCE\[r\.kind\]/.test(src),
+    'each reason reaches the owner with where it was read from');
+  const sources = (/const WA_EVIDENCE_SOURCE = \{[\s\S]*?\n\};/.exec(src) || [''])[0];
+  ['asked', 'inbox', 'justin', 'drop', 'rival', 'catalogue', 'waseller', 'sitting', 'fast',
+    'weekday', 'fresh', 'nophoto'].forEach((k) =>
+    t.check(new RegExp(`\\b${k}:`).test(sources), `the ${k} claim can be traced to its record`));
+
+  t.check(/\$\{others\.length \? '<button[^']*id="wa_swap"/.test(src),
+    'the alternates are one press away');
+  /* A missing photo is a FACT about the post, so the placeholder says
+     "no photo" rather than spelling the first two letters of the name
+     -- which produced "AD" for Adjustable Stands and read as an advert. */
+  t.check(/title="No photo — it posts as a text card"/.test(src)
+    && /<rect x="3" y="4" width="18" height="16" rx="2"\/>/.test(src),
+    'a photo-less pick draws a picture mark, not a broken image and not its own initials');
+
+  /* The gaps moved to the panel that already reports the catalogue
+     count -- one fact, one place -- and kept the way to fix them. */
+  t.check(/go: 'media'/.test(src) && /go: 'products'/.test(src) && /go: 'inventory'/.test(src)
     && /data-go="\$\{esc\(g\.go\)\}"/.test(src) && /goToTab\(btn\.dataset\.go\)/.test(src),
-    'the gaps walk straight to Media and Products');
-  /* These two wordings are load-bearing. A shop that reads "no photo"
-     as "cannot be posted" stops posting; a shop told only "low stock"
-     does not know the screen means restock before advertising. */
+    'the gaps still walk straight to Media, Products and Inventory');
   t.check(/still pickable, better with one/.test(src),
     'the photo gap says plainly that a photo is wanted, not required');
-  t.check(/selling too fast to advertise — restock first/.test(src) && /go: 'inventory'/.test(src),
+  t.check(/selling too fast to advertise/.test(src),
     'the depth skips are shown with the way to fix them');
   t.check(/resting after a recent post/.test(src) && /back in \$\{WA_ROTATION_DAYS - e\.daysAgo\}d/.test(src),
     'and the rotation bench is still visible — what is resting, and when it returns');
-  t.check(/class="wa-rl-x wa-hist-del"/.test(src) && /class="wa-rl-d"/.test(src),
-    'the record list still lets a row be removed, and shows when it was picked');
-  /* Truncation, the rule that keeps biting this app: "Iron sheets —
-     G28, 3m box profile" does not fit 304px, so the name must ellipsis
-     and carry the full value where a pointer can still read it. */
-  t.check(/\.wa-pk-n\{[^}]*text-overflow:ellipsis/.test(src)
-    && /class="wa-pk-n" title="\$\{esc\(lead\.name\)\}"/.test(src),
-    'and a name too long for the rail is cut with a mark, not clipped mid-word');
+
+  /* The record has to stay correctable: a post entered by mistake now
+     skews every median it touches, which it never did before. */
+  t.check(/class="wa-rl-x wa-hist-del"/.test(src)
+    && /stops counting towards what posting has taught the shop/.test(src),
+    'a record can still be removed, and the warning says what removing it costs');
+  t.check(/\.po-n\{[^}]*text-overflow:ellipsis/.test(src)
+    && /class="po-n" title="\$\{esc\(lead\.name\)\}"/.test(src),
+    'and a name too long for the column is cut with a mark, not clipped mid-word');
 }
 
 /* ---------- 10. all of it is REACHED ---------------------------------- */

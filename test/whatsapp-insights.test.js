@@ -142,7 +142,12 @@ const NOW = Date.parse('2026-08-06T12:00:00Z');
     src.indexOf('function waRenderHeadline'))),
     'and the count the tab badge carried now rides the rail, where it competes with the other screens');
 
-  t.check(/waInsightStats\(waInbox\.convs, waInbox\.allMsgs, data\.savedQuotes, now\)/.test(src),
+  /* The post outcomes are HANDED IN rather than read off `data` inside
+     the function, so the strip's fifth tile leans on exactly the same
+     measure of lift the picker ranks on -- one definition in the file,
+     not two -- while waInsightStats stays a function of its arguments
+     and can still be compiled alone by this suite. */
+  t.check(/waInsightStats\(waInbox\.convs, waInbox\.allMsgs, data\.savedQuotes, now,\s*\n\s*waPostOutcomes\(data\.waPosts, data\.savedQuotes, todayISO\(\)\)\)/.test(src),
     'the strip is computed from live records at render time — derived, never stored');
 
   /* THE FIGURES THEMSELVES CHANGED, and the two that went are worth
@@ -159,9 +164,30 @@ const NOW = Date.parse('2026-08-06T12:00:00Z');
     'the strip leads with who is waiting and how long the worst of them has waited');
   t.check(/st\.waitingCount \? 'ow-warn' : ''/.test(strip),
     'and it is amber only when somebody actually is');
-  t.check(/`\$\{st\.autoCount\}<span class="ow-u">of \$\{st\.outboundCount\}<\/span>`/.test(strip),
-    'the system\'s share is a count of replies, not a percentage that reads as a score');
-  t.check(!/100%|autoShare\*100/.test(strip), 'and the percentage is gone, not merely relabelled');
+  /* THE FIFTH TILE CHANGED HANDS, and the argument is worth keeping.
+     "Answered by the system" is a TRUST fact -- how much of the talking
+     a machine does in the shop's name -- and it survives in two places
+     that are closer to it than a strip: an amber chip on every queue
+     row it applies to, and the Answered panel's own header ("6 by you,
+     3 by the system"). What took the slot is the thing this screen now
+     exists to argue, and the thing the picker was missing entirely: a
+     post record that says whether posting moves stock at all.
+
+     It is UNITS, deliberately, not money. Money would need the caveat
+     chain that lives under the learning panel, and a strip sub is no
+     place for it -- so the tile reports what was counted and says the
+     span it was counted over. */
+  t.check(/tile\('Moved after posting'/.test(strip)
+    && /st\.postLift/.test(strip) && /st\.postRipe/.test(strip),
+    'the fifth tile is what posting moved, counted the week after each post');
+  t.check(/no post has a week of trading behind it yet/.test(strip),
+    'and it says so plainly rather than showing a zero, when nothing is ripe');
+  t.check(!/100%|autoShare\*100/.test(strip),
+    'the percentage that read as a score is gone, not merely relabelled');
+  /* Gone from the strip, still on the screen. */
+  t.check(/class="ow-cp wa-cp-auto">Answered by the system/.test(src)
+    && /by you, \$\{autoN\} by the system/.test(src),
+    'and the system\'s share survives on the rows and in the Answered panel it describes');
 }
 
 process.exit(t.done() ? 1 : 0);
