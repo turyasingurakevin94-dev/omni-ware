@@ -10852,6 +10852,14 @@
      The rail is 320 wide -- a product name and its sizes -- and the
      right takes the rest. */
   .pr-panes{display:grid;grid-template-columns:320px minmax(0,1fr);gap:var(--ow-sp-16);align-items:start;}
+  /* The size grid works either way -- it is the SAVING of a size that
+     needs 0093. A tick that quietly stays on one phone is the worst of
+     the three states, so it says so above the screen rather than
+     letting the owner find out on the second device. */
+  .pr-sizewarn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);border-radius:var(--ow-r-lg);
+    padding:var(--ow-sp-10) var(--ow-sp-12);margin-bottom:var(--ow-sp-16);
+    font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);}
+  .pr-sizewarn b{font-weight:var(--ow-fw-600);}
   .pr-left{display:flex;flex-direction:column;min-width:0;}
   .pr-right{min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
   .pr-find-w{position:relative;display:flex;align-items:center;margin:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);}
@@ -50084,7 +50092,12 @@ function renderPairings(){
      opens on something rather than on an instruction. */
   if(pairSelectedId && !productById(pairSelectedId)) pairSelectedId = null;
   if(!pairSelectedId && withRules.length && window.innerWidth > 820) pairSelectedId = withRules[0].p.id;
-  wrap.innerHTML = `<div class="pr-panes${pairSelectedId ? ' pr-has' : ''}">
+  const sizeWarn = linkSizeColumn ? '' : `<div class="pr-sizewarn">
+    <b>Sizes on a pairing are staying on this device.</b> The rules themselves save and share
+    normally &mdash; only the size ticked on either side of one does not. Paste
+    <b>supabase/migrations/0093_product_link_size.sql</b> into the Supabase SQL editor and reload,
+    and this line goes away. Until it does, a size chosen here is not on the other phones.</div>`;
+  wrap.innerHTML = `${sizeWarn}<div class="pr-panes${pairSelectedId ? ' pr-has' : ''}">
     <div class="ow-pan pr-left">
       <div class="pr-find-w">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>

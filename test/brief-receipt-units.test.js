@@ -282,6 +282,15 @@ const fns = compileScope([
   t.check(/sb\.from\('product_links'\)\.select\('to_variant_idx, from_variant_idx'\)\.limit\(1\)/.test(src), 'after a probe for it');
   t.check(read('supabase/migrations/0093_product_link_size.sql').includes('add column if not exists to_variant_idx integer'),
     'the migration adds exactly that column, idempotently');
+  /* And where it has not been run, the screen says so. A size ticked
+     into a column that is not there is dropped on the way to the server
+     without a word, and the owner finds out on the second phone. */
+  t.check(/linkSizeColumn \? '' : `<div class="pr-sizewarn">/.test(src),
+    'a shop without the column is told, on the screen that writes sizes');
+  t.check(/pr-sizewarn[\s\S]{0,400}0093_product_link_size\.sql/.test(src),
+    'and the notice names the migration to paste');
+  t.check(/pr-sizewarn[\s\S]{0,400}rules themselves save and share/.test(src),
+    'while saying what still works, so nobody stops writing rules over it');
 }
 
 process.exit(t.done() ? 1 : 0);
