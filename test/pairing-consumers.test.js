@@ -241,5 +241,21 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
     'and no line is added outside a click');
 }
 
+/* ---- 10. the till, and a rhythm the books cannot see yet -------------- */
+{
+  t.check(/function tillGoesWith\(\)\{/.test(src), 'the till reads what goes with the last thing added');
+  t.check(/data-tillwith=/.test(src), 'and offers it as a tap');
+  t.check(/tillAddSaleLine\(el\.dataset\.tillwith, vi\);/.test(src), 'which adds it the way the till adds anything');
+  t.check(/\.find\(c=> \(c\.verbId === 'needs' \|\| c\.verbId === 'with'\) && c\.inStock && !c\.why && c\.price != null\)/.test(src),
+    'never offering what the shelf has not got or the registry cannot price');
+
+  const habitsSrc = extractFunction(src, 'customerProductHabits', 'index.html');
+  t.check(/rhythmBy = 'rule'/.test(habitsSrc), 'a rule can stand in for a rhythm the invoices cannot show yet');
+  t.check(/const lasts = pairLastsDays\(h\.productId\);/.test(habitsSrc), 'read from what the owner wrote down');
+  const reason = extractFunction(src, 'briefReasonFor', 'index.html');
+  t.check(/by your own rule/.test(reason), 'and the picture says which of the two it is reading');
+  t.check(/times running/.test(reason), 'the other sentence being about the invoices');
+}
+
 t.check(saves > 0, 'every rule written was saved');
 process.exit(t.done() ? 1 : 0);

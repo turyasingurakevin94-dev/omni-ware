@@ -5058,6 +5058,10 @@
   .till-lines-foot{display:flex;align-items:baseline;justify-content:space-between;
     border-top:1px solid var(--ow-rule);padding-top:7px;margin-top:2px;
     font-size:12px;color:var(--ink-soft);}
+  /* One line, under the total, on a screen used one-handed: what the
+     shop wrote down about the thing just added, and a tap to take it. */
+  .till-with{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6);
+    padding:var(--ow-sp-8) var(--ow-sp-12) 0;margin:0;}
   .till-lines-foot b{font-family:'IBM Plex Mono',monospace;font-size:14.5px;color:var(--ink);
     font-variant-numeric:tabular-nums;}
   @media (max-width:560px){
@@ -23510,6 +23514,15 @@ const WA_DRAFT_TOOLS = {
         row.unit = r.at.unit || '';
         if(r.at.packQty > 1){ row.pack_qty = r.at.packQty; row.pack_unit = r.at.packUnit || 'pack'; }
         row.breaks = (catalogueBreaks(p, variantIdx, r.basisKey)||[]).slice(0, 2);
+        /* What the shop wrote down about it, priced the same way. Still
+           no availability -- "usually taken with" is a fact about the
+           shop's own orders, which is a different claim from "we have
+           it", and only the shop can make the second one. */
+        const goes = pairCompanionsFor(p.id, variantIdx, 1)
+          .filter(c=> c.verbId !== 'instead' && c.price != null && !c.why)
+          .slice(0, 2)
+          .map(c=> ({ name: c.label, price: c.price, unit: c.unit || '' }));
+        if(goes.length) row.goes_with = goes;
       } else {
         row.price = null;
         row.price_not_set = true;
@@ -24036,6 +24049,14 @@ function waQuoteReply(m){
   lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`);
   (m.breaks||[]).slice(0,1).forEach(b=>
     lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}.`));
+  /* ONE companion, and said as what the shop's own orders show rather
+     than as availability: "usually taken with" is true of the books,
+     while "we have it" is a claim only the shop can make. */
+  const goes = m.productId
+    ? pairCompanionsFor(m.productId, m.variantIdx, 1)
+        .find(c=> c.verbId !== 'instead' && c.inStock && !c.why && c.price != null)
+    : null;
+  if(goes) lines.push(`Usually taken with ${goes.label}: UGX ${Number(goes.price).toLocaleString('en-UG')}${goes.unit ? ' per ' + goes.unit : ''}.`);
   lines.push('Reply here to order, or ask about anything else.');
   return lines.join('\n');
 }
@@ -47836,8 +47857,20 @@ function customerProductHabits(customerId){
       if(span > 0) everyDays = Math.round(span / (order.length - 1));
     }
     const sinceLast = daysBetweenISO(last.d, today);
+    /* A RHYTHM THE BOOKS CANNOT SEE YET. Three orders make a rhythm,
+       and a customer who has bought once has none -- however plainly the
+       owner has written down that a tin lasts a month. Where they have,
+       that is the rhythm until the invoices have enough to say
+       otherwise, and the picture says which of the two it is reading:
+       "by your own rule" is a different sentence from "three times
+       running", and only one of them is a fact about this customer. */
+    let rhythmBy = everyDays === null ? null : 'orders';
+    if(everyDays === null){
+      const lasts = pairLastsDays(h.productId);
+      if(lasts > 0){ everyDays = Math.round(lasts); rhythmBy = 'rule'; }
+    }
     return {
-      productId: h.productId, variantIdx: h.variantIdx, orders: order.length, everyDays,
+      productId: h.productId, variantIdx: h.variantIdx, orders: order.length, everyDays, rhythmBy,
       /* The receipt figure, in the row's unit, or NOTHING where the line
          does not say its unit and the goods come packed: a figure that
          might be a carton's or a pair's is not a figure to measure
@@ -47901,7 +47934,10 @@ function briefReasonFor(r, habits){
     return { key:'rhythm', chip:'Due by rhythm', tone:'ow-good',
       productId: due.productId, variantIdx: due.variantIdx, qty: due.typicalQty,
       weight: due.typicalQty * (due.lastPrice || 0),
-      why: `Takes <b>${f(due.typicalQty)}</b> ${due.unit ? `${esc(due.unit)} of ` : ''}${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.` };
+      why: `Takes <b>${f(due.typicalQty)}</b> ${due.unit ? `${esc(due.unit)} of ` : ''}${esc(p ? productVariantLabel(p, due.variantIdx) : due.productId)} ${
+        due.rhythmBy === 'rule'
+          ? `once, on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago &mdash; and it runs out after about <b>${due.everyDays}</b> days by your own rule.`
+          : `about every <b>${due.everyDays}</b> days, ${due.orders} times running. Last on ${esc(fmtShortDate(due.lastAt))}, ${due.sinceLast} days ago.`}` };
   }
 
   /* 3. THE PRICE FELL FOR THEM. The strongest sentence in this trade,
@@ -65966,6 +66002,27 @@ function tillAddSaleLine(productId, variantIdx){
   tillRenderSaleLines();
 }
 
+/* WHAT THE COUNTER FORGETS. A till sale is over in twenty seconds and
+   the thing the customer will come back for tomorrow -- the nails for
+   the sheets -- is remembered by nobody at that speed. One line, the
+   strongest claim on what was last added, and it is a button rather
+   than a line already added: a till that adds things by itself is a
+   till nobody trusts. */
+function tillGoesWith(){
+  const last = tillSaleLines[tillSaleLines.length - 1];
+  if(!last || !last.productId) return null;
+  const on = new Set(tillSaleLines.map(l=> l.productId).filter(Boolean));
+  return pairCompanionsFor(last.productId, last.variantIdx, Number(last.qty) || 0, { exclude: on })
+    .find(c=> (c.verbId === 'needs' || c.verbId === 'with') && c.inStock && !c.why && c.price != null) || null;
+}
+function tillGoesWithHTML(){
+  const c = tillGoesWith();
+  if(!c) return '';
+  const say = c.verbId === 'needs' ? 'cannot be used without' : 'usually goes with';
+  return `<p class="ow-mini till-with">${esc(c.label)} &mdash; ${esc(say)} it${
+    c.qty ? `, ${c.qty} ${esc(c.unit || '')}` : ''} at ${esc(fmtUGX(c.price))}.
+    <button type="button" class="q-rail-act" data-tillwith="${esc(c.productId)}" data-tv="${c.variantIdx == null ? '' : c.variantIdx}" data-tq="${c.qty || 1}">Add it</button></p>`;
+}
 function tillRenderSaleLines(){
   const wrap = document.getElementById('cb_in_sale_lines');
   if(!wrap) return;
@@ -65984,12 +66041,20 @@ function tillRenderSaleLines(){
       <span>${tillSaleLines.length} line${tillSaleLines.length===1?'':'s'}</span>
       <b>${esc(fmtUGX(Math.round(tillSaleTotal())))}</b>
     </div>
+    ${tillGoesWithHTML()}
   </div>`;
   wrap.querySelectorAll('.till-line-qty').forEach(el=> el.addEventListener('input', ()=>{
     tillSaleLines[Number(el.dataset.i)].qty = el.value; tillSyncAmountFromSale(); tillRefreshLineTotals();
   }));
   wrap.querySelectorAll('.till-line-price').forEach(el=> el.addEventListener('input', ()=>{
     tillSaleLines[Number(el.dataset.i)].price = el.value; tillSyncAmountFromSale(); tillRefreshLineTotals();
+  }));
+  wrap.querySelectorAll('[data-tillwith]').forEach(el=> el.addEventListener('click', ()=>{
+    const vi = el.dataset.tv === '' ? null : Number(el.dataset.tv);
+    tillAddSaleLine(el.dataset.tillwith, vi);
+    const line = tillSaleLines[tillSaleLines.length - 1];
+    const want = Number(el.dataset.tq) || 1;
+    if(line && want > 1){ line.qty = want; tillSyncAmountFromSale(); tillRenderSaleLines(); }
   }));
   wrap.querySelectorAll('.till-line-del').forEach(el=> el.addEventListener('click', ()=>{
     tillSaleLines.splice(Number(el.dataset.i), 1); tillRenderSaleLines();

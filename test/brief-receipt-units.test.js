@@ -77,6 +77,9 @@ const env = {
   customerOrdersFor: ()=> data.savedQuotes,
   todayISO: ()=> '2026-09-06',
   daysBetweenISO: (a, b)=> Math.round((Date.parse(b) - Date.parse(a)) / 86400000),
+  /* This shop has written no "runs out after" rule, so a rhythm can
+     only come from the invoices — which is what these checks are about. */
+  pairLastsDays: ()=> null,
 };
 const NAMES = ['habitLineOnRowUnit', 'customerProductHabits', 'briefVariantForLine', 'briefSameSizeAs',
   'briefPaidFigure', 'updateProductLink', 'productLinkLabel', 'pairSizeIdx', 'pairFault',

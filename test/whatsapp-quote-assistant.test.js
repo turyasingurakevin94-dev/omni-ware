@@ -35,6 +35,7 @@ const hookSrc = read('supabase/functions/wa-webhook/index.ts');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 const sellFixture = new Map(); const breaksFixture = new Map(); const basisAsked = [];
+const companionFixture = new Map();  // 'P1' or 'P1::0' -> [{label, price, unit, ...}]
 const env = {
   data: { products: [] },
   WA_QUOTE_STOPWORDS_SRC: null,
@@ -43,6 +44,9 @@ const env = {
     return sellFixture.get(p.id + (idx==null ? '' : '::'+idx)) || null;
   },
   catalogueBreaks: (p, idx) => breaksFixture.get(p.id + (idx==null ? '' : '::'+idx)) || [],
+  /* What the shop wrote down about a product, as the one reader returns
+     it. Empty unless a check below puts something in. */
+  pairCompanionsFor: (id, idx) => companionFixture.get(id + (idx==null ? '' : '::'+idx)) || [],
   productVariantLabel: (p, idx) => {
     if (idx == null) return p.name;
     const v = (p.variants || [])[idx];
@@ -141,6 +145,19 @@ if (!scope) process.exit(1);
   t.check(reply.includes('Buy 10+ at UGX 43,500.'), 'and the volume break');
   t.check(reply.includes('Reply here to order'), 'and invites the order');
   t.check(!/[Mm]argin|[Cc]ost/.test(reply), 'no cost, no margin — the third surface held to the same line');
+  t.check(!/[Uu]sually taken with/.test(reply), 'and nothing is claimed to go with it where nothing is written down');
+
+  /* WHAT THE SHOP WROTE DOWN reaches the customer's reply, said as a
+     fact about the shop's own orders rather than as availability: only
+     the shop can say what is on the shelf, and it says that itself. */
+  const m = scope.waQuoteMatch('cement price', cands);
+  companionFixture.set(m.productId + (m.variantIdx == null ? '' : '::' + m.variantIdx),
+    [{ verbId: 'needs', label: 'River Sand', price: 30000, unit: 'trip', inStock: true, why: null }]);
+  const withCompanion = scope.waQuoteReply(m);
+  t.check(withCompanion.includes('Usually taken with River Sand: UGX 30,000 per trip.'),
+    'one companion is named, with its price');
+  t.check(!/stock|available/i.test(withCompanion), 'and nothing about the shelf is claimed');
+  companionFixture.clear();
 }
 
 /* ---------- 5. all of it is REACHED, and nothing sends itself -------- */

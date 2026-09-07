@@ -172,6 +172,10 @@ const vercel = read('vercel.json');
     searchTokens: (s) => String(s || '').toLowerCase().split(/\s+/).filter(Boolean),
     catalogueSellAtQty: (p, idx, qty, basis) => (PRICEBOOK[p.id] || {})[basis] || null,
     catalogueBreaks: () => [{ qty: 10, price: 43500 }],
+    /* This shop has written down nothing about what goes with what, so
+       a row carries a price and no companion — which is what these
+       checks are about. */
+    pairCompanionsFor: () => [],
     getStockQty: (pid) => Number(data.stock[pid]) || 0,
     productVariantLabel: (p, vi) => (vi == null || !p.variants) ? p.name : p.name + ' ' + p.variants[vi].label,
     todayISO: () => '2026-08-26',
