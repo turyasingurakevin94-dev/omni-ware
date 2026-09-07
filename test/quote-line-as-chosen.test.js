@@ -128,11 +128,12 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'an edited count makes the choice explicit on the line');
   t.check(/const typed = Number\(e\.target\.value\) \|\| 1;\s*const newQty = Math\.max\(1, Math\.round\(typed \* per \* 1e6\) \/ 1e6\);/.test(rows),
     'and a count typed in cartons is multiplied back to the base unit before it is kept');
-  /* The caption under a carton count is the base, for anyone checking
-     the arithmetic -- the reverse of the caption that used to force the
-     carton on a rep who had typed pairs. */
-  t.check(/asPack \? `<span class="q-qty-pack"[^`]*>= \$\{esc\(String\(Number\(it\.qty\)\.toLocaleString\('en-UG'\)\)\)\} \$\{esc\(it\.unit \|\| ''\)\}<\/span>`/.test(rows),
-    'under a carton count the caption gives the base count');
+  /* No caption under a carton count. "2 Ctn" with "= 200 Pair" under
+     it is the sum the rep did not ask for; the pack size lives in the
+     unit's tooltip instead. */
+  t.check(/\(!asPack && packView\) \? `<span class="q-qty-pack"/.test(rows)
+    && !/asPack \? `<span class="q-qty-pack"/.test(rows),
+    'a carton count carries no "= 200 Pair" caption under it');
   t.check(/--ow-tbl-cols:30px minmax\(0,1fr\) 88px 116px/.test(src),
     'and the Qty track is wide enough for a count and its unit, Price each for a six-digit carton price and its reset arrow');
 }

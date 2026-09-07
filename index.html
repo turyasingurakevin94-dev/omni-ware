@@ -32910,9 +32910,13 @@ function renderQuoteItems(){
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span>${consignTag}</span>
       </div>
-      <div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${countUnit ? `Counted in ${esc(countUnit)}` : ''}">${esc(countUnit)}</span></div>${
-        asPack ? `<span class="q-qty-pack" title="${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(String(Number(it.qty).toLocaleString('en-UG')))} ${esc(it.unit || '')}</span>`
-        : packView ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
+      <div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span></div>${
+        /* A count in cartons is a count in cartons: no "= 200 Pair"
+           under it. The pack size is in the unit's tooltip for anyone
+           who wants it. Only the OLD reading -- a line written before
+           the choice was recorded, with a remainder -- still says what
+           the document will fold it into. */
+        (!asPack && packView) ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
       <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
