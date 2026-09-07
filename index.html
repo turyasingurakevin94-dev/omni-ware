@@ -29754,6 +29754,13 @@ function openBuyingList(){
            reason for writing one down, so the line says which way. */
         const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
         const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
+        /* In the unit the line was chosen in -- "2 Ctn @ 430,000", not
+           "200 Pair @ 2,150" -- through the same reader every document
+           uses. Every figure is still kept per base unit. */
+        const cnt = (n)=> quoteLineCount(l.it, n);
+        const per = quoteLineCountPer(l.it);
+        const cu = cnt(l.qty).unit;
+        const perChosen = (x)=> (x == null ? null : x * per);
         /* Received in full is finished business; received short is not.
            The row used to draw both the same way -- struck through,
            "paid", Undo only -- so the one case that still needed
@@ -29765,8 +29772,8 @@ function openBuyingList(){
             <div class="bl-item-cost">${l.settled ? `<span class="bl-paid">paid</span>` : fmtUGX(l.lineCost)}</div>
           </div>
           <div class="bl-item-line sub">
-            <div class="bl-item-qty">${esc(l.shortfall || l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}
-              <span class="bl-item-each">@ ${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</span></div>
+            <div class="bl-item-qty">${esc(cnt(l.shortfall || l.qty).n)}${cu ? ` ${esc(cu)}` : ''}
+              <span class="bl-item-each">@ ${fmtUGX(perChosen(l.received ? Number(l.it.receivedPrice) : l.unitCost))}</span></div>
             <div class="bl-item-act">${l.shortfall
               ? `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive rest</button>
                  <button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
@@ -29777,10 +29784,10 @@ function openBuyingList(){
           ${l.movedFrom
             ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
             : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
-          ${l.received ? `<div class="bl-recd">${ICON_CHECK}${Number(l.it.receivedQty)} received${
-            shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
-            paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}
-          ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${l.shortfall}${l.it.unit ? ' ' + esc(l.it.unit) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}
+          ${l.received ? `<div class="bl-recd">${ICON_CHECK}${esc(cnt(Number(l.it.receivedQty)).n)} received${
+            shortBy > 0 ? ` · ${esc(cnt(shortBy).n)} short of the ${esc(cnt(exp.qty).n)} sent for` : ''}${
+            paidMore ? ` · ${fmtUGX(Math.abs(paidMore) * per)} ${paidMore>0?'more':'less'} per ${esc(cu||'unit')} than quoted` : ''}</div>` : ''}
+          ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${esc(cnt(l.shortfall).n)}${cu ? ' ' + esc(cu) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}
         </li>`;
       }).join('')}</ul>
       ${/* One journey, one job. Offered only while something on this run
@@ -30024,6 +30031,9 @@ function createCollectionTripFromRun(run, opts){
       productId: l.it.productId, variantIdx: l.it.variantIdx == null ? null : l.it.variantIdx,
       productName: l.it.productName || 'Item',
       unit: l.it.unit || '', packUnit: l.it.packUnit || '',
+      /* How the line was chosen, so the phone asks for cartons of a
+         carton line -- see pickLineCount. */
+      packQty: Number(l.it.packQty) || 0, qtyIn: l.it.qtyIn || '',
       clientName: quoteClientName(l.order),
       qty: l.qty, expectedPrice: l.unitCost,
       gotQty: null, gotPrice: null,
@@ -30270,14 +30280,20 @@ function wireBuyingListReceiving(){
       let boughtFrom = it.supplierId;
       if(cheaper){
         boughtFrom = confirm(`Where did this actually come from?\n\n`
-          + `OK — ${supplierName(cheaper)} (cheaper today at ${fmtUGX(runLine.unitCost)} each)\n`
+          + `OK — ${supplierName(cheaper)} (cheaper today at ${fmtUGX(runLine.unitCost * quoteLineCountPer(it))} per ${quoteLineCount(it, 1).unit || 'unit'})\n`
           + `Cancel — ${supplierName(it.supplierId)}, who the order was quoted against\n\n`
           + `Whoever you pick is who gets billed for it.`)
           ? cheaper : it.supplierId;
       }
       const switching = String(boughtFrom) !== String(it.supplierId);
       const exp = quoteLineExpected(it);
-      const unit = it.unit || 'unit';
+      /* Asked in the unit the line was chosen in: a carton line asks
+         "How many Ctn arrived?" and "What did each Ctn cost?", and the
+         answers are brought back to the base unit before they are kept.
+         A loose line asks exactly as before. */
+      const per = quoteLineCountPer(it);
+      const unit = quoteLineCount(it, 1).unit || 'unit';
+      const say = (n)=> quoteLineCount(it, n).n;
       /* The price to open on follows the supplier just chosen.
          quoteLineExpected reports what the line was QUOTED at, so
          buying at the cheaper shop and taking the offered figure would
@@ -30292,16 +30308,20 @@ function wireBuyingListReceiving(){
       const owed = quoteLineShortfall(it);
       const topUp = owed > 0;
       const qty = prompt(`${it.productName || 'Item'}${switching ? `\nFrom ${supplierName(boughtFrom)}` : ''}\n${topUp
-        ? `${it.receivedQty} already in, ${owed} ${unit} still owed.\nHow many ${unit} arrived this time?`
-        : `How many ${unit} arrived?`}`, String(topUp ? owed : exp.qty));
+        ? `${say(it.receivedQty)} already in, ${say(owed)} ${unit} still owed.\nHow many ${unit} arrived this time?`
+        : `How many ${unit} arrived?`}`, say(topUp ? owed : exp.qty));
       if(qty === null) return;
-      const n = Number(qty);
-      if(!isFinite(n) || n <= 0){ toast('Nothing received — enter how many arrived'); return; }
-      const paid = prompt(`What did each ${unit} cost?`, String(topUp ? (Number(it.receivedPrice) || expPrice) : expPrice));
+      const typed = Number(String(qty).replace(/,/g, ''));
+      if(!isFinite(typed) || typed <= 0){ toast('Nothing received — enter how many arrived'); return; }
+      const n = Math.round(typed * per * 1e6) / 1e6;
+      const paid = prompt(`What did each ${unit} cost?`, String(Math.round((topUp ? (Number(it.receivedPrice) || expPrice) : expPrice) * per)));
       if(paid === null) return;
-      /* The carton figure, if that is what was typed, divided down to
-         the unit the line is kept in -- see packFigureAtTheDoor. */
-      const paidEach = packFigureAtTheDoor(Number(paid), expPrice, Number(it.packQty) || 0, it.packUnit, unit);
+      /* A carton line was asked per carton, so the answer is divided
+         by the carton. A loose line may still have had the carton
+         figure typed at it -- see packFigureAtTheDoor. */
+      const paidEach = per > 1
+        ? Number(paid) / per
+        : packFigureAtTheDoor(Number(paid), expPrice, Number(it.packQty) || 0, it.packUnit, unit);
       /* Only now. Written before the prompts, a cancelled receipt would
          still have moved the line's supplier -- a bill quietly
          reassigned by a question somebody backed out of. */
@@ -30321,9 +30341,9 @@ function wireBuyingListReceiving(){
       renderInventory();
       openBuyingList();
       const stillOwed = quoteLineShortfall(it);
-      toast(`${got} ${unit} received onto the shelf${
+      toast(`${say(got)} ${unit} received onto the shelf${
         movedSupplier ? ` — now billed to ${supplierName(it.supplierId)}` : ''}${stillOwed > 0
-        ? ` — still ${stillOwed} short for ${quoteClientName(q)}`
+        ? ` — still ${say(stillOwed)} short for ${quoteClientName(q)}`
         : (topUp ? ' — this line is now complete' : '')}${
         closed ? ` · ${closed} supplier ${closed===1?'delivery':'deliveries'} now complete` : ''}${
         autoAdvanceNote(advanced)}`,

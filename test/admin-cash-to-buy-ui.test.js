@@ -92,6 +92,12 @@ const scope = compileScope([
   extractFunction(src, 'consignedForOrder', 'index.html'),
   extractFunction(src, 'orderCashStripHTML', 'index.html'),
   extractFunction(src, 'openBuyingList', 'index.html'),
+  /* The list counts each line in the unit it was chosen in, through the
+     same reader every document uses. Compiled in, not stubbed; a loose
+     line reads exactly as before. */
+  extractFunction(src, 'quoteLinePack', 'index.html'),
+  extractFunction(src, 'quoteLineCountPer', 'index.html'),
+  extractFunction(src, 'quoteLineCount', 'index.html'),
 ], {
   data,
   quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
@@ -433,6 +439,18 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(/class="bl-item-cost"/.test(modal.html) && /class="bl-item-qty"/.test(modal.html),
     'still showing what each line costs and how much of it there is');
   t.check(/class="bl-receive"/.test(modal.html), 'and still offering to receive it');
+
+  /* IN THE UNIT THE LINE WAS CHOSEN IN. A line chosen as 2 Ctn is on the
+     list as 2 Ctn at the carton price, not as 200 Pair at the pair price
+     -- the person collecting it asks the supplier for cartons. */
+  data.savedQuotes = [order({ id: 41, items: [line({ productId: 'P1', productName: 'Soft Close',
+    unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200, price: 2150 })] })];
+  data.prices = [price({ id: 1, supplierId: 'S1', wholesale: 2150, retail: 2400, packQty: 100, packUnit: 'Ctn', unit: 'Pair' })];
+  scope.openBuyingList();
+  t.check(/class="bl-item-qty">2 Ctn/.test(modal.html) && !/200 Pair/.test(modal.html),
+    `a carton line is listed as 2 Ctn (${(modal.html.match(/class="bl-item-qty">([^<]*)/) || [])[1]})`);
+  t.check(/@ 215,000 UGX/.test(modal.html),
+    `at the carton price, 100 × 2,150 = 215,000 (${(modal.html.match(/bl-item-each">([^<]*)/) || [])[1]})`);
 
   /* Every branch of that control, not just the common one. Blanking the
      shortfall test still leaves a plain "Receive" on an unreceived line,

@@ -940,12 +940,14 @@ function renderWorkerTrips(){
       ${trip.status==='collecting' ? `<div class="wv-trip-lines">${lines.map((l,i)=>{
         const got = tripLineGot(l);
         const short = got != null && got < (Number(l.qty)||0);
+        /* In the unit the line was chosen in -- see pickLineCount. */
+        const c = pickLineCount(l, Number(l.qty)||0);
         return `<button type="button" class="wv-trip-line ${got==null?'':(short?'short':'done')}"
           data-trip="${esc(trip.id)}" data-idx="${i}">
           <span class="wv-trip-item">${esc(l.productName)}</span>
           <span class="wv-trip-qty">${got==null
-            ? `${esc(l.qty)} ${esc(l.unit||'')}`
-            : `${got} of ${esc(l.qty)} ${esc(l.unit||'')}`}</span>
+            ? `${esc(c.n)} ${esc(c.unit)}`
+            : `${esc(pickLineCount(l, got).n)} of ${esc(c.n)} ${esc(c.unit)}`}</span>
           <span class="wv-trip-for">for ${esc(l.clientName||'an order')}</span>
         </button>`;
       }).join('')}</div>
@@ -964,11 +966,16 @@ function renderWorkerTrips(){
     const trip = (data.collectionTrips||[]).find(x=> x.id === b.dataset.trip);
     const l = trip && tripLines(trip)[Number(b.dataset.idx)];
     if(!l) return;
-    const got = prompt(`${l.productName}\nHow many ${l.unit||'units'} did you get?`, String(l.qty));
+    /* Asked in the unit the line was chosen in, and brought back to
+       the base unit before it is kept -- see pickLineCount. */
+    const c = pickLineCount(l, Number(l.qty)||0);
+    const got = prompt(`${l.productName}\nHow many ${c.unit||'units'} did you get?`, c.n);
     if(got === null) return;
-    const paid = prompt(`What did each ${l.unit||'unit'} cost?`, String(l.expectedPrice == null ? '' : l.expectedPrice));
+    const paid = prompt(`What did each ${c.unit||'unit'} cost?`, String(l.expectedPrice == null ? '' : Math.round(l.expectedPrice * c.per)));
     if(paid === null) return;
-    if(setTripLineGot(b.dataset.trip, Number(b.dataset.idx), got, paid)) renderWorkerView();
+    const gotBase = Math.round(Number(String(got).replace(/,/g, '')) * c.per * 1e6) / 1e6;
+    const paidBase = String(paid).trim() === '' ? paid : Number(paid) / c.per;
+    if(setTripLineGot(b.dataset.trip, Number(b.dataset.idx), gotBase, paidBase)) renderWorkerView();
   }));
 }
 
