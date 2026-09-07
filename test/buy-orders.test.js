@@ -107,6 +107,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     .concat(extraSrc || []),
   Object.assign({
     data,
+    /* What the shop wrote down about its own goods, as the one reader
+       returns it. This fixture has written none. */
+    pairCompanionsFor: () => [],
     todayISO: () => TODAY,
     daysSinceDate: (d) => (d ? Math.round((Date.parse(TODAY) - Date.parse(String(d))) / 86400000) : -1),
     supplierName: (id) => SUPPLIERS[id] || String(id),

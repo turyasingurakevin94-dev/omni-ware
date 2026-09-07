@@ -92,6 +92,9 @@ const data = {
 let saved = 0;
 const env = {
   data,
+  /* What the shop wrote down about its own goods, as the one reader
+     returns it. This fixture has written none. */
+  pairCompanionsFor: () => [],
   todayISO: () => TODAY,
   saveData: () => { saved++; },
   supplierName: (id) => ({ S1: 'Quick Steel', S2: 'Slow Roto', S3: 'Once Only Ltd' })[id] || String(id),
