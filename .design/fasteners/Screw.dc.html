@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+
+    :root{
+      --navy:#14171B; --steel800:#252A31; --steel400:#8A939C; --steel100:#DCE0E4;
+      --steel050:#E9EBED; --paper:#FFFFFF; --paper2:#F7F9FB;
+      --oxide:#B23A26; --oxideDeep:#8E2C1C; --oxideSoft:#F6E7E3;
+      --verd:#1C6B58; --verdSoft:#E2EFEB; --amber:#B0700A; --amberSoft:#FBEFD9; --amberInk:#7A4A02;
+      --crimson:#7F1D1A; --crimsonSoft:#F7E4E2;
+      --ink:#14171B; --ink600:#59626B; --ink400:#8A939C;
+      --rule:#CFD5DA; --ruleSoft:#E3E7EA;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      /* the viewport is the ONE dark surface on the page: metal reads on
+         dark and nowhere else does this app go dark. */
+      --vp:#171B20; --vp2:#1E242B; --vpLine:#2F3841; --vpInk:#B9C3CC; --vpInk2:#6E7B87;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);
+      background:var(--steel050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--oxide);} a:hover{color:var(--oxideDeep);}
+    .app{position:relative;background:var(--steel050);overflow:hidden;}
+    .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* chrome */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--navy);
+      display:flex;align-items:center;gap:14px;padding:0 20px;color:#fff;z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-mark{width:32px;height:32px;border-radius:8px;background:var(--oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:12px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:15.5px;letter-spacing:.3px;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--navy);
+      padding:12px 10px;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-l{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--oxide);color:#fff;font-weight:700;}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:22px 26px 24px;overflow:hidden;
+      display:flex;flex-direction:column;gap:14px;}
+
+    /* page header */
+    .ph{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--rule);padding-bottom:11px;}
+    .ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ph-sub{font-size:12px;color:var(--ink600);margin:0 0 1px;}
+    .ph-sp{flex:1;}
+
+    /* panels */
+    .pan{background:var(--paper);border:1px solid var(--ruleSoft);border-radius:8px;overflow:hidden;
+      display:flex;flex-direction:column;min-height:0;}
+    .pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;flex:none;
+      border-bottom:1px solid var(--ruleSoft);background:var(--paper2);}
+    .pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink600);}
+    .pan-n{font-size:11px;color:var(--ink600);margin-left:auto;white-space:nowrap;}
+    .pan-b{padding:10px 12px;}
+
+    /* the dark viewport */
+    .vp{position:relative;background:var(--vp);border:1px solid var(--vpLine);border-radius:8px;overflow:hidden;}
+    .vp-grid{position:absolute;inset:0;
+      background-image:linear-gradient(var(--vpLine) 1px,transparent 1px),linear-gradient(90deg,var(--vpLine) 1px,transparent 1px);
+      background-size:40px 40px;opacity:.30;}
+    .vp-glow{position:absolute;left:50%;top:46%;width:78%;height:62%;transform:translate(-50%,-50%);
+      background:radial-gradient(ellipse at center,rgba(120,150,180,.20),transparent 68%);}
+    .vp-bar{position:absolute;left:0;right:0;top:0;height:32px;display:flex;align-items:center;gap:8px;
+      padding:0 12px;border-bottom:1px solid var(--vpLine);background:rgba(10,13,16,.55);}
+    .vp-lab{font-size:10px;font-weight:600;letter-spacing:.10em;text-transform:uppercase;color:var(--vpInk2);}
+    .vp-seg{display:flex;gap:1px;background:var(--vpLine);border-radius:5px;overflow:hidden;margin-left:auto;}
+    .vp-seg span{font-size:10.5px;font-weight:600;padding:4px 9px;background:#12161A;color:var(--vpInk2);}
+    .vp-seg span.on{background:var(--vpInk);color:#12161A;}
+    .vp-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;display:flex;gap:1px;
+      background:var(--vpLine);border-radius:7px;overflow:hidden;}
+    .vp-tools i{display:flex;align-items:center;justify-content:center;width:34px;height:30px;background:#12161A;}
+    .vp-tools i.on{background:#2A333C;}
+    .vp-tools svg{width:15px;height:15px;fill:none;stroke:var(--vpInk);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* callouts, drawn as leader + label like an engineering drawing */
+    .co{position:absolute;}
+    .co-l{font-size:9.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--vpInk2);white-space:nowrap;}
+    .co-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;
+      color:#E4EAEF;white-space:nowrap;letter-spacing:-.02em;}
+    .co-line{position:absolute;background:#48555F;}
+    .co-dot{position:absolute;width:5px;height:5px;border-radius:50%;background:#8FA3B2;
+      box-shadow:0 0 0 3px rgba(143,163,178,.18);}
+
+    /* scale ruler */
+    .ruler{position:absolute;left:14px;right:14px;bottom:52px;height:22px;}
+    .ruler .rl{position:absolute;bottom:0;width:1px;background:#3C474F;}
+    .ruler .rn{position:absolute;bottom:9px;font-family:var(--mono);font-size:9px;color:var(--vpInk2);transform:translateX(-50%);}
+    .ruler .rbase{position:absolute;left:0;right:0;bottom:0;height:1px;background:#3C474F;}
+
+    /* controls */
+    .fld{display:flex;flex-direction:column;gap:4px;}
+    .fld-l{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink600);}
+    .sel{display:flex;align-items:center;height:30px;padding:0 9px;border:1px solid var(--rule);
+      border-radius:6px;background:var(--paper);font-size:12.5px;font-weight:500;}
+    .sel svg{width:13px;height:13px;margin-left:auto;fill:none;stroke:var(--ink400);stroke-width:2;}
+    .chips{display:flex;flex-wrap:wrap;gap:5px;}
+    .chip{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;
+      border:1px solid var(--rule);background:var(--paper);color:var(--ink600);}
+    .chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+    .sw{display:flex;gap:6px;}
+    .sw i{width:26px;height:26px;border-radius:6px;border:1px solid var(--rule);display:block;}
+    .sw i.on{outline:2px solid var(--navy);outline-offset:1px;}
+
+    .btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 13px;
+      border-radius:6px;border:1px solid var(--rule);background:var(--paper);font-size:12.5px;font-weight:600;color:var(--ink);}
+    .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .btn-accent{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+
+    /* spec rows */
+    .sp{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:12px;
+      color:var(--ink600);padding:5px 0;border-bottom:1px dashed var(--steel100);}
+    .sp:last-child{border-bottom:0;}
+    .sp b{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;font-size:12px;}
+    .sp-sec{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink400);
+      margin:9px 0 3px;padding-top:6px;border-top:1px solid var(--ruleSoft);}
+    .sp-sec:first-child{margin-top:0;padding-top:0;border-top:0;}
+
+    .cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;height:18px;
+      padding:0 6px;border-radius:4px;background:var(--steel050);color:var(--ink600);}
+    .cp.good{background:var(--verdSoft);color:var(--verd);}
+    .cp.warn{background:var(--amberSoft);color:var(--amberInk);}
+    .cp.bad{background:var(--crimsonSoft);color:var(--crimson);}
+    .cp.mg{background:var(--oxideSoft);color:var(--oxideDeep);}
+
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink600);
+      font-weight:700;padding:6px 10px;border-bottom:1px solid var(--rule);}
+    .tbl td{padding:6px 10px;border-bottom:1px solid var(--ruleSoft);font-size:12px;color:var(--ink600);}
+    .tbl td b{color:var(--ink);font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;}
+    .tbl tr.on td{background:var(--paper2);}
+    .note{font-size:11px;line-height:1.45;color:var(--ink600);max-width:76ch;}
+
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:900px">  <div class="topbar">
+    <div class="brand"><div class="brand-mark">OW</div><div class="tag">OMNI&#8203;WARE</div></div>
+    <div class="tb-sp"></div>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <svg class="tb-ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0"/></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-l">The day</div>
+    <div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 12h3M18 12h3M12 3v3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1M6 18a6 6 0 0112 0z"/></svg>Today</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M20.6 13.4L12 22 2 12V2h10z M7 7h.01"/></svg>Sell</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7"/></svg>Products</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 21V9l7-4 7 4v12M9 21v-5h4v5"/></svg>Suppliers</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Money</div>
+    <div class="nav-l">Reference</div>
+    <div class="nav-b active"><svg viewBox="0 0 24 24"><path d="M12 3v18M8.5 6.5h7M8.5 17.5h7"/><circle cx="12" cy="12" r="3.2"/></svg>Fastener guide</div>
+    <div class="nav-b"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z M4 10h16M10 10v9"/></svg>Price list</div>
+  </div>
+  <div class="main">
+    <div class="ph"><div><h1 class="ph-t">Fastener guide</h1></div>
+      <p class="ph-sub">Hold the size on screen, read the fit off it.</p>
+      <div class="ph-sp"></div>
+      <div class="sel" style="width:330px;height:34px;font-size:13px;color:var(--ink400)">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;margin-right:7px;stroke:var(--ink400);fill:none;stroke-width:2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Type a size &#8212; M8, #8, 38mm, 1 1/2, 13&#8230;</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch"><div class="pan" style="width:212px;flex:none"><div class="pan-h"><span class="pan-t">Configure</span></div><div class="pan-b" style="display:flex;flex-direction:column;gap:11px"><div class="fld"><span class="fld-l">Type</span><div class="sel">Wood screw<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div></div><div class="fld"><span class="fld-l">Gauge</span><div class="chips"><span class="chip">#6</span><span class="chip on">#8</span><span class="chip">#10</span><span class="chip">#12</span></div></div><div class="fld"><span class="fld-l">Head</span><div class="chips"><span class="chip on">Csk</span><span class="chip">Pan</span><span class="chip">Truss</span></div></div><div class="fld"><span class="fld-l">Length</span><div class="chips"><span class="chip">25</span><span class="chip">38</span><span class="chip on">50</span><span class="chip">75</span></div></div><div class="fld"><span class="fld-l">Finish</span><div class="sw"><i style="background:linear-gradient(135deg,#F4F7F9,#79828A)"></i><i class="on" style="background:linear-gradient(135deg,#7C848B,#14171B)"></i><i style="background:linear-gradient(135deg,#F6E2A6,#8A6519)"></i><i style="background:linear-gradient(135deg,#D9DEE1,#5C6366)"></i></div><span style="font-size:11px;color:var(--ink600)">Black phosphate &#8212; the black screw</span></div><div class="fld"><span class="fld-l">Shown with</span><div class="chips"><span class="chip on">Wall plug</span><span class="chip on">Drill</span></div></div></div></div>
+      <div style="flex:1;min-width:0"><div class="vp" style="height:402px"><div class="vp-grid"></div><div class="vp-glow"></div><svg width="676" height="402" style="position:absolute;inset:0"><g transform="translate(34,150)"><defs>
+  <linearGradient id="cylsc" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0B0D0E"/><stop offset="9%" stop-color="#1A1D20"/>
+    <stop offset="30%" stop-color="#2E3236"/><stop offset="43%" stop-color="#7C848B"/>
+    <stop offset="58%" stop-color="#2E3236"/><stop offset="86%" stop-color="#1A1D20"/>
+    <stop offset="100%" stop-color="#0B0D0E"/>
+  </linearGradient>
+  <linearGradient id="facesc" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#7C848B"/><stop offset="38%" stop-color="#2E3236"/>
+    <stop offset="100%" stop-color="#1A1D20"/>
+  </linearGradient>
+  <linearGradient id="rimsc" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#1A1D20"/><stop offset="45%" stop-color="#2E3236"/>
+    <stop offset="100%" stop-color="#0B0D0E"/>
+  </linearGradient>
+  <radialGradient id="boresc" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#0B0D0E"/><stop offset="70%" stop-color="#1A1D20"/>
+    <stop offset="100%" stop-color="#2E3236"/>
+  </radialGradient>
+</defs><path d="M0 -31.92 L4.31 -31.92 L21.55 -15.96 L21.55 15.96 L4.31 31.92 L0 31.92 Z" fill="url(#cylsc)"/><rect x="20.55" y="-9.26" width="60.80" height="18.51" fill="url(#cylsc)"/><clipPath id="tcsc"><rect x="74.75" y="-17.96" width="266.95" height="35.92"/></clipPath><rect x="74.75" y="-15.96" width="266.95" height="31.92" fill="url(#cylsc)"/><g fill="#000" opacity="0.42" clip-path="url(#tcsc)"><path d="M74.75 -15.96 L81.45 -15.96 L86.53 15.96 L79.83 15.96 Z"/><path d="M90.71 -15.96 L97.41 -15.96 L102.49 15.96 L95.79 15.96 Z"/><path d="M106.67 -15.96 L113.37 -15.96 L118.45 15.96 L111.75 15.96 Z"/><path d="M122.63 -15.96 L129.33 -15.96 L134.41 15.96 L127.71 15.96 Z"/><path d="M138.59 -15.96 L145.29 -15.96 L150.37 15.96 L143.67 15.96 Z"/><path d="M154.55 -15.96 L161.25 -15.96 L166.33 15.96 L159.63 15.96 Z"/><path d="M170.51 -15.96 L177.21 -15.96 L182.29 15.96 L175.59 15.96 Z"/><path d="M186.47 -15.96 L193.17 -15.96 L198.25 15.96 L191.55 15.96 Z"/><path d="M202.43 -15.96 L209.13 -15.96 L214.21 15.96 L207.51 15.96 Z"/><path d="M218.39 -15.96 L225.09 -15.96 L230.17 15.96 L223.47 15.96 Z"/><path d="M234.35 -15.96 L241.05 -15.96 L246.13 15.96 L239.43 15.96 Z"/><path d="M250.31 -15.96 L257.01 -15.96 L262.09 15.96 L255.39 15.96 Z"/><path d="M266.27 -15.96 L272.97 -15.96 L278.05 15.96 L271.35 15.96 Z"/><path d="M282.23 -15.96 L288.93 -15.96 L294.01 15.96 L287.31 15.96 Z"/><path d="M298.19 -15.96 L304.89 -15.96 L309.97 15.96 L303.27 15.96 Z"/><path d="M314.15 -15.96 L320.85 -15.96 L325.93 15.96 L319.23 15.96 Z"/><path d="M330.11 -15.96 L336.81 -15.96 L341.89 15.96 L335.19 15.96 Z"/></g><g fill="#fff" opacity="0.13" clip-path="url(#tcsc)"><path d="M84.64 -15.96 L87.19 -15.96 L92.28 15.96 L89.72 15.96 Z"/><path d="M100.60 -15.96 L103.15 -15.96 L108.24 15.96 L105.68 15.96 Z"/><path d="M116.56 -15.96 L119.11 -15.96 L124.20 15.96 L121.64 15.96 Z"/><path d="M132.52 -15.96 L135.07 -15.96 L140.16 15.96 L137.60 15.96 Z"/><path d="M148.48 -15.96 L151.03 -15.96 L156.12 15.96 L153.56 15.96 Z"/><path d="M164.44 -15.96 L166.99 -15.96 L172.08 15.96 L169.52 15.96 Z"/><path d="M180.40 -15.96 L182.95 -15.96 L188.04 15.96 L185.48 15.96 Z"/><path d="M196.36 -15.96 L198.91 -15.96 L204.00 15.96 L201.44 15.96 Z"/><path d="M212.32 -15.96 L214.87 -15.96 L219.96 15.96 L217.40 15.96 Z"/><path d="M228.28 -15.96 L230.83 -15.96 L235.92 15.96 L233.36 15.96 Z"/><path d="M244.24 -15.96 L246.79 -15.96 L251.88 15.96 L249.32 15.96 Z"/><path d="M260.20 -15.96 L262.75 -15.96 L267.84 15.96 L265.28 15.96 Z"/><path d="M276.16 -15.96 L278.71 -15.96 L283.80 15.96 L281.24 15.96 Z"/><path d="M292.12 -15.96 L294.67 -15.96 L299.76 15.96 L297.20 15.96 Z"/><path d="M308.08 -15.96 L310.63 -15.96 L315.72 15.96 L313.16 15.96 Z"/><path d="M324.04 -15.96 L326.59 -15.96 L331.68 15.96 L329.12 15.96 Z"/><path d="M340.00 -15.96 L342.55 -15.96 L347.64 15.96 L345.08 15.96 Z"/></g><g fill="#171B20" clip-path="url(#tcsc)"><path d="M74.75 -16.96 L90.71 -16.96 L82.73 -9.26 Z"/><path d="M90.71 -16.96 L106.67 -16.96 L98.69 -9.26 Z"/><path d="M106.67 -16.96 L122.63 -16.96 L114.65 -9.26 Z"/><path d="M122.63 -16.96 L138.59 -16.96 L130.61 -9.26 Z"/><path d="M138.59 -16.96 L154.55 -16.96 L146.57 -9.26 Z"/><path d="M154.55 -16.96 L170.51 -16.96 L162.53 -9.26 Z"/><path d="M170.51 -16.96 L186.47 -16.96 L178.49 -9.26 Z"/><path d="M186.47 -16.96 L202.43 -16.96 L194.45 -9.26 Z"/><path d="M202.43 -16.96 L218.39 -16.96 L210.41 -9.26 Z"/><path d="M218.39 -16.96 L234.35 -16.96 L226.37 -9.26 Z"/><path d="M234.35 -16.96 L250.31 -16.96 L242.33 -9.26 Z"/><path d="M250.31 -16.96 L266.27 -16.96 L258.29 -9.26 Z"/><path d="M266.27 -16.96 L282.23 -16.96 L274.25 -9.26 Z"/><path d="M282.23 -16.96 L298.19 -16.96 L290.21 -9.26 Z"/><path d="M298.19 -16.96 L314.15 -16.96 L306.17 -9.26 Z"/><path d="M314.15 -16.96 L330.11 -16.96 L322.13 -9.26 Z"/><path d="M330.11 -16.96 L346.07 -16.96 L338.09 -9.26 Z"/><path d="M346.07 -16.96 L362.03 -16.96 L354.05 -9.26 Z"/><path d="M79.83 16.96 L95.79 16.96 L87.81 9.26 Z"/><path d="M95.79 16.96 L111.75 16.96 L103.77 9.26 Z"/><path d="M111.75 16.96 L127.71 16.96 L119.73 9.26 Z"/><path d="M127.71 16.96 L143.67 16.96 L135.69 9.26 Z"/><path d="M143.67 16.96 L159.63 16.96 L151.65 9.26 Z"/><path d="M159.63 16.96 L175.59 16.96 L167.61 9.26 Z"/><path d="M175.59 16.96 L191.55 16.96 L183.57 9.26 Z"/><path d="M191.55 16.96 L207.51 16.96 L199.53 9.26 Z"/><path d="M207.51 16.96 L223.47 16.96 L215.49 9.26 Z"/><path d="M223.47 16.96 L239.43 16.96 L231.45 9.26 Z"/><path d="M239.43 16.96 L255.39 16.96 L247.41 9.26 Z"/><path d="M255.39 16.96 L271.35 16.96 L263.37 9.26 Z"/><path d="M271.35 16.96 L287.31 16.96 L279.33 9.26 Z"/><path d="M287.31 16.96 L303.27 16.96 L295.29 9.26 Z"/><path d="M303.27 16.96 L319.23 16.96 L311.25 9.26 Z"/><path d="M319.23 16.96 L335.19 16.96 L327.21 9.26 Z"/><path d="M335.19 16.96 L351.15 16.96 L343.17 9.26 Z"/><path d="M351.15 16.96 L367.11 16.96 L359.13 9.26 Z"/></g><path d="M341.70 -15.96 L380.00 0 L341.70 15.96 Z" fill="url(#cylsc)"/><path d="M341.70 -15.96 L350.12 -12.45 L353.19 11.17 L344.76 15.96 Z" fill="#000" opacity="0.35"/><path d="M351.27 -11.97 L359.70 -8.46 L362.76 7.18 L354.34 11.97 Z" fill="#000" opacity="0.35"/><path d="M360.85 -7.98 L369.27 -4.47 L372.34 3.19 L363.91 7.98 Z" fill="#000" opacity="0.35"/><path d="M370.42 -3.99 L378.85 -0.48 L381.92 -0.80 L373.49 3.99 Z" fill="#000" opacity="0.35"/></g><g transform="translate(68,272)"><defs><linearGradient id="plpl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6E2317"/><stop offset="14%" stop-color="#B2402E"/>
+      <stop offset="40%" stop-color="#D98874"/><stop offset="62%" stop-color="#B2402E"/>
+      <stop offset="100%" stop-color="#6E2317"/></linearGradient></defs><path d="M0 -26.90 L6.84 -26.90 L6.84 -22.80 L216.60 -19.61 L228.00 -10.26 L228.00 10.26 L216.60 19.61 L6.84 22.80 L6.84 26.90 L0 26.90 Z" fill="url(#plpl)"/><g fill="#000" opacity="0.26"><path d="M22.80 -22.34 L30.55 -22.34 L27.36 -12.54 L19.61 -12.54 Z"/><path d="M22.80 22.34 L30.55 22.34 L27.36 12.54 L19.61 12.54 Z"/><path d="M40.58 -22.34 L48.34 -22.34 L45.14 -12.54 L37.39 -12.54 Z"/><path d="M40.58 22.34 L48.34 22.34 L45.14 12.54 L37.39 12.54 Z"/><path d="M58.37 -22.34 L66.12 -22.34 L62.93 -12.54 L55.18 -12.54 Z"/><path d="M58.37 22.34 L66.12 22.34 L62.93 12.54 L55.18 12.54 Z"/><path d="M76.15 -22.34 L83.90 -22.34 L80.71 -12.54 L72.96 -12.54 Z"/><path d="M76.15 22.34 L83.90 22.34 L80.71 12.54 L72.96 12.54 Z"/><path d="M93.94 -22.34 L101.69 -22.34 L98.50 -12.54 L90.74 -12.54 Z"/><path d="M93.94 22.34 L101.69 22.34 L98.50 12.54 L90.74 12.54 Z"/><path d="M111.72 -22.34 L119.47 -22.34 L116.28 -12.54 L108.53 -12.54 Z"/><path d="M111.72 22.34 L119.47 22.34 L116.28 12.54 L108.53 12.54 Z"/><path d="M129.50 -22.34 L137.26 -22.34 L134.06 -12.54 L126.31 -12.54 Z"/><path d="M129.50 22.34 L137.26 22.34 L134.06 12.54 L126.31 12.54 Z"/><path d="M147.29 -22.34 L155.04 -22.34 L151.85 -12.54 L144.10 -12.54 Z"/><path d="M147.29 22.34 L155.04 22.34 L151.85 12.54 L144.10 12.54 Z"/><path d="M165.07 -22.34 L172.82 -22.34 L169.63 -12.54 L161.88 -12.54 Z"/><path d="M165.07 22.34 L172.82 22.34 L169.63 12.54 L161.88 12.54 Z"/><path d="M182.86 -22.34 L190.61 -22.34 L187.42 -12.54 L179.66 -12.54 Z"/><path d="M182.86 22.34 L190.61 22.34 L187.42 12.54 L179.66 12.54 Z"/><path d="M200.64 -22.34 L208.39 -22.34 L205.20 -12.54 L197.45 -12.54 Z"/><path d="M200.64 22.34 L208.39 22.34 L205.20 12.54 L197.45 12.54 Z"/></g><path d="M6.84 -6.84 L214.32 -3.65 L214.32 3.65 L6.84 6.84 Z" fill="#000" opacity="0.45"/></g><g transform="translate(350.0,272)"><defs>
+  <linearGradient id="cyldb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#404750"/><stop offset="9%" stop-color="#6B7479"/>
+    <stop offset="30%" stop-color="#98A0A5"/><stop offset="43%" stop-color="#D9DEE1"/>
+    <stop offset="58%" stop-color="#98A0A5"/><stop offset="86%" stop-color="#6B7479"/>
+    <stop offset="100%" stop-color="#404750"/>
+  </linearGradient>
+  <linearGradient id="facedb" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#D9DEE1"/><stop offset="38%" stop-color="#98A0A5"/>
+    <stop offset="100%" stop-color="#6B7479"/>
+  </linearGradient>
+  <linearGradient id="rimdb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#6B7479"/><stop offset="45%" stop-color="#98A0A5"/>
+    <stop offset="100%" stop-color="#404750"/>
+  </linearGradient>
+  <radialGradient id="boredb" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#404750"/><stop offset="70%" stop-color="#6B7479"/>
+    <stop offset="100%" stop-color="#98A0A5"/>
+  </radialGradient>
+</defs><rect x="0" y="-22.80" width="228.00" height="45.60" fill="url(#cyldb)"/><g fill="#000" opacity="0.34"><path d="M45.60 -22.80 L62.70 -22.80 L87.78 22.80 L70.68 22.80 Z"/><path d="M79.80 -22.80 L96.90 -22.80 L121.98 22.80 L104.88 22.80 Z"/><path d="M114.00 -22.80 L131.10 -22.80 L156.18 22.80 L139.08 22.80 Z"/><path d="M148.20 -22.80 L165.30 -22.80 L190.38 22.80 L173.28 22.80 Z"/><path d="M182.40 -22.80 L199.50 -22.80 L224.58 22.80 L207.48 22.80 Z"/></g><path d="M228.00 -22.80 L243.96 -24.17 L271.32 0 L243.96 24.17 L228.00 22.80 Z" fill="#8E969B"/></g></svg><div class="co" style="left:48px;top:0"><div class="co-dot" style="left:-2px;top:116px"></div><div class="co-line" style="left:0;top:88px;width:1px;height:30px"></div><div style="position:absolute;top:58px;left:0;"><div class="co-l">Head</div><div class="co-v">Countersunk</div></div></div><div class="co" style="left:235px;top:0"><div class="co-dot" style="left:-2px;top:164px"></div><div class="co-line" style="left:0;top:166px;width:1px;height:54px"></div><div style="position:absolute;top:226px;left:0;"><div class="co-l">Shank</div><div class="co-v">4.2 mm &#183; a number 8</div></div></div><div class="co" style="left:422px;top:0"><div class="co-dot" style="left:-2px;top:132px"></div><div class="co-line" style="left:0;top:88px;width:1px;height:46px"></div><div style="position:absolute;top:58px;right:0;text-align:right;"><div class="co-l">Length</div><div class="co-v">50 mm &#183; 2&#8221;</div></div></div><div class="co" style="left:84px;top:0"><div class="co-dot" style="left:-2px;top:297px"></div><div class="co-line" style="left:0;top:299px;width:1px;height:17px"></div><div style="position:absolute;top:322px;left:0;"><div class="co-l">Red plug</div><div class="co-v">6 mm &#183; drill 6 mm</div></div></div><div class="co" style="left:380px;top:0"><div class="co-dot" style="left:-2px;top:293px"></div><div class="co-line" style="left:0;top:295px;width:1px;height:21px"></div><div style="position:absolute;top:322px;left:0;"><div class="co-l">Masonry bit</div><div class="co-v">6 mm</div></div></div><div class="vp-bar"><div class="vp-lab">Wood screw &#183; #8 &#215; 50 &#183; black phosphate</div><div class="vp-lab" style="color:#4B5762">to scale &#183; 2.4&#8202;:&#8202;1</div><div class="vp-seg"><span>Screw</span><span class="on">With plug</span><span>Section</span></div></div><div class="co" style="left:16px;bottom:14px"><div class="co-l" style="color:#4B5762">plug shown in section &#8212; the screw bites the ribs, not the wall</div></div></div></div><div class="pan" style="width:272px;flex:none"><div class="pan-h"><span class="pan-t">Every dimension</span><span class="pan-n mono">mm</span></div><div class="pan-b" style="padding-top:6px"><div class="sp-sec">The screw</div><div class="sp"><span>Gauge</span><b>#8</b></div><div class="sp"><span>Diameter</span><b>4.20</b></div><div class="sp"><span>Length</span><b>50 &#183; 2&#8221;</b></div><div class="sp"><span>Head diameter</span><b>8.4</b></div><div class="sp-sec">Into timber</div><div class="sp"><span>Pilot, softwood</span><b>2.00</b></div><div class="sp"><span>Pilot, hardwood</span><b>3.00</b></div><div class="sp"><span>Clearance</span><b>4.50</b></div><div class="sp-sec">Into masonry</div><div class="sp"><span>Wall plug</span><b>6 &#183; red</b></div><div class="sp"><span>Masonry drill</span><b>6.00</b></div><div class="sp"><span>Plug takes</span><b>#6 &#8211; #10</b></div><div class="sp-sec">Also called</div><div class="sp"><span>Metric naming</span><b>4.2 &#215; 50</b></div><div class="sp"><span>Chipboard naming</span><b>4 &#215; 50</b></div></div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch;flex:1;min-height:0"><div class="pan" style="flex:1"><div class="pan-h"><span class="pan-t">What it needs</span><span class="pan-n">the hole decides, not the screw</span></div><div class="pan-b" style="display:flex;gap:0;padding:12px 0 14px"><div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Masonry drill</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">6 mm</div><div style="margin-top:6px"><span class="cp good">the plug size is the bit</span></div></div><div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Pilot, soft</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">2 mm</div><div style="margin-top:6px"><span style="font-size:11px;color:var(--ink600)">pine, cypress</span></div></div><div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Pilot, hard</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">3 mm</div><div style="margin-top:6px"><span class="cp warn">mvule splits &#8212; go bigger</span></div></div><div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Driver</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">PZ2</div><div style="margin-top:6px"><span style="font-size:11px;color:var(--ink600)">PH2 will cam out</span></div></div></div><p class="note" style="margin:0 12px 12px">A 6 mm plug in a 7 mm hole spins and pulls out. The colour is only a nickname &#8212; makers differ; the millimetre is the fact.</p></div><div class="pan" style="width:352px;flex:none"><div class="pan-h"><span class="pan-t">On the shelf</span><span class="pan-n">4 spellings counted</span></div><div class="pan-b" style="display:flex;flex-direction:column;gap:9px;flex:1"><div style="display:flex;align-items:baseline;gap:9px"><span class="mono" style="font-size:24px;font-weight:500">4,120</span><span style="font-size:11.5px;color:var(--ink600)">pcs &#183; <b class="mono">8*2</b>, <b class="mono">4.2*50</b>, <b class="mono">4*50</b></span></div><div class="sp" style="border-bottom:1px solid var(--ruleSoft)"><span>Per 100</span><b>UGX 9,800</b></div><div class="sp" style="border-bottom:1px solid var(--ruleSoft)"><span>Per kg &#183; 168 pcs</span><b>UGX 15,400</b></div><div class="sp"><span>Red plugs &#183; 6 mm</span><b>930 pcs</b></div><div style="display:flex;gap:7px;margin-top:auto"><span class="btn btn-accent">Add to the sale</span><span class="btn">With plugs</span></div></div></div></div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

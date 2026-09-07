@@ -1,0 +1,371 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+
+    :root{
+      --navy:#14171B; --steel800:#252A31; --steel400:#8A939C; --steel100:#DCE0E4;
+      --steel050:#E9EBED; --paper:#FFFFFF; --paper2:#F7F9FB;
+      --oxide:#B23A26; --oxideDeep:#8E2C1C; --oxideSoft:#F6E7E3;
+      --verd:#1C6B58; --verdSoft:#E2EFEB; --amber:#B0700A; --amberSoft:#FBEFD9; --amberInk:#7A4A02;
+      --crimson:#7F1D1A; --crimsonSoft:#F7E4E2;
+      --ink:#14171B; --ink600:#59626B; --ink400:#8A939C;
+      --rule:#CFD5DA; --ruleSoft:#E3E7EA;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      /* the viewport is the ONE dark surface on the page: metal reads on
+         dark and nowhere else does this app go dark. */
+      --vp:#171B20; --vp2:#1E242B; --vpLine:#2F3841; --vpInk:#B9C3CC; --vpInk2:#6E7B87;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);
+      background:var(--steel050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--oxide);} a:hover{color:var(--oxideDeep);}
+    .app{position:relative;background:var(--steel050);overflow:hidden;}
+    .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+    /* chrome */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--navy);
+      display:flex;align-items:center;gap:14px;padding:0 20px;color:#fff;z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-mark{width:32px;height:32px;border-radius:8px;background:var(--oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:12px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:15.5px;letter-spacing:.3px;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--navy);
+      padding:12px 10px;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-l{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--oxide);color:#fff;font-weight:700;}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:22px 26px 24px;overflow:hidden;
+      display:flex;flex-direction:column;gap:14px;}
+
+    /* page header */
+    .ph{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--rule);padding-bottom:11px;}
+    .ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ph-sub{font-size:12px;color:var(--ink600);margin:0 0 1px;}
+    .ph-sp{flex:1;}
+
+    /* panels */
+    .pan{background:var(--paper);border:1px solid var(--ruleSoft);border-radius:8px;overflow:hidden;
+      display:flex;flex-direction:column;min-height:0;}
+    .pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;flex:none;
+      border-bottom:1px solid var(--ruleSoft);background:var(--paper2);}
+    .pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink600);}
+    .pan-n{font-size:11px;color:var(--ink600);margin-left:auto;white-space:nowrap;}
+    .pan-b{padding:10px 12px;}
+
+    /* the dark viewport */
+    .vp{position:relative;background:var(--vp);border:1px solid var(--vpLine);border-radius:8px;overflow:hidden;}
+    .vp-grid{position:absolute;inset:0;
+      background-image:linear-gradient(var(--vpLine) 1px,transparent 1px),linear-gradient(90deg,var(--vpLine) 1px,transparent 1px);
+      background-size:40px 40px;opacity:.30;}
+    .vp-glow{position:absolute;left:50%;top:46%;width:78%;height:62%;transform:translate(-50%,-50%);
+      background:radial-gradient(ellipse at center,rgba(120,150,180,.20),transparent 68%);}
+    .vp-bar{position:absolute;left:0;right:0;top:0;height:32px;display:flex;align-items:center;gap:8px;
+      padding:0 12px;border-bottom:1px solid var(--vpLine);background:rgba(10,13,16,.55);}
+    .vp-lab{font-size:10px;font-weight:600;letter-spacing:.10em;text-transform:uppercase;color:var(--vpInk2);}
+    .vp-seg{display:flex;gap:1px;background:var(--vpLine);border-radius:5px;overflow:hidden;margin-left:auto;}
+    .vp-seg span{font-size:10.5px;font-weight:600;padding:4px 9px;background:#12161A;color:var(--vpInk2);}
+    .vp-seg span.on{background:var(--vpInk);color:#12161A;}
+    .vp-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;display:flex;gap:1px;
+      background:var(--vpLine);border-radius:7px;overflow:hidden;}
+    .vp-tools i{display:flex;align-items:center;justify-content:center;width:34px;height:30px;background:#12161A;}
+    .vp-tools i.on{background:#2A333C;}
+    .vp-tools svg{width:15px;height:15px;fill:none;stroke:var(--vpInk);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* callouts, drawn as leader + label like an engineering drawing */
+    .co{position:absolute;}
+    .co-l{font-size:9.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--vpInk2);white-space:nowrap;}
+    .co-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;
+      color:#E4EAEF;white-space:nowrap;letter-spacing:-.02em;}
+    .co-line{position:absolute;background:#48555F;}
+    .co-dot{position:absolute;width:5px;height:5px;border-radius:50%;background:#8FA3B2;
+      box-shadow:0 0 0 3px rgba(143,163,178,.18);}
+
+    /* scale ruler */
+    .ruler{position:absolute;left:14px;right:14px;bottom:52px;height:22px;}
+    .ruler .rl{position:absolute;bottom:0;width:1px;background:#3C474F;}
+    .ruler .rn{position:absolute;bottom:9px;font-family:var(--mono);font-size:9px;color:var(--vpInk2);transform:translateX(-50%);}
+    .ruler .rbase{position:absolute;left:0;right:0;bottom:0;height:1px;background:#3C474F;}
+
+    /* controls */
+    .fld{display:flex;flex-direction:column;gap:4px;}
+    .fld-l{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink600);}
+    .sel{display:flex;align-items:center;height:30px;padding:0 9px;border:1px solid var(--rule);
+      border-radius:6px;background:var(--paper);font-size:12.5px;font-weight:500;}
+    .sel svg{width:13px;height:13px;margin-left:auto;fill:none;stroke:var(--ink400);stroke-width:2;}
+    .chips{display:flex;flex-wrap:wrap;gap:5px;}
+    .chip{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;
+      border:1px solid var(--rule);background:var(--paper);color:var(--ink600);}
+    .chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+    .sw{display:flex;gap:6px;}
+    .sw i{width:26px;height:26px;border-radius:6px;border:1px solid var(--rule);display:block;}
+    .sw i.on{outline:2px solid var(--navy);outline-offset:1px;}
+
+    .btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 13px;
+      border-radius:6px;border:1px solid var(--rule);background:var(--paper);font-size:12.5px;font-weight:600;color:var(--ink);}
+    .btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .btn-accent{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+
+    /* spec rows */
+    .sp{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:12px;
+      color:var(--ink600);padding:5px 0;border-bottom:1px dashed var(--steel100);}
+    .sp:last-child{border-bottom:0;}
+    .sp b{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;font-size:12px;}
+    .sp-sec{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink400);
+      margin:9px 0 3px;padding-top:6px;border-top:1px solid var(--ruleSoft);}
+    .sp-sec:first-child{margin-top:0;padding-top:0;border-top:0;}
+
+    .cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;height:18px;
+      padding:0 6px;border-radius:4px;background:var(--steel050);color:var(--ink600);}
+    .cp.good{background:var(--verdSoft);color:var(--verd);}
+    .cp.warn{background:var(--amberSoft);color:var(--amberInk);}
+    .cp.bad{background:var(--crimsonSoft);color:var(--crimson);}
+    .cp.mg{background:var(--oxideSoft);color:var(--oxideDeep);}
+
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink600);
+      font-weight:700;padding:6px 10px;border-bottom:1px solid var(--rule);}
+    .tbl td{padding:6px 10px;border-bottom:1px solid var(--ruleSoft);font-size:12px;color:var(--ink600);}
+    .tbl td b{color:var(--ink);font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;}
+    .tbl tr.on td{background:var(--paper2);}
+    .note{font-size:11px;line-height:1.45;color:var(--ink600);max-width:76ch;}
+
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:900px">
+    <div class="topbar">
+    <div class="brand"><div class="brand-mark">OW</div><div class="tag">OMNI&#8203;WARE</div></div>
+    <div class="tb-sp"></div>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <svg class="tb-ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0"/></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-l">The day</div>
+    <div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 12h3M18 12h3M12 3v3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1M6 18a6 6 0 0112 0z"/></svg>Today</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M20.6 13.4L12 22 2 12V2h10z M7 7h.01"/></svg>Sell</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7"/></svg>Products</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M3 21V9l7-4 7 4v12M9 21v-5h4v5"/></svg>Suppliers</div><div class="nav-b"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Money</div>
+    <div class="nav-l">Reference</div>
+    <div class="nav-b active"><svg viewBox="0 0 24 24"><path d="M12 3v18M8.5 6.5h7M8.5 17.5h7"/><circle cx="12" cy="12" r="3.2"/></svg>Fastener guide</div>
+    <div class="nav-b"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z M4 10h16M10 10v9"/></svg>Price list</div>
+  </div>
+  <div class="main">
+    <div class="ph">
+      <div><h1 class="ph-t">Fastener guide</h1></div>
+      <p class="ph-sub">Hold the size on screen, read the fit off it.</p>
+      <div class="ph-sp"></div>
+      <div class="sel" style="width:330px;height:34px;font-size:13px;color:var(--ink400)">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;margin-right:7px;stroke:var(--ink400);fill:none;stroke-width:2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Type a size &#8212; M8, #8, 38mm, 1 1/2, 13&#8230;</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch">
+      <div class="pan" style="width:212px;flex:none">
+      <div class="pan-h"><span class="pan-t">Configure</span></div>
+      <div class="pan-b" style="display:flex;flex-direction:column;gap:11px">
+        <div class="fld"><span class="fld-l">Type</span><div class="sel">Hex bolt<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div></div>
+        <div class="fld"><span class="fld-l">Size</span><div class="sel"><span class="mono">M10</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div></div>
+        <div class="fld"><span class="fld-l">Thread</span><div class="chips"><span class="chip on">Coarse 1.5</span><span class="chip">1.25</span><span class="chip">1.0</span></div></div>
+        <div class="fld"><span class="fld-l">Length</span><div class="chips"><span class="chip">50</span><span class="chip on">75</span><span class="chip">100</span><span class="chip">150</span></div></div>
+        <div class="fld"><span class="fld-l">Finish</span><div class="sw">
+          <i class="on" style="background:linear-gradient(135deg,#F4F7F9,#79828A)"></i>
+          <i style="background:linear-gradient(135deg,#7C848B,#14171B)"></i>
+          <i style="background:linear-gradient(135deg,#F6E2A6,#8A6519)"></i>
+          <i style="background:linear-gradient(135deg,#D9DEE1,#5C6366)"></i>
+        </div><span style="font-size:11px;color:var(--ink600)">Bright zinc</span></div>
+        <div class="fld"><span class="fld-l">Shown with</span><div class="chips">
+          <span class="chip on">Nut</span><span class="chip on">Washer</span><span class="chip">Spring</span></div></div>
+      </div>
+    </div>
+      <div style="flex:1;min-width:0"><div class="vp" style="height:402px">
+        <div class="vp-grid"></div><div class="vp-glow"></div>
+        <svg width="676" height="402" style="position:absolute;inset:0"><g transform="translate(38,198)"><defs>
+  <linearGradient id="cylab" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="9%" stop-color="#79828A"/>
+    <stop offset="30%" stop-color="#AEB6BD"/><stop offset="43%" stop-color="#F4F7F9"/>
+    <stop offset="58%" stop-color="#AEB6BD"/><stop offset="86%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <linearGradient id="faceab" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#F4F7F9"/><stop offset="38%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#79828A"/>
+  </linearGradient>
+  <linearGradient id="rimab" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#79828A"/><stop offset="45%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <radialGradient id="boreab" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="70%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#AEB6BD"/>
+  </radialGradient>
+</defs><clipPath id="tcab"><rect x="34.06" y="-29.00" width="405.50" height="58.00"/></clipPath><rect x="34.06" y="-27.00" width="405.50" height="54.00" fill="url(#cylab)"/><g fill="#000" opacity="0.42" clip-path="url(#tcab)"><path d="M34.06 -27.00 L37.46 -27.00 L40.04 27.00 L36.64 27.00 Z"/><path d="M42.16 -27.00 L45.56 -27.00 L48.14 27.00 L44.74 27.00 Z"/><path d="M50.26 -27.00 L53.66 -27.00 L56.24 27.00 L52.84 27.00 Z"/><path d="M58.36 -27.00 L61.76 -27.00 L64.34 27.00 L60.94 27.00 Z"/><path d="M66.46 -27.00 L69.86 -27.00 L72.44 27.00 L69.04 27.00 Z"/><path d="M74.56 -27.00 L77.96 -27.00 L80.54 27.00 L77.14 27.00 Z"/><path d="M82.66 -27.00 L86.06 -27.00 L88.64 27.00 L85.24 27.00 Z"/><path d="M90.76 -27.00 L94.16 -27.00 L96.74 27.00 L93.34 27.00 Z"/><path d="M98.86 -27.00 L102.26 -27.00 L104.84 27.00 L101.44 27.00 Z"/><path d="M106.96 -27.00 L110.36 -27.00 L112.94 27.00 L109.54 27.00 Z"/><path d="M115.06 -27.00 L118.46 -27.00 L121.04 27.00 L117.64 27.00 Z"/><path d="M123.16 -27.00 L126.56 -27.00 L129.14 27.00 L125.74 27.00 Z"/><path d="M131.26 -27.00 L134.66 -27.00 L137.24 27.00 L133.84 27.00 Z"/><path d="M139.36 -27.00 L142.76 -27.00 L145.34 27.00 L141.94 27.00 Z"/><path d="M147.46 -27.00 L150.86 -27.00 L153.44 27.00 L150.04 27.00 Z"/><path d="M155.56 -27.00 L158.96 -27.00 L161.54 27.00 L158.14 27.00 Z"/><path d="M163.66 -27.00 L167.06 -27.00 L169.64 27.00 L166.24 27.00 Z"/><path d="M171.76 -27.00 L175.16 -27.00 L177.74 27.00 L174.34 27.00 Z"/><path d="M179.86 -27.00 L183.26 -27.00 L185.84 27.00 L182.44 27.00 Z"/><path d="M187.96 -27.00 L191.36 -27.00 L193.94 27.00 L190.54 27.00 Z"/><path d="M196.06 -27.00 L199.46 -27.00 L202.04 27.00 L198.64 27.00 Z"/><path d="M204.16 -27.00 L207.56 -27.00 L210.14 27.00 L206.74 27.00 Z"/><path d="M212.26 -27.00 L215.66 -27.00 L218.24 27.00 L214.84 27.00 Z"/><path d="M220.36 -27.00 L223.76 -27.00 L226.34 27.00 L222.94 27.00 Z"/><path d="M228.46 -27.00 L231.86 -27.00 L234.44 27.00 L231.04 27.00 Z"/><path d="M236.56 -27.00 L239.96 -27.00 L242.54 27.00 L239.14 27.00 Z"/><path d="M244.66 -27.00 L248.06 -27.00 L250.64 27.00 L247.24 27.00 Z"/><path d="M252.76 -27.00 L256.16 -27.00 L258.74 27.00 L255.34 27.00 Z"/><path d="M260.86 -27.00 L264.26 -27.00 L266.84 27.00 L263.44 27.00 Z"/><path d="M268.96 -27.00 L272.36 -27.00 L274.94 27.00 L271.54 27.00 Z"/><path d="M277.06 -27.00 L280.46 -27.00 L283.04 27.00 L279.64 27.00 Z"/><path d="M285.16 -27.00 L288.56 -27.00 L291.14 27.00 L287.74 27.00 Z"/><path d="M293.26 -27.00 L296.66 -27.00 L299.24 27.00 L295.84 27.00 Z"/><path d="M301.36 -27.00 L304.76 -27.00 L307.34 27.00 L303.94 27.00 Z"/><path d="M309.46 -27.00 L312.86 -27.00 L315.44 27.00 L312.04 27.00 Z"/><path d="M317.56 -27.00 L320.96 -27.00 L323.54 27.00 L320.14 27.00 Z"/><path d="M325.66 -27.00 L329.06 -27.00 L331.64 27.00 L328.24 27.00 Z"/><path d="M333.76 -27.00 L337.16 -27.00 L339.74 27.00 L336.34 27.00 Z"/><path d="M341.86 -27.00 L345.26 -27.00 L347.84 27.00 L344.44 27.00 Z"/><path d="M349.96 -27.00 L353.36 -27.00 L355.94 27.00 L352.54 27.00 Z"/><path d="M358.06 -27.00 L361.46 -27.00 L364.04 27.00 L360.64 27.00 Z"/><path d="M366.16 -27.00 L369.56 -27.00 L372.14 27.00 L368.74 27.00 Z"/><path d="M374.26 -27.00 L377.66 -27.00 L380.24 27.00 L376.84 27.00 Z"/><path d="M382.36 -27.00 L385.76 -27.00 L388.34 27.00 L384.94 27.00 Z"/><path d="M390.46 -27.00 L393.86 -27.00 L396.44 27.00 L393.04 27.00 Z"/><path d="M398.56 -27.00 L401.96 -27.00 L404.54 27.00 L401.14 27.00 Z"/><path d="M406.66 -27.00 L410.06 -27.00 L412.64 27.00 L409.24 27.00 Z"/><path d="M414.76 -27.00 L418.16 -27.00 L420.74 27.00 L417.34 27.00 Z"/><path d="M422.86 -27.00 L426.26 -27.00 L428.84 27.00 L425.44 27.00 Z"/><path d="M430.96 -27.00 L434.36 -27.00 L436.94 27.00 L433.54 27.00 Z"/><path d="M439.06 -27.00 L442.46 -27.00 L445.04 27.00 L441.64 27.00 Z"/></g><g fill="#fff" opacity="0.13" clip-path="url(#tcab)"><path d="M39.08 -27.00 L40.38 -27.00 L42.96 27.00 L41.66 27.00 Z"/><path d="M47.18 -27.00 L48.48 -27.00 L51.06 27.00 L49.76 27.00 Z"/><path d="M55.28 -27.00 L56.58 -27.00 L59.16 27.00 L57.86 27.00 Z"/><path d="M63.38 -27.00 L64.68 -27.00 L67.26 27.00 L65.96 27.00 Z"/><path d="M71.48 -27.00 L72.78 -27.00 L75.36 27.00 L74.06 27.00 Z"/><path d="M79.58 -27.00 L80.88 -27.00 L83.46 27.00 L82.16 27.00 Z"/><path d="M87.68 -27.00 L88.98 -27.00 L91.56 27.00 L90.26 27.00 Z"/><path d="M95.78 -27.00 L97.08 -27.00 L99.66 27.00 L98.36 27.00 Z"/><path d="M103.88 -27.00 L105.18 -27.00 L107.76 27.00 L106.46 27.00 Z"/><path d="M111.98 -27.00 L113.28 -27.00 L115.86 27.00 L114.56 27.00 Z"/><path d="M120.08 -27.00 L121.38 -27.00 L123.96 27.00 L122.66 27.00 Z"/><path d="M128.18 -27.00 L129.48 -27.00 L132.06 27.00 L130.76 27.00 Z"/><path d="M136.28 -27.00 L137.58 -27.00 L140.16 27.00 L138.86 27.00 Z"/><path d="M144.38 -27.00 L145.68 -27.00 L148.26 27.00 L146.96 27.00 Z"/><path d="M152.48 -27.00 L153.78 -27.00 L156.36 27.00 L155.06 27.00 Z"/><path d="M160.58 -27.00 L161.88 -27.00 L164.46 27.00 L163.16 27.00 Z"/><path d="M168.68 -27.00 L169.98 -27.00 L172.56 27.00 L171.26 27.00 Z"/><path d="M176.78 -27.00 L178.08 -27.00 L180.66 27.00 L179.36 27.00 Z"/><path d="M184.88 -27.00 L186.18 -27.00 L188.76 27.00 L187.46 27.00 Z"/><path d="M192.98 -27.00 L194.28 -27.00 L196.86 27.00 L195.56 27.00 Z"/><path d="M201.08 -27.00 L202.38 -27.00 L204.96 27.00 L203.66 27.00 Z"/><path d="M209.18 -27.00 L210.48 -27.00 L213.06 27.00 L211.76 27.00 Z"/><path d="M217.28 -27.00 L218.58 -27.00 L221.16 27.00 L219.86 27.00 Z"/><path d="M225.38 -27.00 L226.68 -27.00 L229.26 27.00 L227.96 27.00 Z"/><path d="M233.48 -27.00 L234.78 -27.00 L237.36 27.00 L236.06 27.00 Z"/><path d="M241.58 -27.00 L242.88 -27.00 L245.46 27.00 L244.16 27.00 Z"/><path d="M249.68 -27.00 L250.98 -27.00 L253.56 27.00 L252.26 27.00 Z"/><path d="M257.78 -27.00 L259.08 -27.00 L261.66 27.00 L260.36 27.00 Z"/><path d="M265.88 -27.00 L267.18 -27.00 L269.76 27.00 L268.46 27.00 Z"/><path d="M273.98 -27.00 L275.28 -27.00 L277.86 27.00 L276.56 27.00 Z"/><path d="M282.08 -27.00 L283.38 -27.00 L285.96 27.00 L284.66 27.00 Z"/><path d="M290.18 -27.00 L291.48 -27.00 L294.06 27.00 L292.76 27.00 Z"/><path d="M298.28 -27.00 L299.58 -27.00 L302.16 27.00 L300.86 27.00 Z"/><path d="M306.38 -27.00 L307.68 -27.00 L310.26 27.00 L308.96 27.00 Z"/><path d="M314.48 -27.00 L315.78 -27.00 L318.36 27.00 L317.06 27.00 Z"/><path d="M322.58 -27.00 L323.88 -27.00 L326.46 27.00 L325.16 27.00 Z"/><path d="M330.68 -27.00 L331.98 -27.00 L334.56 27.00 L333.26 27.00 Z"/><path d="M338.78 -27.00 L340.08 -27.00 L342.66 27.00 L341.36 27.00 Z"/><path d="M346.88 -27.00 L348.18 -27.00 L350.76 27.00 L349.46 27.00 Z"/><path d="M354.98 -27.00 L356.28 -27.00 L358.86 27.00 L357.56 27.00 Z"/><path d="M363.08 -27.00 L364.38 -27.00 L366.96 27.00 L365.66 27.00 Z"/><path d="M371.18 -27.00 L372.48 -27.00 L375.06 27.00 L373.76 27.00 Z"/><path d="M379.28 -27.00 L380.58 -27.00 L383.16 27.00 L381.86 27.00 Z"/><path d="M387.38 -27.00 L388.68 -27.00 L391.26 27.00 L389.96 27.00 Z"/><path d="M395.48 -27.00 L396.78 -27.00 L399.36 27.00 L398.06 27.00 Z"/><path d="M403.58 -27.00 L404.88 -27.00 L407.46 27.00 L406.16 27.00 Z"/><path d="M411.68 -27.00 L412.98 -27.00 L415.56 27.00 L414.26 27.00 Z"/><path d="M419.78 -27.00 L421.08 -27.00 L423.66 27.00 L422.36 27.00 Z"/><path d="M427.88 -27.00 L429.18 -27.00 L431.76 27.00 L430.46 27.00 Z"/><path d="M435.98 -27.00 L437.28 -27.00 L439.86 27.00 L438.56 27.00 Z"/><path d="M444.08 -27.00 L445.38 -27.00 L447.96 27.00 L446.66 27.00 Z"/></g><g fill="#171B20" clip-path="url(#tcab)"><path d="M34.06 -28.00 L42.16 -28.00 L38.11 -22.03 Z"/><path d="M42.16 -28.00 L50.26 -28.00 L46.21 -22.03 Z"/><path d="M50.26 -28.00 L58.36 -28.00 L54.31 -22.03 Z"/><path d="M58.36 -28.00 L66.46 -28.00 L62.41 -22.03 Z"/><path d="M66.46 -28.00 L74.56 -28.00 L70.51 -22.03 Z"/><path d="M74.56 -28.00 L82.66 -28.00 L78.61 -22.03 Z"/><path d="M82.66 -28.00 L90.76 -28.00 L86.71 -22.03 Z"/><path d="M90.76 -28.00 L98.86 -28.00 L94.81 -22.03 Z"/><path d="M98.86 -28.00 L106.96 -28.00 L102.91 -22.03 Z"/><path d="M106.96 -28.00 L115.06 -28.00 L111.01 -22.03 Z"/><path d="M115.06 -28.00 L123.16 -28.00 L119.11 -22.03 Z"/><path d="M123.16 -28.00 L131.26 -28.00 L127.21 -22.03 Z"/><path d="M131.26 -28.00 L139.36 -28.00 L135.31 -22.03 Z"/><path d="M139.36 -28.00 L147.46 -28.00 L143.41 -22.03 Z"/><path d="M147.46 -28.00 L155.56 -28.00 L151.51 -22.03 Z"/><path d="M155.56 -28.00 L163.66 -28.00 L159.61 -22.03 Z"/><path d="M163.66 -28.00 L171.76 -28.00 L167.71 -22.03 Z"/><path d="M171.76 -28.00 L179.86 -28.00 L175.81 -22.03 Z"/><path d="M179.86 -28.00 L187.96 -28.00 L183.91 -22.03 Z"/><path d="M187.96 -28.00 L196.06 -28.00 L192.01 -22.03 Z"/><path d="M196.06 -28.00 L204.16 -28.00 L200.11 -22.03 Z"/><path d="M204.16 -28.00 L212.26 -28.00 L208.21 -22.03 Z"/><path d="M212.26 -28.00 L220.36 -28.00 L216.31 -22.03 Z"/><path d="M220.36 -28.00 L228.46 -28.00 L224.41 -22.03 Z"/><path d="M228.46 -28.00 L236.56 -28.00 L232.51 -22.03 Z"/><path d="M236.56 -28.00 L244.66 -28.00 L240.61 -22.03 Z"/><path d="M244.66 -28.00 L252.76 -28.00 L248.71 -22.03 Z"/><path d="M252.76 -28.00 L260.86 -28.00 L256.81 -22.03 Z"/><path d="M260.86 -28.00 L268.96 -28.00 L264.91 -22.03 Z"/><path d="M268.96 -28.00 L277.06 -28.00 L273.01 -22.03 Z"/><path d="M277.06 -28.00 L285.16 -28.00 L281.11 -22.03 Z"/><path d="M285.16 -28.00 L293.26 -28.00 L289.21 -22.03 Z"/><path d="M293.26 -28.00 L301.36 -28.00 L297.31 -22.03 Z"/><path d="M301.36 -28.00 L309.46 -28.00 L305.41 -22.03 Z"/><path d="M309.46 -28.00 L317.56 -28.00 L313.51 -22.03 Z"/><path d="M317.56 -28.00 L325.66 -28.00 L321.61 -22.03 Z"/><path d="M325.66 -28.00 L333.76 -28.00 L329.71 -22.03 Z"/><path d="M333.76 -28.00 L341.86 -28.00 L337.81 -22.03 Z"/><path d="M341.86 -28.00 L349.96 -28.00 L345.91 -22.03 Z"/><path d="M349.96 -28.00 L358.06 -28.00 L354.01 -22.03 Z"/><path d="M358.06 -28.00 L366.16 -28.00 L362.11 -22.03 Z"/><path d="M366.16 -28.00 L374.26 -28.00 L370.21 -22.03 Z"/><path d="M374.26 -28.00 L382.36 -28.00 L378.31 -22.03 Z"/><path d="M382.36 -28.00 L390.46 -28.00 L386.41 -22.03 Z"/><path d="M390.46 -28.00 L398.56 -28.00 L394.51 -22.03 Z"/><path d="M398.56 -28.00 L406.66 -28.00 L402.61 -22.03 Z"/><path d="M406.66 -28.00 L414.76 -28.00 L410.71 -22.03 Z"/><path d="M414.76 -28.00 L422.86 -28.00 L418.81 -22.03 Z"/><path d="M422.86 -28.00 L430.96 -28.00 L426.91 -22.03 Z"/><path d="M430.96 -28.00 L439.06 -28.00 L435.01 -22.03 Z"/><path d="M439.06 -28.00 L447.16 -28.00 L443.11 -22.03 Z"/><path d="M447.16 -28.00 L455.26 -28.00 L451.21 -22.03 Z"/><path d="M36.64 28.00 L44.74 28.00 L40.69 22.03 Z"/><path d="M44.74 28.00 L52.84 28.00 L48.79 22.03 Z"/><path d="M52.84 28.00 L60.94 28.00 L56.89 22.03 Z"/><path d="M60.94 28.00 L69.04 28.00 L64.99 22.03 Z"/><path d="M69.04 28.00 L77.14 28.00 L73.09 22.03 Z"/><path d="M77.14 28.00 L85.24 28.00 L81.19 22.03 Z"/><path d="M85.24 28.00 L93.34 28.00 L89.29 22.03 Z"/><path d="M93.34 28.00 L101.44 28.00 L97.39 22.03 Z"/><path d="M101.44 28.00 L109.54 28.00 L105.49 22.03 Z"/><path d="M109.54 28.00 L117.64 28.00 L113.59 22.03 Z"/><path d="M117.64 28.00 L125.74 28.00 L121.69 22.03 Z"/><path d="M125.74 28.00 L133.84 28.00 L129.79 22.03 Z"/><path d="M133.84 28.00 L141.94 28.00 L137.89 22.03 Z"/><path d="M141.94 28.00 L150.04 28.00 L145.99 22.03 Z"/><path d="M150.04 28.00 L158.14 28.00 L154.09 22.03 Z"/><path d="M158.14 28.00 L166.24 28.00 L162.19 22.03 Z"/><path d="M166.24 28.00 L174.34 28.00 L170.29 22.03 Z"/><path d="M174.34 28.00 L182.44 28.00 L178.39 22.03 Z"/><path d="M182.44 28.00 L190.54 28.00 L186.49 22.03 Z"/><path d="M190.54 28.00 L198.64 28.00 L194.59 22.03 Z"/><path d="M198.64 28.00 L206.74 28.00 L202.69 22.03 Z"/><path d="M206.74 28.00 L214.84 28.00 L210.79 22.03 Z"/><path d="M214.84 28.00 L222.94 28.00 L218.89 22.03 Z"/><path d="M222.94 28.00 L231.04 28.00 L226.99 22.03 Z"/><path d="M231.04 28.00 L239.14 28.00 L235.09 22.03 Z"/><path d="M239.14 28.00 L247.24 28.00 L243.19 22.03 Z"/><path d="M247.24 28.00 L255.34 28.00 L251.29 22.03 Z"/><path d="M255.34 28.00 L263.44 28.00 L259.39 22.03 Z"/><path d="M263.44 28.00 L271.54 28.00 L267.49 22.03 Z"/><path d="M271.54 28.00 L279.64 28.00 L275.59 22.03 Z"/><path d="M279.64 28.00 L287.74 28.00 L283.69 22.03 Z"/><path d="M287.74 28.00 L295.84 28.00 L291.79 22.03 Z"/><path d="M295.84 28.00 L303.94 28.00 L299.89 22.03 Z"/><path d="M303.94 28.00 L312.04 28.00 L307.99 22.03 Z"/><path d="M312.04 28.00 L320.14 28.00 L316.09 22.03 Z"/><path d="M320.14 28.00 L328.24 28.00 L324.19 22.03 Z"/><path d="M328.24 28.00 L336.34 28.00 L332.29 22.03 Z"/><path d="M336.34 28.00 L344.44 28.00 L340.39 22.03 Z"/><path d="M344.44 28.00 L352.54 28.00 L348.49 22.03 Z"/><path d="M352.54 28.00 L360.64 28.00 L356.59 22.03 Z"/><path d="M360.64 28.00 L368.74 28.00 L364.69 22.03 Z"/><path d="M368.74 28.00 L376.84 28.00 L372.79 22.03 Z"/><path d="M376.84 28.00 L384.94 28.00 L380.89 22.03 Z"/><path d="M384.94 28.00 L393.04 28.00 L388.99 22.03 Z"/><path d="M393.04 28.00 L401.14 28.00 L397.09 22.03 Z"/><path d="M401.14 28.00 L409.24 28.00 L405.19 22.03 Z"/><path d="M409.24 28.00 L417.34 28.00 L413.29 22.03 Z"/><path d="M417.34 28.00 L425.44 28.00 L421.39 22.03 Z"/><path d="M425.44 28.00 L433.54 28.00 L429.49 22.03 Z"/><path d="M433.54 28.00 L441.64 28.00 L437.59 22.03 Z"/><path d="M441.64 28.00 L449.74 28.00 L445.69 22.03 Z"/><path d="M449.74 28.00 L457.84 28.00 L453.79 22.03 Z"/></g><path d="M439.56 -22.03 L453.06 -12.12 L453.06 12.12 L439.56 22.03 Z" fill="url(#cylab)"/><path d="M9.98 -49.88 L34.56 -49.88 L34.56 49.88 L9.98 49.88 L0 -39.91 L0 39.91 Z" fill="url(#cylab)"/><path d="M9.98 -49.88 L34.56 -49.88 L34.56 -24.94 L3.99 -24.94 Z" fill="#000" opacity="0.30"/><path d="M9.98 49.88 L34.56 49.88 L34.56 24.94 L3.99 24.94 Z" fill="#000" opacity="0.42"/><rect x="3.99" y="-24.94" width="30.57" height="49.88" fill="url(#faceab)"/><line x1="3.99" y1="-24.94" x2="34.56" y2="-24.94" stroke="#3E464D" stroke-width="0.9" opacity="0.7"/><line x1="3.99" y1="24.94" x2="34.56" y2="24.94" stroke="#3E464D" stroke-width="0.9" opacity="0.7"/><rect x="33.36" y="-49.88" width="1.6" height="99.77" fill="#3E464D" opacity="0.55"/><rect x="3.99" y="-16.96" width="30.57" height="9.98" fill="#F4F7F9" opacity="0.35"/></g><g transform="translate(536.8,198)"><defs>
+  <linearGradient id="cylaw" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="9%" stop-color="#79828A"/>
+    <stop offset="30%" stop-color="#AEB6BD"/><stop offset="43%" stop-color="#F4F7F9"/>
+    <stop offset="58%" stop-color="#AEB6BD"/><stop offset="86%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <linearGradient id="faceaw" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#F4F7F9"/><stop offset="38%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#79828A"/>
+  </linearGradient>
+  <linearGradient id="rimaw" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#79828A"/><stop offset="45%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <radialGradient id="boreaw" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="70%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#AEB6BD"/>
+  </radialGradient>
+</defs><path d="M0 -54.00 A30.20 54.00 0 0 0 0 54.00 L8.95 54.00 A30.20 54.00 0 0 1 8.95 -54.00 Z" fill="url(#rimaw)"/><ellipse cx="0" cy="0" rx="30.20" ry="54.00" fill="url(#faceaw)"/><ellipse cx="0" cy="0" rx="30.20" ry="54.00" fill="none" stroke="#3E464D" stroke-width="0.8" opacity="0.6"/><ellipse cx="0" cy="0" rx="26.57" ry="47.52" fill="none" stroke="#F4F7F9" stroke-width="2.70" opacity="0.26"/><path d="M0 -28.35 A15.85 28.35 0 0 0 0 28.35 L8.95 28.35 A15.85 28.35 0 0 1 8.95 -28.35 Z" fill="url(#boreaw)"/><ellipse cx="0" cy="0" rx="15.85" ry="28.35" fill="#3E464D"/></g><g transform="translate(602.6,198)"><defs>
+  <linearGradient id="cylan" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="9%" stop-color="#79828A"/>
+    <stop offset="30%" stop-color="#AEB6BD"/><stop offset="43%" stop-color="#F4F7F9"/>
+    <stop offset="58%" stop-color="#AEB6BD"/><stop offset="86%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <linearGradient id="facean" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#F4F7F9"/><stop offset="38%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#79828A"/>
+  </linearGradient>
+  <linearGradient id="riman" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#79828A"/><stop offset="45%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <radialGradient id="borean" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="70%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#AEB6BD"/>
+  </radialGradient>
+</defs><polygon points="37.61,49.88 13.45,24.94 13.45,-24.94 37.61,-49.88 61.76,-24.94 61.76,24.94" fill="#3E464D"/><polygon points="24.16,24.94 0.00,49.88 37.61,49.88 61.76,24.94" fill="#AEB6BD"/><polygon points="24.16,24.94 0.00,49.88 37.61,49.88 61.76,24.94" fill="#000" opacity="0.2"/><polygon points="24.16,-24.94 24.16,24.94 61.76,24.94 61.76,-24.94" fill="#AEB6BD"/><polygon points="24.16,-24.94 24.16,24.94 61.76,24.94 61.76,-24.94" fill="#000" opacity="0.42"/><polygon points="-0.00,-49.88 24.16,-24.94 61.76,-24.94 37.61,-49.88" fill="#AEB6BD"/><polygon points="-0.00,-49.88 24.16,-24.94 61.76,-24.94 37.61,-49.88" fill="#000" opacity="0.58"/><polygon points="0.00,49.88 -24.16,24.94 -24.16,-24.94 -0.00,-49.88 24.16,-24.94 24.16,24.94" fill="url(#facean)"/><polygon points="0.00,49.88 -24.16,24.94 -24.16,-24.94 -0.00,-49.88 24.16,-24.94 24.16,24.94" fill="none" stroke="#3E464D" stroke-width="0.8" opacity="0.65"/><polygon points="0.00,41.90 -20.29,20.95 -20.29,-20.95 -0.00,-41.90 20.29,-20.95 20.29,20.95" fill="none" stroke="#F4F7F9" stroke-width="2.49" opacity="0.22"/><path d="M0 -27.00 A15.10 27.00 0 0 0 0 27.00 L37.61 27.00 A15.10 27.00 0 0 1 37.61 -27.00 Z" fill="url(#borean)"/><clipPath id="nban"><path d="M0 -27.00 A15.10 27.00 0 0 0 0 27.00 L37.61 27.00 A15.10 27.00 0 0 1 37.61 -27.00 Z"/></clipPath><g stroke="#F4F7F9" stroke-width="0.7" opacity="0.30" clip-path="url(#nban)"><line x1="-7.17" y1="-23.76" x2="44.78" y2="-23.76"/><line x1="-12.30" y1="-15.66" x2="49.90" y2="-15.66"/><line x1="-14.49" y1="-7.56" x2="52.10" y2="-7.56"/><line x1="-15.10" y1="0.54" x2="52.70" y2="0.54"/><line x1="-14.30" y1="8.64" x2="51.91" y2="8.64"/><line x1="-11.85" y1="16.74" x2="49.45" y2="16.74"/><line x1="-5.92" y1="24.84" x2="43.52" y2="24.84"/></g><ellipse cx="0" cy="0" rx="15.10" ry="27.00" fill="none" stroke="#3E464D" stroke-width="1"/></g></svg>
+        <div class="co" style="left:54px;top:0"><div class="co-dot" style="left:-2px;top:146px"></div><div class="co-line" style="left:0;top:90px;width:1px;height:58px"></div><div style="position:absolute;top:60px;left:0;"><div class="co-l">Head</div><div class="co-v">Hex &#183; 17 mm AF</div></div></div><div class="co" style="left:537px;top:0"><div class="co-dot" style="left:-2px;top:142px"></div><div class="co-line" style="left:0;top:90px;width:1px;height:54px"></div><div style="position:absolute;top:60px;left:50%;transform:translateX(-50%);text-align:center;"><div class="co-l">Flat washer</div><div class="co-v">20 / 10.5 &#215; 2</div></div></div><div class="co" style="left:624px;top:0"><div class="co-dot" style="left:-2px;top:236px"></div><div class="co-line" style="left:0;top:238px;width:1px;height:18px"></div><div style="position:absolute;top:262px;right:0;text-align:right;"><div class="co-l">Nut</div><div class="co-v">M10 &#215; 1.5</div></div></div><div class="co" style="left:87px;top:0"><div class="co-dot" style="left:-2px;top:223px"></div><div class="co-line" style="left:0;top:225px;width:1px;height:31px"></div><div style="position:absolute;top:262px;left:0;"><div class="co-l">Diameter</div><div class="co-v">10.00 mm</div></div></div><div class="co" style="left:275px;top:0"><div class="co-dot" style="left:-2px;top:223px"></div><div class="co-line" style="left:0;top:225px;width:1px;height:65px"></div><div style="position:absolute;top:296px;left:50%;transform:translateX(-50%);text-align:center;"><div class="co-l">Length under head</div><div class="co-v">75 mm</div></div></div><div class="co" style="left:421px;top:0"><div class="co-dot" style="left:-2px;top:223px"></div><div class="co-line" style="left:0;top:225px;width:1px;height:31px"></div><div style="position:absolute;top:262px;left:50%;transform:translateX(-50%);text-align:center;"><div class="co-l">Pitch</div><div class="co-v">1.50 mm</div></div></div>
+        <div class="vp-bar"><div class="vp-lab">Hex bolt · M10 &#215; 75 · full thread</div><div class="vp-seg"><span class="">Assembly</span><span class="on">Exploded</span><span class="">Section</span></div></div>
+        <div class="ruler"><div class="rbase"></div><div class="rl" style="left:0.0px;height:9px"></div><div class="rl" style="left:27.0px;height:5px"></div><div class="rl" style="left:54.0px;height:9px"></div><div class="rn" style="left:54.0px">10</div><div class="rl" style="left:81.0px;height:5px"></div><div class="rl" style="left:108.0px;height:9px"></div><div class="rn" style="left:108.0px">20</div><div class="rl" style="left:135.0px;height:5px"></div><div class="rl" style="left:162.0px;height:9px"></div><div class="rn" style="left:162.0px">30</div><div class="rl" style="left:189.0px;height:5px"></div><div class="rl" style="left:216.0px;height:9px"></div><div class="rn" style="left:216.0px">40</div><div class="rl" style="left:243.0px;height:5px"></div><div class="rl" style="left:270.0px;height:9px"></div><div class="rn" style="left:270.0px">50</div><div class="rl" style="left:297.0px;height:5px"></div><div class="rl" style="left:324.0px;height:9px"></div><div class="rn" style="left:324.0px">60</div><div class="rl" style="left:351.0px;height:5px"></div><div class="rl" style="left:378.0px;height:9px"></div><div class="rn" style="left:378.0px">70</div><div class="rl" style="left:405.0px;height:5px"></div><div class="rl" style="left:432.0px;height:9px"></div><div class="rn" style="left:432.0px">80</div><div class="rl" style="left:459.0px;height:5px"></div><div class="rl" style="left:486.0px;height:9px"></div><div class="rn" style="left:486.0px">90</div><div class="rl" style="left:513.0px;height:5px"></div><div class="rl" style="left:540.0px;height:9px"></div><div class="rn" style="left:540.0px">100</div><div class="rl" style="left:567.0px;height:5px"></div><div class="rl" style="left:594.0px;height:9px"></div><div class="rn" style="left:594.0px">110</div><div class="rl" style="left:621.0px;height:5px"></div></div>
+        <div class="vp-tools"><i class=""><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9M12 3v4M12 3l4 2"/></svg></i><i class=""><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></i><i class="on"><svg viewBox="0 0 24 24"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg></i><i class=""><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"/></svg></i></div>
+      </div></div>
+      <div class="pan" style="width:272px;flex:none">
+      <div class="pan-h"><span class="pan-t">Every dimension</span><span class="pan-n mono">mm</span></div>
+      <div class="pan-b" style="padding-top:6px">
+        <div class="sp-sec">Bolt</div>
+        <div class="sp"><span>Nominal diameter</span><b>10.00</b></div><div class="sp"><span>Thread pitch, coarse</span><b>1.50</b></div>
+        <div class="sp"><span>Across flats &#8212; ISO</span><b>17</b></div><div class="sp"><span>Across flats &#8212; DIN</span><b>17</b></div>
+        <div class="sp"><span>Head height</span><b>6.40</b></div><div class="sp"><span>Length under head</span><b>75</b></div>
+        <div class="sp-sec">Nut &amp; washer</div>
+        <div class="sp"><span>Nut height</span><b>8.40</b></div><div class="sp"><span>Washer OD / ID</span><b>20 / 10.5</b></div><div class="sp"><span>Washer thickness</span><b>2.00</b></div>
+        <div class="sp-sec">Holes</div>
+        <div class="sp"><span>Tap drill</span><b>8.50</b></div><div class="sp"><span>Clearance drill</span><b>11.00</b></div>
+        <div class="sp-sec">Also called</div>
+        <div class="sp"><span>Imperial nearest</span><b>3/8&#8221;&#8211;16 UNC</b></div><div class="sp"><span>Spanner, imperial</span><b>11/16&#8221;</b></div>
+      </div>
+    </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch;flex:1;min-height:0">
+      <div class="pan" style="flex:1">
+      <div class="pan-h"><span class="pan-t">What it takes</span><span class="pan-n">ISO 4017 &#183; grade 8.8</span></div>
+      <div class="pan-b" style="display:flex;gap:0;padding:12px 0 14px">
+        <div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Spanner</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">17 mm</div><div style="margin-top:6px"><span class="cp good">ISO and DIN agree here</span></div></div>
+        <div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Tap drill</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">8.5 mm</div><div style="margin-top:6px"><span style="font-size:11px;color:var(--ink600)">to cut an M10 thread</span></div></div>
+        <div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Clearance</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">11 mm</div><div style="margin-top:6px"><span style="font-size:11px;color:var(--ink600)">for the bolt to pass</span></div></div>
+        <div style="flex:1;padding:0 16px;border-left:1px solid var(--ruleSoft)"><div class="fld-l" style="margin-bottom:5px">Torque</div><div class="mono" style="font-size:23px;font-weight:500;line-height:1.05">47&#8211;56 N&#183;m</div><div style="margin-top:6px"><span style="font-size:11px;color:var(--ink600)">grade 8.8, dry thread</span></div></div>
+      </div>
+      <div style="margin-top:auto"><div class="vp" style="height:118px;border-radius:0;border-left:0;border-right:0;border-bottom:0">
+        <div class="vp-grid"></div>
+        <svg width="700" height="118" style="position:absolute;inset:0">
+          <g transform="translate(126,62)"><defs>
+  <linearGradient id="cylts" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#404750"/><stop offset="9%" stop-color="#6B7479"/>
+    <stop offset="30%" stop-color="#98A0A5"/><stop offset="43%" stop-color="#D9DEE1"/>
+    <stop offset="58%" stop-color="#98A0A5"/><stop offset="86%" stop-color="#6B7479"/>
+    <stop offset="100%" stop-color="#404750"/>
+  </linearGradient>
+  <linearGradient id="facets" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#D9DEE1"/><stop offset="38%" stop-color="#98A0A5"/>
+    <stop offset="100%" stop-color="#6B7479"/>
+  </linearGradient>
+  <linearGradient id="rimts" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#6B7479"/><stop offset="45%" stop-color="#98A0A5"/>
+    <stop offset="100%" stop-color="#404750"/>
+  </linearGradient>
+  <radialGradient id="borets" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#404750"/><stop offset="70%" stop-color="#6B7479"/>
+    <stop offset="100%" stop-color="#98A0A5"/>
+  </radialGradient>
+</defs><g transform="rotate(-15)"><path d="M-34.00 -20.00 L-34.00 -36.00 L22.00 -36.00 Q46.00 -36.00 60.00 -12.00 L184.00 -12.00 Q200.80 -12.00 200.80 0 Q200.80 12.00 184.00 12.00 L60.00 12.00 Q46.00 36.00 22.00 36.00 L-34.00 36.00 L-34.00 20.00 L16.80 20.00 A12.00 12.00 0 0 0 16.80 -20.00 Z" fill="url(#cylts)" stroke="#404750" stroke-width="0.9" stroke-linejoin="round"/><path d="M-34.00 -20.00 L-34.00 -36.00 L22.00 -36.00 Q46.00 -36.00 60.00 -12.00 L184.00 -12.00 Q200.80 -12.00 200.80 0 Q200.80 12.00 184.00 12.00 L60.00 12.00 Q46.00 36.00 22.00 36.00 L-34.00 36.00 L-34.00 20.00 L16.80 20.00 A12.00 12.00 0 0 0 16.80 -20.00 Z" fill="none" stroke="#D9DEE1" stroke-width="0.8" opacity="0.30" transform="translate(0,-1.2)"/></g></g>
+          <g transform="translate(350,94)"><defs>
+  <linearGradient id="cyltd" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="9%" stop-color="#79828A"/>
+    <stop offset="30%" stop-color="#AEB6BD"/><stop offset="43%" stop-color="#F4F7F9"/>
+    <stop offset="58%" stop-color="#AEB6BD"/><stop offset="86%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <linearGradient id="facetd" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#F4F7F9"/><stop offset="38%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#79828A"/>
+  </linearGradient>
+  <linearGradient id="rimtd" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#79828A"/><stop offset="45%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <radialGradient id="boretd" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="70%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#AEB6BD"/>
+  </radialGradient>
+</defs><rect x="0" y="-10.62" width="160.00" height="21.25" fill="url(#cyltd)"/><g fill="#000" opacity="0.34"><path d="M21.25 -10.62 L29.22 -10.62 L40.91 10.62 L32.94 10.62 Z"/><path d="M37.19 -10.62 L45.16 -10.62 L56.84 10.62 L48.88 10.62 Z"/><path d="M53.12 -10.62 L61.09 -10.62 L72.78 10.62 L64.81 10.62 Z"/><path d="M69.06 -10.62 L77.03 -10.62 L88.72 10.62 L80.75 10.62 Z"/><path d="M85.00 -10.62 L92.97 -10.62 L104.66 10.62 L96.69 10.62 Z"/><path d="M100.94 -10.62 L108.91 -10.62 L120.59 10.62 L112.62 10.62 Z"/><path d="M116.88 -10.62 L124.84 -10.62 L136.53 10.62 L128.56 10.62 Z"/><path d="M132.81 -10.62 L140.78 -10.62 L152.47 10.62 L144.50 10.62 Z"/><path d="M148.75 -10.62 L156.72 -10.62 L168.41 10.62 L160.44 10.62 Z"/></g><path d="M160.00 -10.62 L172.22 0 L160.00 10.62 Z" fill="url(#cyltd)"/></g>
+          <g transform="translate(350,46)"><defs>
+  <linearGradient id="cylcd" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="9%" stop-color="#79828A"/>
+    <stop offset="30%" stop-color="#AEB6BD"/><stop offset="43%" stop-color="#F4F7F9"/>
+    <stop offset="58%" stop-color="#AEB6BD"/><stop offset="86%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <linearGradient id="facecd" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#F4F7F9"/><stop offset="38%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#79828A"/>
+  </linearGradient>
+  <linearGradient id="rimcd" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#79828A"/><stop offset="45%" stop-color="#AEB6BD"/>
+    <stop offset="100%" stop-color="#3E464D"/>
+  </linearGradient>
+  <radialGradient id="borecd" cx="0.5" cy="0.42" r="0.62">
+    <stop offset="0%" stop-color="#3E464D"/><stop offset="70%" stop-color="#79828A"/>
+    <stop offset="100%" stop-color="#AEB6BD"/>
+  </radialGradient>
+</defs><rect x="0" y="-13.75" width="160.00" height="27.50" fill="url(#cylcd)"/><g fill="#000" opacity="0.34"><path d="M27.50 -13.75 L37.81 -13.75 L52.94 13.75 L42.62 13.75 Z"/><path d="M48.12 -13.75 L58.44 -13.75 L73.56 13.75 L63.25 13.75 Z"/><path d="M68.75 -13.75 L79.06 -13.75 L94.19 13.75 L83.88 13.75 Z"/><path d="M89.38 -13.75 L99.69 -13.75 L114.81 13.75 L104.50 13.75 Z"/><path d="M110.00 -13.75 L120.31 -13.75 L135.44 13.75 L125.12 13.75 Z"/><path d="M130.62 -13.75 L140.94 -13.75 L156.06 13.75 L145.75 13.75 Z"/></g><path d="M160.00 -13.75 L175.81 0 L160.00 13.75 Z" fill="url(#cylcd)"/></g>
+        </svg>
+        <div class="co" style="left:16px;top:10px"><div class="co-l">The spanner and the two drills</div></div>
+        <div class="co" style="left:560px;top:34px"><div class="co-l">11 mm &#183; clearance</div></div>
+        <div class="co" style="left:560px;top:82px"><div class="co-l">8.5 mm &#183; tap</div></div>
+        <div class="co" style="right:14px;bottom:10px"><div class="co-l" style="color:#4B5762">same scale as above</div></div>
+      </div></div>
+    </div>
+      <div class="pan" style="width:352px;flex:none">
+      <div class="pan-h"><span class="pan-t">On the shelf</span><span class="pan-n">214 nuts &#183; 660 washers</span></div>
+      <div class="pan-b" style="display:flex;flex-direction:column;gap:9px;flex:1">
+        <div style="display:flex;align-items:baseline;gap:9px">
+          <span class="mono" style="font-size:24px;font-weight:500">328</span>
+          <span style="font-size:11.5px;color:var(--ink600)">pcs &#183; held as <b class="mono">M10*75</b> and <b class="mono">10x75</b></span>
+        </div>
+        <div class="sp" style="border-bottom:1px solid var(--ruleSoft)"><span>Each</span><b>UGX 1,250</b></div>
+        <div class="sp" style="border-bottom:1px solid var(--ruleSoft)"><span>Per 100</span><b>UGX 108,000</b></div>
+        <div class="sp"><span>By weight &#183; 4.1 kg / 100</span><b>UGX 26,300/kg</b></div>
+        <div style="display:flex;gap:7px;margin-top:auto">
+          <span class="btn btn-accent"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add to the sale</span>
+          <span class="btn">With nut &amp; washer</span>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
