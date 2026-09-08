@@ -37,7 +37,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 const sellFixture = new Map(); const breaksFixture = new Map(); const basisAsked = [];
 const companionFixture = new Map();  // 'P1' or 'P1::0' -> [{label, price, unit, ...}]
 const env = {
-  data: { products: [] },
+  data: { products: [], presetWaAliases: [], presetWaAliasNo: [] },
   WA_QUOTE_STOPWORDS_SRC: null,
   catalogueSellAtQty: (p, idx, qty, basis) => {
     basisAsked.push(basis);
@@ -53,14 +53,21 @@ const env = {
     return v ? `${p.name} — ${Object.values(v.combo).join(' / ')}` : p.name;
   },
 };
-const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteReply'];
+const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteReply',
+  /* The matcher scores both ways now and the quantity is no longer
+     thrown away, so the pieces those rest on come in with it. */
+  'waQuoteProductTokens', 'waQuoteHit', 'waAskedQty'];
 let scope = null; let err = null;
 try {
   scope = compileScope([
     extractFunction(src, 'waQuoteTokens', 'index.html'),
     extractFunction(src, 'waQuoteCandidates', 'index.html'),
     extractFunction(src, 'waQuoteMatch', 'index.html'),
+    extractFunction(src, 'waQuoteProductTokens', 'index.html'),
+    extractFunction(src, 'waQuoteHit', 'index.html'),
+    extractFunction(src, 'waAskedQty', 'index.html'),
     extractFunction(src, 'waQuoteReply', 'index.html'),
+    extractFunction(src, 'stockKey', 'index.html'),
     // the stopword set the tokenizer closes over
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
   ], env, NAMES);
@@ -137,6 +144,108 @@ if (!scope) process.exit(1);
     'a quarter of a long name, even UNRIVALLED, is below the line — only the threshold holds here');
 }
 
+/* ---------- 3b. THE SCORING WAS BACKWARDS ----------------------------
+ *
+ * A product used to be judged by how much of ITS OWN NAME the message
+ * covered, and 1.0 was the autonomy contract. So a one-word product
+ * scored a perfect 1.0 on any message containing the word and answered
+ * by itself, while a five-word product scored 0.8 for a customer who
+ * asked precisely and got silence. Short names won; precise questions
+ * lost. These are the cases that bug produced.
+ */
+{
+  /* Sections 4 and after go on reading the pool section 2 built, so
+     everything borrowed here is put back at the end of the block. */
+  const keptProducts = env.data.products;
+  const keptSell = new Map(sellFixture); const keptBreaks = new Map(breaksFixture);
+  env.data.products = [
+    { id: 'C1', name: 'Cement', type: 'simple', image: null },
+    { id: 'C2', name: 'Iron Sheets 28 Gauge Plain', type: 'simple', image: null },
+  ];
+  sellFixture.clear(); breaksFixture.clear();
+  sellFixture.set('C1', { price: 32000, unit: 'bag' });
+  sellFixture.set('C2', { price: 48000, unit: 'sheet' });
+  breaksFixture.set('C2', [{ qty: 20, price: 46500 }]);
+  const cands = scope.waQuoteCandidates();
+
+  /* THE BUG, exactly as it fired. Two words of theirs belong to the
+     iron sheets and one to the cement, but the cement's whole name is
+     that one word -- so the old rule scored it a perfect 1.0 and sent
+     a cement price, unattended, to a question mostly about roofing.
+     (The sheets are not the answer either: two of their five words is
+     below the half-a-name floor, so they are not even a candidate. The
+     right answer here is that a person reads it.) */
+  const both = scope.waQuoteMatch('do you have cement and iron sheets', cands);
+  eq(both && both.name, 'Cement', 'the one product named wholly is still what the owner is shown');
+  eq(both && both.auto, false,
+    'but it no longer answers by itself, because it explains only a third of what they said');
+  const cementAlone = scope.waQuoteMatch('how much is cement', cands);
+  eq(cementAlone && cementAlone.auto, true, 'cement alone is still a whole naming, and answerable');
+  /* And the same word inside a bigger question is not. */
+  const mixed = scope.waQuoteMatch('cement and iron sheets 28 gauge plain', cands);
+  eq(mixed && mixed.auto, false,
+    'nothing answers by itself while words belonging to another product are left over');
+
+  /* THE PRECISE QUESTION that used to get silence. Four of five words is
+     not a whole naming, so it still does not answer alone -- but it IS
+     the match, and the owner sees it with what they missed. */
+  const precise = scope.waQuoteMatch('how much for 30 iron sheets 28 gauge', cands);
+  eq(precise && precise.name, 'Iron Sheets 28 Gauge Plain', 'the precise question matches');
+  eq(precise && precise.hit, 4, 'on four of its five words');
+  eq(precise && precise.exact, false, 'which is not a whole naming');
+  eq(precise && precise.missed.join(','), 'plain', 'and it says which word they did not say');
+  eq(precise && Math.round(precise.precision * 100), 100,
+    'while everything they said that names a product belongs to this one');
+
+  /* THE QUANTITY. It used to survive tokenisation as a stray number
+     that matched nothing, and the reply quoted one unit to a customer
+     who had asked for thirty. */
+  eq(scope.waAskedQty('how much for 30 iron sheets 28 gauge', precise), 30,
+    'thirty is the quantity');
+  eq(scope.waAskedQty('iron sheets 28 gauge', precise), null,
+    'and 28 is the product, not a quantity — its own name says so');
+  eq(scope.waAskedQty('do you have one bag', null), null, 'one is not a quantity worth saying');
+  eq(scope.waAskedQty('is it 250000 for a roll', null), null, 'and a figure that size is a price');
+
+  const reply = scope.waQuoteReply(precise, 30);
+  t.check(reply.includes('30 sheets comes to UGX 1,395,000 at UGX 46,500 each'),
+    'the reply does the arithmetic they asked for, at the break they qualified for');
+  t.check(!scope.waQuoteReply(precise, null).includes('comes to'),
+    'and says nothing about a total when no quantity was asked');
+
+  /* A WORD THIS SHOP'S CUSTOMERS USE is a whole naming: someone who
+     writes "mabati" has named the product as surely as one who typed
+     all five words of it. */
+  env.data.presetWaAliases = [{ word: 'mabati', key: 'C2', name: 'Iron Sheets 28 Gauge Plain' }];
+  const viaWord = scope.waQuoteMatch('mabati price?', scope.waQuoteCandidates());
+  eq(viaWord && viaWord.name, 'Iron Sheets 28 Gauge Plain', 'a confirmed word finds its product');
+  eq(viaWord && viaWord.auto, true, 'and names it wholly, so it can be answered at once');
+  eq(viaWord && viaWord.viaAlias, 'mabati', 'the screen can say which word did it');
+  env.data.presetWaAliases = [];
+
+  /* WHO IS ASKING breaks a tie the message cannot. */
+  env.data.products = [
+    { id: 'T1', name: 'Cement Tororo', type: 'simple', image: null },
+    { id: 'T2', name: 'Cement Hima', type: 'simple', image: null },
+  ];
+  sellFixture.clear();
+  sellFixture.set('T1', { price: 32000, unit: 'bag' });
+  sellFixture.set('T2', { price: 31000, unit: 'bag' });
+  const two = scope.waQuoteCandidates();
+  eq(scope.waQuoteMatch('cement', two).ambiguous, true, 'two cements and one word is a question');
+  const settled = scope.waQuoteMatch('cement', two, { customerKeys: new Set(['T1']) });
+  eq(settled && settled.name, 'Cement Tororo', 'unless the shop knows which one this customer buys');
+  eq(settled && settled.viaCustomer, true, 'and it says that is what settled it');
+  eq(settled && settled.auto, false,
+    'a tie broken on someone\'s history is still not something to answer unattended');
+  eq(scope.waQuoteMatch('cement', two, { customerKeys: new Set(['T1', 'T2']) }).ambiguous, true,
+    'a customer who buys both settles nothing');
+
+  env.data.products = keptProducts;
+  sellFixture.clear(); keptSell.forEach((v, k) => sellFixture.set(k, v));
+  breaksFixture.clear(); keptBreaks.forEach((v, k) => breaksFixture.set(k, v));
+}
+
 /* ---------- 4. what leaves the building ------------------------------ */
 {
   const cands = scope.waQuoteCandidates();
@@ -162,8 +271,11 @@ if (!scope) process.exit(1);
 
 /* ---------- 5. all of it is REACHED, and nothing sends itself -------- */
 {
-  t.check(/const m = waQuoteMatch\(lastIn\.body \|\| '', waQuoteCandidates\(\)\);/.test(src),
-    'the last inbound text is what gets matched');
+  /* The matcher is handed what the shop already knew about the person
+     asking: a tie between two cements is settled by which one this
+     customer has actually bought. */
+  t.check(/const m = waQuoteMatch\(lastIn\.body \|\| '', waQuoteCandidates\(\),\s*\n\s*\{ customerKeys: waCustomerKeys\(cust && cust\.id, data\.savedQuotes\) \}\);/.test(src),
+    'the last inbound text is what gets matched, and who asked breaks a tie');
   t.check(/const lastIn = \[\.\.\.waInbox\.msgs\]\.reverse\(\)\.find\(x=> x\.direction==='in' && x\.msg_type==='text'\);/.test(src),
     'and "last" means LAST — the newest inbound, not the first ever');
   // (dismissal is asserted with the unanswered-question gate in section 6)
@@ -257,7 +369,12 @@ if (!scope) process.exit(1);
   }
 
   /* The autonomy contract, held in the source. */
-  t.check(/if \(bestScore === 1 && winners\.length === 1\) return winners\[0\];/.test(hookSrc),
+  /* EXACT AND ALONE, and now also UNSHARED: scoring recall alone let a
+     one-word product answer a question that was mostly about something
+     else, so "cement and iron sheets" came back as a cement quote. The
+     server holds the identical contract to the client. */
+  t.check(/if \(winners\.length !== 1\) return null;/.test(hookSrc)
+    && /if \(w\.recall === 1 && precision === 1\) return w\.c;/.test(hookSrc),
     'the server sends only on EXACT AND ALONE — anything less returns nothing');
   t.check(/if \(!numRow \|\| !numRow\.auto_quote \|\| !numRow\.catalog_id \|\| !ACCESS_TOKEN\) return;/.test(hookSrc),
     'and only when the shop has OPTED IN and published a catalog');

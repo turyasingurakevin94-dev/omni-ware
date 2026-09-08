@@ -267,18 +267,44 @@ function waQuoteTokens(str: string) {
 // deno-lint-ignore no-explicit-any -- extracted into the Node harness
 function waExactMatch(text: string, candidates: any) {
   const qSet = new Set(waQuoteTokens(text));
-  let bestScore = 0;
+  // The words in the message that name SOME product. A number or a
+  // greeting is not evidence against a match, so it cannot count
+  // against precision.
+  const prodTokens: Set<string> = new Set();
+  candidates.forEach((c: any) => {
+    (c.tokens ?? []).forEach((t: string) => { if (qSet.has(t)) prodTokens.add(t); });
+    (c.aliases ?? []).forEach((a: string) => { if (qSet.has(a)) prodTokens.add(a); });
+  });
+  let best: number[] | null = null;
   let winners: any[] = [];
   candidates.forEach((c: any) => {
     if (!c.tokens.length) return;
-    const hit = c.tokens.filter((t: string) => qSet.has(t)).length;
+    const said = c.tokens.filter((t: string) => qSet.has(t)).length;
+    const alias = (c.aliases ?? []).find((a: string) => qSet.has(a));
+    // `hit` is the naming -- an alias names the product wholly; while
+    // `explains` is what precision asks, how many of the message's own
+    // product words this candidate accounts for.
+    const hit = alias ? c.tokens.length : said;
+    const explains = said + (alias ? 1 : 0);
     if (hit === 0) return;
-    const score = hit / c.tokens.length;
-    if (score > bestScore) { bestScore = score; winners = [c]; }
-    else if (score === bestScore) winners.push(c);
+    const recall = hit / c.tokens.length;
+    if (recall < 0.5) return;
+    const rank = [hit, recall];
+    if (!best || rank[0] > best[0] || (rank[0] === best[0] && rank[1] > best[1])) {
+      best = rank; winners = [{ c, hit, explains, recall }];
+    } else if (rank[0] === best[0] && rank[1] === best[1]) {
+      winners.push({ c, hit, explains, recall });
+    }
   });
-  // EXACT AND ALONE, or nothing -- the whole autonomy contract.
-  if (bestScore === 1 && winners.length === 1) return winners[0];
+  // THE AUTONOMY CONTRACT, and the client holds the identical one: they
+  // said the WHOLE name, nothing else they said names another product,
+  // and nobody else matched as well. Scoring recall alone let a
+  // one-word product answer a question that was mostly about something
+  // else -- "cement and iron sheets" came back as a cement quote.
+  if (winners.length !== 1) return null;
+  const w = winners[0];
+  const precision = prodTokens.size ? w.explains / prodTokens.size : 0;
+  if (w.recall === 1 && precision === 1) return w.c;
   return null;
 }
 

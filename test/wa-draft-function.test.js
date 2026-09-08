@@ -296,7 +296,10 @@ const vercel = read('vercel.json');
      assistant's draft WINS when it is live for the current question,
      and the token match fills in otherwise. One line, one precedence,
      instead of two cards stacked above the reply box. */
-  t.check(/aiLive && aiLive\.text \? aiLive\.text : \(match \? waQuoteReply\(match\) : null\)/.test(app),
+  /* The token match now carries the quantity the customer asked for, so
+     the two suggestions differ by more than their source -- but the
+     precedence is unchanged and still lives on one line. */
+  t.check(/aiLive && aiLive\.text \? aiLive\.text : \(match \? waQuoteReply\(match, askedQty\) : null\)/.test(app),
     'the assistant draft outranks the token match, and neither can appear twice');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');

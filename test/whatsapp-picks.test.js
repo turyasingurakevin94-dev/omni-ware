@@ -694,8 +694,10 @@ const THU = '2026-08-06', MON = '2026-08-03';
      linked. Drawing the rail before that answer arrives showed a shop
      its daily post above a desk it had not connected. */
   t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src), 'the tab renders on entry')
-  t.check(/waRenderInbox\(\);\n  renderWaInsights\(\);\n  waRenderHeadline\(\);\n  renderWhatsApp\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
-    'and entry draws the queue, the strip, the headline and all three rail panels');
+  /* The inbox grew an intelligence of its own -- the autonomy ledger
+     and the vocabulary -- so entry now draws five panels, not three. */
+  t.check(/waRenderInbox\(\);\n  renderWaInsights\(\);\n  waRenderHeadline\(\);\n  renderWhatsApp\(\);\n  waRenderAnswering\(\);\n  waRenderWords\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
+    'and entry draws the queue, the strip, the headline and every panel on both sides');
   /* One rail entry is enough now: the phone sheet is generated from the
      rail, so a screen listed once is reachable on both. Counting two
      copies was counting the duplicate that has since been removed. */

@@ -9827,6 +9827,50 @@
   .wp-hint{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);
     max-width:var(--ow-measure);}
 
+  /* ---- the inbox's own intelligence ----
+     The autonomy ledger and the vocabulary sit under the queue, because
+     both are about the ANSWERING -- the left of the screen is the inbox
+     and what it understands, the right is the post and what it has
+     learned. */
+  .wa-al{display:grid;grid-template-columns:minmax(0,1fr) 60px 92px 62px;align-items:baseline;
+    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);}
+  .wa-al.wa-al-h{border-top:0;}
+  /* The header labels WRAP rather than truncate. "MEDIAN WAIT" clipped
+     to "MEDIAN WA…" names nothing, and shortening it to "WAIT" would
+     drop the one word that says which average this is. */
+  .wa-al.wa-al-h span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
+    text-transform:uppercase;color:var(--ow-ink-400);white-space:normal;line-height:1.25;}
+  .wa-al-k{font-size:var(--ow-t-12);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wa-al-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);text-align:right;white-space:nowrap;}
+  .wa-al-v.b{font-weight:var(--ow-fw-600);}
+  .wa-al-v.wa-bad{color:var(--ow-crimson);}
+
+  .wa-wd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-10);
+    align-items:center;padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);}
+  .wa-wd-b{min-width:0;}
+  .wa-wd-k{display:block;font-size:var(--ow-t-13);line-height:1.35;}
+  .wa-wd-k b{font-weight:var(--ow-fw-600);}
+  .wa-wd-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
+    margin-top:2px;max-width:var(--ow-measure);}
+  .wa-wd-s b{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .wa-wd-a{display:flex;gap:var(--ow-sp-6);flex:none;min-width:0;}
+  .wa-word{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    background:var(--ow-steel-050);border-radius:var(--ow-r-sm);padding:0 var(--ow-sp-4);}
+  @media (max-width:820px){
+    .wa-wd{grid-template-columns:minmax(0,1fr);}
+    /* Two taps sharing one row. It has to name .ow-sm to outrank the
+       phone-wide floor of calc(50% - 3px), which is right for a row of
+       acts that WRAPS but here would put 50% + 50% + a 6px gap past the
+       panel -- the same correction .cb-ph-acts makes, for the same
+       reason. border-box so the padding comes out of the half, not on
+       top of it. */
+    .wa-wd-a .btn.ow-sm{min-height:var(--ow-tap);flex:1;min-width:0;box-sizing:border-box;}
+    .wa-al{grid-template-columns:minmax(0,1fr) 48px 62px 52px;}
+  }
+
   /* ---- the post, promoted to a co-lead ----
      .ow-grid is one work column and a 304px context rail. The post
      stopped being context the day the shop said it was for earning:
@@ -9920,6 +9964,7 @@
   /* a line of evidence, and where it was read from */
   .po-ev{padding:7px var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
   .po-ev-k{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);line-height:1.35;}
+  .po-ev-n{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
   .po-ev-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
     margin-top:1px;max-width:var(--ow-measure);}
 
@@ -16949,6 +16994,8 @@
             <div id="wa_answered"></div>
             <p class="ow-mini" id="wa_answered_note"></p>
           </div>
+          <div class="ow-pan" id="wa_answering_pan"></div>
+          <div class="ow-pan" id="wa_words_pan"></div>
         </div>
 
         <div class="ow-stack">
@@ -21370,6 +21417,11 @@ async function loadData(shopId){
        at a time from the post panel, because these are facts the books
        have no way to hold. */
     presetWaNeverPost: Array.isArray(presets.waNeverPost) ? presets.waNeverPost : [],
+    /* The words this shop's customers use, confirmed one at a time from
+       chats the owner answered by hand -- and the ones waved away, so a
+       rejected word is never offered twice. */
+    presetWaAliases: Array.isArray(presets.waAliases) ? presets.waAliases : [],
+    presetWaAliasNo: Array.isArray(presets.waAliasNo) ? presets.waAliasNo : [],
     // Highest id ever issued per entity type. Persisted rather than derived
     // so it survives deletions -- see nextEntityId().
     idCounters: presets.idCounters || {},
@@ -21660,7 +21712,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -23475,6 +23527,159 @@ function waStockIdle(key, dateISO){
 // sold in the last 30 days -- the money the item actually earns in a
 // month, which is profit emphasis and fast-mover emphasis in one number,
 // normalized against today's best earner so no other signal drowns.
+/* ---- WORDS YOUR CUSTOMERS USE ----------------------------------------
+
+   Every chat the owner answered by hand is a labelled example: their
+   word on one side, the product the shop quoted on the other. The
+   matcher only ever knew product names as the shop typed them, so a
+   customer writing "mabati" got silence -- while the answer had been
+   sitting in fourteen of the shop's own replies.
+
+   Nothing here is trusted on its own. A word is PROPOSED, with the
+   evidence and the count behind it, and becomes real only when the
+   owner says yes. A customer's typo is not a word their customers use,
+   which is what the five-conversation floor is for. */
+const WA_LEDGER_MIN = 40;          // below this, the ledger says so and offers nothing
+const WA_ALIAS_MIN_CHATS = 5;      // below this, one person's habit is not a word
+const WA_ALIAS_CLEAR = 0.75;       // and it must mean ONE thing this often
+
+function waAliasProposals(convs, msgs, candidates, confirmed, denied){
+  const yes = new Set((confirmed||[]).map(a=> a.word));
+  const no = new Set(denied||[]);
+  const nameTokens = new Set();
+  (candidates||[]).forEach(c=> (c.tokens||[]).forEach(t=> nameTokens.add(t)));
+
+  // word -> key -> set of conversation ids
+  const seen = new Map();
+  const byConv = new Map();
+  (msgs||[]).forEach(m=>{
+    if(!byConv.has(m.conversation_id)) byConv.set(m.conversation_id, []);
+    byConv.get(m.conversation_id).push(m);
+  });
+  byConv.forEach((list, convId)=>{
+    const sorted = [...list].sort((a,b)=> String(a.sent_at).localeCompare(String(b.sent_at)));
+    sorted.forEach((m, i)=>{
+      if(m.direction !== 'in' || m.msg_type !== 'text' || !m.body) return;
+      /* The owner's OWN next reply, not the machine's: an automatic
+         answer would only teach the matcher what it already knew, and
+         the loop would confirm its own guesses. */
+      const reply = sorted.slice(i+1).find(x=> x.direction === 'out' && x.msg_type === 'text' && x.body);
+      if(!reply || (reply.payload && reply.payload.auto)) return;
+      const named = waQuoteMatch(reply.body, candidates);
+      if(!named || named.ambiguous || !named.exact) return;
+      const key = named.key || stockKey(named.productId, named.variantIdx==null?null:named.variantIdx);
+      waQuoteTokens(m.body).forEach(t=>{
+        if(nameTokens.has(t) || no.has(t) || yes.has(t)) return;
+        if(t.length < 3 || /^\d+$/.test(t)) return;   // a number is a quantity, not a name
+        if(!seen.has(t)) seen.set(t, new Map());
+        const perKey = seen.get(t);
+        if(!perKey.has(key)) perKey.set(key, new Set());
+        perKey.get(key).add(convId);
+      });
+    });
+  });
+
+  const nameOf = k=> (candidates||[]).find(c=> (c.key
+    || stockKey(c.productId, c.variantIdx==null?null:c.variantIdx)) === k);
+  const out = [];
+  seen.forEach((perKey, word)=>{
+    const rows = [...perKey.entries()]
+      .map(([key, convIds])=> ({ key, chats: convIds.size, cand: nameOf(key) }))
+      .filter(r=> r.cand)
+      .sort((a,b)=> b.chats - a.chats);
+    const total = rows.reduce((s,r)=> s + r.chats, 0);
+    if(!rows.length || total < WA_ALIAS_MIN_CHATS) return;
+    const top = rows[0];
+    out.push({ word, key: top.key, name: top.cand.name, chats: top.chats, total,
+      others: rows.slice(1).map(r=> ({ key: r.key, name: r.cand.name, chats: r.chats })),
+      /* A word the record disagrees about is a QUESTION, not a
+         suggestion: "simenti" may be the general word for cement rather
+         than for the one cement the shop quoted most. */
+      clear: top.chats / total >= WA_ALIAS_CLEAR });
+  });
+  return out.sort((a,b)=> b.chats - a.chats);
+}
+
+/* ---- WHAT THE SYSTEM IS ANSWERING ------------------------------------
+
+   The autonomy loop. Every inbound question falls into one of three
+   buckets -- answered by the system, answered by the owner, answered by
+   nobody -- and each carries how long the customer waited and whether
+   an order followed.
+
+   The conversion columns are CONFOUNDED and every screen that shows
+   them says so: the system only ever takes the questions where a
+   customer named a product outright, which are also the easiest and the
+   least committed. The row that is not confounded is the third one. */
+const WA_ANSWER_HOURS = 24;        // past this, nobody answered it
+const WA_ORDER_DAYS = 3;           // an order this soon after is plausibly the answer's
+
+function waAnswerLedger(convs, msgs, quotes, nowMs){
+  const byConv = new Map();
+  (msgs||[]).forEach(m=>{
+    if(!byConv.has(m.conversation_id)) byConv.set(m.conversation_id, []);
+    byConv.get(m.conversation_id).push(m);
+  });
+  // orders born in a chat, by conversation and date
+  const orders = new Map();
+  (quotes||[]).forEach(q=>{
+    if(!q.originWa || q.voided || q.waConversationId == null || !q.date) return;
+    if(!orders.has(q.waConversationId)) orders.set(q.waConversationId, []);
+    orders.get(q.waConversationId).push(q.date);
+  });
+
+  const row = ()=> ({ asks: 0, waits: [], ordered: 0 });
+  const out = { system: row(), owner: row(), nobody: row(), total: 0 };
+  byConv.forEach((list, convId)=>{
+    const sorted = [...list].sort((a,b)=> String(a.sent_at).localeCompare(String(b.sent_at)));
+    sorted.forEach((m, i)=>{
+      if(m.direction !== 'in' || m.msg_type !== 'text' || !m.body) return;
+      const asked = Date.parse(m.sent_at);
+      if(!isFinite(asked)) return;
+      out.total++;
+      const reply = sorted.slice(i+1).find(x=> x.direction === 'out');
+      const gap = reply ? (Date.parse(reply.sent_at) - asked) / 3600000 : null;
+      const bucket = (!reply || !(gap <= WA_ANSWER_HOURS)) ? out.nobody
+        : (reply.payload && reply.payload.auto) ? out.system : out.owner;
+      bucket.asks++;
+      if(bucket !== out.nobody && gap != null) bucket.waits.push(gap * 60);
+      const after = (orders.get(convId) || []).some(d=>{
+        const t = Date.parse(d + 'T00:00:00Z');
+        return isFinite(t) && t >= asked - 86400000 && t <= asked + WA_ORDER_DAYS * 86400000;
+      });
+      if(after) bucket.ordered++;
+    });
+  });
+  ['system','owner','nobody'].forEach(k=>{ out[k].medianWaitMins = waMedian(out[k].waits); });
+  return out;
+}
+
+/* What widening the contract WOULD have answered, on the real messages,
+   sending nothing. A rule about what a machine may say in the shop's
+   name should never be widened by making a customer the experiment. */
+function waWidenDryRun(convs, msgs, candidates, nowMs, days){
+  const win = days || 30;
+  /* GROUPED, not listed. Twelve people asking the same thing is one
+     fact about the shop, and four identical rows would spend the panel
+     saying it four times while the owner learns nothing new. The count
+     carries the weight instead, and four DIFFERENT questions fit. */
+  const groups = new Map();
+  (msgs||[]).forEach(m=>{
+    if(m.direction !== 'in' || m.msg_type !== 'text' || !m.body || !m.sent_at) return;
+    const age = (nowMs - Date.parse(m.sent_at)) / 86400000;
+    if(!(age >= 0 && age <= win)) return;
+    const hit = waQuoteMatch(m.body, candidates);
+    if(!hit || hit.ambiguous || hit.auto) return;       // already answered, or still no
+    if(!(hit.recall >= 0.75 && hit.precision === 1)) return;
+    const sig = waQuoteTokens(m.body).join(' ');
+    const had = groups.get(sig);
+    if(had){ had.times++; return; }
+    groups.set(sig, { ask: m.body, name: hit.name, times: 1,
+      reply: waQuoteReply(hit, waAskedQty(m.body, hit)) });
+  });
+  return [...groups.values()].sort((a,b)=> b.times - a.times);
+}
+
 /* ---- WHAT A POST DID, measured against the shop's own invoices ----
 
    The picker used to be OPEN-LOOP: waPosts was read for exactly two
@@ -24169,6 +24374,129 @@ function waPickView(dateISO){
     waOrders: waChannelOrdersByKey(quotes),
     inboxAsks: waInboxAsksByKey(waInbox.allMsgs, waQuoteCandidates(), dateISO),
   });
+}
+
+/* What this customer has actually bought, so a tie can be broken on the
+   shop's own record rather than on a coin. */
+function waCustomerKeys(customerId, quotes){
+  const out = new Set();
+  if(customerId == null) return out;
+  (quotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced) return;
+    if(String(q.client && q.client.customerId || q.customerId || '') !== String(customerId)) return;
+    (q.items||[]).forEach(it=>{
+      if(it.productId) out.add(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx));
+    });
+  });
+  return out;
+}
+
+function waRenderAnswering(){
+  const pan = document.getElementById('wa_answering_pan');
+  if(!pan) return;
+  const led = waAnswerLedger(waInbox.convs, waInbox.allMsgs, data.savedQuotes, Date.now());
+  if(!led.total){ pan.innerHTML = ''; return; }
+  const fig = n=> Number(n||0).toLocaleString('en-UG');
+  const wait = v=> v == null ? '—' : (v < 1 ? '<1 min' : v < 60 ? Math.round(v) + ' min' : (v/60).toFixed(1) + ' h');
+  const row = (label, r, cls)=> `<div class="wa-al">
+    <span class="wa-al-k">${esc(label)}</span>
+    <span class="wa-al-v b${cls||''}">${fig(r.asks)}</span>
+    <span class="wa-al-v">${esc(wait(r.medianWaitMins))}</span>
+    <span class="wa-al-v b">${fig(r.ordered)}</span></div>`;
+
+  pan.innerHTML = `
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">What the system is answering</span>
+      <span class="ow-pan-n">${fig(led.total)} question${led.total===1?'':'s'}</span>
+    </div>
+    <div class="wa-al wa-al-h"><span>Answered</span><span class="wa-al-v">Asks</span><span class="wa-al-v">Median wait</span><span class="wa-al-v">Ordered</span></div>
+    ${row('By the system', led.system)}
+    ${row('By you', led.owner)}
+    ${row('Never answered', led.nobody, led.nobody.asks ? ' wa-bad' : '')}
+    ${led.total >= WA_LEDGER_MIN ? `<div class="wa-ra" style="padding-top:10px;">
+      <button type="button" class="btn btn-ghost ow-sm" id="wa_dry">See what widening it would say</button></div>` : ''}
+    <p class="po-note">${led.total < WA_LEDGER_MIN
+      ? `Too few questions yet to say anything about what answering does. The system stays on its
+         narrowest setting until there are about ${WA_LEDGER_MIN}.`
+      : `Fewer of the system&rsquo;s answers become orders, and that is <b>not</b> proof it answers
+         worse &mdash; it only ever takes the questions where a customer named a product outright,
+         which are also the easiest. You take the ones somebody is deciding on. The two rows are not
+         the same question.${led.nobody.asks ? ` What the figures do support is the last row:
+         <b>${fig(led.nobody.asks)} got no answer at all</b>.` : ''}`}</p>
+    <div id="wa_dry_out"></div>`;
+
+  const dry = document.getElementById('wa_dry');
+  if(dry) dry.addEventListener('click', ()=>{
+    const runs = waWidenDryRun(waInbox.convs, waInbox.allMsgs, waQuoteCandidates(), Date.now());
+    const out = document.getElementById('wa_dry_out');
+    out.innerHTML = `<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
+        <span class="ow-pan-t">Widening it</span><span class="ow-pan-n">a dry run, nothing sent</span></div>
+      ${runs.length ? runs.slice(0,4).map(r=> `<div class="po-ev">
+        <span class="po-ev-k">&ldquo;${esc(r.ask.slice(0,90))}&rdquo;${
+          r.times > 1 ? ` <span class="po-ev-n">and ${r.times - 1} more like it</span>` : ''}</span>
+        <span class="po-ev-s">Would have said: ${esc(String(r.reply).split('\n')[0])}</span></div>`).join('')
+        + (runs.length > 4 ? `<p class="po-note">${runs.length - 4} other question${runs.length - 4 === 1 ? '' : 's'} like these.</p>` : '')
+      : `<p class="po-note">Nothing in the last month would have been answered differently.</p>`}
+      ${runs.length ? `<div class="wa-ra"><button type="button" class="btn btn-ghost ow-sm" id="wa_widen">Let it answer near-misses too</button></div>
+      <p class="po-note">Turning this on changes what goes out unattended, in the shop&rsquo;s name, at
+        any hour. It can be turned off again in one press, and every automatic reply stays marked
+        <b>auto</b> so you can always see what was said for you.</p>` : ''}`;
+    const w = document.getElementById('wa_widen');
+    if(w) w.addEventListener('click', ()=> toast('Widening rides the connection settings — the shop turns it on there, and the server holds the contract.', 7000));
+  });
+}
+
+/* The vocabulary, proposed with its evidence and never trusted early. */
+function waRenderWords(){
+  const pan = document.getElementById('wa_words_pan');
+  if(!pan) return;
+  const cands = waQuoteCandidates();
+  const props = waAliasProposals(waInbox.convs, waInbox.allMsgs, cands,
+    data.presetWaAliases || [], data.presetWaAliasNo || []);
+  const known = data.presetWaAliases || [];
+  if(!props.length && !known.length){ pan.innerHTML = ''; return; }
+  const fig = n=> Number(n||0).toLocaleString('en-UG');
+
+  pan.innerHTML = `
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Words your customers use</span>
+      <span class="ow-pan-n">${props.length ? fig(props.length) + ' waiting on you' : fig(known.length) + ' in use'}</span>
+    </div>
+    ${props.slice(0,4).map(p=> `<div class="wa-wd">
+      <span class="wa-wd-b">
+        <span class="wa-wd-k"><span class="wa-word">${esc(p.word)}</span> means <b>${esc(p.name)}</b></span>
+        <span class="wa-wd-s">In ${fig(p.chats)} chat${p.chats===1?'':'s'} you answered by quoting it${
+          p.others.length ? `, but ${p.others.map(o=> `${fig(o.chats)} say ${esc(o.name)}`).join(' and ')}.
+          <b>It may be the general word</b>, not this one.` : ', and in none where you quoted anything else.'}</span>
+      </span>
+      <span class="wa-wd-a">
+        <button type="button" class="btn btn-ghost ow-sm wa-wd-y" data-w="${esc(p.word)}" data-k="${esc(p.key)}">Yes</button>
+        <button type="button" class="btn btn-ghost ow-sm wa-wd-n" data-w="${esc(p.word)}">No</button>
+      </span></div>`).join('')}
+    ${known.length ? `<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
+        <span class="ow-pan-t">Words it has learned</span><span class="ow-pan-n">${fig(known.length)} in use</span></div>
+      ${known.slice(0,5).map(a=> `<div class="wa-rl">
+        <span class="wa-rl-n"><span class="wa-word">${esc(a.word)}</span> &rarr; ${esc(a.name || a.key)}</span>
+        <button class="wa-rl-x wa-wd-x" data-w="${esc(a.word)}" title="Take this word back">✕</button></div>`).join('')}` : ''}
+    <p class="po-note">A word is only proposed once it has come up in ${WA_ALIAS_MIN_CHATS} different
+      conversations and gone to one product nearly every time &mdash; a customer&rsquo;s typo is not a
+      word your customers use. Saying yes teaches the suggestion here and the automatic reply
+      together; saying no is remembered too.</p>`;
+
+  pan.querySelectorAll('.wa-wd-y').forEach(b=> b.addEventListener('click', ()=>{
+    const c = cands.find(x=> x.key === b.dataset.k);
+    data.presetWaAliases = [...(data.presetWaAliases||[]),
+      { word: b.dataset.w, key: b.dataset.k, name: c ? c.name : b.dataset.k }];
+    saveData(); waRenderWords(); waRenderInbox();
+  }));
+  pan.querySelectorAll('.wa-wd-n').forEach(b=> b.addEventListener('click', ()=>{
+    data.presetWaAliasNo = [...(data.presetWaAliasNo||[]), b.dataset.w];
+    saveData(); waRenderWords();
+  }));
+  pan.querySelectorAll('.wa-wd-x').forEach(b=> b.addEventListener('click', ()=>{
+    data.presetWaAliases = (data.presetWaAliases||[]).filter(a=> a.word !== b.dataset.w);
+    saveData(); waRenderWords(); waRenderInbox();
+  }));
 }
 
 /* THE RANKING, SHOWN. A recommendation that cannot be interrogated is
@@ -25052,8 +25380,12 @@ function waQuoteCandidates(){
       const at = catalogueSellAtQty(p, idx, 1, 'retail');
       if(!at || at.price==null) return;
       const name = productVariantLabel(p, idx);
-      out.push({ productId: p.id, variantIdx: idx, name,
+      const key = stockKey(p.id, idx);
+      out.push({ productId: p.id, variantIdx: idx, name, key,
         tokens: waQuoteTokens(name), price: at.price, unit: at.unit || '',
+        /* The words this shop's own customers use for it, confirmed one
+           at a time from chats the owner answered by hand. */
+        aliases: (data.presetWaAliases||[]).filter(x=> x.key === key).map(x=> x.word),
         breaks: catalogueBreaks(p, idx, 'retail') });
     });
   });
@@ -25064,33 +25396,141 @@ function waQuoteCandidates(){
    own name the message covers; a winner must beat every rival OUTRIGHT
    -- "sofa leg 4" against both a Gold 4" and a Silver 4" is a tie, and
    a tie is ambiguity, and ambiguity goes to the human. */
-function waQuoteMatch(text, candidates){
-  // No empty-tokens guard: an empty set hits nothing in the loop and
-  // falls out through the same empty-winners return -- one path, not two.
-  const qSet = new Set(waQuoteTokens(text));
-  let bestScore = 0, winners = [];
-  candidates.forEach(c=>{
-    if(!c.tokens.length) return;
-    const hit = c.tokens.filter(t=> qSet.has(t)).length;
-    if(hit === 0) return;
-    const score = hit / c.tokens.length;
-    if(score > bestScore){ bestScore = score; winners = [c]; }
-    else if(score === bestScore) winners.push(c);
+/* THE SCORING WAS BACKWARDS, and that was the whole bug.
+
+   A product used to be scored by how much of ITS OWN NAME the message
+   covered -- hit / tokens.length -- and 1.0 was the autonomy contract.
+   So "Cement", one token, scored a perfect 1.0 on any message
+   containing the word and answered by itself, while "Iron Sheets (28
+   gauge, plain)", five tokens, scored 0.8 for a customer who asked
+   precisely and got silence. Short names won and precise questions
+   lost; worse, a one-word product could outrank a five-word one the
+   message had matched better, because both were judged on a ratio
+   rather than on how much they explained.
+
+   It is scored both ways now:
+
+     RECALL     how much of the product's own name they said
+     PRECISION  how much of what THEY said this product accounts for
+
+   Ranking goes on the absolute count first -- the product that explains
+   more of the message wins -- and recall breaks its ties. Autonomy needs
+   recall whole AND precision whole: they said the entire name, and
+   nothing else they said belongs to another product. That is what stops
+   "cement and iron sheets" being answered as though it were about
+   cement. */
+
+// The words in a message that name SOME product. A number, a greeting
+// or a word for nothing in the book is not evidence against a match,
+// so it may not count against precision.
+function waQuoteProductTokens(qSet, candidates){
+  const out = new Set();
+  (candidates||[]).forEach(c=>{
+    (c.tokens||[]).forEach(t=>{ if(qSet.has(t)) out.add(t); });
+    (c.aliases||[]).forEach(a=>{ if(qSet.has(a)) out.add(a); });
   });
-  if(!winners.length || bestScore < 0.5) return null;
-  if(winners.length === 1) return { ...winners[0], exact: bestScore === 1 };
-  // A small tie is a QUESTION worth asking -- "sofa leg black" against
-  // Black 4", 5" and 6" -- so the card can offer the options instead
-  // of guessing or going silent. A bigger scatter is neither: nothing.
-  if(winners.length <= 4) return { ambiguous: true, options: winners };
+  return out;
+}
+
+/* How many of a product's own words a message said, and whether one of
+   the shop's confirmed words for it was used instead. An alias is a
+   WHOLE naming: a customer who writes "mabati" has named the product as
+   surely as one who typed all five words of it. */
+function waQuoteHit(qSet, c){
+  const said = (c.tokens||[]).filter(t=> qSet.has(t));
+  const alias = (c.aliases||[]).find(a=> qSet.has(a));
+  /* `hit` is the naming: an alias names the product wholly, so it
+     counts for the whole name and outranks a partial spelling of it.
+     `explains` is the different question precision asks -- how many of
+     the message's own product words this candidate accounts for -- and
+     crediting a five-word name against one typed word made every
+     aliased answer look like precision 5.0 and refused it. */
+  const explains = said.length + (alias ? 1 : 0);
+  if(alias) return { hit: (c.tokens||[]).length, explains, viaAlias: alias, said, missed: [] };
+  return { hit: said.length, explains, viaAlias: null, said,
+    missed: (c.tokens||[]).filter(t=> !qSet.has(t)) };
+}
+
+/* The match, or honestly nothing. A winner must beat every rival
+   OUTRIGHT -- "sofa leg 4" against Gold 4" and Silver 4" is a tie, and
+   a tie is ambiguity, and ambiguity goes to the human as a question. */
+function waQuoteMatch(text, candidates, opts){
+  const o = opts || {};
+  const qSet = new Set(waQuoteTokens(text));
+  const prodTokens = waQuoteProductTokens(qSet, candidates || []);
+  let best = null, winners = [];
+  (candidates||[]).forEach(c=>{
+    if(!c.tokens || !c.tokens.length) return;
+    const h = waQuoteHit(qSet, c);
+    if(h.hit === 0) return;
+    const recall = h.hit / c.tokens.length;
+    if(recall < 0.5) return;                  // half a name is the floor
+    const rank = [h.hit, recall];
+    if(!best || rank[0] > best[0] || (rank[0] === best[0] && rank[1] > best[1])){
+      best = rank; winners = [{ c, h, recall }];
+    } else if(rank[0] === best[0] && rank[1] === best[1]){
+      winners.push({ c, h, recall });
+    }
+  });
+  if(!winners.length) return null;
+
+  /* A KNOWN CUSTOMER BREAKS A TIE, because the shop already knows what
+     they buy. Their own record is better evidence than a coin, and the
+     screen says which record settled it rather than presenting the
+     choice as obvious. */
+  if(winners.length > 1 && o.customerKeys && o.customerKeys.size){
+    const known = winners.filter(w=> o.customerKeys.has(w.c.key
+      || stockKey(w.c.productId, w.c.variantIdx==null?null:w.c.variantIdx)));
+    if(known.length === 1) winners = [{ ...known[0], viaCustomer: true }];
+  }
+
+  const shape = w=>{
+    const precision = prodTokens.size ? w.h.explains / prodTokens.size : 0;
+    return { ...w.c, exact: w.recall === 1, recall: w.recall, precision,
+      hit: w.h.hit, said: w.h.said, missed: w.h.missed, viaAlias: w.h.viaAlias,
+      viaCustomer: !!w.viaCustomer,
+      /* The autonomy contract, in one place: they said the whole name,
+         nothing else they said names another product, and nobody else
+         matched as well. */
+      alone: winners.length === 1,
+      auto: winners.length === 1 && w.recall === 1 && precision === 1 };
+  };
+  if(winners.length === 1) return shape(winners[0]);
+  // A small tie is a QUESTION worth asking; a bigger scatter is neither.
+  if(winners.length <= 4) return { ambiguous: true, options: winners.map(shape) };
+  return null;
+}
+
+/* HOW MANY THEY ASKED FOR. The number was surviving tokenisation as a
+   stray token that matched nothing, and the reply quoted a unit price
+   to a customer who had asked for thirty. A bare number that is not
+   part of a product's own name is a quantity. */
+function waAskedQty(text, m){
+  const words = String(text||'').toLowerCase().match(/\d[\d,.]*/g) || [];
+  const nameNums = new Set((m && m.tokens || []).filter(t=> /^\d/.test(t)));
+  for(const w of words){
+    const n = Number(String(w).replace(/[,.]+$/,'').replace(/,/g,''));
+    if(!isFinite(n) || n <= 1) continue;      // "1" is not a quantity worth saying
+    if(nameNums.has(String(n))) continue;      // 28 in "28 gauge" is the product
+    if(n > 100000) continue;                   // that is a price, or a phone number
+    return n;
+  }
   return null;
 }
 
 /* What leaves the building: SELL prices only, the same rule the caption
    and the printed catalogue carry, held by the same kind of test. */
-function waQuoteReply(m){
+function waQuoteReply(m, qty){
   const lines = [];
   lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`);
+  /* They asked for thirty; quoting one and leaving them to multiply is
+     the shop making the customer do its arithmetic. */
+  const n = Number(qty);
+  if(isFinite(n) && n > 1){
+    const at = (m.breaks||[]).filter(b=> n >= b.qty).sort((x,y)=> y.qty - x.qty)[0];
+    const each = at ? at.price : m.price;
+    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith('s') ? '' : 's') : ''} comes to UGX ${Math.round(n * each).toLocaleString('en-UG')}${at ? ` at UGX ${Number(each).toLocaleString('en-UG')} each` : ''}.`);
+  }
   (m.breaks||[]).slice(0,1).forEach(b=>
     lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}.`));
   /* ONE companion, and said as what the shop's own orders show rather
@@ -25166,6 +25606,8 @@ async function waInboxEnter(){
   renderWaInsights();
   waRenderHeadline();
   renderWhatsApp();
+  waRenderAnswering();
+  waRenderWords();
   waRenderChannel();
   waRenderBroadcasts();
   // One poller, self-terminating when the user leaves the tab -- the
@@ -25661,7 +26103,12 @@ function waOpenRowHTML(c, nowMs){
      reply it suggests belongs in the composer rather than beside it. */
   let match = null, options = null, noMatch = false;
   if(unanswered && !waInbox.dismissed[lastIn.wamid]){
-    const m = waQuoteMatch(lastIn.body || '', waQuoteCandidates());
+    /* Three things the shop already knew and the matcher never asked:
+       who is asking, how many they want, and which words this shop's own
+       customers use for the thing. */
+    const cust = waMatchCustomer(c.wa_id);
+    const m = waQuoteMatch(lastIn.body || '', waQuoteCandidates(),
+      { customerKeys: waCustomerKeys(cust && cust.id, data.savedQuotes) });
     if(m && m.ambiguous){ options = m.options; waInbox.suggestOptions = m.options; }
     else if(m) match = m;
     else noMatch = true;
@@ -25671,7 +26118,8 @@ function waOpenRowHTML(c, nowMs){
      the suggestion only while it still holds the LAST suggestion this
      screen wrote, so a newer question replaces a stale draft and a
      hand-typed one is never touched. */
-  const suggested = aiLive && aiLive.text ? aiLive.text : (match ? waQuoteReply(match) : null);
+  const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
+  const suggested = aiLive && aiLive.text ? aiLive.text : (match ? waQuoteReply(match, askedQty) : null);
   if(suggested != null){
     const held = waInbox.drafts[convId];
     const mine = waInbox.suggested[convId];
@@ -25695,17 +26143,29 @@ function waOpenRowHTML(c, nowMs){
     ${unanswered ? `
       <div class="wa-mh">
         <span class="wa-mh-t">What they asked for</span>
-        <span class="wa-mh-n">${options ? `${options.length} things match — pick one` : (match ? (match.exact ? 'matched in your catalogue · priced as it stands now' : 'a partial match — check it before it goes') : 'read from your catalogue')}</span>
+        <span class="wa-mh-n">${options ? `${options.length} things match — pick one`
+          : (match ? [
+              match.viaAlias ? `they said “${esc(match.viaAlias)}”` : `${match.hit} of its ${match.tokens.length} words`,
+              askedQty ? `${askedQty} asked for` : '',
+              match.exact ? '' : 'a partial match — check it before it goes',
+            ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
       ${(order || options || match) ? `<table class="wa-mtbl">
-        <tr><th class="wa-l">Item</th><th>Each</th><th>Buy more</th><th></th></tr>
+        <tr><th class="wa-l">Item</th><th>Each</th><th>${askedQty ? esc(askedQty) + ' comes to' : 'Buy more'}</th><th></th></tr>
         ${order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
           + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="3">no price on file — quote this one by hand</td></tr>`).join('')
           + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
         : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}">Use this</button></td></tr>`).join('')
-        : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
+        : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${askedQty
+            ? esc(String(Math.round(askedQty * ((match.breaks||[]).filter(b=> askedQty >= b.qty).sort((x,y)=> y.qty-x.qty)[0]||{}).price || askedQty * match.price).toLocaleString('en-UG')))
+            : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
       : `<p class="wa-cmp-n" style="margin-top:0;">Nothing in the catalogue matches what they asked for${known ? ` — it is already being sourced as <b>${esc(known.name)}</b>` : ''}. Say so, or record the ask.</p>`}
+      ${match && (match.viaCustomer || match.viaAlias || match.missed.length) ? `<p class="wa-cmp-n" style="margin-top:0;">${[
+          match.viaCustomer ? `<b>${esc(waConvTitle(c))}</b> has bought this before, which is what settled it against the others` : '',
+          match.viaAlias ? `&ldquo;${esc(match.viaAlias)}&rdquo; is a word you confirmed for this product` : '',
+          match.missed.length && !match.viaAlias ? `they did not say ${match.missed.map(t=> '&ldquo;' + esc(t) + '&rdquo;').join(', ')}` : '',
+        ].filter(Boolean).join('; ')}.</p>` : ''}
       ${(noMatch || waInbox.dismissed[(lastIn||{}).wamid]) ? `
         <div class="wa-mh wa-mh2"><span class="wa-mh-t">Start sourcing it</span>
           <span class="wa-mh-n">a repeat ask is the cheapest thing to notice</span></div>
