@@ -407,6 +407,11 @@ function waQuoteEach(m: any, qty: number | null) {
 // deno-lint-ignore no-explicit-any
 function waQuoteReply(m: any, qty: number | null) {
   const lines: string[] = [];
+  // We sell it; the price is pending. Unreachable here -- the pack carries
+  // only priced items -- and kept so the two copies stay one function.
+  if (m.priced === false || m.price == null) {
+    return `${m.name}: we have it — the price will be confirmed shortly.\nReply here to order, or ask about anything else.`;
+  }
   lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString("en-UG")}${m.unit ? " per " + m.unit : ""}.`);
   // deno-lint-ignore no-explicit-any
   const breaks: any[] = m.breaks ?? [];

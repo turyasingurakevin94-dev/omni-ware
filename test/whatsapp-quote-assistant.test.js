@@ -130,7 +130,24 @@ let SECTION2_PRODUCTS = null;
   breaksFixture.set('P1', [{ qty: 10, price: 43500 }]);
 
   const cands = scope.waQuoteCandidates();
-  eq(cands.length, 8, 'a quote needs a PRICE, not a photo — the photoless cement is in, the priceless sheet is out');
+  /* This used to say eight: the priceless sheet was OUT. That was the
+     photo gate done right and the price gate done wrong -- a product
+     with no retail rule vanished from the list entirely, and a customer
+     asking for it was told nothing in the catalogue matched. A lie:
+     it is in the catalogue; it has no price. It stays in the pool now,
+     marked, so the screen can name it and say the price is missing.
+     What a quote needs is still a price -- see the checks below. */
+  eq(cands.length, 9, 'every product is a candidate — the photoless cement AND the priceless sheet');
+  const sheet = cands.find((c) => c.name === 'Iron Sheet');
+  eq(sheet && sheet.priced, false, 'the priceless one is marked as such');
+  t.check(cands.filter((c) => c.priced !== false).length === 8, 'and eight of the nine can actually be quoted');
+  /* NO PRICE IS NOT NO PRODUCT -- and no price is not a price either. */
+  const askSheet = scope.waQuoteMatch('iron sheet price', cands);
+  eq(askSheet && askSheet.name, 'Iron Sheet', 'a customer asking for it is shown it, not "nothing matches"');
+  eq(askSheet && askSheet.auto, false, 'but it can never answer by itself');
+  t.check(/^Iron Sheet: we have it — the price will be confirmed shortly\.$/m.test(scope.waQuoteReply(askSheet, 5)),
+    'and the draft says we have it and the price is pending — never a number the book does not hold, never "we don\'t have it"');
+  t.check(!/UGX/.test(scope.waQuoteReply(askSheet, 5)), 'no figure at all');
   /* The list price is the retail one; the ONLY other side ever read is
      the wholesale rule at the pack quantity, for the customer who takes
      a pack's worth -- the same two reads the assistant's own tool makes. */
@@ -357,6 +374,43 @@ let SECTION2_PRODUCTS = null;
   eq((scope.waQuoteMatch('cemnt', scope.waQuoteCandidates()) || {}).name, 'Cemnt Board',
     'a product actually called that outranks one it might be a misspelling of');
 
+  /* A NAMING RESTS ON THE NAME. With the floor gone, a size word that
+     only one product carries had no tie to stop it: "LAK Handles - Big"
+     was drafted as a chair pin because a chair pin comes big. */
+  const keptK = env.data.products;
+  env.data.products = [
+    { id: 'K1', name: 'Chair Pin', type: 'variable', variants: [
+      { combo: { Size: 'Small' } }, { combo: { Size: 'Big' } } ] },
+    { id: 'K2', name: 'Edging Lipping', type: 'variable', variants: [ { combo: { Size: '4' } } ] },
+  ];
+  sellFixture.clear();
+  sellFixture.set('K1::0', { price: 47000, unit: 'Pack' });
+  sellFixture.set('K1::1', { price: 55000, unit: 'Pack' });
+  sellFixture.set('K2::0', { price: 45000, unit: 'Roll' });
+  const sized = scope.waQuoteCandidates();
+  eq(scope.waQuoteMatch('do you have LAK handles - big', sized), null,
+    '"big" alone names nothing — a chair pin is not what they asked for');
+  eq(scope.waQuoteMatch('sofa leg 4" gold', sized), null,
+    'and neither does a bare "4" — an edging lipping is not a sofa leg');
+  eq((scope.waQuoteMatch('chair pin big', sized) || {}).name, 'Chair Pin — Big',
+    'while a size beside the name still picks the size');
+  eq((scope.waQuoteMatch('chair pins', sized) || {}).ambiguous, true,
+    'and the name alone is the honest question between its sizes');
+  /* THE SAME LEAK, THROUGH THE SIDE DOOR. A size word that no name
+     anchors used to fall through to the spelling reading, where "small"
+     was a perfect "misspelling" of the size on every product that came
+     small -- and in a several-item message, the "- Small" left over
+     from a door handle became a chair pin as the second item. */
+  eq(scope.waQuoteMatch('small', sized), null,
+    'a size word alone is not a misspelling of anything');
+  env.data.products = [ ...env.data.products,
+    { id: 'K3', name: 'BOVOS Door Handle', type: 'simple' } ];
+  const withDoor = scope.waQuoteCandidates();
+  const dh = scope.waQuoteMatchAll('do you have BOVOS door handle - small', withDoor);
+  eq(dh.items.length, 1, 'the door handle is one thing asked for, not a door handle and a chair pin');
+  eq(dh.items[0].name, 'BOVOS Door Handle', 'and it is the door handle');
+  env.data.products = keptK;
+
   sellFixture.clear(); keptSell.forEach((v, k) => sellFixture.set(k, v));
 }
 
@@ -532,6 +586,15 @@ let SECTION2_PRODUCTS = null;
      suggestion and a hand-typed reply is never touched. */
   t.check(/if\(!held \|\| \(mine && held === mine\.text\)\)\{/.test(src),
     'and it never overwrites words the owner typed themselves');
+  /* THE OTHER HALF OF THAT GUARD. A message that matched nothing used
+     to leave the PREVIOUS message's draft sitting in the composer -- a
+     chair pin's price under "do you have BOVOS door handle". Only text
+     this screen wrote, and only when written for a different message. */
+  t.check(/if\(held && mine && held === mine\.text && \(!lastIn \|\| mine\.wamid !== lastIn\.wamid\)\)\{\s*\n\s*delete waInbox\.drafts\[convId\]; delete waInbox\.suggested\[convId\];/.test(src),
+    'and a suggestion written for an EARLIER message is cleared when the new one has none');
+  t.check(/waInbox\.suggested\[convId\] = \{ wamid: btn\.dataset\.wamid \|\| null, text \};/.test(src)
+    && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}" data-wamid="\$\{esc\(lastIn\.wamid\)\}"/.test(src),
+    'a tapped option is marked with the message it answers, so that sweep leaves it alone');
   /* The tie. Still a QUESTION rather than a guess or a silence — now
      asked as rows in the priced table, so the owner picks by reading
      the two prices side by side instead of by reading two names. */

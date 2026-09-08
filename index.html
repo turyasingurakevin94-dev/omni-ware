@@ -23675,6 +23675,7 @@ function waWidenDryRun(convs, msgs, candidates, nowMs, days){
     if(!(age >= 0 && age <= win)) return;
     const hit = waQuoteMatch(m.body, candidates);
     if(!hit || hit.ambiguous || hit.auto) return;       // already answered, or still no
+    if(hit.priced === false) return;                    // nothing to say without a price
     if(!(hit.recall >= 0.75 && hit.precision === 1)) return;
     const sig = waQuoteTokens(m.body).join(' ');
     const had = groups.get(sig);
@@ -25399,10 +25400,30 @@ function waQuoteCandidates(){
     if(p.type==='variable' && idxs.length===0) return;
     idxs.forEach(idx=>{
       const at = catalogueSellAtQty(p, idx, 1, 'retail');
-      if(!at || at.price==null) return;
       const name = productVariantLabel(p, idx);
       const key = stockKey(p.id, idx);
       const tokens = waQuoteTokens(name);
+      /* THE PRODUCT'S OWN NAME, apart from its size. "Chair Pin — Small"
+         is a chair pin that comes small; "small" is not a word that
+         names it, and a message that says only "small" has named
+         nothing. The matcher wants at least one of THESE. */
+      const kind = waQuoteTokens(p.name);
+      /* NO PRICE IS NOT NO PRODUCT. A door handle with no retail rule
+         yet used to be left out of this list entirely, so a customer
+         asking for it was told nothing in the catalogue matched -- a
+         lie, and the assistant already knew better ("we sell it, the
+         price is pending"). It stays in, marked, so the screen can name
+         it and say the price is missing. It can never be quoted or
+         sent: the reply says the price will be confirmed, and the pack
+         the server answers from carries only priced items. */
+      if(!at || at.price==null){
+        out.push({ productId: p.id, variantIdx: idx, name, key, tokens, kind,
+          priced: false, price: null, unit: '', pack: null, wholesale: null,
+          soft: waQuoteTokens(p.category || '').filter(t=> !tokens.includes(t)),
+          aliases: (data.presetWaAliases||[]).filter(x=> x.key === key).map(x=> x.word),
+          breaks: [], companion: null });
+        return;
+      }
       /* THE OTHER SIDE OF THE PRICE BOOK. A customer who asks for a
          pack's worth is a wholesale customer, and the counter would
          give them the wholesale side -- the assistant already did,
@@ -25415,7 +25436,7 @@ function waQuoteCandidates(){
       const ws = packQty > 1 ? catalogueSellAtQty(p, idx, packQty, 'wholesale') : null;
       const named = new Set(tokens.map(waQuoteStem));
       out.push({ productId: p.id, variantIdx: idx, name, key,
-        tokens, price: at.price, unit: at.unit || '',
+        tokens, kind, priced: true, price: at.price, unit: at.unit || '',
         pack: packQty > 1 ? { qty: packQty, unit: at.packUnit || 'pack' } : null,
         wholesale: ws && ws.price != null && ws.price < at.price ? { price: ws.price } : null,
         /* The KIND of thing it is, for "anything for roofing?". Findable
@@ -25533,6 +25554,16 @@ function waQuoteHit(qSet, c, tier){
   const st = waQuoteStem;
   const said = (c.tokens||[]).filter(t=> qSet.has(st(t)));
   const alias = (c.aliases||[]).find(a=> qSet.has(st(a)));
+  /* A NAMING RESTS ON THE NAME. "Chair Pin — Small" is named by "chair"
+     or "pin", never by "small" alone; "Edging Lipping — 4" is not named
+     by "4". Without the floor, a size word that only one product
+     carries has no tie to stop it, and "LAK Handles - Big" was drafted
+     as a chair pin on the strength of "big". So: the words they said
+     must include one of the product's own name, and not a bare number.
+     (Where a candidate carries no `kind` -- the server's pack, an old
+     fixture -- every token is the name, as before.) */
+  const kind = c.kind ? new Set(c.kind.map(st)) : null;
+  const anchored = !kind || said.some(t=> kind.has(st(t)) && !/^\d+$/.test(t));
   /* `hit` is the naming: an alias names the product wholly, so it
      counts for the whole name and outranks a partial spelling of it.
      `explains` is the different question precision asks -- how many of
@@ -25542,7 +25573,7 @@ function waQuoteHit(qSet, c, tier){
   const explains = said.length + (alias ? 1 : 0);
   const missed = ()=> (c.tokens||[]).filter(t=> !qSet.has(st(t)));
   if(alias) return { hit: (c.tokens||[]).length, explains, viaAlias: alias, said, missed: [], via: 'named' };
-  if(said.length) return { hit: said.length, explains, viaAlias: null, said, missed: missed(), via: 'named' };
+  if(said.length && anchored) return { hit: said.length, explains, viaAlias: null, said, missed: missed(), via: 'named' };
   const none = { hit: 0, explains: 0, viaAlias: null, said: [], missed: [], via: null };
   /* The softer readings are reached ONLY when nothing was named -- a
      message that names a product is never answered with the category it
@@ -25551,7 +25582,10 @@ function waQuoteHit(qSet, c, tier){
   const cat = (c.soft||[]).filter(t=> qSet.has(st(t)));
   if(cat.length) return { hit: cat.length, explains: 0, viaAlias: null, said: [],
     missed: c.tokens||[], via: 'category', soft: cat };
-  const near = [...qSet].filter(q=> waQuoteNear(c.name, q));
+  /* Of the product's own name only. Tested against the whole label,
+     "small" was an exact "misspelling" of the size on every product
+     that came small, and a leftover size word became a second item. */
+  const near = [...qSet].filter(q=> waQuoteNear((c.kind || c.tokens || []).join(' '), q));
   if(near.length) return { hit: near.length, explains: 0, viaAlias: null, said: [],
     missed: c.tokens||[], via: 'spelling', soft: near };
   return none;
@@ -25615,7 +25649,7 @@ function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
      the softer readings get a turn -- the category they asked for, the
      word they mistyped. */
   let winners = waQuoteRank(qSet, candidates, 'named');
-  if(!winners.length) winners = waQuoteRank(qSet, candidates, 'found');
+  if(!winners.length && !o.namedOnly) winners = waQuoteRank(qSet, candidates, 'found');
   if(!winners.length) return null;
 
   /* A KNOWN CUSTOMER BREAKS A TIE, because the shop already knows what
@@ -25641,7 +25675,8 @@ function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
          nothing else they said names another product, and nobody else
          matched as well. */
       alone: winners.length === 1,
-      auto: winners.length === 1 && w.h.via === 'named' && w.recall === 1 && precision === 1 };
+      auto: winners.length === 1 && w.h.via === 'named' && w.recall === 1 && precision === 1
+        && w.c.priced !== false };
   };
   if(winners.length === 1) return shape(winners[0]);
   // A small tie is a QUESTION worth asking; a bigger scatter is neither.
@@ -25676,7 +25711,7 @@ function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
    no margin, no supplier. What leaves the building never carries them,
    and a list the server reads is the building's edge. */
 function waQuotePack(){
-  return waQuoteCandidates().map(c=> ({
+  return waQuoteCandidates().filter(c=> c.priced !== false).map(c=> ({
     key: c.key, name: c.name, tokens: c.tokens, price: c.price, unit: c.unit,
     pack: c.pack, wholesale: c.wholesale,
     breaks: c.breaks, aliases: c.aliases, companion: c.companion }));
@@ -25747,7 +25782,12 @@ function waQuoteMatchAll(text, candidates, opts){
   const prodTokens = waQuoteProductTokens(qSet, candidates || []);
   const items = [];
   for(let i = 0; i < WA_QUOTE_MAX_ITEMS && qSet.size; i++){
-    const m = waQuoteMatchSet(qSet, candidates, opts, prodTokens);
+    /* A SECOND ITEM MUST BE NAMED. Once one thing has been read, what is
+       left is mostly the words around it -- "- Small" after a door
+       handle that does not come small -- and reading those by category
+       or by spelling is how a stray size word became a chair pin. The
+       softer readings are for a message that named nothing at all. */
+    const m = waQuoteMatchSet(qSet, candidates, i ? { ...(opts||{}), namedOnly: true } : opts, prodTokens);
     if(!m) break;
     /* The words this item spoke for come out. For a tie, the options
        share the words that tied them; what the first said is what they
@@ -25818,6 +25858,7 @@ function waQuoteReplyAll(items, qtys){
   if(items.length === 1) return waQuoteReply(items[0], (qtys||[])[0]);
   const lines = items.map((m, i)=>{
     const n = Number((qtys||[])[i]);
+    if(m.priced === false || m.price == null) return `${m.name}: we have it — the price will be confirmed shortly.`;
     if(isFinite(n) && n > 1){
       const at = waQuoteEach(m, n);
       return `${m.name}: ${n} ${m.unit ? m.unit + (String(m.unit).endsWith('s') ? '' : 's') : ''} comes to UGX ${Math.round(n * at.each).toLocaleString('en-UG')}${at.why ? ` at UGX ${Number(at.each).toLocaleString('en-UG')} each (${at.why})` : ''}.`;
@@ -25864,6 +25905,12 @@ function waQuoteEach(m, qty){
 
 function waQuoteReply(m, qty){
   const lines = [];
+  /* WE SELL IT; THE PRICE IS PENDING. Said the way the assistant was
+     told to say it: never "we don't have it" for something on the
+     shelf, never a number the book does not hold. */
+  if(m.priced === false || m.price == null){
+    return `${m.name}: we have it — the price will be confirmed shortly.\nReply here to order, or ask about anything else.`;
+  }
   lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`);
   /* They asked for thirty; quoting one and leaving them to multiply is
      the shop making the customer do its arithmetic. */
@@ -26493,6 +26540,18 @@ function waOpenRowHTML(c, nowMs){
       waInbox.drafts[convId] = suggested;
       waInbox.suggested[convId] = { wamid: lastIn ? lastIn.wamid : null, text: suggested };
     }
+  } else {
+    /* NO SUGGESTION FOR THIS MESSAGE. If the composer still holds the
+       one this screen wrote for an EARLIER message, that is a stale
+       price sitting under a new question -- a chair pin drafted under
+       "do you have BOVOS door handle" -- and it goes. The owner's own
+       words are never touched: only text this screen wrote, and only
+       when it was written for a different message. */
+    const held = waInbox.drafts[convId];
+    const mine = waInbox.suggested[convId];
+    if(held && mine && held === mine.text && (!lastIn || mine.wamid !== lastIn.wamid)){
+      delete waInbox.drafts[convId]; delete waInbox.suggested[convId];
+    }
   }
 
   const order = aiLive && aiLive.order && (aiLive.order.lines||[]).length ? aiLive.order : null;
@@ -26528,23 +26587,24 @@ function waOpenRowHTML(c, nowMs){
                 : match.via === 'spelling' ? `a spelling — they typed ${(match.viaSoft||[]).map(t=> '“' + esc(t) + '”').join(', ')}`
                 : `${match.hit} of its ${match.tokens.length} words`,
               askedQty ? `${askedQty} asked for` : '',
-              match.exact ? '' : (match.via === 'named' ? 'a partial match — check it before it goes' : 'a guess — check it before it goes'),
+              match.priced === false ? 'no price on file — quote it by hand'
+                : match.exact ? '' : (match.via === 'named' ? 'a partial match — check it before it goes' : 'a guess — check it before it goes'),
             ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
       ${(order || options || match || multi) ? `<table class="wa-mtbl">
         <tr><th class="wa-l">Item</th><th>Each</th><th>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : 'Buy more'}</th><th></th></tr>
         ${multi ? multi.slots.map((m, i)=> m.ambiguous
             /* An unsettled slot: its options, each a tap that fills it. */
-            ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">${m.options.length} things match “${esc((m.options[0].said||[]).join(' '))}” — pick one</span></td></tr>`
+            ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">${m.options.length} things match “${esc(((m.options[0].said||[]).length ? m.options[0].said : (m.options[0].viaSoft||[])).join(' '))}” — pick one</span></td></tr>`
               + m.options.map(o=> `<tr><td class="wa-nm" title="${esc(o.name)}">&nbsp;&nbsp;${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-slot-pick" data-slot="${i}" data-key="${esc(o.key)}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
-            : `<tr><td class="wa-nm" title="${esc(m.name)}">${multi.qtys[i] ? esc(String(multi.qtys[i])) + ' × ' : ''}${esc(m.name)}</td><td>${esc(String(Number(m.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${multi.qtys[i]
+            : `<tr><td class="wa-nm" title="${esc(m.name)}">${multi.qtys[i] ? esc(String(multi.qtys[i])) + ' × ' : ''}${esc(m.name)}</td><td>${m.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(m.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${m.priced === false ? '—' : multi.qtys[i]
                 ? esc(String(Math.round(multi.qtys[i] * waQuoteEach(m, multi.qtys[i]).each).toLocaleString('en-UG')))
                 : '—'}</td><td></td></tr>`).join('')
         : order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
           + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="3">no price on file — quote this one by hand</td></tr>`).join('')
           + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
-        : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}">Use this</button></td></tr>`).join('')
-        : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${askedQty
+        : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${o.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+        : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${match.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${match.priced === false ? '—' : askedQty
             ? esc(String(Math.round(askedQty * waQuoteEach(match, askedQty).each).toLocaleString('en-UG')))
             : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
@@ -26581,7 +26641,7 @@ function waOpenRowHTML(c, nowMs){
         <button type="button" class="btn btn-accent ow-sm" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}>${order ? 'Send the quotation' : 'Send'}</button>
       </div>
     </div>
-    <p class="wa-cmp-n">${aiLive && aiLive.error ? `The assistant could not draft this one: ${esc(aiLive.error)} ` : ''}${aiLive && aiLive.text ? 'Written by the assistant from this chat and your catalogue — <b>read it before it goes</b>. ' : (match ? 'Written from your catalogue at today’s price. ' : '')}Nothing has been sent: the reply leaves the shop when you press <b>Send</b>, and lands in this same chat on your phone.</p>`;
+    <p class="wa-cmp-n">${aiLive && aiLive.error ? `The assistant could not draft this one: ${esc(aiLive.error)} ` : ''}${aiLive && aiLive.text ? 'Written by the assistant from this chat and your catalogue — <b>read it before it goes</b>. ' : (match ? (match.priced === false ? 'Written from your catalogue — it has no price on file yet, so none is promised. ' : 'Written from your catalogue at today’s price. ') : '')}Nothing has been sent: the reply leaves the shop when you press <b>Send</b>, and lands in this same chat on your phone.</p>`;
 }
 
 /* The first bulk break, which is the second thing every builder asks
@@ -26650,7 +26710,9 @@ function waBindOpenRow(wrap){
     if(!opt) return;
     const text = waQuoteReply(opt);
     waInbox.drafts[convId] = text;
-    waInbox.suggested[convId] = { wamid: null, text };
+    /* Marked with the MESSAGE it answers, so the stale-draft sweep above
+       leaves it alone until a newer question arrives. */
+    waInbox.suggested[convId] = { wamid: btn.dataset.wamid || null, text };
     const taNow = document.getElementById('wa_reply');
     if(taNow) taNow.value = text;
     waRenderInbox();
