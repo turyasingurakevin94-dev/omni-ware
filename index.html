@@ -24808,6 +24808,8 @@ function waTimeShort(ts){
 }
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+  priceDoc: {},       // conversation id -> {wamid, doc} — the PRICE LIST the row
+                      // drew, so Send can post the same rows as a picture
   narrow: {},         // conversation id -> {wamid, productId} — the KIND the owner
                       // picked out of a tie, so the next question is its size
   picks: {},          // conversation id -> {wamid, by:{slot: key}} — which option
@@ -25048,33 +25050,21 @@ function waDrawOrderReceipt(canvas, receipt){
   const c = canvas.getContext('2d');
   c.scale(2, 2);
   const f = n=> Number(n||0).toLocaleString('en-UG');
-  const ACCENT = '#8E2C1C', INK = '#12151A', MUTE = '#6B7280', FAINT = '#9CA3AF';
-  const SANS = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
-  const MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", monospace';
+  const ACCENT = WA_DOC_ACCENT, INK = WA_DOC_INK, MUTE = WA_DOC_MUTE;
+  const SANS = WA_DOC_SANS, MONO = WA_DOC_MONO;
   c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, h);
-  c.fillStyle = ACCENT; c.fillRect(0, 0, w, 6);
 
   // Two documents share this layout: the order receipt (default) and,
   // with kind 'quote', the quotation — same table, different promises.
+  // (The price list is a third document with its own columns; it shares
+  // the letterhead and the close, not the table.)
   const isQuote = receipt.kind === 'quote';
-  c.fillStyle = INK; c.font = '700 22px ' + SANS;
-  c.fillText(receipt.shopName || 'Omni-Ware', 32, 48);
-  c.fillStyle = ACCENT; c.font = '700 13px ' + SANS;
-  c.fillText(isQuote ? 'QUOTATION' : 'ORDER RECEIVED', 32, 68);
-  c.textAlign = 'right';
-  c.fillStyle = INK; c.font = '700 13px ' + SANS;
-  c.fillText(isQuote ? (receipt.dateLabel || '') : 'Order ' + (receipt.invoice || ''), w-32, 48);
-  if(!isQuote){
-    c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
-    c.fillText(receipt.dateLabel || '', w-32, 68);
-  }
-  c.textAlign = 'left';
-
-  c.strokeStyle = '#E9EBEF'; c.lineWidth = 1;
-  c.beginPath(); c.moveTo(32, 90); c.lineTo(w-32, 90); c.stroke();
+  waDocHead(c, w, receipt, isQuote ? 'QUOTATION' : 'ORDER RECEIVED',
+    isQuote ? (receipt.dateLabel || '') : 'Order ' + (receipt.invoice || ''),
+    isQuote ? '' : (receipt.dateLabel || ''));
 
   let y = headerH;
-  c.fillStyle = FAINT; c.font = '700 11px ' + SANS;
+  c.fillStyle = MUTE; c.font = '700 11px ' + SANS;
   c.fillText('QTY', 32, y);
   c.fillText('ITEM', 110, y);
   c.textAlign = 'right';
@@ -25095,7 +25085,7 @@ function waDrawOrderReceipt(canvas, receipt){
     c.fillText(f(l.price), w-190, y);
     c.fillText(f(l.amount), w-32, y);
     c.textAlign = 'left';
-    c.strokeStyle = '#F1F3F5';
+    c.strokeStyle = WA_DOC_HAIR;
     c.beginPath(); c.moveTo(32, y+22); c.lineTo(w-32, y+22); c.stroke();
   });
 
@@ -25113,7 +25103,7 @@ function waDrawOrderReceipt(canvas, receipt){
 
   if(extras.length){
     y += 34;
-    c.fillStyle = FAINT; c.font = '700 11px ' + SANS;
+    c.fillStyle = MUTE; c.font = '700 11px ' + SANS;
     c.fillText('STILL TO CONFIRM', 32, y);
     c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
     extras.forEach(t=>{ y += 20; c.fillText(waReceiptClip(c, t, w-64), 32, y); });
@@ -25121,15 +25111,214 @@ function waDrawOrderReceipt(canvas, receipt){
   }
 
   y += 44;
-  c.fillStyle = FAINT; c.font = '500 11.5px ' + SANS;
-  c.fillText(isQuote ? 'We will confirm availability and get back to you.'
-    : 'We are preparing your order — thank you.', 32, y);
-  const who = [receipt.shopName, receipt.phone].filter(Boolean).join(' · ');
-  if(who){
-    y += 22;
-    c.fillStyle = MUTE; c.font = '600 11.5px ' + SANS;
-    c.fillText(who, 32, y);
+  waDocFoot(c, w, y, receipt, isQuote ? 'We will confirm availability and get back to you.'
+    : 'We are preparing your order — thank you.');
+}
+
+/* ---- The shop's paper, drawn once ----------------------------------
+
+   Three documents carry the same letterhead now -- the order receipt,
+   the quotation and the price list -- so it is drawn in one place and a
+   change to the shop's paper is one change.
+
+   THE GREY MOVED. The receipt's old FAINT (#9CA3AF) is 2.54:1 on white,
+   and it set the column heads, the block heads and the closing line --
+   all at 11px, where the floor is 4.5:1. That is the document a customer
+   reads on a phone in the sun, which is the same reading condition that
+   got the oxide chosen over amber in the first place. Everything faint
+   is MUTE (#6B7280, 4.83:1) now; nothing else about the paper moved. */
+const WA_DOC_ACCENT = '#8E2C1C', WA_DOC_INK = '#12151A', WA_DOC_MUTE = '#6B7280';
+const WA_DOC_RULE = '#E9EBEF', WA_DOC_HAIR = '#F1F3F5';
+const WA_DOC_SANS = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+const WA_DOC_MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", monospace';
+
+function waDocHead(c, w, doc, kindLabel, rightLine, rightSub){
+  c.fillStyle = WA_DOC_ACCENT; c.fillRect(0, 0, w, 6);
+  c.fillStyle = WA_DOC_INK; c.font = '700 22px ' + WA_DOC_SANS;
+  c.fillText(doc.shopName || 'Omni-Ware', 32, 48);
+  c.fillStyle = WA_DOC_ACCENT; c.font = '700 13px ' + WA_DOC_SANS;
+  c.fillText(kindLabel, 32, 68);
+  c.textAlign = 'right';
+  c.fillStyle = WA_DOC_INK; c.font = '700 13px ' + WA_DOC_SANS;
+  c.fillText(rightLine || '', w-32, 48);
+  if(rightSub){
+    c.fillStyle = WA_DOC_MUTE; c.font = '600 12px ' + WA_DOC_SANS;
+    c.fillText(rightSub, w-32, 68);
   }
+  c.textAlign = 'left';
+  c.strokeStyle = WA_DOC_RULE; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(32, 90); c.lineTo(w-32, 90); c.stroke();
+}
+
+/* The close: the promise this document makes, then who made it. */
+function waDocFoot(c, w, y, doc, promise){
+  c.fillStyle = WA_DOC_MUTE; c.font = '500 11.5px ' + WA_DOC_SANS;
+  c.fillText(promise, 32, y);
+  const who = [doc.shopName, doc.phone].filter(Boolean).join(' \u00b7 ');
+  if(who){
+    c.fillStyle = WA_DOC_MUTE; c.font = '600 11.5px ' + WA_DOC_SANS;
+    c.fillText(who, 32, y + 22);
+  }
+}
+
+/* ---- THE PRICE LIST: the third document -----------------------------
+
+   The quotation answers "I want thirty bags": QTY x RATE = AMOUNT, and
+   a TOTAL. Most of what the matcher reads asks nothing of the sort --
+   "do you have pull handles", "bolts 6*80, 6*30, 6*60" -- and forcing
+   those into the quotation invents a quantity of one and a total the
+   customer never asked for. So the message decides the document, not
+   the owner: no quantity asked, no total drawn.
+
+   PURE, and built from the same items the row already drew, so the
+   picture can never say something the owner was not shown. */
+function waPriceListDoc(items, unread, ident, dateLabel){
+  const groups = [];
+  (items||[]).forEach(m=>{
+    if(!m || m.ambiguous) return;
+    const pname = m.pname || String(m.name||'').split(' — ')[0];
+    const key = m.productId || pname;
+    let g = groups.find(x=> x.key === key);
+    if(!g){ g = { key, name: pname, rows: [] }; groups.push(g); }
+    const brk = (m.breaks||[])[0] || null;
+    g.rows.push({
+      label: m.vlabel || null,
+      /* HOW IT COMES -- "20 bx/ctn". Derived from the purchase row the
+         price came off, never typed: a pack of 20, sold by the bx,
+         twenty to the ctn. */
+      packing: (m.pack && m.pack.qty > 1)
+        ? `${Number(m.pack.qty).toLocaleString('en-UG')} ${m.unit || 'pc'}/${m.pack.unit}` : '',
+      price: m.priced === false ? null : m.price,
+      unit: m.unit || 'pc',
+      brkQty: brk ? brk.qty : null, brkPrice: brk ? brk.price : null,
+    });
+  });
+  const rows = groups.reduce((n, g)=> n + g.rows.length, 0);
+  const all = [].concat(...groups.map(g=> g.rows));
+  const brks = all.map(r=> r.brkQty).filter(q=> q != null);
+  return { kind: 'prices', shopName: ident.name,
+    phone: ident.phone || data.presetWaPhone || '', dateLabel,
+    groups, rows,
+    /* A COLUMN OF NOTHING IS NOT A COLUMN. Packing and the volume break
+       are drawn only where at least one row has them to say. */
+    hasPacking: all.some(r=> r.packing),
+    breakQty: brks.length ? Math.min(...brks) : null,
+    /* A size the shop does not carry is named on the paper, not dropped
+       -- the same no-silent-drop law the receipt's leftovers block
+       follows. */
+    notCarried: (unread||[]).filter(t=> WA_QUOTE_SIZE.test(t)).map(t=> t.replace('x', '*')) };
+}
+
+/* Drawn from that document and nothing else -- the waDrawStatus law:
+   what the renderer cannot reach, it cannot leak. Same paper as the
+   receipt, same 2x oversampling so the figures survive WhatsApp's
+   recompression, different table. */
+function waDrawPriceList(canvas, doc){
+  const headerH = 122, rowH = 34, grpH = 30;
+  const f = n=> Number(n||0).toLocaleString('en-UG');
+  const w = 640;
+  const nc = (doc.notCarried||[]).length;
+  const ncH = nc ? 34 + nc*20 + 6 : 0;
+  const bodyH = (doc.groups||[]).reduce((n, g)=>
+    n + (g.rows.length === 1 && !g.rows[0].label ? 0 : grpH) + g.rows.length*rowH, 0);
+  const h = headerH + 14 + bodyH + ncH + 106;
+  canvas.width = w*2; canvas.height = h*2;
+  const c = canvas.getContext('2d');
+  c.scale(2, 2);
+  c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, h);
+  waDocHead(c, w, doc, 'PRICE LIST', doc.dateLabel || '', '');
+
+  /* The columns, right edges first. A money column keeps its own
+     right-aligned figure and hangs the unit AFTER it in a fixed slot,
+     so "2,000/bx" reads as one price and a varying suffix can never
+     push a column of figures out of true. */
+  const brkFig = doc.breakQty != null ? w-64 : 0;
+  const priceFig = doc.breakQty != null ? w-188 : w-64;
+  const packRight = doc.hasPacking ? priceFig - 106 : 0;
+  const nameMax = (doc.hasPacking ? packRight : priceFig - 66) - 50 - 12;
+
+  let y = headerH;
+  c.fillStyle = WA_DOC_MUTE; c.font = '700 11px ' + WA_DOC_SANS;
+  c.fillText('ITEM', 32, y);
+  c.textAlign = 'right';
+  if(doc.hasPacking) c.fillText('PACKING', packRight, y);
+  c.fillText('PRICE', priceFig, y);
+  if(doc.breakQty != null) c.fillText(f(doc.breakQty) + '+', brkFig, y);
+  c.textAlign = 'left';
+  y += 14;
+  c.strokeStyle = WA_DOC_RULE; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(32, y); c.lineTo(w-32, y); c.stroke();
+
+  const money = (fig, unit, x, strong)=>{
+    c.textAlign = 'right';
+    c.fillStyle = strong ? WA_DOC_INK : WA_DOC_MUTE;
+    c.font = (strong ? '700 13px ' : '600 13px ') + WA_DOC_MONO;
+    c.fillText(f(fig), x, y);
+    c.textAlign = 'left';
+    c.fillStyle = WA_DOC_MUTE; c.font = '600 11.5px ' + WA_DOC_SANS;
+    c.fillText('/' + unit, x + 3, y);
+  };
+
+  (doc.groups||[]).forEach(g=>{
+    /* A product with no sizes is ONE row. A heading over a single
+       nameless row is the layout talking, not the shop. */
+    const bare = g.rows.length === 1 && !g.rows[0].label;
+    if(!bare){
+      y += grpH;
+      c.fillStyle = WA_DOC_INK; c.font = '700 13.5px ' + WA_DOC_SANS;
+      c.fillText(waReceiptClip(c, g.name, w-64), 32, y);
+    }
+    g.rows.forEach(r=>{
+      y += rowH;
+      const x = bare ? 32 : 50;
+      c.fillStyle = WA_DOC_INK; c.font = '700 13.5px ' + WA_DOC_SANS;
+      c.fillText(waReceiptClip(c, bare ? g.name : r.label, nameMax), x, y);
+      if(doc.hasPacking && r.packing){
+        c.textAlign = 'right';
+        c.fillStyle = WA_DOC_INK; c.font = '600 12px ' + WA_DOC_SANS;
+        c.fillText(r.packing, packRight, y);
+        c.textAlign = 'left';
+      }
+      if(r.price == null){
+        /* We sell it, the price is pending -- never a number the book
+           does not hold, and never "we do not have it". */
+        c.textAlign = 'right';
+        c.fillStyle = WA_DOC_MUTE; c.font = '600 12px ' + WA_DOC_SANS;
+        /* Under PRICE, which is the column it is answering -- not under
+           the volume break, where it would read as a bulk rate. */
+        c.fillText('price to confirm', priceFig, y);
+        c.textAlign = 'left';
+      } else {
+        money(r.price, r.unit, priceFig, true);
+        if(doc.breakQty != null && r.brkPrice != null) money(r.brkPrice, r.unit, brkFig, false);
+      }
+      c.strokeStyle = WA_DOC_HAIR;
+      c.beginPath(); c.moveTo(32, y+12); c.lineTo(w-32, y+12); c.stroke();
+    });
+  });
+
+  if(nc){
+    y += 34;
+    c.fillStyle = WA_DOC_MUTE; c.font = '700 11px ' + WA_DOC_SANS;
+    c.fillText('WE DO NOT CARRY', 32, y);
+    c.fillStyle = WA_DOC_MUTE; c.font = '600 12px ' + WA_DOC_SANS;
+    (doc.notCarried||[]).forEach(t=>{
+      y += 20;
+      c.fillText(waReceiptClip(c, t + ' — not a size we stock', w-64), 32, y);
+    });
+    y += 6;
+  }
+
+  y += 44;
+  waDocFoot(c, w, y, doc, 'Prices as at ' + (doc.dateLabel || 'today')
+    + '. We will confirm availability and get back to you.');
+}
+
+/* One door, three documents: the caller hands in what it built and the
+   kind decides the renderer. */
+function waDrawDoc(canvas, doc){
+  if(doc && doc.kind === 'prices') return waDrawPriceList(canvas, doc);
+  return waDrawOrderReceipt(canvas, doc);
 }
 
 /* Straight PNG upload — NOT uploadProductImageBlob: that one re-encodes
@@ -25163,7 +25352,7 @@ async function waSendDocImage(receipt, caption, textTwin){
   let sentImage = false; let why = '';
   try{
     const canvas = document.createElement('canvas');
-    waDrawOrderReceipt(canvas, receipt);
+    waDrawDoc(canvas, receipt);
     const blob = await new Promise((res, rej)=>
       canvas.toBlob(b=> b ? res(b) : rej(new Error('the document could not be drawn')), 'image/png'));
     const link = await waUploadReceiptBlob(blob);
@@ -25190,6 +25379,21 @@ async function waSendDocImage(receipt, caption, textTwin){
   await waFetchThread(waInbox.active);
   await waFetchConvs();
   waRenderInbox();
+}
+
+/* "Send" on a several-row answer: the same document road, headed PRICE
+   LIST. The caption is whatever stands in the composer -- the drafted
+   words, or the owner's own if they rewrote them -- and it is also the
+   text twin, so a customer whose image never loads still reads every
+   price. */
+async function waSendPriceList(){
+  const convId = String(waInbox.active);
+  const held = waInbox.priceDoc[convId];
+  if(!held || waInbox.sending || waInbox.creating) return;
+  const ta = document.getElementById('wa_reply');
+  const words = String((ta && ta.value) || waInbox.drafts[convId] || '').trim();
+  if(!words) return;
+  await waSendDocImage(held.doc, words, words);
 }
 
 /* "Send quote": the same document road, headed QUOTATION — no order is
@@ -25453,6 +25657,7 @@ function waQuoteCandidates(){
          the server answers from carries only priced items. */
       if(!at || at.price==null){
         out.push({ productId: p.id, variantIdx: idx, name, key, tokens, kind,
+          pname: p.name, vlabel: idx == null ? null : String(name).slice(String(p.name).length + 3),
           priced: false, price: null, unit: '', pack: null, wholesale: null,
           soft: waQuoteTokens(p.category || '').filter(t=> !tokens.includes(t)),
           aliases: (data.presetWaAliases||[]).filter(x=> x.key === key).map(x=> x.word),
@@ -25472,6 +25677,10 @@ function waQuoteCandidates(){
       const named = new Set(tokens.map(waQuoteStem));
       out.push({ productId: p.id, variantIdx: idx, name, key,
         tokens, kind, priced: true, price: at.price, unit: at.unit || '',
+        /* The two halves of the label, kept apart. A price list names the
+           product ONCE and lists its sizes beneath, which it cannot do
+           from "Hex Bolts — 6*80" alone. */
+        pname: p.name, vlabel: idx == null ? null : String(name).slice(String(p.name).length + 3),
         pack: packQty > 1 ? { qty: packQty, unit: at.packUnit || 'pack' } : null,
         wholesale: ws && ws.price != null && ws.price < at.price ? { price: ws.price } : null,
         /* The KIND of thing it is, for "anything for roofing?". Findable
@@ -26708,6 +26917,18 @@ function waOpenRowHTML(c, nowMs){
      the suggestion only while it still holds the LAST suggestion this
      screen wrote, so a newer question replaces a stale draft and a
      hand-typed one is never touched. */
+  /* THE SAME ROWS, AS THE SHOP'S PAPER. Built from what the row just
+     drew -- never from a second read of the message -- so the picture
+     and the screen can never disagree. Held against the message, so a
+     newer question cannot be answered with an older list. */
+  waInbox.priceDoc[convId] = null;
+  if(lastIn && (match || (multi && multi.settled))){
+    const rows = multi ? multi.slots : [match];
+    const doc = waPriceListDoc(rows, multi ? multi.unread : [], shopIdentity(),
+      new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }));
+    if(doc.rows) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc };
+  }
+
   const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
   const suggested = aiLive && aiLive.text ? aiLive.text
     : match ? waQuoteReply(match, askedQty)
@@ -26861,6 +27082,14 @@ function waBindOpenRow(wrap){
        composes conversation. The draft is KEPT on this road, so "Make
        it an order" still works right after the quote. */
     if(d && d.order && (d.order.lines||[]).length){ waSendQuoteFromChat(); return; }
+    /* A LIST GOES AS A LIST. More than one priced row is the case the
+       picture exists for -- names, packing and figures in columns that
+       can be read down -- and one row is not: a single price is one
+       short line, and a picture of it costs the customer data to be
+       told less. The composer's own words ride along as the caption,
+       so nothing goes out that the owner has not read. */
+    const pl = waInbox.priceDoc[convId];
+    if(pl && pl.doc.rows > 1){ waSendPriceList(); return; }
     waSendReply();
   });
 
