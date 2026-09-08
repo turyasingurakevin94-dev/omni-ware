@@ -47,3 +47,7 @@ build Rail.dc.html    body_rail.html    "${W_RAIL:-820}" "${H_RAIL:-1230}"
 build Post.dc.html    body_post.html    1440 "${H_POST:-1180}"
 build Rank.dc.html    body_rank.html    "${W_RANK:-620}" "${H_RANK:-1440}" _extra_post.css
 build Cold.dc.html    body_cold.html    "${W_COLD:-620}" "${H_COLD:-760}" _extra_post.css
+build Inbox.dc.html   body_inbox.html   1440 "${H_INBOX:-1420}" _extra_inbox.css
+build Match.dc.html   body_match.html   "${W_MATCH:-620}" "${H_MATCH:-1100}" _extra_inbox.css
+build Words.dc.html   body_words.html   "${W_WORDS:-620}" "${H_WORDS:-880}" _extra_inbox.css
+build Auto.dc.html    body_auto.html    "${W_AUTO:-620}" "${H_AUTO:-1080}" _extra_inbox.css

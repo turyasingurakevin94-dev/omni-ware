@@ -321,9 +321,6 @@
     .ow-cp.fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
     .cv-bd .cg,.ow-q-x .cg{max-width:var(--ow-measure);}
     .ow-pan-n.w{font-family:'Inter',system-ui,sans-serif;}
-    /* The shared chrome carries the palette but not the ramp, so the
-       tokens this sheet uses are declared here rather than silently
-       falling back to the browser's defaults. Same values as the app. */
     :root{
       --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
       --ow-t-16:16px; --ow-t-20:20px;
@@ -332,259 +329,184 @@
       --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
       --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px;
     }
-    /* ---- the post, promoted to a co-lead ----
-       .ow-grid is 1fr + 304. Two jobs of equal standing need equal
-       columns, so this screen uses its own: the queue and the post,
-       side by side, with the rail's small panels folded under the post
-       rather than into a third column. */
-    .po-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    .col-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);
+      max-width:76ch;}
+    .in-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       gap:16px;align-items:start;}
-    .po-stack{display:flex;flex-direction:column;gap:16px;min-width:0;}
+    .in-stack{display:flex;flex-direction:column;gap:16px;min-width:0;}
 
-    /* the lead pick */
-    .po-lead{display:flex;gap:14px;padding:14px;align-items:flex-start;}
-    .po-im{width:96px;height:96px;border-radius:var(--ow-r);flex:none;object-fit:cover;
-      background:var(--ow-steel-100);color:var(--ow-ink-400);
-      display:flex;align-items:center;justify-content:center;}
-    .po-im svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;
-      stroke-linecap:round;stroke-linejoin:round;}
-    .po-b{min-width:0;flex:1;}
-    .po-n,.po-sub,.po-basis{display:block;}
-    .po-fig{margin-bottom:2px;}
-    .po-n{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);line-height:1.3;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .po-sub{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:2px;}
-    .po-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;
-      font-size:26px;font-weight:var(--ow-fw-500);letter-spacing:-.03em;
-      line-height:1.15;margin-top:8px;display:block;color:var(--ow-verdigris);}
-    .po-fig .u{font-size:.46em;color:var(--ow-ink-400);margin-left:.35em;letter-spacing:0;}
-    .po-basis{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:3px;
-      line-height:1.45;max-width:52ch;}
-    .po-basis b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-
-    /* the arithmetic, shown rather than asserted */
-    .po-sum{display:grid;grid-template-columns:minmax(0,1fr) auto;
-      gap:0 12px;padding:0 14px 12px;}
-    .po-sr{display:contents;}
-    .po-sl{font-size:var(--ow-t-12);color:var(--ow-ink-600);padding:5px 0;
-      border-top:1px solid var(--ow-rule-soft);}
-    .po-sv{font-family:var(--mono);font-variant-numeric:tabular-nums;
-      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:-.02em;
-      text-align:right;padding:5px 0;border-top:1px solid var(--ow-rule-soft);
-      white-space:nowrap;}
-    .po-sr.tot .po-sl,.po-sr.tot .po-sv{border-top:1px solid var(--ow-rule);
-      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-    .po-sr.tot .po-sv{color:var(--ow-verdigris);}
-    .po-sl .why{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-400);
-      margin-top:1px;line-height:1.35;}
-
-    /* the two channels, each with its own bar */
-    .po-ch{border-top:1px solid var(--ow-rule-soft);padding:12px 14px;}
-    .po-ch + .po-ch{border-top:1px solid var(--ow-rule-soft);}
-    .po-ch-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
-    .po-ch-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
-    .po-ch-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;
-      font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
-    .po-ch-w{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
-      margin:0 0 8px;max-width:56ch;}
-    .po-ch-w b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-    .po-ch-a{display:flex;gap:6px;flex-wrap:wrap;}
-
-    /* the ranking argument: candidates compared on one bar */
-    .po-rank{padding:2px 14px 12px;}
-    .po-rr{display:grid;grid-template-columns:minmax(0,1fr) 84px;
-      align-items:center;gap:10px;padding:7px 0;
-      border-top:1px solid var(--ow-rule-soft);}
-    .po-rr:first-child{border-top:0;}
-    .po-rn{min-width:0;font-size:var(--ow-t-12);overflow:hidden;
-      text-overflow:ellipsis;white-space:nowrap;}
-    .po-rr.on .po-rn{font-weight:var(--ow-fw-600);}
-    .po-rw{grid-column:1;height:4px;border-radius:2px;background:var(--ow-steel-100);
-      overflow:hidden;margin-top:3px;}
-    .po-rw i{display:block;height:100%;background:var(--ow-steel-400);}
-    .po-rr.on .po-rw i{background:var(--ow-verdigris);}
-    .po-rv{grid-column:2;grid-row:1 / span 2;text-align:right;
-      font-family:var(--mono);font-variant-numeric:tabular-nums;
-      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:-.02em;
-      white-space:nowrap;}
-    .po-rv.zero{color:var(--ow-ink-400);}
-    .po-out{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
-      padding:8px 0 0;border-top:1px solid var(--ow-rule-soft);margin:6px 0 0;
-      max-width:var(--ow-measure);}
-    .po-out b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-
-    /* what the shop has learned from its own posting */
-    .po-lr{display:grid;grid-template-columns:minmax(0,1fr) 64px 56px;
-      align-items:baseline;gap:10px;padding:6px 14px;
-      border-top:1px solid var(--ow-rule-soft);}
-    .po-lr.head{border-top:0;}
-    .po-lr.head span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-      letter-spacing:.04em;text-transform:uppercase;color:var(--ow-ink-400);}
-    .po-lk{font-size:var(--ow-t-12);min-width:0;overflow:hidden;
-      text-overflow:ellipsis;white-space:nowrap;}
-    .po-lv,.po-ln{font-family:var(--mono);font-variant-numeric:tabular-nums;
-      font-size:var(--ow-t-12);text-align:right;white-space:nowrap;}
-    .po-lv{font-weight:var(--ow-fw-600);}
-    .po-ln{color:var(--ow-ink-400);font-size:var(--ow-t-11);}
-    .po-lv.good{color:var(--ow-verdigris);}
-    .po-lv.thin{color:var(--ow-ink-400);}
-
-    .po-note{margin:0;padding:8px 14px;border-top:1px solid var(--ow-rule-soft);
-      font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-ink-600);
-      max-width:var(--ow-measure);}
-    .po-note b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-    .po-warn{background:var(--ow-amber-faint);}
-    .po-warn b{color:var(--ow-amber-ink);}
-    /* the unit span inside a rail figure, and the queue's age column --
-       both live in index.html's own sheet, so the canvas declares them */
-    .kv-v .u{font-size:.85em;color:var(--ow-ink-400);margin-left:.35em;letter-spacing:0;}
-    .age{font-family:var(--mono);font-variant-numeric:tabular-nums;
-      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:-.02em;
-      text-align:right;white-space:nowrap;}
-    .age.late{color:var(--ow-amber-ink);}
-    /* one ask open, because that is what the screen looks like in use --
-       a co-lead where one column is half empty is not a co-lead */
+    /* the transcript */
     .tx{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
       background:var(--ow-paper-2);margin:0 0 10px;overflow:hidden;}
-    .tx-r{display:grid;grid-template-columns:48px 96px minmax(0,1fr);align-items:baseline;
+    .tx-r{display:grid;grid-template-columns:46px 92px minmax(0,1fr);align-items:baseline;
       column-gap:10px;padding:6px 10px;border-top:1px solid var(--ow-rule-soft);}
     .tx-r:first-child{border-top:0;}
     .tx-t{font-family:var(--mono);font-size:var(--ow-t-11);color:var(--ow-ink-400);}
     .tx-w{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .tx-b{font-size:var(--ow-t-13);line-height:var(--ow-lh-snug);}
-    .cmp{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
-      overflow:hidden;}
-    .cmp-b{padding:9px 11px;font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);min-height:52px;}
+    .age{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+    .age.late{color:var(--ow-amber-ink);}
+
+    /* the matched line, with its quantity and its total */
+    .mt-h{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;flex-wrap:wrap;}
+    .mt-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .mt-n{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+    .mtb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:var(--ow-t-12);margin:0 0 10px;}
+    .mtb th{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
+      text-transform:uppercase;color:var(--ow-ink-400);text-align:right;padding:0 0 4px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .mtb th.l{text-align:left;padding-left:0;overflow:hidden;text-overflow:ellipsis;}
+    .mtb th:not(.l),.mtb td:not(.nm){width:88px;}
+    .mtb td{padding:6px 0 6px 12px;border-bottom:1px solid var(--ow-rule-soft);text-align:right;
+      white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .mtb tr:last-child td{border-bottom:0;}
+    .mtb td.nm{width:auto;min-width:0;padding-left:0;text-align:left;overflow:hidden;
+      text-overflow:ellipsis;font-family:'Inter',sans-serif;font-weight:var(--ow-fw-500);letter-spacing:0;}
+    .mtb td.w{font-weight:var(--ow-fw-600);}
+    .mtb tr.dim td{color:var(--ow-ink-400);}
+    .mtb tr.dim td.nm{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+
+    /* why this one: the evidence behind a match */
+    .ev{padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .ev-k{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);line-height:1.35;}
+    .ev-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin-top:1px;}
+    .tok{display:inline-block;font-family:var(--mono);font-size:var(--ow-t-11);
+      background:var(--ow-verdigris-soft);color:var(--ow-verdigris);border-radius:3px;
+      padding:0 4px;margin:0 1px;}
+    .tok.miss{background:var(--ow-steel-100);color:var(--ow-ink-400);}
+    .tok.other{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
+    /* the composer */
+    .cmp{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;}
+    .cmp-b{padding:9px 11px;font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);
+      white-space:pre-line;min-height:52px;}
     .cmp-f{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;
       border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
     .cmp-f .sp{flex:1;}
     .win{display:inline-flex;align-items:center;gap:4px;font-size:var(--ow-t-11);
       font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
-    /* The queue's own accent, held while anybody is waiting. */
-    .btn.btn-accent{background:var(--ow-oxide);color:#fff;}
-    /* the candidate table: money right, name gives way */
-    .ca{width:100%;border-collapse:collapse;font-size:var(--ow-t-12);margin:0;}
-    .ca th{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
-      text-transform:uppercase;color:var(--ow-ink-400);text-align:right;
-      padding:10px 14px 5px 12px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
-    .ca th.l{text-align:left;padding-left:14px;}
-    .ca td{padding:7px 14px 7px 12px;border-bottom:1px solid var(--ow-rule-soft);
-      text-align:right;white-space:nowrap;width:1%;
-      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
-    .ca tr:last-child td{border-bottom:0;}
-    .ca td.nm{width:auto;max-width:0;min-width:0;padding-left:14px;text-align:left;
-      overflow:hidden;text-overflow:ellipsis;
-      font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-500);letter-spacing:0;}
-    .ca td.w{font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
-    .ca tr.on td{background:var(--ow-paper-2);}
-    .ca tr.on td.nm{font-weight:var(--ow-fw-600);}
-    /* a line of evidence and where it was read from */
-    .ev{padding:7px 14px;border-top:1px solid var(--ow-rule-soft);}
-    .ev-k{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);line-height:1.35;}
-    .ev-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;
-      margin-top:1px;max-width:var(--ow-measure);}
-    .col-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);}
-    /* an estimate the record cannot yet support is ink, never green */
-    .po-fig.thin{color:var(--ow-ink-900);}
-    .po-hold{background:var(--ow-amber-faint);border:1px solid #EBD9B4;
-      border-radius:var(--ow-r-sm);padding:8px 10px;}
-    .po-hold b{color:var(--ow-amber-ink);}
+
+    /* the autonomy ledger */
+    .al{display:grid;grid-template-columns:minmax(0,1fr) 60px 74px 62px;align-items:baseline;
+      gap:10px;padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .al.head{border-top:0;}
+    .al.head span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
+      text-transform:uppercase;color:var(--ow-ink-400);}
+    .al-k{font-size:var(--ow-t-12);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .al-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+      text-align:right;white-space:nowrap;}
+    .al-v.b{font-weight:var(--ow-fw-600);}
+    .al-v.dim{color:var(--ow-ink-400);}
+
+    /* a word the customers use, waiting to be confirmed */
+    .wd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
+      padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .wd-b{min-width:0;}
+    .wd-k{display:block;font-size:var(--ow-t-13);line-height:1.35;}
+    .wd-k b{font-weight:var(--ow-fw-600);}
+    .wd-k .word{font-family:var(--mono);background:var(--ow-steel-050);border-radius:3px;padding:0 4px;}
+    .wd-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin-top:2px;}
+    .wd-a{display:flex;gap:6px;flex:none;}
+
+    .note{margin:0;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-ink-600);max-width:76ch;}
+    .note b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+    .warn{background:var(--ow-amber-faint);}
+    .warn b{color:var(--ow-amber-ink);}
+    .bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;
+      font-weight:var(--ow-fw-500);letter-spacing:-.03em;line-height:1.15;display:block;margin:8px 0 2px;}
+    .fig .u{font-size:.44em;color:var(--ow-ink-400);margin-left:.35em;letter-spacing:0;}
+    .kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:6px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .kv:first-child{border-top:0;}
+    .kv-l{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .kv-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+      font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+    .kv-v .u{font-size:.85em;color:var(--ow-ink-400);margin-left:.35em;letter-spacing:0;}
+    .a-row{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;}
   </style>
 </helmet>
-<div class="app" style="width:620px;height:1440px">
+<div class="app" style="width:620px;height:880px">
   <div style="padding:24px;background:var(--ow-steel-050);">
-    <p class="col-s" style="margin:0 0 12px;">Nobody is waiting, so the accent moves here. The
-      queue holds it whenever a customer does &mdash; a post can go any time today, a person who
-      asked forty minutes ago cannot.</p>
+    <p class="col-s" style="margin:0 0 12px;">Every chat you answered by hand is a labelled example: their
+      word on one side, the product you quoted on the other. Nothing is trusted until you say so.</p>
 
     <div class="ow-pan" style="margin-bottom:16px;">
       <div class="ow-pan-h">
-        <span class="ow-pan-t">Today&rsquo;s post</span>
-        <span class="ow-pan-n">not sent</span>
+        <span class="ow-pan-t">Words your customers use</span>
+        <span class="ow-pan-n">3 waiting on you</span>
       </div>
 
-      <div class="po-lead">
-        <span class="po-im"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9.5" r="1.6"></circle><path d="M21 16l-5-5L5 20"></path></svg></span>
-        <span class="po-b">
-          <span class="po-n" title="Iron sheets &mdash; G28, 3m box profile">Iron sheets &mdash; G28, 3m box profile</span>
-          <span class="po-sub">48,000 each &middot; 140 in the yard &middot; in the catalogue</span>
-          <span class="po-fig">+75,600<span class="u">UGX expected</span></span>
-          <span class="po-basis"><b>8,400</b> margin a sheet &times; <b>9 sheets</b> &mdash; the median
-            week-after lift of your <b>11 posts</b> that named a customer ask.</span>
+      <div class="wd">
+        <span class="wd-b">
+          <span class="wd-k"><span class="word">mabati</span> means <b>Iron Sheets (28 gauge, plain)</b></span>
+          <span class="wd-s">In 14 chats you answered by quoting it, and in none where you quoted anything
+            else. Seen from 11 different numbers.</span>
+        </span>
+        <span class="wd-a">
+          <span class="btn btn-ghost ow-sm">Yes</span>
+          <span class="btn btn-ghost ow-sm">No</span>
         </span>
       </div>
-      <div class="po-ch-a" style="padding:0 14px 12px;">
-        <span class="btn btn-ghost ow-sm">Pick another</span>
-        <span class="btn btn-ghost ow-sm">Never post this one</span>
+      <div class="wd">
+        <span class="wd-b">
+          <span class="wd-k"><span class="word">simenti</span> means <b>Cement (Tororo 50kg)</b></span>
+          <span class="wd-s">In 9 chats you answered with Tororo &mdash; but in 4 you answered with Hima.
+            <b>It may be the general word for cement</b>, not this one; saying yes would have it quote
+            Tororo to someone who wanted Hima.</span>
+        </span>
+        <span class="wd-a">
+          <span class="btn btn-ghost ow-sm">Yes</span>
+          <span class="btn btn-ghost ow-sm">No</span>
+        </span>
       </div>
-      <div class="po-ch">
-        <div class="po-ch-h">
-          <span class="po-ch-t">Post it free on Status</span>
-          <span class="po-ch-n">412 have your number</span>
-        </div>
-        <div class="po-ch-a">
-          <span class="btn btn-accent ow-sm">Open the picture</span>
-          <span class="btn btn-ghost ow-sm">Mark as posted</span>
-        </div>
+      <div class="wd">
+        <span class="wd-b">
+          <span class="wd-k"><span class="word">g28</span> means <b>Iron Sheets (28 gauge, plain)</b></span>
+          <span class="wd-s">In 6 chats. Written as <span class="word">g28</span>, <span class="word">g-28</span>
+            and <span class="word">gauge 28</span> &mdash; all three would be taken together.</span>
+        </span>
+        <span class="wd-a">
+          <span class="btn btn-ghost ow-sm">Yes</span>
+          <span class="btn btn-ghost ow-sm">No</span>
+        </span>
       </div>
+
+      <p class="note">A word is only proposed once it has appeared in <b>five different conversations</b>
+        and gone to one product every time, or nearly. That threshold is why <span class="word">simenti</span>
+        above is offered without a recommendation: the record disagrees with itself, and a proposal the
+        books cannot settle is a question, not a suggestion.</p>
+      <p class="note">Saying yes teaches the matcher and the automatic reply together. Saying no is
+        remembered too &mdash; the word will not be offered again.</p>
+    </div>
+
+    <div class="ow-pan" style="margin-bottom:16px;">
+      <div class="ow-pan-h">
+        <span class="ow-pan-t">Words it has learned</span>
+        <span class="ow-pan-n">7 in use</span>
+      </div>
+      <div class="kv"><span class="kv-l"><span class="word">mabati</span> &rarr; Iron Sheets (28 gauge, plain)</span><span class="kv-v">14<span class="u">chats</span></span></div>
+      <div class="kv"><span class="kv-l"><span class="word">misumali</span> &rarr; Steel Nails 3 inch</span><span class="kv-v">8<span class="u">chats</span></span></div>
+      <div class="kv"><span class="kv-l"><span class="word">bomba</span> &rarr; PVC Pipe 1 inch</span><span class="kv-v">6<span class="u">chats</span></span></div>
+      <p class="note">Each of these came from your own answers, and each can be taken back. They ride the
+        product, so they reach the suggestion in the chat, the automatic reply and the search box alike.</p>
     </div>
 
     <div class="ow-pan">
       <div class="ow-pan-h">
-        <span class="ow-pan-t">Why this one</span>
-        <span class="ow-pan-n">62 of 480 could go out today</span>
+        <span class="ow-pan-t">Nothing to confirm yet</span>
+        <span class="ow-pan-n">a new shop</span>
       </div>
-
-      <table class="ca">
-        <tr>
-          <th class="l">Ranked on what a post is expected to earn</th>
-          <th>Margin</th><th>Lift</th><th>Expected</th>
-        </tr>
-        <tr class="on">
-          <td class="nm">Iron sheets &mdash; G28, 3m box profile</td>
-          <td>8,400</td><td>&times; 9</td><td class="w">+75,600</td>
-        </tr>
-        <tr>
-          <td class="nm">Cement &mdash; Tororo 50 kg</td>
-          <td>4,800</td><td>&times; 6</td><td class="w">+28,800</td>
-        </tr>
-        <tr>
-          <td class="nm">Binding wire &mdash; 1.6mm, 25kg roll</td>
-          <td>6,500</td><td>&times; 3</td><td class="w">+19,500</td>
-        </tr>
-        <tr>
-          <td class="nm">Wall plugs &mdash; 6mm</td>
-          <td>180</td><td>&times; 40</td><td class="w">+7,200</td>
-        </tr>
-      </table>
-      <p class="po-note" style="border-top:0;">Margin is the sell price less the last price actually
-        paid for it, on a purchase invoice. Lift is how many extra units a post like this one has
-        moved in this shop &mdash; not a guess about the product, a median of what happened after
-        posts carrying the same kind of reason.</p>
-
-      <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
-        <span class="ow-pan-t">What the lead is carrying</span>
+      <div class="ow-empty" style="padding:22px 24px 6px;">
+        <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-ink-900);">No word has come up five times yet.</p>
+        <p style="margin:0 auto;font-size:13px;line-height:1.5;max-width:46ch;">This fills itself as you
+          answer chats. Nothing is guessed from one conversation &mdash; a customer&rsquo;s typo is not a
+          word your customers use.</p>
       </div>
-      <div class="po-lr head"><span>Evidence</span><span class="po-lv">Where it came from</span><span class="po-ln"></span></div>
-      <div class="ev"><span class="ev-k">2 customers asked for it</span><span class="ev-s">an open follow-up, and a sourcing ask that graduated</span></div>
-      <div class="ev"><span class="ev-k">4 questions in the inbox this fortnight</span><span class="ev-s">chats matched to this product by name</span></div>
-      <div class="ev"><span class="ev-k">Restocked 3 days ago</span><span class="ev-s">a stock movement in, from the stock log</span></div>
-      <div class="ev"><span class="ev-k">Costs 6% less than last time</span><span class="ev-s">the last two prices paid, on dated purchase invoices</span></div>
-      <div class="ev"><span class="ev-k">In the WhatsApp catalogue</span><span class="ev-s">customers can tap it to order without asking a price</span></div>
-      <div class="ev"><span class="ev-k">3 of its 6 WhatsApp orders came after a post</span><span class="ev-s">orders marked WhatsApp-born, against the post record</span></div>
-
-      <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
-        <span class="ow-pan-t">Left out, and why</span>
-        <span class="ow-pan-n">418 of 480</span>
-      </div>
-      <div class="ev"><span class="ev-k">Roofing nails 4&Prime; &mdash; earns 12,000 a kilo</span><span class="ev-s">6 kg in the yard would be gone in two days at its own pace. An ad for an empty shelf costs trust.</span></div>
-      <div class="ev"><span class="ev-k">Clamps &mdash; 51mm</span><span class="ev-s">posted 4 days ago; resting until the 14th day</span></div>
-      <div class="ev"><span class="ev-k">106 products</span><span class="ev-s">no selling price on either side &mdash; nothing to advertise</span></div>
-      <div class="ev"><span class="ev-k">Cement &mdash; Hima 50 kg</span><span class="ev-s">you said never post this one</span></div>
-      <p class="po-note">A product with no photo is <b>not</b> left out &mdash; it goes as a text card,
-        and the record says photos are worth about 4 extra units here, so it ranks slightly lower
-        rather than being refused.</p>
     </div>
   </div>
 </div>
