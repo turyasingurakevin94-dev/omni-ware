@@ -101,10 +101,22 @@ if (!scope) process.exit(1);
     'punctuation splits, it does not stick');
   /* A SIZE IS ONE WORD. Split at the star, "6*80" was a 6 and an 80
      that matched any product carrying either; joined, it is the bolt. */
-  ['6*80', '6x80', '6×80', '6 x 80', '6 by 80', 'M6*80'].forEach((w) =>
-    eq(JSON.stringify(scope.waQuoteTokens('hex bolts ' + w)).replace('"m6x80"', '"6x80"'), '["hex","bolts","6x80"]',
-      `${JSON.stringify(w)} is one size, written the customer's way`));
+  /* THIS SHOP WRITES ITS BOLTS "6*80". A customer writes it seven other
+     ways, and the M is the thread standard rather than part of the
+     size. All of them are the one bolt. */
+  ['6*80', '6x80', '6×80', '6 x 80', '6 by 80', '6-80', '6/80', 'M6*80', 'm6x80'].forEach((w) =>
+    eq(JSON.stringify(scope.waQuoteTokens('hex bolts ' + w)), '["hex","bolts","6x80"]',
+      `${JSON.stringify(w)} is the size the shop wrote as 6*80`));
   eq(JSON.stringify(scope.waQuoteTokens('80*6')), '["80x6"]', 'and turned round it is a different one');
+  /* THE FENCE. Four digits a side, and the lookahead is what makes it
+     one: without it "0772-123456" matched the first four of the six and
+     joined anyway. A phone number stays whole, and stays nonsense. */
+  eq(JSON.stringify(scope.waQuoteTokens('call me on 0772-123456')), '["call","0772","123456"]',
+    'a phone number is not a size');
+  eq(JSON.stringify(scope.waQuoteTokens('is it 250000/2 per roll')), '["250000","2","per","roll"]',
+    'and neither is a price divided by two');
+  eq(JSON.stringify(scope.waQuoteTokens('hex bolts 6*60. 8*25')), '["hex","bolts","6x60","8x25"]',
+    'while a full stop between two sizes still ends the first one');
 }
 
 /* ---------- 2. the candidate pool ------------------------------------ */
@@ -528,6 +540,12 @@ let SECTION2_PRODUCTS = null;
   eq(also.items.map((m) => m.name).join(' | '), 'Hex Bolts — 6*80 | Hex Bolts — 6*30', 'the second is found by its size');
   eq(!!also.items[1].bySize, true, 'and marked as reached that way');
   eq(JSON.stringify(listed.unread), '["8x25"]', 'and the size the shop does not sell is named, not dropped');
+  /* ONLY WHILE SIZES ARE THE SUBJECT. A phone number reads as a size by
+     shape, and "no 0772x1234 on file" under a bolt order is the machine
+     talking to itself. */
+  const phoned = scope.waQuoteMatchAll('cement and steel nails, call me on 0772-1234', bolts.concat(cands));
+  t.check(!phoned.unread.some((t) => /^\d+x\d/.test(t)),
+    'a size-shaped number is only a missing size when something sized was actually asked about');
   t.check(listed.items.every((m) => !m.auto), 'none of which may answer by itself');
   t.check(/^Hex Bolts — 6\*30: UGX 500 per pc\.$/m.test(scope.waQuoteReplyAll(listed.items, [null, null, null])),
     'and each size gets its own line at its own price');

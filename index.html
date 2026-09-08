@@ -25383,15 +25383,26 @@ const WA_QUOTE_STOPWORDS = new Set(('how much is the a an of for price cost what
   + 'hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one '
   + 'buy get selling sell kwa ya sente ssente meka').split(' '));
 
-/* A SIZE IS ONE WORD. "6*80", "6x80", "6×80", "6 x 80" and "6 by 80"
-   are the same bolt, and split at the star they were two loose numbers
-   that matched any product carrying a 6 or an 80 -- and read as a
-   quantity of six. Joined before anything splits, so the customer's
-   "6*80" and the catalogue's "6x80" are one token, "80*6" is another,
-   and neither is a number of anything. */
+/* A SIZE IS ONE WORD. This shop writes its bolts "6*80"; a customer
+   writes "6x80", "6×80", "6 x 80", "6 by 80", "6-80", "6/80" or
+   "M6*80", and they all mean the one bolt. Split at the star they were
+   two loose numbers that matched any product carrying a 6 or an 80 --
+   and read as a quantity of six. Joined before anything else splits,
+   so however either side wrote it there is one token; "80*6" is a
+   different one, and neither is a number of anything.
+
+   The metric M is dropped because it is the thread standard, not part
+   of the size: M6*80 and 6*80 are the same bolt whichever way the shop
+   happens to have typed it.
+
+   Four digits a side is the fence, and the lookahead is what makes it
+   a fence: without it "0772-123456" matched the first four of the six
+   and joined anyway, which is a fence with a hole in it. A phone number
+   and a price stay whole and stay nonsense, and nonsense matches
+   nothing. */
 function waQuoteSizeJoin(s){
   return String(s||'').toLowerCase()
-    .replace(/(\d+(?:\.\d+)?)\s*(?:[x×*]|by)\s*(\d+(?:\.\d+)?)/g, '$1x$2');
+    .replace(/\bm?(\d{1,4}(?:\.\d+)?)\s*(?:[x×*\/-]|by)\s*(\d{1,4}(?:\.\d+)?)(?!\d)/g, '$1x$2');
 }
 const WA_QUOTE_SIZE = /^\d+(?:\.\d+)?x\d/;
 
@@ -25850,10 +25861,21 @@ function waQuoteMatchAll(text, candidates, opts){
   /* Words that name SOME product and were claimed by no item: the
      scatter a tie cap silenced. Named on the screen rather than dropped,
      so "and nails" is not simply missing from the answer. */
-  /* ...and a SIZE that matched nothing is named too: "8x25" in a list
-     of bolts the shop does sell is a question, not filler. */
-  const unread = [...new Set([...prodTokens, ...[...qSet].filter(t=> /^\d+(?:\.\d+)?x\d/.test(t))])]
-    .filter(t=> qSet.has(t));
+  /* ...and a SIZE that matched nothing is named too: "8*25" in a list
+     of bolts the shop does sell is a question, not filler.
+
+     Only while the shop is being asked about something that COMES in
+     sizes, though. A date or a phone number reads as a size by shape,
+     and "no 0772x123456 on file" under a bolt order is the machine
+     talking to itself. If nothing sized was found, a size-shaped word
+     is just a number somebody wrote. */
+  const sized = items.some(m=>{
+    const one = m.ambiguous ? m.options[0] : m;
+    return (candidates||[]).some(c=> c.productId === one.productId
+      && (c.tokens||[]).some(t=> WA_QUOTE_SIZE.test(t)));
+  });
+  const unread = [...new Set([...prodTokens,
+    ...(sized ? [...qSet].filter(t=> WA_QUOTE_SIZE.test(t)) : [])])].filter(t=> qSet.has(t));
   /* IN THE ORDER THEY SAID THEM. The matcher reads the thing named most
      first, but a customer who wrote "cement and nails" should read
      "cement" then "nails" back, not the reverse -- the reply is a

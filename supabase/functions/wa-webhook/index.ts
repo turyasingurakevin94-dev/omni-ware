@@ -267,12 +267,13 @@ const WA_QUOTE_STOPWORDS = new Set(("how much is the a an of for price cost what
   + "hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one "
   + "buy get selling sell kwa ya sente ssente meka").split(" "));
 
-// A size is one word: "6*80", "6x80", "6 x 80" are the same bolt, and
-// none of them is six of anything. Character-for-character the client's
-// waQuoteSizeJoin / waQuoteTokens.
+// A size is one word: "6*80", "6x80", "6 x 80", "6-80", "M6*80" are the
+// same bolt, and none of them is six of anything. Four digits a side
+// keeps phone numbers and dates out. Character-for-character the
+// client's waQuoteSizeJoin.
 function waQuoteSizeJoin(s: string) {
   return String(s || "").toLowerCase()
-    .replace(/(\d+(?:\.\d+)?)\s*(?:[x×*]|by)\s*(\d+(?:\.\d+)?)/g, "$1x$2");
+    .replace(/\bm?(\d{1,4}(?:\.\d+)?)\s*(?:[x×*\/-]|by)\s*(\d{1,4}(?:\.\d+)?)(?!\d)/g, "$1x$2");
 }
 const WA_QUOTE_SIZE = /^\d+(?:\.\d+)?x\d/;
 
