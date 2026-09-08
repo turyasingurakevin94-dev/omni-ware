@@ -39,11 +39,31 @@ a{color:var(--acc);} a:hover{color:#B23A26;}
 .cols{display:grid;align-items:end;gap:0;font-size:11px;font-weight:700;
   color:var(--faint);letter-spacing:.06em;padding-top:30px;padding-bottom:12px;}
 .cols .r,.row .r{text-align:right;}
+/* The PRICE head sits over the FIGURES, not over the unit slot beside
+   them -- a column header that does not point at its own column is a
+   small lie the eye keeps having to correct. */
+.cols .r.over{padding-right:41px;}
 .r2{height:1px;background:var(--rule);}
 .row{display:grid;align-items:baseline;padding:13px 0 12px;
   border-bottom:1px solid var(--hair);}
 .row .it{font-size:13.5px;font-weight:700;}
 .row .un{font-size:13px;font-weight:600;color:var(--mute);}
+/* HOW IT COMES, as its own fact. "20 bx/ctn" is what a trader buying a
+   carton needs before the figure means anything, and it is already in
+   the books -- packQty and packUnit ride every purchase row and are
+   already published in the quote pack. Derived, never typed. */
+.row .pk{font-size:12px;font-weight:600;text-align:right;}
+.row .pk.no{color:var(--faint);font-weight:500;}
+/* THE UNIT RIDES THE PRICE, because "2,000" and "2,000/bx" are different
+   promises. The figure keeps its own right-aligned column so a column of
+   money still lines up; the unit hangs after it in a fixed slot, so the
+   suffix cannot push the figures out of true. */
+.row .pc{display:grid;grid-template-columns:1fr 38px;align-items:baseline;}
+.row .pc b{font-family:var(--mono);font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right;}
+.row .pc i{font-style:normal;font-size:11.5px;font-weight:600;color:var(--mute);
+  padding-left:3px;}
+.row .pc.soft b{color:var(--mute);font-weight:600;}
 .row .fg{font-family:var(--mono);font-size:13px;font-weight:700;
   font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right;}
 .row .fg.soft{color:var(--mute);font-weight:600;}
@@ -80,27 +100,40 @@ a{color:var(--acc);} a:hover{color:#B23A26;}
       </div>
       <div class="r1"></div>
 
-      <div class="cols" style="grid-template-columns:1fr 70px 104px 104px;">
-        <div>ITEM</div><div class="r">UNIT</div><div class="r">PRICE</div><div class="r">20+</div>
+      <div class="cols" style="grid-template-columns:1fr 128px 136px 128px;">
+        <div>ITEM</div><div class="r">PACKING</div>
+        <div class="r over">PRICE</div><div class="r over">20+</div>
       </div>
       <div class="r2"></div>
 
       <div class="grp">Hex Bolts</div>
-      <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
-        <div class="it">6*80</div><div class="un r">pc</div><div class="fg">900</div><div class="fg soft">820</div>
+      <div class="row sub" style="grid-template-columns:1fr 128px 136px 128px;">
+        <div class="it">6*80</div><div class="pk">100 pc/bx</div>
+        <div class="pc"><b>900</b><i>/pc</i></div>
+        <div class="pc soft"><b>820</b><i>/pc</i></div>
       </div>
-      <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
-        <div class="it">6*30</div><div class="un r">pc</div><div class="fg">500</div><div class="fg soft">450</div>
+      <div class="row sub" style="grid-template-columns:1fr 128px 136px 128px;">
+        <div class="it">6*30</div><div class="pk">200 pc/bx</div>
+        <div class="pc"><b>500</b><i>/pc</i></div>
+        <div class="pc soft"><b>450</b><i>/pc</i></div>
       </div>
-      <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
-        <div class="it">6*60</div><div class="un r">pc</div><div class="fg">700</div><div class="fg soft">640</div>
+      <div class="row sub" style="grid-template-columns:1fr 128px 136px 128px;">
+        <div class="it">6*60</div><div class="pk">100 pc/bx</div>
+        <div class="pc"><b>700</b><i>/pc</i></div>
+        <div class="pc soft"><b>640</b><i>/pc</i></div>
       </div>
 
-      <!-- A product with no sizes is ONE row, not a heading over an
-           empty one: the group exists to carry sizes, and inventing a
-           blank size to hang a price on is the layout talking. -->
-      <div class="row" style="grid-template-columns:1fr 70px 208px;">
-        <div class="it">BOVOS Door Handle</div><div class="un r">pc</div>
+      <!-- The other notation the shop uses, and the reason the column is
+           not just a unit: this one is priced BY THE BOX and comes twenty
+           boxes to a carton. -->
+      <div class="row" style="grid-template-columns:1fr 128px 136px 128px;">
+        <div class="it">Roofing Nails 4&Prime;</div><div class="pk">20 bx/ctn</div>
+        <div class="pc"><b>2,000</b><i>/bx</i></div>
+        <div class="pc soft"><b>1,850</b><i>/bx</i></div>
+      </div>
+
+      <div class="row" style="grid-template-columns:1fr 128px 264px;">
+        <div class="it">BOVOS Door Handle</div><div class="pk no">not recorded</div>
         <div class="none">price to confirm</div>
       </div>
 
