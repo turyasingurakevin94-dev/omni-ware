@@ -41,12 +41,12 @@ const env = {
   pairCompanionsFor: () => [],
   productVariantLabel: (p) => p.name,
 };
-const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteReply', 'waAskedQty',
+const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteReply', 'waAskedQty',
   'waAliasProposals', 'waAnswerLedger', 'waWidenDryRun', 'waCustomerKeys'];
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach',
+    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach',
       'waAskedQty', 'waQuoteReply', 'waQuoteCompanion', 'stockKey', 'waMedian',
       'waAliasProposals', 'waAnswerLedger', 'waWidenDryRun', 'waCustomerKeys',
     ].map((n) => extractFunction(src, n, 'index.html')),

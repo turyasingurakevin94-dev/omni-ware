@@ -24797,6 +24797,8 @@ function waTimeShort(ts){
 }
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+  picks: {},          // conversation id -> {wamid, by:{slot: key}} — which option
+                      // the owner chose for each tied slot of a several-item ask
   pack: null,         // {count, at, error} — the list the SERVER answers from,
                       // republished on entry whenever its contents change
   drafts: {},         // conversation id -> half-typed reply, surviving re-renders
@@ -25597,9 +25599,18 @@ function waQuoteRank(qSet, candidates, tier){
 }
 
 function waQuoteMatch(text, candidates, opts){
-  const o = opts || {};
   const qSet = new Set(waQuoteTokens(text).map(waQuoteStem));
-  const prodTokens = waQuoteProductTokens(qSet, candidates || []);
+  return waQuoteMatchSet(qSet, candidates, opts, waQuoteProductTokens(qSet, candidates || []));
+}
+
+/* The matcher proper, on a SET of the customer's words rather than the
+   text -- so a message can be read more than once, with the words one
+   product explained taken out before the next is looked for. prodTokens
+   is the whole message's product words, passed in rather than recomputed,
+   because precision is a claim about the MESSAGE, not about what is left
+   of it. */
+function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
+  const o = opts || {};
   /* NAMED FIRST. Only when nothing in the catalogue was named at all do
      the softer readings get a turn -- the category they asked for, the
      word they mistyped. */
@@ -25711,6 +25722,110 @@ async function waPublishQuotePack(){
     waInbox.pack = { count: (waInbox.pack && waInbox.pack.count) || 0,
       at: (waInbox.pack && waInbox.pack.at) || null, error: e.message || String(e) };
   }
+}
+
+/* ---- More than one thing in one message. ----
+
+   "cement and nails", "30 bags cement 5kg nails, delivery to Mukono".
+   The single matcher answers this with whichever product explains more
+   of it and a precision under one, so the owner is shown half an answer
+   and taps the assistant for the rest. This reads the message the way
+   the counter does: find the thing they named most, take those words
+   out, look again, until nothing is named.
+
+   Each item is a waQuoteMatch result -- a product, or a small tie to be
+   picked from -- and every item's precision is measured against the
+   WHOLE message, so no item of a several-item question ever reaches
+   the autonomy contract on its own: several things in one question is
+   a conversation, and a conversation is the owner's. The server is
+   silent on these by the same arithmetic and needs no second rule. */
+const WA_QUOTE_MAX_ITEMS = 5;
+
+function waQuoteMatchAll(text, candidates, opts){
+  const raw = waQuoteTokens(text);
+  let qSet = new Set(raw.map(waQuoteStem));
+  const prodTokens = waQuoteProductTokens(qSet, candidates || []);
+  const items = [];
+  for(let i = 0; i < WA_QUOTE_MAX_ITEMS && qSet.size; i++){
+    const m = waQuoteMatchSet(qSet, candidates, opts, prodTokens);
+    if(!m) break;
+    /* The words this item spoke for come out. For a tie, the options
+       share the words that tied them; what the first said is what they
+       all said. */
+    const lead = m.ambiguous ? m.options[0] : m;
+    const spoke = new Set([...(lead.said||[]).map(waQuoteStem),
+      ...(lead.viaAlias ? [waQuoteStem(lead.viaAlias)] : []),
+      ...(lead.viaSoft||[]).map(waQuoteStem)]);
+    const before = qSet.size;
+    qSet = new Set([...qSet].filter(t=> !spoke.has(t)));
+    items.push(m);
+    if(qSet.size === before) break;                // no progress: stop, do not loop
+  }
+  /* Words that name SOME product and were claimed by no item: the
+     scatter a tie cap silenced. Named on the screen rather than dropped,
+     so "and nails" is not simply missing from the answer. */
+  const unread = [...prodTokens].filter(t=> qSet.has(t));
+  /* IN THE ORDER THEY SAID THEM. The matcher reads the thing named most
+     first, but a customer who wrote "cement and nails" should read
+     "cement" then "nails" back, not the reverse -- the reply is a
+     conversation, and a conversation keeps the other person's order. */
+  const stems = raw.map(waQuoteStem);
+  const firstAt = m=>{
+    const lead = m.ambiguous ? m.options[0] : m;
+    const mine = new Set([...(lead.said||[]), ...(lead.viaAlias ? [lead.viaAlias] : []), ...(lead.viaSoft||[])].map(waQuoteStem));
+    const i = stems.findIndex(t=> mine.has(t));
+    return i < 0 ? stems.length : i;
+  };
+  items.sort((a, b)=> firstAt(a) - firstAt(b));
+  return { items, prodTokens, unread, explained: prodTokens.size - unread.length };
+}
+
+/* The quantity THIS item was asked for, when a message carries several.
+   The number nearest before the first word of its name, within a few
+   words, and never past a word that belongs to another item -- "30 bags
+   cement and 5kg nails" gives cement 30 and nails 5, not both 30. With
+   nothing before, the two words after are tried ("cement 30 bags"). */
+function waAskedQtyFor(text, m, others){
+  const words = String(text||'').toLowerCase().replace(/[^a-z0-9\u00C0-\u024F.,]+/g, ' ').trim().split(/\s+/);
+  const mine = new Set((m.said||[]).map(waQuoteStem).concat(m.viaAlias ? [waQuoteStem(m.viaAlias)] : []));
+  const theirs = new Set([].concat(...(others||[]).map(o=> (o.said||[]).map(waQuoteStem))));
+  const nameNums = new Set((m.tokens||[]).filter(t=> /^\d/.test(t)));
+  const isQty = w=>{
+    if(!/^\d/.test(w)) return null;
+    const n = Number(w.replace(/[,.]+$/, '').replace(/,/g, '').replace(/[a-z]+$/, ''));
+    if(!isFinite(n) || n <= 1 || n > 100000 || nameNums.has(String(n))) return null;
+    return n;
+  };
+  const at = words.findIndex(w=> mine.has(waQuoteStem(w.replace(/[.,]+$/, ''))));
+  if(at < 0) return null;
+  for(let k = at - 1; k >= Math.max(0, at - 4); k--){
+    const w = words[k];
+    if(theirs.has(waQuoteStem(w))) break;            // that number is somebody else's
+    const n = isQty(w); if(n != null) return n;
+  }
+  for(let k = at + 1; k <= Math.min(words.length - 1, at + 2); k++){
+    if(theirs.has(waQuoteStem(words[k]))) break;
+    const n = isQty(words[k]); if(n != null) return n;
+  }
+  return null;
+}
+
+/* Several items, one line each, and the close once. The single-item
+   reply says more -- the break, the companion -- because it has the
+   room; a several-item answer that said all of that for each would be
+   a page, and the counter would not. */
+function waQuoteReplyAll(items, qtys){
+  if(items.length === 1) return waQuoteReply(items[0], (qtys||[])[0]);
+  const lines = items.map((m, i)=>{
+    const n = Number((qtys||[])[i]);
+    if(isFinite(n) && n > 1){
+      const at = waQuoteEach(m, n);
+      return `${m.name}: ${n} ${m.unit ? m.unit + (String(m.unit).endsWith('s') ? '' : 's') : ''} comes to UGX ${Math.round(n * at.each).toLocaleString('en-UG')}${at.why ? ` at UGX ${Number(at.each).toLocaleString('en-UG')} each (${at.why})` : ''}.`;
+    }
+    return `${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`;
+  });
+  lines.push('Reply here to order, or ask about anything else.');
+  return lines.join('\n');
 }
 
 function waAskedQty(text, m){
@@ -26330,17 +26445,36 @@ function waOpenRowHTML(c, nowMs){
      floating over the thread with its own oxide button; it is the
      answer to the row's question, so it belongs in the row, and the
      reply it suggests belongs in the composer rather than beside it. */
-  let match = null, options = null, noMatch = false;
+  let match = null, options = null, noMatch = false, multi = null;
   if(unanswered && !waInbox.dismissed[lastIn.wamid]){
     /* Three things the shop already knew and the matcher never asked:
        who is asking, how many they want, and which words this shop's own
        customers use for the thing. */
     const cust = waMatchCustomer(c.wa_id);
-    const m = waQuoteMatch(lastIn.body || '', waQuoteCandidates(),
+    const all = waQuoteMatchAll(lastIn.body || '', waQuoteCandidates(),
       { customerKeys: waCustomerKeys(cust && cust.id, data.savedQuotes) });
-    if(m && m.ambiguous){ options = m.options; waInbox.suggestOptions = m.options; }
-    else if(m) match = m;
-    else noMatch = true;
+    if(all.items.length > 1){
+      /* SEVERAL THINGS IN ONE MESSAGE. Each slot is a product or a small
+         tie; a tie the owner has already settled (by tapping) is
+         replaced by their pick, keyed on the message so a newer question
+         starts clean. */
+      const picks = (waInbox.picks[convId] && waInbox.picks[convId].wamid === lastIn.wamid)
+        ? waInbox.picks[convId].by : {};
+      const slots = all.items.map((m, i)=>{
+        if(!m.ambiguous) return m;
+        const chosen = m.options.find(o=> o.key === picks[i]);
+        return chosen || m;
+      });
+      const qtys = slots.map((m, i)=> m.ambiguous ? null
+        : waAskedQtyFor(lastIn.body || '', m, slots.filter((x, j)=> j !== i && !x.ambiguous)));
+      multi = { slots, qtys, unread: all.unread, settled: slots.every(m=> !m.ambiguous) };
+      waInbox.suggestOptions = null;
+    } else {
+      const m = all.items[0] || null;
+      if(m && m.ambiguous){ options = m.options; waInbox.suggestOptions = m.options; }
+      else if(m) match = m;
+      else noMatch = true;
+    }
   }
 
   /* Pre-fill, but never over the owner's own words: the composer takes
@@ -26348,7 +26482,10 @@ function waOpenRowHTML(c, nowMs){
      screen wrote, so a newer question replaces a stale draft and a
      hand-typed one is never touched. */
   const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
-  const suggested = aiLive && aiLive.text ? aiLive.text : (match ? waQuoteReply(match, askedQty) : null);
+  const suggested = aiLive && aiLive.text ? aiLive.text
+    : match ? waQuoteReply(match, askedQty)
+    : (multi && multi.settled) ? waQuoteReplyAll(multi.slots, multi.qtys)
+    : null;
   if(suggested != null){
     const held = waInbox.drafts[convId];
     const mine = waInbox.suggested[convId];
@@ -26372,7 +26509,13 @@ function waOpenRowHTML(c, nowMs){
     ${unanswered ? `
       <div class="wa-mh">
         <span class="wa-mh-t">What they asked for</span>
-        <span class="wa-mh-n">${options ? [
+        <span class="wa-mh-n">${multi ? [
+              `${multi.slots.length} things asked for`,
+              multi.settled ? '' : 'one of them needs picking',
+              multi.unread.length ? `“${multi.unread.map(esc).join('”, “')}” could be many things` : '',
+              'read it before it goes',
+            ].filter(Boolean).join(' · ')
+          : options ? [
               `${options.length} things match — pick one`,
               /* A tie reached by kind or by spelling is a tie of GUESSES,
                  and the owner should know that before picking. */
@@ -26388,9 +26531,16 @@ function waOpenRowHTML(c, nowMs){
               match.exact ? '' : (match.via === 'named' ? 'a partial match — check it before it goes' : 'a guess — check it before it goes'),
             ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
-      ${(order || options || match) ? `<table class="wa-mtbl">
-        <tr><th class="wa-l">Item</th><th>Each</th><th>${askedQty ? esc(askedQty) + ' comes to' : 'Buy more'}</th><th></th></tr>
-        ${order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
+      ${(order || options || match || multi) ? `<table class="wa-mtbl">
+        <tr><th class="wa-l">Item</th><th>Each</th><th>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : 'Buy more'}</th><th></th></tr>
+        ${multi ? multi.slots.map((m, i)=> m.ambiguous
+            /* An unsettled slot: its options, each a tap that fills it. */
+            ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">${m.options.length} things match “${esc((m.options[0].said||[]).join(' '))}” — pick one</span></td></tr>`
+              + m.options.map(o=> `<tr><td class="wa-nm" title="${esc(o.name)}">&nbsp;&nbsp;${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-slot-pick" data-slot="${i}" data-key="${esc(o.key)}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+            : `<tr><td class="wa-nm" title="${esc(m.name)}">${multi.qtys[i] ? esc(String(multi.qtys[i])) + ' × ' : ''}${esc(m.name)}</td><td>${esc(String(Number(m.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${multi.qtys[i]
+                ? esc(String(Math.round(multi.qtys[i] * waQuoteEach(m, multi.qtys[i]).each).toLocaleString('en-UG')))
+                : '—'}</td><td></td></tr>`).join('')
+        : order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
           + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="3">no price on file — quote this one by hand</td></tr>`).join('')
           + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
         : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}">Use this</button></td></tr>`).join('')
@@ -26399,6 +26549,8 @@ function waOpenRowHTML(c, nowMs){
             : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
       : `<p class="wa-cmp-n" style="margin-top:0;">Nothing in the catalogue matches what they asked for${known ? ` — it is already being sourced as <b>${esc(known.name)}</b>` : ''}. Say so, or record the ask.</p>`}
+      ${multi ? `<p class="wa-cmp-n" style="margin-top:0;">Several things in one message is a conversation, so this is drafted for you and never sent by itself${
+        multi.slots.some(m=> !m.ambiguous && m.via && m.via !== 'named') ? ' — and one of them was found by ' + esc(multi.slots.filter(m=> !m.ambiguous && m.via && m.via !== 'named').map(m=> m.via === 'category' ? 'its category' : 'its spelling').join(' and ')) : ''}.</p>` : ''}
       ${match && (match.viaCustomer || match.viaAlias || match.missed.length) ? `<p class="wa-cmp-n" style="margin-top:0;">${[
           match.viaCustomer ? `<b>${esc(waConvTitle(c))}</b> has bought this before, which is what settled it against the others` : '',
           match.viaAlias ? `&ldquo;${esc(match.viaAlias)}&rdquo; is a word you confirmed for this product` : '',
@@ -26479,6 +26631,19 @@ function waBindOpenRow(wrap){
     delete waInbox.suggested[convId];
     waRenderInbox();
   });
+
+  /* Settling one slot of a several-item question. The pick is remembered
+     against the MESSAGE, so it survives the poll's re-render and dies
+     with the next question. The draft is not written here: the render
+     that follows composes it from the settled slots, through the same
+     pre-fill guard every suggestion passes. */
+  wrap.querySelectorAll('.wa-slot-pick').forEach(btn=> btn.addEventListener('click', ()=>{
+    const cur = waInbox.picks[convId];
+    const by = cur && cur.wamid === btn.dataset.wamid ? cur.by : {};
+    by[Number(btn.dataset.slot)] = btn.dataset.key;
+    waInbox.picks[convId] = { wamid: btn.dataset.wamid, by };
+    waRenderInbox();
+  }));
 
   wrap.querySelectorAll('.wa-suggest-opt').forEach(btn=> btn.addEventListener('click', ()=>{
     const opt = (waInbox.suggestOptions||[])[Number(btn.dataset.oi)];

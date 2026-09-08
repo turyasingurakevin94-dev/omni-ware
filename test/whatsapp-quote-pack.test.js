@@ -55,11 +55,11 @@ const env = {
     return v ? `${p.name} — ${Object.values(v.combo).join(' / ')}` : p.name;
   },
 };
-const NAMES = ['waQuotePack', 'waQuotePackPrint', 'waQuoteCandidates', 'waQuoteReply', 'waQuoteMatch'];
+const NAMES = ['waQuotePack', 'waQuotePackPrint', 'waQuoteCandidates', 'waQuoteReply', 'waQuoteMatch', 'waQuoteMatchSet'];
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteCompanion', 'waQuoteMatch', 'waQuoteProductTokens',
+    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteCompanion', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens',
       'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach', 'waAskedQty', 'waQuoteReply', 'waQuotePack', 'waQuotePackPrint', 'stockKey',
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],

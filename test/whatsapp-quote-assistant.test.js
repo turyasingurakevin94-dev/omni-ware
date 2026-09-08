@@ -56,7 +56,8 @@ const env = {
     return v ? `${p.name} — ${Object.values(v.combo).join(' / ')}` : p.name;
   },
 };
-const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteReply',
+const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteReply',
+  'waQuoteMatchAll', 'waAskedQtyFor', 'waQuoteReplyAll',
   /* The matcher scores both ways now and the quantity is no longer
      thrown away, so the pieces those rest on come in with it. */
   'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waAskedQty'];
@@ -66,6 +67,11 @@ try {
     extractFunction(src, 'waQuoteTokens', 'index.html'),
     extractFunction(src, 'waQuoteCandidates', 'index.html'),
     extractFunction(src, 'waQuoteMatch', 'index.html'),
+    extractFunction(src, 'waQuoteMatchSet', 'index.html'),
+    extractFunction(src, 'waQuoteMatchAll', 'index.html'),
+    extractFunction(src, 'waAskedQtyFor', 'index.html'),
+    extractFunction(src, 'waQuoteReplyAll', 'index.html'),
+    (src.match(/^const WA_QUOTE_MAX_ITEMS = .*$/m) || [''])[0],
     extractFunction(src, 'waQuoteProductTokens', 'index.html'),
     extractFunction(src, 'waQuoteHit', 'index.html'),
     extractFunction(src, 'waQuoteStem', 'index.html'),
@@ -354,6 +360,94 @@ let SECTION2_PRODUCTS = null;
   sellFixture.clear(); keptSell.forEach((v, k) => sellFixture.set(k, v));
 }
 
+/* ---------- 3c. SEVERAL THINGS IN ONE MESSAGE -------------------------
+ *
+ * "cement and nails" used to draft whichever product explained more of
+ * the message, with a precision under one, and the owner tapped the
+ * assistant for the other half. The counter reads such a message by
+ * finding the thing named most, setting its words aside, and looking
+ * again -- and now so does this.
+ */
+{
+  const keptProducts = env.data.products;
+  const keptSell = new Map(sellFixture); const keptBreaks = new Map(breaksFixture);
+  env.data.products = [
+    { id: 'C1', name: 'Cement (Tororo 50kg)', type: 'simple', image: null },
+    { id: 'N1', name: 'Steel Nails 3 inch', type: 'simple', image: null },
+    { id: 'P1', name: 'PVC Pipe 1 inch', type: 'simple', image: null },
+    { id: 'S1', name: 'Sofa Leg', type: 'variable', variants: [
+      { combo: { Colour: 'Gold', Size: '4"' } }, { combo: { Colour: 'Silver', Size: '4"' } } ] },
+  ];
+  sellFixture.clear(); breaksFixture.clear();
+  sellFixture.set('C1', { price: 32000, unit: 'bag' });
+  sellFixture.set('N1', { price: 12000, unit: 'kg' });
+  sellFixture.set('P1', { price: 9000, unit: 'pc' });
+  sellFixture.set('S1::0', { price: 203000, unit: 'ctn' });
+  sellFixture.set('S1::1', { price: 199000, unit: 'ctn' });
+  const cands = scope.waQuoteCandidates();
+
+  const two = scope.waQuoteMatchAll('cement and nails', cands);
+  eq(two.items.map((m) => m.name).join(' + '), 'Cement (Tororo 50kg) + Steel Nails 3 inch',
+    'two things named, two things found');
+  eq(two.unread.length, 0, 'and nothing they said about a product is left unread');
+  t.check(two.items.every((m) => !m.auto),
+    'NEITHER may answer by itself — each is measured against the whole message, and explains half of it');
+  eq(scope.waQuoteMatch('cement and nails', cands).auto, false,
+    'and the one-answer reading of the same message is not sendable either');
+
+  /* EACH ITEM'S OWN QUANTITY. "30 bags cement and 5kg nails" is 30 of
+     one and 5 of the other, not 30 of both. */
+  const asked = '30 bags cement and 5kg nails, delivery to mukono';
+  const m30 = scope.waQuoteMatchAll(asked, cands);
+  const [cem, nails] = m30.items;
+  eq(scope.waAskedQtyFor(asked, cem, [nails]), 30, 'the cement is thirty');
+  eq(scope.waAskedQtyFor(asked, nails, [cem]), 5, 'and the nails are five, read off "5kg"');
+  eq(scope.waAskedQtyFor('cement and 3 inch nails', nails, [cem]), null,
+    'the 3 in "3 inch nails" is the product, not a quantity');
+  eq(scope.waAskedQtyFor('cement 30 bags and nails', cem, [nails]), 30,
+    'a number just after the name counts too');
+  eq(scope.waAskedQtyFor('30 nails and cement', cem, [nails]), null,
+    'but a number on the far side of ANOTHER item\'s name belongs to that item');
+
+  /* THE REPLY: one line each, the close once. The single-item reply
+     says more because it has the room. */
+  const reply = scope.waQuoteReplyAll(m30.items, [30, 5]);
+  eq(reply.split('\n').length, 3, 'two lines and the close');
+  t.check(/^Cement \(Tororo 50kg\): 30 bags comes to UGX 960,000\.$/m.test(reply), 'the cement line does its arithmetic');
+  t.check(/^Steel Nails 3 inch: 5 kgs comes to UGX 60,000\.$/m.test(reply), 'and so does the nails line');
+  t.check(!/Usually taken with|Buy \d+\+/.test(reply),
+    'no companions and no breaks in a several-item answer — that is a page, and the counter would not');
+  eq(scope.waQuoteReplyAll([cem], [30]), scope.waQuoteReply(cem, 30),
+    'one item through the several-item road is the single reply, word for word');
+
+  /* A TIE IN ONE SLOT is a tie in one slot, not silence for the whole
+     message: the cement is answered, the sofa leg is a question. */
+  const tied = scope.waQuoteMatchAll('cement and sofa leg 4', cands);
+  eq(tied.items.length, 2, 'both things are read');
+  /* The thing named MOST is read first -- three words of the sofa leg
+     against one of the cement -- so the tie leads. Order is the
+     matcher's; what the test holds is that both are there. */
+  const clear = tied.items.find((m) => !m.ambiguous); const choice = tied.items.find((m) => m.ambiguous);
+  eq(clear && clear.name, 'Cement (Tororo 50kg)', 'the one that is clear is clear');
+  eq(!!choice, true, 'the one that is not is offered as a choice');
+  eq(choice && choice.options.length, 2, 'between the two 4" legs');
+
+  eq(scope.waQuoteMatchAll('hello, good morning!', cands).items.length, 0, 'a greeting names nothing');
+  eq(scope.waQuoteMatchAll('cement price', cands).items.length, 1, 'one thing is one item');
+  t.check(scope.waQuoteMatchAll('cement nails pipe leg cement nails pipe', cands).items.length <= 5,
+    'and the reading is capped, so a list cannot become a loop');
+
+  /* THE SERVER IS SILENT ON THESE by the same arithmetic. No second rule
+     was written for it: a several-item message has no item with a
+     precision of one, and precision is the contract. */
+  t.check(!/waQuoteMatchAll|WA_QUOTE_MAX_ITEMS/.test(hookSrc),
+    'the server carries no several-item reading — it has nothing to send on one');
+
+  env.data.products = keptProducts;
+  sellFixture.clear(); keptSell.forEach((v, k) => sellFixture.set(k, v));
+  breaksFixture.clear(); keptBreaks.forEach((v, k) => breaksFixture.set(k, v));
+}
+
 /* ---------- 4. what leaves the building ------------------------------ */
 {
   env.data.products = SECTION2_PRODUCTS;
@@ -390,8 +484,12 @@ let SECTION2_PRODUCTS = null;
   /* The matcher is handed what the shop already knew about the person
      asking: a tie between two cements is settled by which one this
      customer has actually bought. */
-  t.check(/const m = waQuoteMatch\(lastIn\.body \|\| '', waQuoteCandidates\(\),\s*\n\s*\{ customerKeys: waCustomerKeys\(cust && cust\.id, data\.savedQuotes\) \}\);/.test(src),
-    'the last inbound text is what gets matched, and who asked breaks a tie');
+  /* The row reads the message for EVERY thing it names now, not the one
+     it names most -- waQuoteMatchAll rather than waQuoteMatch -- but
+     what is read (the last inbound text) and what settles a tie (who is
+     asking) have not moved. */
+  t.check(/const all = waQuoteMatchAll\(lastIn\.body \|\| '', waQuoteCandidates\(\),\s*\n\s*\{ customerKeys: waCustomerKeys\(cust && cust\.id, data\.savedQuotes\) \}\);/.test(src),
+    'the last inbound text is what gets matched, for everything it names, and who asked breaks a tie');
   t.check(/const lastIn = \[\.\.\.waInbox\.msgs\]\.reverse\(\)\.find\(x=> x\.direction==='in' && x\.msg_type==='text'\);/.test(src),
     'and "last" means LAST — the newest inbound, not the first ever');
   // (dismissal is asserted with the unanswered-question gate in section 6)
@@ -484,6 +582,7 @@ let SECTION2_PRODUCTS = null;
       'do you have wheelbarrows?',       // plural -> the same
       'price of simba cements',          // plural of the whole name -> exact -> auto
       'do you have tiles?',              // unknown -> nothing
+      'cement and sofa leg gold 4',      // two things -> a conversation, nothing sent
     ];
     fixtures.forEach((text) => {
       const client = scope.waQuoteMatch(text, cands);
