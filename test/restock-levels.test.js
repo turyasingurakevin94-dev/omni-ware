@@ -111,7 +111,7 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'supplierLeadTimes', 'supplierLeadDays', 'reorderRuleFor', 'setReorderRule',
-    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineMerge',
+    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
     'buyLineReason', 'buyLineAlsoReason',
     'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted', 'purchasePlan',
     'buyKeptPct', 'buyHoldFor',

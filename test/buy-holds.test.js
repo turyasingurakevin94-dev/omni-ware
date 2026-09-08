@@ -105,7 +105,7 @@ const CHAIN = [
      anything, so the ordering chain travels with it: without these the
      scope compiles and purchasePlan throws on the first line it costs. */
   'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',
-  'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineMerge',
+  'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
   'buyLineReason', 'buyLineAlsoReason',
   'buyLineFacts', 'buyLineWhy', 'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'purchasePlan',

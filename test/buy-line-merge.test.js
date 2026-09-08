@@ -76,7 +76,7 @@ const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockO
   'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
   'quoteItemSellPrice', 'invoiceLineCost', 'buyKeptPct',
   'buyKeyParts', 'buyKeyLabel', 'buyPriceStamp', 'buyPriceNow', 'buyHoldFor',
-  'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineMerge',
+  'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
   'buyLineReason', 'buyLineAlsoReason',
   'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',

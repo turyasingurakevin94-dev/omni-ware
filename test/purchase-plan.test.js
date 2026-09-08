@@ -119,7 +119,7 @@ try {
     'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
-    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineMerge',
+    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
     'buyLineReason', 'buyLineAlsoReason',
     'buyLineFacts', 'buyLineWhy', 'buyKeptPct',
     'buyKeyParts', 'buyKeyLabel', 'buyPriceStamp', 'buyPriceNow',
@@ -464,6 +464,54 @@ if (scope) {
   t.check(withRule.spend === plain.spend, 'and a rule never changes what the plan spends');
   t.check(withRule.lines.length === plain.lines.length, 'nor how many lines it buys');
   data.__companions = {};
+}
+
+/* ---------- 8. priced, and the supplier has run out ---------------------
+   The owner's own screen: "Soft Close Mulper (Flat) — 35 sold in 30
+   days, 4 needed" filed under SELLING, NO SUPPLIER PRICE ON FILE, the
+   morning after the one supplier who sells it was marked out of stock.
+   The price was on file the whole time. rankedPriceRows() drops
+   out-of-stock rows -- rightly, nobody can be sent to buy from them --
+   buyLineFor() then returned null, and the plan had one bucket for
+   null which said the registry was empty when it was not.
+
+   Two facts, two buckets, two doors: get a price, or clear a mark. */
+if (scope) {
+  const angle = data.prices.find((r) => r.id === 3);   // S3, the only quote on Wall Angle
+  angle.outOfStock = true;
+  angle.outOfStockSince = '2026-08-25';
+  const out = scope.purchasePlan(2000000, null, TODAY);
+
+  t.check(out.lines.every((l) => l.name !== 'Wall Angle'),
+    'a supplier with none of it is still no place to send anybody — the line leaves the plan');
+  t.check(out.sourceFirst.every((s) => s.name !== 'Wall Angle'),
+    'but it is NOT "no supplier price on file": the registry has had the price all along');
+  eq(out.ranOut.map((s) => s.name).join(','), 'Wall Angle',
+    'it stands in its own bucket, which says what is actually wrong');
+
+  const line = out.ranOut[0];
+  eq(line.markedOut.who, 'Okuosi Gypsum', 'named: who has run out');
+  eq(line.markedOut.days, 2, 'and how long the mark has stood, so a stale one can be doubted');
+  eq(line.markedOut.unitCost, 2300, 'with what they last quoted at the quantity wanted — the tier, not the flat figure');
+  eq(line.units30, 200, 'carrying the demand that makes it worth chasing a second supplier for');
+
+  /* The other half of the distinction: a line nobody ever quoted still
+     belongs where it always did. */
+  t.check(out.sourceFirst.some((s) => s.name === 'Half Bend') && !out.ranOut.some((s) => s.name === 'Half Bend'),
+    'and a line nobody ever quoted stays under "no supplier price on file"');
+
+  /* A row marked out of stock that carries no price at that quantity is
+     not evidence of a price. */
+  angle.wholesale = null; angle.retail = null; angle.tiers = [];
+  const bare = scope.purchasePlan(2000000, null, TODAY);
+  t.check(bare.ranOut.every((s) => s.name !== 'Wall Angle') && bare.sourceFirst.some((s) => s.name === 'Wall Angle'),
+    'an out-of-stock row with no figure on it proves nothing, and the line falls back to "no price"');
+
+  angle.outOfStock = false; angle.outOfStockSince = null;
+  angle.wholesale = 2500; angle.retail = 2600; angle.tiers = [{ minQty: 200, price: 2300 }];
+  const back = scope.purchasePlan(2000000, null, TODAY);
+  t.check(back.lines.some((l) => l.name === 'Wall Angle') && !back.ranOut.length,
+    'and clearing the mark puts the line straight back in the plan — the bucket is a state, not a record');
 }
 
 process.exit(t.done() ? 1 : 0);

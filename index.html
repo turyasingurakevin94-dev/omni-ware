@@ -950,6 +950,7 @@
   .bp-sr-n b{display:block;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bp-sr-n em{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);margin-top:1px;
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bp-sr-w{display:block;font-size:11px;line-height:1.35;color:var(--ink-soft);margin-top:2px;}
   .bp-bk .bp-bk-clear{color:var(--ow-steel-100);border:1px solid var(--ow-steel-800);}
   /* What other shops charge. Quiet, because it is evidence rather than
      an instruction -- the owner is deciding, not being told. */
@@ -1618,6 +1619,16 @@
     .ow-pan .mgr-ask-row .btn{width:100%;height:44px;}
     .mgr-ask-q{font-size:15px;}
     .mgr-emp{padding:var(--ow-sp-24) var(--ow-sp-16);}
+    /* THE RAIL ROW HAS NO SECOND COLUMN AT 390. Beside a button, the
+       name of a real product ("Soft Close Mulper (Flat)") was cut to
+       "P007 — Sof…" and the evidence under it stacked five words deep in
+       a sliver — a row that says nothing, next to a control the thumb
+       still has to aim at. Full width for the words, the button under
+       them at a tap's height: the same shape .bp-ord-a and the Manager's
+       plays already take on this screen. */
+    .bp-sr{flex-wrap:wrap;}
+    .bp-sr-n{flex:1 1 100%;}
+    .bp-sr .btn{width:100%;min-height:var(--ow-tap);box-sizing:border-box;}
   }
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
@@ -81851,6 +81862,58 @@ function buyLineFor(r, needUnits, kind){
     unitCost: Math.round(unitCost), cost: Math.round(buyQty * unitCost) };
 }
 
+/* WHY NOTHING COULD BE COSTED — which is two different facts, and the
+   screen printed only one of them.
+
+   From the owner's own screen: "Soft Close Mulper (Flat) — 35 sold in
+   30 days, 4 needed", filed under SELLING, NO SUPPLIER PRICE ON FILE,
+   the morning after Roto — the one supplier who sells it — was marked
+   out of stock. There is a price on file. There has been for months.
+   What happened is that rankedPriceRows() drops out-of-stock rows,
+   correctly, because a supplier with none is not somewhere to send the
+   owner to buy; buyLineFor() then found nothing priced and returned
+   null; and the plan has exactly one bucket for null, which says the
+   registry is empty when it is not.
+
+   So the owner is told to go and do the one thing already done, on a
+   screen whose whole authority rests on saying only what the books
+   say. The quote screen learned this distinction long ago
+   (outOfStockNotice), and the daily brief keeps it too ('outOfStock'
+   versus 'noRow'); the buying plan simply never did.
+
+   Returns null when the registry really is empty for this line, and
+   otherwise who has run out, since when, and what they last quoted —
+   read at the SAME quantity buyLineFor would have costed, so a row
+   that carries no price at that quantity is not counted as one that
+   does. */
+function buyRanOut(productId, variantIdx, want){
+  const qty = Math.max(1, Math.ceil(Number(want) || 1));
+  const priced = productPriceRows(productId, variantIdx == null ? null : variantIdx)
+    .filter(r=> r.outOfStock)
+    .map(r=> ({ row: r, cost: purchasePriceAtQty(r, qty) }))
+    .filter(x=> x.cost != null)
+    .sort((a, b)=> a.cost - b.cost);
+  if(!priced.length) return null;
+  const names = [...new Set(priced.map(x=> supplierName(x.row.supplierId) || 'a supplier'))];
+  /* The LONGEST any of them has been out: the question this answers is
+     how stale the mark is, and the oldest one is the one worth doubting.
+     Null, never 0, when nobody dated it — a row marked before the app
+     recorded the day is not a row marked today. */
+  const days = priced.map(x=> x.row.outOfStockSince ? daysSinceDate(x.row.outOfStockSince) : null)
+    .filter(d=> d != null && d >= 0).sort((a, b)=> b - a)[0];
+  return {
+    suppliers: names,
+    who: names.length === 1 ? names[0]
+      : names.length === 2 ? `${names[0]} and ${names[1]}`
+      : `${names[0]} and ${names.length - 1} others`,
+    days: days == null ? null : days,
+    /* What they were quoting when they ran out. Not a cost to plan on —
+       nobody can be sent to buy it — but it is what the line is worth
+       chasing a second supplier for, and it is evidence the price
+       exists. */
+    unitCost: Math.round(priced[0].cost), unit: priced[0].row.unit || '' };
+}
+
 /* ONE PRODUCT, ONE DECISION.
 
    From the owner's own screen: ABC Black Screws stood on the plan
@@ -82145,7 +82208,10 @@ function purchasePlan(budget, coverDays, dateISO){
       return;
     }
     if(!probe){ noPrice.push({ name: r.name, qty: need, daysLeft: r.daysLeft,
-      units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx }); return; }
+      units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx,
+      /* Nothing priceable to buy from is not the same as nothing priced.
+         Costed at the same quantity the probe asked for. */
+      markedOut: buyRanOut(r.productId, r.variantIdx, need) }); return; }
     /* RE-COSTED WHENEVER THE ASK IS NOT THE ONE THE PROBE PRICED.
 
        It used to re-cost only UPWARDS, for the extra days of the wait,
@@ -82180,7 +82246,8 @@ function purchasePlan(budget, coverDays, dateISO){
     }
     const line = buyLineFor(r, r.units30, 'stock');
     if(!line){ noPrice.push({ name: r.name, qty: r.units30, daysLeft: null,
-      units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx }); return; }
+      units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx,
+      markedOut: buyRanOut(r.productId, r.variantIdx, r.units30) }); return; }
     /* Costed at the month's own quantity, so the comparison in the
        reason is like for like: these units, bought once. */
     line.bulkCost = Math.round(r.units30 * line.unitCost);
@@ -82276,6 +82343,13 @@ function purchasePlan(budget, coverDays, dateISO){
     lines.push(line);
   });
   noPrice.sort((a,b)=> b.profit30 - a.profit30);
+  /* TWO BUCKETS, BECAUSE THEY ARE TWO PROBLEMS WITH TWO DIFFERENT
+     ANSWERS. One is "nobody has ever quoted this, go and get a price";
+     the other is "the price is on file and the supplier has none, go
+     and clear the mark or find a second supplier". Said in one
+     sentence, the second is simply false, and the owner is sent to fix
+     something that is not broken. */
+  const ranOut = noPrice.filter(x=> x.markedOut);
   coming.sort((a,b)=> (a.daysLeft == null ? Infinity : a.daysLeft) - (b.daysLeft == null ? Infinity : b.daysLeft));
   return { budget: spendable, coverDays: cover,
     /* Both figures, because they answer different questions: what was
@@ -82283,7 +82357,8 @@ function purchasePlan(budget, coverDays, dateISO){
        orders already out. A screen given only one of them cannot
        explain the other. */
     budgetBefore: budget == null ? null : Math.round(budget), onOrder,
-    lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice, coming,
+    lines, spend: Math.round(spend), didNotFit,
+    sourceFirst: noPrice.filter(x=> !x.markedOut), ranOut, coming,
     /* Read and answered rather than bought: what the lines above cannot
        be used without, and the shelf still has. */
     alongside: alongside.filter(a=> lines.some(l=> l.name === a.with)) };
@@ -82532,7 +82607,8 @@ function renderPurchasePlanPanel(){
 
   /* ---- the plan ---- */
   const picked = plan.lines.concat(plan.didNotFit).filter(l=> buyOrderBasket.has(String(l.tag))).length;
-  const nothing = !plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length;
+  const ranOut = plan.ranOut || [];
+  const nothing = !plan.lines.length && !plan.sourceFirst.length && !ranOut.length && !plan.didNotFit.length;
   let work = strip + ordPanel;
   if(nothing){
     work += `<div class="ow-pan"><div class="ow-empty"><b>Nothing to buy.</b><br>${plan.coming.length
@@ -82620,11 +82696,32 @@ function renderPurchasePlanPanel(){
   if(plan.sourceFirst.length) rail += `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Selling, no supplier price on file</span><span class="ow-pan-n">${plan.sourceFirst.length}</span></div>
     ${plan.sourceFirst.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
-      <span class="bp-sr-n"><b>${esc(sf.name)}</b><em>${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em></span>
+      <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em></span>
       <button type="button" class="btn btn-ghost ow-sm buy-price" data-i="${i}">Add a price</button>
     </div>`).join('')}
     <p class="ow-mini">Nothing here can be costed until a supplier price exists, so it is named rather than guessed at.</p>
     ${plan.sourceFirst.length > 3 ? `<p class="ow-mini">and ${plan.sourceFirst.length - 3} more.</p>` : ''}
+  </div>`;
+  /* THE PRICE IS ON FILE; THE SUPPLIER HAS NONE. A different fact from
+     the panel above and a different door: the registry, where the mark
+     is cleared, rather than the form where a price is typed. Costed
+     figures are deliberately absent — nobody can be sent to buy this,
+     so a cost here would be a plan for an order that cannot be placed.
+     What it shows instead is who, since when, and what they last
+     quoted, which is the evidence for doubting a stale mark. */
+  if(ranOut.length) rail += `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Selling, but the supplier has none</span><span class="ow-pan-n">${ranOut.length}</span></div>
+    ${ranOut.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
+      <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em>
+        <span class="bp-sr-w">${esc(sf.markedOut.who)} ${
+          sf.markedOut.days == null ? 'marked out of stock'
+            : sf.markedOut.days === 0 ? 'marked out of stock today'
+            : `marked out of stock ${sf.markedOut.days} day${sf.markedOut.days === 1 ? '' : 's'} ago`}, last at ${
+          fmtUGXPerUnit(sf.markedOut.unitCost, sf.markedOut.unit)}</span></span>
+      <button type="button" class="btn btn-ghost ow-sm buy-oos" data-i="${i}">Open the registry</button>
+    </div>`).join('')}
+    <p class="ow-mini">These carry a price — the mark says the supplier has none, not that the registry is empty. Clear it for anyone who can send again, or add a second supplier. Until then none of it can be ordered, so none of it is in the figures above.</p>
+    ${ranOut.length > 3 ? `<p class="ow-mini">and ${ranOut.length - 3} more.</p>` : ''}
   </div>`;
 
   let html = `<div class="ow-grid"><div class="ow-stack">${work}</div><div class="ow-side">${rail}</div></div>`;
@@ -82731,6 +82828,18 @@ function renderPurchasePlanPanel(){
     resetPriceForm();
     selectPrProduct(sf.productId, sf.variantIdx);
     openModal('priceModal');
+  }));
+  /* A DIFFERENT DOOR FOR A DIFFERENT PROBLEM. The price exists, so the
+     add-a-price form would be the wrong room; the registry, filtered to
+     this product, is where the out-of-stock mark is carried and cleared.
+     Filtered by product id rather than by name, the same way the
+     sourcing board opens it, because a name can match several lines. */
+  el.querySelectorAll('.buy-oos').forEach(btn=> btn.addEventListener('click', ()=>{
+    const sf = ((buyPlanLast && buyPlanLast.ranOut) || [])[Number(btn.dataset.i)];
+    if(!sf) return;
+    document.getElementById('pr_search').value = sf.productId;
+    goToTab('prices');
+    triggerPricesRender();
   }));
   /* The door the hold is arguing for. openPriceRuleEditor already shows
      what the shelf cost against the cheapest quote on file, which is
@@ -94360,6 +94469,10 @@ const ASSISTANT_TOOLS = {
         line_count: plan.lines.length,
         over_budget: plan.didNotFit.length,
         no_price_on_file: plan.sourceFirst.length,
+        /* Priced, and nobody who quotes it has any. Counted apart, so
+           the Manager cannot advise "go and get a price" for a line
+           whose price it can already read. */
+        priced_but_supplier_out_of_stock: (plan.ranOut || []).length,
         /* WHAT THE OWNER HAS ALREADY ACTED ON. Without this the meeting
            reads a plan the owner half-ordered yesterday and tells them
            to order it again -- the same restating that costs the
@@ -95331,6 +95444,9 @@ const ASSISTANT_TOOLS = {
       more_lines: Math.max(0, plan.lines.length - 8),
       over_budget: plan.didNotFit.slice(0, 5).map(l=> ({ name: l.name, cost: apRound(l.cost) })),
       no_price_on_file: plan.sourceFirst.slice(0, 5).map(s=> ({ name: s.name, needs_about: s.qty, sold_30d: s.units30 })),
+      priced_but_supplier_out_of_stock: (plan.ranOut || []).slice(0, 5).map(s=> ({ name: s.name,
+        needs_about: s.qty, sold_30d: s.units30, marked_out_by: s.markedOut.suppliers,
+        marked_days_ago: s.markedOut.days, last_quoted: apRound(s.markedOut.unitCost) })),
     };
   }},
 
