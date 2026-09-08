@@ -302,8 +302,13 @@ const vercel = read('vercel.json');
      the assistant first, then the single match, then the settled
      several-item draft, and nothing else writes the composer. One chain,
      one composer, no second card. */
-  t.check(/aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: match \? waQuoteReply\(match, askedQty\)\s*\n\s*: \(multi && multi\.settled\) \? waQuoteReplyAll\(multi\.slots, multi\.qtys, multi\.unread\)\s*\n\s*: null;/.test(app),
-    'the assistant draft outranks the token match, which outranks the several-item draft, and none can appear twice');
+  /* A fourth source joins the chain: a TIE now drafts the price list of
+     everything that tied, composed from the same document the picture
+     is drawn from. The precedence is what this pin holds — the
+     assistant, then the single match, then the settled several-item
+     draft, then the tie — and nothing else writes the composer. */
+  t.check(/aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: match \? waQuoteReply\(match, askedQty\)\s*\n\s*: \(multi && multi\.settled\) \? waQuoteReplyAll\(multi\.slots, multi\.qtys, multi\.unread\)[\s\S]{0,320}?: \(options && plDoc\) \? waPriceListText\(plDoc\)\s*\n\s*: null;/.test(app),
+    'the assistant draft outranks the token match, the several-item draft and the tie, and none can appear twice');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');
   t.check(/id="wa_ai_order"/.test(app) && /waCreateOrderFromChat\(\)/.test(app)

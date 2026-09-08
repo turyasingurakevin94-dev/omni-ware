@@ -25209,6 +25209,33 @@ function waPriceListDoc(items, unread, ident, dateLabel){
     notCarried: (unread||[]).filter(t=> WA_QUOTE_SIZE.test(t)).map(t=> t.replace('x', '*')) };
 }
 
+/* THE WORDS FOR THAT DOCUMENT, composed from the document itself so a
+   customer whose image never loads reads the same answer, in the same
+   order, at the same prices. Capped: a caption is read in a stream, and
+   twenty lines of it is a wall -- past the cap the count is named and
+   the rest is in the picture, which is never silently dropped. */
+const WA_PRICE_TEXT_MAX = 8;
+
+function waPriceListText(doc){
+  const f = n=> Number(n||0).toLocaleString('en-UG');
+  const out = []; let shown = 0, held = 0;
+  (doc.groups||[]).forEach(g=>{
+    const bare = g.rows.length === 1 && !g.rows[0].label;
+    g.rows.forEach(r=>{
+      if(shown >= WA_PRICE_TEXT_MAX){ held++; return; }
+      shown++;
+      const nm = bare ? g.name : g.name + ' — ' + r.label;
+      out.push(r.price == null
+        ? `${nm}: we have it — the price will be confirmed shortly.`
+        : `${nm}: UGX ${f(r.price)}/${r.unit}${r.packing ? ` (${r.packing})` : ''}.`);
+    });
+  });
+  if(held) out.push(`And ${held} more in the picture.`);
+  (doc.notCarried||[]).forEach(t=> out.push(`${t}: we do not have that size.`));
+  out.push('Reply here to order, or ask about anything else.');
+  return out.join('\n');
+}
+
 /* Drawn from that document and nothing else -- the waDrawStatus law:
    what the renderer cannot reach, it cannot leak. Same paper as the
    receipt, same 2x oversampling so the figures survive WhatsApp's
@@ -26922,17 +26949,30 @@ function waOpenRowHTML(c, nowMs){
      and the screen can never disagree. Held against the message, so a
      newer question cannot be answered with an older list. */
   waInbox.priceDoc[convId] = null;
-  if(lastIn && (match || (multi && multi.settled))){
-    const rows = multi ? multi.slots : [match];
+  if(lastIn && (match || options || (multi && multi.settled))){
+    /* A TIE IS A PRICE LIST. "do you have pull handles" ties five
+       handles because the matcher cannot tell which ONE was meant --
+       but a price list does not have to pick one. The honest answer to
+       that question is all five with their prices, which is the answer
+       the owner asked for when they asked why it only showed the
+       C-type. Picking a kind still narrows it; it is no longer the only
+       way to answer. */
+    const rows = multi ? multi.slots : options ? options : [match];
     const doc = waPriceListDoc(rows, multi ? multi.unread : [], shopIdentity(),
       new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }));
     if(doc.rows) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc };
   }
 
   const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
+  const plDoc = (waInbox.priceDoc[convId] || {}).doc;
   const suggested = aiLive && aiLive.text ? aiLive.text
     : match ? waQuoteReply(match, askedQty)
     : (multi && multi.settled) ? waQuoteReplyAll(multi.slots, multi.qtys, multi.unread)
+    /* A tie had no words at all, so Send had nothing to post and the
+       owner had to pick before the shop could say anything. The words
+       come off the same document the picture is drawn from, so the two
+       can never disagree. */
+    : (options && plDoc) ? waPriceListText(plDoc)
     : null;
   if(suggested != null){
     const held = waInbox.drafts[convId];
@@ -27082,14 +27122,19 @@ function waBindOpenRow(wrap){
        composes conversation. The draft is KEPT on this road, so "Make
        it an order" still works right after the quote. */
     if(d && d.order && (d.order.lines||[]).length){ waSendQuoteFromChat(); return; }
-    /* A LIST GOES AS A LIST. More than one priced row is the case the
-       picture exists for -- names, packing and figures in columns that
-       can be read down -- and one row is not: a single price is one
-       short line, and a picture of it costs the customer data to be
-       told less. The composer's own words ride along as the caption,
-       so nothing goes out that the owner has not read. */
+    /* A PRICED ANSWER GOES AS THE SHOP'S PAPER. This once held out for
+       more than one row -- a single price is one short line, and a
+       picture of it costs the customer data to be told less. That was
+       not my trade to make: the owner asked for product answers in
+       picture form, and under that rule almost every real question
+       ("cement tororo price", "hex bolts 6*80") still went as prose,
+       which reads as the feature being broken. One row is a quote slip
+       on the shop's letterhead, which is the more professional answer
+       anyway. The composer's own words ride along as the caption, so
+       nothing goes out that the owner has not read -- and they are
+       still the whole answer if the image never loads. */
     const pl = waInbox.priceDoc[convId];
-    if(pl && pl.doc.rows > 1){ waSendPriceList(); return; }
+    if(pl){ waSendPriceList(); return; }
     waSendReply();
   });
 

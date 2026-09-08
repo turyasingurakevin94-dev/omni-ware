@@ -164,13 +164,31 @@ const item = (o) => Object.assign({
   /* Built from what the ROW just drew, never from a second read of the
      message, so the picture and the screen can never disagree. */
   t.check(/const doc = waPriceListDoc\(rows, multi \? multi\.unread : \[\], shopIdentity\(\),/.test(src)
-    && /const rows = multi \? multi\.slots : \[match\];/.test(src),
+    && /const rows = multi \? multi\.slots : options \? options : \[match\];/.test(src),
     'the document is built from the rows the owner is looking at');
+  /* A TIE IS A PRICE LIST. "do you have pull handles" ties five handles
+     because the matcher cannot tell which ONE was meant — and a price
+     list does not have to pick one. Before this, a tie built no document
+     and drafted no words, so Send did nothing at all until the owner had
+     narrowed to a single size: the shop could not answer "what pull
+     handles do you have" with the list of its pull handles. */
+  t.check(/if\(lastIn && \(match \|\| options \|\| \(multi && multi\.settled\)\)\)\{/.test(src),
+    'a tie is a price list of every option — the honest answer to "do you have pull handles"');
+  t.check(/: \(options && plDoc\) \? waPriceListText\(plDoc\)/.test(src),
+    'and it carries words, composed from the same document, so Send has something to post');
   t.check(/waInbox\.priceDoc\[convId\] = \{ wamid: lastIn\.wamid, doc \};/.test(src),
     'and held against the MESSAGE, so a newer question cannot be answered with an older list');
 
-  t.check(/const pl = waInbox\.priceDoc\[convId\];\s*\n\s*if\(pl && pl\.doc\.rows > 1\)\{ waSendPriceList\(\); return; \}/.test(src),
-    'Send posts the picture when there is more than one priced row — the case the picture exists for');
+  /* This once read `pl.doc.rows > 1`: one priced row went as prose,
+     because a picture of a single line costs the customer data to be
+     told less. That trade was not mine to make. The owner asked for
+     product answers in picture form, and under that rule almost every
+     real question — "cement tororo price", "hex bolts 6*80" — still went
+     as text, which reads as the feature being broken. One row is a
+     quote slip on the shop's letterhead, which is the better answer
+     anyway; the words are still the whole answer if the image misses. */
+  t.check(/const pl = waInbox\.priceDoc\[convId\];\s*\n\s*if\(pl\)\{ waSendPriceList\(\); return; \}/.test(src),
+    'EVERY priced answer goes as the shop\'s paper, one row or twenty');
   t.check(/if\(d && d\.order && \(d\.order\.lines\|\|\[\]\)\.length\)\{ waSendQuoteFromChat\(\); return; \}/.test(src),
     'behind the quotation, which still wins when a quantity was resolved');
 
@@ -181,6 +199,45 @@ const item = (o) => Object.assign({
     'and those same words are the text twin, so a customer whose image never loads still reads every price');
   t.check(/if\(!words\) return;/.test(send),
     'an empty composer sends nothing — a picture with no words is the half that cannot be copied');
+}
+
+/* ---------- 7. the words for that document -------------------------- */
+{
+  let W = null;
+  try {
+    W = compileScope([extractFunction(src, 'waPriceListText', 'index.html'),
+      (src.match(/^const WA_PRICE_TEXT_MAX = .*$/m) || [''])[0]], {}, ['waPriceListText']);
+  } catch (e) { /* reported below */ }
+  t.check(!!W, 'the words twin compiles alone — it is composed from the document, not from the screen');
+  if (W) {
+    const doc = {
+      groups: [
+        { name: 'C-Type Pull Handle 425MM', rows: [{ label: '400mm', packing: '10 pc/bx', price: 50000, unit: 'pc' }] },
+        { name: 'Cement (Tororo 50kg)', rows: [{ label: null, packing: '', price: 32000, unit: 'bag' }] },
+        { name: 'BOVOS Door Handle', rows: [{ label: null, packing: '', price: null, unit: 'pc' }] },
+      ],
+      notCarried: ['8*25'],
+    };
+    const lines = W.waPriceListText(doc).split('\n');
+    eq(lines[0], 'C-Type Pull Handle 425MM — 400mm: UGX 50,000/pc (10 pc/bx).',
+      'the same name, the same packing and the unit on the price — word for word what the picture says');
+    eq(lines[1], 'Cement (Tororo 50kg): UGX 32,000/bag.',
+      'a product with no size is named plainly, and with no packing to give it says none');
+    eq(lines[2], 'BOVOS Door Handle: we have it — the price will be confirmed shortly.',
+      'and one the shop has not priced says so — never a number the book does not hold');
+    eq(lines[3], '8*25: we do not have that size.', 'what the shop does not carry is said, not dropped');
+    eq(lines[4], 'Reply here to order, or ask about anything else.', 'and it closes by inviting the order');
+    t.check(!/cost|margin|supplier/i.test(lines.join(' ')),
+      'nothing about the shop\'s side of the book leaves in the caption either');
+
+    /* A CAPTION IS READ IN A STREAM. Twenty lines of it is a wall — but
+       the ones held back are COUNTED, never silently dropped. */
+    const many = { groups: [{ name: 'Hex Bolts', rows: Array.from({ length: 12 },
+      (_, i) => ({ label: 'size ' + i, packing: '', price: 900, unit: 'pc' })) }], notCarried: [] };
+    const long = W.waPriceListText(many).split('\n');
+    eq(long.length, 10, 'eight rows, the count of what is left, and the close');
+    eq(long[8], 'And 4 more in the picture.', 'and it says how many it did not list');
+  }
 }
 
 process.exit(t.done() ? 1 : 0);
