@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+/* The drawn document's own vocabulary, lifted value-for-value from
+   waDrawOrderReceipt (index.html). Literal colours on purpose: a
+   receipt is the shop's paper, not the owner's screen, so it does not
+   follow the app's theme tokens. */
+:root{
+  --acc:#8E2C1C; --ink:#12151A; --mute:#6B7280; --faint:#9CA3AF;
+  --rule:#E9EBEF; --hair:#F1F3F5;
+  --sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",monospace;
+}
+body{margin:0;font-family:var(--sans);color:var(--ink);
+  background:#E9EBED;-webkit-font-smoothing:antialiased;}
+a{color:var(--acc);} a:hover{color:#B23A26;}
+.doc{width:640px;background:#fff;box-sizing:border-box;}
+.bar{height:6px;background:var(--acc);}
+.pad{padding:0 32px;}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;padding-top:26px;}
+.nm{font-size:22px;font-weight:700;line-height:1.1;}
+.kind{font-size:13px;font-weight:700;color:var(--acc);letter-spacing:.06em;margin-top:5px;}
+.dt{font-size:13px;font-weight:700;text-align:right;}
+.dt2{font-size:12px;font-weight:600;color:var(--mute);margin-top:6px;}
+.r1{height:1px;background:var(--rule);margin-top:20px;}
+.cols{display:grid;align-items:end;gap:0;font-size:11px;font-weight:700;
+  color:var(--faint);letter-spacing:.06em;padding-top:30px;padding-bottom:12px;}
+.cols .r,.row .r{text-align:right;}
+.r2{height:1px;background:var(--rule);}
+.row{display:grid;align-items:baseline;padding:13px 0 12px;
+  border-bottom:1px solid var(--hair);}
+.row .it{font-size:13.5px;font-weight:700;}
+.row .un{font-size:13px;font-weight:600;color:var(--mute);}
+.row .fg{font-family:var(--mono);font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right;}
+.row .fg.soft{color:var(--mute);font-weight:600;}
+.row .none{font-size:12.5px;font-weight:600;color:var(--mute);text-align:right;}
+/* A KIND heading: the product, once, with its sizes beneath. This is
+   the whole readability win -- five handles become one name and four
+   short lines instead of five long ones. */
+.grp{font-size:13.5px;font-weight:700;padding:14px 0 2px;}
+.grp:first-of-type{padding-top:10px;}
+.sub{padding-left:18px;}
+.tot-r{height:1.5px;background:var(--ink);margin-top:44px;}
+.tot{display:flex;align-items:baseline;justify-content:space-between;padding-top:22px;}
+.tot-l{font-size:14px;font-weight:800;letter-spacing:.02em;}
+.tot-v{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--acc);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.blk{padding-top:30px;}
+.blk-h{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.06em;}
+.blk-l{font-size:12px;font-weight:600;color:var(--mute);margin-top:8px;}
+.ft{padding-top:38px;padding-bottom:30px;}
+.ft-1{font-size:11.5px;font-weight:500;color:var(--faint);}
+.ft-2{font-size:11.5px;font-weight:600;color:var(--mute);margin-top:10px;}
+/* A neutral messaging surface -- deliberately NOT a recreation of any
+   messenger's chrome. What is being designed is the shop's document and
+   the words beside it; the app around them is context, drawn plainly so
+   it cannot be mistaken for the subject. No fake status bar: on a real
+   phone the system draws its own on top. */
+.ph{width:390px;height:844px;box-sizing:border-box;background:#EDE7E0;
+  display:flex;flex-direction:column;overflow:hidden;}
+.ph-h{padding:14px 16px;background:#F7F5F2;border-bottom:1px solid #DED7CF;
+  font-family:var(--sans);}
+.ph-h b{display:block;font-size:15px;font-weight:600;color:var(--ink);}
+.ph-h span{font-size:12px;color:var(--mute);}
+.ph-b{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden;}
+.bub{max-width:300px;border-radius:10px;padding:8px 10px;font-family:var(--sans);
+  font-size:14.5px;line-height:1.42;color:var(--ink);box-shadow:0 1px 1px rgba(15,20,25,.10);}
+.bub.in{background:#fff;align-self:flex-start;border-top-left-radius:3px;}
+.bub.out{white-space:pre-line;background:#DCEFE4;align-self:flex-end;border-top-right-radius:3px;}
+.bub .t{display:block;text-align:right;font-size:10.5px;color:var(--faint);margin-top:3px;}
+.bub.img{padding:4px 4px 6px;max-width:284px;}
+/* The picture at the size it actually arrives: a 640px document sitting
+   in a ~270px bubble. Scaled, not redrawn -- so what is judged here is
+   the real thing. */
+.shot{width:270px;height:var(--shot-h);overflow:hidden;border-radius:7px;
+  background:#fff;position:relative;}
+.shot > .doc{transform:scale(.4219);transform-origin:top left;position:absolute;top:0;left:0;}
+/* The bubble sets pre-line so the CAPTION keeps its line breaks -- and
+   the document inside inherited it, turning every newline in its markup
+   into a real break and making the picture almost twice as tall. The
+   document lays itself out; only the words around it are pre-formatted. */
+.shot .doc,.shot .doc *{white-space:normal;}
+.cap{white-space:pre-line;padding:6px 6px 0;font-size:14.5px;line-height:1.42;}
+.tap{display:flex;align-items:center;gap:6px;padding:6px 6px 0;
+  font-size:11.5px;color:var(--mute);font-family:var(--sans);}
+.tap svg{width:13px;height:13px;flex:none;}
+.note{margin:0;padding:10px 14px;background:#fff;border-top:1px solid #DED7CF;
+  font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--mute);}
+.note b{color:var(--ink);font-weight:600;}
+  </style>
+</helmet>
+<div class="ph">
+  <div class="ph-h"><b>Kevin Moses</b><span>Today</span></div>
+  <div class="ph-b">
+    <div class="bub in">bolts 6*80, 6*30 6*60. 8*25<span class="t">12:25</span></div>
+    <div class="bub out img">
+      <div class="shot" style="--shot-h:217px;">
+        <div class="doc">
+          <div class="bar"></div>
+          <div class="pad">
+            <div class="hd">
+              <div><div class="nm">Omni-Ware Hardware</div><div class="kind">PRICE LIST</div></div>
+              <div class="dt">8 Sep 2025</div>
+            </div>
+            <div class="r1"></div>
+            <div class="cols" style="grid-template-columns:1fr 70px 104px 104px;">
+              <div>ITEM</div><div class="r">UNIT</div><div class="r">PRICE</div><div class="r">20+</div>
+            </div>
+            <div class="r2"></div>
+            <div class="grp">Hex Bolts</div>
+            <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
+              <div class="it">6*80</div><div class="un r">pc</div><div class="fg">900</div><div class="fg soft">820</div>
+            </div>
+            <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
+              <div class="it">6*30</div><div class="un r">pc</div><div class="fg">500</div><div class="fg soft">450</div>
+            </div>
+            <div class="row sub" style="grid-template-columns:1fr 70px 104px 104px;">
+              <div class="it">6*60</div><div class="un r">pc</div><div class="fg">700</div><div class="fg soft">640</div>
+            </div>
+            <div class="blk">
+              <div class="blk-h">WE DO NOT CARRY</div>
+              <div class="blk-l">8*25 &mdash; not a size we stock</div>
+            </div>
+            <div class="ft">
+              <div class="ft-1">Prices as at 8 Sep 2025. We will confirm availability and get back to you.</div>
+              <div class="ft-2">Omni-Ware Hardware &middot; 0772 123 456</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/>
+          <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+        Tap to open full size
+      </div>
+      <div class="cap">Hex Bolts — 6*80 at 900, 6*30 at 500, 6*60 at 700 per pc.
+We do not have 8*25. Full list in the picture.
+Reply here to order, or ask about anything else.<span class="t">12:26</span></div>
+    </div>
+  </div>
+  <p class="note"><b>The picture is not the message &mdash; the caption is.</b>
+    It arrives legible but small, and tapping opens it full size. The reason the
+    words still carry every price is not legibility: a picture cannot be copied,
+    cannot be found by searching the chat, and costs data to fetch on a connection
+    that may not be paying attention. The picture carries the layout; the words
+    carry the answer.</p>
+</div>
+</x-dc>
+</body>
+</html>
