@@ -47,7 +47,7 @@ let scope = null; let err = null;
 try {
   scope = compileScope([
     ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteProductTokens', 'waQuoteHit',
-      'waAskedQty', 'waQuoteReply', 'stockKey', 'waMedian',
+      'waAskedQty', 'waQuoteReply', 'waQuoteCompanion', 'stockKey', 'waMedian',
       'waAliasProposals', 'waAnswerLedger', 'waWidenDryRun', 'waCustomerKeys',
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
@@ -256,4 +256,4 @@ const said = (conv, body, hour, auto) => ({ conversation_id: conv, direction: 'o
     'and a voided order is not a purchase');
 }
 
-t.done();
+process.exit(t.done() ? 1 : 0);

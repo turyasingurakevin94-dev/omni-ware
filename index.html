@@ -9755,6 +9755,11 @@
     border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);
     line-height:1.45;color:var(--ow-ink-600);max-width:var(--ow-measure);}
   .wa-note b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  /* A note that is reporting a FAILURE, on the amber ground the rest of
+     the app already uses for one. ink-600 on --ow-amber-soft is 4.7:1
+     (see the palette note), so the body text keeps its colour. */
+  .wa-note.wa-note-warn{background:var(--ow-amber-soft);}
+  .wa-note.wa-note-warn b{color:var(--ow-amber-ink);}
   .wa-pk{display:flex;gap:var(--ow-sp-10);align-items:flex-start;padding:var(--ow-sp-10) var(--ow-sp-12);}
   .wa-pk-im{width:56px;height:56px;border-radius:var(--ow-r-sm);flex:none;object-fit:cover;
     background:var(--ow-steel-100);color:var(--ow-ink-400);display:flex;align-items:center;
@@ -24792,6 +24797,8 @@ function waTimeShort(ts){
 }
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+  pack: null,         // {count, at, error} — the list the SERVER answers from,
+                      // republished on entry whenever its contents change
   drafts: {},         // conversation id -> half-typed reply, surviving re-renders
   dismissed: {},      // wamid -> true; suggestion cards waved away this session
   aiDrafts: {},       // conversation id -> {wamid, text|error} — survives the 12s poll
@@ -25348,6 +25355,18 @@ function waCatalogItems(){
   return { items, gaps };
 }
 
+/* The one companion a quote is allowed to name, reduced to the three
+   facts the sentence needs. Said as what the shop's own orders show
+   rather than as availability: "usually taken with" is true of the
+   books, while "we have it" is a claim only the shop can make -- but
+   nothing is offered that the shop could not actually supply, which is
+   what `available` is doing here. */
+function waQuoteCompanion(productId, variantIdx){
+  const c = pairCompanionsFor(productId, variantIdx, 1)
+    .find(x=> x.verbId !== 'instead' && x.available && !x.why && x.price != null);
+  return c ? { label: c.label, price: c.price, unit: c.unit || '' } : null;
+}
+
 /* ---- The quote assistant (phase 4): draft-first, by decision. ----
 
    When a customer's message names a product, a reply is DRAFTED from
@@ -25386,7 +25405,12 @@ function waQuoteCandidates(){
         /* The words this shop's own customers use for it, confirmed one
            at a time from chats the owner answered by hand. */
         aliases: (data.presetWaAliases||[]).filter(x=> x.key === key).map(x=> x.word),
-        breaks: catalogueBreaks(p, idx, 'retail') });
+        breaks: catalogueBreaks(p, idx, 'retail'),
+        /* ONE companion, resolved HERE rather than inside the reply.
+           It is what makes waQuoteReply a pure function of its match --
+           which is what lets the server run the identical function
+           against the published pack and say the identical words. */
+        companion: waQuoteCompanion(p.id, idx) });
     });
   });
   return out;
@@ -25505,6 +25529,76 @@ function waQuoteMatch(text, candidates, opts){
    stray token that matched nothing, and the reply quoted a unit price
    to a customer who had asked for thirty. A bare number that is not
    part of a product's own name is a quantity. */
+/* ---- The quote pack: one list, published. ----
+
+   The browser and the webhook have been matching against two different
+   sets of products while calling themselves mirrors. The browser reads
+   every product with a retail price; the webhook read the Meta catalog,
+   which takes only products with a photo AND a price. So the same
+   question about the same product got a price when the owner was
+   reading and silence when they were asleep, and nothing said why.
+
+   Meta's photo rule is Meta's, and their catalog keeps it -- a
+   storefront needs pictures. A TEXT REPLY needs no photo. The two are
+   different lists because they always were, and this is the wider one:
+   everything the shop can be asked about.
+
+   WHAT RIDES, AND WHY EACH. The name and its tokens are the match; the
+   price and unit are the answer; the breaks are the volume line; the
+   ALIASES are the words this shop's own customers use, which is what
+   makes "saying yes teaches the suggestion here and the automatic reply
+   together" true rather than a claim; and the companion is the one
+   thing the sentence names beside the product. Nothing else -- no cost,
+   no margin, no supplier. What leaves the building never carries them,
+   and a list the server reads is the building's edge. */
+function waQuotePack(){
+  return waQuoteCandidates().map(c=> ({
+    key: c.key, name: c.name, tokens: c.tokens, price: c.price, unit: c.unit,
+    breaks: c.breaks, aliases: c.aliases, companion: c.companion }));
+}
+
+/* Whether the pack CHANGED, in one short string. Opening the screen
+   twice is a read and no write; changing a price is a read and one.
+   FNV-1a over the JSON -- not a security hash, and it does not need to
+   be: the worst a collision costs is a republish that did not happen,
+   which the next real change publishes anyway. */
+function waQuotePackPrint(items){
+  const str = JSON.stringify(items);
+  let h = 0x811c9dc5;
+  for(let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return items.length + '-' + h.toString(16);
+}
+
+/* Published on entering the screen, because a pack nobody remembers to
+   push is a pack that quotes last month's prices. A FAILURE NAMES
+   ITSELF: the channel panel reads waInbox.pack, and says both how old
+   the list is and that the last attempt to refresh it did not land. */
+async function waPublishQuotePack(){
+  const items = waQuotePack();
+  const print = waQuotePackPrint(items);
+  try{
+    const { data: row, error: readErr } = await sb.from('wa_quote_pack')
+      .select('fingerprint, item_count, built_at').eq('shop_id', currentShopId).maybeSingle();
+    if(readErr) throw readErr;
+    if(row && row.fingerprint === print){
+      waInbox.pack = { count: row.item_count, at: row.built_at, error: null };
+      return;
+    }
+    const at = new Date().toISOString();
+    const { error } = await sb.from('wa_quote_pack').upsert({
+      shop_id: currentShopId, items, item_count: items.length, fingerprint: print, built_at: at });
+    if(error) throw error;
+    waInbox.pack = { count: items.length, at, error: null };
+  }catch(e){
+    console.error('quote pack publish failed', e);
+    waInbox.pack = { count: (waInbox.pack && waInbox.pack.count) || 0,
+      at: (waInbox.pack && waInbox.pack.at) || null, error: e.message || String(e) };
+  }
+}
+
 function waAskedQty(text, m){
   const words = String(text||'').toLowerCase().match(/\d[\d,.]*/g) || [];
   const nameNums = new Set((m && m.tokens || []).filter(t=> /^\d/.test(t)));
@@ -25533,13 +25627,11 @@ function waQuoteReply(m, qty){
   }
   (m.breaks||[]).slice(0,1).forEach(b=>
     lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}.`));
-  /* ONE companion, and said as what the shop's own orders show rather
-     than as availability: "usually taken with" is true of the books,
-     while "we have it" is a claim only the shop can make. */
-  const goes = m.productId
-    ? pairCompanionsFor(m.productId, m.variantIdx, 1)
-        .find(c=> c.verbId !== 'instead' && c.available && !c.why && c.price != null)
-    : null;
+  /* ONE companion, read off the match rather than looked up. The
+     lookup moved to waQuoteCandidates so that THIS function is a pure
+     function of its argument -- the server runs the very same source
+     against the published pack, and two voices become one. */
+  const goes = m.companion;
   if(goes) lines.push(`Usually taken with ${goes.label}: UGX ${Number(goes.price).toLocaleString('en-UG')}${goes.unit ? ' per ' + goes.unit : ''}.`);
   lines.push('Reply here to order, or ask about anything else.');
   return lines.join('\n');
@@ -25601,6 +25693,9 @@ async function waInboxEnter(){
   document.getElementById('wa_find_btn').style.display = '';
   await waFetchConvs();
   await waFetchInsightMsgs();
+  /* Before the panels draw the count, so the number on the screen is
+     the number the server will actually answer from. */
+  await waPublishQuotePack();
   if(waInbox.active) await waFetchThread(waInbox.active);
   waRenderInbox();
   renderWaInsights();
@@ -25694,9 +25789,11 @@ function waRenderConnect(){
       <div class="wa-fields">
         <label style="display:flex;align-items:flex-start;gap:8px;font-size:var(--ow-t-12);line-height:1.45;cursor:pointer;max-width:var(--ow-measure);">
           <input type="checkbox" id="wa_auto_quote" style="margin-top:2px;">
-          <span>Answer price questions automatically — EXACT catalogue matches only, at the published
-          price. Partial matches and ties still wait for you, and every automatic reply is marked
-          <b>auto</b> in the thread and on this screen.</span>
+          <span>Answer price questions automatically &mdash; only when a customer names a product
+          outright, at the price this app holds for it. That is <b>anything you can sell</b>, photo
+          or no photo, not just what is in the browsable catalogue. Partial matches and ties still
+          wait for you, and every automatic reply is marked <b>auto</b> in the thread and on this
+          screen.</span>
         </label>
       </div>
       <p class="wa-note" style="border-top:0;padding-left:0;">Sync pushes every product that has a photo
@@ -26084,7 +26181,7 @@ function waRenderAnswered(waiting, snippets, nowMs){
     (hidden ? `${hidden} more answered earlier today, not shown. ` : '')
     + (outToday.length > rows.length ? 'Chats that have since asked again are in the queue above, not here. ' : '')
     + (median == null ? '' : `Half of today’s answers went out within ${waFmtMins(median)}. `)
-    + 'The system answers only an exact catalogue match, and marks the reply so the customer’s next question still reaches you.';
+    + 'The system answers only when a customer names a product outright, and marks the reply so the customer’s next question still reaches you.';
 }
 
 /* Inside the open row: the record, the price, and the reply. */
@@ -26675,8 +26772,12 @@ function waRenderChannel(){
   if(!pan) return;
   if(!waInbox.configured){ pan.innerHTML = ''; return; }
   const cat = waCatalogItems();
-  const total = (data.products||[]).length;
-  const left = cat.gaps.noPhoto.length + cat.gaps.noPrice.length;
+  /* The denominator is every SELLABLE LINE -- a variable product with
+     six variants is six things a customer can ask about, and counting
+     it as one made both fractions lie. Every line lands in exactly one
+     of these three. */
+  const lines = cat.items.length + cat.gaps.noPhoto.length + cat.gaps.noPrice.length;
+  const pack = waInbox.pack || { count: 0, at: null, error: null };
   /* What is in the way, and the way to fix it -- in the panel that
      already reports the catalogue count, rather than in the post panel
      where the same fact was being told a second time in other words.
@@ -26696,7 +26797,8 @@ function waRenderChannel(){
   pan.innerHTML = `
     <div class="ow-pan-h"><span class="ow-pan-t">The channel</span></div>
     <div class="wa-kv"><span class="wa-kv-l">Chats on file</span><span class="wa-kv-v">${(waInbox.convs||[]).length}</span></div>
-    <div class="wa-kv"><span class="wa-kv-l">In the catalogue</span><span class="wa-kv-v">${cat.items.length}<span class="ow-u">of ${total}</span></span></div>
+    <div class="wa-kv"><span class="wa-kv-l">Answerable by the system</span><span class="wa-kv-v">${pack.count}<span class="ow-u">of ${lines}</span></span></div>
+    <div class="wa-kv"><span class="wa-kv-l">Browsable inside WhatsApp</span><span class="wa-kv-v">${cat.items.length}<span class="ow-u">of ${lines}</span></span></div>
     <div class="wa-bc">
       <div class="field" style="margin:0;">
         <label for="wa_phone">Number shown on posts</label>
@@ -26707,9 +26809,15 @@ function waRenderChannel(){
       <button type="button" class="btn btn-ghost ow-sm" id="wa_conn_open">Connection</button>
     </div>
     ${gapRows.join('')}
-    ${left ? `<p class="wa-note">A photo is wanted, not required &mdash; anything with a price can
-      still go out as a text card. Only a photo <b>and</b> a price puts a product in the catalogue
-      customers browse inside WhatsApp.</p>` : ''}`;
+    ${pack.error ? `<p class="wa-note wa-note-warn"><b>The list the system answers from did not refresh.</b>
+      ${esc(pack.error)} &mdash; until it does, automatic replies quote the last list that landed${
+        pack.at ? `, published ${esc(waFmtWait((Date.now() - Date.parse(pack.at))/60000) + ' ago')}` : ''}.</p>`
+      : `<p class="wa-note">The system can be asked about <b>anything with a price</b>, photo or no
+      photo &mdash; a text reply needs no picture, and neither does a post. A photo <b>and</b> a
+      price is what puts a product in the catalogue customers browse inside WhatsApp, which is
+      Meta&rsquo;s rule, not the shop&rsquo;s. The answerable list is republished whenever this
+      screen is opened and something has changed${pack.at
+        ? `; this one was built ${esc(waFmtWait((Date.now() - Date.parse(pack.at))/60000) + ' ago')}` : ''}.</p>`}`;
   pan.querySelectorAll('.wa-gap-go').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.go)));
 
   const phone = document.getElementById('wa_phone');

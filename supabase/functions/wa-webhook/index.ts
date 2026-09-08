@@ -246,13 +246,23 @@ async function createWaOrder(shopId: string, phoneNumberId: string, waId: string
 
 /* ---- Auto-quote (phase 4b): exact matches only, by decision. ----
 
-   A MIRROR of the client's waQuoteTokens/waQuoteMatch, small enough to
-   carry twice; the test suite runs both implementations over the same
-   fixtures and fails if they ever disagree. Prices come from the
-   PUBLISHED CATALOG -- the shop's own public word, priced by the
-   client's proven chain at sync time -- so an auto-reply can never say
-   a number the shop window does not. Anything less than an exact match
-   is left for the humans and the inbox card. */
+   A MIRROR of the client's waQuoteTokens/waQuoteMatch/waQuoteReply,
+   small enough to carry twice; the test suite runs both implementations
+   over the same fixtures and fails if they ever disagree -- on the
+   match AND on the words.
+
+   IT READS THE QUOTE PACK, not the Meta catalog. That was the fork:
+   the catalog takes only products with a photo and a price, so the
+   webhook could answer about a few dozen things while the browser could
+   answer about hundreds, and the same question got a price by day and
+   silence by night. The pack is the browser's own candidate list,
+   published to wa_quote_pack -- every product with a price, photo or
+   no photo, carrying the words this shop's customers use for it.
+   Prices still come from the client's proven chain; the server does not
+   and must not re-derive one.
+
+   Anything less than an exact match is left for the humans and the
+   inbox card. */
 const WA_QUOTE_STOPWORDS = new Set(("how much is the a an of for price cost what whats does do you have i want need me my "
   + "hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one "
   + "buy get selling sell kwa ya sente ssente meka").split(" "));
@@ -308,29 +318,77 @@ function waExactMatch(text: string, candidates: any) {
   return null;
 }
 
-// The published catalog, cached per instance: a burst of questions must
-// not become a burst of Graph calls.
-let catalogCache: { catalogId: string; at: number; items: { tokens: string[]; name: string; price: string }[] } | null = null;
+// How long after it was built a pack may still be quoted from. The
+// browser republishes every time the WhatsApp screen is opened and
+// anything has changed, so a pack this old means nobody has opened the
+// app in a month -- and a price nobody has looked at in a month is not
+// a price to say unattended. Silence is the safe direction.
+const WA_PACK_STALE_DAYS = 30;
 
-async function catalogQuoteItems(catalogId: string) {
-  if (catalogCache && catalogCache.catalogId === catalogId && Date.now() - catalogCache.at < 5 * 60 * 1000) {
-    return catalogCache.items;
+// The published pack, cached per instance: a burst of questions must
+// not become a burst of database reads.
+// deno-lint-ignore no-explicit-any
+let packCache: { shopId: string; at: number; items: any[] } | null = null;
+
+async function quotePackItems(shopId: string) {
+  if (packCache && packCache.shopId === shopId && Date.now() - packCache.at < 5 * 60 * 1000) {
+    return packCache.items;
   }
-  const items: { tokens: string[]; name: string; price: string }[] = [];
-  let url = `${GRAPH_BASE}/${catalogId}/products?fields=name,price&limit=100`;
-  for (let page = 0; page < 10 && url; page++) {
-    const resp = await fetch(url, { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
-    const result = await resp.json().catch(() => ({}));
-    if (!resp.ok) { console.error("wa-webhook: catalog fetch for auto-quote failed", resp.status, result); return null; }
-    // deno-lint-ignore no-explicit-any
-    for (const pr of ((result as any).data ?? [])) {
-      if (pr.name) items.push({ name: String(pr.name), tokens: waQuoteTokens(String(pr.name)), price: String(pr.price ?? "") });
-    }
-    // deno-lint-ignore no-explicit-any
-    url = (result as any).paging?.next ?? "";
+  const { data: row, error } = await admin.from("wa_quote_pack")
+    .select("items, built_at").eq("shop_id", shopId).maybeSingle();
+  if (error) { console.error("wa-webhook: quote pack read failed", error); return null; }
+  // NAMED, not silently nothing: a shop that opted in and is answering
+  // no one should be findable in the logs.
+  if (!row) { console.log("wa-webhook: no quote pack published for shop", shopId, "- not auto-quoting"); return null; }
+  const age = (Date.now() - Date.parse(String(row.built_at))) / 86400000;
+  if (!(age >= 0) || age > WA_PACK_STALE_DAYS) {
+    console.log("wa-webhook: quote pack is", Math.round(age), "days old - not auto-quoting");
+    return null;
   }
-  catalogCache = { catalogId, at: Date.now(), items };
+  const items = Array.isArray(row.items) ? row.items : [];
+  packCache = { shopId, at: Date.now(), items };
   return items;
+}
+
+// THE SAME WORDS THE OWNER WOULD HAVE SENT. Character-for-character the
+// client's waQuoteReply and waAskedQty, which is why they are pure
+// functions of a match: one voice, whether the owner taps Send or the
+// system answers at midnight. The test suite runs both copies over one
+// fixture set.
+// deno-lint-ignore no-explicit-any
+function waAskedQty(text: string, m: any) {
+  const words = String(text || "").toLowerCase().match(/\d[\d,.]*/g) || [];
+  // deno-lint-ignore no-explicit-any
+  const toks: any[] = (m && m.tokens) || [];
+  const nameNums = new Set(toks.filter((t) => /^\d/.test(t)));
+  for (const w of words) {
+    const n = Number(String(w).replace(/[,.]+$/, "").replace(/,/g, ""));
+    if (!isFinite(n) || n <= 1) continue;      // "1" is not a quantity worth saying
+    if (nameNums.has(String(n))) continue;      // 28 in "28 gauge" is the product
+    if (n > 100000) continue;                   // that is a price, or a phone number
+    return n;
+  }
+  return null;
+}
+
+// deno-lint-ignore no-explicit-any
+function waQuoteReply(m: any, qty: number | null) {
+  const lines: string[] = [];
+  lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString("en-UG")}${m.unit ? " per " + m.unit : ""}.`);
+  // deno-lint-ignore no-explicit-any
+  const breaks: any[] = m.breaks ?? [];
+  const n = Number(qty);
+  if (isFinite(n) && n > 1) {
+    const at = breaks.filter((b) => n >= b.qty).sort((x, y) => y.qty - x.qty)[0];
+    const each = at ? at.price : m.price;
+    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith("s") ? "" : "s") : ""} comes to UGX ${Math.round(n * each).toLocaleString("en-UG")}${at ? ` at UGX ${Number(each).toLocaleString("en-UG")} each` : ""}.`);
+  }
+  breaks.slice(0, 1).forEach((b) =>
+    lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString("en-UG")}.`));
+  const goes = m.companion;
+  if (goes) lines.push(`Usually taken with ${goes.label}: UGX ${Number(goes.price).toLocaleString("en-UG")}${goes.unit ? " per " + goes.unit : ""}.`);
+  lines.push("Reply here to order, or ask about anything else.");
+  return lines.join("\n");
 }
 
 // STOP in the customer's own words -- and a few of the words they
@@ -344,14 +402,16 @@ function waOptOutCommand(text: string) {
 
 async function maybeAutoQuote(shopId: string, phoneNumberId: string, convId: number, waId: string, text: string) {
   const { data: numRow } = await admin.from("wa_numbers")
-    .select("auto_quote, catalog_id").eq("shop_id", shopId).maybeSingle();
-  if (!numRow || !numRow.auto_quote || !numRow.catalog_id || !ACCESS_TOKEN) return;
-  const items = await catalogQuoteItems(String(numRow.catalog_id));
-  if (!items) return;
+    .select("auto_quote").eq("shop_id", shopId).maybeSingle();
+  // The catalog id is no longer a gate: a shop can answer questions
+  // without running a storefront, and requiring one meant a shop that
+  // had not finished Commerce Manager answered nobody.
+  if (!numRow || !numRow.auto_quote || !ACCESS_TOKEN) return;
+  const items = await quotePackItems(shopId);
+  if (!items || !items.length) return;
   const m = waExactMatch(text, items);
   if (!m) return;
-  const reply = `${m.name}: ${m.price ? m.price.replace(/(\d) UGX$/, "$1 UGX") : "price on request"}. `
-    + "Reply here to order, or ask about bulk prices.";
+  const reply = waQuoteReply(m, waAskedQty(text, m));
   // Parrot guard: the same answer, twice in an hour, to the same
   // conversation is noise, not service.
   const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();

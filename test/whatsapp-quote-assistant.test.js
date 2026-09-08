@@ -65,6 +65,7 @@ try {
     extractFunction(src, 'waQuoteMatch', 'index.html'),
     extractFunction(src, 'waQuoteProductTokens', 'index.html'),
     extractFunction(src, 'waQuoteHit', 'index.html'),
+    extractFunction(src, 'waQuoteCompanion', 'index.html'),
     extractFunction(src, 'waAskedQty', 'index.html'),
     extractFunction(src, 'waQuoteReply', 'index.html'),
     extractFunction(src, 'stockKey', 'index.html'),
@@ -258,10 +259,17 @@ if (!scope) process.exit(1);
 
   /* WHAT THE SHOP WROTE DOWN reaches the customer's reply, said as a
      fact about the shop's own orders rather than as availability: only
-     the shop can say what is on the shelf, and it says that itself. */
-  const m = scope.waQuoteMatch('cement price', cands);
-  companionFixture.set(m.productId + (m.variantIdx == null ? '' : '::' + m.variantIdx),
+     the shop can say what is on the shelf, and it says that itself.
+
+     The pairing is now read when the CANDIDATE is built rather than
+     when the reply is written, which is why the fixture goes in before
+     the pool: waQuoteReply had to become a pure function of its match
+     for the server to be able to run the identical source against the
+     published pack. Setting the fixture and re-reading a match made
+     earlier would now, correctly, find nothing. */
+  companionFixture.set('P1',
     [{ verbId: 'needs', label: 'River Sand', price: 30000, unit: 'trip', available: true, why: null }]);
+  const m = scope.waQuoteMatch('cement price', scope.waQuoteCandidates());
   const withCompanion = scope.waQuoteReply(m);
   t.check(withCompanion.includes('Usually taken with River Sand: UGX 30,000 per trip.'),
     'one companion is named, with its price');
@@ -341,8 +349,14 @@ if (!scope) process.exit(1);
     hook = compileScope([
       extractFunction(hookSrc, 'waQuoteTokens', 'wa-webhook'),
       extractFunction(hookSrc, 'waExactMatch', 'wa-webhook'),
+      /* The WORDS are a mirror too now, not only the match. The server
+         used to compose its own one-liner out of Meta's price string,
+         so the shop had two voices -- one when the owner tapped Send
+         and another at midnight. */
+      extractFunction(hookSrc, 'waAskedQty', 'wa-webhook'),
+      extractFunction(hookSrc, 'waQuoteReply', 'wa-webhook'),
       (hookSrc.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
-    ], {}, ['waQuoteTokens', 'waExactMatch'], { typescript: true });
+    ], {}, ['waQuoteTokens', 'waExactMatch', 'waAskedQty', 'waQuoteReply'], { typescript: true });
   } catch (e) { hErr = e; }
   t.check(!!hook, `the webhook mirror compiles${hErr ? ` (${hErr.message})` : ''}`);
   if (hook) {
@@ -361,11 +375,25 @@ if (!scope) process.exit(1);
     fixtures.forEach((text) => {
       const client = scope.waQuoteMatch(text, cands);
       const server = hook.waExactMatch(text, cands);
-      const clientExact = client && !client.ambiguous && client.exact ? client.name : null;
+      const clientAuto = client && !client.ambiguous && client.auto ? client : null;
       const serverName = server ? server.name : null;
-      eq(serverName, clientExact,
-        `both matchers agree on ${JSON.stringify(text)} — the server answers only what the client calls exact`);
+      eq(serverName, clientAuto && clientAuto.name,
+        `both matchers agree on ${JSON.stringify(text)} — the server answers only what the client would answer alone`);
+      /* AND THEY SAY THE SAME THING. Same source, same match, same
+         quantity — so a customer cannot tell from the words whether a
+         person was awake. */
+      if (server && clientAuto) {
+        eq(hook.waQuoteReply(server, hook.waAskedQty(text, server)),
+          scope.waQuoteReply(clientAuto, scope.waAskedQty(text, clientAuto)),
+          `and word for word on ${JSON.stringify(text)}`);
+      }
     });
+    /* The quantity is the case that used to differ most: the client did
+       the arithmetic and the server quoted one unit. */
+    const thirty = 'price of sofa leg gold 4 — i need 30';
+    const sm = hook.waExactMatch(thirty, cands);
+    t.check(!!sm && /30 ctns comes to UGX 6,090,000/.test(hook.waQuoteReply(sm, hook.waAskedQty(thirty, sm))),
+      'the server does the arithmetic the customer asked for, exactly as the composer would');
   }
 
   /* The autonomy contract, held in the source. */
@@ -376,8 +404,15 @@ if (!scope) process.exit(1);
   t.check(/if \(winners\.length !== 1\) return null;/.test(hookSrc)
     && /if \(w\.recall === 1 && precision === 1\) return w\.c;/.test(hookSrc),
     'the server sends only on EXACT AND ALONE — anything less returns nothing');
-  t.check(/if \(!numRow \|\| !numRow\.auto_quote \|\| !numRow\.catalog_id \|\| !ACCESS_TOKEN\) return;/.test(hookSrc),
-    'and only when the shop has OPTED IN and published a catalog');
+  /* THE CATALOG ID IS NO LONGER A GATE. It used to be, because the
+     Meta catalog WAS the list -- which meant a shop that had not
+     finished Commerce Manager answered nobody, and a shop that had
+     could only answer about the products it had photographed. The
+     opt-in is the gate; the pack is the list. */
+  t.check(/if \(!numRow \|\| !numRow\.auto_quote \|\| !ACCESS_TOKEN\) return;/.test(hookSrc),
+    'and only when the shop has OPTED IN');
+  t.check(!/catalog_id/.test(hookSrc.slice(hookSrc.indexOf('async function maybeAutoQuote'))),
+    'a shop can answer questions without running a storefront');
   t.check(/ev\.type === "text" && ev\.body && \(landed \?\? \[\]\)\.length > 0/.test(hookSrc),
     'auto-quote rides the freshly-landed gate — a webhook retry cannot answer twice');
   /* The lookup existing is not the guard working -- the RETURN is. */
@@ -386,7 +421,9 @@ if (!scope) process.exit(1);
   t.check(/payload: \{ auto: true \},/.test(hookSrc),
     'every automatic reply is marked as the system speaking');
   t.check(!/catalogueSellAtQty|suggestedSellingPrice/.test(hookSrc),
-    'the server never re-prices — it quotes the PUBLISHED catalog, the shop\'s own public word');
+    'the server never re-prices — it quotes the pack the browser published, priced by the chain the printed catalogue proves');
+  t.check(!/GRAPH_BASE\}\/\$\{catalogId\}\/products/.test(hookSrc),
+    'and it no longer reads the Meta catalog to decide what it can talk about');
 
   /* The client's side of the bargain. */
   t.check(/update\(\{ auto_quote: on \}\)\.eq\('shop_id', currentShopId\)/.test(src),
