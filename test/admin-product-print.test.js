@@ -114,8 +114,21 @@ if (rowsFor) {
       'the on-screen list is built from these rows');
     t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/g) || []).length === 2,
       'and the printout calls the very same function with the very same filters');
-    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 4,
+    /* 4 -> 5, and the fifth is the reason the assertion below was added
+       beside it. The register's strip and its category rail describe THE
+       REGISTER, not the slice the set-up filter has left, so they are
+       computed over a fifth call that passes the same search, category
+       and supplier and deliberately passes NO set-up filter. Without it,
+       narrowing to "no supplier price" made the rail claim the shop sold
+       nothing else.
+       What this check has always meant is that no caller quietly
+       narrows on a filter the others do not apply. That still holds: the
+       new caller widens, on one named filter, and the check below pins
+       it to exactly one so a second cannot appear unnoticed. */
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 5,
       'and nothing calls it with a filter the others are not passing');
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, '', addedFilter\)/g) || []).length === 1,
+      'exactly one call drops the set-up filter on purpose — the strip and the rail, which describe the whole register rather than the filtered slice');
     /* The catalogue is the fourth caller and the one deliberate
        exception: it passes '' for the pricing filter because it decides
        for itself what it can price -- a product needs a supplier price

@@ -149,11 +149,20 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/const initials = agentInitials\(\);/.test(code),
     'the Account card uses the same helper, so the two cannot disagree');
 
-  // The behaviour that was missing entirely -- the letter never changed.
+  /* The behaviour that was missing entirely -- the letter never changed.
+
+     Compiled WITH nameInitials, because agentInitials is a wrapper over
+     it now rather than a fourth private copy. It used to take character
+     zero of each word, which is how "Reagan - Stuart" was lettered
+     "R-": punctuation where an initial belongs, on the one mark whose
+     job is telling two people apart. The cases below cover both the old
+     behaviour and the names that broke it. */
   const initialsFor = (name) => {
     let f = null;
     try { ({ agentInitials: f } = compileScope(
-      [extractFunction(src, 'agentInitials', 'agent.html')], { myAgent: name === undefined ? null : { name } }, ['agentInitials'])); }
+      [extractFunction(src, 'nameInitials', 'agent.html'),
+       extractFunction(src, 'agentInitials', 'agent.html')],
+      { myAgent: name === undefined ? null : { name } }, ['agentInitials'])); }
     catch (e) { return `THREW: ${e.message}`; }
     return f();
   };
@@ -164,6 +173,16 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(initialsFor('  Grace  ') === 'G', 'padding does not become the initial');
   t.check(initialsFor(undefined) === '?', 'and no agent yet shows a placeholder instead of throwing');
   t.check(initialsFor('') === '?', 'as does a nameless one');
+  /* The four that shipped wrong, and the reason this stopped being a
+     private copy. */
+  t.check(initialsFor('Reagan - Stuart') === 'RS',
+    'a hyphen-qualified name gives two letters, not a letter and a hyphen');
+  t.check(initialsFor('Feko (Ambrose)') === 'FA',
+    'and a bracket-qualified one two letters, not a letter and a bracket');
+  t.check(initialsFor('Ronald - 7th Street') === 'R7',
+    'a digit counts as a letter, because the 7 is what says which Ronald');
+  t.check(initialsFor('Feko (Ambrose)') !== initialsFor('Feko (Rebbeca)'),
+    'so the two Fekos are told apart by the mark that exists to tell them apart');
 }
 
 process.exit(t.done() ? 1 : 0);

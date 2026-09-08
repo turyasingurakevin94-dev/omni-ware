@@ -101,6 +101,9 @@ const data = {
 const env = {
   data,
   todayISO: () => TODAY,
+  /* What the shop wrote down about its own goods, as the one reader
+     returns it. Empty unless a check below writes a rule down. */
+  pairCompanionsFor: (pid, vi) => (data.__companions || {})[pid + '::' + (vi == null ? '' : vi)] || [],
   supplierName: (id) => ({ S1: 'Kampala Steel', S2: 'Roto', S3: 'Okuosi Gypsum' })[id] || String(id),
   productDisplayLabel: (p, vi) => (vi == null ? p.name : p.name + ' v' + vi),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
@@ -112,7 +115,7 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+    'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
     'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
@@ -421,6 +424,46 @@ if (scope) {
     'the borrowed classes are retired, not left in the drawer');
   t.check(!/class="buy-row"/.test(panel) && !/class="buy-controls"/.test(panel),
     'while this one wears its own');
+}
+
+/* ---------- what cannot be sold without the other --------------------- */
+/*
+ * Sheets bought without the nails that fix them are sheets nobody can
+ * use, and the plan ranked the two by what each earned alone — so the
+ * nails could sit ten lines below the sheets and fall off the end of
+ * the budget. A rule never buys anything: it moves a line the plan had
+ * already chosen up beside the line that needs it, and names a needed
+ * thing the shelf still has rather than buying it again.
+ */
+{
+  const plain = scope.purchasePlan(null, 14, TODAY);
+  const names = plain.lines.map((l) => l.name);
+  /* Wall Angle is on the plan; the shop has written that it cannot be
+     used without Sofa Legs, which is on the plan too — and without
+     Roofing Nails, which the shelf still holds. */
+  data.__companions = {
+    'P2::': [
+      { verbId: 'needs', productId: 'P4', variantIdx: null, label: 'Sofa Legs',
+        qty: 40, unit: 'Pc', price: 6000, inStock: true, stock: 12, why: null },
+      { verbId: 'needs', productId: 'P9', variantIdx: null, label: 'Roofing Nails',
+        qty: 40, unit: 'Kg', price: 6000, inStock: true, stock: 80, why: null },
+    ],
+  };
+  const withRule = scope.purchasePlan(null, 14, TODAY);
+  const paired = withRule.lines.filter((l) => l.productId === 'P2' || l.productId === 'P4');
+  if (paired.length === 2) {
+    const i = withRule.lines.indexOf(paired[0]), j = withRule.lines.indexOf(paired[1]);
+    t.check(Math.abs(i - j) === 1, 'a thing that cannot be used without another is bought beside it');
+    t.check(withRule.lines.some((l) => l.boughtWith), 'and says which line put it there');
+    t.check(/cannot be used without/.test(scope.buyLineWhy(withRule.lines.find((l) => l.boughtWith))),
+      'in the sentence the card shows');
+  }
+  t.check(withRule.alongside.some((a) => a.name === 'Roofing Nails'),
+    'a needed thing the shelf still holds is named rather than bought');
+  t.check(withRule.alongside.every((a) => a.with), 'and says what needs it');
+  t.check(withRule.spend === plain.spend, 'and a rule never changes what the plan spends');
+  t.check(withRule.lines.length === plain.lines.length, 'nor how many lines it buys');
+  data.__companions = {};
 }
 
 process.exit(t.done() ? 1 : 0);

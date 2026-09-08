@@ -69,7 +69,7 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    'stockKey', 'getStockQty', 'addStockLot', 'consumeStockLots', 'restoreStockLots',
+    'stockKey', 'stockOnHand', 'getStockQty', 'addStockLot', 'consumeStockLots', 'restoreStockLots',
     'applyStockDelta', 'getFIFOUnitCost', 'shelfValueForKey', 'inventoryValue',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued',
     'consignmentSettlements', 'consignmentSettled', 'consignmentSettlementDue',
@@ -83,7 +83,7 @@ try {
     'shelfValueForKey',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
     'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
-    'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements',
+    'sellBelowCostClause', 'getFIFOUnitCost', 'stockOnHand', 'getStockQty', 'stockKey', 'consignmentSettlements',
     'consignmentSettlementDue', 'purchaseInvoiceBalanceDue', 'consignmentDueNow',
     'consignmentMarkPlan', 'consignmentMarkApply', 'unmarkedSalesByKey', 'consignmentUnmarkedSales']);
 } catch (e) { err = e; }

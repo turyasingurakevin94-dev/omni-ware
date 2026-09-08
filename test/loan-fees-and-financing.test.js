@@ -38,6 +38,10 @@ const data = { loans: [], fixedAssets: [] };
 const scope = compileScope([
   'const DEPRECIATION_MAX_MONTHS = 40*12;',
   extractFunction(src, 'monthsBetween', 'index.html'),
+  extractFunction(src, 'monthChargeFraction', 'index.html'),
+  extractFunction(src, 'assetCoverInMonth', 'index.html'),
+  extractFunction(src, 'assetRowFraction', 'index.html'),
+  extractFunction(src, 'periodEndDate', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
@@ -147,8 +151,12 @@ const asset = (over) => Object.assign({
   const a = asset(), l = loan();
   const s = scope.assetFinancingSchedule(a, l);
 
-  t.check(s.length === 60,
-    `the schedule runs as long as either side has something to say (got ${s.length}: 60 depreciating, 36 repaying)`);
+  /* 61, not 60: the van was bought on the 15th, so its sixty months of
+     life end in the 61st calendar month. The rule this pins -- the chart
+     runs as long as EITHER side still has something to say -- is
+     unchanged; what changed is how long the depreciating side runs. */
+  t.check(s.length === 61,
+    `the schedule runs as long as either side has something to say (got ${s.length}: 61 depreciating from the 15th, 36 repaying)`);
   t.check(r(s[0].owed) === 20000000, 'it opens on the full debt');
   t.check(r(s[0].equity) < 0, 'and the van is worth less than it the day it is bought');
 
@@ -162,10 +170,15 @@ const asset = (over) => Object.assign({
     `the debt clears on the agreed schedule rather than standing still (got ${r(last.owed)} in ${last.month})`);
   t.check(r(last.nbv) === 2000000, 'while the asset carries on to its residual value');
 
+  /* One month earlier than it used to be, and for a real reason: the
+     first month now wears only the 17 days the van was owned, so book
+     value stays above the debt sooner. The point is the same -- a van
+     bought with a loan is underwater at the start and then it is not,
+     for a handful of months rather than for its whole life. */
   const crossover = s.find((x) => x.equity >= 0);
-  t.check(crossover && crossover.month === '2026-04',
+  t.check(crossover && crossover.month === '2026-03',
     `it is underwater only until the repayments overtake the depreciation (${crossover && crossover.month})`);
-  t.check(s.filter((x) => x.equity < 0).length === 3, 'three months, not sixty');
+  t.check(s.filter((x) => x.equity < 0).length === 2, 'two months, not sixty');
 
   // A loan repaid faster than the asset depreciates is never underwater.
   const quick = scope.assetFinancingSchedule(a, loan({ termMonths: 6, ratePct: 0 }));

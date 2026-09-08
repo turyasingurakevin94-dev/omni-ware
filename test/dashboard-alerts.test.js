@@ -69,6 +69,9 @@ try {
     daysSinceDate: (d) => (d ? Math.round((Date.parse('2026-08-29') - Date.parse(String(d))) / 86400000) : -1),
     daysBetweenISO: (a, b) => Math.round((Date.parse(String(b)) - Date.parse(String(a))) / 86400000),
     supplierName: (id) => ({ S2: 'Roto' })[id] || String(id),
+    /* What the shop wrote down as a swap for a line that has run out.
+       Empty unless a check below writes one down. */
+    pairSubstitutesFor: (pid, idx) => (promiseData.__subs || {})[pid + '::' + (idx == null ? '' : idx)] || [],
     data: promiseData,
   }, [...NAMES, 'readBands']);
 } catch (e) { err = e; }

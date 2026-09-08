@@ -59,6 +59,11 @@ const scope = compileScope([
   extractFunction(src, 'stageStepsHTML', 'index.html'),
   extractFunction(src, 'orderPreviewStepsHTML', 'index.html'),
   extractFunction(src, 'buildPackingChitHTML', 'index.html'),
+  /* The chit says the count in the unit the line was chosen in, through
+     the same reader every document uses. Compiled in, not stubbed. */
+  extractFunction(src, 'quoteLinePack', 'index.html'),
+  extractFunction(src, 'quoteLineCountPer', 'index.html'),
+  extractFunction(src, 'quoteLineCount', 'index.html'),
 ], {
   data,
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
@@ -268,6 +273,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      nobody has a screen to tap. */
   const boxes = (chit.match(/class="pk-box"/g) || []).length;
   t.check(boxes === 2, `a box to tick on each line (${boxes})`);
+
+  /* IN THE WORDS THE ORDER WAS WRITTEN IN. A line chosen as 2 Ctn is
+     gathered as 2 Ctn, with what is already in said in cartons too --
+     not counted out as 200 Pair for the picker to fold back. */
+  const ctnChit = scope.buildPackingChitHTML(order([stockLine({ productName: 'Soft Close',
+    unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200, pickStatus: 'short', pickedQty: 150 })]));
+  t.check(/2 Ctn/.test(ctnChit) && /1\.5 already in/.test(ctnChit) && !/200 Pair/.test(ctnChit),
+    'a carton line is listed as 2 Ctn, with 1.5 already in');
   t.check(/Picked by/.test(chit), 'and somewhere to sign at the end');
 
   /* Nothing truncated. The trip message learned this: two 14-character

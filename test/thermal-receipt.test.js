@@ -32,9 +32,15 @@ const src = read('index.html');
 
 /* ---------- the builder, compiled with the app's own money ----------- */
 
+/* quoteLinePack and its two readers are compiled in rather than stubbed:
+   a receipt that says "20 Pair" to somebody who walked out with a
+   carton is describing a different sale from the one that happened, and
+   the paper is the only record they keep. Stubbing them here would let
+   the receipt drift away from the invoice printed for the same order. */
 const NAMES = ['receiptNum', 'receiptNumberLabel', 'nextPaymentId', 'paymentMethodLabel',
   'shopIdentity', 'printedShopName', 'buildReceiptHTML', 'savedQuoteTotal',
-  'invoiceBalanceDue', 'quoteClientName', 'invoiceNumberLabel'];
+  'invoiceBalanceDue', 'quoteClientName', 'invoiceNumberLabel',
+  'quoteLinePack', 'quoteLineQtyText', 'quoteLineEach'];
 
 const makeScope = (over) => {
   const data = Object.assign({

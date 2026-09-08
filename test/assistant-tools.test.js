@@ -70,7 +70,7 @@ const NAMES = [
   'collectableDebts', 'customerOldestOpenChargeDate', 'customerOpenCharges', 'daysSinceDate',
   'cashOnHandFor', 'cashOnHandByAccount', 'cashAnchorFor', 'cashIsMoneyIn', 'cashIsMoneyOut',
   'debtCollectionsOn', 'debtLogIsInvoiceOwned', 'cashIsDebtCollection',
-  'getStockQty', 'stockKey',
+  'stockOnHand', 'getStockQty', 'stockKey',
   'buildProductSuggestionEntries', 'supplierSkuIndex', 'searchTokens', 'matchesAllTokens',
   'productSearchText', 'productVariantLabel', 'variantLabel',
   'rankedPriceRows', 'productPriceRows', 'suggestedSellingPrice', 'effectiveMarkupRule',
@@ -80,7 +80,7 @@ const NAMES = [
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId', 'ensurePresetCategory',
   'allProductVariantEntries', 'reorderRuleFor', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
   'shelfValueForKey', 'consignTally', 'consignedOnShelf',
-  'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
+  'getFIFOUnitCost', 'stockUnitFor', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   // The registry's own label builders: the dossier speaks its words,
   // not a second set of its own (see assistant-price-vocabulary).
   'prTierChipLabel', 'priceTierSummaryPart',
@@ -88,6 +88,9 @@ const NAMES = [
 ];
 const scope = compileScope([
   extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+  /* productPackInfo reads the shelf's own unit through stockUnitFor now,
+     and that compares unit words through this. */
+  extractDeclaration(src, 'cmpUnitKey', 'index.html'),
   extractDeclaration(src, 'AP_MAX_THREAD', 'index.html'),
   extractDeclaration(src, 'AP_MAX_STEPS', 'index.html'),
   extractDeclaration(src, 'apRound', 'index.html'),
@@ -125,6 +128,34 @@ const scope = compileScope([
   'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS, todayISO}; }',
 ], {
   data,
+  /* What the shop wrote down about its own goods. This fixture keeps
+     the rules themselves in pairing-consumers.test.js and answers the
+     tools here with an empty book, so product_details reads a product
+     with no companions -- which is most of a catalogue. */
+  pairCompanionsFor: () => [],
+  pairSubstitutesFor: () => [],
+  pairLastsDays: () => null,
+  pairRulesOf: () => [],
+  pairGrid: () => null,
+  pairStanding: () => ({ label: 'Yours only', ev: { withFrom: 0, andTo: 0 } }),
+  pairSizeIdx: (v) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v)),
+  pairSideLabel: (id) => String(id),
+  pairDuplicateOf: () => null,
+  productLinkName: (id) => String(id),
+  observedPairs: () => [],
+  addProductLink: (fromId, verb, toId, qty, per, note, sizes) => {
+    (data.productLinks = data.productLinks || []).push({ id: (data.productLinks.length + 1),
+      fromId, verb, toId, qty, per, note, active: true,
+      fromVariantIdx: (sizes || {}).fromVariantIdx == null ? null : sizes.fromVariantIdx,
+      toVariantIdx: (sizes || {}).toVariantIdx == null ? null : sizes.toVariantIdx });
+    return { ok: true, link: data.productLinks[data.productLinks.length - 1] };
+  },
+  updateProductLink: (id, patch) => {
+    const l = (data.productLinks || []).find(x => x.id === id);
+    if (!l) return { ok: false, why: 'gone' };
+    Object.assign(l, patch);
+    return { ok: true };
+  },
   /* A benign element for every id: the reused functions peek at tabs
      ("is the cashbook visible?") before re-rendering, and 'none' makes
      every such peek answer no. */
@@ -164,12 +195,19 @@ const run = (name, input) => T[name].run(input || {});
        shop's name on a quantity at a price. A card the owner approves
        is the whole difference between the app acting on advice and the
        app acting on its own. */
-    'place_buy_order'];
+    'place_buy_order',
+    /* Writing down what goes with what is a write and gated like one.
+       It moves no money and changes no price -- and it changes what
+       every customer's picture, the quote rail and the till say about
+       the shop's goods, which is the owner's word to give, not the
+       assistant's. */
+    'set_product_rule'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'invoice_lines', 'financial_summary', 'recommended_price', 'product_details',
-    'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies', 'month_and_quarter'];
-  t.check(Object.keys(T).length === 38, `thirty-eight executors (got ${Object.keys(T).length})`);
+    'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies', 'month_and_quarter',
+    'product_rules'];
+  t.check(Object.keys(T).length === 40, `forty executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -177,7 +215,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 38 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 40 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
   // The three Manager reads join the free side of the ledger.
   t.check(T.shop_pulse && T.shop_pulse.confirm === false, 'shop_pulse answers freely — it reads and nothing more');

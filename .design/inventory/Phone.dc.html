@@ -1,0 +1,904 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+    /* ================= THE INVENTORY CONSOLE ==========================
+       Built only from what index.html already ships: the 23-colour
+       palette, the 11/12/13/14/19 ramp, Inter + Archivo Black + IBM Plex
+       Mono, the .ow-* components, radius 4/6/8, space in even steps,
+       hairlines instead of shadows. No new colour, no new weight, no new
+       size, no fourteenth button family.
+       ================================================================= */
+
+    /* ---- THE FIND BAR: the screen leads with it ----
+       Three of the four jobs -- look one line up, receive against a
+       line, correct a count -- start by naming a product. So the widest,
+       tallest, first thing under the page name is the box you type into,
+       and the filters sit on its own row rather than above the money. */
+    .iv-find{display:flex;align-items:stretch;gap:8px;margin-bottom:8px;}
+    .iv-fb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      box-sizing:border-box;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);}
+    .iv-fb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fb-v{font-size:14px;color:var(--ow-ink-900);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fb-v.ph{color:var(--ow-ink-600);}
+    .iv-fb-x{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-fb-x svg{width:11px;height:11px;stroke:var(--ow-ink-600);stroke-width:1.8;}
+    .iv-sel{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-sel .l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .iv-sel .cv{width:7px;height:7px;border-right:1.6px solid var(--ow-ink-400);
+      border-bottom:1.6px solid var(--ow-ink-400);transform:rotate(45deg) translate(-1px,-1px);flex:none;}
+    .iv-tog{display:flex;align-items:center;gap:8px;height:44px;padding:0 13px 0 11px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-tog .bx{width:16px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-tog .bx svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* What the search actually did, said in one line, before the money.
+       "Nothing matches" is never allowed to stand for "it matched and a
+       filter hid it" -- so the line names the filter and offers it back. */
+    .iv-fr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 16px;
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-fr b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fr .lk{color:var(--ow-ink-900);font-weight:600;text-decoration:underline;
+      text-underline-offset:2px;}
+
+    /* ---- THE REPAIR BAR ----
+       Two full-width crimson banners became one 38px line. It appears
+       only when something is wrong and takes the space back entirely
+       when nothing is -- a screen that reserves room for problems it
+       does not have is a screen that always looks slightly broken. */
+    .iv-fix{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 12px;
+      box-sizing:border-box;background:var(--ow-amber-faint);border:1px solid rgba(176,112,10,.30);
+      border-radius:var(--ow-r-lg);margin-bottom:16px;}
+    .iv-fix > svg{width:16px;height:16px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fix-t{font-size:12px;font-weight:600;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+    .iv-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1px solid rgba(176,112,10,.30);
+      font-size:11px;font-weight:500;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-chip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;}
+    .iv-chip.on{background:var(--ow-amber-soft);border-color:var(--ow-amber);font-weight:600;}
+    .iv-fix-sp{flex:1;}
+    .iv-fix-o{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-o .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);}
+
+    /* ---- THE SHELF ROW ----
+       44px, table-like, opens in place. Five columns and only one of
+       them gives way: the name. Money and counts are sized to their
+       content, because a clipped figure is a WRONG figure. */
+    .iv-h{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:10px;padding:0 12px;height:28px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .iv-h span{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-h .r{text-align:right;}
+    .iv-g.ow-open{box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+    .iv-r{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);text-align:left;}
+    .iv-g:last-child .iv-r{border-bottom:0;}
+    .iv-g.ow-open .iv-r{background:var(--ow-paper-2);}
+    .iv-cr{grid-column:1;grid-row:1 / span 2;width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;align-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .iv-g.ow-open .iv-cr{transform:rotate(90deg);}
+    .iv-n{grid-column:3;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
+    .iv-nm{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-m{grid-column:3;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .iv-f .u{font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-left:3px;}
+    .iv-f .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f.q{grid-column:4;grid-row:1 / span 2;}
+    .iv-f.c{grid-column:5;grid-row:1 / span 2;}
+    .iv-f.v{grid-column:6;grid-row:1 / span 2;font-size:14px;}
+    /* Out entirely against a floor somebody set: genuinely bad. Under
+       the floor but not out: caution. Everything else is ink -- a count
+       is a size, not a warning. */
+    .iv-f.out{color:var(--ow-crimson);}
+    .iv-f.thin{color:var(--ow-amber-ink);}
+    .iv-f.none{color:var(--ow-ink-600);font-weight:500;}
+    .iv-f.notours{color:var(--ow-amber-ink);}
+
+    /* ---- THE OPEN LINE: the whole of one line's business ---- */
+    .iv-x{padding:4px 12px 14px 40px;}
+    .iv-say{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 11px;}
+    .iv-say b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-say .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fs{display:flex;flex-wrap:wrap;align-items:stretch;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);
+      width:max-content;max-width:100%;margin:0 0 11px;}
+    .iv-fs > div{padding:7px 14px;border-left:1px solid var(--ow-rule-soft);}
+    .iv-fs > div:first-child{border-left:0;}
+    .iv-fs-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .iv-fs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;white-space:nowrap;}
+    .iv-fs-v .u{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:var(--ow-ink-600);margin-left:3px;}
+    .iv-fs-v.warn{color:var(--ow-amber-ink);}
+    .iv-fs-v.bad{color:var(--ow-crimson);}
+    .iv-mv{margin:0 0 11px;}
+    .iv-mv-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 6px;}
+    .iv-mv-r{display:flex;align-items:baseline;gap:10px;padding:5px 0;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .iv-mv-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);white-space:nowrap;
+      width:66px;flex:none;}
+    .iv-mv-w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-600);}
+    .iv-mv-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .iv-mv-q.up{color:var(--ow-verdigris);}
+    .iv-mv-q.down{color:var(--ow-crimson);}
+    .iv-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* ---- rail ---- */
+    .rr{display:flex;align-items:baseline;gap:10px;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .rr:first-child{border-top:0;}
+    .rr-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+    .rr-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+    .rr-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rr-q.up{color:var(--ow-verdigris);}
+    .rr-q.down{color:var(--ow-crimson);}
+    .ow-pan-a{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-pan-a .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(-45deg);}
+    .ow-mt-v.sm{font-size:19px;}
+
+    /* The page header's help bubble and the two buttons */
+    .ow-ph-h{display:flex;align-items:center;gap:8px;}
+
+    /* ---- the repair drawer ----
+       What used to be two crimson banners standing above every figure on
+       the screen, on every visit. It is one 38px line until you open it,
+       and the order of the three sections is a rule rather than a
+       ranking -- said on screen, because a shop that fixes them in the
+       other order makes more work for itself. */
+    .iv-fx{background:var(--ow-paper);border:1px solid rgba(176,112,10,.30);border-top:1px solid rgba(176,112,10,.30);
+      border-bottom-left-radius:var(--ow-r-lg);border-bottom-right-radius:var(--ow-r-lg);
+      margin-bottom:16px;overflow:hidden;}
+    .iv-fx-o{margin:0;padding:11px 14px;background:var(--ow-amber-faint);
+      border-bottom:1px solid var(--ow-rule-soft);
+      font-size:12px;line-height:1.5;color:var(--ow-amber-ink);max-width:var(--ow-measure);}
+    .iv-fx-o b{font-weight:600;}
+    .iv-fx-s{padding:13px 14px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-s:first-of-type{border-top:0;}
+    .iv-fx-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 6px;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-n{font-size:11px;font-weight:400;color:var(--ow-ink-600);}
+    .iv-fx-w{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .iv-fx-w b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-fx-r{display:flex;align-items:center;gap:12px;padding:7px 0;
+      border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-nm{font-size:13px;font-weight:500;min-width:0;flex:0 1 260px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fx-f{flex:0 0 auto;margin-right:auto;font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-fx-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-f .warn{color:var(--ow-amber-ink);font-weight:500;}
+    .iv-fx-f .bad{color:var(--ow-crimson);font-weight:500;}
+    .iv-fx-a{padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-m{margin:9px 0 0;padding-top:9px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .iv-fx-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the states sheet ---- */
+    .st-l{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:12px;font-weight:600;
+      letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-l:not(:first-child){margin-top:26px;}
+    .st-n{width:19px;height:19px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);
+      font-size:11px;letter-spacing:0;flex:none;}
+    .st{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:14px;}
+    .st-w{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .st-w b{color:var(--ow-ink-900);font-weight:600;}
+    .st-fail{display:flex;gap:12px;padding:14px;background:var(--ow-crimson-soft);
+      border:1px solid var(--ow-crimson);border-radius:var(--ow-r-lg);}
+    .st-fail > svg{width:20px;height:20px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .st-fail-t{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-crimson);}
+    .st-fail-w{margin:0 0 11px;font-size:12px;line-height:1.55;color:var(--ow-ink-900);max-width:var(--ow-measure);}
+    .st-fail-w b{font-weight:600;}
+    .st-fail-a{display:flex;gap:6px;}
+
+    /* The header as state C draws it: the screen's two acts, off. The copy
+       says receiving and counting are turned off until the ledger reads,
+       and a board that says so without showing it is only half the state. */
+    .st-hd{display:flex;align-items:center;gap:8px;padding:0 0 10px;margin-bottom:12px;
+      border-bottom:1px solid var(--ow-rule);}
+    .st-hd-t{font-family:'Archivo Black',sans-serif;font-size:19px;letter-spacing:-.015em;}
+
+    /* ---- THE PHOTO ON THE ROW, AS A ZOOM TARGET ----
+
+       index.html argues at .ow-sf-th that a 28px row thumb must NOT be
+       zoomable: "28px is not a zoom target, and the row's one job when
+       you press it is to open -- a thumbnail that stole that press would
+       make the picture cost you the row." That objection is right about
+       28px and right about the stolen press. It is answered here rather
+       than ignored, and it takes three things, not a class.
+
+       1. IT IS A 44px TARGET THAT LOOKS 28px. The frame stays 28 so the
+          row keeps its density and matches .ow-thumb everywhere else;
+          an ::after extends the pressable area to 44x44. inset:-8px
+          stays inside the row's own height (rows run ~50px), so it
+          never steals a press from the row above or below.
+
+       2. IT SAYS SO WITHOUT HOVER. A corner glyph is on at REST, not
+          only on hover -- this app is used on a phone and a tablet,
+          where there is no hover to discover anything with, and a
+          control that only announces itself to a mouse is a control
+          half the shop cannot find. Hover deepens it to a full scrim.
+
+       3. THE ROW HANDLER MUST STEP OVER IT. Without
+          `if(e.target.closest(".img-zoomable")) return;` at the top of
+          the row's click handler, the row toggle fires too and shuts
+          the row underneath the lightbox -- the picture appears and
+          vanishes. index.html:74072 already does exactly this for
+          Sourcing's open-row photo; the inventory row needs the same
+          line. This is the whole of the "stolen press" objection, and
+          it is one line.
+
+       What it still costs, honestly: the row is now two targets, and a
+       press aimed at the row that lands in the left 44px opens a
+       picture instead of the line. That is the trade, and it is why the
+       glyph is always on. */
+    .ow-thumb{grid-column:2;grid-row:1 / span 2;position:relative;width:28px;height:28px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;flex:none;overflow:visible;
+      cursor:zoom-in;}
+    .ow-th-i{width:100%;height:100%;display:block;border-radius:var(--ow-r-sm);}
+    /* the 44px target, invisible, inside the row's own height */
+    .ow-thumb::after{content:'';position:absolute;inset:-8px;border-radius:var(--ow-r);}
+    /* the resting affordance: on without hover, because touch has none */
+    .ow-th-z{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:var(--ow-paper);
+      display:flex;align-items:center;justify-content:center;}
+    .ow-th-z svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* hover: the whole frame says it, not just the corner */
+    .ow-thumb.hov .ow-th-sc{position:absolute;inset:0;border-radius:var(--ow-r-sm);
+      background:rgba(20,23,27,.55);display:flex;align-items:center;justify-content:center;}
+    .ow-thumb.hov .ow-th-sc svg{width:14px;height:14px;fill:none;stroke:var(--ow-paper);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* the console's own focus ring, so the picture is reachable by keyboard --
+       the app's .img-zoomable is a bare <img> today and is not */
+    .ow-thumb.foc{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+    /* No photo is not a target. Dashed so it never reads as a photo that
+       failed to load, no zoom cursor, no glyph, no 44px area -- there is
+       nothing behind it to open. */
+    .ow-thumb.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
+      color:var(--ow-ink-600);cursor:default;}
+    .ow-thumb.none::after{content:none;}
+    .ow-thumb.none svg{width:15px;height:15px;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* In the open line: 148px, the size Sourcing settled on, and the one
+       element on the row that opens the lightbox. cursor:zoom-in is the
+       app's own .img-zoomable affordance. */
+    .iv-ph{display:flex;gap:14px;align-items:flex-start;margin:0 0 11px;}
+    .iv-ph-i{width:148px;height:148px;flex:none;display:block;object-fit:cover;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);cursor:zoom-in;}
+    .iv-ph-c{margin:6px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:148px;}
+    .iv-ph-b{min-width:0;flex:1;}
+    .iv-ph-none{width:148px;height:148px;flex:none;border-radius:var(--ow-r);
+      border:1px dashed var(--ow-rule);background:var(--ow-paper-2);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;}
+    .iv-ph-none svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- THE LIGHTBOX ----
+       Not a new component: this is index.html's own .lightbox-overlay,
+       at its own values -- rgba(15,20,26,.82), 40px of padding, radius
+       10, the 0 24px 64px shadow, and the close button at top 22 /
+       right 26 on rgba(255,255,255,.12). It is opened by the document
+       -level .img-zoomable handler that already ships, closed by Escape,
+       by the close button, or by pressing the backdrop.
+
+       Drawn absolute rather than fixed only because an artboard is not
+       a viewport; in the app it stays position:fixed.
+
+       ONE ADDITION, and it is the only thing here that is not already
+       shipping: the name under the picture. openImageLightbox already
+       takes the alt text and sets it on the img, so the name is present
+       and merely invisible -- and a shop that reuses one photo across
+       three lines needs to know which line it just opened. */
+    .lb{position:absolute;inset:0;z-index:300;display:flex;align-items:center;
+      justify-content:center;padding:40px;background:rgba(15,20,26,.82);}
+    .lb-in{display:flex;flex-direction:column;align-items:center;gap:14px;min-height:0;}
+    .lb-img{width:420px;height:420px;max-width:100%;max-height:100%;display:block;
+      border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.45);}
+    .lb-cap{margin:0;font-size:13px;font-weight:600;color:var(--ow-paper);}
+    .lb-x{position:absolute;top:22px;right:26px;display:flex;padding:8px;
+      border-radius:var(--ow-r-lg);background:rgba(255,255,255,.12);z-index:301;}
+    .lb-x svg{width:18px;height:18px;fill:none;stroke:var(--ow-paper);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the thumbnail's states, drawn ---- */
+    .th-st{display:flex;gap:34px;align-items:flex-start;padding:6px 2px 2px;}
+    .th-st-c{display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+    .th-st-l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0;}
+    .th-st-w{position:relative;width:44px;height:44px;display:flex;align-items:center;
+      justify-content:center;flex:none;}
+    .th-st-w .ow-thumb{grid-column:auto;grid-row:auto;}
+    .th-st-hit{position:absolute;inset:0;border:1px dashed var(--ow-oxide);
+      border-radius:var(--ow-r);}
+    .th-st-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:150px;}
+    .ph{position:absolute;inset:0;background:var(--ow-steel-050);overflow:hidden;
+      display:flex;flex-direction:column;}
+    .ph-top{height:44px;flex:none;background:var(--ow-steel-950);color:#fff;display:flex;align-items:center;
+      gap:10px;padding:0 14px;}
+    .ph-top .mk{width:24px;height:24px;border-radius:6px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:9px;}
+    .ph-top .ttl{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-top .sp{flex:1;}
+    .ph-top svg{width:20px;height:20px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ph-body{flex:1;min-height:0;overflow:hidden;padding:16px 16px 0;display:flex;flex-direction:column;gap:14px;}
+    .ph-h1{font-family:'Archivo Black',sans-serif;font-size:26px;margin:0;letter-spacing:-.02em;line-height:1.1;}
+    .ph-sub{font-size:13px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.4;}
+
+    .ph-mt{display:grid;grid-template-columns:1fr 1fr;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-mt > div{padding:12px 14px;border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ph-mt > div:nth-child(odd){border-left:0;}
+    .ph-mt > div:nth-child(-n+2){border-top:0;}
+    .ph-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ph-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;}
+
+    .ph-list{display:flex;flex-direction:column;gap:10px;}
+    .ph-card{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:14px 14px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center;}
+    .ph-card-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:15px;font-weight:600;}
+    .ph-card-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-card-v{grid-column:2;grid-row:1 / span 3;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;letter-spacing:-.02em;}
+    .ph-card-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:2px;}
+    .ph-card-w{grid-column:1;margin:6px 0 0;font-size:13px;color:var(--ow-ink-600);line-height:1.45;}
+    .ph-card-m{grid-column:1;margin:4px 0 0;font-size:11px;color:var(--ow-ink-600);}
+
+    .ow-bk{display:flex;align-items:center;gap:12px;margin:0 16px 10px;
+      padding:10px 12px 10px 16px;background:var(--ow-steel-950);color:var(--ow-paper);
+      border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+    .ow-bk-say{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--ow-steel-100);}
+    .ow-bk-b{color:var(--ow-paper);font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+    .ph-tab-bar{height:60px;flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);
+      display:grid;grid-template-columns:repeat(5,1fr);align-items:center;}
+    .ph-tb{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ow-ink-600);font-size:11px;font-weight:600;}
+    .ph-tb svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ph-tb.on{color:var(--ow-ink-900);}
+    .ph-tb.on svg{fill:var(--ow-ink-900);stroke:var(--ow-ink-900);}
+
+    .ph-who{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--ow-paper);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-who .ow-av{width:40px;height:40px;font-size:13px;}
+    .ph-who-n{font-size:16px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-who-m{font-size:12px;color:var(--ow-ink-600);font-family:var(--mono);margin-top:2px;}
+    .ph-item{padding:14px 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .ph-item-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .ph-item-n{font-size:15px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+    .ph-why{margin:5px 0 0;font-size:13px;color:var(--ow-ink-600);line-height:1.45;}
+    .ph-scroll{flex:1;min-height:0;overflow:hidden;}
+    .ph-sec{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);padding:14px 16px 6px;}
+    .ph-msg{margin:0 16px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+      padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+    .ph-note{font-size:12px;color:var(--ow-ink-600);margin:8px 16px 0;line-height:1.45;}
+    .ph-foot{flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);padding:10px 16px 14px;
+      display:flex;flex-direction:column;gap:8px;}
+    .ph-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:7px;
+      font-size:15px;font-weight:700;}
+    .ph-btn.accent{background:var(--ow-oxide);color:#fff;}
+    .ph-btn.ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .ph-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ph-sec{display:flex;align-items:baseline;gap:8px;}
+    .ph-sec-n{margin-left:auto;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ow-ink-600);}
+    .ph-msg{font-size:13px;}
+    .ph-item{padding:12px 16px;}
+
+    /* ---- added for the debtors phone ----
+       The phone job is looking ONE customer up: somebody is standing in
+       the yard and you need their figure. So search is the first control
+       under the strip, at 44px, and the list below it is worst-aged
+       first for when you are working rather than looking up.
+
+       The cards carry no button. The accent lives once, in the docked
+       navy bar in the thumb zone -- the pattern Follow-ups already
+       ships -- so a screen of ten cards does not become a screen of ten
+       oxide buttons. */
+    .ph-sb{display:flex;align-items:center;gap:9px;height:44px;padding:0 14px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:15px;color:var(--ow-ink-400);}
+    .ph-sb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    /* the age bar, phone-side: the bar stays, the five bands become two
+       columns because five across 358px is 60px a band and unreadable */
+    .ph-ag{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:12px 14px 13px;}
+    .ph-ag-h{display:flex;align-items:baseline;gap:8px;margin:0 0 9px;}
+    .ph-ag-t{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ph-ag-n{margin-left:auto;font-size:11px;color:var(--ow-ink-400);}
+    .ph-ag-bar{display:flex;gap:2px;height:14px;border-radius:var(--ow-r-sm);overflow:hidden;
+      background:var(--ow-rule-soft);}
+    .ph-ag-bar > span{flex-basis:0;min-width:18px;background:var(--age-hue);}
+    .ph-ag-lg{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:11px;}
+    .ph-ag-b{display:flex;align-items:baseline;gap:7px;min-width:0;padding-left:8px;
+      border-left:2px solid var(--age-hue);}
+    .ph-ag-b-l{font-size:12px;color:var(--ow-ink-600);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .ph-ag-b-v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .age-b30{--age-hue:var(--ow-steel-400);}
+    .age-b60{--age-hue:var(--ow-amber);}
+    .age-b90{--age-hue:var(--ow-crimson);}
+    .age-b90p{--age-hue:var(--ow-crimson);}
+    .age-unknown{--age-hue:var(--ow-steel-100);}
+
+    .ph-card-b.bad{color:var(--ow-crimson);font-weight:500;}
+    .ph-card-b.warn{color:var(--ow-amber-ink);font-weight:500;}
+    .ph-card-v{font-size:16px;}
+    .ph-card-m b{font-weight:500;color:var(--ow-ink-600);}
+    .ph-card-m .never{color:var(--ow-crimson);font-weight:600;}
+    .ph-mt-v{font-size:20px;}
+    .ph-mt-v .ow-u{font-size:.6em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ph-mt > div.bad .ph-mt-v{color:var(--ow-crimson);}
+    .ph-mt-s{font-size:11px;color:var(--ow-ink-400);margin:3px 0 0;line-height:1.3;}
+
+    /* ---- the waterline, on the phone ----
+       Full bleed across the card list, because on 390px a centred rule
+       with text either side has no room for either. Same fact, same
+       wording, one column. */
+    .ph-wl{padding:10px 14px;background:var(--ow-paper-2);
+      border-top:1px dashed var(--ow-rule);border-bottom:1px dashed var(--ow-rule);
+      font-size:12px;line-height:1.45;color:var(--ow-ink-600);border-radius:var(--ow-r-lg);}
+    .ph-wl b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .ph-wl-t{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-400);margin-bottom:3px;}
+    .ph-card-r{font-size:12px;font-weight:600;margin-top:1px;}
+    .ph-card-r.bad{color:var(--ow-crimson);}
+    .ph-card-r.warn{color:var(--ow-amber-ink);}
+    .ph-card-r.none{color:var(--ow-ink-400);font-weight:500;}
+
+    /* ---- added for the pricing phone ----
+       The phone job is not the desk job. At the desk you work down a
+       ranked list deciding a day's prices. On a phone you are STANDING
+       AT THE SHELF, or a buyer is in front of you asking what you will
+       take for the dusty lot in the corner. So: search first, the card
+       carries the price you charge and the price that keeps target
+       side by side, and the accent lives once in the docked bar. */
+    .ph-seg{display:flex;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-seg span{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+      height:42px;font-size:14px;font-weight:600;color:var(--ow-ink-600);
+      border-left:1px solid var(--ow-rule);}
+    .ph-seg span:first-child{border-left:0;}
+    .ph-seg span.on{background:var(--ow-steel-950);color:#fff;}
+    .ph-seg .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      color:var(--ow-ink-400);letter-spacing:-.02em;}
+    .ph-seg span.on .n{color:rgba(255,255,255,.72);}
+
+    /* the two prices, side by side, at the size a shelf is read at */
+    .ph-pr{grid-column:1;display:flex;align-items:stretch;margin:9px 0 0;
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;
+      background:var(--ow-paper-2);width:max-content;max-width:100%;}
+    .ph-pr > div{padding:6px 13px;border-left:1px solid var(--ow-rule-soft);}
+    .ph-pr > div:first-child{border-left:0;}
+    .ph-pr-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 1px;white-space:nowrap;}
+    .ph-pr-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;white-space:nowrap;}
+    .ph-pr .now .ph-pr-v{color:var(--ow-crimson);}
+    .ph-pr .aim{background:var(--ow-paper);}
+    .ph-pr .aim .ph-pr-v{color:var(--ow-verdigris);}
+    .ph-card-v .pl{color:var(--ow-ink-400);font-weight:500;}
+    .ph-card-b.mth,.ph-card-b.once{color:var(--ow-ink-600);}
+
+    /* The strip, search and segments are FIXED furniture; only the card
+       list flexes. Without this the column squashes them to slivers the
+       moment the cards are taller than the screen -- which is the normal
+       case, since a list of prices is meant to scroll. */
+    .ph-body > div:first-child,.ph-mt,.ph-sb,.ph-seg{flex:none;}
+    .ph-list{flex:1;min-height:0;overflow:hidden;}
+
+    /* Two prices, not three. At 390px a third cell clips the figure it
+       exists to show, and the cost is a supporting fact rather than a
+       decision -- so it moves to the meta line under the card. What the
+       shelf reads is: what you charge now, and what you should. */
+    .ph-card{grid-template-columns:minmax(0,1fr) auto;}
+    .ph-card-v{grid-row:1;align-self:start;}
+    .ph-card-r{grid-column:1 / -1;}
+    .ph-pr{grid-column:1 / -1;}
+    .ph-pr > div{flex:1;padding:7px 14px;}
+    .ph-card-m{grid-column:1 / -1;}
+    .ow-bk{align-items:flex-start;}
+    .ow-bk-say{padding:2px 0;}
+    .ow-bk,.ph-tab-bar,.ph-foot{flex:none;}
+
+    /* ================= THE INVENTORY PHONE ============================
+       The phone job is not the desk job. At the desk you work down a
+       list deciding what to fix and what to order. On a phone you are
+       STANDING IN THE YARD with a customer in front of you asking
+       whether you have it. So: search is the first and biggest thing,
+       the count is the biggest figure on the card, and the money is
+       secondary -- it is the desk's question, not the yard's.
+
+       No strip. Four tiles of shillings answer a question nobody in a
+       yard is asking, and they cost 110px of the six inches a card list
+       has. One line carries the position instead.
+       ================================================================= */
+    .iv-p-sb{display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .iv-p-sb svg{width:20px;height:20px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-p-sb .v{font-size:16px;color:var(--ow-ink-900);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .iv-p-sb .x{margin-left:auto;width:22px;height:22px;border-radius:50%;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-p-sb .x svg{width:12px;height:12px;stroke:var(--ow-ink-600);stroke-width:1.8;}
+    .iv-p-pos{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0;
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-p-pos b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-p-pos .w{color:var(--ow-amber-ink);font-weight:600;}
+
+    .iv-p-c{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:13px 14px 12px;}
+    .iv-p-h{display:flex;align-items:center;gap:7px;min-width:0;}
+    .iv-p-n{min-width:0;flex:1;font-size:16px;font-weight:600;line-height:1.3;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-p-m{margin:3px 0 0;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* The count is the answer to the question in the yard, so it is the
+       biggest thing on the card. Money sits beside it at half the size:
+       a supporting fact, not the decision. */
+    .iv-p-f{display:flex;align-items:flex-end;gap:16px;margin-top:10px;}
+    .iv-p-q{min-width:0;}
+    .iv-p-q-l,.iv-p-v-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 2px;}
+    .iv-p-q-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+      font-size:28px;font-weight:500;line-height:1.05;}
+    .iv-p-q-v .u{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-left:4px;}
+    .iv-p-q-v.thin{color:var(--ow-amber-ink);}
+    .iv-p-q-v.out{color:var(--ow-crimson);}
+    .iv-p-v{margin-left:auto;text-align:right;}
+    .iv-p-v-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:600;white-space:nowrap;}
+    .iv-p-v-v.none{color:var(--ow-ink-600);font-weight:500;}
+    .iv-p-b{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--ow-rule-soft);
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-p-b b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .ph-body > .iv-p-sb,.ph-body > .iv-p-pos,.ph-body > div:first-child{flex:none;}
+
+    /* ---- THE PHOTO, ON THE PHONE ----
+       44px, which is a real tap target, and here it DOES open the
+       lightbox. The desk rule that a row thumb must not be zoomable
+       exists because the press would shut the row it is in; a phone
+       result card has no press to steal, so the thumbnail can mean
+       itself. Same .img-zoomable hook, same overlay. */
+    .iv-p-th{width:44px;height:44px;flex:none;border-radius:var(--ow-r);
+      background:var(--ow-steel-050);overflow:hidden;display:flex;
+      align-items:center;justify-content:center;cursor:zoom-in;}
+    .iv-p-th svg{width:100%;height:100%;display:block;}
+    .iv-p-th.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
+      color:var(--ow-ink-600);cursor:default;}
+    .iv-p-th.none svg{width:20px;height:20px;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* the meta line and the figures clear the thumb rather than wrapping under it */
+    .iv-p-m,.iv-p-f,.iv-p-b{margin-left:56px;}
+  </style>
+</helmet>
+<div class="app" style="width:390px;height:844px">
+  <div class="ph">
+    <div class="ph-top">
+      <span class="mk">OW</span>
+      <span class="ttl">Inventory</span>
+      <span class="sp"></span>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </div>
+
+    <div class="ph-body">
+      <div>
+        <h1 class="ph-h1">Inventory</h1>
+        <p class="ph-sub">What is on the shelf, right now</p>
+      </div>
+
+      <div class="iv-p-sb">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <span class="v">iron sheets</span>
+        <span class="x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span>
+      </div>
+      <p class="iv-p-pos"><b>3</b> lines match &middot; <b>166</b> on the shelf, worth <b>18,412,600</b> &middot; <span class="w">7 below their floor</span></p>
+
+      <div class="ph-list">
+        <div class="iv-p-c">
+          <div class="iv-p-h"><span class="iv-p-th img-zoomable"><svg viewBox="0 0 64 64" role="img" aria-label="Iron sheets — G28, 3m"><rect width="64" height="64" fill="#E9EBED"/><g stroke="#8A939C" stroke-width="2" fill="#DCE0E4"><path d="M4 22h56v8H4zM4 34h56v8H4zM4 46h56v8H4z"/></g><path d="M4 22h56" stroke="#59626B" stroke-width="2"/></svg></span><span class="iv-p-n">Iron sheets &mdash; G28, 3m</span></div>
+          <p class="iv-p-m">Charcoal &middot; box profile &middot; IS-G28-3M-CH</p>
+          <div class="iv-p-f">
+            <div class="iv-p-q"><p class="iv-p-q-l">On the shelf</p><span class="iv-p-q-v">88<span class="u">sheets</span></span></div>
+            <div class="iv-p-v"><p class="iv-p-v-l">Worth</p><span class="iv-p-v-v">3,608,000</span></div>
+          </div>
+          <p class="iv-p-b"><b>3</b> bundles and <b>8</b> loose. Cost you <b>41,000</b> a sheet.</p>
+        </div>
+
+        <div class="iv-p-c">
+          <div class="iv-p-h"><span class="iv-p-th img-zoomable"><svg viewBox="0 0 64 64" role="img" aria-label="Iron sheets — G30, 2m"><rect width="64" height="64" fill="#E9EBED"/><g stroke="#8A939C" stroke-width="2" fill="#DCE0E4"><path d="M4 22h56v8H4zM4 34h56v8H4zM4 46h56v8H4z"/></g><path d="M4 22h56" stroke="#59626B" stroke-width="2"/></svg></span><span class="iv-p-n">Iron sheets &mdash; G30, 2m</span><span class="ow-cp ow-warn">9 short</span></div>
+          <p class="iv-p-m">Red &middot; box profile &middot; IS-G30-2M-RD</p>
+          <div class="iv-p-f">
+            <div class="iv-p-q"><p class="iv-p-q-l">On the shelf</p><span class="iv-p-q-v thin">11<span class="u">sheets</span></span></div>
+            <div class="iv-p-v"><p class="iv-p-v-l">Worth</p><span class="iv-p-v-v">341,000</span></div>
+          </div>
+          <p class="iv-p-b">Your floor is <b>20</b>. At what it has been selling, about <b>4 days</b> left.</p>
+        </div>
+
+        <div class="iv-p-c">
+          <div class="iv-p-h"><span class="iv-p-th none"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="iv-p-n">Iron sheet ridge cap &mdash; 2m</span><span class="ow-cp ow-warn">no cost</span></div>
+          <p class="iv-p-m">Charcoal &middot; PRD-0402</p>
+          <div class="iv-p-f">
+            <div class="iv-p-q"><p class="iv-p-q-l">On the shelf</p><span class="iv-p-q-v">24</span></div>
+            <div class="iv-p-v"><p class="iv-p-v-l">Worth</p><span class="iv-p-v-v none">&mdash;</span></div>
+          </div>
+          <p class="iv-p-b">No photo on file either, so this one has to be told apart by its name. Nothing says what these cost, so nothing here can say what they are worth.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ow-bk">
+      <span class="ow-bk-say">
+        <b class="ow-bk-b">Iron sheets &mdash; G30, 2m</b>
+        <span class="fig" style="color:#fff">11</span> on the shelf against a floor of 20
+      </span>
+      <span class="ph-btn accent" style="height:44px;padding:0 16px;font-size:14px">Count it</span>
+    </div>
+
+    <div class="ph-tab-bar">
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M4 18h16"></path><path d="M7 18a5 5 0 0 1 10 0"></path><path d="M12 5v3M5.6 8.6l2 2M18.4 8.6l-2 2"></path></svg>Today</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M20.5 12.3 12.8 20a1.7 1.7 0 0 1-2.4 0l-6.9-6.9a1.7 1.7 0 0 1-.5-1.2V4.6c0-.9.7-1.6 1.6-1.6h7.3c.5 0 .9.2 1.2.5l7.4 7.4a1.3 1.3 0 0 1 0 1.4z"></path><path d="M7.6 7.6h.01"></path></svg>Sell</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="12" cy="12" r="3"></circle><path d="M6.5 8h.01M17.5 16h.01"></path></svg>Money</span>
+      <span class="ph-tb"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20.5l1.8-5.2A8.4 8.4 0 1 1 21 11.5z"></path><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"></path></svg>Manager</span>
+      <span class="ph-tb on"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h11"></path></svg>More</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

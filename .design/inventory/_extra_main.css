@@ -1,0 +1,344 @@
+    /* ================= THE INVENTORY CONSOLE ==========================
+       Built only from what index.html already ships: the 23-colour
+       palette, the 11/12/13/14/19 ramp, Inter + Archivo Black + IBM Plex
+       Mono, the .ow-* components, radius 4/6/8, space in even steps,
+       hairlines instead of shadows. No new colour, no new weight, no new
+       size, no fourteenth button family.
+       ================================================================= */
+
+    /* ---- THE FIND BAR: the screen leads with it ----
+       Three of the four jobs -- look one line up, receive against a
+       line, correct a count -- start by naming a product. So the widest,
+       tallest, first thing under the page name is the box you type into,
+       and the filters sit on its own row rather than above the money. */
+    .iv-find{display:flex;align-items:stretch;gap:8px;margin-bottom:8px;}
+    .iv-fb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+      box-sizing:border-box;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);}
+    .iv-fb svg{width:18px;height:18px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fb-v{font-size:14px;color:var(--ow-ink-900);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fb-v.ph{color:var(--ow-ink-600);}
+    .iv-fb-x{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--ow-steel-050);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-fb-x svg{width:11px;height:11px;stroke:var(--ow-ink-600);stroke-width:1.8;}
+    .iv-sel{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-sel .l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .iv-sel .cv{width:7px;height:7px;border-right:1.6px solid var(--ow-ink-400);
+      border-bottom:1.6px solid var(--ow-ink-400);transform:rotate(45deg) translate(-1px,-1px);flex:none;}
+    .iv-tog{display:flex;align-items:center;gap:8px;height:44px;padding:0 13px 0 11px;box-sizing:border-box;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;}
+    .iv-tog .bx{width:16px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .iv-tog .bx svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* What the search actually did, said in one line, before the money.
+       "Nothing matches" is never allowed to stand for "it matched and a
+       filter hid it" -- so the line names the filter and offers it back. */
+    .iv-fr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 16px;
+      font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+    .iv-fr b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fr .lk{color:var(--ow-ink-900);font-weight:600;text-decoration:underline;
+      text-underline-offset:2px;}
+
+    /* ---- THE REPAIR BAR ----
+       Two full-width crimson banners became one 38px line. It appears
+       only when something is wrong and takes the space back entirely
+       when nothing is -- a screen that reserves room for problems it
+       does not have is a screen that always looks slightly broken. */
+    .iv-fix{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 12px;
+      box-sizing:border-box;background:var(--ow-amber-faint);border:1px solid rgba(176,112,10,.30);
+      border-radius:var(--ow-r-lg);margin-bottom:16px;}
+    .iv-fix > svg{width:16px;height:16px;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fix-t{font-size:12px;font-weight:600;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+    .iv-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;
+      border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1px solid rgba(176,112,10,.30);
+      font-size:11px;font-weight:500;color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-chip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      letter-spacing:-.02em;}
+    .iv-chip.on{background:var(--ow-amber-soft);border-color:var(--ow-amber);font-weight:600;}
+    .iv-fix-sp{flex:1;}
+    .iv-fix-o{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+      color:var(--ow-amber-ink);white-space:nowrap;}
+    .iv-fix-o .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);}
+
+    /* ---- THE SHELF ROW ----
+       44px, table-like, opens in place. Five columns and only one of
+       them gives way: the name. Money and counts are sized to their
+       content, because a clipped figure is a WRONG figure. */
+    .iv-h{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:10px;padding:0 12px;height:28px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .iv-h span{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-h .r{text-align:right;}
+    .iv-g.ow-open{box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+    .iv-r{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);text-align:left;}
+    .iv-g:last-child .iv-r{border-bottom:0;}
+    .iv-g.ow-open .iv-r{background:var(--ow-paper-2);}
+    .iv-cr{grid-column:1;grid-row:1 / span 2;width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;align-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .iv-g.ow-open .iv-cr{transform:rotate(90deg);}
+    .iv-n{grid-column:3;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;}
+    .iv-nm{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-m{grid-column:3;grid-row:2;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .iv-f .u{font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-left:3px;}
+    .iv-f .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-f.q{grid-column:4;grid-row:1 / span 2;}
+    .iv-f.c{grid-column:5;grid-row:1 / span 2;}
+    .iv-f.v{grid-column:6;grid-row:1 / span 2;font-size:14px;}
+    /* Out entirely against a floor somebody set: genuinely bad. Under
+       the floor but not out: caution. Everything else is ink -- a count
+       is a size, not a warning. */
+    .iv-f.out{color:var(--ow-crimson);}
+    .iv-f.thin{color:var(--ow-amber-ink);}
+    .iv-f.none{color:var(--ow-ink-600);font-weight:500;}
+    .iv-f.notours{color:var(--ow-amber-ink);}
+
+    /* ---- THE OPEN LINE: the whole of one line's business ---- */
+    .iv-x{padding:4px 12px 14px 40px;}
+    .iv-say{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 11px;}
+    .iv-say b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-say .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fs{display:flex;flex-wrap:wrap;align-items:stretch;border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper-2);
+      width:max-content;max-width:100%;margin:0 0 11px;}
+    .iv-fs > div{padding:7px 14px;border-left:1px solid var(--ow-rule-soft);}
+    .iv-fs > div:first-child{border-left:0;}
+    .iv-fs-l{font-size:11px;color:var(--ow-ink-600);margin:0 0 2px;white-space:nowrap;}
+    .iv-fs-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;white-space:nowrap;}
+    .iv-fs-v .u{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;color:var(--ow-ink-600);margin-left:3px;}
+    .iv-fs-v.warn{color:var(--ow-amber-ink);}
+    .iv-fs-v.bad{color:var(--ow-crimson);}
+    .iv-mv{margin:0 0 11px;}
+    .iv-mv-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 6px;}
+    .iv-mv-r{display:flex;align-items:baseline;gap:10px;padding:5px 0;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .iv-mv-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);white-space:nowrap;
+      width:66px;flex:none;}
+    .iv-mv-w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-600);}
+    .iv-mv-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .iv-mv-q.up{color:var(--ow-verdigris);}
+    .iv-mv-q.down{color:var(--ow-crimson);}
+    .iv-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* ---- rail ---- */
+    .rr{display:flex;align-items:baseline;gap:10px;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);font-size:12px;}
+    .rr:first-child{border-top:0;}
+    .rr-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+    .rr-d{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+    .rr-q{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rr-q.up{color:var(--ow-verdigris);}
+    .rr-q.down{color:var(--ow-crimson);}
+    .ow-pan-a{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;
+      font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-pan-a .cv{width:6px;height:6px;border-right:1.6px solid currentColor;
+      border-bottom:1.6px solid currentColor;transform:rotate(-45deg);}
+    .ow-mt-v.sm{font-size:19px;}
+
+    /* The page header's help bubble and the two buttons */
+    .ow-ph-h{display:flex;align-items:center;gap:8px;}
+
+    /* ---- the repair drawer ----
+       What used to be two crimson banners standing above every figure on
+       the screen, on every visit. It is one 38px line until you open it,
+       and the order of the three sections is a rule rather than a
+       ranking -- said on screen, because a shop that fixes them in the
+       other order makes more work for itself. */
+    .iv-fx{background:var(--ow-paper);border:1px solid rgba(176,112,10,.30);border-top:1px solid rgba(176,112,10,.30);
+      border-bottom-left-radius:var(--ow-r-lg);border-bottom-right-radius:var(--ow-r-lg);
+      margin-bottom:16px;overflow:hidden;}
+    .iv-fx-o{margin:0;padding:11px 14px;background:var(--ow-amber-faint);
+      border-bottom:1px solid var(--ow-rule-soft);
+      font-size:12px;line-height:1.5;color:var(--ow-amber-ink);max-width:var(--ow-measure);}
+    .iv-fx-o b{font-weight:600;}
+    .iv-fx-s{padding:13px 14px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-s:first-of-type{border-top:0;}
+    .iv-fx-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 6px;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-n{font-size:11px;font-weight:400;color:var(--ow-ink-600);}
+    .iv-fx-w{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .iv-fx-w b{color:var(--ow-ink-900);font-weight:600;}
+    .iv-fx-r{display:flex;align-items:center;gap:12px;padding:7px 0;
+      border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-nm{font-size:13px;font-weight:500;min-width:0;flex:0 1 260px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-fx-f{flex:0 0 auto;margin-right:auto;font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-fx-f b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+    .iv-fx-f .warn{color:var(--ow-amber-ink);font-weight:500;}
+    .iv-fx-f .bad{color:var(--ow-crimson);font-weight:500;}
+    .iv-fx-a{padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .iv-fx-m{margin:9px 0 0;padding-top:9px;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:var(--ow-measure);}
+    .iv-fx-m b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);}
+
+    /* ---- the states sheet ---- */
+    .st-l{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:12px;font-weight:600;
+      letter-spacing:.05em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-l:not(:first-child){margin-top:26px;}
+    .st-n{width:19px;height:19px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);
+      font-size:11px;letter-spacing:0;flex:none;}
+    .st{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:14px;}
+    .st-w{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--ow-ink-600);max-width:var(--ow-measure);}
+    .st-w b{color:var(--ow-ink-900);font-weight:600;}
+    .st-fail{display:flex;gap:12px;padding:14px;background:var(--ow-crimson-soft);
+      border:1px solid var(--ow-crimson);border-radius:var(--ow-r-lg);}
+    .st-fail > svg{width:20px;height:20px;fill:none;stroke:var(--ow-crimson);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+    .st-fail-t{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--ow-crimson);}
+    .st-fail-w{margin:0 0 11px;font-size:12px;line-height:1.55;color:var(--ow-ink-900);max-width:var(--ow-measure);}
+    .st-fail-w b{font-weight:600;}
+    .st-fail-a{display:flex;gap:6px;}
+
+    /* The header as state C draws it: the screen's two acts, off. The copy
+       says receiving and counting are turned off until the ledger reads,
+       and a board that says so without showing it is only half the state. */
+    .st-hd{display:flex;align-items:center;gap:8px;padding:0 0 10px;margin-bottom:12px;
+      border-bottom:1px solid var(--ow-rule);}
+    .st-hd-t{font-family:'Archivo Black',sans-serif;font-size:19px;letter-spacing:-.015em;}
+
+    /* ---- THE PHOTO ON THE ROW, AS A ZOOM TARGET ----
+
+       index.html argues at .ow-sf-th that a 28px row thumb must NOT be
+       zoomable: "28px is not a zoom target, and the row's one job when
+       you press it is to open -- a thumbnail that stole that press would
+       make the picture cost you the row." That objection is right about
+       28px and right about the stolen press. It is answered here rather
+       than ignored, and it takes three things, not a class.
+
+       1. IT IS A 44px TARGET THAT LOOKS 28px. The frame stays 28 so the
+          row keeps its density and matches .ow-thumb everywhere else;
+          an ::after extends the pressable area to 44x44. inset:-8px
+          stays inside the row's own height (rows run ~50px), so it
+          never steals a press from the row above or below.
+
+       2. IT SAYS SO WITHOUT HOVER. A corner glyph is on at REST, not
+          only on hover -- this app is used on a phone and a tablet,
+          where there is no hover to discover anything with, and a
+          control that only announces itself to a mouse is a control
+          half the shop cannot find. Hover deepens it to a full scrim.
+
+       3. THE ROW HANDLER MUST STEP OVER IT. Without
+          `if(e.target.closest(".img-zoomable")) return;` at the top of
+          the row's click handler, the row toggle fires too and shuts
+          the row underneath the lightbox -- the picture appears and
+          vanishes. index.html:74072 already does exactly this for
+          Sourcing's open-row photo; the inventory row needs the same
+          line. This is the whole of the "stolen press" objection, and
+          it is one line.
+
+       What it still costs, honestly: the row is now two targets, and a
+       press aimed at the row that lands in the left 44px opens a
+       picture instead of the line. That is the trade, and it is why the
+       glyph is always on. */
+    .ow-thumb{grid-column:2;grid-row:1 / span 2;position:relative;width:28px;height:28px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;flex:none;overflow:visible;
+      cursor:zoom-in;}
+    .ow-th-i{width:100%;height:100%;display:block;border-radius:var(--ow-r-sm);}
+    /* the 44px target, invisible, inside the row's own height */
+    .ow-thumb::after{content:'';position:absolute;inset:-8px;border-radius:var(--ow-r);}
+    /* the resting affordance: on without hover, because touch has none */
+    .ow-th-z{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:var(--ow-paper);
+      display:flex;align-items:center;justify-content:center;}
+    .ow-th-z svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    /* hover: the whole frame says it, not just the corner */
+    .ow-thumb.hov .ow-th-sc{position:absolute;inset:0;border-radius:var(--ow-r-sm);
+      background:rgba(20,23,27,.55);display:flex;align-items:center;justify-content:center;}
+    .ow-thumb.hov .ow-th-sc svg{width:14px;height:14px;fill:none;stroke:var(--ow-paper);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* the console's own focus ring, so the picture is reachable by keyboard --
+       the app's .img-zoomable is a bare <img> today and is not */
+    .ow-thumb.foc{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+    /* No photo is not a target. Dashed so it never reads as a photo that
+       failed to load, no zoom cursor, no glyph, no 44px area -- there is
+       nothing behind it to open. */
+    .ow-thumb.none{background:var(--ow-paper-2);border:1px dashed var(--ow-rule);
+      color:var(--ow-ink-600);cursor:default;}
+    .ow-thumb.none::after{content:none;}
+    .ow-thumb.none svg{width:15px;height:15px;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* In the open line: 148px, the size Sourcing settled on, and the one
+       element on the row that opens the lightbox. cursor:zoom-in is the
+       app's own .img-zoomable affordance. */
+    .iv-ph{display:flex;gap:14px;align-items:flex-start;margin:0 0 11px;}
+    .iv-ph-i{width:148px;height:148px;flex:none;display:block;object-fit:cover;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);cursor:zoom-in;}
+    .iv-ph-c{margin:6px 0 0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:148px;}
+    .iv-ph-b{min-width:0;flex:1;}
+    .iv-ph-none{width:148px;height:148px;flex:none;border-radius:var(--ow-r);
+      border:1px dashed var(--ow-rule);background:var(--ow-paper-2);color:var(--ow-ink-600);
+      display:flex;align-items:center;justify-content:center;}
+    .iv-ph-none svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- THE LIGHTBOX ----
+       Not a new component: this is index.html's own .lightbox-overlay,
+       at its own values -- rgba(15,20,26,.82), 40px of padding, radius
+       10, the 0 24px 64px shadow, and the close button at top 22 /
+       right 26 on rgba(255,255,255,.12). It is opened by the document
+       -level .img-zoomable handler that already ships, closed by Escape,
+       by the close button, or by pressing the backdrop.
+
+       Drawn absolute rather than fixed only because an artboard is not
+       a viewport; in the app it stays position:fixed.
+
+       ONE ADDITION, and it is the only thing here that is not already
+       shipping: the name under the picture. openImageLightbox already
+       takes the alt text and sets it on the img, so the name is present
+       and merely invisible -- and a shop that reuses one photo across
+       three lines needs to know which line it just opened. */
+    .lb{position:absolute;inset:0;z-index:300;display:flex;align-items:center;
+      justify-content:center;padding:40px;background:rgba(15,20,26,.82);}
+    .lb-in{display:flex;flex-direction:column;align-items:center;gap:14px;min-height:0;}
+    .lb-img{width:420px;height:420px;max-width:100%;max-height:100%;display:block;
+      border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.45);}
+    .lb-cap{margin:0;font-size:13px;font-weight:600;color:var(--ow-paper);}
+    .lb-x{position:absolute;top:22px;right:26px;display:flex;padding:8px;
+      border-radius:var(--ow-r-lg);background:rgba(255,255,255,.12);z-index:301;}
+    .lb-x svg{width:18px;height:18px;fill:none;stroke:var(--ow-paper);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the thumbnail's states, drawn ---- */
+    .th-st{display:flex;gap:34px;align-items:flex-start;padding:6px 2px 2px;}
+    .th-st-c{display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+    .th-st-l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0;}
+    .th-st-w{position:relative;width:44px;height:44px;display:flex;align-items:center;
+      justify-content:center;flex:none;}
+    .th-st-w .ow-thumb{grid-column:auto;grid-row:auto;}
+    .th-st-hit{position:absolute;inset:0;border:1px dashed var(--ow-oxide);
+      border-radius:var(--ow-r);}
+    .th-st-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:150px;}

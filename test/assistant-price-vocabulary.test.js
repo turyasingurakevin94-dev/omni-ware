@@ -62,7 +62,15 @@ const data = {
 };
 
 const env = {
+  // productPackInfo reads the shelf's own unit now (stockUnitFor).
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
   data,
+  /* product_details also reads what the shop wrote down about what
+     goes with what. This fixture is about the WORDS a price is said
+     in, and its shop has written no rules. */
+  pairCompanionsFor: () => [],
+  pairSubstitutesFor: () => [],
+  pairLastsDays: () => null,
   /* product_details now reads what other shops charge, and that
      reading dates each sighting. */
   todayISO: () => '2026-08-29',
@@ -90,6 +98,7 @@ const scope = compileScope([
   extractFunction(src, 'rivalPricesFor', 'index.html'),
   extractFunction(src, 'productPriceRows', 'index.html'),
   extractFunction(src, 'rankedPriceRows', 'index.html'),
+  extractFunction(src, 'stockUnitFor', 'index.html'),
   extractFunction(src, 'productPackInfo', 'index.html'),
   extractFunction(src, 'prTierChipLabel', 'index.html'),
   extractFunction(src, 'priceTierSummaryPart', 'index.html'),

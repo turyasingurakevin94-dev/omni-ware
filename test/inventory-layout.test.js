@@ -35,6 +35,7 @@ const data = { stock: {}, stockLots: {}, products: [] };
 const scope = compileScope([
   extractDeclaration(src, 'INVENTORY_SORTS', 'index.html'),
   extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'stockOnHand', 'index.html'),
   extractFunction(src, 'getStockQty', 'index.html'),
   // The card now shows the shop's own restock level, so the rule that
   // reads it comes with the line builder.
@@ -177,25 +178,78 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
 
 /* ---------- 5. the screen itself ------------------------------------- */
 {
-  /* Cards, kept. A list was tried and pulled back: the grid is how this
-     screen is meant to read, and the figures that were missing did not
-     need a new shape to be added -- "Value here" is one more stat beside
-     In stock and Cost/unit. */
-  t.check(/class="inv-card"/.test(code) && /class="inv-grid"/.test(code),
-    'the cards are the layout');
-  t.check(!/class="inv-row"/.test(code), 'and the row list is gone');
-  t.check(/Value here/.test(code) && /fmtUGX\(Math\.round\(l\.value\)\)/.test(code),
-    'with the line value on the card, which is what was actually missing');
-  t.check(/\.inv-qty-wrap\{font-variant-numeric:tabular-nums;\}/.test(src),
-    'and the figures set in tabular numerals so they align card to card');
+  /* THE CARDS ARE GONE, AND THIS ASSERTION IS THE REVERSE OF WHAT IT
+     USED TO SAY. It read "Cards, kept. A list was tried and pulled back:
+     the grid is how this screen is meant to read, and the figures that
+     were missing did not need a new shape to be added."
 
-  // Counted over the filtered lines, so the strip cannot contradict the
-  // rows under it.
-  const render = (/function renderInventory[\s\S]*?\n\}/.exec(code) || [''])[0];
+     WHAT THAT MEANT, and why it was right at the time: the only
+     complaint against the screen then was that it never multiplied
+     quantity by cost. That is a missing figure, not a missing shape, and
+     adding "Value here" as a third stat on a card fixed it without
+     touching anything else. Reshaping a screen to add a number would
+     have been the larger change made for the smaller reason.
+
+     WHY IT STOPPED BEING TRUE: the complaint is now a different one.
+     Four columns of cards mean no two figures ever line up, and a column
+     of money that does not line up cannot be compared at a glance --
+     which is the only way a stock list is ever read. At 192 lines the
+     grid also ranked nothing, carried thirty-two unlabelled icon buttons
+     and no accent at all, and stacked two crimson repair banners over
+     every figure on the screen. None of that is a missing figure and
+     none of it can be fixed by adding one.
+
+     WHAT THE NEW ASSERTION MEANS: this screen is on the layer now, so it
+     uses the layer's queue -- .ow-q rows that open in place and emit
+     their own phone cards from the SAME call, which is what stops the
+     desk and the phone drifting apart -- and it may not grow a private
+     card grid again. Six columns rather than the layer's four, because
+     this screen answers three questions per line. */
+  t.check(!/class="inv-card"/.test(code) && !/class="inv-grid"/.test(code),
+    'the private card grid is gone from the screen');
+  t.check(/class="ow-q-r" data-invopen=/.test(code) && /class="ow-q-card" data-invopen=/.test(code),
+    'and the desk row and the phone card are emitted from one call, so they cannot say different things');
+  t.check(/Value here/.test(code) && /fmtUGX\(Math\.round\(l\.value\)\)/.test(code),
+    'the line value survived the reshape — it is a column now rather than a third stat');
+  t.check(/\.iv-f\{[^}]*IBM Plex Mono/.test(src) && /\.iv-f\{[^}]*tabular-nums/.test(src),
+    'and the figures are mono and tabular, so a column of money lines up — which is the whole reason for the reshape');
+  t.check(/\.iv-f\.iv-c1\{grid-column:4;\}/.test(src) && /minmax\(0,1fr\) 108px 104px 152px/.test(src),
+    'the figure columns are fixed and only the name column flexes, so a name is cut before a figure ever is');
+
+  /* THE STRIP IS THE WHOLE SHELF NOW, and this is the second reversal.
+     It used to be checked as `strip.innerHTML = lines.length ?` with the
+     reasoning "counts follow the filters — a strip that ignored the
+     filters would contradict the rows underneath it."
+
+     THAT FEAR IS REAL and it is answered differently rather than
+     ignored. Two figures on one screen only contradict each other if
+     both claim to be the same figure. The strip now says what the shop
+     HOLDS and never moves when a filter does; the panel header over the
+     list says what is LISTED under it. Each is labelled as what it is.
+
+     The reason for the change is the one Pricing had already learned: a
+     position that shrinks because somebody left a filter on is a
+     position nobody can trust, and the shelf total is read against the
+     balance sheet, which does not know what was typed in a search box. */
+  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const s = inventoryLineStats\(lines\);/.test(render),
-    'the summary counts what is listed, after the filters have run');
-  t.check(/strip\.innerHTML = lines\.length \?/.test(render),
-    'and shows nothing when nothing matched');
+    'what is LISTED is still counted after the filters have run');
+  t.check(/listN\.textContent = lines\.length/.test(render),
+    'and that total is shown on the list it describes, not above it');
+  t.check(/const all = inventoryLineStats\(allLines\);/.test(render)
+       && /allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(render),
+    'while the strip is counted over the WHOLE shelf, unfiltered');
+  t.check(/at what you paid/.test(render) && /of \$\{all\.lines\} on file/.test(render),
+    'and both figures say which of the two they are');
+
+  /* NO TILE EVER READS 0. Four figures saying nothing happened fill a
+     healthy screen with noise and make a good shelf look like a broken
+     app, so a count that would be zero is replaced by the fact that
+     makes it good news -- never simply dropped, which would leave the
+     strip a different shape on a good day. */
+  t.check(/else tiles\.push\(mt\('Costed'/.test(render)
+       && /else if\(withFloor\) tiles\.push\(mt\('With a floor set'/.test(render),
+    'a count that would be zero is replaced by the reading that makes it good news');
 
   // Every option offered is one the sort understands.
   const sorts = (/const INVENTORY_SORTS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
@@ -203,6 +257,107 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   eq(keys.join(','), 'name,value,low', 'three sorts are offered');
   t.check(/INVENTORY_SORTS\.map/.test(code),
     'and the dropdown is built from that list rather than written out twice');
+}
+
+/* ---------- 5a. twenty to a page -------------------------------------- */
+{
+  /* A shelf of two hundred lines was two hundred rows. The answer to
+     "what is on the shelf" is not something you scroll past: you search
+     for a line, or you work down the ranking from the top, and both of
+     those want a first page rather than a whole one. */
+  const win = compileScope(
+    [extractFunction(src, 'invPageWindow', 'index.html')], {}, ['invPageWindow']
+  ).invPageWindow;
+
+  eq(win(1, 1).join(','), '1', 'one page is one number');
+  eq(win(3, 7).join(','), '1,2,3,4,5,6,7', 'seven or fewer are all drawn, with no gaps');
+
+  /* Beyond that the row must not grow with the shelf: first, last, and
+     where you are. A pager that draws three hundred numbers is the
+     problem it was added to solve, wearing different clothes. */
+  const far = win(10, 300);
+  t.check(far.length <= 9, `a 300-page shelf still draws a short row (${far.length})`);
+  t.check(far[0] === 1 && far[far.length - 1] === 300,
+    'with the first and last page always reachable in one press');
+  t.check(far.includes(9) && far.includes(10) && far.includes(11),
+    'and the pages either side of where you are');
+
+  /* The ends are where an off-by-one shows: at page 1 there is nothing
+     to the left to elide, and a gap drawn there would be a lie about
+     pages that do not exist. */
+  eq(win(1, 20).filter((x) => x === 'gap').length, 1, 'at the start there is one gap, on the right only');
+  eq(win(20, 20).filter((x) => x === 'gap').length, 1, 'and at the end, on the left only');
+  t.check(win(1, 20)[0] === 1 && win(20, 20)[0] === 1, 'page one is never elided');
+
+  [1, 2, 3, 8, 17, 18, 19, 20].forEach((n) => {
+    const w = win(n, 20);
+    t.check(w.includes(n), `page ${n} is always in its own window`);
+    t.check(!w.some((x, i) => x === 'gap' && w[i + 1] === 'gap'), `and ${n} never draws two gaps running`);
+    t.check(w[0] !== 'gap' && w[w.length - 1] !== 'gap', `nor a gap at either end (${n})`);
+    const nums = w.filter((x) => x !== 'gap');
+    t.check(nums.every((x, i) => i === 0 || x > nums[i - 1]), `and the numbers only ever count up (${n})`);
+  });
+
+  /* The three rules that make paging safe, read off the source. */
+  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(invPage > pageCount\) invPage = pageCount;/.test(render),
+    'the page is CLAMPED, because a filter can shrink the list under the page you are on');
+  t.check(/const pageLines = lines\.slice\(from, from \+ INVENTORY_PAGE\);/.test(render)
+       && /pageLines\.map\(invLineHTML\)/.test(render),
+    'only the page is drawn');
+  t.check(/listN\.textContent = lines\.length[\s\S]{0,120}fmtUGX\(Math\.round\(s\.value\)\)/.test(render),
+    'while the header still counts the whole filtered list and its whole value — money that moved as you paged would be the worst kind of wrong');
+
+  /* Every control that changes WHAT is listed goes back to page one.
+     Without it, narrowing 166 lines to 3 while on page 5 leaves an empty
+     list that is not empty, which reads as the search having failed. */
+  t.check(/function invRefilter\(\)\{ invPage = 1; renderInventory\(\); \}/.test(code),
+    'there is one way back to the first page');
+  ['inv_table_search', 'inv_category_filter', 'inv_hide_zero'].forEach((id) => {
+    t.check(new RegExp(`${id}[\\s\\S]{0,80}?addEventListener\\('(?:input|change)', invRefilter\\)`).test(code),
+      `${id} takes it`);
+  });
+  t.check(/sel\.addEventListener\('change', invRefilter\);/.test(code), 'and so does the sort');
+}
+
+/* ---------- 5b. the repair drawer ------------------------------------ */
+{
+  /* Two crimson banners, about 470px of them, stood over every figure on
+     this screen on an ordinary Tuesday. Crimson is the app's colour for
+     the genuinely bad and none of this is bad -- it is admin. They are
+     one amber line now, and when there is nothing in it there is no
+     line at all rather than a line reading zero. */
+  const fix = (/function renderInvFix\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(fix.length > 0, 'the repair line exists');
+  t.check(/if\(!kinds\)\{ line\.innerHTML = ''; body\.hidden = true;/.test(fix),
+    'and it is GONE when there is nothing in it, rather than showing zeros');
+  /* Retired from THIS SCREEN, not from the file: the cash book's broken
+     chain and the Manager's missing-notes warning are both genuinely
+     bad and still wear it properly. Only the two inventory repairs may
+     not emit it again. */
+  const repairs = code.slice(code.indexOf('function renderStockLotDrift'),
+                             code.indexOf('function renderInventory('));
+  t.check(!/cb-chain-break/.test(repairs),
+    'the crimson banners are gone from the two inventory repairs');
+  /* The ORDER of the drawer is a rule, not a ranking, and it is said out
+     loud: matching a cost record to the shelf can leave new units with
+     no cost behind it, so matching comes before pricing. The old screen
+     depended on the shop doing them in that order and never said so. */
+  t.check(/matching a cost record to the shelf can leave new units/.test(fix),
+    'the drawer says why its sections are in the order they are');
+
+  /* The third repair is new. Seven lines under their floor were a red
+     pill on seven cards scattered through 192; they are a queue now,
+     ranked by how soon each RUNS OUT at the rate it has actually sold --
+     not by how far under it is, because two short of a line that sells
+     twice a year is not a problem and four days of paint is. */
+  const floors = (/function invFloorRows\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/restockRiskRows\(\)\.forEach\(r=> rate\.set\(r\.key, r\)\)/.test(floors),
+    'the below-floor queue reads the shop’s own thirty days of sales for its rate');
+  t.check(/if\(a\.daysLeft == null\) return b\.daysLeft == null \? 0 : 1;/.test(floors),
+    'and a line with no rate sorts LAST rather than being given a guessed day count');
+  t.check(/nothing sold in 30 days/.test(code),
+    'saying so in words where the day count would have been');
 }
 
 /* ---------- searching without finishing the words -------------------- */
@@ -282,8 +437,13 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'and the difference is what the empty state reports');
   t.check(/hiddenByZero > 0/.test(code) && /nothing on the shelf/.test(code),
     'and an empty result names the filter that emptied it rather than denying the match');
-  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*renderInventory\(\);/.test(code),
-    'with one press to lift it');
+  /* Through invRefilter rather than renderInventory: lifting the shelf
+     filter changes WHAT is listed, and every such change returns to the
+     first page. Without that, lifting it while on page 5 of a 1-page
+     result shows an empty list that is not empty -- which reads as the
+     press having done nothing. */
+  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*invRefilter\(\);/.test(code),
+    'with one press to lift it, and that press goes back to the first page');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -130,6 +130,18 @@ const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
 const FN_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/catalogue-public';
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* The first LETTER of each of the first two words -- not the first
+   CHARACTER. An agent qualified the way this shop qualifies people --
+   "Reagan - Stuart" -- has a hyphen at character zero of the second
+   word, and the avatar on a public catalogue then greets a customer
+   with "R-". Byte-for-byte the admin app's nameInitials(); this page
+   shares no script with it, so it is a copy, and the only one here. */
+function nameInitials(name){
+  const letters = String(name||'').trim().split(/\s+/)
+    .map(w=> (w.match(/[A-Za-z0-9]/)||[''])[0]).filter(Boolean);
+  if(!letters.length) return '?';
+  return (letters[0] + (letters[1]||'')).toUpperCase();
+}
 function toast(msg){
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -304,7 +316,7 @@ async function boot(){
     catalogueData = res;
     items = res.items || [];
 
-    const initials = (res.agentName||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const initials = nameInitials(res.agentName);
     document.getElementById('agentAvatar').textContent = initials;
     document.getElementById('agentName').textContent = res.agentName;
     document.getElementById('headline').textContent = res.headline || 'Independent Sales Agent';

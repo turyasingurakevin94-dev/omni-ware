@@ -44,7 +44,14 @@ const env = {
   renderCustomers: () => rendered.push('customers'),
   renderDebtorsList: () => rendered.push('debtors'),
   document: { getElementById: () => ({ value: '' }) },
+  /* These scenarios are about the DEBT arithmetic of voiding rather
+     than about the asking, so they run with nothing to answer. The ask
+     has its own scenario at the end of the file. */
+  voidInvoicesWarning: () => warning,
+  confirm: () => confirmAnswer,
 };
+let warning = null;
+let confirmAnswer = true;
 const NAMES = [
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'invoiceDebtDesired',
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
@@ -136,13 +143,70 @@ if (fns) {
 
 /* ---------- 6. all three callers go through it ---------------------- */
 {
-  t.check(/function setInvoicesVoided\(quotes, voided\)\{\s*\n\s*quotes\.forEach\(q=>\{ q\.voided = voided; syncInvoiceDebtCharge\(q\); \}\);/.test(code),
-    'the flag and the sync happen together, for every quote passed');
-  t.check(/setInvoicesVoided\(\[q\], !q\.voided\);/.test(code), 'the single toggle uses it');
-  t.check(/setInvoicesVoided\(quotes, true\);/.test(code), 'bulk void uses it');
+  /* The body now opens by asking, then does exactly what it always
+     did. Both halves are pinned: the guard cannot be dropped, and the
+     flag and the sync still cannot be separated. */
+  t.check(/function setInvoicesVoided\(quotes, voided\)\{\s*\n\s*if\(voided\)\{\s*\n\s*const warning = voidInvoicesWarning\(quotes\);\s*\n\s*if\(warning && !confirm\(warning\)\) return false;\s*\n\s*\}\s*\n\s*quotes\.forEach\(q=>\{ q\.voided = voided; syncInvoiceDebtCharge\(q\); \}\);/.test(code),
+    'it asks before voiding, then the flag and the sync happen together for every quote passed');
+  t.check(/setInvoicesVoided\(\[q\], !q\.voided\)/.test(code), 'the single toggle uses it');
+  t.check(/setInvoicesVoided\(quotes, true\)/.test(code), 'bulk void uses it');
   t.check(/setInvoicesVoided\(quotes, false\);/.test(code), 'bulk unvoid uses it');
+  /* A caller must not announce something the shop declined. */
+  t.check(/if\(!setInvoicesVoided\(\[q\], !q\.voided\)\) return;/.test(code),
+    'the single toggle keeps quiet when the ask is refused');
+  t.check(/if\(!setInvoicesVoided\(quotes, true\)\) return;/.test(code),
+    'and so does bulk void');
   t.check(!/quotes\.forEach\(q=>q\.voided = (true|false)\);/.test(code),
     'and neither bulk action sets the flag on its own any more');
+}
+
+/* ---------- 7. saying no leaves everything exactly as it was --------- *
+ * Voiding cancels a sale, and it is a small grey icon a thumb's width
+ * from Undo invoice, which does something quite different. So it asks --
+ * and a dialog is only worth having if refusing it really does nothing.
+ * Checked on the debt as well as the flag, because the flag alone was
+ * the original bulk-void bug in this very file.
+ */
+if (fns) {
+  const { setInvoicesVoided, customerDebtDrift, syncInvoiceDebtCharge } = fns;
+  /* The same two-invoice fixture the scenarios above use, built here
+     because setup() is scoped to the block that owns them. */
+  store.customers = [{ id: 'C1', name: 'Nakato', debt: 0, debtLog: [] }];
+  store.savedQuotes = [3000, 5000].map((price, i) => ({
+    id: i + 1, client: { name: 'Nakato' }, date: '2026-08-02', customerId: 'C1',
+    items: [{ id: (i + 1) * 10, productId: 'P1', variantIdx: null, qty: 1, sellPrice: price, supplierId: 'S1' }],
+    status: 'completed', invoiced: true, invoicedAt: '2026-08-02',
+    amountPaid: 0, payments: [], voided: false, debtCharged: 0,
+  }));
+  store.savedQuotes.forEach(syncInvoiceDebtCharge);
+  const debt = () => store.customers[0].debt;
+  const before = debt();
+  t.check(before === 8000, 'two invoices charge 8,000 between them to begin with');
+
+  warning = 'Void these?';
+  confirmAnswer = false;
+  rendered = [];
+  const went = setInvoicesVoided(store.savedQuotes, true);
+
+  t.check(went === false, 'a refused void reports that it did not happen');
+  t.check(store.savedQuotes.every(q => q.voided === false), 'no document is marked voided');
+  t.check(debt() === before, `the customer still owes what they owed (${debt()})`);
+  t.check(customerDebtDrift(store.customers[0]) === 0, 'and the ledger has not been written to');
+  t.check(rendered.length === 0, 'nothing is redrawn, because nothing changed');
+
+  /* And the ask is not in the way of the act: answering yes does what it
+     always did. */
+  confirmAnswer = true;
+  t.check(setInvoicesVoided(store.savedQuotes, true) === true, 'saying yes goes ahead');
+  t.check(debt() === 0, 'and the debt clears, exactly as before the dialog existed');
+
+  /* Unvoiding is the way back from the question, so it is never asked
+     about -- even with a warning available and the answer set to no. */
+  confirmAnswer = false;
+  t.check(setInvoicesVoided(store.savedQuotes, false) === true, 'unvoiding is not gated on the ask');
+  t.check(debt() === 8000, 'and it restores the charge');
+  warning = null;
+  confirmAnswer = true;
 }
 
 process.exit(t.done() ? 1 : 0);

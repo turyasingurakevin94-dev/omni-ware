@@ -1,0 +1,121 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The redesign"
+    },
+    {
+      "id": "page-2",
+      "name": "The account, the states and the phone"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Before.dc.html",
+      "title": "As it stands today \u2014 fifteen faults, twelve of them on the drawing",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Proposed \u2014 the buying book, ranked by who is winning you money",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1340,
+      "page": "page-1"
+    },
+    {
+      "file": "Account.dc.html",
+      "title": "Proposed \u2014 one supplier's account, which used to be a modal",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1050,
+      "page": "page-2"
+    },
+    {
+      "file": "States.dc.html",
+      "title": "Proposed \u2014 empty, nothing priced, and a read that failed",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1450,
+      "page": "page-2"
+    },
+    {
+      "file": "Phone.dc.html",
+      "title": "Proposed \u2014 the phone, drawn from scratch at 390",
+      "x": 1560,
+      "y": 1610,
+      "w": 390,
+      "h": 844,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": -820,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT THIS SCREEN IS FOR\n\nYou settled four things when I asked, and everything on the drawing follows from them.\n\n1. SUPPLIERS IS THE BUYING BOOK, NOT A SECOND CREDITORS. Creditors already owns who to pay first and how old each bill is; Purchase invoices owns one bill; Compare prices owns one item. The only question left that is genuinely this screen's own is WHO IS WORTH BUYING FROM. So it is ranked by the lines each supplier is currently CHEAPEST ON -- the answer you chose -- and what you owe them is one column of seven, not the headline.\n\n2. THE BAND AT THE TOP IS PRICES YOU CAN NO LONGER TRUST, AND NOTHING ELSE. You picked one rule out of four, and one rule is right: a band that fires on everybody stops being a band. Ranked by EXPOSURE, not by age -- how many lines you still buy on that stale price. A 201-day price nobody buys on is amber; a 118-day price you are ordering hoop iron against every month is red.\n\n3. A SUPPLIER OPENS AS A FULL-WIDTH ACCOUNT, IN PLACE. The modal is gone. It can be printed, read beside something else, and does not dead-end on a phone.\n\n4. THE PHONE ANSWERS A DIFFERENT QUESTION. At the desk you are deciding who to buy from. On a phone you are standing in a yard about to buy, so it is SEARCH FIRST -- by product as well as by name -- and then one supplier, deep. 820px is a switch, not a reflow.\n\nTHE THING THE OLD SCREEN ALREADY KNEW AND NEVER SAID. supplierStats() computes, for every supplier, how many lines they price and how many of those they currently WIN. That is the whole answer to \"who is worth buying from\", and it is rendered as two 16px tiles at the bottom of a card in an alphabetical grid. Every price row carries lastAskedAt; supplierAskList() builds the list of prices to chase and supplierAskBlockHTML() renders it -- all of it locked inside a modal, one supplier at a time, with nothing on the list hinting it exists. This design adds no new figure. It takes what the app already computes and puts it where it can be compared.\n\nEverything is drawn from index.html's own values: the 23-colour palette, the 11/12/13/14 ramp, Inter + Archivo Black + IBM Plex Mono, and the .ow-* console components already shipping on Today, Customers, Creditors, Purchase invoices, Debtors, Pricing and Compare Prices. No new colour, no new weight, no new type size, no fourteenth button family."
+    },
+    {
+      "id": "faults",
+      "x": -820,
+      "y": 1260,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT IS WRONG WITH IT AS IT STANDS >\n\n1. THE HEADLINE IS A DATA-ENTRY INSTRUCTION. \"Everyone you buy hardware from. Give each one a short ID -- it's used to link prices to them.\" The screen's own description of itself is a note about an ID field. Compare Customers, which now says what each one is WORTH to you.\n\n2. A SECOND PAGE TITLE, 65px LOWER, CARRYING NOTHING. \"Suppliers\" then \"All suppliers\".\n\n3. TOTAL YOU OWE IS PAINTED CRIMSON. .dir-summary-card.owed sets color:var(--danger) on 12,480,000 of ordinary trade credit. Crimson in this app means BAD -- overdue, behind, a loss. Buying on credit is how the shop trades. A figure is a size, not a warning. (Customers has the identical fault with the identical rule; fixing one should fix both.)\n\n4. THE THIRD TILE REPEATS THE SECOND, AND BOTH BELONG TO CREDITORS. \"Total you owe\" and \"Suppliers with a balance\" are one piece of news twice, and it is Creditors' news. Neither tile says anything only this screen can say -- how many of the 44 you can actually buy from, for instance.\n\n5. THE SEARCH PROMISES SOMETHING GOOD AND HIDES IT. It does search products -- renderSuppliers falls through to supplierPriceMatches -- which is genuinely useful and is buried in a placeholder that reads like every other search box. It also does not search phone2, the same bug Customers has.\n\n6. NOTHING IS RANKED. Alphabetical, paged at 24, so 20 of 44 suppliers sit behind \"Show 20 more\". Your best supplier's position on the screen is decided by the alphabet.\n\n7. NAMES BREAK MID-WORD. \"Feko (Ambros / e)\", \"Katwe Hardwar / e Depot\", \"Mulongo Hardwar / e\". word-break:break-word plus three 28px buttons that will not shrink, in a 260px minimum column. A name cut mid-word reads as a different supplier, not as a shortened one -- and this shop's names are deliberately qualified (\"Feko (Ambrose)\" vs \"Feko (Rebbeca)\") precisely so they can be told apart.\n\n8. THE MOST VALUABLE FIGURES ON THE SCREEN ARE THE SMALLEST. \"96 PRICED ITEMS / 27 BEST PRICE\" is the answer to who is worth buying from, at 16px mono under a 10.5px caption, at the bottom of a card, wrapped onto two rows because two 130px minimums do not fit a 228px card.\n\n9. A SUPPLIER YOU CANNOT BUY FROM LOOKS LIKE ONE YOU CAN. Nabweru Traders has no prices, so they cannot be picked as a source for anything, anywhere in the app. supRenderConsequence() says exactly that -- inside the add form. The list shows two zeroes.\n\n10. A CARD THAT KNOWS NOTHING SAYS NOTHING. Feko (Rebbeca) has no number, is 87 days unconfirmed, and is cheapest on six lines. The card says \"No contact details on file yet\" and stops.\n\n11. IT IS A GRID, SO NOTHING CAN BE COMPARED. 44 equal cards. Bahco at 14,820,000 and a supplier you have never bought from are the same size on screen, and no figure lines up with the one beside it.\n\n12. TWENTY MORE ARE BEHIND A BUTTON, AND 132 CONTROLS ARE IN FRONT OF YOU. Three 28px buttons per card against a 44px tap floor, delete immediately beside edit.\n\nAND OFF THE DRAWING:\n\n13. EVERYTHING VALUABLE IS IN A MODAL. What you owe, what you have bought, when you last paid, the whole statement of account, the list of prices to chase and the reply sheet to type them back into -- all of it, one supplier at a time.\n\n14. PRICE AGE IS RECORDED AND NEVER SHOWN. lastAskedAt is on every price row and supplierAskList() already builds the chase list. The one thing that decides whether a price can be trusted is computed and displayed nowhere on this screen.\n\n15. FORTY-FOUR OXIDE AVATARS. .sc-avatar paints the initials in --accent on navy. The accent is meant to appear ONCE per screen, on the thing to do next. Here it appears 44 times, on the least actionable element on the card."
+    },
+    {
+      "id": "proposal",
+      "x": 3120,
+      "y": 0,
+      "w": 700,
+      "page": "page-1",
+      "text": "THE PROPOSAL -- what changed, and why\n\nTHE STRIP SAYS WHETHER THE BUYING BOOK IS HEALTHY, AND NOT ONE FIGURE OF IT IS CREDITORS'. 31 of 44 suppliers can actually be bought from; 13 carry no price and cannot be picked as a source. 148 of 214 priced lines have more than one quote -- the other 66 are lines where you have no second opinion at all, which is where money quietly leaks. 48,660,000 spent in ninety days. 187 of 612 prices are past sixty days. Nothing is coloured: they are sizes, not warnings.\n\nTHE BAND IS RANKED BY EXPOSURE, NOT BY AGE. Ronald's price is 118 days old and Katwe's is 201 -- Ronald is first, and red, because he is still the cheapest on eleven lines you order and Katwe is cheapest on none. The mark is the rule: RED means you are buying on that price right now, amber means the price is old and nothing depends on it. That distinction is the whole reason the band is worth reading, and it is why an \"everything older than 60 days\" list would be useless.\n\nEVERY ROW CARRIES ITS ARITHMETIC, NOT A LABEL. \"Cheapest on 3 lines of mild steel tubing, on an April price. The next quote is 14% above it -- a real saving, if it still stands\" is a sentence you can argue with. A chip reading \"Stale\" is not.\n\nTHE FOOT OF THE BAND IS WHAT MAKES IT TRUSTABLE. Nine suppliers hold a stale price, five are listed, and the sentence says what the ranking is NOT saying: this checks how old a price is, never whether it is right. And nothing has been sent -- asking opens WhatsApp with the list written out, which is the app's own law.\n\nTHE BOOK IS A TABLE, WHICH IS THE POINT. Seven columns, money right-aligned and tabular, sorted by CHEAPEST ON. Bahco's 27 wins and Tumusiime's 3 are now visibly different sizes. The name column is the one that gives way when space runs short; no money column ever truncates, because \"1,240,00\" is a tenth of \"1,240,000\" and looks entirely plausible.\n\nDASHES, NOT ZEROS. Katwe has never been invoiced, so their spend is a dash. Nabweru has no prices, so Priced, Cheapest on and Confirmed are all dashes and the Standing column says \"No prices\" -- the one thing the old card could not tell you. A zero would claim you bought nothing from them; a dash says the app cannot know.\n\nFIVE FILTERS, EACH A REAL QUESTION. All 44 / Winning 22 / Stale 9 / Owing 9 / No prices 13. Every count is derived, and every one is a sentence a shopkeeper says out loud.\n\nTHE SEARCH ADVERTISES WHAT IT ALREADY DOES: \"Name, either number, place, ID -- or a product to see who prices it\". That last clause is the best feature on the current screen and nobody knows it is there.\n\nTHE ACCENT IS SPENT ONCE, ON ADD SUPPLIER. Every action in the band and on the account is a ghost button, and the 44 oxide avatars are gone -- along with the avatars themselves, which told you nothing a name did not."
+    },
+    {
+      "id": "open",
+      "x": 3120,
+      "y": 1420,
+      "w": 700,
+      "page": "page-1",
+      "text": "WHAT I HAVE NOT DECIDED FOR YOU\n\n1. WHERE \"STALE\" STARTS. I have drawn sixty days, with the red/amber split on whether you still buy on the price. Sixty days is my number, not yours -- cement moves monthly and hoop iron does not, so the honest version might be per-category rather than one figure. Too loose and the band fires on everybody; too tight and it never fires.\n\n2. WHETHER THE BAND SHOULD ALSO CARRY \"LOST THEIR PRICE LEAD\". You picked stale prices alone, and I think that is right for a first cut. A supplier who used to be cheapest and is no longer is a genuinely different piece of news, and it is computable from what you have. It would be the second rule, not a replacement.\n\n3. THE BAND'S CEILING. Five listed, nine said. My instinct is that it stays at five and the header tells the truth, the way Customers does. You may want \"show the rest\".\n\n4. COMMISSION. I have put it on the account rail because commissionPct is on the supplier and openSupplierCommissionModal is on every card, and today nothing anywhere says what commission has cost you. If commission is really a payroll or agent matter rather than a supplier one, it should leave this screen entirely rather than sit half-here.\n\n5. THE AVATARS. I have removed them. Two initials told you nothing the name did not, and they were 44 oxide marks on a screen allowed one. If you want a mark on each row, say so and it will be an ink one.\n\n6. WHAT I HAVE NOT TOUCHED. supplierStats, supplierAskList, supplierPriceMatches, supplierAccountStats, supplierStatementRows, the duplicate check, the opening-balance dating, or any figure anywhere. Same data, computed the same way, drawn differently.\n\n7. THREE THINGS THAT ARE BUGS WHATEVER YOU DECIDE HERE: trade credit painted crimson (fault 3), the search that ignores phone2 (fault 5), and names breaking mid-word in the card head (fault 7)."
+    },
+    {
+      "id": "account-note",
+      "x": -820,
+      "y": 0,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE ACCOUNT -- what used to be a modal\n\nClicking a supplier opens this in place of the register. It is a screen, so it can be printed, linked to and read beside something else.\n\nTHE FOUR FIGURES ARE THE FOUR THINGS YOU ASK ABOUT A SUPPLIER. What you owe them, what you have bought, what they win you, and how old the price behind those wins is. The fourth one is the finding: every one of Ronald's eleven wins is on a price from 11 May.\n\nSO THE ACCENT IS \"ASK FOR 11 PRICES\". One oxide button on the screen, and it is the thing this account is telling you to do. Enter their reply sits beside it as a ghost, because asking is only useful if what comes back can be written down in the same minute -- both flows already exist in the code, behind the modal.\n\n\"WHAT YOU BUY FROM THEM\" IS THE TABLE THE APP HAS NEVER DRAWN. Their price against the next best quote from anybody else on the same line, the age of each, and what you have spent. Two of the five lines show a dash under You save -- somebody else is cheaper on roofing nails and flat bar, and this is not where to buy them. That is the real answer to \"should I keep buying here\", and it is per-line rather than per-supplier.\n\nTHE STATEMENT IS THE SHEET THAT GETS HANDED ACROSS A COUNTER, so it closes on TODAY rather than on a total row, and says how old the oldest open bill is. The note under it names its source -- their purchase invoices and the payments against them, which is what Creditors reads -- so the two screens can never drift apart and nobody ever \"fixes\" it into disagreeing.\n\nTHE RAIL CARRIES THE THREE THINGS NO LEDGER CAN SAY. How to reach them, including the second number, the shop number and the sentence a shop keeps in its head and loses when the person who knew it is out. What their commission stands at, with the honest note that commission is recorded by you, never derived -- so 182,500 is earned-and-unwritten, not a debt the books know about. And where their goods are collected from, because the morning pickup run groups by place and three other suppliers sit on the same street.\n\nWHAT IS DELIBERATELY NOT HERE: a Pay button. Paying is done on the bill, in Purchase invoices; who to pay first is Creditors. Two places that post the same money is how two screens come to disagree."
+    },
+    {
+      "id": "states-note",
+      "x": 3120,
+      "y": 0,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE THREE STATES\n\n1. NOTHING ON THE BOOK. No strip, because four figures reading zero are four figures that mean nothing. Instead the empty screen says the one thing a new shop needs to know and the form only says at the very end: a supplier with no price cannot be picked as a source for anything, so adding a name on its own changes nothing. And it names the trap your code already handles -- an opening balance carries the date of the charge it came from, which is why Creditors ages it right from day one instead of showing every old balance as new.\n\n2. ON THE BOOK, NOTHING PRICED. This screen ranks by wins, and wins need prices. Rather than sorting seven names alphabetically and calling that a ranking, it says so, gives the two ways out, and shows the names and numbers -- which are correct -- with every figure column as a dash. One row carries an opening balance, and the foot says why that single figure is there when the rest are dashes: it is a real bill on Creditors and did not come from a price or an invoice.\n\n3. THE PRICE BOOK DID NOT LOAD. This state does not exist today; if the read fails the screen would show zeroes and a shop would read them as facts. Your app's law is that a failure must name itself. So: what loaded is shown (names, numbers, spend, owed -- all current), what did not is a \"?\" and never a 0, the list re-sorts onto what DID load and says so, and the attention band is switched OFF rather than shown short, because a ranked list that quietly leaves suppliers out is worse than no list at all."
+    },
+    {
+      "id": "phone-note",
+      "x": 2060,
+      "y": 1610,
+      "w": 700,
+      "page": "page-2",
+      "text": "THE PHONE -- its own design at 390\n\n44px navy bar, 26px Archivo page name, 15px body, 48px targets, no fake status bar, no fake keyboard.\n\nTHE PHONE JOB IS NOT THE DESK JOB. At the desk you work through the book deciding who is worth buying from. On a phone you are in a yard or at a stall and about to buy ONE thing. So the screen is SEARCH FIRST, and the search is by PRODUCT as often as by name -- \"hoop iron\" returns the four suppliers who price it, cheapest first. That capability already exists in renderSuppliers and has never had a surface worth using.\n\nTHE FOUR FIGURES ARE THE FOUR THINGS YOU NEED BEFORE HANDING OVER MONEY. Their price, the next best quote from anybody else, what you already owe them, and how old their price is. The only colour on the card is on 118 days, because that is the one figure that is off.\n\nTHE SENTENCE UNDER THEM IS WORTH MORE THAN ANY OF THE FIGURES. \"Cheapest by 7%, on a price from May. Ronald is rarely in before ten; Stuart quotes but will not discount.\" No number says that, and it is what actually decides how the next ten minutes go.\n\nTHE ACCENT IS IN THE THUMB ZONE, ONCE. Call and Ask for 11 prices, with the line that keeps the app honest: it opens WhatsApp with the lines written out and nothing is sent until you send it. The card itself carries no buttons at all.\n\nONE THING TO DECIDE: whether the phone should be able to record a purchase or a payment. Somebody handing over money in a yard is a real moment and this is the screen you would be on. I have left it off -- posting money from a search result is the same mistake the old Customers card made with \"+ Charge\" -- but if you want it, it belongs behind a full account view, not on this card."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

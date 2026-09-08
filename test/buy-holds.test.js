@@ -77,6 +77,9 @@ const makeData = () => ({
 let saves = 0;
 const makeEnv = (data) => ({
   data,
+  /* What the shop wrote down about its own goods, as the one reader
+     returns it. This fixture has written none. */
+  pairCompanionsFor: () => [],
   todayISO: () => TODAY,
   daysSinceDate: (d) => Math.round((new Date(TODAY + 'T00:00:00Z') - new Date(d + 'T00:00:00Z')) / 86400000),
   saveData: () => { saves += 1; },
@@ -90,7 +93,7 @@ const makeEnv = (data) => ({
 });
 
 const CHAIN = [
-  'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+  'waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
   'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
   'quoteItemSellPrice', 'invoiceLineCost', 'quoteSuggestedPrice', 'quoteSuggestedStockPrice',

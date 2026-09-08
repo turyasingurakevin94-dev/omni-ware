@@ -79,16 +79,23 @@ const env = {
   renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
   renderInvoices: () => {}, renderCustomers: () => {}, renderDebtorsList: () => {},
   renderSavedQuotes: () => {}, renderPurchaseInvoices: () => {},
-  // deleteSavedQuote asks before it acts. Always saying yes is the harsher
-  // path -- it is the one that actually performs the reversal.
+  // deleteSavedQuote asks before it acts, and so does voiding now.
+  // Always saying yes is the harsher path -- it is the one that actually
+  // performs the reversal. The warning is stubbed truthy rather than null
+  // so the confirm is really reached and the books are driven through the
+  // branch a shop actually takes.
+  voidInvoicesWarning: () => 'Void?',
   confirm: () => true,
   toast: () => {},
   fmtUGX: (n) => `${Math.round(n)} UGX`,
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
 };
 
 const NAMES = [
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
-  'applyStockDelta', 'getStockQty', 'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  'applyStockDelta', 'stockOnHand', 'getStockQty', 'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  // A sale leaves in the shelf's unit, read through these two.
+  'stockUnitFor', 'stockMoveOnRowUnit',
   // applyQuoteStockDeduction now also deducts a bought-in line that has
   // been received, so the test for that comes with it.
   'quoteLineReceived', 'quoteLineComesOffShelf',

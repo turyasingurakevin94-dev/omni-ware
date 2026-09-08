@@ -1034,7 +1034,11 @@ const trip = (over) => Object.assign({
  * anything leaving the shop.
  */
 {
-  const NAMES3 = ['waComposeUrl', 'supplierTripMessage', 'supplierTripWaUrl', 'supplierPriceAskMessage'];
+  /* The trip message counts each line in the unit it was chosen in,
+     through the same reader every document uses; a loose line reads
+     exactly as before. */
+  const NAMES3 = ['waComposeUrl', 'supplierTripMessage', 'supplierTripWaUrl', 'supplierPriceAskMessage',
+    'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount'];
   const msgState = { suppliers: [{ id: 'S1', name: 'Dooba', phone: '0701240819' }] };
   /* The price review is stubbed, not compiled: what is worth asking
      Dooba about is decided by the stock log, the sales and the item's
@@ -1077,6 +1081,9 @@ const trip = (over) => Object.assign({
     'two products that differ only late in the name are still told apart');
   t.check(!/…/.test(ours), 'nothing in the list is truncated');
   t.check(/40 Pcs/.test(ours) && /20 Pcs/.test(ours), 'each carries its quantity and unit');
+  const ctn = msg.supplierTripMessage(t2({ lines: [{ productName: 'Soft Close', qty: 200, unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack' }] }));
+  t.check(/Soft Close — 2 Ctn/.test(ctn) && !/200 Pair/.test(ctn),
+    'a line chosen as cartons asks the supplier for cartons');
 
   // No prices. The shop is about to negotiate with the reader.
   t.check(!/UGX/.test(ours) && !/\d{1,3},\d{3}/.test(ours),

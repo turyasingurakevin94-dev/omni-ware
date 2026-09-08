@@ -1,0 +1,758 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+
+    /* ================= the map console ================= */
+
+    /* A segmented control. ONE object, used for the layer switch and the
+       list filter -- the old page drew both as pills and they were
+       indistinguishable 300px apart. This one is inset and grey; the
+       accent is never spent on "which view am I in". */
+    .seg{display:inline-flex;background:var(--ow-steel-050);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);padding:2px;gap:2px;box-sizing:border-box;height:26px;align-items:center;}
+    .seg-b{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 9px;box-sizing:border-box;
+      border-radius:var(--ow-r-sm);font-size:11px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    .seg-b.on{background:var(--ow-paper);color:var(--ow-ink-900);box-shadow:0 1px 1px rgba(15,20,25,.08);}
+    .seg-b svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .seg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:10px;
+      color:var(--ow-ink-400);font-weight:600;}
+    .seg-b.on .seg-n{color:var(--ow-ink-600);}
+
+    /* the drawn map */
+    .mp-c{position:relative;height:520px;background:#EEF0F1;overflow:hidden;}
+    .mp-c.sat{background:#3B3E36;}
+    .mp-c svg.base{position:absolute;inset:0;width:100%;height:100%;display:block;}
+    .mp-lbl{position:absolute;font-size:11px;font-weight:500;color:#7B848D;
+      letter-spacing:.02em;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;}
+    .mp-c.sat .mp-lbl{color:#E4E7E2;text-shadow:0 1px 2px rgba(0,0,0,.7);}
+    .mp-rd{position:absolute;font-size:10px;font-weight:500;color:#98A0A8;white-space:nowrap;}
+
+    /* a marker: the count, in the band's colour, on the pin's position */
+    .mk{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;
+      justify-content:center;border-radius:50%;color:#fff;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;
+      box-shadow:0 1px 3px rgba(15,20,25,.35);border:2px solid rgba(255,255,255,.92);}
+    /* Nothing owed is HOLLOW, not verdigris. The old legend had two
+       entries painted the same colour, which is a legend that lies. */
+    .mk.none{background:var(--ow-paper);color:var(--ow-ink-600);border-color:var(--ow-rule);
+      box-shadow:0 1px 3px rgba(15,20,25,.2);}
+    /* The selected place, said on the map and not only in the rail. */
+    .mk-sel{position:absolute;transform:translate(-50%,-50%);border-radius:50%;
+      border:2px solid var(--ow-steel-950);}
+    .mk-t{position:absolute;transform:translate(-50%,0);margin-top:4px;font-size:11px;
+      font-weight:600;color:var(--ow-ink-900);background:rgba(255,255,255,.9);
+      border-radius:var(--ow-r-sm);padding:1px 5px;white-space:nowrap;}
+    /* The shop itself. A square, not a circle -- it is not a place that
+       owes anything, it is where you are counting from. */
+    .mk-home{position:absolute;transform:translate(-50%,-50%);width:16px;height:16px;
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-950);border:2px solid #fff;
+      box-shadow:0 1px 3px rgba(15,20,25,.4);}
+
+    /* a ghost pin: a SUGGESTION, drawn so it cannot be mistaken for a fact */
+    .mk-ghost{position:absolute;transform:translate(-50%,-50%);width:38px;height:38px;
+      border-radius:50%;border:2px dashed var(--ow-oxide);background:rgba(178,58,38,.10);
+      display:flex;align-items:center;justify-content:center;}
+    .mk-ghost svg{width:17px;height:17px;fill:none;stroke:var(--ow-oxide);stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* map furniture */
+    .mp-ov{position:absolute;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);box-shadow:0 1px 3px rgba(15,20,25,.14);}
+    .mp-zoom{left:12px;top:12px;width:28px;}
+    .mp-zoom div{height:27px;display:flex;align-items:center;justify-content:center;
+      color:var(--ow-ink-600);}
+    .mp-zoom div + div{border-top:1px solid var(--ow-rule-soft);}
+    .mp-zoom svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;}
+    .mp-base{left:52px;top:12px;padding:3px;display:flex;gap:2px;}
+    .mp-base b{display:flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--ow-r-sm);
+      font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+    .mp-base b.on{background:var(--ow-steel-100);color:var(--ow-ink-900);}
+    .mp-comp{right:12px;top:12px;padding:3px;display:flex;gap:2px;align-items:center;}
+    .mp-comp span{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
+      border-radius:var(--ow-r-sm);color:var(--ow-ink-600);}
+    .mp-comp span.n{width:34px;flex-direction:column;gap:1px;}
+    .mp-comp svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .mp-comp .nd{width:13px;height:13px;fill:none;stroke:var(--ow-oxide);stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .mp-comp .bg{font-family:var(--mono);font-size:9px;font-weight:600;line-height:1;
+      color:var(--ow-ink-900);}
+    /* The legend is UNDER the map, not floating on it. Floated bottom-left
+       it covered Natete and the five customers there -- a key that hides
+       the data it is a key to. Below, it is one readable row and the map
+       keeps every pixel it was given. */
+    .mp-leg{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .mp-leg-t{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-400);}
+    .mp-leg div.r{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ow-ink-600);}
+    .mp-leg i{width:9px;height:9px;border-radius:50%;flex:none;}
+    .mp-leg i.hollow{background:var(--ow-paper);border:1.5px solid var(--ow-rule);}
+    .mp-leg .sp{flex:1;}
+    .mp-leg em{font-style:normal;font-size:11px;color:var(--ow-ink-400);}
+    .mp-scale{position:absolute;right:12px;bottom:26px;background:rgba(255,255,255,.86);padding:3px 6px;border-radius:var(--ow-r-sm);font-size:10px;color:var(--ow-ink-600);
+      font-family:var(--mono);display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+    .mp-scale i{display:block;width:64px;height:5px;border:1px solid var(--ow-ink-600);border-top:0;}
+    .mp-attr{position:absolute;right:0;bottom:0;font-size:10px;color:var(--ow-ink-600);
+      background:rgba(255,255,255,.82);padding:2px 6px;border-top-left-radius:var(--ow-r-sm);}
+
+    /* ---- the rail ---- */
+    .rh{display:flex;align-items:flex-start;gap:8px;padding:11px 12px 9px;}
+    .rh-t{font-size:15px;font-weight:700;line-height:1.2;margin:0;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rh-s{font-size:11px;color:var(--ow-ink-600);margin:2px 0 0;line-height:1.4;}
+    .rh-dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:5px;}
+    .r-acts{display:flex;gap:6px;padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+
+    /* ---- the places list ---- */
+    .pbar{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .pbar .sp{flex:1;}
+    .psearch{display:flex;align-items:center;gap:7px;height:26px;width:210px;padding:0 9px;
+      box-sizing:border-box;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);font-size:12px;color:var(--ow-ink-400);}
+    .psearch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    .pl{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px 150px;align-items:center;
+      gap:12px;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
+    .pl:last-child{border-bottom:0;}
+    .pl.on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .pl-d{width:10px;height:10px;border-radius:50%;justify-self:center;}
+    .pl-d.off{background:var(--ow-paper);border:1.5px dashed var(--ow-amber);}
+    .pl-n{font-size:13px;font-weight:500;line-height:1.3;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pl-m{grid-column:2;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pl-v{text-align:right;white-space:nowrap;}
+    .pl-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .pl-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:1px;}
+    .pl-v.zero .pl-f{color:var(--ow-ink-400);font-weight:400;}
+    .pl-a{display:flex;gap:6px;justify-content:flex-end;}
+    .pl-hd{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px 150px;gap:12px;
+      padding:7px 12px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .pl-hd span{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-400);}
+    .pl-hd span.r{text-align:right;}
+
+    /* the suggestion, carried on the row it belongs to */
+    .sg{padding:2px 12px 12px 43px;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .sg-b{display:flex;align-items:center;gap:12px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);padding:9px 12px;}
+    .sg-t{font-size:12px;color:var(--ow-ink-900);line-height:1.45;min-width:0;}
+    .sg-t b{font-weight:600;}
+    .sg-src{display:block;font-size:11px;color:var(--ow-ink-600);margin-top:2px;}
+    .sg-a{display:flex;gap:6px;margin-left:auto;flex:none;}
+
+    /* A row that must say WHY it is not on the map cannot ellipsis the
+       reason away -- the sentence is the whole point of the row. */
+    .wrapm .ow-lr-m{white-space:normal;overflow:visible;}
+    .note{margin:0;padding:9px 12px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .note b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* ---- the old page, redrawn for comparison ---- */
+    .lg-head h1{font-family:'Archivo Black',sans-serif;font-size:22px;margin:0 0 4px;}
+    .lg-head p{font-size:13px;color:var(--ow-ink-600);margin:0 0 18px;}
+    .lg-pan{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:11px;padding:16px;}
+    .lg-hrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+    .lg-pill{font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:999px;
+      border:1px solid var(--ow-rule);color:var(--ow-ink-600);}
+    .lg-pill.on{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;}
+    .lg-sum{font-size:12.5px;color:var(--ow-ink-600);}
+    .lg-wrap{display:grid;grid-template-columns:minmax(0,1.6fr) 300px;
+      border:1px solid var(--ow-rule);border-radius:11px;overflow:hidden;}
+    .lg-side{border-left:1px solid var(--ow-rule);padding:13px 15px;font-size:13px;
+      color:var(--ow-ink-600);line-height:1.6;}
+    .lg-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;
+      padding:9px 12px;border-radius:9px;font-size:12.5px;}
+    .lg-strip.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .lg-strip.far{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .lg-chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule);color:var(--ow-ink-900);}
+    .lg-res{border:1px solid var(--ow-rule);border-radius:9px;margin-top:12px;overflow:hidden;}
+    .lg-r{display:flex;align-items:center;gap:10px;padding:9px 12px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .lg-r:last-child{border-bottom:0;}
+    .lg-r i{width:9px;height:9px;border-radius:50%;background:var(--ow-verdigris);flex:none;}
+    .lg-r i.off{background:var(--ow-steel-100);}
+    .lg-r .nm{font-size:13px;}
+    .lg-r .sb{font-size:11px;color:var(--ow-ink-600);}
+    .lg-r .sp{flex:1;}
+
+    /* fault markers on the Before board */
+    .fxr{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 12px;}
+    .fx{display:flex;align-items:center;gap:6px;}
+    .fx i{width:19px;height:19px;border-radius:50%;background:var(--ow-oxide);color:#fff;
+      font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+      font-family:'Inter',sans-serif;flex:none;box-shadow:0 1px 3px rgba(15,20,25,.3);}
+    .fx b{font-size:11px;font-weight:600;color:var(--ow-oxide-deep);background:rgba(255,255,255,.94);
+      border:1px solid var(--ow-oxide-soft);border-radius:var(--ow-r-sm);padding:2px 6px;white-space:nowrap;}
+
+    /* ---- states board ---- */
+    .sb-h{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-400);margin:0 0 8px;}
+    .sb-w{margin-bottom:22px;}
+    .ow-empty-t{font-size:14px;font-weight:600;color:var(--ow-ink-900);margin:0 0 5px;}
+    .ow-empty-s{font-size:12px;color:var(--ow-ink-600);margin:0 auto 12px;max-width:46ch;line-height:1.5;}
+
+    /* ---- phone ---- */
+    .ph-app{width:390px;height:844px;position:relative;background:var(--ow-steel-050);overflow:hidden;}
+    .ph-top{height:44px;background:var(--ow-steel-950);color:#fff;display:flex;align-items:center;
+      gap:10px;padding:0 16px;}
+    .ph-top .t{font-size:14px;font-weight:600;}
+    .ph-top svg{width:19px;height:19px;fill:none;stroke:#C7CFD8;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-body{position:absolute;top:44px;left:0;right:0;bottom:60px;padding:14px 16px 16px;
+      box-sizing:border-box;overflow:hidden;}
+    .ph-h1{font-family:'Archivo Black',sans-serif;font-size:26px;margin:0 0 3px;letter-spacing:-.02em;}
+    .ph-sub{font-size:13px;color:var(--ow-ink-600);margin:0 0 12px;line-height:1.4;}
+    .ph-card{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ph-2x2{display:grid;grid-template-columns:1fr 1fr;}
+    .ph-mt{padding:11px 14px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);}
+    .ph-mt:nth-child(1),.ph-mt:nth-child(2){border-top:0;}
+    .ph-mt:nth-child(odd){border-left:0;}
+    .ph-mt-l{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 3px;}
+    .ph-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;
+      font-weight:500;letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ph-mt-s{font-size:11px;color:var(--ow-ink-600);margin:3px 0 0;}
+    .ph-tabs{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--ow-paper);
+      border-top:1px solid var(--ow-rule);display:grid;grid-template-columns:repeat(5,1fr);}
+    .ph-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      font-size:10px;font-weight:600;color:var(--ow-ink-400);}
+    .ph-tab.on{color:var(--ow-oxide);}
+    .ph-tab svg{width:23px;height:23px;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ph-tab svg{fill:none;stroke:currentColor;}
+    .ph-tab.on svg{fill:currentColor;stroke:none;}
+    .ph-pc{display:flex;align-items:center;gap:11px;padding:13px 14px;
+      border-bottom:1px solid var(--ow-rule-soft);min-height:44px;}
+    .ph-pc:last-child{border-bottom:0;}
+    .ph-pc .nm{font-size:15px;font-weight:600;line-height:1.25;}
+    .ph-pc .sb{font-size:12px;color:var(--ow-ink-600);margin-top:2px;}
+    .ph-pc .vv{margin-left:auto;text-align:right;white-space:nowrap;}
+    .ph-pc .vf{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ph-pc .vb{font-size:11px;color:var(--ow-ink-600);display:block;}
+
+  </style>
+</helmet>
+
+<div class="app" style="width:1440px;height:1300px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">People</span><span>/</span><span>Map</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Selling</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg><span>Quotes</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="10" rx="1.5"></rect><path d="M16 9h3l2 3v4h-5z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17.5" cy="18" r="2"></circle></svg><span>Order tracking</span><span class="nav-badge">6</span></div>
+    <div class="nav-section-label">People</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 19c0-3.1 2.7-5.2 6-5.2s6 2.1 6 5.2"></path><path d="M16.5 6.2a3 3 0 0 1 0 5.6M18 19c0-2.3-.9-3.9-2.4-4.8"></path></svg><span>Customers</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9h18"></path><path d="M5 9V6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M10 13h4"></path></svg><span>Suppliers</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 19c0-3.1 2.7-5.2 6-5.2s6 2.1 6 5.2"></path><path d="M17 4v6M14 7h6"></path></svg><span>Staff</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 3 3 5.4v15L9 18l6 3 6-2.4v-15L15 6z"></path><path d="M9 3v15M15 6v15"></path></svg><span>Map</span><span class="nav-badge">6</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M8 20V9M12 20V4M16 20v-7"></path></svg><span>Debtors</span><span class="nav-badge">11</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+  </div>
+
+  <div class="main">
+
+    <div class="ow-ph">
+      <div>
+        <h1 class="ow-ph-t">Map</h1>
+        <p class="ow-ph-sub">Six orders going out today, to three places.</p>
+      </div>
+      <span class="ow-ph-i">i</span>
+      <span class="ow-ph-sp"></span>
+      <span class="btn btn-ghost ow-sm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+        The shop is in Kisenyi
+      </span>
+      <span class="btn btn-accent ow-sm">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 19c0-3.1 2.7-5.2 6-5.2s6 2.1 6 5.2"></path><path d="M17 4v6M14 7h6"></path></svg>
+        Hand out the 3 with no driver
+      </span>
+    </div>
+
+    <!-- The answer before the picture. Four figures, one row, hairline
+         dividers, no per-tile borders -- the house strip. -->
+    <!-- The layer changes the question, so it changes the figures. What the
+         driver carries back is the balance still unpaid, never the order's
+         value -- on a part-paid order those are different numbers, and the
+         one he is accountable for is the balance. -->
+    <div class="ow-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+      <div class="ow-mt">
+        <p class="ow-mt-l">Going out today</p>
+        <span class="ow-mt-v">6<span class="ow-u">orders</span></span>
+        <p class="ow-mt-s">to 3 places, 14.8&nbsp;km round trip</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">To collect on delivery</p>
+        <span class="ow-mt-v">2,340,000<span class="ow-u">UGX</span></span>
+        <p class="ow-mt-s">balances unpaid, not order value</p>
+      </div>
+      <div class="ow-mt ow-warn">
+        <p class="ow-mt-l">No driver yet</p>
+        <span class="ow-mt-v">3<span class="ow-u">orders</span></span>
+        <p class="ow-mt-s">Nakawa and Kireka</p>
+      </div>
+      <div class="ow-mt">
+        <p class="ow-mt-l">Furthest stop</p>
+        <span class="ow-mt-v">9.4<span class="ow-u">km</span></span>
+        <p class="ow-mt-s">Kireka &mdash; one drop, 180,000 to collect</p>
+      </div>
+    </div>
+
+    <div class="ow-grid" style="margin-bottom:16px;">
+
+      <div class="ow-pan">
+        <div class="ow-pan-h">
+          <span class="seg">
+            <span class="seg-b">
+              <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 19c0-3.1 2.7-5.2 6-5.2s6 2.1 6 5.2"></path><path d="M16.5 6.2a3 3 0 0 1 0 5.6"></path></svg>
+              Customers <b class="seg-n">22</b>
+            </span>
+            <span class="seg-b">
+              <svg viewBox="0 0 24 24"><path d="M3 9h18"></path><path d="M5 9V6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path></svg>
+              Suppliers <b class="seg-n">9</b>
+            </span>
+            <span class="seg-b on">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="12" height="9" rx="1.4"></rect><path d="M14 10h3l3 3v3h-6z"></path><circle cx="7" cy="18" r="1.8"></circle><circle cx="17" cy="18" r="1.8"></circle></svg>
+              Deliveries <b class="seg-n">6</b>
+            </span>
+          </span>
+          <span class="ow-pan-n">3 stops drawn &middot; 1 cannot be</span>
+        </div>
+        <div class="mp-c">
+    <svg class="base" viewBox="0 0 820 520" preserveAspectRatio="none" aria-hidden="true">
+      <rect width="820" height="520" fill="#EEF0F1"></rect>
+      <!-- wetland and open ground: the shapes that make a street map readable
+           as a place rather than a diagram -->
+      <path d="M0 452 C 120 428, 236 470, 352 452 C 470 434, 600 476, 820 448 L820 520 L0 520 Z" fill="#CFDCE1"></path>
+      <path d="M602 32 C 664 20, 726 40, 762 76 C 790 106, 776 148, 726 156 C 664 166, 616 138, 606 96 Z" fill="#DCE4DA"></path>
+      <path d="M56 236 C 100 222, 142 240, 148 268 C 154 296, 118 314, 82 304 C 48 294, 34 258, 56 236 Z" fill="#DCE4DA"></path>
+      <path d="M436 104 C 470 92, 508 104, 512 128 C 516 152, 486 166, 456 158 C 428 150, 416 118, 436 104 Z" fill="#DCE4DA"></path>
+      <!-- minor streets -->
+      <g stroke="#FFFFFF" stroke-width="2.4" fill="none" opacity=".9">
+        <path d="M120 60 L188 128 L188 246 L262 320"></path>
+        <path d="M330 40 L330 132 L404 206 L404 300"></path>
+        <path d="M60 168 L166 168 L246 248"></path>
+        <path d="M486 60 L486 150 L560 226 L560 336"></path>
+        <path d="M640 76 L640 190 L716 266"></path>
+        <path d="M240 380 L340 380 L340 448"></path>
+        <path d="M520 372 L620 372 L620 440"></path>
+        <path d="M96 300 L216 300 L216 400"></path>
+        <path d="M700 320 L780 320 L780 420"></path>
+        <path d="M266 108 L360 108"></path>
+        <path d="M430 250 L520 250"></path>
+        <path d="M150 420 L150 470"></path>
+        <path d="M456 60 L390 126"></path>
+      </g>
+      <!-- arterials: casing then fill, which is what makes a road read as a road -->
+      <g stroke="#DDE2E5" stroke-width="9" fill="none" stroke-linecap="round">
+        <path d="M410 300 L344 216 L300 170 L250 95 L206 20"></path>
+        <path d="M410 300 L500 286 L585 275 L700 235 L820 208"></path>
+        <path d="M410 300 L430 372 L455 430 L472 508"></path>
+        <path d="M410 300 L330 320 L210 355 L96 386"></path>
+        <path d="M410 300 L466 236 L560 175 L648 118"></path>
+        <path d="M300 170 L360 246 L410 300"></path>
+      </g>
+      <g stroke="#FFFFFF" stroke-width="5.5" fill="none" stroke-linecap="round">
+        <path d="M410 300 L344 216 L300 170 L250 95 L206 20"></path>
+        <path d="M410 300 L500 286 L585 275 L700 235 L820 208"></path>
+        <path d="M410 300 L430 372 L455 430 L472 508"></path>
+        <path d="M410 300 L330 320 L210 355 L96 386"></path>
+        <path d="M410 300 L466 236 L560 175 L648 118"></path>
+        <path d="M300 170 L360 246 L410 300"></path>
+      </g>
+      <!-- the ring -->
+      <g stroke="#E6EAEC" stroke-width="8" fill="none">
+        <path d="M186 214 C 250 128, 402 96, 528 132 C 654 168, 726 268, 682 356 C 638 444, 452 486, 322 456 C 192 426, 128 296, 186 214 Z"></path>
+      </g>
+      <g stroke="#FBFCFC" stroke-width="4.5" fill="none">
+        <path d="M186 214 C 250 128, 402 96, 528 132 C 654 168, 726 268, 682 356 C 638 444, 452 486, 322 456 C 192 426, 128 296, 186 214 Z"></path>
+      </g>
+    </svg>
+    <span class="mp-rd" style="left:222px;top:152px;transform:rotate(-52deg);">Bombo Rd</span>
+    <span class="mp-rd" style="left:500px;top:262px;">Jinja Rd</span>
+    <span class="mp-rd" style="left:250px;top:340px;transform:rotate(-14deg);">Masaka Rd</span>
+    <span class="mp-rd" style="left:432px;top:390px;transform:rotate(72deg);">Entebbe Rd</span>
+    <span class="mp-rd" style="left:492px;top:196px;transform:rotate(-33deg);">Northern Bypass</span>
+
+      <div class="mk-sel" style="left:585px;top:275px;width:48px;height:48px;"></div>
+      <div class="mk" style="left:585px;top:275px;width:34px;height:34px;font-size:13px;background:#B0700A;">3</div>
+      <div class="mk-t" style="left:585px;top:299px;">Nakawa</div>
+      <div class="mk" style="left:560px;top:175px;width:32px;height:32px;font-size:11px;background:#1C6B58;">2</div>
+      <span class="mp-lbl" style="left:560px;top:200px;">Ntinda</span>
+      <div class="mk" style="left:700px;top:235px;width:29px;height:29px;font-size:11px;background:#B0700A;">1</div>
+      <span class="mp-lbl" style="left:700px;top:258px;">Kireka</span>
+      <div class="mk-home" style="left:410px;top:300px;"></div>
+      <span class="mp-lbl" style="left:410px;top:318px;color:#14171B;font-weight:600;">The shop</span>
+
+      <div class="mp-ov mp-zoom">
+        <div><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div>
+        <div><svg viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div>
+      </div>
+      <div class="mp-ov mp-base"><b class="on">Streets</b><b>Satellite</b></div>
+      <div class="mp-ov mp-comp">
+        <span><svg viewBox="0 0 24 24"><path d="M20 8a9 9 0 1 0 1.5 6"></path><path d="M20 3v5h-5"></path></svg></span>
+        <span class="n">
+          <svg class="nd" viewBox="0 0 24 24"><path d="M12 4 L17 19 L12 15 L7 19 Z"></path></svg>
+          <b class="bg">N</b>
+        </span>
+        <span><svg viewBox="0 0 24 24"><path d="M4 8a9 9 0 1 1-1.5 6"></path><path d="M4 3v5h5"></path></svg></span>
+        <span><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></span>
+      </div>
+      <div class="mp-scale"><span>2 km</span><i></i></div>
+      <div class="mp-attr">&copy; OpenStreetMap contributors</div>
+
+        </div>
+        <div class="mp-leg">
+          <span class="mp-leg-t">Today&rsquo;s round</span>
+          <div class="r"><i style="background:#B0700A"></i>No driver yet</div>
+          <div class="r"><i style="background:#1C6B58"></i>Driver assigned</div>
+          <span class="sp"></span>
+          <em>Circle size is how many drops &middot; the square is your shop</em>
+        </div>
+
+      </div>
+
+      <div class="ow-side">
+
+        <div class="ow-pan">
+          <div class="rh">
+            <span class="rh-dot" style="background:#B0700A;"></span>
+            <div style="min-width:0;">
+              <h3 class="rh-t">Nakawa</h3>
+              <p class="rh-s">3 orders &middot; 2 with no driver &middot; 3.1&nbsp;km from the shop</p>
+            </div>
+          </div>
+          <div class="rf"><span class="rf-l">Order value</span><span class="rf-v">1,640,000</span></div>
+          <div class="rf"><span class="rf-l">To collect on delivery</span><span class="rf-v">1,180,000</span></div>
+          <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
+            <span class="ow-pan-t">The drops</span>
+            <span class="ow-pan-n">3</span>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Kato Construction Ltd</span></div>
+            <div class="ow-lr-m">INV&#8209;2291 &middot; Musoke driving</div>
+            <div class="ow-lr-v">620,000<span class="ow-lr-b">to collect</span></div>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Nakawa Steel Works</span></div>
+            <div class="ow-lr-m">INV&#8209;2294 &middot; no driver yet</div>
+            <div class="ow-lr-v">560,000<span class="ow-lr-b">to collect</span></div>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Nabbosa Stores</span></div>
+            <div class="ow-lr-m">INV&#8209;2296 &middot; no driver yet</div>
+            <div class="ow-lr-v zero">paid<span class="ow-lr-b">nothing to collect</span></div>
+          </div>
+          <div class="r-acts">
+            <span class="btn btn-ghost ow-sm">Open these on Order tracking</span>
+          </div>
+          <p class="note">Handing an order to a driver happens on Order tracking, and it
+            is always a tap of yours. <b>Nothing here dispatches anybody.</b></p>
+        </div>
+
+        <!-- What the map cannot draw, said out loud rather than left off.
+             These are not missing from today; they are missing from the MAP,
+             and that difference matters when you are counting the van's stops. -->
+        <div class="ow-pan wrapm">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">Not on the round</span>
+            <span class="ow-pan-n">3</span>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Kajjansi</span>
+              <span class="ow-cp ow-warn">Not placed</span></div>
+            <div class="ow-lr-m">1 order &mdash; the stop exists, the pin does not</div>
+            <div class="ow-lr-v">240,000</div>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Order INV&#8209;2288</span>
+              <span class="ow-cp ow-warn">No address</span></div>
+            <div class="ow-lr-m">no destination on file &mdash; nobody can plan a drop</div>
+            <div class="ow-lr-v">85,000</div>
+          </div>
+          <div class="ow-lr">
+            <div class="ow-lr-n"><span class="ow-lr-nm">Ssekitoleko Hardware</span></div>
+            <div class="ow-lr-m">collecting in person &mdash; no drop needed</div>
+            <div class="ow-lr-v zero">&mdash;</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- The round, as a list. The same three stops as the map, in the order
+         the van would drive them -- nearest first, because that is how a
+         driver is briefed, not most-owed first. -->
+    <div class="ow-pan">
+      <div class="ow-pan-h">
+        <span class="ow-pan-t">Today&rsquo;s round</span>
+        <span class="ow-pan-n">nearest stop first</span>
+      </div>
+      <div class="pl-hd">
+        <span></span><span>Stop</span><span class="r">To collect</span><span class="r">Distance</span><span></span>
+      </div>
+      <div class="pl on">
+        <span class="pl-d" style="background:#B0700A;"></span>
+        <div class="pl-n">Nakawa <span class="ow-cp ow-warn" style="margin-left:6px;">2 with no driver</span></div>
+        <div class="pl-m">3 drops &middot; Kato Construction, Nakawa Steel Works, Nabbosa Stores</div>
+        <div class="pl-v">1,180,000<span class="pl-b">UGX</span></div>
+        <div class="pl-v"><span class="pl-f">3.1</span><span class="pl-b">km</span></div>
+        <div class="pl-a"><span class="btn btn-ghost ow-sm">Open on tracking</span></div>
+      </div>
+      <div class="pl">
+        <span class="pl-d" style="background:#1C6B58;"></span>
+        <div class="pl-n">Ntinda</div>
+        <div class="pl-m">2 drops &middot; Musoke driving both</div>
+        <div class="pl-v">980,000<span class="pl-b">UGX</span></div>
+        <div class="pl-v"><span class="pl-f">5.8</span><span class="pl-b">km</span></div>
+        <div class="pl-a"><span class="btn btn-ghost ow-sm">Open on tracking</span></div>
+      </div>
+      <div class="pl">
+        <span class="pl-d" style="background:#B0700A;"></span>
+        <div class="pl-n">Kireka <span class="ow-cp ow-warn" style="margin-left:6px;">No driver</span></div>
+        <div class="pl-m">1 drop &middot; Kireka Builders Merchants</div>
+        <div class="pl-v">180,000<span class="pl-b">UGX</span></div>
+        <div class="pl-v"><span class="pl-f">9.4</span><span class="pl-b">km</span></div>
+        <div class="pl-a"><span class="btn btn-ghost ow-sm">Open on tracking</span></div>
+      </div>
+      <p class="note">Which orders share a trip is decided in one place, by the same
+        working that Order tracking uses &mdash; so the map and the list can never hold two
+        opinions about today&rsquo;s round. <b>The three stops here are the three stops
+        there.</b></p>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

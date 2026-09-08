@@ -95,6 +95,8 @@ const makeData = () => ({
 });
 
 const env = (data, over) => ({
+  // productPackInfo reads the shelf's own unit now (stockUnitFor).
+  cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
   data,
   todayISO: () => TODAY,
   daysSinceDate: (d) => Math.round((new Date(TODAY + 'T00:00:00Z') - new Date(d + 'T00:00:00Z')) / 86400000),
@@ -117,11 +119,11 @@ const CHAIN = ['rivalSide', 'rivalSideSaid', 'rivalSideLabel',
   'rivalPricesFor', 'rivalPriceLatest', 'ourCostFor', 'ourPriceFor', 'boughtInPriceFor', 'suggestedSellingPrice',
   'priceRuleForTarget', 'setStockPriceRule',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
-  'tieredUnitPrice', 'tiersForKind', 'productPackInfo', 'productUnitLabel',
+  'tieredUnitPrice', 'tiersForKind', 'stockUnitFor', 'productPackInfo', 'productUnitLabel',
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule',
   'rivalMarketRows', 'rivalNeverChecked', 'marketVerdict', 'buyKeyParts', 'stockKey',
   'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
-  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty'];
+  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'stockOnHand', 'getStockQty'];
 
 const build = (data, extraSrc, names, over) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))

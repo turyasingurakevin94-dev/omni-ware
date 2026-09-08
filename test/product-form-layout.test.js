@@ -100,17 +100,25 @@ const modal = (/<div class="modal-overlay" id="productModal">[\s\S]*?\n<\/div>/.
 
 /* ---------- 3. the two rails do not share a handler ------------------ */
 {
-  /* The Presets switcher binds every .preset-tab on the page and clears
-     `active` from all of them. Had this form reused that class, opening a
-     section here would have deactivated the Presets rail underneath. */
+  /* The Presets switcher used to bind every .preset-tab on the page and
+     clear `active` from all of them; had this form reused that class,
+     opening a section here would have deactivated the Presets rail
+     underneath. That rail is gone, but the check stays as the record of
+     why this form's rail has a class of its own. */
   // Matched loosely: the class rarely appears alone, and pinning the
   // closing quote let `class="preset-tab active"` slip straight through.
   t.check(!/class="[^"]*\bpreset-tab\b/.test(modal),
-    'the form does not reuse the Presets tab class');
+    'the form does not reuse the class that rail was bound by');
   t.check(/#p_form_nav \.pf-tab/.test(code) || /getElementById\('p_form_nav'\)/.test(code),
     'its handler is scoped to its own rail');
-  t.check(/\.pf-tab\{/.test(src) && /\.preset-tab\{/.test(src),
-    'and the two carry their own rules rather than one being retrofitted onto the other');
+  /* There is no Presets rail left to collide with: The shop has no
+     sub-tabs at all. So the hazard this section guarded is gone at the
+     source, and what is worth pinning now is that it went cleanly --
+     no orphan .preset-tab rule styling nothing, and no orphan handler
+     binding a class that is never emitted. */
+  t.check(/\.pf-tab\{/.test(src), 'the form’s own rail carries its own rule');
+  t.check(!/\.preset-tab/.test(src),
+    'and the rail it could once have collided with is gone, rule and handler together');
 }
 
 /* ---------- 4. the rail says what is set ----------------------------- */

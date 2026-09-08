@@ -51,8 +51,19 @@ try {
 t.check(!!scope, `the promotion helpers compile${err ? ` (${err.message})` : ''}`);
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
-const card = (/function promotionCardHTML\(promo\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const render = (/async function renderAgentPromotions\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* THE CARD BECAME A ROW, and the fetch left the renderer.
+ *
+ * Promotions were a sub-tab of the agents screen, read the first time
+ * somebody opened that tab. They are now part of the screen itself -- a
+ * clash between two live promotions is money, and it was invisible from
+ * the roster anybody actually opens -- so the read moved into
+ * loadAgentSideTables() and renderAgentPromotions draws from whatever
+ * has arrived, which is why it is no longer async.
+ *
+ * `card` is kept as the name: promotionRowHTML emits a row that .ow-tbl
+ * turns back into a card on a phone, from the same call. */
+const card = (/function promotionRowHTML\(promo\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+const render = (/function renderAgentPromotions\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const posHTML = (/function promotionPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const save = (/promo_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
 const del = (/async function deletePromotion\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
@@ -243,8 +254,12 @@ if (scope) {
      is agreed, funded, and earning its supplier nothing. */
   eq(p.runningUnsold, 1, 'and a running promotion nobody has sold on is singled out');
 
-  t.check(/actually paying today<\/span>/.test(posHTML),
-    'the header leads with how many are paying rather than how many exist');
+  /* It was a figure in a bordered box floating above a grid of cards; it
+     is now the first clause of the note under the table, because it is a
+     sentence about the table rather than a heading over it. Same claim,
+     same lead: how many are paying, not how many exist. */
+  t.check(/are actually paying today/.test(posHTML),
+    'the note leads with how many are paying rather than how many exist');
   t.check(/never been sold on/.test(posHTML), 'and names the ones producing nothing');
 }
 

@@ -52,12 +52,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      ceiling, never a target: lower it when the count falls, and the
      next person cannot quietly raise it back. */
   const CEILING = {
-    'font sizes': [32, /font-size:\s*([\d.]+)px/g],
-    /* 27, not 28: the WhatsApp desk's bespoke radii went with the
-       screen they clothed -- 11px stat cards, 12px picks and bubbles,
-       14px on the inbox shell and 21px on the round composer. What
-       replaced them is the layer's 4 / 6 / 8. */
-    'radii': [27, /border-radius:\s*([^;}]+)/g],
+    /* 31, not 32: the statements' half-pixel ramp -- 9, 9.5, 10.5,
+       11.5, 12.5, 15.5 and 29px across sixteen sizes in one block --
+       came onto the 11/12/13/14/16/20 ramp when that screen was drawn
+       as a console. */
+    'font sizes': [31, /font-size:\s*([\d.]+)px/g],
+    /* 26, not 27: Compare Prices went the same way. Its verdict slab and
+       phone cards carried 12px and 11px, its rival chips 20px, and its
+       notes 9px -- four bespoke radii on one screen, replaced by the
+       layer's 4 / 6 / 8 when it was drawn as a console.
+
+       27, not 28 before that: the WhatsApp desk's bespoke radii went
+       with the screen they clothed -- 11px stat cards, 12px picks and
+       bubbles, 14px on the inbox shell and 21px on the round composer. */
+    'radii': [26, /border-radius:\s*([^;}]+)/g],
     /* 56, not 62, and this number is MEASURED rather than argued from
        one side: two screens lost their bespoke depth in the same week
        and the merge had to be counted, not reasoned about.
@@ -73,12 +81,34 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        (62, not 63, was the cash book's two floating + / - buttons: they
        duplicated Money in and Money out from the top of the page, and
        the entry line that replaced them is permanently on screen.) */
+    /* 56, not 55, and this one goes UP -- the only entry in this table
+       that ever has, so it is argued rather than nudged.
+
+       Media's phone screen ends in a camera bar fixed above the tab bar,
+       and the photographs scroll underneath it. That is the one thing
+       --ow-lift is FOR: "things that genuinely float -- a menu, a search
+       result". Every alternative was worse. A top hairline cannot edge a
+       bar inset 16px from both sides. Running the bar edge to edge to
+       earn a hairline would put a second full-width chrome band directly
+       above the tab bar, which reads as two tab bars. Leaving it flat
+       lets a card slide flush under an oxide stripe with nothing to say
+       the stripe is in front.
+
+       It is the layer's own value, used once, on the one element in the
+       app that is fixed over its own scrolling content.
+
+       (55, not 56, was a second elevation on a tab: the statements'
+       active document tab lifted itself off the tray it sat in; it is
+       underscored now, and depth on this app is hairlines.) */
     'shadows': [56, /box-shadow:\s*([^;}]+)/g],
-    /* 105, not 106: Follow-ups' card wall carried its own hover border,
-       its own two near-whites for a card and a settled row, and its own
-       hover fill. All four went when that screen became a console on the
-       layer, and the one that survives is the layer's --ow-paper-2. */
-    'distinct colours': [105, /#[0-9A-Fa-f]{6}\b/g],
+    /* 104, not 105: the statements' verdict slab carried #C4DED6, a
+       verdigris keyline that was in no palette and existed only to edge
+       a tinted banner. The banner is a row in ink now and the colour
+       went with it. (105 was Follow-ups' card wall: its own hover
+       border, its own two near-whites for a card and a settled row, and
+       its own hover fill -- all four gone when that screen became a
+       console on the layer.) */
+    'distinct colours': [104, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -285,6 +315,59 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   t.check(!layerEmoji, 'and there is no emoji in the layer');
 }
 
+/* ---------- one component, one behaviour ---------- */
+{
+  /* .ow-thumb is the app's 28px picture frame and TWO screens now let you
+     press it to enlarge the picture. That is opt-in -- .ow-zoom -- and the
+     opt-in is the whole point: a frame that zooms on one screen and does
+     nothing on another is the same square teaching two different lessons,
+     which is worse than either rule applied twice.
+
+     So this holds the pair together. Adding .ow-zoom to a third screen is
+     fine; adding it without the guard, or letting one of these two drop
+     out, is what this catches. */
+  const src2 = src;
+  const zoomers = ['invRowThumbHTML', 'sourcingThumbHTML'];
+  zoomers.forEach((name) => {
+    const fn = new RegExp(`\\nfunction ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src2);
+    t.check(!!fn, `${name} is found`);
+    /* Resolve the named glyph constant, so a screen that keeps its mark in
+       one place reads the same as one that inlines it. */
+    let body = (fn || [''])[0];
+    [...src2.matchAll(/const (IV_ZOOM_GLYPH)\s*=\s*'([^']*)'/g)]
+      .forEach((m) => { body = body.split(m[1]).join(m[2]); });
+    t.check(/ow-thumb ow-zoom/.test(body),
+      `${name}: a line WITH a photo gets the enlarged target`);
+    /* And a line without one is not a target at all. There is nothing
+       behind it to open, so a press that appeared to do something and
+       then did nothing is worse than a frame that never invited it. */
+    t.check(/ow-thumb ow-none/.test(body),
+      `${name}: a line WITHOUT one is not a target`);
+    t.check(/ow-th-z/.test(body),
+      `${name}: and the zoomable one carries the glyph that says so at rest`);
+  });
+
+  /* The 44px extender takes the press, so the target is the FRAME and has
+     no .src of its own -- the document listener has to read the image out
+     of it, or an enlarged target silently opens nothing. */
+  t.check(/const frame = e\.target\.closest\('\.ow-thumb\.ow-zoom'\);/.test(src2)
+       && /const im = frame\.querySelector\('img'\);/.test(src2),
+    'the lightbox opens from the frame, not only from the image inside it');
+
+  /* And every row that carries one steps over it, or the row toggles
+     underneath the lightbox and the picture appears and vanishes.
+
+     Counted against the screens that actually emit a frame, not against
+     every .img-zoomable guard in the file: two other screens guard a
+     photo that is not in a pressable row, and there is nothing there for
+     .ow-zoom to cover. This is what keeps the two counts moving together
+     when a third screen opts in. */
+  const emitters = zoomers.length;
+  const zoomGuards = [...src2.matchAll(/if\(e\.target\.closest\('\.img-zoomable, \.ow-zoom'\)\) return;/g)].length;
+  t.check(zoomGuards === emitters,
+    `every screen that draws a pressable frame steps over it (${zoomGuards} guards for ${emitters} screens)`);
+}
+
 /* ---------- the converted screens ---------- */
 {
   /* THE RATCHET'S OTHER HALF. A screen joins this list when it has been
@@ -401,6 +484,43 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-note', 'ow-q-a',
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
+    },
+    /* INVENTORY. A grid of cards, four columns wide -- so no two figures
+       on the shelf ever lined up, and a column of money that does not
+       line up cannot be compared at a glance, which is the only way a
+       stock list is ever read. At 192 lines it also ranked nothing,
+       carried thirty-two unlabelled icon buttons and no accent at all,
+       and stacked two crimson repair banners over every figure on the
+       screen on an ordinary Tuesday.
+
+       So the private grid became the layer's queue -- .ow-q rows that
+       open in place and emit their own phone cards from the SAME call --
+       with the strip above it and the rail beside it. The two banners
+       became one amber line that is not there at all when there is
+       nothing in it. .pack-pill, .pc-icon-btn and the .cb-chain-break
+       banner are NOT retired from the FILE: the catalogue and the
+       product cards still wear the first two properly, and the cash
+       book's broken chain and the Manager's missing notes are genuinely
+       bad and still wear the third. Only this screen may not emit them
+       again.
+
+       The movements log that used to sit under this screen as a second
+       console with its own three filters is its own door now, so the
+       classes it took with it are not this screen's to answer for. */
+    inventory: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search',
+                'p-toolbar-filter', 'p-toolbar-checkbox', 'search-bar', 'field',
+                'inv-grid', 'inv-card', 'inv-card-head', 'inv-card-title', 'inv-card-name',
+                'inv-card-sub', 'inv-card-meta', 'inv-card-foot', 'inv-card-stats',
+                'inv-qty-wrap', 'inv-qty-label', 'inv-qty', 'inv-cost', 'pack-pill',
+                'pc-actions', 'pc-icon-btn', 'inv-action-btn', 'inv-reorder-btn', 'inv-price-rule-btn',
+                'sum-strip', 'sum-cell', 'sum-value', 'sum-label', 'cb-chain-break', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
+      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
+                'renderInvRail', 'renderInventoryFloors'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
+                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty'],
     },
     /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
        named the word the shop already uses. Two stacked .panel blocks
@@ -546,7 +666,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
       renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
-                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody'],
+                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
                     'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
@@ -559,7 +679,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                        it in the action column, and the archive's fold
                        and its rows */
                     'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg', 'ow-sf-need', 'ow-sf-who',
-                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say'],
+                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb'],
     },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the
@@ -584,6 +704,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                        settled and sold things live, and the repayment
                        form that is the one place it takes typing */
                     'ow-al', 'ow-al-h', 'ow-al-nm', 'ow-al-none', 'ow-al-sect', 'ow-al-pay'],
+    },
+    /* STATEMENTS. Five documents over one period, and a page that had
+       grown a wrapper around itself: one .panel holding a tab tray, a
+       seven-control period row and the figures, so nothing said which
+       control chose the period, which chose the document and which
+       acted on the choice.
+
+       The period rides in the page header now, where Payroll carries
+       its month; the five documents are names on a hairline; and the
+       Overview leads with the verdict, then the layer's strip, then two
+       columns -- this period on the left, the trustworthiness of the
+       figures on the right, where the checks sit BESIDE the verdict
+       they are the evidence for instead of 880px below it.
+
+       .st-vitals survives as a marker on the layer's strip, because two
+       test files read the order the Overview emits its parts in and the
+       rule they pin -- the verdict before the numbers -- is the point
+       of the screen. .st-doc, .st-check, .st-lean, .st-be-* and the
+       whole drill-down family stay: they are this screen's own, and the
+       records rail was kept deliberately, on the shop's instruction.
+       .st-bar, .st-period and .st-to went with the box they lived in. */
+    'statements': {
+      retired: ['page-head', 'panel', 'st-bar', 'st-period', 'st-to', 'st-two', 'st-vital',
+                'st-vital-label', 'st-vital-note', 'rost-period', 'rost-per', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-sel'],
+      renders: ['stOverview', 'stBreakevenHTML', 'stTrendChartHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
     },
     'quote-saved': {
       retired: ['sq-board-tools', 'sq-select-all-label', 'panel', 'qp-panel', 'sq-board', 'sq-col', 'sq-stepper',
@@ -680,6 +829,146 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
                     'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+    },
+    /* Customers. The screen was a second debt book -- a grid of cards
+       whose largest figure was a debt balance, on a question Debtors
+       and Chase debts already answer better. .customer-grid and
+       .customer-card went for the layer's table, .dir-summary-row and
+       its three bordered tiles for the strip, and the four controls per
+       card -- edit, delete, "+ Charge", "Payment", ninety of them on a
+       45-customer screen -- for the existing .btn family inside the one
+       row that is open.
+
+       .cc-debt-btn was a fourteenth button family that existed nowhere
+       else in the app and posted to the debt ledger from a contact
+       list; it is gone from the FILE, not only from this screen.
+       .cc-history* stay in the file -- four payment modals wear them --
+       but this screen may not draw them again. .dir-summary-row and
+       .dir-summary-card stay too: the suppliers directory is still a
+       grid and still carries the strip.
+
+       Six renderers rather than one, and they are listed together for
+       one reason: this screen draws the same customer three times over
+       -- as a row in the register, as the account that opens under that
+       row, and as the account screen behind it. The band and the row
+       read their chip from custAttentionReason; the open row and the
+       account screen read their four figures from customerFiguresHTML.
+       Anything that drew a second copy of either would be free to
+       disagree with the first, which is the drift this list exists to
+       stop. */
+    customers: {
+      retired: ['panel', 'panel-head-row', 'search-bar', 'dir-summary-row', 'dir-summary-card',
+                'customer-grid', 'customer-card', 'cc-head', 'cc-avatar', 'cc-title', 'cc-name',
+                'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
+                'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
+                'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
+      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
+                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
+                'customerAccountRailHTML', 'customerStatsHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
+                    'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
+                    'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
+                    'ow-sr-k', 'ow-sr-v'],
+    },
+    /* Suppliers. The last Buy screen on the legacy shell, and the shell
+       was the smaller half of it: the headline was an instruction about
+       an ID field, the three tiles were Creditors' three figures with
+       one of them painting ordinary trade credit crimson, and the list
+       was alphabetical and paged at 24 -- so twenty of forty-four sat
+       behind a button and the best one's place on screen was decided by
+       the alphabet.
+
+       .supplier-card and .supplier-grid went for the layer's table.
+       They stay in the FILE, because the agent roster and the staff
+       list wear them; this screen may not draw them again.
+       .dir-summary-row and .dir-summary-card do NOT stay: Customers
+       stopped drawing them on conversion and this was the last screen
+       carrying them, so they are gone from the file along with
+       .dir-summary-card.owed, which painted trade credit in --danger.
+       .sc-matches went with the card that held it.
+
+       Six renderers rather than one, listed together for the reason the
+       customers entry gives: this screen draws the same supplier three
+       times over -- as a row in the register, as the band's reason for
+       listing them, and as the account that replaces the register. The
+       row and the band both read their chip from supAttentionReason;
+       the account reads its figures from supplierFiguresHTML. Anything
+       drawing a second copy of either would be free to disagree with
+       the first, which is the drift this list exists to stop. */
+    suppliers: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'search-bar', 'dir-summary-row',
+                'dir-summary-card', 'supplier-grid', 'supplier-card', 'sc-head', 'sc-avatar',
+                'sc-title', 'sc-name', 'sc-id', 'sc-meta', 'sc-actions', 'sc-details', 'sc-row',
+                'sc-notes', 'sc-stats', 'sc-stat', 'sc-matches', 'sc-match-row', 'sc-match-name',
+                'sc-match-price', 'both-tag', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
+      renders: ['renderSuppliers', 'supplierRegisterRowHTML', 'supplierAttentionHTML',
+                'supplierFiguresHTML', 'renderSupplierAccount', 'supplierAccountRailHTML',
+                'supplierAskBlockHTML', 'supplierBuysHTML', 'supplierBillsHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini',
+                    'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid', 'ow-stack',
+                    'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
+                    'ow-sr-k', 'ow-sr-v'],
+    },
+    /* Worth telling. A new screen rather than a converted one, so it
+       retires nothing -- but it is ratcheted from its first day, which
+       is the only moment a screen is ever free of its own history.
+
+       Six renderers, and the reason they are listed together is the
+       same as the customers list above: the SAME brief is drawn three
+       times -- as a row in the fortnight's queue, as the reasoning that
+       opens under that row, and as a panel on the customer's own
+       account screen. A second copy of briefStripHTML would be free to
+       show the owner a filmstrip that the picture does not match, and
+       the picture is the thing being approved. */
+    telling: {
+      retired: [],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
+      renders: ['renderTelling', 'tellingRowHTML', 'tellingRailHTML',
+                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
+                'briefNoteBody', 'briefLeftOffHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
+                    'ow-empty', 'ow-mini', 'ow-grid', 'ow-side',
+                    /* The reasoning under a picture makes three different
+                       demands on the owner -- go and fix, weigh before
+                       sending, simply know -- and they arrived in one grey.
+                       Three blocks under their own heading, plus the
+                       picture's own measure under a rule. */
+                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
+                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
+    },
+    /* What goes with what. New as well, and the one screen in the app
+       whose register is a SENTENCE -- product, verb, product, in one
+       cell, because three columns of truncated product names say
+       nothing. The editor is listed beside the row for the reason the
+       whole file exists: the row states the pairing and the editor
+       changes it, and a second opinion about what the five verbs are
+       would be a second grammar. */
+    pairings: {
+      retired: [],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-sm'],
+      /* Two panes now: the product list and the product's rules are
+         drawn by their own builders beside the screen builder, and the
+         size grid and the draft by theirs. */
+      renders: ['renderPairings', 'pairListHTML', 'pairProductHTML', 'pairRowHTML',
+                'pairEditorHTML', 'pairGridHTML', 'pairDraftHTML',
+                'pairObservedHTML', 'pairOffHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-fig-b',
+                    'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-msg',
+                    'ow-empty', 'ow-mini'],
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so

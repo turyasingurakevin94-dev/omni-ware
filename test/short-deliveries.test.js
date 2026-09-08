@@ -124,11 +124,14 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
   const priceWrites = [];
   const recv = compileScope(
     [extractFunction(src, 'receiveQuoteLine', 'index.html'),
+      extractFunction(src, 'stockUnitFor', 'index.html'),
+      extractFunction(src, 'stockMoveOnRowUnit', 'index.html'),
       extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
       extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
       extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js')],
     {
       applyStockDelta: (pid, vi, n) => { deltas.push(n); },
+      cmpUnitKey: (s) => String(s || '').trim().toLowerCase(),
       supplierName: () => 'Shafik Katwe',
       // Stubbed: the price registry is not what this file is about, and
       // compiling it would drag in tier resolution and the inversion

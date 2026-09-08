@@ -589,6 +589,36 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'product_rules',
+    description: 'What the shop has WRITTEN DOWN about how one product goes with others — the owner’s own knowledge of their goods, which no figure in the books can hold. Five verbs and no sixth: needs (it cannot be used without the other, and a customer’s picture says so), goes with (usually bought together, offered not insisted on), instead of (a swap when the first is out of stock), runs out after (this product alone, and how many days one lasts), part of (both belong to one job). A rule may hold for every size of the product or for one size, and may name a size of the second product or leave it to follow the first. Every rule comes back with what the shop’s OWN INVOICES say about it — orders that carried the first, orders that carried both — so you can tell a rule the books agree with from one they argue with, and say so. Also returns pairs the invoices keep showing that nobody has ruled on yet. Use it before advising on what to stock together, what to offer when something is out, or why a customer’s picture is or is not naming a companion. Resolve the product with find_product first.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: 'From find_product.' },
+      },
+      required: ['product_id'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_product_rule',
+    description: 'Write down, change or switch off ONE rule about how two products go together — only what the owner has actually told you, in their words, never what the invoices merely suggest. The verbs are the five in product_rules and there is no sixth. qty is HOW MANY of the second product per ONE of the first (eight nails a sheet is qty 8, per "sheet"), and it is the whole value of a rule: without it a customer’s picture can only name the thing, and with it the picture turns a hundred and forty sheets into eleven hundred nails. Omit qty when the owner did not give one — an invented figure is worse than none. For "runs out after", qty is the number of DAYS one lasts and the second product is the first: do not pass to_product_id. Sizes are optional: leave them out and the rule holds for every size of the first product and the picture takes the size that follows for the second (the size that customer already buys, the only size priced, or the size matching the first). A rule changes no price, moves no stock and places no order; it only lets a customer’s picture say a second thing. Set active false to stop a rule being used in pictures without deleting what the owner decided.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        from_product_id: { type: 'string', description: 'From find_product — the product the rule is ABOUT.' },
+        verb: { type: 'string', enum: ['needs', 'with', 'instead', 'after', 'part'], description: 'needs | with (goes with) | instead (of) | after (runs out after) | part (of one job).' },
+        to_product_id: { type: 'string', description: 'From find_product — the second product. Omit for "after", which is about the first product alone.' },
+        qty: { type: ['number', 'null'], exclusiveMinimum: 0, description: 'How many of the second per ONE of the first; for "after", how many DAYS one lasts. Omit where the owner gave no figure.' },
+        per: { type: 'string', description: 'What the figure is per, in the owner’s words: sheet, bag, Pair. Omit for "after".' },
+        note: { type: 'string', description: 'Why, for whoever reads it next — what the owner knows that the orders cannot show.' },
+        from_variant_index: { type: ['integer', 'null'], description: 'A size of the FIRST product, when the rule holds for that size only. Omit for every size.' },
+        to_variant_index: { type: ['integer', 'null'], description: 'A size of the SECOND product, when the owner named one. Omit to let the picture take the size that follows.' },
+        active: { type: 'boolean', description: 'False stops an existing rule being used in pictures, keeping the decision. Defaults true.' },
+      },
+      required: ['from_product_id', 'verb'], additionalProperties: false,
+    },
+  },
 ];
 
 module.exports = async (req, res) => {

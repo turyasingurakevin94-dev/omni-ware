@@ -71,7 +71,7 @@ const makeData = (over) => Object.assign({
   ],
 }, over || {});
 
-const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'getStockQty',
+const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockOnHand', 'getStockQty',
   'productPriceRows', 'rankedPriceRows', 'rankedPurchaseRowsAtQty',
   'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
   'quoteItemSellPrice', 'invoiceLineCost', 'buyKeptPct',
@@ -89,6 +89,9 @@ const build = (data, over) => compileScope(
     .concat(CONSTS.map((n) => extractDeclaration(src, n, 'index.html'))),
   Object.assign({
     data,
+    /* What the shop wrote down about its own goods, as the one reader
+       returns it. This fixture has written none. */
+    pairCompanionsFor: () => [],
     todayISO: () => TODAY,
     daysSinceDate: () => -1,
     supplierName: (id) => ({ S1: 'ABC', S2: 'Roto' })[id] || String(id),
@@ -258,6 +261,7 @@ const build = (data, over) => compileScope(
         extractFunction(src, 'renderPurchasePlanPanel', 'index.html')]),
     {
       data: makeData(),
+      pairCompanionsFor: () => [],
       todayISO: () => TODAY, daysSinceDate: () => -1,
       supplierName: (id) => ({ S1: 'ABC' })[id] || String(id),
       productDisplayLabel: (p) => p.name,

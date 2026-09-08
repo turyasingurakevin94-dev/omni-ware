@@ -140,20 +140,20 @@ const pkg = read('package.json');
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
 
-/* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
+/* ---------- 5. forty tools, writes distinguishable --------------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 38, `thirty-eight tools defined (got ${names.length})`);
+  t.check(names.length === 40, `forty tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
-    'set_chase_timing', 'set_restock_rule', 'set_stage_limit'];
+    'set_chase_timing', 'set_restock_rule', 'set_stage_limit', 'set_product_rule'];
   writes.forEach(w => t.check(names.includes(w), `${w} is offered`));
   ['find_customer', 'find_supplier', 'find_product', 'customer_statement', 'list_debtors',
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details', 'stock_overview',
     'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data',
-    'standing_policies', 'month_and_quarter', 'invoice_lines']
+    'standing_policies', 'month_and_quarter', 'invoice_lines', 'product_rules']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
   /* AN ID IS WHATEVER THE BOOKS MINTED. Customer ids are issued as
      C001-style strings (issueEntityId) while the oldest rows are plain

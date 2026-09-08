@@ -322,21 +322,46 @@ const reset = () => {
   t.check(/if\(mpLayer === 'deliveries'\) return renderDeliveryMap\(\);/.test(wired),
     'which takes its own render path');
   const dm = extractFunction(src, 'renderDeliveryMap', 'index.html');
-  t.check(/r\.unassigned > 0 \? '#B0700A' : '#2F7FBF'/.test(dm),
-    'a stop with no driver is the colour that stands out — it is the one thing to fix before the van leaves');
-  t.check(/const noPin = runs\.filter\(r=> !r\.pin\);/.test(dm) && /not on the map/.test(dm),
+  /* WAS: '#B0700A' : '#2F7FBF'. That blue is not one of the palette's
+     twenty-three values and carries no meaning anywhere else in the app,
+     so a driver-assigned stop was painted a colour the shop has never
+     been taught to read. The two states are amber (wants doing) and
+     verdigris (handled), which is exactly what those colours mean on
+     every other screen. The assertion that matters is unchanged: the
+     stop with nobody taking it is the one that stands out. */
+  t.check(/r\.unassigned > 0 \? '#B0700A' : '#1C6B58'/.test(dm),
+    'a stop with no driver is amber and a taken one verdigris — the app\'s own two states, not an invented colour');
+  /* Scoped to the map. The same blue is still on the order-status
+     pipeline chip in the top bar -- a different screen's colour
+     language, and not this change's to rewrite. */
+  t.check(!/#2F7FBF/.test(dm), 'and the off-palette blue is gone from the delivery map');
+  /* WAS: checked in renderDeliveryMap. The three cases moved into the
+     rail, where they are listed with their figures instead of being a
+     sentence in a strip -- a chip could not carry what is owed at a stop
+     the map cannot draw. Same rule, better placed: they are named. */
+  const dside = extractFunction(src, 'renderDeliverySide', 'index.html');
+  t.check(/const noPin = runs\.filter\(x=> !x\.pin\);/.test(dside) && /the pin does not/.test(dside),
     'stops the map cannot draw are named, not silently dropped from the day');
+  t.check(/No destination/.test(dside) && /collected in person/.test(dside),
+    'and an order with no address is kept apart from one being collected — different problems, different words');
   const ds = extractFunction(src, 'renderDeliverySide', 'index.html');
   t.check(/invoiceBalanceDue\(q\)/.test(ds) && /no driver yet/.test(ds),
     'and each order shows what is owed on it and who is taking it');
 }
 
 /* ---------- 10. finding a place, and moving its pin ------------------ *
- * Twenty places have to be pinned by hand, so the list that makes that
- * quick is part of the feature, not decoration. UNPLACED SORTS FIRST
- * whatever the query -- those are the work -- and busiest first within
- * each half, because pinning the place holding thirteen customers is
- * worth more than the one holding one.
+ * IT USED TO PUT THE UNPLACED FIRST, and that was right while pinning
+ * twenty places by hand was the job this list existed for: the ones
+ * still to do were the work, so they went to the top.
+ *
+ * THAT JOB HAS MOVED. Placing is now a run started from one button in
+ * the header -- each place looked up by name, drawn as a dashed pin, and
+ * accepted or rejected one at a time -- so nobody hunts this list to
+ * find something to pin. What is left is the other job: finding a place
+ * and reading what is owed there. So the rank is the money at the place,
+ * and an unplaced place keeps its figures and therefore keeps its rank
+ * rather than being sorted to the top for missing a position or to the
+ * bottom for the same reason. Ties fall back to headcount, then name.
  *
  * And a pin must be movable. The first click of a rough map is a guess;
  * a feature that can only ever be told once is a feature people stop
@@ -356,17 +381,40 @@ const reset = () => {
   }, ['mapPlaceSearch', 'mapSetPin', 'mapClearPin']);
 
   const rows = [
-    { name: 'Original Shauriyako', count: 23, pin: { lat: 0.311, lng: 32.576 } },
-    { name: 'Industrial Area', count: 13, pin: null },
-    { name: 'Bwaise', count: 3, pin: null },
-    { name: 'Katwe', count: 5, pin: { lat: 0.294, lng: 32.571 } },
+    { name: 'Original Shauriyako', count: 23, owed: 40000, pin: { lat: 0.311, lng: 32.576 } },
+    { name: 'Industrial Area', count: 13, owed: 900000, pin: null },
+    { name: 'Bwaise', count: 3, owed: 120000, pin: null },
+    { name: 'Katwe', count: 5, owed: 0, pin: { lat: 0.294, lng: 32.571 } },
   ];
 
   const all = sScope.mapPlaceSearch(rows, '');
-  eq(all[0].name, 'Industrial Area', 'the busiest UNPLACED place is first — that is the work');
-  eq(all[1].name, 'Bwaise', 'then the rest of the unplaced');
-  eq(all[2].name, 'Original Shauriyako', 'placed ones come after, busiest first');
+  eq(all[0].name, 'Industrial Area', 'the place holding the most money is first, placed or not');
+  eq(all[1].name, 'Bwaise', 'then the next most, still regardless of whether it has a pin');
+  eq(all[2].name, 'Original Shauriyako', 'a placed place with less money sorts below an unplaced one with more');
+  eq(all[3].name, 'Katwe', 'and a place with nothing owed sorts last');
   eq(all.length, 4, 'and nothing is dropped');
+
+  /* The layer decides WHICH money ranks, because the column shown
+     changes with it. A three-argument call keeps the customer side, so
+     nothing that does not care has to say so. */
+  const twoWay = [
+    { name: 'Owes Us', count: 1, owed: 500000, owing: 0, pin: null },
+    { name: 'We Owe Them', count: 1, owed: 0, owing: 800000, pin: null },
+  ];
+  eq(sScope.mapPlaceSearch(twoWay, '', 'all')[0].name, 'Owes Us',
+    'by default the rank is what customers owe the shop');
+  eq(sScope.mapPlaceSearch(twoWay, '', 'all', 'suppliers')[0].name, 'We Owe Them',
+    'and on the suppliers layer it is what the shop owes');
+
+  /* Rows that carry no money at all still rank, by headcount then name,
+     so a place list with nothing owed anywhere is not in arbitrary
+     order. */
+  const noMoney = [
+    { name: 'Small', count: 2, pin: null },
+    { name: 'Big', count: 9, pin: null },
+  ];
+  eq(sScope.mapPlaceSearch(noMoney, '', 'all')[0].name, 'Big',
+    'with no money anywhere the busiest place leads');
 
   eq(sScope.mapPlaceSearch(rows, 'bwa').length, 1, 'a fragment finds its place');
   eq(sScope.mapPlaceSearch(rows, 'BWA')[0].name, 'Bwaise', 'however it is typed');
@@ -400,13 +448,39 @@ const reset = () => {
 /* ---------- 11. the search and the pin editing are wired ------------- */
 {
   const wired2 = stripLineComments(src);
-  t.check(/id="mp_search"/.test(src) && /getElementById\('mp_search'\)\.addEventListener\('input', renderMapResults\);/.test(wired2),
+  /* WAS: id="mp_search". That id was in this file TWICE -- the map's
+     search box and the media picker's -- and getElementById returns the
+     first in document order, which is the map's. So the media picker's
+     photo search had been reading the map's input all along. Renaming
+     the map's box (the more accurate name anyway: it searches places)
+     fixes both consumers with one change. */
+  t.check(/id="mp_place_search"/.test(src)
+    && /getElementById\('mp_place_search'\)\.addEventListener\('input', renderMapResults\);/.test(wired2),
     'the search box narrows the list as it is typed');
+  t.check((src.match(/id="mp_search"/g) || []).length <= 1,
+    'and no id in this file is claimed by two different controls');
   const rr = extractFunction(src, 'renderMapResults', 'index.html');
-  t.check(/class="mp-chip mp-place"/.test(rr) && /r\.pin \? 'Move' : 'Place'/.test(rr),
+  /* WAS: class="mp-chip ...". .mp-chip was a fourteenth button family in
+     a file that already had thirteen, and the design system's rule is
+     that a new one is not a fix, it is another one. These are now the
+     app's own .btn with the one size modifier; mp-place / mp-clear /
+     mp-go survive as the click hooks they always were, and .mp-chip
+     itself is gone -- with nothing styling it and nothing reading it, a
+     class kept only to satisfy this assertion would have been dead
+     markup pinned by a test. What the row must
+     SAY is unchanged, and that is what is asserted. */
+  t.check(/class="btn btn-ghost ow-sm mp-place/.test(rr) && /r\.pin \? 'Move' : 'Place'/.test(rr),
     'a placed place offers Move and an unplaced one offers Place — the same button, honest about which');
-  t.check(/r\.pin \? `<button type="button" class="mp-chip mp-clear"/.test(rr),
+  t.check(/r\.pin \? `<button type="button" class="btn btn-ghost ow-sm mp-clear/.test(rr),
     'and only a placed place can be removed');
+  /* A phone drops the row's secondary actions to keep the list
+     scannable, so moving and removing a pin MUST have a second home or
+     the bug in section 12 comes straight back in a different shape. */
+  const rs = extractFunction(src, 'renderMapSide', 'index.html');
+  t.check(/id="mp_rail_place"/.test(rs) && /id="mp_rail_clear"/.test(rs),
+    'the place\'s own panel can move and remove its pin too — the phone hides those on the row');
+  t.check(/mp_rail_clear[\s\S]{0,160}mapRemovePin/.test(rs),
+    'and that one really removes it');
   t.check(/mpPinning === r\.name \? 'Click the map…'/.test(rr),
     'the place being placed says so, so nobody wonders whether the click registered');
 
@@ -458,10 +532,14 @@ const reset = () => {
 
   const all = fScope.mapPlaceSearch(many, '', 'all');
   eq(all.length, 22, 'every place is returned — nothing is dropped before it reaches the screen');
-  /* The bug, stated as the thing that must stay true: the placed ones
-     sort last, so any cap at all buries them. */
+  /* The bug, restated for the ranking that replaced the old one. It used
+     to be "placed places sort last, so a cap buries them". Now the rank
+     is money, and these rows have none -- so a place falls down the list
+     for being quiet rather than for being placed, and a cap buries it
+     just the same. The protection is the same and it matters as much:
+     render every match, and offer the halves by name. */
   t.check(all.findIndex((r) => r.name === 'Katwe') > 12,
-    'placed places still sort last, which is why the list may not be truncated');
+    'a quiet place still sorts far down, which is why the list may not be truncated');
 
   const placed = fScope.mapPlaceSearch(many, '', 'placed');
   eq(placed.length, 2, 'asking for the placed half returns exactly the pins on the map');
@@ -487,8 +565,8 @@ const reset = () => {
   t.check(!/all\.slice\(0, ?\d+\)/.test(rr2), 'nothing silently truncates the list');
   t.check(/\.mp-results\{max-height:320px;overflow-y:auto;\}/.test(src),
     'the list scrolls instead, so a long one is still all there');
-  t.check(/mapPlaceSearch\(mapPlaceRows\(\), q, mpFilter\)/.test(rr2),
-    'and the chosen half is what it asks for');
+  t.check(/mapPlaceSearch\(rows, q, mpFilter, layer\)/.test(rr2),
+    'and the chosen half, ranked by the money the current layer is about, is what it asks for');
   t.check(/data-filter="placed"/.test(src) && /data-filter="todo"/.test(src),
     'with a way to ask for either half');
   t.check(/mpFilter = b\.dataset\.filter;/.test(wired3) && /renderMapResults\(\);/.test(wired3),
@@ -722,19 +800,54 @@ const reset = () => {
   t.check(/@media \(max-width: 560px\)\{\s*\n?\s*\.mp-bases\{left:10px;top:84px;\}/.test(src),
     'and drops below it on a phone, where the row cannot hold zoom, basemap and compass at once');
 
-  /* The legend ran under Leaflet's attribution at phone width. That
-     credit is a licence condition of using OSM tiles, so it has to stay
-     readable. */
-  const legendRule = src.indexOf('.mp-legend{position:absolute');
-  const legendMobile = src.indexOf('.mp-legend{bottom:34px;}');
-  t.check(legendMobile > -1 && legendMobile > legendRule,
-    'the legend lifts clear of the attribution on a phone');
-  /* AFTER the rule it overrides, and this is the whole point: a media
-     query adds no specificity, so the same selector written later in the
-     file wins at every width. Placed above, this measured as bottom:10px
-     -- overruled by the very rule it was meant to override. */
-  t.check(legendMobile > legendRule,
-    'and is written after that rule, since a media query alone does not outrank it');
+  /* THE LEGEND CAME OFF THE MAP.
+
+     It used to float bottom-left, which put it over the corner of the
+     picture it is a key to, and at phone width it ran under Leaflet's
+     attribution -- and that credit is a licence condition of using OSM
+     tiles, so it could not stay there. The old fix was to lift it 34px
+     and to write that rule after the one it overrode, since a media
+     query adds no specificity.
+
+     Both of those were offsets tuned against a collision. Below the map
+     there is no collision to tune: the legend is a normal row in the
+     panel, at every width, and the corner it was covering is given back.
+     So the rule asserted is the one that makes the class of bug
+     impossible, not the two numbers that used to dodge one instance of
+     it. */
+  t.check(!/\.mp-legend\{position:absolute/.test(src),
+    'the legend does not float on the map, so it cannot cover the picture or the attribution');
+  t.check(/\.mp-legend\{display:flex;[^}]*border-top:1px solid/.test(src),
+    'it is a row under the canvas, separated by a hairline like every other band in the app');
+  const canvasEnd = src.indexOf('<div class="mp-legend" id="mp_legend">');
+  const canvasStart = src.indexOf('<div class="mp-canvas">');
+  t.check(canvasStart > -1 && canvasEnd > canvasStart,
+    'and it is written after the canvas in the markup, not inside it');
+
+  /* REPORTED LIVE: "why is the map blurry, it's whitish". The empty-state
+     overlay is marked hidden when there is something to draw -- but its
+     own rule sets display:flex, and an author rule beats the browser's
+     [hidden]{display:none}, so el.hidden did nothing and a 94% white
+     sheet sat over the map permanently. The tiles were loading the whole
+     time; they were being read through it.
+
+     Any class in this file that sets display AND is toggled by the
+     hidden attribute needs its own companion rule. Six others are
+     written out longhand for exactly this reason, which is the clue this
+     was always going to happen again. */
+  t.check(/\.mp-empty\[hidden\]\{display:none;\}/.test(src),
+    'the empty-state overlay actually hides when it is hidden');
+  const meIdx = src.indexOf('.mp-empty{');
+  const meHidden = src.indexOf('.mp-empty[hidden]{');
+  t.check(meHidden > meIdx,
+    'and the companion is written after the rule it has to beat');
+
+  /* The key must not paint two entries the same colour. "Under 30 days"
+     and "Nothing owed" were both #1C6B58, which is a key that lies about
+     the thing it is a key to. */
+  const rm2 = extractFunction(src, 'renderMap', 'index.html');
+  t.check(/mp-hollow"><\/i>Nothing owed/.test(rm2),
+    'nothing owed is a hollow ring, not a second verdigris');
 }
 
 process.exit(t.done() ? 1 : 0);

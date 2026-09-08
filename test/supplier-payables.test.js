@@ -363,7 +363,13 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
   // Run the real builder rather than matching source, so the marking has to
   // actually reach the page.
   const build = compileScope(
-    [extractFunction(adminSrc, 'buildPurchaseInvoiceA5HTML', 'index.html')],
+    /* The pack readers are COMPILED IN rather than stubbed. A purchase
+       invoice printed in the unit the shop counts in rather than the
+       one the supplier billed is exactly the mismatch the Price
+       Registry later reports as a fault on that supplier's row, so what
+       the paper says about the pack is part of what this print is for. */
+    ['quoteLinePack', 'quoteLineQtyText', 'quoteLineEach', 'buildPurchaseInvoiceA5HTML']
+      .map((n) => extractFunction(adminSrc, n, 'index.html')),
     Object.assign({}, env, {
       esc: (s) => String(s == null ? '' : s),
       quoteItemPackingLabel: () => '',

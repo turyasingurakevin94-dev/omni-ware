@@ -142,7 +142,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const rail = extractFunction(src, 'renderMediaRail', 'index.html');
   t.check(/const tree = mediaFolderTree\(data\.mediaFolders\|\|\[\]\);/.test(rail),
     'the rail draws the tree, not a flat list');
-  t.check(/padding-left:\$\{10 \+ depth\*14\}px/.test(rail),
+  /* 12 + depth*12, not 10 + depth*14. The step is the same idea and the
+     same assertion -- a folder is indented by how deep it sits -- on
+     values that are both on the space scale, which 14 never was. */
+  t.check(/padding-left:\$\{12 \+ depth\*12\}px/.test(rail),
     'and indents each folder by how deep it sits');
 
   /* The count must agree with what clicking shows, or a parent reading
