@@ -9711,6 +9711,13 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     font-family:inherit;font-weight:var(--ow-fw-500);letter-spacing:0;}
   .wa-mtbl td.wa-w{font-weight:var(--ow-fw-600);}
+  /* A KIND ROW IS THE EXCEPTION, and it does not break the rule above.
+     Money still never truncates -- but on a price row the name is a
+     label beside a figure, while HERE the name IS the question, and
+     "C-Type P…" against "H-Type P…" is a question nobody can answer.
+     So the name wraps instead of clipping, and on the phone the size
+     count moves into the button to give it back that column. */
+  .wa-mtbl td.wa-nm.wa-kd{white-space:normal;overflow:visible;line-height:1.3;}
   .wa-mtbl .wa-none{color:var(--ow-ink-400);}
 
   /* ---- the reply, before it is a reply ---- */
@@ -9874,6 +9881,9 @@
        top of it. */
     .wa-wd-a .btn.ow-sm{min-height:var(--ow-tap);flex:1;min-width:0;box-sizing:border-box;}
     .wa-al{grid-template-columns:minmax(0,1fr) 48px 62px 52px;}
+    /* The size count is on the button here, so the column that held it
+       is a second copy taking width the NAME needs. */
+    .wa-mtbl th.wa-kd-h,.wa-mtbl td.wa-kd-n{display:none;}
   }
 
   /* ---- the post, promoted to a co-lead ----
@@ -24798,6 +24808,8 @@ function waTimeShort(ts){
 }
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+  narrow: {},         // conversation id -> {wamid, productId} — the KIND the owner
+                      // picked out of a tie, so the next question is its size
   picks: {},          // conversation id -> {wamid, by:{slot: key}} — which option
                       // the owner chose for each tied slot of a several-item ask
   pack: null,         // {count, at, error} — the list the SERVER answers from,
@@ -25644,7 +25656,17 @@ function waQuoteRank(qSet, candidates, tier){
        untouched -- the autonomy contract below still wants the whole
        name, so a third of it is drafted for the owner to read, never
        sent by itself. */
-    const rank = [h.explains, h.hit, recall];
+    /* WHOLE OR NOT WHOLE -- never a fraction against a fraction. Two
+       products that account for the same words of the message, with the
+       same number of their own words said, are equally answered by it;
+       preferring the one whose NAME happens to be shorter is the
+       short-name bias wearing a third hat. "do you have pull handles"
+       said two words of both the C-type (six words, 0.333) and the
+       H-type (seven words, 0.286), and the shop's customer was shown
+       one kind of handle as though the other did not exist. A whole
+       naming still wins -- that is real evidence, and it is the only
+       thing recall is asked here. */
+    const rank = [h.explains, h.hit, recall === 1 ? 1 : 0];
     const better = !best || rank[0] > best[0]
       || (rank[0] === best[0] && (rank[1] > best[1]
         || (rank[1] === best[1] && rank[2] > best[2])));
@@ -25656,8 +25678,10 @@ function waQuoteRank(qSet, candidates, tier){
 }
 
 function waQuoteMatch(text, candidates, opts){
-  const qSet = new Set(waQuoteTokens(text).map(waQuoteStem));
-  return waQuoteMatchSet(qSet, candidates, opts, waQuoteProductTokens(qSet, candidates || []));
+  const order = waQuoteTokens(text).map(waQuoteStem);
+  const qSet = new Set(order);
+  return waQuoteMatchSet(qSet, candidates, { ...(opts||{}), order },
+    waQuoteProductTokens(qSet, candidates || []));
 }
 
 /* The matcher proper, on a SET of the customer's words rather than the
@@ -25674,6 +25698,29 @@ function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
   let winners = waQuoteRank(qSet, candidates, 'named');
   if(!winners.length && !o.namedOnly) winners = waQuoteRank(qSet, candidates, 'found');
   if(!winners.length) return null;
+
+  /* A TIE IS BETWEEN RIVALS FOR THE SAME WORDS. "cement and nails"
+     scores the cement and the nails identically -- one word of their
+     message each, one word of their own name each -- and they are not
+     rivals at all; they are two things asked for. Only candidates
+     explaining the SAME words are a question, and the rest are the next
+     item, which the reader above finds on its next pass. The leftmost
+     goes first so the answer keeps the customer's own order. */
+  if(winners.length > 1){
+    const sig = w=> [...(w.h.said||[]).map(waQuoteStem), ...(w.h.soft||[]).map(waQuoteStem)]
+      .sort().join(' ') + '|' + (w.h.viaAlias || '');
+    const groups = new Map();
+    winners.forEach(w=>{ const k = sig(w); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(w); });
+    if(groups.size > 1){
+      const firstAt = g=>{
+        const said = new Set([...(g[0].h.said||[]).map(waQuoteStem),
+          ...(g[0].h.soft||[]).map(waQuoteStem), ...(g[0].h.viaAlias ? [waQuoteStem(g[0].h.viaAlias)] : [])]);
+        const i = (o.order||[]).findIndex(t=> said.has(t));
+        return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+      };
+      winners = [...groups.values()].sort((a, b)=> firstAt(a) - firstAt(b))[0];
+    }
+  }
 
   /* A KNOWN CUSTOMER BREAKS A TIE, because the shop already knows what
      they buy. Their own record is better evidence than a coin, and the
@@ -25702,9 +25749,38 @@ function waQuoteMatchSet(qSet, candidates, opts, prodTokens){
         && w.c.priced !== false };
   };
   if(winners.length === 1) return shape(winners[0]);
-  // A small tie is a QUESTION worth asking; a bigger scatter is neither.
-  if(winners.length <= 4) return { ambiguous: true, options: winners.map(shape) };
-  return null;
+
+  /* A TIE IS A QUESTION, AND THE QUESTION IS ASKED THE WAY THE COUNTER
+     ASKS IT. Somebody who says "pull handles" is not asking to be read
+     five variant labels; they are asking which KINDS the shop has, and
+     the counter says "C-type and H-type — which?" before it says a
+     size. So the options are grouped by product: one row per kind, with
+     what its sizes cost, and picking a kind asks the size next.
+
+     The cap counts KINDS, not variants. Four sizes of one handle is one
+     question; forty kinds of screw is not a question at all. */
+  const kinds = [];
+  winners.forEach(w=>{
+    const at = kinds.find(k=> k.productId === w.c.productId);
+    (at ? at.rows : (kinds[kinds.length] = { productId: w.c.productId,
+      name: w.c.kind ? w.c.kind.join(' ') : w.c.name, rows: [] }).rows).push(w);
+  });
+  if(kinds.length > WA_QUOTE_TIE_MAX) return null;
+  const options = winners.map(shape);
+  /* One kind: the question is the size, and the sizes ARE the options.
+     Several kinds: the question is the kind. */
+  if(kinds.length === 1) return { ambiguous: true, options, kinds: null };
+  return { ambiguous: true, options, kinds: kinds.map(k=>{
+    const priced = k.rows.filter(w=> w.c.priced !== false && w.c.price != null);
+    const at = priced.map(w=> w.c.price);
+    return { productId: k.productId,
+      /* The product's own name, which is what the shop calls the kind --
+         not the first variant's label, which names one size of it. */
+      name: (k.rows[0].c.name || '').split(' — ')[0],
+      sizes: k.rows.length, from: at.length ? Math.min(...at) : null,
+      to: at.length ? Math.max(...at) : null,
+      unpriced: k.rows.length - priced.length };
+  }) };
 }
 
 /* HOW MANY THEY ASKED FOR. The number was surviving tokenisation as a
@@ -25798,19 +25874,27 @@ async function waPublishQuotePack(){
    a conversation, and a conversation is the owner's. The server is
    silent on these by the same arithmetic and needs no second rule. */
 const WA_QUOTE_MAX_ITEMS = 5;
+/* How many KINDS a tie may name before it stops being a question. Four
+   sizes of one handle is one question; forty kinds of screw is not.
+   WA_QUOTE_TIE_ROWS is how many of ONE kind's sizes are worth reading
+   in a row before the rest are counted rather than listed. */
+const WA_QUOTE_TIE_MAX = 6;
+const WA_QUOTE_TIE_ROWS = 8;
 
 function waQuoteMatchAll(text, candidates, opts){
   const raw = waQuoteTokens(text);
   let qSet = new Set(raw.map(waQuoteStem));
   const prodTokens = waQuoteProductTokens(qSet, candidates || []);
   const items = [];
+  const order = raw.map(waQuoteStem);
   for(let i = 0; i < WA_QUOTE_MAX_ITEMS && qSet.size; i++){
     /* A SECOND ITEM MUST BE NAMED. Once one thing has been read, what is
        left is mostly the words around it -- "- Small" after a door
        handle that does not come small -- and reading those by category
        or by spelling is how a stray size word became a chair pin. The
        softer readings are for a message that named nothing at all. */
-    let m = waQuoteMatchSet(qSet, candidates, i ? { ...(opts||{}), namedOnly: true } : opts, prodTokens);
+    let m = waQuoteMatchSet(qSet, candidates,
+      { ...(opts||{}), order, namedOnly: i > 0 }, prodTokens);
     if(!m) break;
     /* SIBLINGS THAT EACH HAD THEIR SIZE SAID ARE NOT A TIE. "Hex Bolts
        6*80, 6*30, 6*60" ties three sizes of one bolt at the same score,
@@ -26580,7 +26664,7 @@ function waOpenRowHTML(c, nowMs){
      floating over the thread with its own oxide button; it is the
      answer to the row's question, so it belongs in the row, and the
      reply it suggests belongs in the composer rather than beside it. */
-  let match = null, options = null, noMatch = false, multi = null;
+  let match = null, options = null, kinds = null, noMatch = false, multi = null;
   if(unanswered && !waInbox.dismissed[lastIn.wamid]){
     /* Three things the shop already knew and the matcher never asked:
        who is asking, how many they want, and which words this shop's own
@@ -26605,8 +26689,16 @@ function waOpenRowHTML(c, nowMs){
       multi = { slots, qtys, unread: all.unread, settled: slots.every(m=> !m.ambiguous) };
       waInbox.suggestOptions = null;
     } else {
-      const m = all.items[0] || null;
-      if(m && m.ambiguous){ options = m.options; waInbox.suggestOptions = m.options; }
+      let m = all.items[0] || null;
+      /* A KIND ALREADY PICKED narrows the question to its sizes. Held
+         against the message, so a newer question asks from the top. */
+      const nar = waInbox.narrow[convId];
+      if(m && m.ambiguous && m.kinds && nar && nar.wamid === lastIn.wamid){
+        const only = m.options.filter(o=> o.productId === nar.productId);
+        if(only.length === 1) m = { ...only[0], alone: true, auto: false };
+        else if(only.length) m = { ambiguous: true, options: only, kinds: null };
+      }
+      if(m && m.ambiguous){ options = m.options; kinds = m.kinds; waInbox.suggestOptions = m.options; }
       else if(m) match = m;
       else noMatch = true;
     }
@@ -26666,6 +26758,10 @@ function waOpenRowHTML(c, nowMs){
               multi.unread.some(t=> !WA_QUOTE_SIZE.test(t)) ? `“${multi.unread.filter(t=> !WA_QUOTE_SIZE.test(t)).map(esc).join('”, “')}” could be many things` : '',
               'read it before it goes',
             ].filter(Boolean).join(' · ')
+          : kinds ? [
+              `${kinds.length} kinds — which one?`,
+              `${options.length} in all`,
+            ].filter(Boolean).join(' · ')
           : options ? [
               `${options.length} things match — pick one`,
               /* A tie reached by kind or by spelling is a tie of GUESSES,
@@ -26684,7 +26780,7 @@ function waOpenRowHTML(c, nowMs){
             ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
       ${(order || options || match || multi) ? `<table class="wa-mtbl">
-        <tr><th class="wa-l">Item</th><th>Each</th><th>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : 'Buy more'}</th><th></th></tr>
+        <tr><th class="wa-l">Item</th><th>Each</th><th${kinds ? ' class="wa-kd-h"' : ''}>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : kinds ? 'Sizes' : 'Buy more'}</th><th></th></tr>
         ${multi ? multi.slots.map((m, i)=> m.ambiguous
             /* An unsettled slot: its options, each a tap that fills it. */
             ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">${m.options.length} things match “${esc(((m.options[0].said||[]).length ? m.options[0].said : (m.options[0].viaSoft||[])).join(' '))}” — pick one</span></td></tr>`
@@ -26695,12 +26791,19 @@ function waOpenRowHTML(c, nowMs){
         : order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
           + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="3">no price on file — quote this one by hand</td></tr>`).join('')
           + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
-        : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${o.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+        : kinds ? kinds.map(k=> `<tr><td class="wa-nm wa-kd" title="${esc(k.name)}">${esc(k.name)}</td><td>${
+            k.from == null ? '<span class="wa-none">no price</span>'
+            : esc(Number(k.from).toLocaleString('en-UG')) + (k.to !== k.from ? '–' + esc(Number(k.to).toLocaleString('en-UG')) : '')}</td><td class="wa-kd-n">${
+            k.sizes === 1 ? '—' : esc(String(k.sizes)) + ' sizes'}</td><td><button type="button" class="btn btn-ghost ow-sm wa-kind-pick" data-pid="${esc(k.productId)}" data-wamid="${esc(lastIn.wamid)}">${k.sizes === 1 ? 'Use this' : esc(String(k.sizes)) + ' sizes'}</button></td></tr>`).join('')
+        : options ? options.slice(0, WA_QUOTE_TIE_ROWS).map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${o.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+          + (options.length > WA_QUOTE_TIE_ROWS ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">and ${options.length - WA_QUOTE_TIE_ROWS} more — ask them which</span></td></tr>` : '')
         : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${match.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${match.priced === false ? '—' : askedQty
             ? esc(String(Math.round(askedQty * waQuoteEach(match, askedQty).each).toLocaleString('en-UG')))
             : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
       : `<p class="wa-cmp-n" style="margin-top:0;">Nothing in the catalogue matches what they asked for${known ? ` — it is already being sourced as <b>${esc(known.name)}</b>` : ''}. Say so, or record the ask.</p>`}
+      ${kinds ? `<p class="wa-cmp-n" style="margin-top:0;">They named the thing, not which kind of it &mdash;
+        so the shop asks, the way it would at the counter. Picking one asks the size next.</p>` : ''}
       ${multi ? `<p class="wa-cmp-n" style="margin-top:0;">Several things in one message is a conversation, so this is drafted for you and never sent by itself${
         multi.slots.some(m=> !m.ambiguous && m.via && m.via !== 'named') ? ' — and one of them was found by ' + esc(multi.slots.filter(m=> !m.ambiguous && m.via && m.via !== 'named').map(m=> m.via === 'category' ? 'its category' : 'its spelling').join(' and ')) : ''}.</p>` : ''}
       ${match && (match.viaCustomer || match.viaAlias || match.missed.length) ? `<p class="wa-cmp-n" style="margin-top:0;">${[
@@ -26794,6 +26897,15 @@ function waBindOpenRow(wrap){
     const by = cur && cur.wamid === btn.dataset.wamid ? cur.by : {};
     by[Number(btn.dataset.slot)] = btn.dataset.key;
     waInbox.picks[convId] = { wamid: btn.dataset.wamid, by };
+    waRenderInbox();
+  }));
+
+  /* Picking a KIND out of a tie. Nothing is drafted here: the render
+     that follows narrows the same question to that product's sizes, and
+     a kind with only one size falls straight through to the draft, so
+     the owner is never asked a question with one answer. */
+  wrap.querySelectorAll('.wa-kind-pick').forEach(btn=> btn.addEventListener('click', ()=>{
+    waInbox.narrow[convId] = { wamid: btn.dataset.wamid, productId: btn.dataset.pid };
     waRenderInbox();
   }));
 

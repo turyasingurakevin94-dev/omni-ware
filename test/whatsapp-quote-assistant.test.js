@@ -67,6 +67,7 @@ try {
     extractFunction(src, 'waQuoteTokens', 'index.html'),
     extractFunction(src, 'waQuoteSizeJoin', 'index.html'),
     (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
+    (src.match(/^const WA_QUOTE_TIE_MAX = .*$/m) || [''])[0],
     extractFunction(src, 'waQuoteCandidates', 'index.html'),
     extractFunction(src, 'waQuoteMatch', 'index.html'),
     extractFunction(src, 'waQuoteMatchSet', 'index.html'),
@@ -191,8 +192,18 @@ let SECTION2_PRODUCTS = null;
   eq(tie && tie.ambiguous, true, 'four 4" colours tie — ambiguity becomes a QUESTION, not a guess');
   eq(tie && tie.options.length, 4, 'with every tied option offered');
   t.check(tie && tie.options.every((o) => /4"/.test(o.name)), 'and only the tied ones');
-  eq(scope.waQuoteMatch('sofa leg', cands), null,
-    'six variants tying is a scatter, not a question — past the cap, silence');
+  /* This used to be silence: "six variants tying is a scatter, not a
+     question — past the cap, silence." The cap counted VARIANTS, and it
+     was answering a customer who asked for a sofa leg, about a shop
+     that sells six of them, with "nothing in the catalogue matches".
+     That is not a scatter; it is the whole answer. The cap counts KINDS
+     now -- six sizes of one leg is one question, forty kinds of screw
+     is still none -- and the rows themselves are capped so a long list
+     is counted rather than read out. */
+  const legs = scope.waQuoteMatch('sofa leg', cands);
+  eq(legs && legs.ambiguous, true, 'six sizes of the one leg they asked for is a QUESTION, not silence');
+  eq(legs && legs.options.length, 6, 'with every size in it');
+  eq(legs && legs.kinds, null, 'and no kind to pick first, because there is only one kind');
   eq(scope.waQuoteMatch('hello, good morning!', cands), null, 'a greeting suggests nothing');
   eq(scope.waQuoteMatch('do you have tiles?', cands), null, 'an unknown product suggests nothing');
   /* "do you have wheelbarrows?" used to be the unknown-product case
@@ -202,8 +213,11 @@ let SECTION2_PRODUCTS = null;
      product. */
   const plural = scope.waQuoteMatch('do you have wheelbarrows?', cands);
   eq(plural && plural.name, 'Heavy Duty Steel Wheelbarrow', 'a plural finds the thing it is the plural of');
-  eq(scope.waQuoteMatch('leg', cands), null,
-    'one generic word that six variants share is a scatter, and a scatter stays silent');
+  /* Same decision, one word further out: "leg" is a word of the name of
+     six real products, and six priced rows the owner reads before
+     sending beats a flat denial of stock the shop is holding. */
+  eq((scope.waQuoteMatch('leg', cands) || {}).options.length, 6,
+    'and one word of their name finds them too — the owner reads six prices, not a denial');
   /* THE FLOOR IS GONE, AND THIS IS WHY. "wheelbarrow price?" against
      "Heavy Duty Steel Wheelbarrow" is a quarter of the name, and used
      to be refused on that fraction alone -- an unrivalled, unambiguous
@@ -671,8 +685,35 @@ let SECTION2_PRODUCTS = null;
      the two prices side by side instead of by reading two names. */
   t.check(/\$\{options\.length\} things match — pick one/.test(src),
     'a tie renders as a question, with each option priced');
-  t.check(/options\.map\(\(o,i\)=>/.test(src) && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}"/.test(src),
-    'every tied option becomes a row you can take');
+  /* Capped at WA_QUOTE_TIE_ROWS, and the rest COUNTED rather than
+     dropped: a tie of twenty sizes is still a question, but it is not
+     twenty rows to read on a phone. */
+  t.check(/options\.slice\(0, WA_QUOTE_TIE_ROWS\)\.map\(\(o,i\)=>/.test(src)
+    && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}"/.test(src),
+    'every tied option becomes a row you can take, up to what fits');
+  t.check(/and \$\{options\.length - WA_QUOTE_TIE_ROWS\} more — ask them which/.test(src),
+    'and a longer tie says how many it did not list');
+  /* THE KIND COMES BEFORE THE SIZE. Somebody who says "pull handles" is
+     asking which kinds the shop has, not to be read five variant
+     labels -- so a tie spanning products asks the kind first, with what
+     its sizes cost, and picking one asks the size next. */
+  t.check(/\$\{kinds\.length\} kinds — which one\?/.test(src),
+    'a tie across products asks the KIND first');
+  t.check(/class="btn btn-ghost ow-sm wa-kind-pick" data-pid="\$\{esc\(k\.productId\)\}"/.test(src)
+    && /waInbox\.narrow\[convId\] = \{ wamid: btn\.dataset\.wamid, productId: btn\.dataset\.pid \};/.test(src),
+    'and picking a kind narrows the same question to its sizes');
+  t.check(/const only = m\.options\.filter\(o=> o\.productId === nar\.productId\);\s*\n\s*if\(only\.length === 1\)/.test(src),
+    'a kind with one size falls straight through — never a question with one answer');
+  /* THE ONE PLACE THE NAME OUTRANKS THE MONEY, and it does not break
+     the rule: money still never truncates, but on a KIND row the name
+     is the question itself, and "C-Type P…" against "H-Type P…" is a
+     question nobody can answer. It wraps, and on the phone the size
+     count rides the button so the name gets that column back. */
+  t.check(/\.wa-mtbl td\.wa-nm\.wa-kd\{white-space:normal;overflow:visible;/.test(src),
+    'a kind name wraps rather than clipping — it is the question, not a label beside a figure');
+  t.check(/\.wa-mtbl th\.wa-kd-h,\.wa-mtbl td\.wa-kd-n\{display:none;\}/.test(src)
+    && /esc\(String\(k\.sizes\)\) \+ ' sizes'\}<\/button>/.test(src),
+    'and on the phone the size count moves into the button rather than holding a column of its own');
   const optHandler = (/wa-suggest-opt'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{[\s\S]*?\}\)\);/.exec(src) || [''])[0];
   t.check(/waInbox\.drafts\[convId\] = text;/.test(optHandler)
     && /if\(taNow\) taNow\.value = text;/.test(optHandler)

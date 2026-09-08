@@ -52,6 +52,7 @@ try {
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
     (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
+    (src.match(/^const WA_QUOTE_TIE_MAX = .*$/m) || [''])[0],
     (src.match(/^const WA_LEDGER_MIN = .*$/m) || [''])[0],
     (src.match(/^const WA_ALIAS_MIN_CHATS = .*$/m) || [''])[0],
     (src.match(/^const WA_ALIAS_CLEAR = .*$/m) || [''])[0],

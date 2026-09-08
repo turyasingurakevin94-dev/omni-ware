@@ -64,6 +64,7 @@ try {
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
     (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
+    (src.match(/^const WA_QUOTE_TIE_MAX = .*$/m) || [''])[0],
   ], env, NAMES);
 } catch (e) { err = e; }
 t.check(!!scope, `the pack builder compiles${err ? ` (${err.message})` : ''}`);
