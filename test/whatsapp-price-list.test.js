@@ -163,9 +163,18 @@ const item = (o) => Object.assign({
 {
   /* Built from what the ROW just drew, never from a second read of the
      message, so the picture and the screen can never disagree. */
-  t.check(/const doc = waPriceListDoc\(rows, multi \? multi\.unread : \[\], shopIdentity\(\),/.test(src)
-    && /const rows = multi \? multi\.slots : options \? options : \[match\];/.test(src),
+  t.check(/const rows = multi \? multi\.slots : options \? options : \[match\];/.test(src)
+    && /: waPriceListDoc\(rows, unread, ident, dateLabel\);/.test(src),
     'the document is built from the rows the owner is looking at');
+  /* A QUANTITY MAKES IT A QUOTATION. "how much for 30 bags of cement"
+     is not a price enquiry: they named a number, and the answer they
+     want is what 30 comes to. A price list has no total by design, so
+     answering that with one drops the arithmetic the message was about
+     — which is exactly what would have happened the moment the caption
+     stopped carrying it. */
+  t.check(/const wanted = qtys\.some\(q=> Number\(q\) > 1\);/.test(src)
+    && /const doc = wanted \? waQuotationDoc\(rows, qtys, unread, ident, dateLabel\)/.test(src),
+    'a quantity draws the QUOTATION instead — same rows, same paper, and a total');
   /* A TIE IS A PRICE LIST. "do you have pull handles" ties five handles
      because the matcher cannot tell which ONE was meant — and a price
      list does not have to pick one. Before this, a tie built no document
@@ -174,10 +183,10 @@ const item = (o) => Object.assign({
      handles do you have" with the list of its pull handles. */
   t.check(/if\(lastIn && \(match \|\| options \|\| \(multi && multi\.settled\)\)\)\{/.test(src),
     'a tie is a price list of every option — the honest answer to "do you have pull handles"');
-  t.check(/: \(options && plDoc\) \? waPriceListText\(plDoc\)/.test(src),
-    'and it carries words, composed from the same document, so Send has something to post');
-  t.check(/waInbox\.priceDoc\[convId\] = \{ wamid: lastIn\.wamid, doc \};/.test(src),
-    'and held against the MESSAGE, so a newer question cannot be answered with an older list');
+  t.check(/: waPriceListText\(doc\);/.test(src),
+    'and it carries words, composed from the same document, so a failed image still answers');
+  t.check(/waInbox\.priceDoc\[convId\] = \{ wamid: lastIn\.wamid, doc, twin \};/.test(src),
+    'and held against the MESSAGE, with its words, so a newer question cannot be answered with an older list');
 
   /* This once read `pl.doc.rows > 1`: one priced row went as prose,
      because a picture of a single line costs the customer data to be
@@ -194,9 +203,18 @@ const item = (o) => Object.assign({
 
   const send = (/async function waSendPriceList\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
   t.check(/const words = String\(\(ta && ta\.value\) \|\| waInbox\.drafts\[convId\] \|\| ''\)\.trim\(\);/.test(send),
-    'the caption is whatever stands in the COMPOSER — the drafted words, or the owner\'s own if they rewrote them');
-  t.check(/await waSendDocImage\(held\.doc, words, words\);/.test(send),
-    'and those same words are the text twin, so a customer whose image never loads still reads every price');
+    'the caption is whatever stands in the COMPOSER — the drafted line, or the owner\'s own if they rewrote it');
+  /* THE CAPTION AND THE TWIN ARE NO LONGER THE SAME STRING. They were,
+     and it meant every figure went twice: once as the table in the
+     picture and once as prose beside it, in a bubble read on a phone.
+     The caption now says only what the picture cannot — what to do
+     next — and the full prices are held back for the one case that
+     needs them, an image that could not be sent. */
+  t.check(/await waSendDocImage\(held\.doc, words, held\.twin\);/.test(send),
+    'while the twin — every price, in words — goes only INSTEAD of the picture, never beside it');
+  t.check(/const WA_PRICE_CALL = 'Reply here to order, or ask about anything else\.';/.test(src)
+    && /: waInbox\.priceDoc\[convId\] \? WA_PRICE_CALL/.test(src),
+    'so the composer holds a call to action, which is the one thing the document does not say');
   t.check(/if\(!words\) return;/.test(send),
     'an empty composer sends nothing — a picture with no words is the half that cannot be copied');
 }

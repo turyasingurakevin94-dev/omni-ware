@@ -24995,6 +24995,8 @@ function waOrderReceiptText(receipt){
      lines only; these ride below it. */
   (receipt.toConfirm||[]).forEach(u=>
     out.push('*' + f(u.qty) + '*× ' + u.name + ' — price to confirm, we will send it'));
+  (receipt.notCarried||[]).forEach(t=>
+    out.push(t + ' — not a size we stock'));
   (receipt.notFound||[]).forEach(q=>
     out.push('"' + q + '" — we are checking on this one'));
   out.push('We are preparing your order — thank you.');
@@ -25042,7 +25044,12 @@ function waDrawOrderReceipt(canvas, receipt){
   const f0 = n=> Number(n||0).toLocaleString('en-UG');
   /* The asked-for items the order cannot carry yet, as one muted block
      under the total — the same no-silent-drop law as the text twin. */
+  /* Three different truths, three different sentences. "Price to
+     confirm" is a thing we sell; "not a size we stock" is a thing we do
+     not; "we are checking on this one" is a thing we could not read.
+     Saying any of them with another's words is a lie the paper keeps. */
   const extras = (receipt.toConfirm||[]).map(u=> `${f0(u.qty)} × ${u.name} — price to confirm`)
+    .concat((receipt.notCarried||[]).map(t=> `${t} — not a size we stock`))
     .concat((receipt.notFound||[]).map(q=> `"${q}" — we are checking on this one`));
   const extraH = extras.length ? 34 + extras.length*20 + 6 : 0;
   const w = 640, h = headerH + rows.length*rowH + 70 + extraH + footerH;
@@ -25209,12 +25216,44 @@ function waPriceListDoc(items, unread, ident, dateLabel){
     notCarried: (unread||[]).filter(t=> WA_QUOTE_SIZE.test(t)).map(t=> t.replace('x', '*')) };
 }
 
+/* A QUANTITY MAKES IT A QUOTATION. "how much for 30 bags of cement"
+   is not a price enquiry -- the customer named a number, and the answer
+   they want is what 30 comes to. A price list has no total by design,
+   so answering that question with one drops the arithmetic the whole
+   message was about. Same rows, same shop's paper, the document the
+   app already draws for the assistant's orders. */
+function waQuotationDoc(items, qtys, unread, ident, dateLabel){
+  const lines = []; const toConfirm = [];
+  (items||[]).forEach((m, i)=>{
+    if(!m || m.ambiguous) return;
+    const asked = Number((qtys||[])[i]);
+    const n = isFinite(asked) && asked > 1 ? asked : 1;
+    if(m.priced === false || m.price == null){ toConfirm.push({ name: m.name, qty: n }); return; }
+    /* Priced at the quantity ASKED, through the same reader the reply
+       uses -- so a pack buyer earns the break or the wholesale side by
+       arithmetic, exactly as the words would have said. */
+    const each = waQuoteEach(m, n).each;
+    lines.push({ qty: n, unit: m.unit || 'pc', name: m.name,
+      price: each, amount: Math.round(n * each) });
+  });
+  return { kind: 'quote', shopName: ident.name,
+    phone: ident.phone || data.presetWaPhone || '', dateLabel,
+    lines, total: lines.reduce((sum, l)=> sum + l.amount, 0),
+    toConfirm,
+    notCarried: (unread||[]).filter(t=> WA_QUOTE_SIZE.test(t)).map(t=> t.replace('x', '*')),
+    notFound: [],
+    rows: lines.length + toConfirm.length };
+}
+
 /* THE WORDS FOR THAT DOCUMENT, composed from the document itself so a
    customer whose image never loads reads the same answer, in the same
    order, at the same prices. Capped: a caption is read in a stream, and
    twenty lines of it is a wall -- past the cap the count is named and
    the rest is in the picture, which is never silently dropped. */
 const WA_PRICE_TEXT_MAX = 8;
+/* What goes BESIDE the picture: the one thing the document does not
+   say, which is what the customer should do next. */
+const WA_PRICE_CALL = 'Reply here to order, or ask about anything else.';
 
 function waPriceListText(doc){
   const f = n=> Number(n||0).toLocaleString('en-UG');
@@ -25420,7 +25459,11 @@ async function waSendPriceList(){
   const ta = document.getElementById('wa_reply');
   const words = String((ta && ta.value) || waInbox.drafts[convId] || '').trim();
   if(!words) return;
-  await waSendDocImage(held.doc, words, words);
+  /* The composer's line is the CAPTION. The twin -- every price, in
+     words -- was composed with the document and goes only if the image
+     cannot, so a customer whose picture never loads is never left with
+     a call to action and no prices to act on. */
+  await waSendDocImage(held.doc, words, held.twin);
 }
 
 /* "Send quote": the same document road, headed QUOTATION — no order is
@@ -26929,8 +26972,10 @@ function waOpenRowHTML(c, nowMs){
       /* A KIND ALREADY PICKED narrows the question to its sizes. Held
          against the message, so a newer question asks from the top. */
       const nar = waInbox.narrow[convId];
-      if(m && m.ambiguous && m.kinds && nar && nar.wamid === lastIn.wamid){
-        const only = m.options.filter(o=> o.productId === nar.productId);
+      if(m && m.ambiguous && nar && nar.wamid === lastIn.wamid){
+        /* A KIND, or one exact option. Both narrow the same question;
+           the difference is only how much of it the owner settled. */
+        const only = m.options.filter(o=> nar.key ? o.key === nar.key : o.productId === nar.productId);
         if(only.length === 1) m = { ...only[0], alone: true, auto: false };
         else if(only.length) m = { ambiguous: true, options: only, kinds: null };
       }
@@ -26948,6 +26993,7 @@ function waOpenRowHTML(c, nowMs){
      drew -- never from a second read of the message -- so the picture
      and the screen can never disagree. Held against the message, so a
      newer question cannot be answered with an older list. */
+  const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
   waInbox.priceDoc[convId] = null;
   if(lastIn && (match || options || (multi && multi.settled))){
     /* A TIE IS A PRICE LIST. "do you have pull handles" ties five
@@ -26958,21 +27004,35 @@ function waOpenRowHTML(c, nowMs){
        C-type. Picking a kind still narrows it; it is no longer the only
        way to answer. */
     const rows = multi ? multi.slots : options ? options : [match];
-    const doc = waPriceListDoc(rows, multi ? multi.unread : [], shopIdentity(),
-      new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }));
-    if(doc.rows) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc };
+    const qtys = multi ? multi.qtys : [askedQty];
+    const unread = multi ? multi.unread : [];
+    const ident = shopIdentity();
+    const dateLabel = new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' });
+    /* A QUANTITY MAKES IT A QUOTATION. They named a number, so the
+       answer is what that number comes to -- and a price list has no
+       total by design. */
+    const wanted = qtys.some(q=> Number(q) > 1);
+    const doc = wanted ? waQuotationDoc(rows, qtys, unread, ident, dateLabel)
+      : waPriceListDoc(rows, unread, ident, dateLabel);
+    /* THE WORDS THAT GO INSTEAD OF THE PICTURE, never beside it. The
+       caption says only what the picture cannot -- what to do next --
+       and these are held back for the one case that needs them: an
+       image that could not be sent. Composed the same way they always
+       were, so the fallback is no poorer than the old text reply. */
+    const twin = wanted ? waQuoteText(doc)
+      : match ? waQuoteReply(match, askedQty)
+      : multi ? waQuoteReplyAll(multi.slots, multi.qtys, multi.unread)
+      : waPriceListText(doc);
+    if(doc.rows) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc, twin };
   }
 
-  const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
-  const plDoc = (waInbox.priceDoc[convId] || {}).doc;
+  /* THE CAPTION IS A CALL TO ACTION, AND NOTHING ELSE. It used to
+     repeat every figure the picture was already showing -- the same
+     prices twice, once as a table and once as prose, in a bubble the
+     customer reads on a phone. The picture carries the answer; the
+     words carry what to do about it. */
   const suggested = aiLive && aiLive.text ? aiLive.text
-    : match ? waQuoteReply(match, askedQty)
-    : (multi && multi.settled) ? waQuoteReplyAll(multi.slots, multi.qtys, multi.unread)
-    /* A tie had no words at all, so Send had nothing to post and the
-       owner had to pick before the shop could say anything. The words
-       come off the same document the picture is drawn from, so the two
-       can never disagree. */
-    : (options && plDoc) ? waPriceListText(plDoc)
+    : waInbox.priceDoc[convId] ? WA_PRICE_CALL
     : null;
   if(suggested != null){
     const held = waInbox.drafts[convId];
@@ -27183,19 +27243,17 @@ function waBindOpenRow(wrap){
     waRenderInbox();
   }));
 
+  /* TAKING ONE OPTION NARROWS THE QUESTION -- it does not write a
+     draft. It used to, and once a tie became a price list of everything
+     that tied, the very next render composed the whole list again and
+     overwrote the owner's pick before they could send it. Narrowing
+     rebuilds the document, the picture and the words together, so what
+     they picked is what goes. */
   wrap.querySelectorAll('.wa-suggest-opt').forEach(btn=> btn.addEventListener('click', ()=>{
     const opt = (waInbox.suggestOptions||[])[Number(btn.dataset.oi)];
     if(!opt) return;
-    const text = waQuoteReply(opt);
-    waInbox.drafts[convId] = text;
-    /* Marked with the MESSAGE it answers, so the stale-draft sweep above
-       leaves it alone until a newer question arrives. */
-    waInbox.suggested[convId] = { wamid: btn.dataset.wamid || null, text };
-    const taNow = document.getElementById('wa_reply');
-    if(taNow) taNow.value = text;
+    waInbox.narrow[convId] = { wamid: btn.dataset.wamid || null, key: opt.key };
     waRenderInbox();
-    const ta2 = document.getElementById('wa_reply');
-    if(ta2){ ta2.focus(); ta2.setSelectionRange(ta2.value.length, ta2.value.length); }
   }));
 
   /* The third capture door. This is where repeat demand is cheapest to

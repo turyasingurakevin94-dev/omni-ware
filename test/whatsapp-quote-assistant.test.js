@@ -677,9 +677,16 @@ let SECTION2_PRODUCTS = null;
      glued word: "Hex Bolts 6*80Hex Bolts 6*30". */
   t.check(/const asked = lastIn \? String\(lastIn\.body\|\|''\)\.replace\(\/\\s\+\/g, ' '\)\.trim\(\)\.slice\(0, 80\) : '';/.test(src),
     'the ask carried to sourcing collapses its line breaks to spaces');
-  t.check(/waInbox\.suggested\[convId\] = \{ wamid: btn\.dataset\.wamid \|\| null, text \};/.test(src)
+  /* WAS: the tap wrote a draft, and the draft was STAMPED with the
+     message it answered so the stale-draft sweep would leave it alone.
+     The tap no longer writes a draft at all -- it narrows, and the
+     render composes the picture and the words from the narrowed match.
+     The stamp is still needed, and for the same reason: the option
+     carries the wamid of the message it answers, so a pick made under
+     one question does not silently re-answer the NEXT one. */
+  t.check(/waInbox\.narrow\[convId\] = \{ wamid: btn\.dataset\.wamid \|\| null, key: opt\.key \};/.test(src)
     && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}" data-wamid="\$\{esc\(lastIn\.wamid\)\}"/.test(src),
-    'a tapped option is marked with the message it answers, so that sweep leaves it alone');
+    'a tapped option is marked with the message it answers, so a later question is not answered by it');
   /* The tie. Still a QUESTION rather than a guess or a silence — now
      asked as rows in the priced table, so the owner picks by reading
      the two prices side by side instead of by reading two names. */
@@ -702,7 +709,12 @@ let SECTION2_PRODUCTS = null;
   t.check(/class="btn btn-ghost ow-sm wa-kind-pick" data-pid="\$\{esc\(k\.productId\)\}"/.test(src)
     && /waInbox\.narrow\[convId\] = \{ wamid: btn\.dataset\.wamid, productId: btn\.dataset\.pid \};/.test(src),
     'and picking a kind narrows the same question to its sizes');
-  t.check(/const only = m\.options\.filter\(o=> o\.productId === nar\.productId\);\s*\n\s*if\(only\.length === 1\)/.test(src),
+  /* WAS: narrowing could only ever mean a KIND (productId). It now
+     also carries one exact option (key), because tapping a row in the
+     tie narrows instead of drafting. One filter serves both: a key
+     when there is one, the product otherwise. The claim is unchanged
+     -- whatever the narrowing leaves alone falls straight through. */
+  t.check(/const only = m\.options\.filter\(o=> nar\.key \? o\.key === nar\.key : o\.productId === nar\.productId\);\s*\n\s*if\(only\.length === 1\)/.test(src),
     'a kind with one size falls straight through — never a question with one answer');
   /* THE ONE PLACE THE NAME OUTRANKS THE MONEY, and it does not break
      the rule: money still never truncates, but on a KIND row the name
@@ -715,10 +727,16 @@ let SECTION2_PRODUCTS = null;
     && /esc\(String\(k\.sizes\)\) \+ ' sizes'\}<\/button>/.test(src),
     'and on the phone the size count moves into the button rather than holding a column of its own');
   const optHandler = (/wa-suggest-opt'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{[\s\S]*?\}\)\);/.exec(src) || [''])[0];
-  t.check(/waInbox\.drafts\[convId\] = text;/.test(optHandler)
-    && /if\(taNow\) taNow\.value = text;/.test(optHandler)
-    && !/waSendReply/.test(optHandler),
-    'tapping an option DRAFTS its quote — never a direct send');
+  /* WAS: the tap wrote that option's quote into the composer. It now
+     narrows the match and re-renders, which rebuilds the price
+     document, its picture and its words together -- the old draft was
+     composed once and then clobbered by the very next render, which
+     still held the whole tie. The half of the claim that mattered is
+     kept whole: tapping an option still SENDS NOTHING. */
+  t.check(/waInbox\.narrow\[convId\] = /.test(optHandler)
+    && /waRenderInbox\(\);/.test(optHandler)
+    && !/waSendReply|waSendDocImage|waSendPriceList|waSendQuoteFromChat/.test(optHandler),
+    'tapping an option NARROWS the question — never a direct send');
   t.check(/a partial match — check it before it goes/.test(src),
     'a partial match says so, above the price it is offering');
 }

@@ -302,13 +302,28 @@ const vercel = read('vercel.json');
      the assistant first, then the single match, then the settled
      several-item draft, and nothing else writes the composer. One chain,
      one composer, no second card. */
-  /* A fourth source joins the chain: a TIE now drafts the price list of
-     everything that tied, composed from the same document the picture
-     is drawn from. The precedence is what this pin holds — the
-     assistant, then the single match, then the settled several-item
-     draft, then the tie — and nothing else writes the composer. */
-  t.check(/aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: match \? waQuoteReply\(match, askedQty\)\s*\n\s*: \(multi && multi\.settled\) \? waQuoteReplyAll\(multi\.slots, multi\.qtys, multi\.unread\)[\s\S]{0,320}?: \(options && plDoc\) \? waPriceListText\(plDoc\)\s*\n\s*: null;/.test(app),
-    'the assistant draft outranks the token match, the several-item draft and the tie, and none can appear twice');
+  /* WAS: four sources of WORDS raced for the composer -- the assistant,
+     the single match, the settled several-item draft, and the tie --
+     each composing the whole answer as text.
+     The answer is now a PICTURE, and the words beside it were reading
+     the picture back aloud. So the four price-shaped sources collapsed
+     into one: whenever a price document was built for this message,
+     the composer holds the call to action and nothing else, and the
+     full priced lines live on as the document's text twin, sent only
+     where a picture cannot be shown.
+     The precedence this pin holds is what survived: the assistant's
+     draft still wins when it is live for the current question, the
+     call to action fills in when there is a document, and nothing else
+     writes the composer. One chain, one composer, no second card. */
+  t.check(/const suggested = aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: waInbox\.priceDoc\[convId\] \? WA_PRICE_CALL\s*\n\s*: null;/.test(app),
+    'the assistant draft outranks the call to action, and nothing else writes the composer');
+  /* And the words the call to action REPLACED are not lost -- they are
+     the twin held with the document, so a customer whose phone cannot
+     show the picture still gets every price. */
+  t.check(/const twin = wanted \? waQuoteText\(doc\)/.test(app)
+    && /waInbox\.priceDoc\[convId\] = \{ wamid: lastIn\.wamid, doc, twin \};/.test(app)
+    && /waSendDocImage\(held\.doc, words, held\.twin\);/.test(app),
+    'and the priced lines it replaced ride along as the picture\'s text twin');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');
   t.check(/id="wa_ai_order"/.test(app) && /waCreateOrderFromChat\(\)/.test(app)
