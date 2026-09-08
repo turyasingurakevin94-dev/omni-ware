@@ -25400,8 +25400,26 @@ function waQuoteCandidates(){
       if(!at || at.price==null) return;
       const name = productVariantLabel(p, idx);
       const key = stockKey(p.id, idx);
+      const tokens = waQuoteTokens(name);
+      /* THE OTHER SIDE OF THE PRICE BOOK. A customer who asks for a
+         pack's worth is a wholesale customer, and the counter would
+         give them the wholesale side -- the assistant already did,
+         through waCustomerPriceAt, while this list quoted retail to
+         everyone. Read at the pack quantity, on the wholesale rule, so
+         the reply can switch sides by arithmetic the way the counter
+         does. Null when the shop has no wholesale rule, and then the
+         retail breaks are all there is. */
+      const packQty = Number(at.packQty) || 0;
+      const ws = packQty > 1 ? catalogueSellAtQty(p, idx, packQty, 'wholesale') : null;
+      const named = new Set(tokens.map(waQuoteStem));
       out.push({ productId: p.id, variantIdx: idx, name, key,
-        tokens: waQuoteTokens(name), price: at.price, unit: at.unit || '',
+        tokens, price: at.price, unit: at.unit || '',
+        pack: packQty > 1 ? { qty: packQty, unit: at.packUnit || 'pack' } : null,
+        wholesale: ws && ws.price != null && ws.price < at.price ? { price: ws.price } : null,
+        /* The KIND of thing it is, for "anything for roofing?". Findable
+           by, never named by: a category word is not part of the name
+           and cannot count towards saying it. */
+        soft: waQuoteTokens(p.category || '').filter(t=> !named.has(waQuoteStem(t))),
         /* The words this shop's own customers use for it, confirmed one
            at a time from chats the owner answered by hand. */
         aliases: (data.presetWaAliases||[]).filter(x=> x.key === key).map(x=> x.word),
@@ -25449,9 +25467,10 @@ function waQuoteCandidates(){
 // so it may not count against precision.
 function waQuoteProductTokens(qSet, candidates){
   const out = new Set();
+  const st = waQuoteStem;
   (candidates||[]).forEach(c=>{
-    (c.tokens||[]).forEach(t=>{ if(qSet.has(t)) out.add(t); });
-    (c.aliases||[]).forEach(a=>{ if(qSet.has(a)) out.add(a); });
+    (c.tokens||[]).forEach(t=>{ if(qSet.has(st(t))) out.add(st(t)); });
+    (c.aliases||[]).forEach(a=>{ if(qSet.has(st(a))) out.add(st(a)); });
   });
   return out;
 }
@@ -25460,9 +25479,58 @@ function waQuoteProductTokens(qSet, candidates){
    the shop's confirmed words for it was used instead. An alias is a
    WHOLE naming: a customer who writes "mabati" has named the product as
    surely as one who typed all five words of it. */
-function waQuoteHit(qSet, c){
-  const said = (c.tokens||[]).filter(t=> qSet.has(t));
-  const alias = (c.aliases||[]).find(a=> qSet.has(a));
+/* THE SAME WORD, SAID EITHER WAY. "nails" and "Nails", "sheet" and
+   "Sheets", "cements" and "Cement" -- customers do not conjugate their
+   nouns to the shop's catalogue, and a matcher that reads a plural as a
+   different word answers nothing. Deliberately blunt: this is Uganda,
+   the names are English trade names, and an English -s is the whole of
+   the problem. `ss` is left alone (gloss, glass, brass) and so is
+   anything under four letters (gas, pcs). */
+function waQuoteStem(w){
+  const t = String(w||'').toLowerCase();
+  if(t.length < 4 || !t.endsWith('s') || t.endsWith('ss')) return t;
+  if(t.length > 4 && /(?:s|x|z|ch|sh)es$/.test(t)) return t.slice(0, -2);
+  return t.slice(0, -1);
+}
+
+/* A WORD THEY MISTYPED, or shortened. The app's own product search has
+   answered this for years -- an anchored subsequence, so "cemnt" finds
+   Cement and "sndppr" finds Sandpaper, while "rdr" cannot wander into
+   the middle of "truss head sc-r-ews". Carried here rather than called,
+   because this file's matcher is mirrored on the server and a mirror
+   cannot reach into the rest of the app. */
+function waQuoteNear(hay, token){
+  const h = String(hay||'').toLowerCase(); const t = String(token||'').toLowerCase();
+  if(t.length < 4) return false;                 // three letters is a coincidence
+  for(let start = 0; start < h.length; start++){
+    if(h[start] !== t[0]) continue;
+    const prev = start > 0 ? h[start-1] : ' ';
+    if(/[a-z0-9]/.test(prev)) continue;          // mid-word: not an anchor
+    let i = 1; let end = start;
+    for(let k = start+1; k < h.length && i < t.length; k++) if(h[k] === t[i]){ i++; end = k; }
+    /* BOUNDED. The search box can afford "tile" wandering through
+       "t-r-i-c-i-r-c-l-e" -- a person reads the list. A price draft
+       cannot: it offered a padlock to somebody asking for tiles. The
+       letters may skip, but not far -- three dropped letters is a
+       typo, six is a different word. */
+    if(i === t.length && (end - start + 1) <= t.length + 3) return true;
+  }
+  return false;
+}
+
+/* HOW A PRODUCT ANSWERS A MESSAGE, in three readings, strongest first.
+   Only the first is a NAMING; the other two are ways of FINDING, and
+   nothing found rather than named may ever answer by itself.
+
+   named    they used a word of its own name, or a word this shop's
+            customers use for it.
+   category they asked for the kind of thing, not the thing --
+            "anything for roofing?"
+   spelling they meant it and typed it wrong. */
+function waQuoteHit(qSet, c, tier){
+  const st = waQuoteStem;
+  const said = (c.tokens||[]).filter(t=> qSet.has(st(t)));
+  const alias = (c.aliases||[]).find(a=> qSet.has(st(a)));
   /* `hit` is the naming: an alias names the product wholly, so it
      counts for the whole name and outranks a partial spelling of it.
      `explains` is the different question precision asks -- how many of
@@ -25470,32 +25538,73 @@ function waQuoteHit(qSet, c){
      crediting a five-word name against one typed word made every
      aliased answer look like precision 5.0 and refused it. */
   const explains = said.length + (alias ? 1 : 0);
-  if(alias) return { hit: (c.tokens||[]).length, explains, viaAlias: alias, said, missed: [] };
-  return { hit: said.length, explains, viaAlias: null, said,
-    missed: (c.tokens||[]).filter(t=> !qSet.has(t)) };
+  const missed = ()=> (c.tokens||[]).filter(t=> !qSet.has(st(t)));
+  if(alias) return { hit: (c.tokens||[]).length, explains, viaAlias: alias, said, missed: [], via: 'named' };
+  if(said.length) return { hit: said.length, explains, viaAlias: null, said, missed: missed(), via: 'named' };
+  const none = { hit: 0, explains: 0, viaAlias: null, said: [], missed: [], via: null };
+  /* The softer readings are reached ONLY when nothing was named -- a
+     message that names a product is never answered with the category it
+     happens to belong to. */
+  if(tier !== 'found') return none;
+  const cat = (c.soft||[]).filter(t=> qSet.has(st(t)));
+  if(cat.length) return { hit: cat.length, explains: 0, viaAlias: null, said: [],
+    missed: c.tokens||[], via: 'category', soft: cat };
+  const near = [...qSet].filter(q=> waQuoteNear(c.name, q));
+  if(near.length) return { hit: near.length, explains: 0, viaAlias: null, said: [],
+    missed: c.tokens||[], via: 'spelling', soft: near };
+  return none;
 }
 
 /* The match, or honestly nothing. A winner must beat every rival
    OUTRIGHT -- "sofa leg 4" against Gold 4" and Silver 4" is a tie, and
    a tie is ambiguity, and ambiguity goes to the human as a question. */
-function waQuoteMatch(text, candidates, opts){
-  const o = opts || {};
-  const qSet = new Set(waQuoteTokens(text));
-  const prodTokens = waQuoteProductTokens(qSet, candidates || []);
-  let best = null, winners = [];
+/* The best-answering candidates in one reading, and every one that
+   answers equally well beside it. */
+function waQuoteRank(qSet, candidates, tier){
+  let best = null; let winners = [];
   (candidates||[]).forEach(c=>{
     if(!c.tokens || !c.tokens.length) return;
-    const h = waQuoteHit(qSet, c);
+    const h = waQuoteHit(qSet, c, tier);
     if(h.hit === 0) return;
-    const recall = h.hit / c.tokens.length;
-    if(recall < 0.5) return;                  // half a name is the floor
-    const rank = [h.hit, recall];
-    if(!best || rank[0] > best[0] || (rank[0] === best[0] && rank[1] > best[1])){
-      best = rank; winners = [{ c, h, recall }];
-    } else if(rank[0] === best[0] && rank[1] === best[1]){
-      winners.push({ c, h, recall });
-    }
+    const recall = h.via === 'named' ? h.hit / c.tokens.length : 0;
+    /* HOW MUCH OF THEIR MESSAGE this product accounts for comes first,
+       and how much of its own name they said second.
+
+       There used to be a floor here: half a product's name or nothing.
+       It was measuring the wrong thing. A shop names a product
+       "Cement (Tororo 50kg)" to tell it apart from the other cement IT
+       stocks, and a customer says "cement" -- one word of three, a third
+       of the name, silence. The floor was not protecting anyone from a
+       wrong answer; it was refusing to read the most ordinary question a
+       hardware shop is asked, and sending the owner to the assistant to
+       have it read for them.
+
+       What actually protects against a wrong answer is the tie: a word
+       that could mean six things matches six candidates and the scatter
+       stays silent, exactly as before. And what protects the CUSTOMER is
+       untouched -- the autonomy contract below still wants the whole
+       name, so a third of it is drafted for the owner to read, never
+       sent by itself. */
+    const rank = [h.explains, h.hit, recall];
+    const better = !best || rank[0] > best[0]
+      || (rank[0] === best[0] && (rank[1] > best[1]
+        || (rank[1] === best[1] && rank[2] > best[2])));
+    const same = best && rank[0] === best[0] && rank[1] === best[1] && rank[2] === best[2];
+    if(better){ best = rank; winners = [{ c, h, recall }]; }
+    else if(same){ winners.push({ c, h, recall }); }
   });
+  return winners;
+}
+
+function waQuoteMatch(text, candidates, opts){
+  const o = opts || {};
+  const qSet = new Set(waQuoteTokens(text).map(waQuoteStem));
+  const prodTokens = waQuoteProductTokens(qSet, candidates || []);
+  /* NAMED FIRST. Only when nothing in the catalogue was named at all do
+     the softer readings get a turn -- the category they asked for, the
+     word they mistyped. */
+  let winners = waQuoteRank(qSet, candidates, 'named');
+  if(!winners.length) winners = waQuoteRank(qSet, candidates, 'found');
   if(!winners.length) return null;
 
   /* A KNOWN CUSTOMER BREAKS A TIE, because the shop already knows what
@@ -25512,12 +25621,16 @@ function waQuoteMatch(text, candidates, opts){
     const precision = prodTokens.size ? w.h.explains / prodTokens.size : 0;
     return { ...w.c, exact: w.recall === 1, recall: w.recall, precision,
       hit: w.h.hit, said: w.h.said, missed: w.h.missed, viaAlias: w.h.viaAlias,
+      /* HOW it was found, so the screen can say so. A product reached
+         through its category or through a misspelling is a guess worth
+         showing and never one worth sending. */
+      via: w.h.via, viaSoft: w.h.soft || null,
       viaCustomer: !!w.viaCustomer,
       /* The autonomy contract, in one place: they said the whole name,
          nothing else they said names another product, and nobody else
          matched as well. */
       alone: winners.length === 1,
-      auto: winners.length === 1 && w.recall === 1 && precision === 1 };
+      auto: winners.length === 1 && w.h.via === 'named' && w.recall === 1 && precision === 1 };
   };
   if(winners.length === 1) return shape(winners[0]);
   // A small tie is a QUESTION worth asking; a bigger scatter is neither.
@@ -25554,6 +25667,7 @@ function waQuoteMatch(text, candidates, opts){
 function waQuotePack(){
   return waQuoteCandidates().map(c=> ({
     key: c.key, name: c.name, tokens: c.tokens, price: c.price, unit: c.unit,
+    pack: c.pack, wholesale: c.wholesale,
     breaks: c.breaks, aliases: c.aliases, companion: c.companion }));
 }
 
@@ -25614,6 +25728,25 @@ function waAskedQty(text, m){
 
 /* What leaves the building: SELL prices only, the same rule the caption
    and the printed catalogue carry, held by the same kind of test. */
+/* WHAT ONE UNIT COSTS AT THIS QUANTITY, decided once. The counter has
+   two answers to "how much each": the retail side, stepping down at its
+   volume breaks, and the wholesale side, for anyone taking a pack's
+   worth. The cheaper of the two at the asked quantity is the honest
+   one -- a shop does not charge a pack buyer the retail rung because
+   the retail rung happened to be the list this reply was built from.
+   Returns the price and, when it is not the list price, why. */
+function waQuoteEach(m, qty){
+  const n = Number(qty);
+  if(!isFinite(n) || n <= 1) return { each: m.price, why: null };
+  const brk = (m.breaks||[]).filter(b=> n >= b.qty).sort((x,y)=> y.qty - x.qty)[0] || null;
+  let each = brk ? brk.price : m.price;
+  let why = brk ? `${brk.qty}+` : null;
+  if(m.wholesale && m.pack && n >= m.pack.qty && m.wholesale.price < each){
+    each = m.wholesale.price; why = `wholesale, ${m.pack.qty}+`;
+  }
+  return { each, why };
+}
+
 function waQuoteReply(m, qty){
   const lines = [];
   lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`);
@@ -25621,9 +25754,8 @@ function waQuoteReply(m, qty){
      the shop making the customer do its arithmetic. */
   const n = Number(qty);
   if(isFinite(n) && n > 1){
-    const at = (m.breaks||[]).filter(b=> n >= b.qty).sort((x,y)=> y.qty - x.qty)[0];
-    const each = at ? at.price : m.price;
-    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith('s') ? '' : 's') : ''} comes to UGX ${Math.round(n * each).toLocaleString('en-UG')}${at ? ` at UGX ${Number(each).toLocaleString('en-UG')} each` : ''}.`);
+    const at = waQuoteEach(m, n);
+    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith('s') ? '' : 's') : ''} comes to UGX ${Math.round(n * at.each).toLocaleString('en-UG')}${at.why ? ` at UGX ${Number(at.each).toLocaleString('en-UG')} each (${at.why})` : ''}.`);
   }
   (m.breaks||[]).slice(0,1).forEach(b=>
     lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}.`));
@@ -26240,11 +26372,20 @@ function waOpenRowHTML(c, nowMs){
     ${unanswered ? `
       <div class="wa-mh">
         <span class="wa-mh-t">What they asked for</span>
-        <span class="wa-mh-n">${options ? `${options.length} things match — pick one`
+        <span class="wa-mh-n">${options ? [
+              `${options.length} things match — pick one`,
+              /* A tie reached by kind or by spelling is a tie of GUESSES,
+                 and the owner should know that before picking. */
+              options.every(o=> o.via === 'category') ? `found by kind — they asked for ${(options[0].viaSoft||[]).map(t=> '“' + esc(t) + '”').join(', ')}`
+                : options.every(o=> o.via === 'spelling') ? `a spelling — they typed ${(options[0].viaSoft||[]).map(t=> '“' + esc(t) + '”').join(', ')}` : '',
+            ].filter(Boolean).join(' · ')
           : (match ? [
-              match.viaAlias ? `they said “${esc(match.viaAlias)}”` : `${match.hit} of its ${match.tokens.length} words`,
+              match.viaAlias ? `they said “${esc(match.viaAlias)}”`
+                : match.via === 'category' ? `found by kind — they asked for ${(match.viaSoft||[]).map(t=> '“' + esc(t) + '”').join(', ')}`
+                : match.via === 'spelling' ? `a spelling — they typed ${(match.viaSoft||[]).map(t=> '“' + esc(t) + '”').join(', ')}`
+                : `${match.hit} of its ${match.tokens.length} words`,
               askedQty ? `${askedQty} asked for` : '',
-              match.exact ? '' : 'a partial match — check it before it goes',
+              match.exact ? '' : (match.via === 'named' ? 'a partial match — check it before it goes' : 'a guess — check it before it goes'),
             ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
       ${(order || options || match) ? `<table class="wa-mtbl">
@@ -26254,7 +26395,7 @@ function waOpenRowHTML(c, nowMs){
           + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
         : options ? options.map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}">Use this</button></td></tr>`).join('')
         : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${askedQty
-            ? esc(String(Math.round(askedQty * ((match.breaks||[]).filter(b=> askedQty >= b.qty).sort((x,y)=> y.qty-x.qty)[0]||{}).price || askedQty * match.price).toLocaleString('en-UG')))
+            ? esc(String(Math.round(askedQty * waQuoteEach(match, askedQty).each).toLocaleString('en-UG')))
             : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
       : `<p class="wa-cmp-n" style="margin-top:0;">Nothing in the catalogue matches what they asked for${known ? ` — it is already being sourced as <b>${esc(known.name)}</b>` : ''}. Say so, or record the ask.</p>`}

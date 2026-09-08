@@ -46,7 +46,7 @@ const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteRep
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteProductTokens', 'waQuoteHit',
+    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach',
       'waAskedQty', 'waQuoteReply', 'waQuoteCompanion', 'stockKey', 'waMedian',
       'waAliasProposals', 'waAnswerLedger', 'waWidenDryRun', 'waCustomerKeys',
     ].map((n) => extractFunction(src, n, 'index.html')),

@@ -35,13 +35,16 @@ const hookSrc = read('supabase/functions/wa-webhook/index.ts');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 const sellFixture = new Map(); const breaksFixture = new Map(); const basisAsked = [];
+const wsFixture = new Map();         // 'P1' -> {price} on the WHOLESALE rule, at the pack qty
 const companionFixture = new Map();  // 'P1' or 'P1::0' -> [{label, price, unit, ...}]
 const env = {
   data: { products: [], presetWaAliases: [], presetWaAliasNo: [] },
   WA_QUOTE_STOPWORDS_SRC: null,
   catalogueSellAtQty: (p, idx, qty, basis) => {
     basisAsked.push(basis);
-    return sellFixture.get(p.id + (idx==null ? '' : '::'+idx)) || null;
+    const k = p.id + (idx==null ? '' : '::'+idx);
+    if (basis === 'wholesale') return wsFixture.get(k) || null;
+    return sellFixture.get(k) || null;
   },
   catalogueBreaks: (p, idx) => breaksFixture.get(p.id + (idx==null ? '' : '::'+idx)) || [],
   /* What the shop wrote down about a product, as the one reader returns
@@ -56,7 +59,7 @@ const env = {
 const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteReply',
   /* The matcher scores both ways now and the quantity is no longer
      thrown away, so the pieces those rest on come in with it. */
-  'waQuoteProductTokens', 'waQuoteHit', 'waAskedQty'];
+  'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waAskedQty'];
 let scope = null; let err = null;
 try {
   scope = compileScope([
@@ -65,6 +68,10 @@ try {
     extractFunction(src, 'waQuoteMatch', 'index.html'),
     extractFunction(src, 'waQuoteProductTokens', 'index.html'),
     extractFunction(src, 'waQuoteHit', 'index.html'),
+    extractFunction(src, 'waQuoteStem', 'index.html'),
+    extractFunction(src, 'waQuoteNear', 'index.html'),
+    extractFunction(src, 'waQuoteRank', 'index.html'),
+    extractFunction(src, 'waQuoteEach', 'index.html'),
     extractFunction(src, 'waQuoteCompanion', 'index.html'),
     extractFunction(src, 'waAskedQty', 'index.html'),
     extractFunction(src, 'waQuoteReply', 'index.html'),
@@ -87,8 +94,9 @@ if (!scope) process.exit(1);
 }
 
 /* ---------- 2. the candidate pool ------------------------------------ */
+let SECTION2_PRODUCTS = null;
 {
-  env.data.products = [
+  env.data.products = SECTION2_PRODUCTS = [
     { id: 'P1', name: 'Simba Cement', type: 'simple', image: null },   // no photo, HAS price
     { id: 'P2', name: 'Iron Sheet', type: 'simple', image: 'u2' },     // photo, NO price
     // Four tokens on purpose: one generic word scores 0.25 with no
@@ -117,7 +125,12 @@ if (!scope) process.exit(1);
 
   const cands = scope.waQuoteCandidates();
   eq(cands.length, 8, 'a quote needs a PRICE, not a photo — the photoless cement is in, the priceless sheet is out');
-  t.check(basisAsked.every((b) => b === 'retail'), 'every price the assistant quotes is the RETAIL one');
+  /* The list price is the retail one; the ONLY other side ever read is
+     the wholesale rule at the pack quantity, for the customer who takes
+     a pack's worth -- the same two reads the assistant's own tool makes. */
+  t.check(basisAsked.every((b) => b === 'retail' || b === 'wholesale'), 'the assistant reads the two customer sides of the price book and nothing else');
+  t.check(basisAsked.filter((b) => b === 'retail').length > basisAsked.filter((b) => b === 'wholesale').length,
+    'and the list price is the retail one');
 }
 
 /* ---------- 3. matching, and refusing to guess ----------------------- */
@@ -138,11 +151,29 @@ if (!scope) process.exit(1);
   eq(scope.waQuoteMatch('sofa leg', cands), null,
     'six variants tying is a scatter, not a question — past the cap, silence');
   eq(scope.waQuoteMatch('hello, good morning!', cands), null, 'a greeting suggests nothing');
-  eq(scope.waQuoteMatch('do you have wheelbarrows?', cands), null, 'an unknown product suggests nothing');
+  eq(scope.waQuoteMatch('do you have tiles?', cands), null, 'an unknown product suggests nothing');
+  /* "do you have wheelbarrows?" used to be the unknown-product case
+     above, and it was passing for the wrong reason: the shop DOES sell a
+     wheelbarrow, and the assertion held only because "wheelbarrows" was
+     not the same string as "wheelbarrow". A plural is not an unknown
+     product. */
+  const plural = scope.waQuoteMatch('do you have wheelbarrows?', cands);
+  eq(plural && plural.name, 'Heavy Duty Steel Wheelbarrow', 'a plural finds the thing it is the plural of');
   eq(scope.waQuoteMatch('leg', cands), null,
-    'one generic word covering a third of a name is below the line');
-  eq(scope.waQuoteMatch('wheelbarrow price?', cands), null,
-    'a quarter of a long name, even UNRIVALLED, is below the line — only the threshold holds here');
+    'one generic word that six variants share is a scatter, and a scatter stays silent');
+  /* THE FLOOR IS GONE, AND THIS IS WHY. "wheelbarrow price?" against
+     "Heavy Duty Steel Wheelbarrow" is a quarter of the name, and used
+     to be refused on that fraction alone -- an unrivalled, unambiguous
+     question, answered with silence, and the owner sent to the
+     assistant to have one word read for them. The fraction was never
+     what protected anyone: the SCATTER above is what stops a common
+     word matching everything, and the autonomy gate below is what
+     stops a quarter of a name being sent unattended. Both still hold.
+     What changed is that the owner now sees the draft. */
+  const quarter = scope.waQuoteMatch('wheelbarrow price?', cands);
+  eq(quarter && quarter.name, 'Heavy Duty Steel Wheelbarrow',
+    'a quarter of a long name, UNRIVALLED, is a match the owner is shown');
+  eq(quarter && quarter.auto, false, 'and is never one that sends itself');
 }
 
 /* ---------- 3b. THE SCORING WAS BACKWARDS ----------------------------
@@ -173,13 +204,14 @@ if (!scope) process.exit(1);
      iron sheets and one to the cement, but the cement's whole name is
      that one word -- so the old rule scored it a perfect 1.0 and sent
      a cement price, unattended, to a question mostly about roofing.
-     (The sheets are not the answer either: two of their five words is
-     below the half-a-name floor, so they are not even a candidate. The
-     right answer here is that a person reads it.) */
+     Now the product that explains MORE of the message ranks first, and
+     neither answers by itself: it is a two-product question, and a
+     two-product question is a person's to read. */
   const both = scope.waQuoteMatch('do you have cement and iron sheets', cands);
-  eq(both && both.name, 'Cement', 'the one product named wholly is still what the owner is shown');
+  eq(both && both.name, 'Iron Sheets 28 Gauge Plain',
+    'the product that explains more of what they said is what the owner is shown');
   eq(both && both.auto, false,
-    'but it no longer answers by itself, because it explains only a third of what they said');
+    'and nothing answers by itself while words belonging to another product are left over');
   const cementAlone = scope.waQuoteMatch('how much is cement', cands);
   eq(cementAlone && cementAlone.auto, true, 'cement alone is still a whole naming, and answerable');
   /* And the same word inside a bigger question is not. */
@@ -247,8 +279,84 @@ if (!scope) process.exit(1);
   breaksFixture.clear(); keptBreaks.forEach((v, k) => breaksFixture.set(k, v));
 }
 
+/* ---------- 3c. READING THE WAY THE ASSISTANT READS --------------------
+ *
+ * Measured, not assumed: on the seeded shop, thirteen real-shaped
+ * questions were put to the matcher and to the search the assistant is
+ * handed. The matcher lost five of them and won none. Every loss was a
+ * way of READING, not of reasoning -- a plural, a category, a typo, and
+ * a floor that refused a third of a name. None needed a model. These
+ * pin each one.
+ */
+{
+  eq(scope.waQuoteStem('nails'), 'nail', 'a plural is the word');
+  eq(scope.waQuoteStem('cements'), 'cement', 'and so is an over-eager one');
+  eq(scope.waQuoteStem('boxes'), 'box', '-es comes off after a hiss');
+  eq(scope.waQuoteStem('gloss'), 'gloss', 'but -ss is not a plural');
+  eq(scope.waQuoteStem('glass'), 'glass', 'nor is glass');
+  eq(scope.waQuoteStem('pcs'), 'pcs', 'and three letters are left alone');
+
+  t.check(scope.waQuoteNear('cement (tororo 50kg)', 'cemnt'), 'a dropped letter still finds the word');
+  t.check(scope.waQuoteNear('sandpaper', 'sndppr'), 'and so does a trader\'s abbreviation');
+  t.check(!scope.waQuoteNear('truss head screws', 'rdr'), 'but it cannot wander into the middle of other words');
+  t.check(!scope.waQuoteNear('cement', 'cem'), 'and three letters are a coincidence, not a spelling');
+  /* Found by measuring, not by reasoning: on a realistic catalogue,
+     "do you have tiles?" drafted a PADLOCK, because t-i-l-e is a
+     subsequence of "tri-circle" once the anchor is on the t. */
+  t.check(!scope.waQuoteNear('padlock 50mm (tri-circle)', 'tile'), 'and letters may skip, but not six letters far');
+
+  env.data.products = [
+    { id: 'R1', name: 'Iron Sheets 28 Gauge', type: 'simple', image: null, category: 'Roofing' },
+    { id: 'R2', name: 'Ridge Caps', type: 'simple', image: null, category: 'Roofing' },
+    { id: 'R3', name: 'Cement Tororo 50kg', type: 'simple', image: null, category: 'Cement' },
+    { id: 'R4', name: 'Gloss Paint White', type: 'simple', image: null, category: 'Paint' },
+  ];
+  const keptSell = new Map(sellFixture); sellFixture.clear();
+  ['R1','R2','R3','R4'].forEach((k, i) => sellFixture.set(k, { price: 10000 * (i + 1), unit: 'pc' }));
+  const cands = scope.waQuoteCandidates();
+
+  /* THE FLOOR. One word of three, and it is the only cement. */
+  const one = scope.waQuoteMatch('cement price', cands);
+  eq(one && one.name, 'Cement Tororo 50kg', 'one word of a three-word name finds the only thing it can mean');
+  eq(one && one.auto, false, 'and is drafted for the owner, not sent');
+  eq(one && one.via, 'named', 'because they NAMED it');
+
+  /* THE PLURAL, on the customer's side. */
+  eq((scope.waQuoteMatch('price of cements', cands) || {}).name, 'Cement Tororo 50kg', 'their plural finds the shop\'s singular');
+  eq((scope.waQuoteMatch('iron sheet 28 gauge', cands) || {}).exact, true, 'and their singular finds the shop\'s plural, wholly');
+
+  /* THE CATEGORY: the kind of thing, not the thing. */
+  const kind = scope.waQuoteMatch('anything for roofing?', cands);
+  eq(kind && kind.ambiguous, true, 'asking for a category with two things in it is a question');
+  eq(kind && kind.options.length, 2, 'with both offered');
+  eq(kind && kind.options[0].via, 'category', 'and the screen can say they were found by kind, not by name');
+  t.check(kind && kind.options.every((o) => !o.auto), 'nothing found by category may ever send itself');
+  /* A category word that is ALSO in a name is a naming, and a naming
+     outranks everything found by kind. */
+  env.data.products.push({ id: 'R6', name: 'Roofing Nails', type: 'simple', image: null, category: 'Roofing' });
+  sellFixture.set('R6', { price: 12000, unit: 'kg' });
+  eq((scope.waQuoteMatch('anything for roofing?', scope.waQuoteCandidates()) || {}).via, 'named',
+    'a message that names a product is never answered with its category');
+  env.data.products.pop();
+
+  /* THE TYPO. */
+  const typo = scope.waQuoteMatch('do you have cemnt', cands);
+  eq(typo && typo.name, 'Cement Tororo 50kg', 'a misspelling finds the product');
+  eq(typo && typo.via, 'spelling', 'and says it was a spelling');
+  eq(typo && typo.auto, false, 'and is never sent on a guess at what they typed');
+
+  /* NAMED BEATS FOUND, always. */
+  env.data.products.push({ id: 'R5', name: 'Cemnt Board', type: 'simple', image: null, category: 'Boards' });
+  sellFixture.set('R5', { price: 50000, unit: 'pc' });
+  eq((scope.waQuoteMatch('cemnt', scope.waQuoteCandidates()) || {}).name, 'Cemnt Board',
+    'a product actually called that outranks one it might be a misspelling of');
+
+  sellFixture.clear(); keptSell.forEach((v, k) => sellFixture.set(k, v));
+}
+
 /* ---------- 4. what leaves the building ------------------------------ */
 {
+  env.data.products = SECTION2_PRODUCTS;
   const cands = scope.waQuoteCandidates();
   const reply = scope.waQuoteReply(scope.waQuoteMatch('cement price', cands));
   t.check(reply.includes('Simba Cement: UGX 45,000 per bag.'), 'the reply names the product and its retail price');
@@ -348,15 +456,17 @@ if (!scope) process.exit(1);
   try {
     hook = compileScope([
       extractFunction(hookSrc, 'waQuoteTokens', 'wa-webhook'),
+      extractFunction(hookSrc, 'waQuoteStem', 'wa-webhook'),
       extractFunction(hookSrc, 'waExactMatch', 'wa-webhook'),
       /* The WORDS are a mirror too now, not only the match. The server
          used to compose its own one-liner out of Meta's price string,
          so the shop had two voices -- one when the owner tapped Send
          and another at midnight. */
       extractFunction(hookSrc, 'waAskedQty', 'wa-webhook'),
+      extractFunction(hookSrc, 'waQuoteEach', 'wa-webhook'),
       extractFunction(hookSrc, 'waQuoteReply', 'wa-webhook'),
       (hookSrc.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
-    ], {}, ['waQuoteTokens', 'waExactMatch', 'waAskedQty', 'waQuoteReply'], { typescript: true });
+    ], {}, ['waQuoteTokens', 'waExactMatch', 'waAskedQty', 'waQuoteReply', 'waQuoteEach'], { typescript: true });
   } catch (e) { hErr = e; }
   t.check(!!hook, `the webhook mirror compiles${hErr ? ` (${hErr.message})` : ''}`);
   if (hook) {
@@ -370,7 +480,10 @@ if (!scope) process.exit(1);
       'sofa leg 4',                      // tie -> human (question card)
       'sofa leg',                        // scatter -> nothing
       'hello, good morning!',            // greeting -> nothing
-      'wheelbarrow price?',              // below threshold -> nothing
+      'wheelbarrow price?',              // a quarter of a name -> drafted, never sent
+      'do you have wheelbarrows?',       // plural -> the same
+      'price of simba cements',          // plural of the whole name -> exact -> auto
+      'do you have tiles?',              // unknown -> nothing
     ];
     fixtures.forEach((text) => {
       const client = scope.waQuoteMatch(text, cands);
@@ -388,6 +501,31 @@ if (!scope) process.exit(1);
           `and word for word on ${JSON.stringify(text)}`);
       }
     });
+    /* THE PACK BUYER. Simba Cement has a retail break at 10+ (43,500)
+       and a wholesale side at the pallet of 10 (41,000). Twenty bags is
+       a wholesale customer, and the counter would give the cheaper
+       side -- the assistant already did, through waCustomerPriceAt,
+       while this reply quoted the retail rung to everyone. */
+    sellFixture.set('P1', { price: 45000, unit: 'bag', packQty: 10, packUnit: 'pallet' });
+    wsFixture.set('P1', { price: 41000, unit: 'bag' });
+    const packCands = scope.waQuoteCandidates();
+    const twenty = 'simba cement, 20 bags';
+    const cm = scope.waQuoteMatch(twenty, packCands); const sm2 = hook.waExactMatch(twenty, packCands);
+    t.check(cm && cm.auto && sm2, 'a pack buyer who names the product is answerable on both sides');
+    const want = '20 bags comes to UGX 820,000 at UGX 41,000 each (wholesale, 10+)';
+    t.check(cm && scope.waQuoteReply(cm, scope.waAskedQty(twenty, cm)).includes(want),
+      'the client quotes the wholesale side to a pack buyer, and says which side it is');
+    t.check(sm2 && hook.waQuoteReply(sm2, hook.waAskedQty(twenty, sm2)).includes(want),
+      'and so does the server, word for word');
+    t.check(cm && /5 bags comes to UGX 225,000\./.test(scope.waQuoteReply(cm, 5)),
+      'while five bags — under the pack — stay at the list price with no side named');
+    /* The break alone, when there is no wholesale rule: the old answer, unchanged. */
+    wsFixture.clear();
+    const noWs = scope.waQuoteMatch(twenty, scope.waQuoteCandidates());
+    t.check(noWs && /20 bags comes to UGX 870,000 at UGX 43,500 each \(10\+\)/.test(scope.waQuoteReply(noWs, 20)),
+      'with no wholesale rule the retail break is the answer, as before');
+    sellFixture.set('P1', { price: 45000, unit: 'bag' });
+
     /* The quantity is the case that used to differ most: the client did
        the arithmetic and the server quoted one unit. */
     const thirty = 'price of sofa leg gold 4 — i need 30';

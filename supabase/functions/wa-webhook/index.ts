@@ -274,23 +274,36 @@ function waQuoteTokens(str: string) {
     .filter((w) => w && !WA_QUOTE_STOPWORDS.has(w));
 }
 
+// The same word, said either way -- "nails" and "Nails", "cements" and
+// "Cement". Character-for-character the client's waQuoteStem.
+function waQuoteStem(w: string) {
+  const t = String(w || "").toLowerCase();
+  if (t.length < 4 || !t.endsWith("s") || t.endsWith("ss")) return t;
+  if (t.length > 4 && /(?:s|x|z|ch|sh)es$/.test(t)) return t.slice(0, -2);
+  return t.slice(0, -1);
+}
+
 // deno-lint-ignore no-explicit-any -- extracted into the Node harness
 function waExactMatch(text: string, candidates: any) {
-  const qSet = new Set(waQuoteTokens(text));
+  const qSet = new Set(waQuoteTokens(text).map(waQuoteStem));
   // The words in the message that name SOME product. A number or a
   // greeting is not evidence against a match, so it cannot count
   // against precision.
   const prodTokens: Set<string> = new Set();
   candidates.forEach((c: any) => {
-    (c.tokens ?? []).forEach((t: string) => { if (qSet.has(t)) prodTokens.add(t); });
-    (c.aliases ?? []).forEach((a: string) => { if (qSet.has(a)) prodTokens.add(a); });
+    (c.tokens ?? []).forEach((t: string) => { if (qSet.has(waQuoteStem(t))) prodTokens.add(waQuoteStem(t)); });
+    (c.aliases ?? []).forEach((a: string) => { if (qSet.has(waQuoteStem(a))) prodTokens.add(waQuoteStem(a)); });
   });
+  // ONLY THE NAMED READING. The client also reads a message by category
+  // and by misspelling, so the owner is shown a guess -- but a guess is
+  // never sent, and this function exists only to send. Leaving those
+  // readings out here is not a divergence; it is the contract.
   let best: number[] | null = null;
   let winners: any[] = [];
   candidates.forEach((c: any) => {
     if (!c.tokens.length) return;
-    const said = c.tokens.filter((t: string) => qSet.has(t)).length;
-    const alias = (c.aliases ?? []).find((a: string) => qSet.has(a));
+    const said = c.tokens.filter((t: string) => qSet.has(waQuoteStem(t))).length;
+    const alias = (c.aliases ?? []).find((a: string) => qSet.has(waQuoteStem(a)));
     // `hit` is the naming -- an alias names the product wholly; while
     // `explains` is what precision asks, how many of the message's own
     // product words this candidate accounts for.
@@ -298,13 +311,15 @@ function waExactMatch(text: string, candidates: any) {
     const explains = said + (alias ? 1 : 0);
     if (hit === 0) return;
     const recall = hit / c.tokens.length;
-    if (recall < 0.5) return;
-    const rank = [hit, recall];
-    if (!best || rank[0] > best[0] || (rank[0] === best[0] && rank[1] > best[1])) {
-      best = rank; winners = [{ c, hit, explains, recall }];
-    } else if (rank[0] === best[0] && rank[1] === best[1]) {
-      winners.push({ c, hit, explains, recall });
-    }
+    // No floor, as on the client: how much of THEIR message a product
+    // explains ranks first, how much of its name they said second. The
+    // whole-name requirement lives in the contract below, not here.
+    const rank = [explains, hit, recall];
+    const better = !best || rank[0] > best[0]
+      || (rank[0] === best[0] && (rank[1] > best[1] || (rank[1] === best[1] && rank[2] > best[2])));
+    const same = best && rank[0] === best[0] && rank[1] === best[1] && rank[2] === best[2];
+    if (better) { best = rank; winners = [{ c, hit, explains, recall }]; }
+    else if (same) winners.push({ c, hit, explains, recall });
   });
   // THE AUTONOMY CONTRACT, and the client holds the identical one: they
   // said the WHOLE name, nothing else they said names another product,
@@ -371,6 +386,24 @@ function waAskedQty(text: string, m: any) {
   return null;
 }
 
+// What one unit costs at this quantity -- the cheaper of the retail
+// rung and the wholesale side for a pack buyer. Character-for-character
+// the client's waQuoteEach.
+// deno-lint-ignore no-explicit-any
+function waQuoteEach(m: any, qty: number | null) {
+  const n = Number(qty);
+  if (!isFinite(n) || n <= 1) return { each: m.price, why: null };
+  // deno-lint-ignore no-explicit-any
+  const breaks: any[] = m.breaks ?? [];
+  const brk = breaks.filter((b) => n >= b.qty).sort((x, y) => y.qty - x.qty)[0] || null;
+  let each = brk ? brk.price : m.price;
+  let why = brk ? `${brk.qty}+` : null;
+  if (m.wholesale && m.pack && n >= m.pack.qty && m.wholesale.price < each) {
+    each = m.wholesale.price; why = `wholesale, ${m.pack.qty}+`;
+  }
+  return { each, why };
+}
+
 // deno-lint-ignore no-explicit-any
 function waQuoteReply(m: any, qty: number | null) {
   const lines: string[] = [];
@@ -379,9 +412,8 @@ function waQuoteReply(m: any, qty: number | null) {
   const breaks: any[] = m.breaks ?? [];
   const n = Number(qty);
   if (isFinite(n) && n > 1) {
-    const at = breaks.filter((b) => n >= b.qty).sort((x, y) => y.qty - x.qty)[0];
-    const each = at ? at.price : m.price;
-    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith("s") ? "" : "s") : ""} comes to UGX ${Math.round(n * each).toLocaleString("en-UG")}${at ? ` at UGX ${Number(each).toLocaleString("en-UG")} each` : ""}.`);
+    const at = waQuoteEach(m, n);
+    lines.push(`${n} ${m.unit ? m.unit + (String(m.unit).endsWith("s") ? "" : "s") : ""} comes to UGX ${Math.round(n * at.each).toLocaleString("en-UG")}${at.why ? ` at UGX ${Number(at.each).toLocaleString("en-UG")} each (${at.why})` : ""}.`);
   }
   breaks.slice(0, 1).forEach((b) =>
     lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString("en-UG")}.`));

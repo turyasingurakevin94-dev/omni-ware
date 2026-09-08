@@ -60,7 +60,7 @@ let scope = null; let err = null;
 try {
   scope = compileScope([
     ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteCompanion', 'waQuoteMatch', 'waQuoteProductTokens',
-      'waQuoteHit', 'waAskedQty', 'waQuoteReply', 'waQuotePack', 'waQuotePackPrint', 'stockKey',
+      'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach', 'waAskedQty', 'waQuoteReply', 'waQuotePack', 'waQuotePackPrint', 'stockKey',
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
   ], env, NAMES);
@@ -87,7 +87,9 @@ if (!scope) process.exit(1);
   /* WHAT RIDES, AND NOTHING ELSE. Each field is here because a sentence
      the customer reads needs it. */
   const cement = pack.find((x) => x.name === 'Cement Tororo');
-  eq(Object.keys(cement).sort().join(','), 'aliases,breaks,companion,key,name,price,tokens,unit',
+  /* pack and wholesale ride so the server can switch sides for a pack
+     buyer the way the counter does -- still nothing about cost. */
+  eq(Object.keys(cement).sort().join(','), 'aliases,breaks,companion,key,name,pack,price,tokens,unit,wholesale',
     'the pack carries exactly what a reply needs to be written');
   eq(cement.key, 'P1', 'keyed by the app\'s own stock key, so a match can walk back to the product');
   eq(JSON.stringify(cement.tokens), '["cement","tororo"]', 'with the words that match it');
