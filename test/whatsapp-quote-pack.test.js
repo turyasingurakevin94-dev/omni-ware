@@ -59,10 +59,11 @@ const NAMES = ['waQuotePack', 'waQuotePackPrint', 'waQuoteCandidates', 'waQuoteR
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteCompanion', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens',
+    ...['waQuoteSizeJoin', 'waQuoteTokens', 'waQuoteCandidates', 'waQuoteCompanion', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens',
       'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach', 'waAskedQty', 'waQuoteReply', 'waQuotePack', 'waQuotePackPrint', 'stockKey',
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
+    (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
   ], env, NAMES);
 } catch (e) { err = e; }
 t.check(!!scope, `the pack builder compiles${err ? ` (${err.message})` : ''}`);

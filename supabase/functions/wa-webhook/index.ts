@@ -267,8 +267,17 @@ const WA_QUOTE_STOPWORDS = new Set(("how much is the a an of for price cost what
   + "hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one "
   + "buy get selling sell kwa ya sente ssente meka").split(" "));
 
+// A size is one word: "6*80", "6x80", "6 x 80" are the same bolt, and
+// none of them is six of anything. Character-for-character the client's
+// waQuoteSizeJoin / waQuoteTokens.
+function waQuoteSizeJoin(s: string) {
+  return String(s || "").toLowerCase()
+    .replace(/(\d+(?:\.\d+)?)\s*(?:[x×*]|by)\s*(\d+(?:\.\d+)?)/g, "$1x$2");
+}
+const WA_QUOTE_SIZE = /^\d+(?:\.\d+)?x\d/;
+
 function waQuoteTokens(str: string) {
-  return String(str || "").toLowerCase()
+  return waQuoteSizeJoin(str)
     .replace(/[^a-z0-9\u00C0-\u024F]+/g, " ")
     .split(/\s+/)
     .filter((w) => w && !WA_QUOTE_STOPWORDS.has(w));
@@ -372,11 +381,13 @@ async function quotePackItems(shopId: string) {
 // fixture set.
 // deno-lint-ignore no-explicit-any
 function waAskedQty(text: string, m: any) {
-  const words = String(text || "").toLowerCase().match(/\d[\d,.]*/g) || [];
+  const words = waQuoteSizeJoin(text).replace(/[^a-z0-9\u00C0-\u024F.,]+/g, " ").trim().split(/\s+/)
+    .filter((w) => /^\d/.test(w));
   // deno-lint-ignore no-explicit-any
   const toks: any[] = (m && m.tokens) || [];
   const nameNums = new Set(toks.filter((t) => /^\d/.test(t)));
   for (const w of words) {
+    if (WA_QUOTE_SIZE.test(w)) continue;         // 6x80 is a bolt, not six of anything
     const n = Number(String(w).replace(/[,.]+$/, "").replace(/,/g, ""));
     if (!isFinite(n) || n <= 1) continue;      // "1" is not a quantity worth saying
     if (nameNums.has(String(n))) continue;      // 28 in "28 gauge" is the product

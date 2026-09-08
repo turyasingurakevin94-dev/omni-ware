@@ -302,7 +302,7 @@ const vercel = read('vercel.json');
      the assistant first, then the single match, then the settled
      several-item draft, and nothing else writes the composer. One chain,
      one composer, no second card. */
-  t.check(/aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: match \? waQuoteReply\(match, askedQty\)\s*\n\s*: \(multi && multi\.settled\) \? waQuoteReplyAll\(multi\.slots, multi\.qtys\)\s*\n\s*: null;/.test(app),
+  t.check(/aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: match \? waQuoteReply\(match, askedQty\)\s*\n\s*: \(multi && multi\.settled\) \? waQuoteReplyAll\(multi\.slots, multi\.qtys, multi\.unread\)\s*\n\s*: null;/.test(app),
     'the assistant draft outranks the token match, which outranks the several-item draft, and none can appear twice');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');

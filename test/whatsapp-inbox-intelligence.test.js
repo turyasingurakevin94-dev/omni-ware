@@ -46,11 +46,12 @@ const NAMES = ['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMat
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...['waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach',
+    ...['waQuoteSizeJoin', 'waQuoteTokens', 'waQuoteCandidates', 'waQuoteMatch', 'waQuoteMatchSet', 'waQuoteProductTokens', 'waQuoteHit', 'waQuoteStem', 'waQuoteNear', 'waQuoteRank', 'waQuoteEach',
       'waAskedQty', 'waQuoteReply', 'waQuoteCompanion', 'stockKey', 'waMedian',
       'waAliasProposals', 'waAnswerLedger', 'waWidenDryRun', 'waCustomerKeys',
     ].map((n) => extractFunction(src, n, 'index.html')),
     (src.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
+    (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
     (src.match(/^const WA_LEDGER_MIN = .*$/m) || [''])[0],
     (src.match(/^const WA_ALIAS_MIN_CHATS = .*$/m) || [''])[0],
     (src.match(/^const WA_ALIAS_CLEAR = .*$/m) || [''])[0],

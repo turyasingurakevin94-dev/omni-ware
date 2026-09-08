@@ -65,6 +65,8 @@ let scope = null; let err = null;
 try {
   scope = compileScope([
     extractFunction(src, 'waQuoteTokens', 'index.html'),
+    extractFunction(src, 'waQuoteSizeJoin', 'index.html'),
+    (src.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
     extractFunction(src, 'waQuoteCandidates', 'index.html'),
     extractFunction(src, 'waQuoteMatch', 'index.html'),
     extractFunction(src, 'waQuoteMatchSet', 'index.html'),
@@ -97,6 +99,12 @@ if (!scope) process.exit(1);
     'a greeting contains no product');
   eq(JSON.stringify(scope.waQuoteTokens('sofa-leg gold 4"')), '["sofa","leg","gold","4"]',
     'punctuation splits, it does not stick');
+  /* A SIZE IS ONE WORD. Split at the star, "6*80" was a 6 and an 80
+     that matched any product carrying either; joined, it is the bolt. */
+  ['6*80', '6x80', '6×80', '6 x 80', '6 by 80', 'M6*80'].forEach((w) =>
+    eq(JSON.stringify(scope.waQuoteTokens('hex bolts ' + w)).replace('"m6x80"', '"6x80"'), '["hex","bolts","6x80"]',
+      `${JSON.stringify(w)} is one size, written the customer's way`));
+  eq(JSON.stringify(scope.waQuoteTokens('80*6')), '["80x6"]', 'and turned round it is a different one');
 }
 
 /* ---------- 2. the candidate pool ------------------------------------ */
@@ -261,6 +269,11 @@ let SECTION2_PRODUCTS = null;
   eq(scope.waAskedQty('iron sheets 28 gauge', precise), null,
     'and 28 is the product, not a quantity — its own name says so');
   eq(scope.waAskedQty('do you have one bag', null), null, 'one is not a quantity worth saying');
+  /* "6*80" IS A BOLT, NOT SIX OF ANYTHING. Split at the star, the
+     quantity reader saw a 6 and drafted six pieces for a customer who
+     had asked for a size. */
+  eq(scope.waAskedQty('hex bolts 6*80', { tokens: ['hex', 'bolts', '6x80'] }), null, 'a size is not a quantity');
+  eq(scope.waAskedQty('20 hex bolts 6*80', { tokens: ['hex', 'bolts', '6x80'] }), 20, 'while a count beside a size is still the count');
   eq(scope.waAskedQty('is it 250000 for a roll', null), null, 'and a figure that size is a price');
 
   const reply = scope.waQuoteReply(precise, 30);
@@ -491,6 +504,42 @@ let SECTION2_PRODUCTS = null;
   t.check(scope.waQuoteMatchAll('cement nails pipe leg cement nails pipe', cands).items.length <= 5,
     'and the reading is capped, so a list cannot become a loop');
 
+  /* ONE NAME, MANY SIZES. "Hex Bolts 6*80, 6*30, 6*60" is three lines
+     at the counter and one product here: the name read once, every
+     other size of the same product the message carries is its own item.
+     A size the shop does not sell is named, not dropped. */
+  env.data.products.push({ id: 'H1', name: 'Hex Bolts', type: 'variable', variants: [
+    { combo: { Size: '6*80' } }, { combo: { Size: '6*30' } }, { combo: { Size: '6*60' } }, { combo: { Size: '8*40' } } ] });
+  sellFixture.set('H1::0', { price: 900, unit: 'pc' }); sellFixture.set('H1::1', { price: 500, unit: 'pc' });
+  sellFixture.set('H1::2', { price: 700, unit: 'pc' }); sellFixture.set('H1::3', { price: 1100, unit: 'pc' });
+  const bolts = scope.waQuoteCandidates();
+  const three = scope.waQuoteMatchAll('Hex Bolts 6*80\nHex Bolts 6*30\nHex Bolts 6*60', bolts);
+  eq(three.items.map((m) => m.name).join(' | '), 'Hex Bolts — 6*80 | Hex Bolts — 6*30 | Hex Bolts — 6*60',
+    'three lines of the same bolt are three items, in the order written');
+  const listed = scope.waQuoteMatchAll('bolts 6*80, 6*30 6*60. 8*25', bolts);
+  eq(listed.items.length, 3, 'the name said once and the sizes listed is the same three');
+  t.check(listed.items.every((m) => !m.ambiguous && m.alone),
+    'and none of them is a question — three sizes of one bolt, each said whole, is not a tie');
+  /* THE OTHER ROAD TO THE SAME PLACE. When something settles the first
+     size alone -- here, that this customer has bought the 6*80 before --
+     the other size they named is still reached, by its size, and says
+     so. Two roads, one answer: both sizes, either way. */
+  const also = scope.waQuoteMatchAll('hex bolts 6*80 and 6*30', bolts, { customerKeys: new Set(['H1::0']) });
+  eq(also.items.map((m) => m.name).join(' | '), 'Hex Bolts — 6*80 | Hex Bolts — 6*30', 'the second is found by its size');
+  eq(!!also.items[1].bySize, true, 'and marked as reached that way');
+  eq(JSON.stringify(listed.unread), '["8x25"]', 'and the size the shop does not sell is named, not dropped');
+  t.check(listed.items.every((m) => !m.auto), 'none of which may answer by itself');
+  t.check(/^Hex Bolts — 6\*30: UGX 500 per pc\.$/m.test(scope.waQuoteReplyAll(listed.items, [null, null, null])),
+    'and each size gets its own line at its own price');
+  /* And the customer is TOLD, plainly, the way the counter would --
+     never a hedge, which reads as a middleman about to overcharge. */
+  t.check(/^8\*25: we do not have that size\.$/m.test(scope.waQuoteReplyAll(listed.items, [null, null, null], listed.unread)),
+    'the size the shop does not sell is said so in the draft, in the customer\'s own notation');
+  t.check(listed.items.every((m) => scope.waAskedQtyFor('bolts 6*80, 6*30 6*60. 8*25', m, listed.items.filter((x) => x !== m)) == null),
+    'and none of the sizes is read as a count of anything');
+  eq(scope.waAskedQtyFor('10 bolts 6*80 and 25 of 6*30', listed.items[1], [listed.items[0]]), 25,
+    'while a count written beside a size is that size\'s count');
+
   /* THE SERVER IS SILENT ON THESE by the same arithmetic. No second rule
      was written for it: a several-item message has no item with a
      precision of one, and precision is the contract. */
@@ -592,6 +641,10 @@ let SECTION2_PRODUCTS = null;
      this screen wrote, and only when written for a different message. */
   t.check(/if\(held && mine && held === mine\.text && \(!lastIn \|\| mine\.wamid !== lastIn\.wamid\)\)\{\s*\n\s*delete waInbox\.drafts\[convId\]; delete waInbox\.suggested\[convId\];/.test(src),
     'and a suggestion written for an EARLIER message is cleared when the new one has none');
+  /* A three-line message is three lines in the sourcing box, not one
+     glued word: "Hex Bolts 6*80Hex Bolts 6*30". */
+  t.check(/const asked = lastIn \? String\(lastIn\.body\|\|''\)\.replace\(\/\\s\+\/g, ' '\)\.trim\(\)\.slice\(0, 80\) : '';/.test(src),
+    'the ask carried to sourcing collapses its line breaks to spaces');
   t.check(/waInbox\.suggested\[convId\] = \{ wamid: btn\.dataset\.wamid \|\| null, text \};/.test(src)
     && /class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="\$\{i\}" data-wamid="\$\{esc\(lastIn\.wamid\)\}"/.test(src),
     'a tapped option is marked with the message it answers, so that sweep leaves it alone');
@@ -616,6 +669,8 @@ let SECTION2_PRODUCTS = null;
   let hook = null; let hErr = null;
   try {
     hook = compileScope([
+      extractFunction(hookSrc, 'waQuoteSizeJoin', 'wa-webhook'),
+      (hookSrc.match(/^const WA_QUOTE_SIZE = .*$/m) || [''])[0],
       extractFunction(hookSrc, 'waQuoteTokens', 'wa-webhook'),
       extractFunction(hookSrc, 'waQuoteStem', 'wa-webhook'),
       extractFunction(hookSrc, 'waExactMatch', 'wa-webhook'),

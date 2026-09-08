@@ -25383,8 +25383,20 @@ const WA_QUOTE_STOPWORDS = new Set(('how much is the a an of for price cost what
   + 'hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one '
   + 'buy get selling sell kwa ya sente ssente meka').split(' '));
 
-function waQuoteTokens(s){
+/* A SIZE IS ONE WORD. "6*80", "6x80", "6×80", "6 x 80" and "6 by 80"
+   are the same bolt, and split at the star they were two loose numbers
+   that matched any product carrying a 6 or an 80 -- and read as a
+   quantity of six. Joined before anything splits, so the customer's
+   "6*80" and the catalogue's "6x80" are one token, "80*6" is another,
+   and neither is a number of anything. */
+function waQuoteSizeJoin(s){
   return String(s||'').toLowerCase()
+    .replace(/(\d+(?:\.\d+)?)\s*(?:[x×*]|by)\s*(\d+(?:\.\d+)?)/g, '$1x$2');
+}
+const WA_QUOTE_SIZE = /^\d+(?:\.\d+)?x\d/;
+
+function waQuoteTokens(s){
+  return waQuoteSizeJoin(s)
     .replace(/[^a-z0-9\u00C0-\u024F]+/g, ' ')
     .split(/\s+/)
     .filter(w=> w && !WA_QUOTE_STOPWORDS.has(w));
@@ -25787,8 +25799,24 @@ function waQuoteMatchAll(text, candidates, opts){
        handle that does not come small -- and reading those by category
        or by spelling is how a stray size word became a chair pin. The
        softer readings are for a message that named nothing at all. */
-    const m = waQuoteMatchSet(qSet, candidates, i ? { ...(opts||{}), namedOnly: true } : opts, prodTokens);
+    let m = waQuoteMatchSet(qSet, candidates, i ? { ...(opts||{}), namedOnly: true } : opts, prodTokens);
     if(!m) break;
+    /* SIBLINGS THAT EACH HAD THEIR SIZE SAID ARE NOT A TIE. "Hex Bolts
+       6*80, 6*30, 6*60" ties three sizes of one bolt at the same score,
+       because each was named as fully as the others -- and a question
+       between them would be a question the customer already answered.
+       All of one product, every size said whole: every one is an item. */
+    if(m.ambiguous && m.options.every(o=> o.productId === m.options[0].productId && o.kind)){
+      const kindSet = new Set(m.options[0].kind.map(waQuoteStem));
+      const sizeOf = o=> (o.tokens||[]).map(waQuoteStem).filter(t=> !kindSet.has(t));
+      if(m.options.every(o=> sizeOf(o).length && sizeOf(o).every(t=> qSet.has(t)))){
+        const each = m.options.map(o=> ({ ...o, alone: true }));
+        const spoken = new Set([].concat(...each.map(o=> (o.said||[]).map(waQuoteStem))));
+        qSet = new Set([...qSet].filter(t=> !spoken.has(t)));
+        each.forEach(o=>{ if(items.length < WA_QUOTE_MAX_ITEMS) items.push(o); });
+        continue;
+      }
+    }
     /* The words this item spoke for come out. For a tie, the options
        share the words that tied them; what the first said is what they
        all said. */
@@ -25799,12 +25827,33 @@ function waQuoteMatchAll(text, candidates, opts){
     const before = qSet.size;
     qSet = new Set([...qSet].filter(t=> !spoke.has(t)));
     items.push(m);
+    /* ONE NAME, MANY SIZES. "Hex Bolts 6*80, 6*30, 6*60" is three lines
+       at the counter and one product here: once its name has been read
+       out, every other size of the SAME product that the message still
+       carries whole is its own item, without the name having to be said
+       again. Only whole sizes, only siblings, and each taken once. */
+    if(!m.ambiguous && m.variantIdx != null && m.kind){
+      const kindSet = new Set(m.kind.map(waQuoteStem));
+      (candidates||[]).forEach(sib=>{
+        if(sib.productId !== m.productId || sib.key === m.key || items.length >= WA_QUOTE_MAX_ITEMS) return;
+        if(items.some(x=> !x.ambiguous && x.key === sib.key)) return;
+        const size = (sib.tokens||[]).map(waQuoteStem).filter(t=> !kindSet.has(t));
+        if(!size.length || !size.every(t=> qSet.has(t))) return;
+        items.push({ ...sib, exact: false, recall: size.length / sib.tokens.length,
+          precision: 0, hit: size.length, said: size, missed: sib.kind, viaAlias: null,
+          via: 'named', viaSoft: null, viaCustomer: false, alone: true, auto: false, bySize: true });
+        qSet = new Set([...qSet].filter(t=> !size.includes(t)));
+      });
+    }
     if(qSet.size === before) break;                // no progress: stop, do not loop
   }
   /* Words that name SOME product and were claimed by no item: the
      scatter a tie cap silenced. Named on the screen rather than dropped,
      so "and nails" is not simply missing from the answer. */
-  const unread = [...prodTokens].filter(t=> qSet.has(t));
+  /* ...and a SIZE that matched nothing is named too: "8x25" in a list
+     of bolts the shop does sell is a question, not filler. */
+  const unread = [...new Set([...prodTokens, ...[...qSet].filter(t=> /^\d+(?:\.\d+)?x\d/.test(t))])]
+    .filter(t=> qSet.has(t));
   /* IN THE ORDER THEY SAID THEM. The matcher reads the thing named most
      first, but a customer who wrote "cement and nails" should read
      "cement" then "nails" back, not the reverse -- the reply is a
@@ -25826,17 +25875,25 @@ function waQuoteMatchAll(text, candidates, opts){
    cement and 5kg nails" gives cement 30 and nails 5, not both 30. With
    nothing before, the two words after are tried ("cement 30 bags"). */
 function waAskedQtyFor(text, m, others){
-  const words = String(text||'').toLowerCase().replace(/[^a-z0-9\u00C0-\u024F.,]+/g, ' ').trim().split(/\s+/);
+  const words = waQuoteSizeJoin(text).replace(/[^a-z0-9\u00C0-\u024F.,]+/g, ' ').trim().split(/\s+/);
   const mine = new Set((m.said||[]).map(waQuoteStem).concat(m.viaAlias ? [waQuoteStem(m.viaAlias)] : []));
-  const theirs = new Set([].concat(...(others||[]).map(o=> (o.said||[]).map(waQuoteStem))));
+  const shared = new Set([].concat(...(others||[]).map(o=> (o.said||[]).map(waQuoteStem))));
+  /* ANCHOR ON WHAT IS THIS ITEM'S ALONE. Three sizes of one bolt all
+     said "bolts"; the word that tells "25 of 6*30" from "10 bolts 6*80"
+     is the size, so the size is where the count is looked for. And a
+     word both items said ("bolts") is nobody's fence -- only a word
+     that is ONLY the other item's stops the scan. */
+  const own = new Set([...mine].filter(t=> !shared.has(t)));
+  const anchor = own.size ? own : mine;
+  const theirs = new Set([...shared].filter(t=> !mine.has(t)));
   const nameNums = new Set((m.tokens||[]).filter(t=> /^\d/.test(t)));
   const isQty = w=>{
-    if(!/^\d/.test(w)) return null;
+    if(!/^\d/.test(w) || WA_QUOTE_SIZE.test(w)) return null;   // a size is not a count
     const n = Number(w.replace(/[,.]+$/, '').replace(/,/g, '').replace(/[a-z]+$/, ''));
     if(!isFinite(n) || n <= 1 || n > 100000 || nameNums.has(String(n))) return null;
     return n;
   };
-  const at = words.findIndex(w=> mine.has(waQuoteStem(w.replace(/[.,]+$/, ''))));
+  const at = words.findIndex(w=> anchor.has(waQuoteStem(w.replace(/[.,]+$/, ''))));
   if(at < 0) return null;
   for(let k = at - 1; k >= Math.max(0, at - 4); k--){
     const w = words[k];
@@ -25854,8 +25911,14 @@ function waAskedQtyFor(text, m, others){
    reply says more -- the break, the companion -- because it has the
    room; a several-item answer that said all of that for each would be
    a page, and the counter would not. */
-function waQuoteReplyAll(items, qtys){
-  if(items.length === 1) return waQuoteReply(items[0], (qtys||[])[0]);
+function waQuoteReplyAll(items, qtys, unread){
+  /* A SIZE THE SHOP DOES NOT SELL is said plainly, the way the counter
+     says it and the way the assistant was told to: never a hedge, which
+     reads as a middleman about to overcharge. Only a size -- a word that
+     could mean many things is the owner's question, not a claim to make
+     to the customer. */
+  const missing = (unread||[]).filter(t=> WA_QUOTE_SIZE.test(t));
+  if(items.length === 1 && !missing.length) return waQuoteReply(items[0], (qtys||[])[0]);
   const lines = items.map((m, i)=>{
     const n = Number((qtys||[])[i]);
     if(m.priced === false || m.price == null) return `${m.name}: we have it — the price will be confirmed shortly.`;
@@ -25865,14 +25928,17 @@ function waQuoteReplyAll(items, qtys){
     }
     return `${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`;
   });
+  missing.forEach(t=> lines.push(`${t.replace('x', '*')}: we do not have that size.`));
   lines.push('Reply here to order, or ask about anything else.');
   return lines.join('\n');
 }
 
 function waAskedQty(text, m){
-  const words = String(text||'').toLowerCase().match(/\d[\d,.]*/g) || [];
+  const words = waQuoteSizeJoin(text).replace(/[^a-z0-9\u00C0-\u024F.,]+/g, ' ').trim().split(/\s+/)
+    .filter(w=> /^\d/.test(w));
   const nameNums = new Set((m && m.tokens || []).filter(t=> /^\d/.test(t)));
   for(const w of words){
+    if(WA_QUOTE_SIZE.test(w)) continue;         // 6x80 is a bolt, not six of anything
     const n = Number(String(w).replace(/[,.]+$/,'').replace(/,/g,''));
     if(!isFinite(n) || n <= 1) continue;      // "1" is not a quantity worth saying
     if(nameNums.has(String(n))) continue;      // 28 in "28 gauge" is the product
@@ -26531,7 +26597,7 @@ function waOpenRowHTML(c, nowMs){
   const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
   const suggested = aiLive && aiLive.text ? aiLive.text
     : match ? waQuoteReply(match, askedQty)
-    : (multi && multi.settled) ? waQuoteReplyAll(multi.slots, multi.qtys)
+    : (multi && multi.settled) ? waQuoteReplyAll(multi.slots, multi.qtys, multi.unread)
     : null;
   if(suggested != null){
     const held = waInbox.drafts[convId];
@@ -26555,7 +26621,7 @@ function waOpenRowHTML(c, nowMs){
   }
 
   const order = aiLive && aiLive.order && (aiLive.order.lines||[]).length ? aiLive.order : null;
-  const asked = lastIn ? String(lastIn.body||'').trim().slice(0, 80) : '';
+  const asked = lastIn ? String(lastIn.body||'').replace(/\s+/g, ' ').trim().slice(0, 80) : '';
   const known = asked ? findSourcingLeadByText(asked) : null;
 
   return `
@@ -26571,7 +26637,11 @@ function waOpenRowHTML(c, nowMs){
         <span class="wa-mh-n">${multi ? [
               `${multi.slots.length} things asked for`,
               multi.settled ? '' : 'one of them needs picking',
-              multi.unread.length ? `“${multi.unread.map(esc).join('”, “')}” could be many things` : '',
+              /* Two kinds of unread word, two different truths: a size the
+                 shop has no such line of, and a word that could mean too
+                 many things to pick from. */
+              multi.unread.some(t=> WA_QUOTE_SIZE.test(t)) ? `no ${multi.unread.filter(t=> WA_QUOTE_SIZE.test(t)).map(t=> '“' + esc(t) + '”').join(', ')} on file` : '',
+              multi.unread.some(t=> !WA_QUOTE_SIZE.test(t)) ? `“${multi.unread.filter(t=> !WA_QUOTE_SIZE.test(t)).map(esc).join('”, “')}” could be many things` : '',
               'read it before it goes',
             ].filter(Boolean).join(' · ')
           : options ? [
