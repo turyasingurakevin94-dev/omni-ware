@@ -31493,14 +31493,28 @@ function cashCommitments(fromISO, days){
      sums principal because it feeds a ratio, and money leaving the
      drawer is the whole instalment, interest and fee with it. Only what
      falls due from today on -- a missed one is the loans screen's
-     business and it is the only reading that knows what was repaid. */
+     business, which is the reading that knows how far behind the shop
+     has fallen.
+
+     LESS WHAT HAS ALREADY BEEN PAID. The schedule alone is the
+     agreement, and every other kind of promise on this line is valued at
+     its BALANCE -- dueBalance takes off what was paid against a wage, an
+     open bill carries what is still due on it. A loan instalment was the
+     one thing here still quoted at its full face after the money had
+     gone, so the morning the owner paid it the line went on asking for
+     it. loanRemainingSchedule allocates repayments oldest first and
+     hands back what is genuinely still to leave the drawer; an
+     instalment nothing is left on drops off the line entirely, and a
+     part-paid one stays at its remainder and says so. */
   (data.loans || []).forEach(l=>{
     if(l.closedOn) return;
-    loanSchedule(l).forEach(r=>{
+    loanRemainingSchedule(l).forEach(r=>{
       if(!r.date || r.date < from || r.date > to) return;
+      if(!(r.remaining > 0.5)) return;
       out.push({ date: r.date, dueOn: r.date, overdue: false, kind: 'loan',
         label: (l.lender || 'Loan') + ' repayment',
-        amount: Math.round(r.payment), unknown: false, raised: true });
+        amount: Math.round(r.remaining), unknown: false, raised: true,
+        partPaid: r.paid > 0.5 });
     });
   });
   /* Rent for a month nobody has raised the dues on yet. DERIVED, never
@@ -75644,6 +75658,37 @@ function loanRepayments(loan){
   return (Array.isArray(loan.repayments) ? loan.repayments : [])
     .slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
 }
+/* The same schedule, less what has already been handed over.
+
+   loanSchedule is the AGREEMENT and knows nothing about what was paid;
+   loanApplied knows what was paid and nothing about which instalment it
+   was for. A forecast needs both, because an instalment already settled
+   is not money that is going to leave the drawer a second time. Without
+   this, the morning the owner paid this week's 88,149 the cash line went
+   on asking for it -- the one screen whose whole job is what is still to
+   go telling them to find the same money twice, and doing it on the day
+   they had just done the right thing.
+
+   CUMULATIVE, OLDEST FIRST -- the way loanDuePosition counts arrears and
+   the way a lender credits money: a payment covers the rows already due
+   before it touches the next one. So a shop three weeks behind does not
+   get this week's instalment struck off by a payment that only caught up
+   on last week's, and a shop that has kept up sees today's row go the
+   moment it pays. A part payment leaves the REMAINDER of its instalment
+   on the line, not the whole of it and not nothing.
+
+   The allocation is by instalment, not by fee-interest-principal:
+   loanApplied answers what is OWED, this answers what is still to be
+   HANDED OVER, and the whole instalment is what leaves the drawer. */
+function loanRemainingSchedule(loan){
+  let credit = loanRepayments(loan)
+    .reduce((s,rp)=> s + Math.max(0, Number(rp && rp.amount)||0), 0);
+  return loanSchedule(loan).map(r=>{
+    const paid = Math.min(credit, r.payment);
+    credit -= paid;
+    return { ...r, paid, remaining: r.payment - paid };
+  });
+}
 /* Applies the repayments actually made, oldest first, interest before
    principal.
 
@@ -78077,6 +78122,7 @@ function renderAhead(){
         e.overdue ? 'overdue' : e.inDays === 0 ? 'today' : 'in ' + e.inDays + (e.inDays === 1 ? ' day' : ' days')}</span>
       <span class="ow-ah-what">${esc(e.label)}<span class="ow-ah-what-s">${esc(kindLabel(e))}${
         e.kind === 'bill' ? (e.overdue ? ' &middot; the day you named has gone by' : ' &middot; the day you named') : ''}${
+        e.partPaid ? ' &middot; what is left of it after what you have already paid' : ''}${
         e.raised ? '' : ' &middot; not raised yet'}</span></span>
       <span class="ow-ah-out">${e.unknown ? '<i class="ow-ah-uncosted">not costed yet</i>' : b(e.amount)}</span>
       <span class="ow-ah-bal">${e.unknown ? '&mdash;' : b(e.balanceAfter)}${
