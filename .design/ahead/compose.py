@@ -20,7 +20,13 @@ def compose(body, svg, vals, rail_extra=""):
     rail = R('_rail_common.html').replace('__DUE__', vals['DUE'])
     s = s.replace('__STRIP__', strip)
     s = s.replace('__SVG__', R(svg) if svg else '')
-    s = s.replace('__LEGEND__', R('_legend.html'))
+    # THE "BELOW NOTHING" KEY ONLY BELONGS WHERE THE LINE GOES UNDER.
+    # A legend naming a mark that is not on the chart is a mark the eye
+    # hunts for and never finds.
+    lg = R('_legend.html')
+    if vals['SAFECLS'] != 'ow-bad':
+        lg = "\n".join(l for l in lg.split("\n") if 'ah-lg-neg' not in l)
+    s = s.replace('__LEGEND__', lg)
     s = s.replace('__RAIL__', rail_extra + rail)
     return s
 

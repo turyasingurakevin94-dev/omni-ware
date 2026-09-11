@@ -13412,11 +13412,31 @@
   /* Nothing left is not a gridline, it is the edge of the cliff. */
   .ow-ah-zero{stroke:var(--ow-ink-400);stroke-width:1;}
   .ow-ah-neg{fill:var(--ow-crimson-soft);}
+  /* The day axis is a rule the eye can run along, one weight up from the
+     gridlines it crosses, with a real tick under every date on it. */
+  .ow-ah-axis{stroke:var(--ow-rule);stroke-width:1;}
+  .ow-ah-tick{stroke:var(--ow-rule);stroke-width:1;}
   .ow-ah-yl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
     font-size:var(--ow-t-11);fill:var(--ow-ink-600);}
   .ow-ah-xl{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
+  /* The second line under the first and last tick: which day is today,
+     and which year the window ends in. Axis ticks carry no year, because
+     thirty of them saying 2026 is thirty repetitions of one fact. */
+  .ow-ah-xl-t{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    fill:var(--ow-ink-600);}
+  .ow-ah-cap{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    fill:var(--ow-ink-600);}
+  /* WHAT LEAVES EACH DAY. One bar per day money goes out, on the same
+     day axis as the line, sized by what goes out. The line's flat
+     segments hide how much is moving and its dots pile up where two
+     payments fall together; this is where the crowding goes. It is grey
+     because it is the same money the line already spends -- the day it
+     lands on is the reading, not a second series. The tightest day is
+     inked so the eye lands on it from the axis as well as the line. */
+  .ow-ah-rail{fill:var(--ow-steel-100);}
+  .ow-ah-rail.ow-ah-rail-low{fill:var(--ow-ink-900);}
 
   /* THE BALANCE IS INK. It is a fact about the drawer, not a warning,
      and a line coloured all the way along says nothing when it finally
@@ -13436,6 +13456,7 @@
     stroke-dasharray:5 4;stroke-linejoin:round;}
   .ow-ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
   .ow-ah-dot.ow-ah-low{fill:var(--ow-ink-900);}
+  .ow-ah-dot.ow-ah-start{stroke-width:1.8;}
   .ow-ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
   .ow-ah-lowlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
@@ -13449,6 +13470,12 @@
   .ow-ah-endghost{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
     font-size:var(--ow-t-11);fill:var(--ow-ink-600);}
+  /* A figure sitting on a gridline is a figure with a line through it.
+     Every label that lands inside the plot carries a paper halo, which
+     costs nothing and needs no box drawn round it. */
+  .ow-ah-lowlab,.ow-ah-lowsub,.ow-ah-endlab,.ow-ah-endghost{
+    paint-order:stroke fill;stroke:var(--ow-paper);stroke-width:3px;
+    stroke-linejoin:round;}
 
   /* Two lines, so a legend -- and each is direct-labelled at its own end
      as well, because a legend the eye has to travel to is one nobody
@@ -13463,6 +13490,7 @@
   .ow-ah-lg-k.ow-ah-lg-g{border-top:1.5px dashed var(--ow-ink-400);}
   .ow-ah-lg-k.ow-ah-lg-n{height:10px;border:0;background:var(--ow-crimson-soft);
     border-radius:var(--ow-r-sm);}
+  .ow-ah-lg-k.ow-ah-lg-b{width:6px;height:11px;border:0;background:var(--ow-steel-100);}
   .ow-ah-lg-t{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);
     line-height:1.45;max-width:62ch;}
   .ow-ah-lg-s{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
@@ -77872,12 +77900,37 @@ function cashAheadDays(){
    solid line only, and the note beside the legend says so where the eye
    already is. */
 function aheadRunwaySVG(a, small){
-  const W = small ? 358 : 1000, H = small ? 108 : 248;
-  const padL = small ? 4 : 78, padR = small ? 4 : 104,
-        padT = small ? 10 : 20, padB = small ? 16 : 36;
+  /* A STEP IN FIGURES A PERSON READS. 1, 2 or 5 times a power of ten, so
+     the value axis lands on 1,000,000 rather than on 1,284,000. An axis
+     whose labels are arbitrary is an axis nobody reads off. */
+  const niceStep = (span, want)=>{
+    const raw = Math.max(1, span) / Math.max(1, want);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const k = raw / mag;
+    return (k <= 1 ? 1 : k <= 2 ? 2 : k <= 5 ? 5 : 10) * mag;
+  };
+  /* THE VIEWBOX IS THE COLUMN'S REAL WIDTH, not a round 1000.
+     The svg is width:100%, so every unit inside it is scaled by
+     column / W -- and at 1000 units in the ~800px column this panel
+     actually gets, every 11px label was rendering at 8.8px. Sized to
+     the column, the type comes out at the size the ramp says, and on a
+     wider screen it scales UP rather than down. */
+  const W = small ? 358 : 800, H = small ? 196 : 280;
+  const padL = small ? 54 : 88, padR = small ? 12 : 100,
+        padT = small ? 14 : 30, padB = small ? 66 : 80;
   const iw = W - padL - padR, ih = H - padT - padB;
   const days = Math.max(1, a.days);
   const dayOf = (iso)=> Math.min(days, Math.max(0, daysBetweenISO(a.from, iso)));
+  const isoAt = (d)=> new Date(Date.parse(a.from + 'T00:00:00Z') + d * 86400000)
+    .toISOString().slice(0, 10);
+  /* Axis dates carry no year: thirty ticks all saying 2026 is thirty
+     repetitions of the one thing the reader already knows, and the year
+     is on the window's own end label under the axis. */
+  const axisDate = (iso)=>{
+    const d = new Date(iso + 'T00:00:00Z');
+    return isNaN(d.getTime()) ? String(iso)
+      : d.toLocaleDateString('en-UG', { day:'numeric', month:'short', timeZone:'UTC' });
+  };
 
   /* Both walks, from the same opening figure. The promised walk merges
      the two event streams in date order; it is a reading, never a
@@ -77896,10 +77949,21 @@ function aheadRunwaySVG(a, small){
     ? walk(outs.concat(ins).sort((x, y)=> String(x.date).localeCompare(String(y.date))))
     : null;
 
+  /* THE DOMAIN, AND WHY IT IS NOT SNAPPED TO THE STEP.
+     Rounding the top up to the next whole gridline put 8,000,000 above
+     a line that never passes 6,381,779, and a quarter of the plot was
+     empty. So the domain is the data plus a little air, the GRIDLINES
+     are the round figures inside it, and the top one simply sits under
+     the line. The floor is nothing-left whenever the line stays above
+     it, because zero is the edge this screen is about. */
   const all = solid.concat(ghost || []);
-  const lo = Math.min(0, ...all.map(p=> p[1]));
+  const loRaw = Math.min(0, ...all.map(p=> p[1]));
   const hiRaw = Math.max(a.onHand, ...all.map(p=> p[1]));
-  const hi = hiRaw > lo ? hiRaw + (hiRaw - lo) * 0.06 : lo + 1;
+  const spanRaw = Math.max(1, hiRaw - loRaw);
+  const air = spanRaw * 0.07;
+  const lo = loRaw < 0 ? loRaw - air : 0;
+  const hi = hiRaw + air;
+  const stepV = niceStep(hi - lo, small ? 4 : 7);
   const X = (d)=> padL + (d / days) * iw;
   const Y = (v)=> padT + ih - ((v - lo) / (hi - lo)) * ih;
   const step = (pts)=> pts.map((p, i)=> i === 0
@@ -77907,48 +77971,115 @@ function aheadRunwaySVG(a, small){
     : `L${X(p[0]).toFixed(1)},${Y(pts[i-1][1]).toFixed(1)} L${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
 
   const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
+  /* The phone gutter is 54px. A full figure does not fit in it and a
+     clipped figure is a WRONG figure, so the small chart says 5.0M and
+     the exact figures stay where they already are -- the strip above it
+     and the ledger below. */
+  const ylab = (v)=> !small ? n(v)
+    : Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
+    : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'k' : n(v);
+  const baseY = padT + ih;
   let g = '';
+
   /* The ground below nothing, drawn as a field the line goes into.
      Zero is the edge of a cliff, not a tick on an axis. */
-  if(lo < 0) g += `<rect class="ow-ah-neg" x="${padL}" y="${Y(0).toFixed(1)}" width="${iw}" height="${(padT + ih - Y(0)).toFixed(1)}"/>`;
-  /* Two gridlines and no more: what you hold now, and nothing left. A
-     third would be a tick nobody reads. They are skipped when they
-     coincide, so an empty drawer does not print "0" twice over itself. */
-  const lines = a.onHand === 0 ? [[0, true]] : [[a.onHand, false], [0, true]];
-  lines.forEach(([v, isZero])=>{
-    g += `<line class="ow-ah-grid${isZero ? ' ow-ah-zero' : ''}" x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${padL + iw}" y2="${Y(v).toFixed(1)}"/>`;
-    if(!small) g += `<text class="ow-ah-yl" x="${padL - 10}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${esc(n(v))}</text>`;
+  if(lo < 0) g += `<rect class="ow-ah-neg" x="${padL}" y="${Y(0).toFixed(1)}" width="${iw}" height="${(baseY - Y(0)).toFixed(1)}"/>`;
+
+  /* THE VALUE AXIS. It used to be two gridlines -- what you hold now and
+     nothing left -- on the argument that a third would be a tick nobody
+     reads. That was wrong: with only the two, every point between them
+     is unreadable, and the whole middle of this chart is between them.
+     So: a round step, a hairline and a figure at each, and zero keeps
+     its heavier stroke because it is still the cliff and not a tick. */
+  const yTicks = [];
+  for(let v = Math.ceil(lo / stepV) * stepV; v <= hi + stepV * 0.001; v += stepV) yTicks.push(Math.round(v));
+  yTicks.forEach(v=>{
+    const y = Y(v).toFixed(1), isZero = v === 0;
+    g += `<line class="ow-ah-grid${isZero ? ' ow-ah-zero' : ''}" x1="${padL}" y1="${y}" x2="${padL + iw}" y2="${y}"/>`
+      + `<text class="ow-ah-yl" x="${padL - 10}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${esc(ylab(v))}</text>`;
   });
+
+  /* THE DAY AXIS. A rule along the floor with dated ticks on it, so a
+     step in the line can be placed on a day without counting pixels
+     from one end. The step is chosen so the labels never touch. */
+  const dayStep = small
+    ? (days <= 16 ? Math.max(1, Math.ceil(days / 2)) : Math.ceil(days / 3))
+    : (days <= 10 ? 1 : days <= 24 ? 3 : days <= 60 ? 7 : days <= 140 ? 14 : 30);
+  const xDays = [];
+  for(let d = 0; d < days; d += dayStep) xDays.push(d);
+  if(xDays.length > 1 && days - xDays[xDays.length - 1] < dayStep * 0.5) xDays.pop();
+  xDays.push(days);
+  g += `<line class="ow-ah-axis" x1="${padL}" y1="${baseY}" x2="${padL + iw}" y2="${baseY}"/>`;
+  xDays.forEach((d, i)=>{
+    const x = X(d), last = i === xDays.length - 1;
+    const anc = i === 0 ? 'start' : last ? 'end' : 'middle';
+    g += `<line class="ow-ah-tick" x1="${x.toFixed(1)}" y1="${baseY}" x2="${x.toFixed(1)}" y2="${baseY + 5}"/>`
+      + `<text class="ow-ah-xl" x="${x.toFixed(1)}" y="${baseY + (small ? 17 : 18)}" text-anchor="${anc}">${esc(axisDate(isoAt(d)))}</text>`;
+    if(!small && (i === 0 || last))
+      g += `<text class="ow-ah-xl-t" x="${x.toFixed(1)}" y="${baseY + 31}" text-anchor="${anc}">${
+        i === 0 ? 'today' : esc(String(new Date(isoAt(d) + 'T00:00:00Z').getUTCFullYear()))}</text>`;
+  });
+
+  /* WHAT LEAVES EACH DAY, under the axis it shares.
+     Twelve payments in thirty days pile four dots into twenty pixels on
+     the line, and the flat segments between them hide how much is
+     moving. The rail spreads them on the same day axis: one bar per day
+     money goes out, sized by what goes out that day. */
+  const byDay = new Map();
+  a.commitments.forEach(c=>{
+    const d = dayOf(c.date), e = byDay.get(d) || { d, amount: 0, items: [] };
+    e.amount += c.amount; e.items.push(c); byDay.set(d, e);
+  });
+  const rail = [...byDay.values()].sort((x, y)=> x.d - y.d);
+  if(rail.length){
+    const railH = small ? 18 : 24, railB = H - (small ? 20 : 16);
+    const maxOut = Math.max(...rail.map(r=> r.amount));
+    const bw = small ? 4 : 6;
+    const tightD = a.commitments.length ? dayOf(a.tightest.date) : -1;
+    if(!small) g += `<text class="ow-ah-cap" x="${padL - 10}" y="${railB - railH / 2 + 3.5}" text-anchor="end">Out each day</text>`;
+    rail.forEach(r=>{
+      const h = Math.max(3, (r.amount / maxOut) * railH);
+      const x = X(r.d) - bw / 2;
+      g += `<rect class="ow-ah-rail${r.d === tightD ? ' ow-ah-rail-low' : ''}" x="${x.toFixed(1)}" y="${(railB - h).toFixed(1)}" width="${bw}" height="${h.toFixed(1)}">`
+        + `<title>${esc(fmtShortDate(isoAt(r.d)))} — ${esc(n(r.amount))} out: ${
+            esc(r.items.map(c=> c.label + ' ' + n(c.amount)).join('; '))}</title></rect>`;
+    });
+  }
+
   if(ghost) g += `<path class="ow-ah-ghost" d="${step(ghost)}"/>`;
   g += `<path class="ow-ah-line" d="${step(solid)}"/>`;
+  g += `<circle class="ow-ah-dot ow-ah-start" cx="${X(0).toFixed(1)}" cy="${Y(a.onHand).toFixed(1)}" r="${small ? 3 : 3.5}">`
+    + `<title>Today, ${esc(fmtShortDate(a.from))} — ${esc(n(a.onHand))} in hand</title></circle>`;
 
   /* The lowest point the line reaches -- the figure the whole screen is
      built on -- marked where it happens, with a rule down to it so the
-     label can sit clear of the axis without floating free of its point. */
+     label can sit clear of the axis without floating free of its point.
+     Two payments on one day put two dots at one x; only the lower one
+     can be seen, so only the lower one is drawn. */
   let low = null;
   solid.forEach((p, i)=>{
     if(i === 0 || i === solid.length - 1) return;
     const c = a.commitments[i - 1];
     if(!low || p[1] < low.p[1]) low = { p, c };
-    g += `<circle class="ow-ah-dot" cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4">`
+    const nxt = solid[i + 1];
+    if(nxt && i + 1 < solid.length - 1 && nxt[0] === p[0]) return;
+    g += `<circle class="ow-ah-dot" cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="${small ? 3 : 3.5}">`
       + `<title>${esc(fmtShortDate(c.dueOn))} — ${esc(c.label)}, ${esc(n(c.amount))} out, leaves ${esc(n(p[1]))}</title></circle>`;
   });
   if(low){
     const lx = X(low.p[0]), ly = Y(low.p[1]), under = low.p[1] < 0;
-    g += `<circle class="ow-ah-dot ow-ah-low" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="4.5"/>`;
+    g += `<circle class="ow-ah-dot ow-ah-low" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${small ? 3.8 : 4.5}"/>`;
     if(small){ /* the hero and the ledger name the day in words */ }
     else {
-    g += `<line class="ow-ah-lowrule" x1="${lx.toFixed(1)}" y1="${padT}" x2="${lx.toFixed(1)}" y2="${padT + ih}"/>`;
+    g += `<line class="ow-ah-lowrule" x1="${lx.toFixed(1)}" y1="${(padT + 34).toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}"/>`;
     const right = lx > padL + iw * 0.62;
     const ax = lx + (right ? -9 : 9), anc = right ? 'end' : 'start';
-    g += `<text class="ow-ah-lowlab${under ? ' ow-bad' : ''}" x="${ax.toFixed(1)}" y="${padT + 13}" text-anchor="${anc}">${
+    g += `<text class="ow-ah-lowlab${under ? ' ow-bad' : ''}" x="${ax.toFixed(1)}" y="${padT + 11}" text-anchor="${anc}">${
       under ? 'Short ' + esc(n(Math.abs(low.p[1]))) : esc(n(low.p[1])) + ' left'}</text>`
-      + `<text class="ow-ah-lowsub" x="${ax.toFixed(1)}" y="${padT + 27}" text-anchor="${anc}">${
+      + `<text class="ow-ah-lowsub" x="${ax.toFixed(1)}" y="${padT + 25}" text-anchor="${anc}">${
         esc(fmtShortDate(a.tightest.date))} — the tightest day</text>`;
     }
   }
-  g += `<text class="ow-ah-xl" x="${padL}" y="${H - (small ? 3 : 12)}">${small ? 'Today' : 'Today, ' + esc(fmtShortDate(a.from))}</text>`
-    + `<text class="ow-ah-xl" x="${padL + iw}" y="${H - (small ? 3 : 12)}" text-anchor="end">${esc(fmtShortDate(a.to))}</text>`;
   if(!small){
     const endS = solid[solid.length - 1][1];
     g += `<text class="ow-ah-endlab" x="${padL + iw + 9}" y="${(Y(endS) + 4).toFixed(1)}">${esc(n(endS))}</text>`;
@@ -77958,7 +78089,7 @@ function aheadRunwaySVG(a, small){
         g += `<text class="ow-ah-endghost" x="${padL + iw + 9}" y="${(Y(endG) + 4).toFixed(1)}">${esc(n(endG))}</text>`;
     }
   }
-  return `<svg class="ow-ah-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="What you will hold over the next ${days} days">${g}</svg>`;
+  return `<svg class="ow-ah-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="What you will hold over the next ${days} days, from ${esc(n(a.onHand))} today down to ${esc(n(solid[solid.length - 1][1]))}, lowest ${esc(n(low ? low.p[1] : a.onHand))}">${g}</svg>`;
 }
 
 /* WHAT IS COMING, AND WHETHER IT LEAVES YOU ANYTHING.
@@ -78030,6 +78161,7 @@ function renderAhead(){
     <div class="ow-ah-lg">
       <span class="ow-ah-lg-i"><span class="ow-ah-lg-k"></span>What you will hold</span>
       ${a.promised.length ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-g"></span>If every promise is kept</span>' : ''}
+      ${a.commitments.length ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-b"></span>What leaves that day</span>' : ''}
       ${short ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-n"></span>Below nothing</span>' : ''}
       <span class="ow-ah-lg-t">${a.promised.length
         ? 'Safe to spend is read off the <b class="ow-ah-lg-s">solid</b> line only. <b class="ow-ah-lg-s">Not counted in what is safe to spend.</b> A day somebody named is worth knowing and is still not money you hold &mdash; buying stock against it is how a shop ends up short.'

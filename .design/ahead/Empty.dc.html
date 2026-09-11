@@ -429,6 +429,18 @@
     /* Nothing left is not a gridline, it is the edge of the cliff. */
     .ah-zero{stroke:var(--ow-ink-400);stroke-width:1;}
     .ah-neg{fill:var(--ow-crimson-soft);}
+    /* The day axis is a rule the eye can run along, one weight up from
+       the gridlines it crosses, with a tick under every date on it. */
+    .ah-axis{stroke:var(--ow-rule);stroke-width:1;}
+    .ah-tick{stroke:var(--ow-rule);stroke-width:1;}
+    .ah-xl-t{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    .ah-cap{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    /* WHAT LEAVES EACH DAY. One bar per day money goes out, on the same
+       day axis as the line, sized by what goes out that day. The line's
+       flat segments hide how much is moving and its dots pile up where
+       two payments fall together; this is where the crowding goes. */
+    .ah-rail{fill:var(--ow-steel-100);}
+    .ah-rail.ah-rail-low{fill:var(--ow-ink-900);}
     .ah-yl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
       font-variant-numeric:tabular-nums;letter-spacing:-.02em;
       font-size:11px;fill:var(--ow-ink-600);}
@@ -447,6 +459,11 @@
       stroke-dasharray:5 4;stroke-linejoin:round;}
     .ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
     .ah-dot.ah-low{fill:var(--ow-ink-900);}
+    .ah-dot.ah-start{stroke-width:1.8;}
+    /* A figure sitting on a gridline is a figure with a line through it,
+       so every label that lands inside the plot carries a paper halo. */
+    .ah-lowlab,.ah-lowsub,.ah-endlab,.ah-endghost{paint-order:stroke fill;
+      stroke:var(--ow-paper);stroke-width:3px;stroke-linejoin:round;}
     .ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
     .ah-lowlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
       font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
@@ -470,6 +487,7 @@
       font-size:var(--ow-t-11);color:var(--ow-ink-600);}
     .ah-lg-k{width:20px;height:0;border-top:2px solid var(--ow-ink-900);flex:none;}
     .ah-lg-k.ah-lg-ghost{border-top:1.5px dashed var(--ow-ink-400);}
+    .ah-lg-k.ah-lg-bar{width:6px;height:11px;border:0;background:var(--ow-steel-100);}
     .ah-lg-k.ah-lg-neg{height:10px;border:0;background:var(--ow-crimson-soft);
       border-radius:2px;}
     .ah-lg-n{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);
@@ -663,16 +681,7 @@
           </div>
         </div>
         <div style="padding:var(--ow-sp-12) var(--ow-sp-12) 0">
-          <svg class="ah-svg" viewBox="0 0 1000 150" role="img" aria-label="A flat balance over 30 days">
-            <line class="ah-grid" x1="78" y1="34" x2="896" y2="34"></line>
-            <text class="ah-yl" x="68" y="37.5" text-anchor="end">4,850,000</text>
-            <line class="ah-grid ah-zero" x1="78" y1="114" x2="896" y2="114"></line>
-            <text class="ah-yl" x="68" y="117.5" text-anchor="end">0</text>
-            <path class="ah-line" d="M78,34 L896,34"></path>
-            <text class="ah-endlab" x="905" y="38">4,850,000</text>
-            <text class="ah-xl" x="78" y="138">Today, 3 Sep</text>
-            <text class="ah-xl" x="896" y="138" text-anchor="end">3 Oct</text>
-          </svg>
+          <svg class="ah-svg" viewBox="0 0 800 280" role="img" aria-label="What you will hold over the next 30 days, from 4,850,000 today down to 4,850,000, lowest 4,850,000"><line class="ah-grid ah-zero" x1="88" y1="200.0" x2="700" y2="200.0"/><text class="ah-yl" x="78" y="203.5" text-anchor="end">0</text><line class="ah-grid" x1="88" y1="167.2" x2="700" y2="167.2"/><text class="ah-yl" x="78" y="170.7" text-anchor="end">1,000,000</text><line class="ah-grid" x1="88" y1="134.5" x2="700" y2="134.5"/><text class="ah-yl" x="78" y="138.0" text-anchor="end">2,000,000</text><line class="ah-grid" x1="88" y1="101.7" x2="700" y2="101.7"/><text class="ah-yl" x="78" y="105.2" text-anchor="end">3,000,000</text><line class="ah-grid" x1="88" y1="69.0" x2="700" y2="69.0"/><text class="ah-yl" x="78" y="72.5" text-anchor="end">4,000,000</text><line class="ah-grid" x1="88" y1="36.2" x2="700" y2="36.2"/><text class="ah-yl" x="78" y="39.7" text-anchor="end">5,000,000</text><line class="ah-axis" x1="88" y1="200" x2="700" y2="200"/><line class="ah-tick" x1="88.0" y1="200" x2="88.0" y2="205"/><text class="ah-xl" x="88.0" y="218" text-anchor="start">3 Sep</text><text class="ah-xl-t" x="88.0" y="231" text-anchor="start">today</text><line class="ah-tick" x1="230.8" y1="200" x2="230.8" y2="205"/><text class="ah-xl" x="230.8" y="218" text-anchor="middle">10 Sep</text><line class="ah-tick" x1="373.6" y1="200" x2="373.6" y2="205"/><text class="ah-xl" x="373.6" y="218" text-anchor="middle">17 Sep</text><line class="ah-tick" x1="516.4" y1="200" x2="516.4" y2="205"/><text class="ah-xl" x="516.4" y="218" text-anchor="middle">24 Sep</text><line class="ah-tick" x1="700.0" y1="200" x2="700.0" y2="205"/><text class="ah-xl" x="700.0" y="218" text-anchor="end">3 Oct</text><text class="ah-xl-t" x="700.0" y="231" text-anchor="end">2026</text><path class="ah-line" d="M88.0,41.1 L700.0,41.1 L700.0,41.1"/><circle class="ah-dot ah-start" cx="88.0" cy="41.1" r="3.5"><title>Today, 3 Sep — 4,850,000 in hand</title></circle><text class="ah-endlab" x="709" y="45.1">4,850,000</text></svg>
         </div>
         <div class="ow-empty">
           <b>Nothing you have promised falls due in the next 30 days.</b>
