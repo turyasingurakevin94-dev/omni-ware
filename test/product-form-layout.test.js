@@ -130,11 +130,50 @@ const modal = (/<div class="modal-overlay" id="productModal">[\s\S]*?\n<\/div>/.
     t.check(new RegExp(`${k}:`).test(fn), `${k} reports its state`);
   });
 
-  // Blank, not a tick.
-  t.check(/el\.textContent = state\[el\.dataset\.state\] \|\| '';/.test(fn),
-    'an untouched section shows nothing rather than a placeholder');
-  t.check(/\.pf-state:empty\{display:none;\}/.test(src),
-    'and the badge collapses rather than sitting there empty');
+  /* Was: "blank, not a tick" -- an untouched section showed nothing, and
+     the badge collapsed rather than sitting there empty.
+
+     That assertion was right about what it rejected and wrong about what
+     it chose. A tick on an empty section IS a lie and a dash on every row
+     DOES read as a broken screen; blank is simply the third wrong answer.
+     It means the rail cannot tell you a section is empty -- you have to
+     open it to find that out, which is the one errand the rail exists to
+     save you. Six sections, five of them blank, and the only way to learn
+     that nothing is set anywhere is five clicks.
+
+     So the rule is no longer "say nothing when there is nothing". It is:
+     every section states its contents in its own words, and a section
+     holding nothing states THAT -- "None", "No rule set", "Not named yet",
+     "Shop default". Neither a tick nor a dash nor a blank: an answer. The
+     empty ones are greyed (.pf-none) so a filled rail still reads at a
+     glance as filled.
+
+     What must hold now is that no section can be silent. */
+  t.check(/const \[text, none\] = state\[el\.dataset\.state\] \|\| \['', true\];/.test(fn),
+    'every section resolves to a state, rather than falling through to nothing');
+  t.check(!/\.pf-state:empty\{display:none;\}/.test(src),
+    'and the rule that collapsed an empty badge is gone with the blank it hid');
+
+  /* Named individually: a count passes while any one of them quietly goes
+     back to reporting nothing, and the section left silent is then the one
+     that looks broken. */
+  [['basics', 'Not named yet'], ['photo', 'None'], ['pricing', 'No rule set'],
+   ['agent', 'Shop default'], ['variants', 'None built yet']].forEach(([k, said]) => {
+    t.check(new RegExp(`${k}:[\\s\\S]*?'${said}'`).test(fn),
+      `${k} says "${said}" rather than going blank`);
+  });
+
+  /* Amber while the form is merely unfinished, crimson only once Save has
+     actually refused. A form you have not yet tried to save is incomplete,
+     which is not the same as wrong, and the rail must not shout before it
+     has been asked to do anything. */
+  t.check(/dot\.hidden = !!name;/.test(fn) && /if\(name\) dot\.classList\.remove\('pf-bad'\);/.test(fn),
+    'the blocking mark is dropped the moment the name is typed');
+  const mark = (/function markProductNameMissing[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/dot\.classList\.add\('pf-bad'\)/.test(mark),
+    'and only a refused save turns it crimson');
+  t.check(/showProductFormPane\('basics'\);/.test(mark) && /field\.focus\(\);/.test(mark),
+    'a refused save opens the section at fault and puts the cursor in the field, rather than toasting from the far corner');
 
   // A markup of "fixed 5000" is money, not a percentage. The catalogue
   // makes the same distinction; the rail must not contradict it.

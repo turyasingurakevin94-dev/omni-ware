@@ -101,14 +101,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        active document tab lifted itself off the tray it sat in; it is
        underscored now, and depth on this app is hairlines.) */
     'shadows': [56, /box-shadow:\s*([^;}]+)/g],
-    /* 104, not 105: the statements' verdict slab carried #C4DED6, a
+    /* 103, not 104: the product form's type cards carried #FFF9EF -- a
+       cream that existed only to tint the selected option, and that made
+       the selection one of four things on that form wearing a warm colour
+       while claiming to be the one thing to do next. The selection is
+       steel now (a dark border, a paper-2 ground and a filled dot), and
+       the cream went with it.
+       (104, not 105: the statements' verdict slab carried #C4DED6, a
        verdigris keyline that was in no palette and existed only to edge
        a tinted banner. The banner is a row in ink now and the colour
        went with it. (105 was Follow-ups' card wall: its own hover
        border, its own two near-whites for a card and a settled row, and
        its own hover fill -- all four gone when that screen became a
-       console on the layer.) */
-    'distinct colours': [104, /#[0-9A-Fa-f]{6}\b/g],
+       console on the layer.)) */
+    'distinct colours': [103, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

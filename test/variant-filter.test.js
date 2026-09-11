@@ -102,11 +102,24 @@ const V = [
 {
   t.check(/id="vf_search"/.test(src) && /id="vf_sort"/.test(src) && /id="vf_clear"/.test(src),
     'the form has a filter, a sort and a way out of both');
-  /* THE ONE THAT PROTECTS THE DATA: the cards must be rendered from the
+  /* THE ONE THAT PROTECTS THE DATA: the rows must be rendered from the
      pairs, destructuring the real index into the same `i` every field
-     already writes through. */
-  t.check(/wrap\.innerHTML = shown\.map\(\(\{v,i\}\)=>`/.test(code),
-    'the cards render from the filtered pairs, keeping the real index as `i`');
+     already writes through. Filter to one variant, edit its SKU, and if the
+     row were numbered by its position in the FILTERED list it would write
+     through to whichever variant happens to sit at that position in the
+     full one.
+
+     The list is a table now rather than a stack of cards, so the map's body
+     is a block (it computes the combo label and the photo cell before
+     emitting the row) instead of a template literal opened on the same
+     line. That is a change of shape, not of guarantee -- so the check now
+     pins the guarantee: the pairs are destructured, and the index that
+     reaches the row's data-idx is the one that came out of them. */
+  const map = (/shown\.map\(\(\{v,i\}\)=>/.exec(code) || [''])[0];
+  t.check(map.length > 0,
+    'the rows render from the filtered pairs, keeping the real index as `i`');
+  t.check(/<tr class="pvt-r\$\{hasOwn \? ' pvt-own' : ''\}" data-idx="\$\{i\}">/.test(code),
+    'and that index is what the row is addressed by, so an edit in a filtered list lands on the variant it was typed against');
   t.check(/vfQuery = e\.target\.value;\s*\r?\n\s*renderVariantsList\(\);/.test(code),
     'typing narrows the list as you go');
   /* Showing a slice without saying so leaves somebody sure the other

@@ -139,7 +139,14 @@ const fn = extractFunction(src, 'foldProductFormInstructions', 'index.html');
 
   // The two radio options describe the choice they are; they are the
   // control, not a paragraph sitting above it.
-  t.check(/class="type-option-desc">One item, one set of prices\./.test(modal),
+  /* The copy changed with the redesign -- "Simple product / One item, one
+     set of prices" became "One item / A single thing, with one set of
+     prices", and the second option now names the section choosing it
+     builds. What this check is about did not change: the description is on
+     the control, not in a paragraph above it. Pinned to the option that
+     carries the longer sentence, since that is the one a future tidy-up
+     would be tempted to lift out. */
+  t.check(/class="type-option-desc">Each priced and searched on its own\./.test(modal),
     'and the simple/variable descriptions stay on their own options');
 }
 

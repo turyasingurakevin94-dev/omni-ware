@@ -2080,7 +2080,13 @@
     flex:1 1 200px;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);
     border-radius:9px;padding:11px 13px;cursor:pointer;transition:border-color .12s ease,background .12s ease;
   }
-  .type-option:has(input:checked),.type-option.active{border-color:var(--accent);background:#FFF9EF;}
+  /* Steel, not the accent. Four things wore oxide on this form -- the
+     selected card, the Required chip's amber, the active rail tab and Save
+     -- which is four things claiming to be the one thing to do next. The
+     selection is marked by an inset rule and a filled dot instead: a shape
+     change, which also survives being read in sunlight. */
+  .type-option:has(input:checked),.type-option.active{
+    border-color:var(--ow-steel-950);background:var(--ow-paper-2);}
   .type-option input{margin-top:3px;flex-shrink:0;}
   .type-option-body{display:flex;flex-direction:column;gap:2px;}
   .type-option-title{font-size:13.5px;font-weight:700;color:var(--ink);}
@@ -2171,38 +2177,217 @@
     .pfx-num{position:static;margin-bottom:6px;}
   }
 
-  .pf-shell{display:grid;grid-template-columns:184px minmax(0,1fr);gap:0;align-items:start;}
+  /* The product form, as sections.
+     ------------------------------------------------------------------
+     ONE SIZE, ON EVERY SECTION. The body height does not change when you
+     click the rail, so the dialog cannot leap under the pointer -- it used
+     to go 340px on Markup to 900px on Variants, and clicking a section
+     moved the Save you were aiming at. Each pane scrolls inside itself
+     instead. The cost is slack at the bottom of the shortest pane, which
+     is cheaper than a dialog that moves.
+     Height follows the viewport so a 768px laptop is not left with a
+     dialog hanging off the bottom; it shrinks the PANE, never the rail
+     and never the footer. */
+  .modal.modal-form{max-width:1160px;height:min(760px, calc(100vh - 96px));
+    display:flex;flex-direction:column;overflow:hidden;}
+  .modal.modal-form .modal-head, .modal.modal-form .modal-foot{flex:none;}
+  /* In a flex-column dialog the footer is a flex row whose children would
+     otherwise shrink: "Save product" wrapped to two lines and Cancel was
+     clipped. Buttons hold their size; the note beside them gives way. */
+  .modal.modal-form .modal-foot .btn{flex:none;white-space:nowrap;}
+  .modal.modal-form .modal-body{padding:0;flex:1;min-height:0;max-height:none;}
+  /* The ID is a fact, not a field: it is issued on save and cannot be
+     typed, so it is read-only ink in the head rather than a disabled and
+     permanently empty box in the second most prominent slot in the form. */
+  .pf-id{margin-left:auto;display:flex;align-items:center;gap:6px;
+    font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .pf-id b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:12px;font-weight:600;color:var(--ink-soft);background:var(--ow-steel-050);
+    border-radius:var(--ow-r-sm);padding:2px 6px;}
+
+  .pf-shell{display:grid;grid-template-columns:204px minmax(0,1fr);gap:0;
+    align-items:stretch;height:100%;min-height:0;}
   .pf-nav{
-    display:flex;flex-direction:column;gap:1px;padding:2px 16px 2px 0;
-    border-right:1px solid var(--line);position:sticky;top:0;
+    display:flex;flex-direction:column;gap:1px;padding:12px 10px 14px;
+    border-right:1px solid var(--line);background:var(--ow-paper-2);
+    min-height:0;overflow-y:auto;
   }
+  /* Grouped by what the setting AFFECTS, which is the grammar the Shop's
+     own rail uses. Five equals said nothing about which of them belonged
+     together, and a flat list of five does not survive a sixth. */
+  .pf-grp{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ow-ink-400);padding:0 10px 6px;margin-top:14px;}
+  .pf-grp:first-child{margin-top:2px;}
   .pf-tab{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
-    padding:9px 11px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink-soft);
+    all:unset;box-sizing:border-box;cursor:pointer;display:grid;
+    grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;
+    padding:7px 10px;border-radius:var(--ow-r);border-left:2px solid transparent;
+    min-height:44px;font-size:13px;font-weight:600;color:var(--ink-soft);
   }
-  .pf-tab span{flex:1;min-width:0;}
-  .pf-tab:hover{background:var(--bg);color:var(--ink);}
+  .pf-tab > span:first-child{grid-column:1;min-width:0;line-height:1.25;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pf-tab:hover{background:var(--panel);}
   .pf-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .pf-tab.active{background:var(--ow-oxide-soft);color:var(--accent);font-weight:700;}
+  /* Active is STEEL, not the accent: a paper ground and an inset rule, a
+     shape change rather than a colour one. The accent is spent once, on
+     Save -- the old form put it on the active tab, the selected type card,
+     the Required chip and the button, which is four things claiming to be
+     the one thing to do next. */
+  .pf-tab.active{background:var(--panel);border-left-color:var(--ow-steel-950);
+    color:var(--ink);font-weight:700;}
+  /* What is IN the section, in its own words -- the product's actual name,
+     "+18% wholesale", "24 - 2 with own markup". The old badge said "Named",
+     which is the rail telling you it knows something it will not say.
+     A section holding nothing says so ("None", "No rule set") rather than
+     going blank: a blank line means you must open the section to learn it
+     is empty, which is the one job the rail exists to save you. */
   .pf-state{
-    font-size:10.5px;font-weight:600;color:var(--ow-ink-400);background:var(--bg);
-    border-radius:999px;padding:1px 7px;max-width:74px;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;
+    grid-column:1;font-size:11px;font-weight:400;color:var(--ink-soft);line-height:1.3;
+    margin-top:2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .pf-tab.active .pf-state{background:var(--panel);color:var(--accent);}
-  /* Blank where nothing is set. A tick on an empty section would be a
-     lie, and a dash on every one of them reads as a broken screen. */
-  .pf-state:empty{display:none;}
-  .pf-body{padding:2px 0 0 20px;min-width:0;}
-  .pf-pane .pset-head{margin-bottom:16px;}
+  .pf-tab.active .pf-state{color:var(--ink-soft);}
+  .pf-state.pf-none{color:var(--ow-ink-400);}
+  .pf-state .pf-num{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  /* Amber marks the section blocking the save; crimson once Save has
+     actually refused. Nothing else on the rail carries a state colour. */
+  .pf-dot{grid-column:2;grid-row:1 / span 2;width:6px;height:6px;border-radius:50%;
+    flex:none;background:var(--ow-amber);}
+  .pf-dot.pf-bad{background:var(--ow-crimson);}
+  .pf-dot[hidden]{display:none;}
+  /* The one section whose state is a picture shows the picture. */
+  .pf-thumb{grid-column:2;grid-row:1 / span 2;width:26px;height:26px;border-radius:var(--ow-r-sm);
+    object-fit:cover;border:1px solid var(--line);background:var(--ow-steel-100);flex:none;}
+  .pf-thumb[hidden]{display:none;}
+  /* A rail normally wastes its bottom 200px. This says the thing the form
+     never said: that a product saved here still cannot be sold. */
+  .pf-rail-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--ow-rule-soft);
+    font-size:11px;line-height:1.45;color:var(--ink-soft);}
+
+  .pf-body{padding:20px 24px;min-width:0;min-height:0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  /* Whatever a pane cannot fit scrolls INSIDE the pane. Nothing outside it
+     moves: not the rail, not the head, not Save. */
+  .pf-pane{min-height:0;flex:1;overflow-y:auto;}
+  /* Addressed by id, not by a second class: showProductFormPane sets
+     display:block inline, which would beat a flex rule on the pane itself,
+     so the column lives on the section inside it. */
+  .pf-pane#pfpane-variants{overflow:hidden;}
+  #variantsSection{display:flex;flex-direction:column;height:100%;min-height:0;}
+  #variantsSection.hidden{display:none;}
+  .pf-pane .pset-head{margin-bottom:16px;flex:none;}
+  .pf-scroll{flex:1;min-height:0;overflow-y:auto;}
+  /* The ID chip in the head. An <input> so .value keeps working, sized to
+     its own content so it can never clip an ID. */
+  /* Sized for "Generating…" as well as "P014", so the head does not
+     reflow when the id lands. */
+  .pf-id b{display:inline-block;box-sizing:border-box;min-width:92px;text-align:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;font-weight:600;color:var(--ink-soft);background:var(--ow-steel-050);
+    border-radius:var(--ow-r-sm);padding:3px 6px;}
+  .pf-id[hidden]{display:none;}
+  /* Said at the field that refused, not as a toast in the far corner that
+     vanishes on its own 900px away from the fault. */
+  .field-error{display:flex;align-items:flex-start;gap:6px;margin-top:6px;
+    font-size:11.5px;font-weight:500;line-height:1.4;color:var(--ow-crimson);}
+  .field-error[hidden]{display:none;}
+  /* The app's own emphasis is an outline, which is also what the field
+     wears when it is focused -- so the refusal and the cursor agree. */
+  .field input.is-bad{border-color:var(--ow-crimson);outline:2px solid var(--ow-crimson);outline-offset:1px;}
+  .pf-grid{grid-template-columns:repeat(2, minmax(0,1fr));}
+
+  /* The variant table. Rows at 36px against cards at 410, and the two that
+     carry a rule of their own marked by SHAPE -- an inset rule and a tinted
+     ground -- so "which of these was touched" is answered without reading
+     twenty-four of anything. */
+  .pvt{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:14px;
+    border:1px solid var(--line);border-radius:var(--ow-r-lg);overflow:hidden;background:var(--panel);}
+  .pvt-head{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;flex:none;
+    background:var(--ow-paper-2);border-bottom:1px solid var(--line);}
+  .pvt-head .vf-bar{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;
+    flex:0 1 auto;min-width:0;margin:0;padding:0;border:0;background:none;}
+  .pvt-head .vf-search{flex:0 1 210px;min-width:0;margin:0;}
+  .pvt-head .vf-search input{height:26px;font-size:12px;}
+  .pvt-head .vf-bar select{height:26px;padding:0 6px;font-size:12px;}
+  .pvt-head .vf-count{margin-left:auto;flex:none;}
+  .pvt-default{flex:none;font-size:11px;color:var(--ink-soft);white-space:nowrap;
+    padding-left:10px;margin-left:10px;border-left:1px solid var(--line);}
+  .pvt-default b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);letter-spacing:-.02em;}
+  .pvt-default:empty{display:none;}
+  .pvt-scroll{flex:1;min-height:0;overflow:auto;}
+  table.pvt-t{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;}
+  .pvt-t th{position:sticky;top:0;z-index:1;font-size:10px;font-weight:600;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:7px 8px;
+    background:var(--ow-paper-2);border-bottom:1px solid var(--line);white-space:nowrap;}
+  .pvt-t th.r{text-align:right;}
+  .pvt-t td{padding:0 8px;height:38px;border-bottom:1px solid var(--ow-rule-soft);
+    font-size:13px;color:var(--ink);}
+  .pvt-t tr:last-child td{border-bottom:0;}
+  .pvt-t tr.pvt-own td{background:var(--ow-paper-2);}
+  .pvt-t tr.pvt-own td:first-child{border-left:2px solid var(--ow-steel-950);padding-left:6px;}
+  .pvt-ix{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;color:var(--ink-soft);}
+  /* Money never truncates; the name gives way. A clipped figure is not a
+     shortened figure, it is a wrong one. */
+  .pvt-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+  .pvt-t input, .pvt-t select{width:100%;box-sizing:border-box;height:26px;padding:0 7px;
+    border:1px solid var(--line);border-radius:var(--ow-r-sm);font-size:12px;font-family:inherit;
+    background:var(--panel);color:var(--ink);}
+  .pvt-t input:focus, .pvt-t select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .pvt-t input[type=number]{-moz-appearance:textfield;}
+  .pvt-t input[type=number]::-webkit-outer-spin-button,
+  .pvt-t input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .pvt-t input.pvt-num{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;text-align:right;letter-spacing:-.02em;}
+  .pvt-money{display:grid;grid-template-columns:58px minmax(0,1fr);gap:5px;align-items:center;}
+  /* A variant's own photo, set from its own row. The card had a labelled
+     uploader per variant; the table has the picture itself. */
+  .pvt-ph{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    height:26px;max-width:100%;padding:0 8px 0 3px;border:1px solid var(--line);
+    border-radius:var(--ow-r-sm);background:var(--panel);
+    font-size:11.5px;color:var(--ink-soft);}
+  .pvt-ph:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .pvt-ph:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .pvt-ph.pvt-ph-own{border-color:var(--ow-steel-950);color:var(--ink);font-weight:600;}
+  .pvt-ph i{width:20px;height:20px;border-radius:3px;flex:none;overflow:hidden;
+    background:var(--ow-steel-100);color:var(--ow-ink-400);
+    display:flex;align-items:center;justify-content:center;}
+  .pvt-ph i img{width:100%;height:100%;object-fit:cover;display:block;}
+  .pvt-ph i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .pvt-ph span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pvt-empty{padding:28px 20px;text-align:center;color:var(--ink-soft);font-size:13px;line-height:1.5;}
+  .pvt.pvt-bare{flex:none;}
+  .pvt.pvt-bare .pvt-head{display:none;}
   @media (max-width:760px){
-    .pf-shell{grid-template-columns:1fr;}
-    .pf-nav{flex-direction:row;overflow-x:auto;border-right:none;position:static;
-      border-bottom:1px solid var(--line);padding:0 0 10px;gap:6px;}
-    .pf-tab{flex-shrink:0;}
-    .pf-body{padding:16px 0 0;}
+    .pvt{margin-top:12px;}
+    /* The header's three parts sit on one 40px line at desk width. At 390
+       they were drawn on top of each other, so they stack instead -- and
+       the table scrolls sideways rather than crushing seven columns. */
+    .pvt-head{flex-wrap:wrap;align-items:flex-start;gap:8px 10px;min-height:0;padding:10px;}
+    .pvt-head .vf-bar{flex:1 1 100%;flex-wrap:wrap;}
+    .pvt-head .vf-search{flex:1 1 150px;}
+    .pvt-head .vf-bar > select, .pvt-head .vf-bar > .btn{flex:none;}
+    .pvt-head .vf-count{margin-left:0;}
+    .pvt-default{flex:1 1 100%;white-space:normal;border-left:0;padding-left:0;margin-left:0;}
+    .pvt-scroll{overflow-x:auto;}
+    table.pvt-t{min-width:760px;}
   }
 
+  @media (max-width:760px){
+    .modal.modal-form{height:auto;max-height:92vh;}
+    .pf-shell{grid-template-columns:1fr;height:auto;}
+    .pf-nav{flex-direction:row;overflow-x:auto;border-right:none;position:static;
+      border-bottom:1px solid var(--line);padding:8px 10px;gap:6px;background:var(--panel);}
+    .pf-grp{display:none;}
+    .pf-tab{flex-shrink:0;min-height:38px;}
+    .pf-state, .pf-thumb{display:none;}
+    .pf-rail-foot{display:none;}
+    .pf-body{padding:16px;overflow:visible;}
+    .pf-pane{display:block;}
+    .pf-scroll{overflow:visible;}
+  }
   /* ================= THE SHOP (was Presets) =========================
      Twelve doors over three different kinds of thing: word lists that
      only decide what a field suggests, rules that change what other
@@ -19519,9 +19704,16 @@
 
 <!-- PRODUCT MODAL -->
 <div class="modal-overlay" id="productModal">
-  <div class="modal modal-xwide">
+  <div class="modal modal-form">
     <div class="modal-head">
       <h2 id="productFormTitle">Add product</h2>
+      <!-- The ID is a fact, not a field. It is issued on save and cannot be
+           typed, so it reads as ink here rather than sitting in the Basics
+           grid as a disabled, permanently empty box beside the one field
+           that must be filled. Still an <input>, because the save handler
+           and fillIssuedId both work through .value. -->
+      <span class="pf-id"><span id="p_id_hint">will be filed as</span><b id="p_id_shown"></b></span>
+      <input type="hidden" id="p_id">
       <button class="modal-close" id="productModalClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -19536,23 +19728,33 @@
            one at a time on the right, each carrying what is set in it so
            the rail says what has been filled without opening anything. -->
       <nav class="pf-nav" id="p_form_nav">
+        <p class="pf-grp">The product</p>
         <button type="button" class="pf-tab active" data-pfpane="basics">
-          <span>Basics</span><b class="pf-state" data-state="basics"></b></button>
+          <span>Basics</span><b class="pf-dot" data-dot="basics" hidden></b>
+          <span class="pf-state" data-state="basics"></span></button>
         <button type="button" class="pf-tab" data-pfpane="photo">
-          <span>Photo</span><b class="pf-state" data-state="photo"></b></button>
+          <span>Photo</span><img class="pf-thumb" data-thumb="photo" alt="" hidden>
+          <span class="pf-state" data-state="photo"></span></button>
+        <p class="pf-grp">Money</p>
         <button type="button" class="pf-tab" data-pfpane="pricing">
-          <span>Markup</span><b class="pf-state" data-state="pricing"></b></button>
+          <span>Markup rules</span>
+          <span class="pf-state" data-state="pricing"></span></button>
         <button type="button" class="pf-tab" data-pfpane="agent">
-          <span>Agent terms</span><b class="pf-state" data-state="agent"></b></button>
+          <span>Agent share</span>
+          <span class="pf-state" data-state="agent"></span></button>
+        <p class="pf-grp" id="p_form_grp_variants">What it comes in</p>
         <button type="button" class="pf-tab" data-pfpane="variants" id="p_form_nav_variants">
-          <span>Variants</span><b class="pf-state" data-state="variants"></b></button>
+          <span>Variants</span>
+          <span class="pf-state" data-state="variants"></span></button>
+        <p class="pf-rail-foot">A price is not set here. It is entered per supplier
+          in the Price Registry, once this is saved.</p>
       </nav>
 
       <div class="pf-body">
 
         <div class="pf-pane" id="pfpane-basics">
           <header class="pset-head">
-            <h3>Basics</h3>
+            <h3>What this item is called</h3>
             <p>How this item is sold, and what it is called. Only the name is required — everything else can wait.</p>
           </header>
 
@@ -19560,22 +19762,30 @@
             <label class="type-option">
               <input type="radio" name="p_type" id="p_type_simple" value="simple" checked>
               <span class="type-option-body">
-                <span class="type-option-title">Simple product</span>
-                <span class="type-option-desc">One item, one set of prices.</span>
+                <span class="type-option-title">One item</span>
+                <span class="type-option-desc">A single thing, with one set of prices.</span>
               </span>
             </label>
             <label class="type-option">
               <input type="radio" name="p_type" id="p_type_variable" value="variable">
               <span class="type-option-body">
-                <span class="type-option-title">Variable product</span>
-                <span class="type-option-desc">Comes in options (e.g. sizes), each priced and searched on its own.</span>
+                <span class="type-option-title">Sizes or options</span>
+                <span class="type-option-desc">Each priced and searched on its own. Adds a Variants section below.</span>
               </span>
             </label>
           </div>
 
-          <div class="form-grid" style="margin-top:16px;">
-            <div class="field"><label>Product name<span class="req">Required</span></label><input id="p_name" placeholder="e.g. Wheelbarrow, heavy duty"></div>
-            <div class="field"><label>Product ID</label><input id="p_id" disabled><div class="field-hint" id="p_id_hint">Generated automatically</div></div>
+          <!-- Declared, not automatic. `auto-fit minmax(160px,1fr)` gave the
+               one required field the same 162px as everything else, which
+               clipped "Wheelbarrow, heavy duty" to "Wheelbarrow, h" -- and an
+               <input> cannot ellipsis, so nothing said anything was cut. The
+               name now spans the row; the two category fields share one. -->
+          <div class="form-grid pf-grid" style="margin-top:16px;">
+            <div class="field" style="grid-column:1/-1;">
+              <label>Product name<span class="req">Required</span></label>
+              <input id="p_name" placeholder="e.g. Iron sheets — G28, 3m box profile">
+              <div class="field-error" id="p_name_error" hidden></div>
+            </div>
             <div class="field"><label>Category</label><input id="p_category" list="dl_categories" placeholder="e.g. Tools"></div>
             <div class="field"><label>Sub-category</label><input id="p_subcategory" list="dl_subcategories" placeholder="e.g. Hand Tools"></div>
             <div class="field" style="grid-column:1/-1;">
@@ -19593,7 +19803,7 @@
 
         <div class="pf-pane" id="pfpane-photo" style="display:none;">
           <header class="pset-head">
-            <h3>Photo</h3>
+            <h3>The picture on the catalogue</h3>
             <p>Shown on the catalogue, the item picker and the agent app. Optional, but it is the fastest way to tell two similar items apart on a shelf.</p>
           </header>
           <div class="img-upload">
@@ -19619,7 +19829,7 @@
 
         <div class="pf-pane" id="pfpane-pricing" style="display:none;">
           <header class="pset-head">
-            <h3 id="p_markup_panel_title">Default markup rules</h3>
+            <h3 id="p_markup_panel_title">What to add on top of a supplier’s price</h3>
             <p>Added on top of a supplier's wholesale or retail price to suggest a selling price in Compare Prices. Leave a value blank or 0 to skip it. On a variable product this is the fallback whenever a variant sets no rule of its own. <span id="p_markup_default_hint"></span></p>
           </header>
           <div class="markup-rules-grid">
@@ -19652,7 +19862,7 @@
 
         <div class="pf-pane" id="pfpane-agent" style="display:none;">
           <header class="pset-head">
-            <h3>Agent discount override</h3>
+            <h3>What an agent keeps on this product</h3>
             <p>A share of your margin on this product, not a cut off its price: 50% gives an agent half of what you would have made, 100% gives all of it and they pay exactly your cost. They can never pay less than that. Leave blank to use the shop-wide default from Presets. Affects the standalone agent app only, never your own quotes.</p>
           </header>
           <div class="markup-rules-grid">
@@ -19676,7 +19886,7 @@
         <div class="pf-pane" id="pfpane-variants" style="display:none;">
           <div id="variantsSection">
             <header class="pset-head">
-              <h3>Variants</h3>
+              <h3>The sizes and options it comes in</h3>
               <p>Add an attribute like Colour or Size, list its values separated by commas, then generate the variants. Each is searched and priced on its own and can carry its own markup rule. Prices themselves are entered later in the Price Registry, one row per supplier.</p>
             </header>
             <div id="variantAttrsWrap"></div>
@@ -19690,19 +19900,33 @@
                 Generate variants
               </button>
             </div>
-            <!-- Shown only once there are enough variants that finding
-                 one is work; see VARIANT_FILTER_MIN. -->
-            <div class="vf-bar" id="variantFilterBar" style="display:none;">
-              <div class="search-bar vf-search"><input id="vf_search" placeholder="Filter variants — e.g. red, or red m8"></div>
-              <select id="vf_sort">
-                <option value="generated">Generated order</option>
-                <option value="az">A to Z</option>
-                <option value="za">Z to A</option>
-              </select>
-              <span class="vf-count" id="vf_count"></span>
-              <button type="button" class="btn btn-ghost" id="vf_clear">Clear</button>
+            <!-- The table takes whatever the pane has left and scrolls inside
+                 it, under a header that stays put. Twenty-four variants as
+                 stacked cards was 410px each -- roughly 9,800px of scrolling
+                 inside a modal that grew to hold them, with no way to see
+                 which of the twenty-four had been given a rule of its own. -->
+            <div class="pvt">
+              <div class="pvt-head">
+                <!-- Shown only once there are enough variants that finding
+                     one is work; see VARIANT_FILTER_MIN. It sits in the
+                     header the panel already had, so it costs no rows. -->
+                <div class="vf-bar" id="variantFilterBar" style="display:none;">
+                  <div class="search-bar vf-search"><input id="vf_search" placeholder="Filter — e.g. red, or red m8"></div>
+                  <select id="vf_sort">
+                    <option value="generated">Generated order</option>
+                    <option value="az">A to Z</option>
+                    <option value="za">Z to A</option>
+                  </select>
+                  <button type="button" class="btn btn-ghost ow-sm" id="vf_clear">Clear</button>
+                </div>
+                <span class="vf-count" id="vf_count"></span>
+                <!-- What "default" in the two markup columns actually resolves
+                     to. Said once, here, rather than repeated under all
+                     twenty-four rows as the cards used to. -->
+                <span class="pvt-default" id="v_default_caption"></span>
+              </div>
+              <div class="pvt-scroll" id="variantsListWrap"></div>
             </div>
-            <div id="variantsListWrap" class="variant-cards" style="margin-top:14px;"></div>
           </div>
         </div>
 
@@ -60377,6 +60601,11 @@ function markupRuleLabel(type, value, kind){
   return type==='fixed' ? `+${fmtUGX(val)}` : `+${val}%`;
 }
 const MARKUP_TYPE_OPTIONS = `<option value="percent">Percentage (%)</option><option value="fixed">Fixed amount (UGX)</option>`;
+/* The same two values, in a column 58px wide. The long labels belong on the
+   product's own rule, where there is a label beside them saying what the
+   choice is about; in the variant table the column header already says
+   "markup" and the row has twenty-three neighbours to line up with. */
+const MARKUP_TYPE_OPTIONS_SHORT = `<option value="percent">%</option><option value="fixed">UGX</option>`;
 // Caption shown on each variant card: which markup rule actually applies --
 // the variant's own (if it set one) or the product-level default -- read
 // live from the form so it updates as the person types, before saving.
@@ -60487,16 +60716,24 @@ function filterSortVariants(variants, query, sort){
 
 function renderVariantsList(){
   const wrap = document.getElementById('variantsListWrap');
+  const bar = document.getElementById('variantFilterBar');
+  const count = document.getElementById('vf_count');
   if(draftVariants.length===0){
-    wrap.innerHTML = '<div class="variants-empty">No variants yet — add attributes above and click "Generate variants", or leave this product as a single option.</div>';
-    const bar0 = document.getElementById('variantFilterBar');
-    if(bar0) bar0.style.display = 'none';
+    wrap.innerHTML = '<div class="pvt-empty">No variants yet — add attributes above and click "Generate variants", or leave this product as a single option.</div>';
+    if(bar) bar.style.display = 'none';
+    if(count) count.textContent = '';
+    refreshVariantCaptions();
+    /* With no rows there is nothing to filter, count or fall back to, so the
+       panel's header would be an empty grey strip over an empty box -- and
+       the box would still stretch to the bottom of the pane. It collapses to
+       the sentence instead. */
+    wrap.closest('.pvt').classList.add('pvt-bare');
     return;
   }
   /* The bar earns its place once there are enough variants that finding
      one is work. Below that it would be furniture. */
+  wrap.closest('.pvt').classList.remove('pvt-bare');
   const filterable = draftVariants.length >= VARIANT_FILTER_MIN;
-  const bar = document.getElementById('variantFilterBar');
   if(bar) bar.style.display = filterable ? '' : 'none';
   /* A hidden bar must not still be filtering. The Clear button goes with
      it, so a query carried in from a longer list would empty a short one
@@ -60505,127 +60742,145 @@ function renderVariantsList(){
   const shown = filterable
     ? filterSortVariants(draftVariants, vfQuery, vfSort)
     : draftVariants.map((v,i)=>({ v, i }));
-  const count = document.getElementById('vf_count');
-  if(count) count.textContent = shown.length === draftVariants.length
+  const own = draftVariants.filter(v=> Number(v.wholesaleMarkupValue)||Number(v.retailMarkupValue)).length;
+  if(count) count.textContent = (shown.length === draftVariants.length
     ? `${draftVariants.length} variants`
-    : `${shown.length} of ${draftVariants.length}`;
+    : `${shown.length} of ${draftVariants.length}`)
+    + (own ? ` · ${own} with own markup` : '');
   if(!shown.length){
-    wrap.innerHTML = '<div class="variants-empty">No variant matches that. Clear the search to see all of them again.</div>';
+    wrap.innerHTML = '<div class="pvt-empty">No variant matches that. Clear the search to see all of them again.</div>';
     return;
   }
-  wrap.innerHTML = shown.map(({v,i})=>`
-    <div class="variant-card" data-idx="${i}">
-      <div class="variant-card-head">
-        <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
-        <button type="button" class="icon-btn v-remove" data-idx="${i}" title="Remove this variant">${ICON_TRASH}</button>
-      </div>
-
-      <div class="vc-subhead">Identifier</div>
-      <div class="vc-grid">
-        <div class="field"><label>SKU / code</label><input class="v-sku" data-idx="${i}" value="${esc(v.sku||'')}" placeholder="optional"></div>
-      </div>
-
-      <div class="vc-subhead">Photo <span class="vc-markup-hint">— leave blank to use the product photo, or the category default</span></div>
-      <div class="img-upload img-upload-sm">
-        <img class="v-image-preview thumb-sm-preview" data-idx="${i}" style="display:${v.image?'':'none'};" alt="Variant photo preview" src="${v.image?esc(v.image):''}">
-        <div class="v-image-placeholder thumb-sm-placeholder" data-idx="${i}" style="display:${v.image?'none':''};">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
-        </div>
-        <div class="img-upload-controls">
-          <div class="img-upload-btns">
-            <button type="button" class="btn btn-ghost btn-icon v-image-upload" data-idx="${i}">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
-              Choose photo
-            </button>
-            <button type="button" class="btn btn-ghost btn-icon danger v-image-remove" data-idx="${i}" style="display:${v.image?'':'none'};">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
-              Remove
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="vc-markup-block">
-        <div class="vc-subhead" style="margin-bottom:10px;">Markup rule override <span class="vc-markup-hint">— leave blank to use the product's default rule above</span></div>
-        <div class="vc-grid">
-          <div class="field"><label>Wholesale markup type</label><select class="v-wmt" data-idx="${i}">${MARKUP_TYPE_OPTIONS}</select></div>
-          <div class="field"><label>Wholesale markup value</label><input class="v-wmv" type="number" min="0" step="any" data-idx="${i}" value="${v.wholesaleMarkupValue||''}" placeholder="Default"></div>
-          <div class="field"><label>Retail markup type</label><select class="v-rmt" data-idx="${i}">${MARKUP_TYPE_OPTIONS}</select></div>
-          <div class="field"><label>Retail markup value</label><input class="v-rmv" type="number" min="0" step="any" data-idx="${i}" value="${v.retailMarkupValue||''}" placeholder="Default"></div>
-        </div>
-        <div class="vc-effective">${variantEffectiveCaption(v)}</div>
-      </div>
-    </div>`).join('');
+  const attrNames = Object.keys((shown[0] && shown[0].v.combo) || {}).join(' · ');
+  wrap.innerHTML = `<table class="pvt-t">
+    <colgroup><col style="width:38px"><col><col style="width:118px">
+      <col style="width:150px"><col style="width:150px"><col style="width:140px"><col style="width:34px"></colgroup>
+    <thead><tr>
+      <th>#</th><th>${esc(attrNames || 'Variant')}</th><th>SKU / code</th>
+      <th class="r">Wholesale</th><th class="r">Retail</th><th>Photo</th><th></th>
+    </tr></thead>
+    <tbody>${shown.map(({v,i})=>{
+      /* Marked by SHAPE, so a product with twenty-four of them says which
+         two were deliberately given a rule of their own. */
+      const hasOwn = Number(v.wholesaleMarkupValue) || Number(v.retailMarkupValue);
+      /* The values alone. "Gauge: 28 · Length: 1.8 m" spends two thirds of
+         the column on two words the header already carries; the full form
+         stays in the title for the pointer. */
+      const label = Object.values(v.combo).join(' · ');
+      const full = Object.entries(v.combo).map(([k,val])=>`${k}: ${val}`).join(' · ');
+      const thumb = v.image
+        ? `<img src="${esc(v.image)}" alt="">`
+        : `<svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg>`;
+      return `<tr class="pvt-r${hasOwn ? ' pvt-own' : ''}" data-idx="${i}">
+        <td class="pvt-ix">${i+1}</td>
+        <td class="pvt-nm" title="${esc(full)}">${esc(label)}</td>
+        <td><input class="v-sku" data-idx="${i}" value="${esc(v.sku||'')}" placeholder="optional" aria-label="SKU for ${esc(full)}"></td>
+        <td><div class="pvt-money">
+          <select class="v-wmt" data-idx="${i}" aria-label="Wholesale markup type">${MARKUP_TYPE_OPTIONS_SHORT}</select>
+          <input class="v-wmv pvt-num" type="number" min="0" step="any" data-idx="${i}" value="${v.wholesaleMarkupValue||''}" placeholder="default" aria-label="Wholesale markup value"></div></td>
+        <td><div class="pvt-money">
+          <select class="v-rmt" data-idx="${i}" aria-label="Retail markup type">${MARKUP_TYPE_OPTIONS_SHORT}</select>
+          <input class="v-rmv pvt-num" type="number" min="0" step="any" data-idx="${i}" value="${v.retailMarkupValue||''}" placeholder="default" aria-label="Retail markup value"></div></td>
+        <td><button type="button" class="pvt-ph v-image-upload${v.image ? ' pvt-ph-own' : ''}" data-idx="${i}"
+            title="${v.image ? 'Its own photo — click to change' : "Using the product's photo — click to give this one its own"}">
+          <i>${thumb}</i><span>${v.image ? 'Its own' : "The product's"}</span></button></td>
+        <td><button type="button" class="icon-btn v-remove" data-idx="${i}" title="Remove this variant">${ICON_TRASH}</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 
   wrap.querySelectorAll('.v-wmt').forEach(sel=>{ sel.value = draftVariants[Number(sel.dataset.idx)].wholesaleMarkupType || 'percent'; });
   wrap.querySelectorAll('.v-rmt').forEach(sel=>{ sel.value = draftVariants[Number(sel.dataset.idx)].retailMarkupType || 'percent'; });
+  refreshVariantCaptions();
 
-  const refreshCaptions = refreshVariantCaptions;
+  /* A row that has just been given a rule has to start looking like one,
+     and the rail's count has to follow -- otherwise the mark is a claim
+     about the list as it was when it was last rebuilt. */
+  const markRow = (idx)=>{
+    const v = draftVariants[idx];
+    const row = wrap.querySelector(`tr[data-idx="${idx}"]`);
+    if(row && v) row.classList.toggle('pvt-own', !!(Number(v.wholesaleMarkupValue) || Number(v.retailMarkupValue)));
+    const c = draftVariants.filter(x=> Number(x.wholesaleMarkupValue)||Number(x.retailMarkupValue)).length;
+    const el = document.getElementById('vf_count');
+    if(el) el.textContent = el.textContent.replace(/( · \d+ with own markup)?$/, c ? ` · ${c} with own markup` : '');
+    refreshProductFormRail();
+  };
 
   wrap.querySelectorAll('.v-sku').forEach(inp=>inp.addEventListener('input', e=>{
     draftVariants[Number(e.target.dataset.idx)].sku = e.target.value;
   }));
   wrap.querySelectorAll('.v-wmt').forEach(sel=>sel.addEventListener('change', e=>{
     draftVariants[Number(e.target.dataset.idx)].wholesaleMarkupType = e.target.value;
-    refreshCaptions();
+    markRow(Number(e.target.dataset.idx));
   }));
   wrap.querySelectorAll('.v-wmv').forEach(inp=>inp.addEventListener('input', e=>{
     draftVariants[Number(e.target.dataset.idx)].wholesaleMarkupValue = Number(e.target.value)||0;
-    refreshCaptions();
+    markRow(Number(e.target.dataset.idx));
   }));
   wrap.querySelectorAll('.v-rmt').forEach(sel=>sel.addEventListener('change', e=>{
     draftVariants[Number(e.target.dataset.idx)].retailMarkupType = e.target.value;
-    refreshCaptions();
+    markRow(Number(e.target.dataset.idx));
   }));
   wrap.querySelectorAll('.v-rmv').forEach(inp=>inp.addEventListener('input', e=>{
     draftVariants[Number(e.target.dataset.idx)].retailMarkupValue = Number(e.target.value)||0;
-    refreshCaptions();
+    markRow(Number(e.target.dataset.idx));
   }));
   wrap.querySelectorAll('.v-remove').forEach(btn=>btn.addEventListener('click', e=>{
     draftVariants.splice(Number(e.currentTarget.dataset.idx), 1);
     renderVariantsList();
+    refreshProductFormRail();
   }));
+  /* One button, both jobs: it opens the picker, and the picker's own
+     "use the product's photo" clears it. A separate Remove button per row
+     would be twenty-four more controls for something done twice. */
   wrap.querySelectorAll('.v-image-upload').forEach(btn=>btn.addEventListener('click', e=>{
     const idx = Number(e.currentTarget.dataset.idx);
     openMediaPicker({ sessionTrack: true, onPick: m=> setVariantImagePreview(idx, m.url) });
   }));
-  wrap.querySelectorAll('.v-image-remove').forEach(btn=>btn.addEventListener('click', e=>{
-    setVariantImagePreview(Number(e.currentTarget.dataset.idx), null);
-  }));
 }
-// Updates one variant's photo widget in place (rather than re-rendering the
-// whole list), so an in-flight upload on one card doesn't disturb another
-// card's unsaved SKU/markup edits.
+/* Updates one variant's photo cell in place (rather than re-rendering the
+   whole table), so an in-flight upload on one row doesn't disturb another
+   row's unsaved SKU or markup edits. */
 function setVariantImagePreview(idx, url){
   if(!draftVariants[idx]) return;
   draftVariants[idx].image = url || null;
-  const card = document.querySelector(`#variantsListWrap .variant-card[data-idx="${idx}"]`);
-  if(!card) return;
-  const img = card.querySelector('.v-image-preview');
-  const placeholder = card.querySelector('.v-image-placeholder');
-  const removeBtn = card.querySelector('.v-image-remove');
-  if(draftVariants[idx].image){
-    img.src = draftVariants[idx].image;
-    img.style.display = '';
-    placeholder.style.display = 'none';
-    removeBtn.style.display = '';
+  const btn = document.querySelector(`#variantsListWrap tr[data-idx="${idx}"] .pvt-ph`);
+  if(!btn) return;
+  const slot = btn.querySelector('i');
+  const label = btn.querySelector('span');
+  if(url){
+    slot.innerHTML = `<img src="${esc(url)}" alt="">`;
+    label.textContent = 'Its own';
+    btn.classList.add('pvt-ph-own');
+    btn.title = 'Its own photo — click to change';
   } else {
-    img.src = '';
-    img.style.display = 'none';
-    placeholder.style.display = '';
-    removeBtn.style.display = 'none';
+    slot.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg>';
+    label.textContent = "The product's";
+    btn.classList.remove('pvt-ph-own');
+    btn.title = "Using the product's photo — click to give this one its own";
   }
 }
-// Re-renders just the effective-rule captions (cheap, keeps input focus)
-// on every variant card. Used whenever a value that could change which
-// rule applies is edited -- a variant's own markup fields, or the
-// product-level default that variants fall back to.
+
+/* What a variant's "default" falls back to, in one line.
+
+   The card carried this caption under every variant -- twenty-four copies
+   of the same sentence about the product's own rule. It is one fact, so it
+   is stated once, in the header of the table the columns belong to, and
+   kept current when the product-level rule is edited. */
+function variantDefaultCaption(){
+  const rule = (typeId, valId)=>{
+    const v = Number(document.getElementById(valId).value)||0;
+    if(!v) return null;
+    return markupRuleLabel(document.getElementById(typeId).value, v);
+  };
+  const w = rule('p_wholesale_markup_type','p_wholesale_markup_value');
+  const r = rule('p_retail_markup_type','p_retail_markup_value');
+  if(!w && !r) return 'default — no rule, so the supplier price stands';
+  return 'default — ' + [w ? `<b>${w}</b> wholesale` : null,
+                         r ? `<b>${r}</b> retail` : null].filter(Boolean).join(' · ');
+}
 function refreshVariantCaptions(){
-  document.querySelectorAll('#variantsListWrap .variant-card').forEach(card=>{
-    const idx = Number(card.dataset.idx);
-    const el = card.querySelector('.vc-effective');
-    if(el && draftVariants[idx]) el.innerHTML = variantEffectiveCaption(draftVariants[idx]);
-  });
+  const el = document.getElementById('v_default_caption');
+  if(el) el.innerHTML = draftVariants.length ? variantDefaultCaption() : '';
 }
 // Product-level markup rule fields feed into every variant's "default"
 // caption -- attached once (not per render) so listeners don't pile up.
@@ -61804,6 +62059,10 @@ function setProductType(type){
      showing nothing. */
   const navItem = document.getElementById('p_form_nav_variants');
   navItem.style.display = isVariable ? '' : 'none';
+  // The group heading goes with the only entry under it. A "What it comes
+  // in" label standing over nothing reads as a section that failed to load.
+  const navGrp = document.getElementById('p_form_grp_variants');
+  if(navGrp) navGrp.style.display = isVariable ? '' : 'none';
   if(!isVariable && navItem.classList.contains('active')) showProductFormPane('basics');
   refreshProductFormRail();
 }
@@ -61818,10 +62077,15 @@ function showProductFormPane(key){
 
 /* What each section carries, on the rail.
 
-   The same idea as the counts on the Presets rail: say what is set
-   without making somebody open five panels to find out. Blank where
-   nothing is set -- a tick on an empty section would be a lie, and a
-   dash on every one of them reads as a broken screen. */
+   The old badge said "Named" -- the rail telling you it knows the product's
+   name and will not say it. Every entry now reports its own contents in
+   words: the actual name, "+18% wholesale", "24 - 2 with own markup", and
+   for Photo the photograph itself.
+
+   A section holding nothing SAYS SO ("None", "No rule set") rather than
+   going blank. Blank was the third wrong answer, after a tick that lies and
+   a dash on every row: it means you must open the section to learn it is
+   empty, which is the one job the rail exists to save you. */
 function refreshProductFormRail(){
   const val = (id)=> (document.getElementById(id).value||'').trim();
   const num = (id)=> Number(document.getElementById(id).value)||0;
@@ -61832,18 +62096,73 @@ function refreshProductFormRail(){
   };
   const markup = [rule('p_wholesale_markup_type','p_wholesale_markup_value'),
                   rule('p_retail_markup_type','p_retail_markup_value')].filter(Boolean).join(' · ');
-  const agent = [val('p_agent_discount_wholesale'), val('p_agent_discount_retail')]
-    .filter(Boolean).map(v=> v+'%').join(' · ');
+  const agentW = val('p_agent_discount_wholesale'), agentR = val('p_agent_discount_retail');
+  const agent = [agentW, agentR].filter(Boolean).map(v=> v+'%').join(' · ');
+  const img = document.getElementById('p_image_preview');
+  const hasPhoto = img.style.display !== 'none' && !!img.getAttribute('src');
+  const own = draftVariants.filter(v=> Number(v.wholesaleMarkupValue)||Number(v.retailMarkupValue)).length;
+  const name = val('p_name');
+  /* Each entry is [text, isEmptyState]. The empty state is greyed rather
+     than hidden, because "None" is an answer and a blank line is not. */
   const state = {
-    basics: val('p_name') ? (val('p_category') || 'Named') : '',
-    photo: document.getElementById('p_image_preview').style.display === 'none' ? '' : 'Set',
-    pricing: markup,
-    agent: agent || '',
-    variants: draftVariants.length ? `${draftVariants.length}` : '',
+    basics:  name ? [esc(name), false] : ['Not named yet', true],
+    photo:   hasPhoto ? ['Chosen', false] : ['None', true],
+    pricing: markup ? [markup + ' on the supplier price', false]
+                    : ['No rule set', true],
+    agent:   agent ? [agent + ' of your margin', false]
+                   : ['Shop default', true],
+    variants: draftVariants.length
+      ? [`<span class="pf-num">${draftVariants.length}</span>`
+         + (own ? ` · ${own} with own markup` : ''), false]
+      : ['None built yet', true],
   };
   document.querySelectorAll('#p_form_nav .pf-state').forEach(el=>{
-    el.textContent = state[el.dataset.state] || '';
+    const [text, none] = state[el.dataset.state] || ['', true];
+    el.innerHTML = text;
+    el.classList.toggle('pf-none', none);
   });
+  /* Amber marks the section blocking the save. It turns crimson only once
+     Save has actually refused -- a form you have not yet tried to save is
+     incomplete, which is not the same as wrong. */
+  const dot = document.querySelector('#p_form_nav .pf-dot[data-dot="basics"]');
+  if(dot){
+    dot.hidden = !!name;
+    if(name) dot.classList.remove('pf-bad');
+  }
+  /* "will be filed as" with nothing after it is worse than saying nothing:
+     the whole line goes until there is an id to show. The save handler
+     refuses on a pending id in its own words, so nothing is concealed. */
+  const shown = document.getElementById('p_id_shown');
+  if(shown){
+    const issued = document.getElementById('p_id').value || '';
+    shown.textContent = issued;
+    shown.closest('.pf-id').hidden = !issued;
+  }
+  const thumb = document.querySelector('#p_form_nav .pf-thumb[data-thumb="photo"]');
+  if(thumb){
+    thumb.hidden = !hasPhoto;
+    if(hasPhoto) thumb.src = img.getAttribute('src');
+  }
+}
+
+/* Said at the field, and on the rail entry that owns it. The old refusal
+   was a toast in the far corner, 900px from the fault and gone in four
+   seconds -- on a form whose only required field it was talking about. */
+function markProductNameMissing(missing){
+  const field = document.getElementById('p_name');
+  const err = document.getElementById('p_name_error');
+  field.classList.toggle('is-bad', missing);
+  err.hidden = !missing;
+  if(missing){
+    err.innerHTML = '<svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;'
+      + 'fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;'
+      + 'flex:none;margin-top:1px;"><path d="M12 8v5m0 3.5v.01M12 3l9 16H3z"/></svg>'
+      + 'A product with no name cannot be found again. Type what you would call it on a quote.';
+    const dot = document.querySelector('#p_form_nav .pf-dot[data-dot="basics"]');
+    if(dot){ dot.hidden = false; dot.classList.add('pf-bad'); }
+    showProductFormPane('basics');
+    field.focus();
+  }
 }
 
 document.getElementById('p_form_nav').addEventListener('click', (e)=>{
@@ -61852,6 +62171,9 @@ document.getElementById('p_form_nav').addEventListener('click', (e)=>{
 });
 // Kept current as the form is filled, so the rail is never a stale claim
 // about what is in a panel nobody is looking at.
+document.getElementById('p_name').addEventListener('input', ()=>{
+  if(document.getElementById('p_name').value.trim()) markProductNameMissing(false);
+});
 document.getElementById('productModal').addEventListener('input', refreshProductFormRail);
 document.getElementById('productModal').addEventListener('change', refreshProductFormRail);
 document.getElementById('p_type_toggle').addEventListener('change', e=>{
@@ -61977,13 +62299,20 @@ const ID_PENDING = 'Generating…';
 function fillIssuedId(fieldId, kind, prefix, pad, existing){
   const el = document.getElementById(fieldId);
   el.value = ID_PENDING;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
   const token = (fillIssuedId._token = (fillIssuedId._token || 0) + 1);
   issueEntityId(kind, prefix, pad, existing).then(id=>{
     // A later open supersedes this one -- without the token, a slow first
     // response could land in a form that's since been reset for a different
     // record and overwrite its (correct) id.
     if(token !== fillIssuedId._token) return;
-    if(el.value === ID_PENDING) el.value = id;
+    if(el.value === ID_PENDING){
+      el.value = id;
+      /* Announced, because the id arrives after the form has been drawn and
+         anything showing it -- the product form's head, say -- would
+         otherwise be left displaying "Generating…" for good. */
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   });
 }
 function idIsPending(id){ return !id || id === ID_PENDING; }
@@ -62206,6 +62535,11 @@ function editProduct(id){
   document.getElementById('p_id').value = p.id;
   document.getElementById('p_id').disabled = true;
   document.getElementById('p_id_hint').style.display = 'none';
+  markProductNameMissing(false);
+  // The rail and the head are both written from the form's values, so they
+  // have to be told once the form has been filled from the record.
+  refreshProductFormRail();
+  refreshVariantCaptions();
   document.getElementById('p_name').value = p.name;
   document.getElementById('p_category').value = p.category;
   document.getElementById('p_subcategory').value = p.subcategory || '';
@@ -63066,6 +63400,7 @@ function resetProductForm(){
   document.getElementById('p_retail_markup_type').value = 'percent';
   fillIssuedId('p_id', 'product', 'P', 3, data.products);
   document.getElementById('p_id_hint').style.display = '';
+  markProductNameMissing(false);
   document.getElementById('productFormTitle').textContent = 'Add product';
   sessionUploadedMediaIds = [];
   setProductImagePreview(null);
@@ -63235,7 +63570,8 @@ document.getElementById('p_save').addEventListener('click', ()=>{
      whole save handler with it -- the form simply did nothing. */
   let id = document.getElementById('p_id').value.trim();
   const name = document.getElementById('p_name').value.trim();
-  if(!name){ toast('Product name is required'); return; }
+  if(!name){ markProductNameMissing(true); return; }
+  markProductNameMissing(false);
   if(!editingProductId && idIsPending(id)){ toast('Still issuing a Product ID — try again in a moment'); return; }
   // Taken is not a dead end: take the next free one and carry on.
   if(!editingProductId) id = firstFreeEntityId('P', 3, data.products, id);
