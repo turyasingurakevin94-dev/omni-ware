@@ -27,5 +27,6 @@ build Before.dc.html body_before.html "$X _extra_before.css" 1440 1300 1 "What's
 build Main.dc.html   _body_main.html   "$X"                   1440 1660 1 "What's coming" _nav_after.html
 build Short.dc.html  _body_short.html  "$X"                   1440 1560 1 "What's coming" _nav_after.html
 build Empty.dc.html  body_empty.html  "$X"                   1440 1360 1 "What's coming" _nav_after.html
+build Cross.dc.html  _body_cross.html  "$X"                   858  580 0
 build Phone.dc.html  body_phone.html  "$X _extra_phone.css"   390  844 0
 exit 0

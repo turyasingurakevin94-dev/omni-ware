@@ -33,4 +33,14 @@ def compose(body, svg, vals, rail_extra=""):
 pathlib.Path('_body_main.html').write_text(compose('body_main.html', '_svg_main.html', MAIN))
 pathlib.Path('_body_short.html').write_text(
     compose('body_short.html', '_svg_short.html', SHORT, rail_extra=R('_rail_ring.html')))
-print('composed Main and Short')
+
+# THE CROSSHAIR ARTBOARD. The canvas cannot hover, so it is drawn in the
+# state a pointer puts it in. Its frame is 858 wide so the plot lands at
+# exactly 800px and the card can be placed in the svg's own units.
+cross = R('body_cross.html')
+cross = cross.replace('__SVG__', R('_svg_cross.html'))
+cross = cross.replace('__CARD__', R('_cross_card.html'))
+cross = cross.replace('__LEGEND__',
+    "\n".join(l for l in R('_legend.html').split("\n") if 'ah-lg-neg' not in l))
+pathlib.Path('_body_cross.html').write_text(cross)
+print('composed Main, Short and Crosshair')

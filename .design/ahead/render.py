@@ -31,7 +31,7 @@ def ylab(v, small):
     if a >= 1e3: return f"{round(v/1e3)}k"
     return money(v)
 
-def svg(on_hand, commits, promises, start="2026-09-03", days=30, ghost=True, small=False):
+def svg(on_hand, commits, promises, start="2026-09-03", days=30, ghost=True, small=False, cross=None):
     g = build(on_hand, commits, promises, start, days, small=small)
     X, Y, step = g['X'], g['Y'], g['step']
     P, Q = g['padL'], g['padT']
@@ -40,6 +40,12 @@ def svg(on_hand, commits, promises, start="2026-09-03", days=30, ghost=True, sma
     baseY = Q + IH
     at = lambda d: D0 + dt.timedelta(days=d)
     out = []
+    # --- the surface the pointer lands on -------------------------------
+    # Empty space inside an svg is not hit-testable, so a transparent rect
+    # spans the plot, the axis and the rail. It goes in FIRST, under every
+    # mark, so a dot or a rail bar still answers for itself.
+    out.append(f'<rect class="ah-hit" x="{P}" y="{Q}" width="{IW}" '
+               f'height="{(H - (18 if g["small"] else 14) - Q):.1f}"/>')
     # --- the ground below nothing, drawn as a field the line goes into --
     if g['lo'] < 0:
         out.append(f'<rect class="ah-neg" x="{P}" y="{Y(0):.1f}" width="{IW}" '
@@ -135,6 +141,25 @@ def svg(on_hand, commits, promises, start="2026-09-03", days=30, ghost=True, sma
             gb = g['ghost'][-1][1]
             if abs(Y(gb) - Y(endb)) > 11:
                 out.append(f'<text class="ah-endghost" x="{P+IW+9}" y="{Y(gb)+4:.1f}">{money(gb)}</text>')
+    # --- the crosshair, parked or standing on a named day ---------------
+    # Drawn last so it sits over every mark, and deaf to the pointer so it
+    # can never get between the pointer and the surface underneath it.
+    if cross is not None:
+        cd = dt.date.fromisoformat(cross)
+        cv = on_hand
+        for d, b in g['solid']:
+            if d <= cd: cv = b
+        gv = on_hand
+        for d, b in g['ghost']:
+            if d <= cd: gv = b
+        cxx = X(cd)
+        out.append(f'<g class="ah-cx"><line class="ah-cx-r" x1="{cxx:.1f}" y1="{Q}" '
+                   f'x2="{cxx:.1f}" y2="{baseY}"/>')
+        if ghost and promises and abs(gv - cv) >= 1:
+            out.append(f'<circle class="ah-cx-g" cx="{cxx:.1f}" cy="{Y(gv):.1f}" '
+                       f'r="{3 if g["small"] else 3.5}"/>')
+        out.append(f'<circle class="ah-cx-d" cx="{cxx:.1f}" cy="{Y(cv):.1f}" '
+                   f'r="{3.8 if g["small"] else 4.5}"/></g>')
     return (f'<svg class="ah-svg" viewBox="0 0 {W} {H}" role="img" '
             f'aria-label="What you will hold over the next {days} days, from {money(on_hand)} '
             f'today down to {money(g["solid"][-1][1])}, lowest {money(lowest[1])}">' + "".join(out) + '</svg>')
@@ -142,6 +167,45 @@ def svg(on_hand, commits, promises, start="2026-09-03", days=30, ghost=True, sma
 open('_svg_main.html','w').write(svg(ON_HAND, COMMITS, PROMISES))
 open('_svg_empty.html','w').write(svg(ON_HAND, [], []))
 open('_svg_phone_short.html','w').write(svg(ON_HAND, SHORT_COMMITS, PROMISES, small=True))
+
+# THE CROSSHAIR, STANDING ON A DAY. The canvas cannot hover, so the
+# artboard is drawn in the state a pointer puts it in: 12 Sep, the day the
+# Ssekitoleko bill takes 1,640,000 out of the line.
+CROSS_DAY = "2026-09-12"
+open('_svg_cross.html','w').write(svg(ON_HAND, COMMITS, PROMISES, cross=CROSS_DAY))
+
+def cross_card():
+    gg = build(ON_HAND, COMMITS, PROMISES, "2026-09-03", 30)
+    cd = dt.date.fromisoformat(CROSS_DAY)
+    cv = ON_HAND
+    for d, b in gg['solid']:
+        if d <= cd: cv = b
+    gv = ON_HAND
+    for d, b in gg['ghost']:
+        if d <= cd: gv = b
+    rows = "".join(
+        f'<div class="ah-tip-r"><span class="ah-tip-n">{c["label"]}</span>'
+        f'<span class="ah-tip-a">{money(c["amount"])} out</span></div>'
+        for c in COMMITS if c['date'] == CROSS_DAY)
+    rows += "".join(
+        f'<div class="ah-tip-r"><span class="ah-tip-n">{p["label"]}</span>'
+        f'<span class="ah-tip-a ah-tip-w">{money(p["amount"])} their word</span></div>'
+        for p in PROMISES if p['date'] == CROSS_DAY)
+    if not rows:
+        rows = '<div class="ah-tip-w">Nothing falls due that day</div>'
+    if abs(gv - cv) >= 1:
+        rows += f'<div class="ah-tip-w">If every promise is kept, {money(gv)}</div>'
+    # The card sits 14px to the right of the crosshair and 14px above the
+    # point it describes, anchored from the bottom so its own height does
+    # not move it off that point.
+    left = gg['X'](cd) + 14
+    bottom = gg['h'] - (gg['Y'](cv) - 14)
+    return (f'<div class="ah-tip" style="left:{left:.0f}px;bottom:{bottom:.0f}px">'
+            f'<p class="ah-tip-d">{short(cd)} 2026</p>'
+            f'<p class="ah-tip-v">{money(cv)} left</p>'
+            f'<div class="ah-tip-l">{rows}</div></div>')
+
+open('_cross_card.html','w').write(cross_card())
 open('_svg_short.html','w').write(svg(ON_HAND, SHORT_COMMITS, PROMISES))
 open('_svg_phone.html','w').write(svg(ON_HAND, COMMITS, PROMISES, small=True))
 print('main  ', len(open('_svg_main.html').read()), 'chars')

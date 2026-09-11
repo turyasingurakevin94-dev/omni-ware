@@ -13402,6 +13402,11 @@
 
   .ow-ah-strip{margin-bottom:var(--ow-sp-16);}
   .ow-ah-runwrap{padding:var(--ow-sp-12) var(--ow-sp-12) 0;}
+  /* The chart and the card that reads it share one box, so the card can
+     be placed against the crosshair rather than against the page.
+     touch-action:pan-y keeps a finger's vertical scroll through the
+     chart and gives the sideways part of the drag to the crosshair. */
+  .ow-ah-plot{position:relative;touch-action:pan-y;}
   /* The phone's own chart, drawn for 358px rather than scaled into it. */
   .ow-ah-sm{display:none;}
   @media (max-width:820px){ .ow-ah-sm{display:block;} }
@@ -13457,6 +13462,47 @@
   .ow-ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
   .ow-ah-dot.ow-ah-low{fill:var(--ow-ink-900);}
   .ow-ah-dot.ow-ah-start{stroke-width:1.8;}
+  /* READING A DAY OFF THE LINE. The rule is dashed and thin so it reads
+     as a measurement and not as a second series; the marker on the line
+     is the same filled dot the tightest day wears, because at the moment
+     you are pointing at it, that day IS the one being asked about. The
+     open grey one is where the promised walk would be. */
+  .ow-ah-hit{fill:transparent;}
+  .ow-ah-cx{pointer-events:none;}
+  .ow-ah-cx-r{stroke:var(--ow-ink-900);stroke-width:1;stroke-dasharray:2 3;}
+  .ow-ah-cx-d{fill:var(--ow-ink-900);stroke:var(--ow-paper);stroke-width:2;}
+  .ow-ah-cx-g{fill:var(--ow-paper);stroke:var(--ow-ink-400);stroke-width:1.5;}
+  /* A card genuinely floats, so it is the one thing on this panel that
+     takes --ow-lift. It never sits over the point it describes. */
+  .ow-ah-tip{position:absolute;left:0;top:0;z-index:3;pointer-events:none;
+    background:var(--ow-paper);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r);box-shadow:var(--ow-lift);
+    padding:var(--ow-sp-8) var(--ow-sp-10);min-width:168px;max-width:268px;}
+  .ow-ah-tip-d{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ah-tip-v{margin:2px 0 0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-ah-tip-v.ow-bad{color:var(--ow-crimson);}
+  .ow-ah-tip-l{margin-top:var(--ow-sp-6);padding-top:var(--ow-sp-6);
+    border-top:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.5;}
+  /* The name gives way and the figure does not: a clipped figure is not
+     a shortened figure, it is a wrong one. */
+  .ow-ah-tip-r{display:flex;gap:var(--ow-sp-10);justify-content:space-between;}
+  .ow-ah-tip-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ah-tip-a{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ow-ink-900);}
+  .ow-ah-tip-a.ow-ah-tip-w{color:var(--ow-ink-600);}
+  .ow-ah-tip-w{color:var(--ow-ink-600);}
+  /* The phone is its own design, and that goes for the card too: read at
+     arm's length in daylight, on the phone ramp, and narrow enough that
+     a finger on the chart still leaves the line either side of it. */
+  @media (max-width:820px){
+    .ow-ah-tip{min-width:150px;max-width:228px;padding:var(--ow-sp-8);}
+    .ow-ah-tip-d{font-size:var(--ow-t-12);}
+    .ow-ah-tip-v{font-size:var(--ow-t-16);}
+    .ow-ah-tip-l{font-size:var(--ow-t-12);}
+  }
   .ow-ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
   .ow-ah-lowlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
@@ -77981,6 +78027,13 @@ function aheadRunwaySVG(a, small){
   const baseY = padT + ih;
   let g = '';
 
+  /* THE SURFACE THE POINTER LANDS ON. Empty space inside an svg is not
+     hit-testable, so a transparent rect spans the plot, the axis and the
+     rail. It goes in FIRST, under every mark, so a dot or a rail bar
+     still answers for itself and the events bubble up to the svg either
+     way. fill:transparent is hit-tested; fill:none is not. */
+  g += `<rect class="ow-ah-hit" x="${padL}" y="${padT}" width="${iw}" height="${(H - (small ? 18 : 14) - padT).toFixed(1)}"/>`;
+
   /* The ground below nothing, drawn as a field the line goes into.
      Zero is the edge of a cliff, not a tick on an axis. */
   if(lo < 0) g += `<rect class="ow-ah-neg" x="${padL}" y="${Y(0).toFixed(1)}" width="${iw}" height="${(baseY - Y(0)).toFixed(1)}"/>`;
@@ -78031,8 +78084,9 @@ function aheadRunwaySVG(a, small){
     e.amount += c.amount; e.items.push(c); byDay.set(d, e);
   });
   const rail = [...byDay.values()].sort((x, y)=> x.d - y.d);
+  const railB = H - (small ? 20 : 16);
   if(rail.length){
-    const railH = small ? 18 : 24, railB = H - (small ? 20 : 16);
+    const railH = small ? 18 : 24;
     const maxOut = Math.max(...rail.map(r=> r.amount));
     const bw = small ? 4 : 6;
     const tightD = a.commitments.length ? dayOf(a.tightest.date) : -1;
@@ -78089,7 +78143,29 @@ function aheadRunwaySVG(a, small){
         g += `<text class="ow-ah-endghost" x="${padL + iw + 9}" y="${(Y(endG) + 4).toFixed(1)}">${esc(n(endG))}</text>`;
     }
   }
-  return `<svg class="ow-ah-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="What you will hold over the next ${days} days, from ${esc(n(a.onHand))} today down to ${esc(n(solid[solid.length - 1][1]))}, lowest ${esc(n(low ? low.p[1] : a.onHand))}">${g}</svg>`;
+  /* THE CROSSHAIR. Drawn last so it sits over every mark, and deaf to
+     the pointer so it can never get between the pointer and the surface
+     underneath it. It is parked until something points at the chart. */
+  g += `<g class="ow-ah-cx" style="display:none">`
+    + `<line class="ow-ah-cx-r" x1="0" y1="${padT}" x2="0" y2="${baseY}"/>`
+    + (ghost ? `<circle class="ow-ah-cx-g" cx="0" cy="0" r="${small ? 3 : 3.5}"/>` : '')
+    + `<circle class="ow-ah-cx-d" cx="0" cy="0" r="${small ? 3.8 : 4.5}"/>`
+    + `</g>`;
+
+  /* WHAT THE CROSSHAIR NEEDS, HANDED OVER WITH THE PICTURE. The same
+     walk, the same scale and the same events the line was drawn from,
+     so the reading can never come from a second calculation that has
+     drifted from the one on screen. */
+  const geo = {
+    W, H, padL, padT, iw, ih, days, lo, hi, from: a.from,
+    pts: solid.map(p=> [p[0], Math.round(p[1])]),
+    gpts: ghost ? ghost.map(p=> [p[0], Math.round(p[1])]) : null,
+    out: rail.map(r=> [r.d, Math.round(r.amount),
+      r.items.map(c=> [String(c.label || ''), Math.round(c.amount)])]),
+    said: a.promised.map(pr=> [dayOf(pr.date), Math.round(pr.amount), String(pr.name || '')]),
+  };
+
+  return `<svg class="ow-ah-svg" viewBox="0 0 ${W} ${H}" role="img" data-ah="${esc(JSON.stringify(geo))}" aria-label="What you will hold over the next ${days} days, from ${esc(n(a.onHand))} today down to ${esc(n(solid[solid.length - 1][1]))}, lowest ${esc(n(low ? low.p[1] : a.onHand))}">${g}</svg>`;
 }
 
 /* WHAT IS COMING, AND WHETHER IT LEAVES YOU ANYTHING.
@@ -78149,7 +78225,18 @@ function renderAhead(){
     </div>
   </div>`;
 
-  /* ---- the runway ---- */
+  /* ---- the runway ----
+     THE READING, WHERE THE POINTER IS. The line answers "when does it
+     get tight" at a glance and then leaves every other day to be
+     guessed at between two gridlines. Pointing at a day now says what
+     that day holds, what leaves on it and who it goes to -- on the
+     phone by dragging along the chart, which is why the plot allows a
+     vertical scroll through it and takes only the sideways part. */
+  const tipHTML = `<div class="ow-ah-tip" hidden>
+        <p class="ow-ah-tip-d"></p>
+        <p class="ow-ah-tip-v"></p>
+        <div class="ow-ah-tip-l"></div>
+      </div>`;
   const runway = `<div class="ow-pan ow-ah-run">
     <div class="ow-pan-h">
       <span class="ow-pan-t">The next ${days} days</span>
@@ -78157,7 +78244,10 @@ function renderAhead(){
         ? `${a.commitments.length} payment${a.commitments.length === 1 ? '' : 's'}${short ? ' &middot; the line goes under on ' + esc(fmtShortDate(a.tightest.date)) : ''}`
         : 'nothing falls due'}</span>
     </div>
-    <div class="ow-ah-runwrap"><span class="ow-hide-sm">${aheadRunwaySVG(a)}</span><span class="ow-ah-sm">${aheadRunwaySVG(a, true)}</span></div>
+    <div class="ow-ah-runwrap">
+      <div class="ow-ah-plot ow-hide-sm">${aheadRunwaySVG(a)}${tipHTML}</div>
+      <div class="ow-ah-plot ow-ah-sm">${aheadRunwaySVG(a, true)}${tipHTML}</div>
+    </div>
     <div class="ow-ah-lg">
       <span class="ow-ah-lg-i"><span class="ow-ah-lg-k"></span>What you will hold</span>
       ${a.promised.length ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-g"></span>If every promise is kept</span>' : ''}
@@ -78346,6 +78436,112 @@ function renderAhead(){
   </div>`;
 
   el.innerHTML = `${strip}<div class="ow-grid"><div class="ow-stack">${runway}${ledger}${pools}</div><div class="ow-side">${rail}</div></div>`;
+
+  /* ---- reading a day off the line ----
+
+     THE READING COMES OFF THE PICTURE THAT WAS DRAWN, never off a
+     second walk. aheadRunwaySVG hands over the points it plotted, the
+     scale it plotted them on and the events behind each drop; this only
+     looks them up. A crosshair that disagreed with the line under it
+     would be worse than no crosshair.
+
+     It lives inside renderAhead rather than beside it because the screen
+     is three functions -- how far ahead to look, the line, and the
+     screen -- and a fourth top-level name is a fourth thing to keep in
+     step. Everything here is null-safe: drawn cold, into a detached
+     element, it binds nothing and says nothing. */
+  const bindRunway = ()=>{
+    const plots = el.querySelectorAll ? el.querySelectorAll('.ow-ah-plot') : [];
+    Array.prototype.forEach.call(plots, (plot)=>{
+      const svg = plot.querySelector('.ow-ah-svg');
+      const tip = plot.querySelector('.ow-ah-tip');
+      const cx  = svg && svg.querySelector('.ow-ah-cx');
+      if(!svg || !tip || !cx) return;
+      let G = null;
+      try { G = JSON.parse(svg.getAttribute('data-ah') || 'null'); } catch(err){ G = null; }
+      if(!G || !G.pts || !G.pts.length) return;
+
+      const rule = cx.querySelector('.ow-ah-cx-r');
+      const dot  = cx.querySelector('.ow-ah-cx-d');
+      const gdot = cx.querySelector('.ow-ah-cx-g');
+      const dEl  = tip.querySelector('.ow-ah-tip-d');
+      const vEl  = tip.querySelector('.ow-ah-tip-v');
+      const lEl  = tip.querySelector('.ow-ah-tip-l');
+      const Xu = (d)=> G.padL + (d / G.days) * G.iw;
+      const Yu = (v)=> G.padT + G.ih - ((v - G.lo) / (G.hi - G.lo)) * G.ih;
+      /* A STEP, READ AS A STEP: the balance on a day is what the last
+         event on or before it left, not an interpolation between two. */
+      const bal = (pts, d)=>{ let v = pts[0][1];
+        for(let i = 0; i < pts.length; i++){ if(pts[i][0] <= d) v = pts[i][1]; }
+        return v; };
+      const dayISO = (d)=> new Date(Date.parse(G.from + 'T00:00:00Z') + d * 86400000)
+        .toISOString().slice(0, 10);
+
+      const park = ()=>{ cx.style.display = 'none'; tip.hidden = true; };
+      const read = (ev)=>{
+        const r = svg.getBoundingClientRect();
+        if(!r.width || !r.height) return;
+        const u = (ev.clientX - r.left) / r.width * G.W;
+        const d = Math.max(0, Math.min(G.days, Math.round((u - G.padL) / G.iw * G.days)));
+        const v = bal(G.pts, d), x = Xu(d), y = Yu(v), under = v < 0;
+
+        rule.setAttribute('x1', x.toFixed(1)); rule.setAttribute('x2', x.toFixed(1));
+        dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
+        const gb = G.gpts ? bal(G.gpts, d) : null;
+        if(gdot && gb !== null){
+          gdot.setAttribute('cx', x.toFixed(1)); gdot.setAttribute('cy', Yu(gb).toFixed(1));
+          gdot.style.display = Math.abs(gb - v) < 1 ? 'none' : '';
+        }
+        cx.style.display = '';
+
+        dEl.textContent = fmtShortDate(dayISO(d)) + (d === 0 ? ' — today' : '');
+        vEl.textContent = under ? 'Short ' + b(Math.abs(v)) : b(v) + ' left';
+        vEl.className = 'ow-ah-tip-v' + (under ? ' ow-bad' : '');
+
+        /* WHAT THE DAY IS MADE OF. What leaves is money; what somebody
+           said is not, and is marked as their word rather than given a
+           figure in the same column. */
+        const outs = (G.out || []).filter(o=> o[0] === d);
+        const said = (G.said || []).filter(o=> o[0] === d);
+        let rows = '';
+        outs.forEach(o=> o[2].forEach(it=>{
+          rows += `<div class="ow-ah-tip-r"><span class="ow-ah-tip-n" title="${esc(it[0])}">${
+            esc(it[0])}</span><span class="ow-ah-tip-a">${esc(b(it[1]))} out</span></div>`;
+        }));
+        said.forEach(o=>{
+          rows += `<div class="ow-ah-tip-r"><span class="ow-ah-tip-n" title="${esc(o[2])}">${
+            esc(o[2])}</span><span class="ow-ah-tip-a ow-ah-tip-w">${esc(b(o[1]))} their word</span></div>`;
+        });
+        if(!rows) rows = `<div class="ow-ah-tip-w">Nothing falls due that day</div>`;
+        if(gb !== null && Math.abs(gb - v) >= 1)
+          rows += `<div class="ow-ah-tip-w">If every promise is kept, ${esc(b(gb))}</div>`;
+        lEl.innerHTML = rows;
+
+        /* The card goes beside the crosshair, on whichever side has room
+           for it, and never over the point it is describing. */
+        tip.hidden = false;
+        const sc = r.width / G.W, pw = plot.clientWidth, ph = plot.clientHeight;
+        const px = (r.left - plot.getBoundingClientRect().left) + x * sc;
+        const py = (r.top - plot.getBoundingClientRect().top) + y * sc;
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let left = px + 14;
+        if(left + tw > pw - 2) left = px - 14 - tw;
+        tip.style.left = Math.max(2, Math.min(left, pw - tw - 2)) + 'px';
+        let top = py - th - 14;
+        if(top < 2) top = py + 14;
+        tip.style.top = Math.max(2, Math.min(top, ph - th - 2)) + 'px';
+      };
+
+      svg.addEventListener('pointermove', read);
+      svg.addEventListener('pointerdown', read);
+      svg.addEventListener('pointerleave', park);
+      svg.addEventListener('pointercancel', park);
+      /* A mouse keeps its reading while it is over the chart; a finger
+         lets go of it when it lifts. */
+      svg.addEventListener('pointerup', (ev)=>{ if(ev.pointerType !== 'mouse') park(); });
+    });
+  };
+  bindRunway();
 
   /* ---- what the screen does ----
      Every one of these is an owner tap, and each goes through the write
