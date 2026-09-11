@@ -394,294 +394,319 @@
       color:#8E9BA8;margin:0 0 3px;}
     .st-sub{font-size:12px;color:#C7CFD8;line-height:1.45;margin:0 0 12px;max-width:66ch;}
     .st-sub b{color:#fff;font-weight:600;}
+
+    /* =================================================================
+       ADD PRODUCT — the sectioned dialog, done properly.
+
+       One size, always: 1040 x 648. The body NEVER changes height between
+       sections, so the dialog cannot leap under the pointer. Each pane
+       scrolls inside itself; the variant table scrolls under a header
+       that stays put. Nothing outside the pane moves, ever.
+       ================================================================= */
+    .b-bg{position:absolute;inset:0;background:var(--ow-steel-950);}
+    .modal.fixed{max-width:1040px;height:760px;overflow:hidden;}
+    .modal.fixed .modal-body{padding:0;flex:1;min-height:0;}
+
+    .tb-shell{display:grid;grid-template-columns:204px minmax(0,1fr);height:631px;}
+
+    /* ---- the rail ---- */
+    .tb-rail{border-right:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      padding:12px 10px 14px;display:flex;flex-direction:column;min-height:0;}
+    .tb-g{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:0 10px 6px;margin-top:14px;}
+    .tb-g:first-child{margin-top:2px;}
+    .tb-i{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+      column-gap:8px;padding:7px 10px;border-radius:var(--ow-r);
+      border-left:2px solid transparent;min-height:44px;box-sizing:border-box;}
+    /* Active is STEEL, never the accent. The accent is the one action. */
+    .tb-i.on{background:var(--ow-paper);border-left-color:var(--ow-steel-950);
+      box-shadow:0 1px 2px rgba(20,30,40,.05);}
+    .tb-n{font-size:13px;font-weight:600;color:var(--ow-ink-600);line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-i.on .tb-n{color:var(--ow-ink-900);font-weight:700;}
+    /* What is IN the section, in its own words -- not "Named", not a tick.
+       Blank is not allowed: a section with nothing in it says so. */
+    .tb-s{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.3;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-s.none{color:var(--ow-ink-400);}
+    .tb-s .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .tb-d{grid-column:2;grid-row:1 / span 2;width:6px;height:6px;border-radius:50%;flex:none;}
+    .tb-d.need{background:var(--ow-amber);}
+    .tb-d.bad{background:var(--ow-crimson);}
+    .tb-thumb{grid-column:2;grid-row:1 / span 2;width:26px;height:26px;border-radius:var(--ow-r-sm);
+      background:var(--ow-steel-100);border:1px solid var(--ow-rule);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .tb-thumb svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;line-height:1.45;color:var(--ow-ink-600);}
+
+    /* ---- the pane ---- */
+    .tb-pane{padding:20px 24px;min-width:0;overflow:hidden;display:flex;flex-direction:column;}
+    /* The section's name is on the rail. The pane opens with the SENTENCE,
+       not with the word written a second time. */
+    .tb-lede{font-size:12.5px;line-height:1.5;color:var(--ow-ink-600);margin:0 0 18px;max-width:74ch;}
+    .tb-lede b{color:var(--ow-ink-900);font-weight:600;}
+    .tb-scroll{flex:1;min-height:0;overflow:hidden;}
+    .pw-set{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      background:var(--ow-steel-100);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-set svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pw-empty{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px dashed var(--ow-rule);
+      background:var(--ow-paper-2);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-empty svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-name{font-size:14px;font-weight:600;color:var(--ow-ink-900);margin:2px 0 0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-meta{font-size:11.5px;color:var(--ow-ink-600);margin:5px 0 0;}
+    .ph-meta .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+    /* ---- the variants section ---- */
+    .va{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;align-items:center;
+      margin-bottom:8px;}
+    .va .f-in{height:34px;font-size:13px;}
+    .va-lab{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;margin-bottom:5px;}
+    .vt-head{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;
+      background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+    .vt-srch{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;width:212px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:12px;color:var(--ow-ink-400);}
+    .vt-srch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .vphoto{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 3px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:11.5px;color:var(--ow-ink-600);max-width:100%;}
+    .vphoto i{width:20px;height:20px;border-radius:3px;background:var(--ow-steel-100);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .vphoto i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .vphoto.own{border-color:var(--ow-steel-950);color:var(--ow-ink-900);font-weight:600;}
+    .vphoto.own i{background:var(--ow-steel-400);color:#fff;}
+    .vtab td:last-child, .vtab th:last-child{padding-right:8px;}
   </style>
 </helmet>
-<div class="app" style="width:1560px;height:2360px">
+<div class="app" style="width:2170px;height:1820px">
 <div class="b-bg"></div>
 
-<div style="position:absolute;left:30px;top:40px;width:720px;">
-  <p class="st-cap">Just opened</p>
-  <p class="st-sub">Nothing typed. Save is <b>flat and unpressable</b> rather than live-and-refusing, and the footer says what saving will do. No control is hidden, so there is nothing to discover.</p>
-  <div class="modal" style="position:relative;max-width:720px;">
+<div style="position:absolute;left:30px;top:36px;width:1040px;">
+  <p class="st-cap">Photo — chosen</p>
+  <p class="st-sub">The state that was missing. A 104px preview, the file the library holds, and the three things you can do to it. The rail shows the same picture at 26px, so this section rarely needs opening twice.</p>
+  <div class="modal fixed" style="position:relative;">
     <div class="modal-head">
       <h2>Add product</h2>
       <span class="mh-id">will be filed as <b>P014</b></span>
       <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
     </div>
-    <div class="modal-body" style="padding:22px 24px 24px;">
-      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
-        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
-        of this: it is entered per supplier in the Price Registry, and until one is there the
-        product cannot be quoted.</p>
-      <div class="f-stack">
-
-        <div>
-          <div class="f-lab">Product name<span class="req">Required</span></div>
-          <div class="f-in big ph" style="margin-top:6px;">e.g. Iron sheets — G28, 3m box profile</div>
-          <div class="f-hint">Written exactly like this on quotes, the catalogue and the agent app.</div>
-        </div>
-
-        <div>
-          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
-          <div class="sold">
-            <div class="sold-o on"><span class="rd"></span>
-              <span><span class="sold-t">One item</span>
-                <span class="sold-d">A single thing, with one set of prices.</span></span></div>
-            <div class="sold-o"><span class="rd"></span>
-              <span><span class="sold-t">Sizes or options</span>
-                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span></div>
-          </div>
-        </div>
-
-        <div class="f-row2">
-          <div><div class="f-lab">Category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
-          <div><div class="f-lab">Sub-category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
-        </div>
-
-        <div>
-          <div class="f-lab">Short description<span class="ct">0 / 120</span></div><div class="f-in ph" style="margin-top:6px;">e.g. Gauge 28 box profile, 3 metres, per sheet</div>
-          <div class="f-hint">One line you would read out to a customer.</div>
-        </div>
-
-        <div>
-          <div class="f-lab">Notes</div>
-          <div class="f-in ph" style="margin-top:6px;">Optional</div>
-          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
-        </div>
-        <div class="more"><div class="more-h">
-            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-            <span class="more-t">More settings</span>
-            <span class="more-s">Photo · Markup rules · Agent share — none set</span>
-          </div></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <span class="mf-note">Saving files it in the register. Nothing is sent and nothing is priced.</span>
-      <span class="btn btn-ghost">Cancel</span>
-      <span class="btn dis">Save product</span></div>
-  </div>
-</div>
-
-<div style="position:absolute;left:810px;top:40px;width:720px;">
-  <p class="st-cap">Save refused</p>
-  <p class="st-sub">The fault is named <b>at the field</b>, in crimson, and it stays there — not a toast in the far corner that vanishes on its own. The footer repeats it beside the button that refused.</p>
-  <div class="modal" style="position:relative;max-width:720px;">
-    <div class="modal-head">
-      <h2>Add product</h2>
-      <span class="mh-id">will be filed as <b>P014</b></span>
-      <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-    </div>
-    <div class="modal-body" style="padding:22px 24px 24px;">
-      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
-        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
-        of this: it is entered per supplier in the Price Registry, and until one is there the
-        product cannot be quoted.</p>
-      <div class="f-stack">
-
-        <div>
-          <div class="f-lab">Product name<span class="req">Required</span></div>
-          <div class="f-in big err ph" style="margin-top:6px;">e.g. Iron sheets — G28, 3m box profile<span class="car" style="background:var(--ow-crimson);"></span></div>
-          <div class="f-err"><svg viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.01M12 3l9 16H3z"/></svg>A product with no name cannot be found again. Type what you would call it on a quote.</div>
-        </div>
-
-        <div>
-          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
-          <div class="sold">
-            <div class="sold-o on"><span class="rd"></span>
-              <span><span class="sold-t">One item</span>
-                <span class="sold-d">A single thing, with one set of prices.</span></span></div>
-            <div class="sold-o"><span class="rd"></span>
-              <span><span class="sold-t">Sizes or options</span>
-                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span></div>
-          </div>
-        </div>
-
-        <div class="f-row2">
-          <div><div class="f-lab">Category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
-          <div><div class="f-lab">Sub-category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
-        </div>
-
-        <div>
-          <div class="f-lab">Short description<span class="ct">0 / 120</span></div><div class="f-in ph" style="margin-top:6px;">e.g. Gauge 28 box profile, 3 metres, per sheet</div>
-          <div class="f-hint">One line you would read out to a customer.</div>
-        </div>
-
-        <div>
-          <div class="f-lab">Notes</div>
-          <div class="f-in ph" style="margin-top:6px;">Optional</div>
-          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
-        </div>
-        <div class="more"><div class="more-h">
-            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-            <span class="more-t">More settings</span>
-            <span class="more-s">Photo · Markup rules · Agent share — none set</span>
-          </div></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <span class="mf-note bad">Not saved — the product has no name. The field is marked above.</span>
-      <span class="btn btn-ghost">Cancel</span>
-      <span class="btn dis">Save product</span></div>
-  </div>
-</div>
-
-<div style="position:absolute;left:30px;top:1000px;width:720px;">
-  <p class="st-cap">A name longer than the box</p>
-  <p class="st-sub">Eighty-four characters. The register keeps it whole; the screens that cannot fit it cut it with an ellipsis and carry the full name on hover. The form says so instead of silently clipping mid-glyph.</p>
-  <div class="modal" style="position:relative;max-width:720px;">
-    <div class="modal-head">
-      <h2>Add product</h2>
-      <span class="mh-id">will be filed as <b>P014</b></span>
-      <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-    </div>
-    <div class="modal-body" style="padding:22px 24px 24px;">
-      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
-        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
-        of this: it is entered per supplier in the Price Registry, and until one is there the
-        product cannot be quoted.</p>
-      <div class="f-stack">
-
-        <div>
-          <div class="f-lab">Product name<span class="req">Required</span></div>
-          <div class="f-in big" style="margin-top:6px;">…iron sheets, gauge 28, 3 metre box profile, blue<span class="car"></span></div>
-          <div class="f-hint"><span class="mono">84</span> characters. It is kept whole everywhere it is stored — but the
-            quote line, the catalogue tile and the agent app each cut it to fit, with an ellipsis and the
-            full name on hover. <b style="color:var(--ow-ink-900);">A shorter name is read correctly more often.</b></div>
-        </div>
-
-        <div>
-          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
-          <div class="sold">
-            <div class="sold-o on"><span class="rd"></span>
-              <span><span class="sold-t">One item</span>
-                <span class="sold-d">A single thing, with one set of prices.</span></span></div>
-            <div class="sold-o"><span class="rd"></span>
-              <span><span class="sold-t">Sizes or options</span>
-                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span></div>
-          </div>
-        </div>
-
-        <div class="f-row2">
-          <div><div class="f-lab">Category</div><div class="f-in" style="margin-top:6px;">Building materials<span class="dd"></span></div></div>
-          <div><div class="f-lab">Sub-category</div><div class="f-in" style="margin-top:6px;">Roofing<span class="dd"></span></div></div>
-        </div>
-
-        <div>
-          <div class="f-lab">Short description<span class="ct">41 / 120</span></div><div class="f-in" style="margin-top:6px;">Gauge 28 box profile, 3 metres, per sheet</div>
-          <div class="f-hint">One line you would read out to a customer.</div>
-        </div>
-
-        <div>
-          <div class="f-lab">Notes</div>
-          <div class="f-in ph" style="margin-top:6px;">Optional</div>
-          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
-        </div>
-        <div class="more"><div class="more-h">
-            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
-            <span class="more-t">More settings</span>
-            <span class="more-s"></span>
-          </div>
-          <div class="more-b">
-            <div class="more-sec">
-              <p class="more-g">Photo</p>
-              <div class="pw">
-                <span class="pw-b"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span>
-                <div>
-                  <span class="btn btn-ghost ow-sm">Choose from the media library</span>
-                  <div class="f-hint">Shown on the catalogue, the item picker and the agent app. The fastest way to tell two similar items apart on a shelf.</div>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i"><span class="tb-n">Basics</span><span class="tb-s">Iron sheets — G28, 3m box profile</span></div>
+          <div class="tb-i on"><span class="tb-n">Photo</span><span class="tb-thumb"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="tb-s">Chosen</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i"><span class="tb-n">Markup rules</span><span class="tb-s"><span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail</span></div>
+          <div class="tb-i"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-g">What it comes in</p>
+          <div class="tb-i"><span class="tb-n">Variants</span><span class="tb-s"><span class="mono">24</span> · 2 with own markup</span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">Shown on the catalogue, the item picker and the agent app —
+            the fastest way to tell two similar items apart on a shelf. <b>Optional.</b></p>
+          <div class="tb-scroll">
+            <div style="display:flex;gap:20px;align-items:flex-start;">
+              <div class="pw-set"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>
+              <div style="min-width:0;">
+                <p class="ph-name">iron-sheets-g28-blue.jpg</p>
+                <p class="ph-meta"><span class="mono">1200 × 900</span> · <span class="mono">184 KB</span> · in the media library since 12 Aug</p>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                  <span class="btn btn-ghost ow-sm">Replace</span>
+                  <span class="btn btn-ghost ow-sm">Remove</span>
+                  <span class="btn btn-ghost ow-sm">Open in the library</span>
                 </div>
+                <p class="f-hint" style="margin-top:14px;max-width:52ch;">Every variant uses this
+                  unless it is given one of its own, in the Variants section.</p>
               </div>
             </div>
-            <div class="more-sec">
-              <p class="more-g">Markup rules</p>
-              <div class="f-hint" style="margin:-4px 0 10px;">Added on top of a supplier's price to <b style="color:var(--ow-ink-900);">suggest</b> a selling price in Compare Prices. It never sets one.</div>
-              <div class="f-row2">
-                <div><div class="f-lab">On the wholesale price</div>
-                  <div style="display:grid;grid-template-columns:1fr 92px;gap:8px;margin-top:6px;">
-                    <div class="f-in ph">No rule<span class="dd"></span></div><div class="f-in ph">%</div></div></div>
-                <div><div class="f-lab">On the retail price</div>
-                  <div style="display:grid;grid-template-columns:1fr 92px;gap:8px;margin-top:6px;">
-                    <div class="f-in ph">No rule<span class="dd"></span></div><div class="f-in ph">%</div></div></div>
-              </div>
-            </div>
-            <div class="more-sec">
-              <p class="more-g">Agent share</p>
-              <div class="f-hint" style="margin:-4px 0 10px;">A share of <b style="color:var(--ow-ink-900);">your margin</b> on this product, not a cut off its price. 100% means the agent pays exactly your cost; they can never pay less. Blank follows the shop default in Presets, and it touches the agent app only — never your own quotes.</div>
-              <div class="f-row2">
-                <div><div class="f-lab">Wholesale</div><div class="f-in ph" style="margin-top:6px;">Shop default — 30%</div></div>
-                <div><div class="f-lab">Retail</div><div class="f-in ph" style="margin-top:6px;">Shop default — 30%</div></div>
-              </div>
-            </div>
-          </div></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
-      <span class="mf-note">Saving files it in the register. Nothing is sent and nothing is priced.</span>
+      <span class="mf-note">Saving files it in the register. Nothing is sent, and nothing is priced.</span>
       <span class="btn btn-ghost">Cancel</span>
-      <span class="btn btn-accent">Save product</span></div>
+      <span class="btn btn-accent">Save product</span>
+    </div>
   </div>
 </div>
 
-<div style="position:absolute;left:810px;top:1000px;width:720px;">
-  <p class="st-cap">Sizes or options, and settings set</p>
-  <p class="st-sub">The choice changed the button: <b>Next — build the variants</b>. The closed row now reports what is in it, so the summary is never a stale claim about a panel nobody opened.</p>
-  <div class="modal" style="position:relative;max-width:720px;">
+<div style="position:absolute;left:1130px;top:36px;width:1040px;">
+  <p class="st-cap">Markup rules</p>
+  <p class="st-sub">Two rules, and under each one what it actually does to a real supplier price. A rule you cannot picture is a rule set wrong.</p>
+  <div class="modal fixed" style="position:relative;">
     <div class="modal-head">
-      <h2>Add product</h2><span class="mh-step" style="margin-left:2px;">· step 1 of 2</span>
+      <h2>Add product</h2>
       <span class="mh-id">will be filed as <b>P014</b></span>
       <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
     </div>
-    <div class="modal-body" style="padding:22px 24px 24px;">
-      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
-        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
-        of this: it is entered per supplier in the Price Registry, and until one is there the
-        product cannot be quoted.</p>
-      <div class="f-stack">
-
-        <div>
-          <div class="f-lab">Product name<span class="req">Required</span></div>
-          <div class="f-in big ph" style="margin-top:6px;">e.g. Iron sheets — G28, 3m box profile</div>
-          <div class="f-hint">Written exactly like this on quotes, the catalogue and the agent app.</div>
-        </div>
-
-        <div>
-          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
-          <div class="sold">
-            <div class="sold-o"><span class="rd"></span>
-              <span><span class="sold-t">One item</span>
-                <span class="sold-d">A single thing, with one set of prices.</span></span></div>
-            <div class="sold-o on"><span class="rd"></span>
-              <span><span class="sold-t">Sizes or options</span>
-                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span></div>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i"><span class="tb-n">Basics</span><span class="tb-s">Iron sheets — G28, 3m box profile</span></div>
+          <div class="tb-i"><span class="tb-n">Photo</span><span class="tb-thumb"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="tb-s">Chosen</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i on"><span class="tb-n">Markup rules</span><span class="tb-s"><span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail</span></div>
+          <div class="tb-i"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-g">What it comes in</p>
+          <div class="tb-i"><span class="tb-n">Variants</span><span class="tb-s"><span class="mono">24</span> · 2 with own markup</span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">Added on top of a supplier's price to <b>suggest</b> a selling price in
+            Compare Prices. It never sets one, and it never touches a price already agreed. A variant
+            with no rule of its own follows what is set here.</p>
+          <div class="tb-scroll">
+            <div class="f-row2" style="max-width:560px;">
+              <div>
+                <div class="f-lab">On the wholesale price</div>
+                <div style="display:grid;grid-template-columns:1fr 96px;gap:8px;margin-top:6px;">
+                  <div class="f-in">Percentage<span class="dd"></span></div><div class="f-in">18 %</div></div>
+                <div class="f-hint">A sheet bought at <span class="mono">32,000</span> is suggested at <span class="mono">37,760</span>.</div>
+              </div>
+              <div>
+                <div class="f-lab">On the retail price</div>
+                <div style="display:grid;grid-template-columns:1fr 96px;gap:8px;margin-top:6px;">
+                  <div class="f-in">Percentage<span class="dd"></span></div><div class="f-in">12 %</div></div>
+                <div class="f-hint">A sheet bought at <span class="mono">35,000</span> is suggested at <span class="mono">39,200</span>.</div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="f-row2">
-          <div><div class="f-lab">Category</div><div class="f-in" style="margin-top:6px;">Building materials<span class="dd"></span></div></div>
-          <div><div class="f-lab">Sub-category</div><div class="f-in" style="margin-top:6px;">Roofing<span class="dd"></span></div></div>
-        </div>
-
-        <div>
-          <div class="f-lab">Short description<span class="ct">0 / 120</span></div><div class="f-in ph" style="margin-top:6px;">e.g. Gauge 28 box profile, 3 metres, per sheet</div>
-          <div class="f-hint">One line you would read out to a customer.</div>
-        </div>
-
-        <div>
-          <div class="f-lab">Notes</div>
-          <div class="f-in ph" style="margin-top:6px;">Optional</div>
-          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
-        </div>
-        <div class="more"><div class="more-h">
-            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-            <span class="more-t">More settings</span>
-            <span class="more-s">Photo set · wholesale +18% · agent share 45%</span>
-          </div></div>
       </div>
     </div>
     <div class="modal-foot">
-      <span class="mf-note">Two attributes make the list. You can still come back and change the name.</span>
+      <span class="mf-note">Saving files it in the register. Nothing is sent, and nothing is priced.</span>
       <span class="btn btn-ghost">Cancel</span>
-      <span class="btn btn-accent">Next — build the variants<svg class="icon" viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span></div>
+      <span class="btn btn-accent">Save product</span>
+    </div>
+  </div>
+</div>
+
+<div style="position:absolute;left:30px;top:936px;width:1040px;">
+  <p class="st-cap">Agent share</p>
+  <p class="st-sub">The most misread setting in the app — a share of your margin, not a discount off the price. The sentence says so, and the hint puts a figure on it.</p>
+  <div class="modal fixed" style="position:relative;">
+    <div class="modal-head">
+      <h2>Add product</h2>
+      <span class="mh-id">will be filed as <b>P014</b></span>
+      <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+    </div>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i"><span class="tb-n">Basics</span><span class="tb-s">Iron sheets — G28, 3m box profile</span></div>
+          <div class="tb-i"><span class="tb-n">Photo</span><span class="tb-thumb"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="tb-s">Chosen</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i"><span class="tb-n">Markup rules</span><span class="tb-s"><span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail</span></div>
+          <div class="tb-i on"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-g">What it comes in</p>
+          <div class="tb-i"><span class="tb-n">Variants</span><span class="tb-s"><span class="mono">24</span> · 2 with own markup</span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">A share of <b>your margin</b> on this product, not a cut off its price.
+            50% gives an agent half of what you would have made; 100% gives all of it and they pay
+            exactly your cost. <b>They can never pay less than that.</b> Blank follows the shop-wide
+            default in Presets, and it affects the standalone agent app only — never your own quotes.</p>
+          <div class="tb-scroll">
+            <div class="f-row2" style="max-width:560px;">
+              <div><div class="f-lab">Wholesale</div>
+                <div class="f-in ph" style="margin-top:6px;">Shop default — 30%</div>
+                <div class="f-hint">On a <span class="mono">5,760</span> margin an agent keeps <span class="mono">1,728</span>.</div></div>
+              <div><div class="f-lab">Retail</div>
+                <div class="f-in ph" style="margin-top:6px;">Shop default — 30%</div>
+                <div class="f-hint">On a <span class="mono">4,200</span> margin an agent keeps <span class="mono">1,260</span>.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="mf-note">Saving files it in the register. Nothing is sent, and nothing is priced.</span>
+      <span class="btn btn-ghost">Cancel</span>
+      <span class="btn btn-accent">Save product</span>
+    </div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1130px;top:936px;width:1040px;">
+  <p class="st-cap">Nothing set, and a refused save</p>
+  <p class="st-sub">Opened fresh, then Save pressed empty. The rail carries an amber dot on the only section that is blocking, crimson once Save has actually refused — and every section still says what it holds.</p>
+  <div class="modal fixed" style="position:relative;">
+    <div class="modal-head">
+      <h2>Add product</h2>
+      <span class="mh-id">will be filed as <b>P014</b></span>
+      <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+    </div>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i on"><span class="tb-n">Basics</span><span class="tb-d bad"></span><span class="tb-s none">A name is needed</span></div>
+          <div class="tb-i"><span class="tb-n">Photo</span><span class="tb-s none">None</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i"><span class="tb-n">Markup rules</span><span class="tb-s none">No rule — the supplier price stands</span></div>
+          <div class="tb-i"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">A product is the name the rest of the shop points at — the price book,
+            quotes, stock, and the agent app. <b>Only the name is required</b>; every other section
+            can be left as it stands.</p>
+          <div class="tb-scroll">
+          <div class="f-stack" style="gap:14px;">
+            <div>
+              <div class="f-lab">Product name<span class="req">Required</span></div>
+              <div class="f-in big err ph" style="margin-top:6px;">e.g. Iron sheets — G28, 3m box profile<span class="car" style="background:var(--ow-crimson);"></span></div>
+              <div class="f-err"><svg viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.01M12 3l9 16H3z"/></svg>A product with no name cannot be found again. Type what you would call it on a quote.</div>
+            </div>
+            <div>
+              <div class="f-lab" style="margin-bottom:7px;">Sold as</div>
+              <div class="sold">
+                <div class="sold-o on"><span class="rd"></span>
+                  <span><span class="sold-t">One item</span>
+                    <span class="sold-d">A single thing, with one set of prices.</span></span></div>
+                <div class="sold-o"><span class="rd"></span>
+                  <span><span class="sold-t">Sizes or options</span>
+                    <span class="sold-d">Each priced and searched on its own. <em>Builds the Variants section.</em></span></span></div>
+              </div>
+            </div>
+            <div class="f-row2">
+              <div><div class="f-lab">Category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
+              <div><div class="f-lab">Sub-category</div><div class="f-in ph" style="margin-top:6px;">Choose or type one<span class="dd"></span></div></div>
+            </div>
+            <div>
+              <div class="f-lab">Short description<span class="ct">0 / 120</span></div>
+              <div class="f-in ph" style="margin-top:6px;">e.g. Gauge 28 box profile, 3 metres, per sheet</div>
+            </div>
+            <div>
+              <div class="f-lab">Notes</div>
+              <div class="f-in ph" style="margin-top:6px;">Optional — for yourselves, not the customer</div>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="mf-note bad">Not saved — the product has no name. The section is marked on the rail and the field below.</span>
+      <span class="btn btn-ghost">Cancel</span>
+      <span class="btn dis">Save product</span>
+    </div>
   </div>
 </div>
 </div>

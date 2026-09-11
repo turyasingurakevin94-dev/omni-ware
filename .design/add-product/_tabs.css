@@ -1,0 +1,91 @@
+
+    /* =================================================================
+       ADD PRODUCT — the sectioned dialog, done properly.
+
+       One size, always: 1040 x 648. The body NEVER changes height between
+       sections, so the dialog cannot leap under the pointer. Each pane
+       scrolls inside itself; the variant table scrolls under a header
+       that stays put. Nothing outside the pane moves, ever.
+       ================================================================= */
+    .b-bg{position:absolute;inset:0;background:var(--ow-steel-950);}
+    .modal.fixed{max-width:1040px;height:760px;overflow:hidden;}
+    .modal.fixed .modal-body{padding:0;flex:1;min-height:0;}
+
+    .tb-shell{display:grid;grid-template-columns:204px minmax(0,1fr);height:631px;}
+
+    /* ---- the rail ---- */
+    .tb-rail{border-right:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      padding:12px 10px 14px;display:flex;flex-direction:column;min-height:0;}
+    .tb-g{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:0 10px 6px;margin-top:14px;}
+    .tb-g:first-child{margin-top:2px;}
+    .tb-i{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+      column-gap:8px;padding:7px 10px;border-radius:var(--ow-r);
+      border-left:2px solid transparent;min-height:44px;box-sizing:border-box;}
+    /* Active is STEEL, never the accent. The accent is the one action. */
+    .tb-i.on{background:var(--ow-paper);border-left-color:var(--ow-steel-950);
+      box-shadow:0 1px 2px rgba(20,30,40,.05);}
+    .tb-n{font-size:13px;font-weight:600;color:var(--ow-ink-600);line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-i.on .tb-n{color:var(--ow-ink-900);font-weight:700;}
+    /* What is IN the section, in its own words -- not "Named", not a tick.
+       Blank is not allowed: a section with nothing in it says so. */
+    .tb-s{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.3;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-s.none{color:var(--ow-ink-400);}
+    .tb-s .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .tb-d{grid-column:2;grid-row:1 / span 2;width:6px;height:6px;border-radius:50%;flex:none;}
+    .tb-d.need{background:var(--ow-amber);}
+    .tb-d.bad{background:var(--ow-crimson);}
+    .tb-thumb{grid-column:2;grid-row:1 / span 2;width:26px;height:26px;border-radius:var(--ow-r-sm);
+      background:var(--ow-steel-100);border:1px solid var(--ow-rule);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .tb-thumb svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;line-height:1.45;color:var(--ow-ink-600);}
+
+    /* ---- the pane ---- */
+    .tb-pane{padding:20px 24px;min-width:0;overflow:hidden;display:flex;flex-direction:column;}
+    /* The section's name is on the rail. The pane opens with the SENTENCE,
+       not with the word written a second time. */
+    .tb-lede{font-size:12.5px;line-height:1.5;color:var(--ow-ink-600);margin:0 0 18px;max-width:74ch;}
+    .tb-lede b{color:var(--ow-ink-900);font-weight:600;}
+    .tb-scroll{flex:1;min-height:0;overflow:hidden;}
+    .pw-set{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      background:var(--ow-steel-100);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-set svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pw-empty{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px dashed var(--ow-rule);
+      background:var(--ow-paper-2);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-empty svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-name{font-size:14px;font-weight:600;color:var(--ow-ink-900);margin:2px 0 0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-meta{font-size:11.5px;color:var(--ow-ink-600);margin:5px 0 0;}
+    .ph-meta .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+    /* ---- the variants section ---- */
+    .va{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;align-items:center;
+      margin-bottom:8px;}
+    .va .f-in{height:34px;font-size:13px;}
+    .va-lab{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;margin-bottom:5px;}
+    .vt-head{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;
+      background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+    .vt-srch{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;width:212px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:12px;color:var(--ow-ink-400);}
+    .vt-srch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .vphoto{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 3px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:11.5px;color:var(--ow-ink-600);max-width:100%;}
+    .vphoto i{width:20px;height:20px;border-radius:3px;background:var(--ow-steel-100);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .vphoto i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .vphoto.own{border-color:var(--ow-steel-950);color:var(--ow-ink-900);font-weight:600;}
+    .vphoto.own i{background:var(--ow-steel-400);color:#fff;}
+    .vtab td:last-child, .vtab th:last-child{padding-right:8px;}

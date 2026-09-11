@@ -29,8 +29,8 @@ build(){ # $1 out $2 body $3 extracss $4 w $5 h
   echo "built $1"
 }
 build Before.dc.html   body_before.html   "_before.css"  1440 1010
-[ -f body_main.html ]     && build Main.dc.html     body_main.html     "_after.css"  1440 1010
-[ -f body_variants.html ] && build Variants.dc.html body_variants.html "_after.css"  1440 1200
-[ -f body_states.html ]   && build States.dc.html   body_states.html   "_after.css"  1560 2360
-[ -f body_phone.html ]    && build Phone.dc.html    body_phone.html    "_phone.css"  390  844
+[ -f body_main.html ]     && build Main.dc.html     body_main.html     "_after.css _tabs.css"  1560 1010
+[ -f body_variants.html ] && build Variants.dc.html body_variants.html "_after.css _tabs.css"  1540 900
+[ -f body_sections.html ] && build Sections.dc.html body_sections.html "_after.css _tabs.css"  2170 1820
+[ -f body_phone.html ]    && build Phone.dc.html    body_phone.html    "_after.css _phone.css"  860 1040
 exit 0

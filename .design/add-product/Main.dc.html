@@ -394,136 +394,210 @@
       color:#8E9BA8;margin:0 0 3px;}
     .st-sub{font-size:12px;color:#C7CFD8;line-height:1.45;margin:0 0 12px;max-width:66ch;}
     .st-sub b{color:#fff;font-weight:600;}
+
+    /* =================================================================
+       ADD PRODUCT — the sectioned dialog, done properly.
+
+       One size, always: 1040 x 648. The body NEVER changes height between
+       sections, so the dialog cannot leap under the pointer. Each pane
+       scrolls inside itself; the variant table scrolls under a header
+       that stays put. Nothing outside the pane moves, ever.
+       ================================================================= */
+    .b-bg{position:absolute;inset:0;background:var(--ow-steel-950);}
+    .modal.fixed{max-width:1040px;height:760px;overflow:hidden;}
+    .modal.fixed .modal-body{padding:0;flex:1;min-height:0;}
+
+    .tb-shell{display:grid;grid-template-columns:204px minmax(0,1fr);height:631px;}
+
+    /* ---- the rail ---- */
+    .tb-rail{border-right:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      padding:12px 10px 14px;display:flex;flex-direction:column;min-height:0;}
+    .tb-g{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:0 10px 6px;margin-top:14px;}
+    .tb-g:first-child{margin-top:2px;}
+    .tb-i{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+      column-gap:8px;padding:7px 10px;border-radius:var(--ow-r);
+      border-left:2px solid transparent;min-height:44px;box-sizing:border-box;}
+    /* Active is STEEL, never the accent. The accent is the one action. */
+    .tb-i.on{background:var(--ow-paper);border-left-color:var(--ow-steel-950);
+      box-shadow:0 1px 2px rgba(20,30,40,.05);}
+    .tb-n{font-size:13px;font-weight:600;color:var(--ow-ink-600);line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-i.on .tb-n{color:var(--ow-ink-900);font-weight:700;}
+    /* What is IN the section, in its own words -- not "Named", not a tick.
+       Blank is not allowed: a section with nothing in it says so. */
+    .tb-s{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.3;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-s.none{color:var(--ow-ink-400);}
+    .tb-s .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .tb-d{grid-column:2;grid-row:1 / span 2;width:6px;height:6px;border-radius:50%;flex:none;}
+    .tb-d.need{background:var(--ow-amber);}
+    .tb-d.bad{background:var(--ow-crimson);}
+    .tb-thumb{grid-column:2;grid-row:1 / span 2;width:26px;height:26px;border-radius:var(--ow-r-sm);
+      background:var(--ow-steel-100);border:1px solid var(--ow-rule);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .tb-thumb svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;line-height:1.45;color:var(--ow-ink-600);}
+
+    /* ---- the pane ---- */
+    .tb-pane{padding:20px 24px;min-width:0;overflow:hidden;display:flex;flex-direction:column;}
+    /* The section's name is on the rail. The pane opens with the SENTENCE,
+       not with the word written a second time. */
+    .tb-lede{font-size:12.5px;line-height:1.5;color:var(--ow-ink-600);margin:0 0 18px;max-width:74ch;}
+    .tb-lede b{color:var(--ow-ink-900);font-weight:600;}
+    .tb-scroll{flex:1;min-height:0;overflow:hidden;}
+    .pw-set{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      background:var(--ow-steel-100);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-set svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pw-empty{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px dashed var(--ow-rule);
+      background:var(--ow-paper-2);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-empty svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-name{font-size:14px;font-weight:600;color:var(--ow-ink-900);margin:2px 0 0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-meta{font-size:11.5px;color:var(--ow-ink-600);margin:5px 0 0;}
+    .ph-meta .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+    /* ---- the variants section ---- */
+    .va{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;align-items:center;
+      margin-bottom:8px;}
+    .va .f-in{height:34px;font-size:13px;}
+    .va-lab{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;margin-bottom:5px;}
+    .vt-head{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;
+      background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+    .vt-srch{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;width:212px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:12px;color:var(--ow-ink-400);}
+    .vt-srch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .vphoto{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 3px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:11.5px;color:var(--ow-ink-600);max-width:100%;}
+    .vphoto i{width:20px;height:20px;border-radius:3px;background:var(--ow-steel-100);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .vphoto i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .vphoto.own{border-color:var(--ow-steel-950);color:var(--ow-ink-900);font-weight:600;}
+    .vphoto.own i{background:var(--ow-steel-400);color:#fff;}
+    .vtab td:last-child, .vtab th:last-child{padding-right:8px;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:1010px">
+<div class="app" style="width:1560px;height:1010px">
 <div class="b-bg"></div>
 
-<div style="position:absolute;left:96px;top:40px;width:720px;">
-  <div class="modal" style="position:relative;max-width:720px;">
-
+<div style="position:absolute;left:40px;top:40px;width:1040px;">
+  <div class="modal fixed" style="position:relative;">
     <div class="modal-head">
       <h2>Add product</h2>
       <span class="mh-id">will be filed as <b>P014</b></span>
       <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
     </div>
-
-    <div class="modal-body" style="padding:22px 24px 24px;">
-      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
-        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
-        of this: it is entered per supplier in the Price Registry, and until one is there the
-        product cannot be quoted.</p>
-
-      <div class="f-stack">
-
-        <div>
-          <div class="f-lab">Product name<span class="req">Required</span></div>
-          <div class="f-in big foc" style="margin-top:6px;">Iron sheets — G28, 3m box profile<span class="car"></span></div>
-          <div class="f-hint">Written exactly like this on quotes, the catalogue and the agent app.</div>
-        </div>
-
-        <div>
-          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
-          <div class="sold">
-            <div class="sold-o on">
-              <span class="rd"></span>
-              <span><span class="sold-t">One item</span>
-                <span class="sold-d">A single thing, with one set of prices.</span></span>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i on"><span class="tb-n">Basics</span><span class="tb-s">Iron sheets — G28, 3m box profile</span></div>
+          <div class="tb-i"><span class="tb-n">Photo</span><span class="tb-thumb"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="tb-s">Chosen</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i"><span class="tb-n">Markup rules</span><span class="tb-s"><span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail</span></div>
+          <div class="tb-i"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-g">What it comes in</p>
+          <div class="tb-i"><span class="tb-n">Variants</span><span class="tb-s"><span class="mono">24</span> · 2 with own markup</span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">A product is the name the rest of the shop points at — the price book,
+            quotes, stock, and the agent app. <b>Only the name is required</b>; every other section
+            can be left as it stands.</p>
+          <div class="tb-scroll">
+          <div class="f-stack" style="gap:14px;">
+            <div>
+              <div class="f-lab">Product name<span class="req">Required</span></div>
+              <div class="f-in big foc" style="margin-top:6px;">Iron sheets — G28, 3m box profile<span class="car"></span></div>
+              <div class="f-hint">Written exactly like this on quotes, the catalogue and the agent app.</div>
             </div>
-            <div class="sold-o">
-              <span class="rd"></span>
-              <span><span class="sold-t">Sizes or options</span>
-                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span>
+            <div>
+              <div class="f-lab" style="margin-bottom:7px;">Sold as</div>
+              <div class="sold">
+                <div class="sold-o"><span class="rd"></span>
+                  <span><span class="sold-t">One item</span>
+                    <span class="sold-d">A single thing, with one set of prices.</span></span></div>
+                <div class="sold-o on"><span class="rd"></span>
+                  <span><span class="sold-t">Sizes or options</span>
+                    <span class="sold-d">Each priced and searched on its own. <em>Builds the Variants section.</em></span></span></div>
+              </div>
+            </div>
+            <div class="f-row2">
+              <div><div class="f-lab">Category</div><div class="f-in" style="margin-top:6px;">Building materials<span class="dd"></span></div></div>
+              <div><div class="f-lab">Sub-category</div><div class="f-in" style="margin-top:6px;">Roofing<span class="dd"></span></div></div>
+            </div>
+            <div>
+              <div class="f-lab">Short description<span class="ct">41 / 120</span></div>
+              <div class="f-in" style="margin-top:6px;">Gauge 28 box profile, 3 metres, per sheet</div>
+            </div>
+            <div>
+              <div class="f-lab">Notes</div>
+              <div class="f-in ph" style="margin-top:6px;">Optional — for yourselves, not the customer</div>
             </div>
           </div>
-        </div>
-
-        <div class="f-row2">
-          <div>
-            <div class="f-lab">Category</div>
-            <div class="f-in" style="margin-top:6px;">Building materials<span class="dd"></span></div>
-          </div>
-          <div>
-            <div class="f-lab">Sub-category</div>
-            <div class="f-in" style="margin-top:6px;">Roofing<span class="dd"></span></div>
           </div>
         </div>
-
-        <div>
-          <div class="f-lab">Short description<span class="ct">46 / 120</span></div>
-          <div class="f-in" style="margin-top:6px;">Gauge 28 box profile, 3 metres, per sheet</div>
-          <div class="f-hint">One line you would read out to a customer.</div>
-        </div>
-
-        <div>
-          <div class="f-lab">Notes</div>
-          <div class="f-in ph" style="margin-top:6px;">Optional</div>
-          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
-        </div>
-
-        <div class="more">
-          <div class="more-h">
-            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-            <span class="more-t">More settings</span>
-            <span class="more-s">Photo · Markup rules · Agent share — none set</span>
-          </div>
-        </div>
-
       </div>
     </div>
-
     <div class="modal-foot">
-      <span class="mf-note">Saving files it in the register. Nothing is sent and nothing is priced.</span>
+      <span class="mf-note">Saving files it in the register. Nothing is sent, and nothing is priced.</span>
       <span class="btn btn-ghost">Cancel</span>
       <span class="btn btn-accent">Save product</span>
     </div>
   </div>
-
-  <span class="mk" style="left:726px;top:20px;">1</span>
-  <span class="mk" style="left:-9px;top:112px;">2</span>
-  <span class="mk" style="left:-9px;top:212px;">3</span>
-  <span class="mk" style="left:-9px;top:330px;">4</span>
-  <span class="mk" style="left:726px;top:340px;">5</span>
-  <span class="mk" style="left:-9px;top:674px;">6</span>
-  <span class="mk" style="left:-9px;top:758px;">7</span>
+  <span class="mk" style="left:-9px;top:82px;">1</span>
+  <span class="mk" style="left:-9px;top:134px;">2</span>
+  <span class="mk" style="left:-9px;top:166px;">3</span>
+  <span class="mk" style="left:-9px;top:606px;">4</span>
+  <span class="mk" style="left:1046px;top:20px;">5</span>
+  <span class="mk" style="left:1046px;top:84px;">6</span>
+  <span class="mk" style="left:1046px;top:700px;">7</span>
 </div>
 
-<div class="leg" style="left:860px;">
-  <p class="leg-h">Proposed — step one of one</p>
-  <p class="leg-s">Same modal shell, same controls, same tokens. What changed is what the
-    screen claims to be: a form for naming a thing, sized to the thing it names.</p>
+<div class="leg" style="left:1140px;">
+  <p class="leg-h">The sections, done properly</p>
+  <p class="leg-s">The rail stays. What changes is that it now earns its width: it says what is
+    in every section without your opening one, and the dialog never moves.</p>
 
-  <div class="leg-g">Down the form</div>
-  <div class="leg-i"><span class="leg-n">1</span><span class="leg-t"><b>The ID is a fact, not a field.</b>
-    It moves into the head as <span class="mono">P014</span> — read-only ink where read-only
-    information belongs — and the dead disabled input is gone. One less control, and the
-    thing it withheld is now visible before you save.</span></div>
-  <div class="leg-i"><span class="leg-n">2</span><span class="leg-t"><b>One sentence, unfolded.</b>
-    Replaces three "i" bubbles, and says the thing the old form never said: a product with
-    no price cannot be quoted. Measure-limited, so it can never run 180 characters wide.</span></div>
-  <div class="leg-i"><span class="leg-n">3</span><span class="leg-t"><b>The required field is the biggest control on the screen</b>
-    — full width, 42px, and wide enough for "Iron sheets — G28, 3m box profile" without
-    clipping. The grid is declared, not automatic, so nothing reflows into four equal columns again.</span></div>
-  <div class="leg-g">Colour and consequence</div>
-  <div class="leg-i"><span class="leg-n">4</span><span class="leg-t"><b>The accent appears once.</b>
-    Selected "Sold as" is steel — an inset rule and a filled dot, a shape change rather than
-    a colour one. Oxide is reserved for Save, which is the one thing to do next.</span></div>
-  <div class="leg-i"><span class="leg-n">5</span><span class="leg-t"><b>The choice carries its own consequence.</b>
-    "Sizes or options — <b>you build them next</b>" tells you a second step exists before you
-    commit to it, and the button below changes its words to match.</span></div>
-  <div class="leg-g">What was taken away</div>
-  <div class="leg-i"><span class="leg-n">6</span><span class="leg-t"><b>The rail is gone.</b>
-    A four-door rail for a form with one door was the original fault. Photo, markup and
-    agent share sit behind <b>one</b> closed row that says what is set in it — so nothing is
-    hidden, and nothing is in the way. <span class="mono">6</span> controls on open instead of <span class="mono">14</span>.</span></div>
-  <div class="leg-i"><span class="leg-n">7</span><span class="leg-t"><b>The footer says what saving does and does not do.</b>
-    The app's law is that nothing sends itself; this is the screen saying so. On an invalid
-    form this same line names the missing field in crimson and Save goes flat — no toast
-    900px away from the fault.</span></div>
-  <div class="leg-g">Unchanged on purpose</div>
-  <div class="leg-i"><span class="leg-n">·</span><span class="leg-t">The modal shell, the <span class="mono">.btn</span> family,
-    <span class="mono">.field</span> ink and the Required chip are the app's own — no fourteenth button family, no
-    twenty-fourth colour, no new font size off the ramp.</span></div>
+  <div class="leg-g">The rail</div>
+  <div class="leg-i"><span class="leg-n">1</span><span class="leg-t"><b>Grouped by what the setting affects</b>
+    — the product, the money, what it comes in. The same grammar the Presets rail already uses,
+    and it scales past five where a flat list of five equals does not.</span></div>
+  <div class="leg-i"><span class="leg-n">2</span><span class="leg-t"><b>Photo carries its thumbnail, on the rail.</b>
+    The one section whose state is a picture shows the picture, at 26px. Nothing else needs opening
+    to be checked.</span></div>
+  <div class="leg-i"><span class="leg-n">3</span><span class="leg-t"><b>Every section reports its own contents, in words.</b>
+    "<span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail", not a tick; the product's actual name, not "Named".
+    A section with nothing in it says so — "None", "No rule — the supplier price stands" — because
+    a blank chip reads as a broken screen and a tick on an empty section is a lie.</span></div>
+  <div class="leg-i"><span class="leg-n">4</span><span class="leg-t"><b>The leftover rail space says the thing the form never said</b>
+    — that a price is entered afterwards, per supplier. It sits where a rail normally wastes 200px.</span></div>
+
+  <div class="leg-g">The dialog</div>
+  <div class="leg-i"><span class="leg-n">5</span><span class="leg-t"><b>One size, always: 1040 × 760.</b>
+    The body height never changes between sections, so the dialog cannot leap under the pointer —
+    the old one went 340px on Markup to 900px on Variants. Each pane scrolls inside itself — and the shortest section, Basics, simply has slack at the bottom. That is what a fixed frame costs, and it is cheaper than a dialog that jumps.</span></div>
+  <div class="leg-i"><span class="leg-n">6</span><span class="leg-t"><b>The heading is written once.</b>
+    The rail is the section's name; the pane opens with the sentence that explains it. The old form
+    wrote "Basics" twice and hid the sentence behind an "i" bubble.</span></div>
+  <div class="leg-i"><span class="leg-n">7</span><span class="leg-t"><b>The accent appears once.</b>
+    The active section is steel — a paper ground and an inset rule, a shape change rather than a
+    colour one. Oxide is left for Save, which is reachable from every section.</span></div>
+
+  <div class="leg-g">Kept from the old form</div>
+  <div class="leg-i"><span class="leg-n">·</span><span class="leg-t">The rail itself, the modal shell, the
+    <span class="mono">.btn</span> family, the Required chip and the app's field ink. This is the shipped
+    idea finished, not replaced.</span></div>
 </div>
 </div>
 </x-dc>

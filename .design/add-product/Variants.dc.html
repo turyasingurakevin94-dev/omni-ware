@@ -394,214 +394,235 @@
       color:#8E9BA8;margin:0 0 3px;}
     .st-sub{font-size:12px;color:#C7CFD8;line-height:1.45;margin:0 0 12px;max-width:66ch;}
     .st-sub b{color:#fff;font-weight:600;}
+
+    /* =================================================================
+       ADD PRODUCT — the sectioned dialog, done properly.
+
+       One size, always: 1040 x 648. The body NEVER changes height between
+       sections, so the dialog cannot leap under the pointer. Each pane
+       scrolls inside itself; the variant table scrolls under a header
+       that stays put. Nothing outside the pane moves, ever.
+       ================================================================= */
+    .b-bg{position:absolute;inset:0;background:var(--ow-steel-950);}
+    .modal.fixed{max-width:1040px;height:760px;overflow:hidden;}
+    .modal.fixed .modal-body{padding:0;flex:1;min-height:0;}
+
+    .tb-shell{display:grid;grid-template-columns:204px minmax(0,1fr);height:631px;}
+
+    /* ---- the rail ---- */
+    .tb-rail{border-right:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      padding:12px 10px 14px;display:flex;flex-direction:column;min-height:0;}
+    .tb-g{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--ow-ink-400);padding:0 10px 6px;margin-top:14px;}
+    .tb-g:first-child{margin-top:2px;}
+    .tb-i{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+      column-gap:8px;padding:7px 10px;border-radius:var(--ow-r);
+      border-left:2px solid transparent;min-height:44px;box-sizing:border-box;}
+    /* Active is STEEL, never the accent. The accent is the one action. */
+    .tb-i.on{background:var(--ow-paper);border-left-color:var(--ow-steel-950);
+      box-shadow:0 1px 2px rgba(20,30,40,.05);}
+    .tb-n{font-size:13px;font-weight:600;color:var(--ow-ink-600);line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-i.on .tb-n{color:var(--ow-ink-900);font-weight:700;}
+    /* What is IN the section, in its own words -- not "Named", not a tick.
+       Blank is not allowed: a section with nothing in it says so. */
+    .tb-s{grid-column:1;font-size:11px;color:var(--ow-ink-600);line-height:1.3;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tb-s.none{color:var(--ow-ink-400);}
+    .tb-s .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .tb-d{grid-column:2;grid-row:1 / span 2;width:6px;height:6px;border-radius:50%;flex:none;}
+    .tb-d.need{background:var(--ow-amber);}
+    .tb-d.bad{background:var(--ow-crimson);}
+    .tb-thumb{grid-column:2;grid-row:1 / span 2;width:26px;height:26px;border-radius:var(--ow-r-sm);
+      background:var(--ow-steel-100);border:1px solid var(--ow-rule);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .tb-thumb svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .tb-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--ow-rule-soft);
+      font-size:11px;line-height:1.45;color:var(--ow-ink-600);}
+
+    /* ---- the pane ---- */
+    .tb-pane{padding:20px 24px;min-width:0;overflow:hidden;display:flex;flex-direction:column;}
+    /* The section's name is on the rail. The pane opens with the SENTENCE,
+       not with the word written a second time. */
+    .tb-lede{font-size:12.5px;line-height:1.5;color:var(--ow-ink-600);margin:0 0 18px;max-width:74ch;}
+    .tb-lede b{color:var(--ow-ink-900);font-weight:600;}
+    .tb-scroll{flex:1;min-height:0;overflow:hidden;}
+    .pw-set{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      background:var(--ow-steel-100);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-set svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pw-empty{width:104px;height:104px;border-radius:var(--ow-r-lg);border:1px dashed var(--ow-rule);
+      background:var(--ow-paper-2);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-empty svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-name{font-size:14px;font-weight:600;color:var(--ow-ink-900);margin:2px 0 0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-meta{font-size:11.5px;color:var(--ow-ink-600);margin:5px 0 0;}
+    .ph-meta .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+    /* ---- the variants section ---- */
+    .va{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;align-items:center;
+      margin-bottom:8px;}
+    .va .f-in{height:34px;font-size:13px;}
+    .va-lab{display:grid;grid-template-columns:170px minmax(0,1fr) 32px;gap:10px;margin-bottom:5px;}
+    .vt-head{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;
+      background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+    .vt-srch{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;width:212px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:12px;color:var(--ow-ink-400);}
+    .vt-srch svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .vphoto{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 3px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:#fff;
+      font-size:11.5px;color:var(--ow-ink-600);max-width:100%;}
+    .vphoto i{width:20px;height:20px;border-radius:3px;background:var(--ow-steel-100);flex:none;
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);}
+    .vphoto i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .vphoto.own{border-color:var(--ow-steel-950);color:var(--ow-ink-900);font-weight:600;}
+    .vphoto.own i{background:var(--ow-steel-400);color:#fff;}
+    .vtab td:last-child, .vtab th:last-child{padding-right:8px;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:1200px">
+<div class="app" style="width:1540px;height:900px">
 <div class="b-bg"></div>
 
-<div style="position:absolute;left:40px;top:32px;width:1160px;">
-  <div class="modal" style="position:relative;max-width:1160px;">
-
+<div style="position:absolute;left:40px;top:32px;width:1040px;">
+  <div class="modal fixed" style="position:relative;">
     <div class="modal-head">
       <h2>Add product</h2>
-      <span class="mh-step" style="margin-left:2px;">· step 2 of 2</span>
       <span class="mh-id">will be filed as <b>P014</b></span>
       <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
     </div>
-
-    <div class="modal-body" style="padding:18px 24px 22px;">
-
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;
-                  padding-bottom:14px;border-bottom:1px solid var(--ow-rule-soft);">
-        <span class="backlink"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Basics</span>
-        <span style="width:1px;height:14px;background:var(--ow-rule);"></span>
-        <span class="crumb">Iron sheets — G28, 3m box profile</span>
-        <span class="ow-cp">Building materials · Roofing</span>
-      </div>
-
-      <p class="m-lede" style="margin-bottom:16px;max-width:76ch;">Every combination below is searched, quoted and
-        counted on its own. <b>Prices are not set here</b> — they are entered per supplier in the
-        Price Registry once this is saved. A markup left on <span class="f-hint" style="display:inline;font-size:12px;">default</span>
-        follows the product's own rule.</p>
-
-      <div class="attr" style="margin-bottom:10px;">
-        <div><div class="f-lab">Attribute</div><div class="f-in" style="margin-top:6px;">Gauge</div></div>
-        <div><div class="f-lab">Values, separated by commas</div><div class="f-in" style="margin-top:6px;">28, 30, 32, 34</div></div>
-        <div><span class="xb" style="margin-bottom:9px;"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></div>
-      </div>
-      <div class="attr" style="margin-bottom:14px;">
-        <div><div class="f-in">Length</div></div>
-        <div><div class="f-in">1.8 m, 2.0 m, 2.4 m, 2.7 m, 3.0 m, 3.6 m</div></div>
-        <div><span class="xb" style="margin-bottom:9px;"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-        <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add attribute</span>
-        <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.3 5.7M4 12V7m0 5h5"/></svg>Rebuild the list</span>
-        <span class="f-hint" style="margin-top:0;">4 × 6 — rebuilding keeps every SKU and markup whose combination still exists.</span>
-      </div>
-
-      <div class="vt">
-        <div class="vt-h">
-          <span class="vt-t">The variants</span>
-          <span class="ow-cp">2 have their own markup</span>
-          <span class="vt-n">24 rows · the header stays put</span>
+    <div class="modal-body">
+      <div class="tb-shell">
+        <nav class="tb-rail">
+          <p class="tb-g">The product</p>
+          <div class="tb-i"><span class="tb-n">Basics</span><span class="tb-s">Iron sheets — G28, 3m box profile</span></div>
+          <div class="tb-i"><span class="tb-n">Photo</span><span class="tb-thumb"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></span><span class="tb-s">Chosen</span></div>
+          <p class="tb-g">Money</p>
+          <div class="tb-i"><span class="tb-n">Markup rules</span><span class="tb-s"><span class="mono">+18%</span> wholesale · <span class="mono">+12%</span> retail</span></div>
+          <div class="tb-i"><span class="tb-n">Agent share</span><span class="tb-s none">Shop default — <span class="mono">30%</span></span></div>
+          <p class="tb-g">What it comes in</p>
+          <div class="tb-i on"><span class="tb-n">Variants</span><span class="tb-s"><span class="mono">24</span> · 2 with own markup</span></div>
+          <p class="tb-foot">A price is not set here. It is entered per supplier in the Price Registry, once this is saved.</p>
+        </nav>
+        <div class="tb-pane">
+          <p class="tb-lede">Every combination below is searched, quoted and counted on its own.
+            <b>Prices are not set here</b> — a markup left on default follows the product's own rule.</p>
+          <div class="va-lab"><span class="f-lab">Attribute</span><span class="f-lab">Values, separated by commas</span><span></span></div>
+          <div class="va"><div class="f-in">Gauge</div><div class="f-in">28, 30, 32, 34</div>
+            <span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></div>
+          <div class="va"><div class="f-in">Length</div><div class="f-in">1.8 m, 2.0 m, 2.4 m, 2.7 m, 3.0 m, 3.6 m</div>
+            <span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></div>
+          <div style="display:flex;align-items:center;gap:10px;margin:12px 0 14px;">
+            <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add attribute</span>
+            <span class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.3 5.7M4 12V7m0 5h5"/></svg>Rebuild the list</span>
+            <span class="f-hint" style="margin-top:0;">4 × 6 — rebuilding keeps every SKU, markup and photo whose combination still exists.</span>
+          </div>
+          <div class="vt tb-scroll" style="display:flex;flex-direction:column;">
+            <div class="vt-head">
+              <span class="vt-srch"><svg viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>Filter — e.g. 30, or 30 3.0</span>
+              <span class="ow-cp">2 have their own markup</span>
+              <span class="vt-n">24 rows</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;">
+            <table class="vtab">
+              <colgroup><col style="width:40px"><col><col style="width:116px">
+                <col style="width:104px"><col style="width:104px"><col style="width:150px"><col style="width:46px"></colgroup>
+              <thead><tr><th>#</th><th>Variant</th><th>SKU / code</th>
+                <th class="r">Wholesale</th><th class="r">Retail</th><th>Photo</th><th></th></tr></thead>
+              <tbody>
+            <tr><td class="ix">1</td><td class="nm">Gauge 28 · 1.8 m</td>
+              <td class="sku">IS-28-18</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr class="own"><td class="ix">2</td><td class="nm">Gauge 28 · 2.0 m</td>
+              <td class="sku">IS-28-20</td>
+              <td class="r"><span class="mny">+18%</span></td><td class="r"><span class="mny">+12%</span></td><td><span class="vphoto own"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>Its own</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">3</td><td class="nm">Gauge 28 · 2.4 m</td>
+              <td class="sku">IS-28-24</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">4</td><td class="nm">Gauge 28 · 2.7 m</td>
+              <td class="sku">IS-28-27</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">5</td><td class="nm">Gauge 28 · 3.0 m</td>
+              <td class="sku">IS-28-30</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">6</td><td class="nm">Gauge 28 · 3.6 m</td>
+              <td class="sku">IS-28-36</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr class="own"><td class="ix">7</td><td class="nm">Gauge 30 · 1.8 m</td>
+              <td class="sku">IS-30-18</td>
+              <td class="r"><span class="mny">+22%</span></td><td class="r"><span class="mny">+15%</span></td><td><span class="vphoto own"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>Its own</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">8</td><td class="nm">Gauge 30 · 2.0 m</td>
+              <td class="sku">IS-30-20</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">9</td><td class="nm">Gauge 30 · 2.4 m</td>
+              <td class="sku">IS-30-24</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">10</td><td class="nm">Gauge 30 · 2.7 m</td>
+              <td class="sku">IS-30-27</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+            <tr><td class="ix">11</td><td class="nm">Gauge 30 · 3.0 m</td>
+              <td class="sku">IS-30-30</td>
+              <td class="r"><span class="mny dash">— default</span></td><td class="r"><span class="mny dash">— default</span></td><td><span class="vphoto"><i><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg></i>The product's</span></td>
+              <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
         </div>
-        <table class="vtab">
-          <colgroup><col style="width:46px"><col><col style="width:200px">
-            <col style="width:156px"><col style="width:156px"><col style="width:140px"><col style="width:48px"></colgroup>
-          <thead><tr>
-            <th>#</th><th>Variant</th><th>SKU / code</th>
-            <th class="r">Wholesale markup</th><th class="r">Retail markup</th><th>Photo</th><th></th>
-          </tr></thead>
-          <tbody>
-        <tr>
-          <td class="ix">1</td>
-          <td class="nm">Gauge 28 · 1.8 m</td>
-          <td class="sku">IS-28-18</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="own">
-          <td class="ix">2</td>
-          <td class="nm">Gauge 28 · 2.0 m</td>
-          <td class="sku">IS-28-20</td>
-          <td class="r"><span class="mny">+18%</span></td>
-          <td class="r"><span class="mny">+12%</span></td>
-          <td><span class="ow-cp">Its own</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr>
-          <td class="ix">3</td>
-          <td class="nm">Gauge 28 · 2.4 m</td>
-          <td class="sku">IS-28-24</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="alt">
-          <td class="ix">4</td>
-          <td class="nm">Gauge 28 · 2.7 m</td>
-          <td class="sku">IS-28-27</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr>
-          <td class="ix">5</td>
-          <td class="nm">Gauge 28 · 3.0 m</td>
-          <td class="sku">IS-28-30</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="alt">
-          <td class="ix">6</td>
-          <td class="nm">Gauge 28 · 3.6 m</td>
-          <td class="sku">IS-28-36</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="own">
-          <td class="ix">7</td>
-          <td class="nm">Gauge 30 · 1.8 m</td>
-          <td class="sku">IS-30-18</td>
-          <td class="r"><span class="mny">+22%</span></td>
-          <td class="r"><span class="mny">+15%</span></td>
-          <td><span class="ow-cp">Its own</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="alt">
-          <td class="ix">8</td>
-          <td class="nm">Gauge 30 · 2.0 m</td>
-          <td class="sku">IS-30-20</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr>
-          <td class="ix">9</td>
-          <td class="nm">Gauge 30 · 2.4 m</td>
-          <td class="sku">IS-30-24</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="alt">
-          <td class="ix">10</td>
-          <td class="nm">Gauge 30 · 2.7 m</td>
-          <td class="sku">IS-30-27</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr>
-          <td class="ix">11</td>
-          <td class="nm">Gauge 30 · 3.0 m</td>
-          <td class="sku">IS-30-30</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-        <tr class="alt">
-          <td class="ix">12</td>
-          <td class="nm">Gauge 30 · 3.6 m</td>
-          <td class="sku">IS-30-36</td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td class="r"><span class="mny dash">— default</span></td>
-          <td><span class="ow-cp">The product's</span></td>
-          <td class="r"><span class="xb"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m2 0-1 14H7L6 6"/></svg></span></td>
-        </tr>
-
-          </tbody>
-        </table>
-        <div style="height:26px;background:linear-gradient(#fff0,#fff);margin-top:-26px;position:relative;"></div>
       </div>
-
     </div>
-
     <div class="modal-foot">
-      <span class="mf-note">Saving files all 24 in the register. None of them has a price yet,
-        so none can be quoted until the Price Registry has one.</span>
-      <span class="btn btn-ghost">Back</span>
+      <span class="mf-note">Saving files all 24 in the register. None has a price yet.</span>
+      <span class="btn btn-ghost">Cancel</span>
       <span class="btn btn-accent">Save product · 24 variants</span>
     </div>
   </div>
+  <span class="mk" style="left:1046px;top:310px;">1</span>
+  <span class="mk" style="left:-9px;top:306px;">2</span>
+  <span class="mk" style="left:-9px;top:406px;">3</span>
+  <span class="mk" style="left:1046px;top:400px;">4</span>
 </div>
 
-<div style="position:absolute;left:40px;top:1030px;width:1160px;display:grid;
-            grid-template-columns:1fr 1fr 1fr;gap:26px;color:#C6CDD4;">
-  <div>
-    <p class="leg-g" style="margin:0 0 7px;padding-top:0;border-top:0;">Why a table</p>
-    <p class="leg-t" style="margin:0;"><b>Twenty-four stacked cards is 9,800&nbsp;px of scroll.</b>
-      Twenty-four rows is 872, and you can read the whole set without moving. The card carried a SKU,
-      a photo picker and two markup fields that are blank on 22 of the 24 — a column can say
-      "default" in one word where a card needed a labelled input.</p>
-  </div>
-  <div>
-    <p class="leg-g" style="margin:0 0 7px;padding-top:0;border-top:0;">What the eye gets for free</p>
-    <p class="leg-t" style="margin:0;"><b>The two rows that were touched are marked by shape</b> —
-      an inset steel rule and a tinted ground — so "which of these has its own markup?" is answered at a
-      glance rather than by reading twenty-four cards. Figures are tabular mono and right-aligned,
-      so the markup columns line up and a wrong one shows up as a ragged edge.</p>
-  </div>
-  <div>
-    <p class="leg-g" style="margin:0 0 7px;padding-top:0;border-top:0;">The step, and the cost of it</p>
-    <p class="leg-t" style="margin:0;">The modal <b>widens</b> from 720 to 1160 between the steps.
-      That is a real cost — the dialog moves under you — and it buys a table that does not need
-      horizontal scrolling at 1440. A simple product never sees it: for one item there is only
-      step one, and the button says Save, not Next.</p>
-  </div>
+<div style="position:absolute;left:1120px;top:32px;width:380px;color:#C7CFD8;">
+  <p class="leg-h">Twenty-four, and the dialog has not moved</p>
+  <p class="leg-s">This is the section the old form handled worst: twenty-four stacked cards,
+    410px each, roughly 9,800px of scrolling inside a modal that grew to hold them.</p>
+  <div class="leg-g">What a fixed pane buys</div>
+  <div class="leg-i"><span class="leg-n">1</span><span class="leg-t"><b>The table scrolls; nothing else does.</b>
+    The rail, the head, the attribute builder and Save all stay exactly where they were on Basics.
+    Ten rows are in view and the column header stays put above them.</span></div>
+  <div class="leg-i"><span class="leg-n">2</span><span class="leg-t"><b>A filter, in the panel head.</b>
+    At forty variants scrolling is not finding. It costs no vertical space because it sits in
+    the 38px header the panel already had.</span></div>
+  <div class="leg-i"><span class="leg-n">3</span><span class="leg-t"><b>The two touched rows are marked by shape</b>
+    — an inset steel rule and a tinted ground — so "which of these has its own markup" is answered
+    without reading twenty-four of anything.</span></div>
+  <div class="leg-i"><span class="leg-n">4</span><span class="leg-t"><b>A variant's photo is set from its own row</b>
+    — a 20px thumbnail button that opens the media picker for that variant. A bordered, ringed
+    thumbnail means its own; a plain one means it is using the product's.</span></div>
+  <div class="leg-g">The cost, said plainly</div>
+  <div class="leg-i"><span class="leg-n">·</span><span class="leg-t">Ten rows in view rather than a
+    full-width twelve, because the rail keeps its 204px on every section. That is the price of the
+    dialog never moving, and it is the right trade.</span></div>
+  <div class="leg-i"><span class="leg-n">·</span><span class="leg-t">Height is
+    <span class="mono">min(760, 100vh − 96)</span>: on a 768px laptop the dialog is 672 and the table
+    shows seven. It shrinks the table, never the rail and never the footer.</span></div>
 </div>
 </div>
 </x-dc>
