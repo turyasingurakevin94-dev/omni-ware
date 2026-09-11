@@ -4316,6 +4316,65 @@
      the continuation of one rather than the start of something else. */
   .log-more-row{display:flex;justify-content:center;margin-top:12px;}
   .log-more-row .btn{padding:6px 16px;font-size:12px;}
+
+  /* THE LOG ITSELF, on the layer's table.
+
+     Tracks, left to right: when, what, what kind, how many moved, what
+     was left, and why. The two figure columns are fixed and never give
+     way -- a clipped "1,240,00" is a tenth of the figure it claims to
+     be -- so the item and the note are what yield, and each carries its
+     full value in a title. The door on the right takes what it needs
+     and no more: the same act at .btn.ow-sm, 28px inside a 46px row,
+     where the full-size .btn wrapped its own label onto two lines and
+     drove the row to 75px -- a button taller than the three figures it
+     sat beside, on every row of a log read by scanning down it. */
+  .ow-tbl.sl-tbl{--ow-tbl-cols:84px minmax(0,1.3fr) 112px 88px 124px minmax(0,1.35fr) auto;}
+  .sl-tbl .ow-tbl-h,.sl-tbl .ow-tbl-r{gap:var(--ow-sp-10);}
+  /* The date is a figure, and it reads down the column as one. */
+  .sl-c-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+  /* What kind of movement, and why it is quiet: the sign on the change
+     beside it already says which way the goods went, so this is the
+     qualifier rather than the news. */
+  .sl-c-t{font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sl-c-n{font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sl-tbl .ow-tbl-n{font-size:var(--ow-t-13);}
+  .sl-tbl .ow-tbl-a .btn.ow-sm{white-space:nowrap;}
+  .sl-tbl .ow-tbl-s{font-size:var(--ow-t-11);}
+  @media (max-width:820px){
+    /* THE PHONE IS ITS OWN DESIGN, not this one squeezed. The header
+       goes, the row becomes a card, and every cell that lost its column
+       name gets it back: date and change on the first line, the item,
+       the note, then what kind and what was left, and the door across
+       the bottom at a full thumb. */
+    .sl-tbl .ow-tbl-h{display:none;}
+    .ow-tbl.sl-tbl{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .sl-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);
+      align-items:start;border-top:1px solid var(--ow-rule-soft);}
+    .sl-tbl .ow-tbl-r > *:nth-child(1){grid-area:1 / 1;justify-self:start;}
+    .sl-tbl .ow-tbl-r > *:nth-child(2){grid-column:1 / span 2;grid-row:2;}
+    .sl-tbl .ow-tbl-r > *:nth-child(3){grid-area:4 / 1;justify-self:start;}
+    .sl-tbl .ow-tbl-r > *:nth-child(4){grid-area:1 / 2;justify-self:end;}
+    .sl-tbl .ow-tbl-r > *:nth-child(5){grid-area:4 / 2;justify-self:end;}
+    .sl-tbl .ow-tbl-r > *:nth-child(6){grid-column:1 / span 2;grid-row:3;}
+    .sl-tbl .ow-tbl-r > *:nth-child(7){grid-column:1 / span 2;grid-row:5;justify-self:stretch;}
+    .sl-tbl .ow-tbl-p{font-size:16px;white-space:normal;}
+    .sl-tbl .ow-tbl-s{font-size:var(--ow-t-12);white-space:normal;}
+    /* The note is the reason the movement happened; on a phone it is
+       read rather than scanned, so it wraps instead of being cut. */
+    .sl-c-n{font-size:var(--ow-t-13);white-space:normal;overflow:visible;}
+    .sl-c-n:empty{display:none;}
+    .sl-tbl .ow-tbl-n{font-size:var(--ow-t-14);}
+    .sl-tbl .ow-tbl-n[data-l]::before{content:attr(data-l) ' ';
+      font-family:'Inter',system-ui,sans-serif;letter-spacing:.06em;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .sl-tbl .ow-tbl-a .btn.ow-sm{width:100%;min-height:var(--ow-tap);
+      box-sizing:border-box;font-size:14px;}
+  }
   .inv-qty-wrap{font-variant-numeric:tabular-nums;}
   .variance-ok{color:var(--good);font-weight:700;}
   .variance-bad{color:var(--danger);font-weight:700;}
@@ -73523,7 +73582,7 @@ const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'
    it is and offers only the verbs that row can actually be asked. */
 function stockLogPutRightButtonHTML(e){
   if(!e) return '';
-  return `<button type="button" class="btn btn-ghost" data-putright-log="${esc(String(e.id))}">Put it right</button>`;
+  return `<button type="button" class="btn btn-ghost ow-sm" data-putright-log="${esc(String(e.id))}">Put it right</button>`;
 }
 /* And the row says it was taken back, so it cannot be read alone and
    believed -- the same reason a corrected row carries its tag. */
@@ -74282,44 +74341,57 @@ function renderStockLog(){
   if(entries.length===0){
     const filtered = (searchEl && searchEl.value.trim()) || (catEl && catEl.value) || (typeEl && typeEl.value);
     wrap.innerHTML = (data.stockLog||[]).length === 0
-      ? '<div class="empty">No stock movements recorded yet.</div>'
+      ? '<div class="ow-empty">No stock movements recorded yet.</div>'
       : filtered
         // Named, so an empty result reads as "this item has not moved"
         // rather than as an empty log.
-        ? '<div class="empty">Nothing has moved that matches those filters.</div>'
-        : '<div class="empty">No stock movements recorded yet.</div>';
+        ? '<div class="ow-empty">Nothing has moved that matches those filters.</div>'
+        : '<div class="ow-empty">No stock movements recorded yet.</div>';
     return;
   }
-  const cardsHtml = entries.map(e=>`
-    <div class="pi-card">
-      <div class="pi-card-top">
-        <div class="pi-card-title">
-          <span class="an-rank">${esc(e.date)}</span>
-          <span class="cmp-card-supplier">${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</span>
-        </div>
+  /* ONE ROW, TWO SKINS. The log used to emit a <table> and a second
+     deck of cards for the phone from two separate templates, which is
+     how a console row and a phone card come to say different things --
+     and the row's only action was a full-size button in a 13px cell,
+     three times the height of the figures it sat beside. The layer's
+     table draws both: a dense console row above 820px, the same cells
+     stacked and labelled below it.
+
+     The tags a corrected or reversed row carries move UNDER THE ITEM
+     rather than after the note. They were trailing a note that now
+     truncates, so on a long note -- and consignment notes here run to
+     a full line -- the one mark saying "do not read this row alone"
+     was the first thing cut. */
+  const rowsHtml = entries.map(e=>{
+    const d = Number(e.delta)||0;
+    const label = e.label || e.productId || '';
+    const tags = `${stockLogCorrectedTagHTML(e)}${stockLogReversedTagHTML(e)}`;
+    const note = e.note || '';
+    return `<div class="ow-tbl-r">
+      <div class="ow-tbl-c sl-c-d">${esc(e.date)}</div>
+      <div class="ow-tbl-c">
+        <span class="ow-tbl-p" title="${esc(label)}">${esc(label)}</span>
+        ${tags ? `<span class="ow-tbl-s">${tags}</span>` : ''}
       </div>
-      <div class="pi-card-meta">
-        <div>${esc(e.label||e.productId)}</div>
-        ${e.note ? `<div>${esc(e.note)}${stockLogCorrectedTagHTML(e)}${stockLogReversedTagHTML(e)}</div>` : ''}
-      </div>
-      <div class="sc-stats">
-        <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</b><span>Change</span></div>
-        <div class="sc-stat"><b>${fmtStockQty(e.qtyAfter)}</b><span>Resulting stock</span></div>
-      </div>
-      <div class="pi-card-foot">${stockLogPutRightButtonHTML(e)}</div>
-    </div>`).join('');
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th><th></th></tr></thead><tbody>
-    ${entries.map(e=>`<tr>
-      <td>${esc(e.date)}</td>
-      <td>${esc(e.label||e.productId)}</td>
-      <td>${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</td>
-      <td class="price" style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</td>
-      <td class="price">${fmtStockQty(e.qtyAfter)}</td>
-      <td>${esc(e.note||'')}${stockLogCorrectedTagHTML(e)}${stockLogReversedTagHTML(e)}</td>
-      <td>${stockLogPutRightButtonHTML(e)}</td>
-    </tr>`).join('')}
-  </tbody></table></div>
-  <div class="pi-cards">${cardsHtml}</div>
+      <div class="ow-tbl-c sl-c-t">${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</div>
+      <div class="ow-tbl-n" data-l="Change"><span class="ow-fig ${d<0?'ow-bad':'ow-good'}">${e.delta>0?'+':''}${fmtStockQty(e.delta)}</span></div>
+      <div class="ow-tbl-n" data-l="Stock after">${fmtStockQty(e.qtyAfter)}</div>
+      <div class="ow-tbl-c sl-c-n"${note ? ` title="${esc(note)}"` : ''}>${esc(note)}</div>
+      <div class="ow-tbl-a">${stockLogPutRightButtonHTML(e)}</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = `<div class="ow-tbl sl-tbl">
+    <div class="ow-tbl-h">
+      <div class="ow-tbl-c">Date</div>
+      <div class="ow-tbl-c">Item</div>
+      <div class="ow-tbl-c">Type</div>
+      <div class="ow-tbl-n">Change</div>
+      <div class="ow-tbl-n">Stock after</div>
+      <div class="ow-tbl-c">Note</div>
+      <div class="ow-tbl-c"></div>
+    </div>
+    ${rowsHtml}
+  </div>
   ${stockLogMoreButtonHTML(capped.length, total)}`;
 
   const moreBtn = document.getElementById('inv_log_more');

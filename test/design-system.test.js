@@ -954,6 +954,23 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
                     'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
     },
+    /* Movements. The page head was on the layer already; the log under
+       it was not. It emitted a <table> for the console and a second
+       deck of .pi-cards for the phone from two separate templates --
+       the last pair in the app that could come to say different things
+       about the same movement -- and the row's one act was a full-size
+       .btn in a 13px cell, 56px tall against the figures beside it.
+       Both are one .ow-tbl now, dense above 820px and a labelled card
+       below it. */
+    'stock-movements': {
+      retired: ['pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
+                'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
+                'an-rank', 'cmp-card-supplier', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-tb', 'ow-f', 'ow-pan'],
+      renders: ['renderStockLog', 'stockLogPutRightButtonHTML'],
+      rendersUses: ['ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
+                    'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-empty', 'ow-sm'],
+    },
     /* What goes with what. New as well, and the one screen in the app
        whose register is a SENTENCE -- product, verb, product, in one
        cell, because three columns of truncated product names say
