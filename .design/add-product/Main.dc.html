@@ -1,0 +1,541 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: navy top bar + rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .ow-f-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-900);}
+    .ow-f-u{font-size:11px;color:var(--ow-ink-600);margin-left:auto;}
+
+    /* ---- panels, strip, chips ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;padding:8px 12px;
+      border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:32px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
+
+    .ow-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-mt{padding:10px 16px;border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+
+    /* ---- the list row ---- */
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;
+      width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;background:none;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:500;line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:11px;color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;box-sizing:border-box;white-space:nowrap;}
+    .btn.ow-sm{padding:0 10px;height:28px;font-size:12px;font-weight:600;}
+    .btn-accent{background:var(--ow-oxide);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);border:1px solid var(--ow-rule);}
+    .btn .icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- the message ---- */
+    .ow-msg-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+    .ow-msg-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-msg{border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:10px 12px;font-size:13px;line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-n{font-size:11px;color:var(--ow-ink-600);margin:6px 0 0;line-height:1.45;max-width:var(--ow-measure);}
+
+    .ow-q-un{display:inline-flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--ow-amber-ink);
+      background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r-sm);padding:6px 8px;}
+    .ow-q-un svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px;}
+
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* ---- added for the consignment console ---- */
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:16px;}
+    .ow-stack{display:flex;flex-direction:column;gap:16px;}
+    .ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;
+      align-items:center;justify-content:center;align-self:center;margin-left:2px;font-family:'Inter',sans-serif;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+
+    /* the work queue */
+    .ow-q{border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-q:last-child{border-bottom:0;}
+    .ow-q-r{display:grid;grid-template-columns:18px minmax(0,1fr) 152px 128px;align-items:center;
+      gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;border:0;background:none;text-align:left;}
+    .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);}
+    .ow-q-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;
+      fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ow-q.ow-open .ow-q-cr{transform:rotate(90deg);}
+    .ow-q-t{min-width:0;font-size:13px;font-weight:500;letter-spacing:-.005em;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-who{font-weight:600;}
+    .ow-q-sep{color:var(--ow-ink-400);margin:0 2px;}
+    .ow-q-rest{color:var(--ow-ink-600);}
+    .ow-q-m{display:flex;gap:4px;align-items:center;justify-content:flex-end;min-width:0;}
+    .ow-q-v{text-align:right;}
+    .ow-q-f{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      font-weight:600;letter-spacing:-.02em;display:block;}
+    .ow-q-b{font-size:11px;color:var(--ow-ink-600);display:block;margin-top:-1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-q-v.ow-zero .ow-q-f{color:var(--ow-ink-400);}
+    .ow-q-x{padding:2px 12px 14px 40px;}
+    .ow-q-why{font-size:13px;color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);margin:0 0 10px;}
+    .ow-q-a{display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* their goods, inside an open row */
+    .cg{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 10px;}
+    .cg caption{text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:0 0 6px;}
+    .cg th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--ow-ink-400);text-align:right;padding:0 0 5px 16px;border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;}
+    .cg th.l{text-align:left;padding-left:0;}
+    .cg td{padding:7px 0 7px 16px;border-bottom:1px solid var(--ow-rule-soft);
+      text-align:right;white-space:nowrap;width:1%;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .cg tr:last-child td{border-bottom:0;}
+    .cg td.nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;font-family:'Inter',sans-serif;
+      font-weight:500;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .cg td.w{font-weight:600;}
+    .cg td.a{padding-left:14px;}
+    .cg td.a .btn{padding:0 9px;height:24px;font-size:11px;font-weight:600;}
+
+    /* the foot of an open row */
+    .cf{display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+    .cf-n{margin:0;font-size:11px;color:var(--ow-ink-600);line-height:1.45;max-width:60ch;}
+
+    /* rail figures */
+    .rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .rf-l{font-size:11px;color:var(--ow-ink-600);min-width:0;}
+    .rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+    .rf-v.warn{color:var(--ow-amber-ink);}
+    .rl{margin:0;padding:8px 12px 10px;font-size:11px;color:var(--ow-ink-600);line-height:1.5;}
+    .rl b{color:var(--ow-ink-900);font-weight:600;}
+    .rl + .rl{border-top:1px solid var(--ow-rule-soft);}
+
+    /* ================================================================
+       THE MODAL SHELL — exact values lifted from index.html
+       .modal-overlay / .modal / .modal-head / .modal-body / .modal-foot
+       ================================================================ */
+    .dim{position:absolute;inset:0;background:rgba(20,26,33,0.55);z-index:20;}
+    .mwrap{position:absolute;inset:0;z-index:21;display:flex;align-items:flex-start;
+      justify-content:center;padding:48px 20px;box-sizing:border-box;}
+    .modal{background:#fff;border-radius:14px;width:100%;
+      box-shadow:0 24px 64px rgba(10,15,20,0.3);display:flex;flex-direction:column;min-height:0;}
+    .modal-xwide{max-width:940px;}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:18px 22px;border-bottom:1px solid var(--ow-rule);}
+    .modal-head h2{margin:0;font-size:14px;text-transform:uppercase;letter-spacing:0.6px;
+      color:var(--ow-ink-600);font-weight:700;}
+    .modal-close{color:var(--ow-ink-600);display:flex;padding:5px;border-radius:6px;}
+    .modal-close svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .modal-body{padding:22px;overflow:hidden;min-height:0;}
+    .modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;
+      padding:16px 22px;border-top:1px solid var(--ow-rule);}
+
+    /* app form controls, exact */
+    .field{display:flex;flex-direction:column;gap:6px;min-width:0;}
+    .field label{font-size:12px;font-weight:600;color:var(--ow-ink-600);}
+    .field .in{padding:9px 11px;border:1px solid var(--ow-rule);border-radius:7px;font-size:14px;
+      background:#FBFCFD;color:var(--ow-ink-900);box-sizing:border-box;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .field .in.ph{color:var(--ow-ink-400);}
+    .field .in.sel{display:flex;align-items:center;background:#FBFCFD;}
+    .field .in.sel::after{content:'';margin-left:auto;width:8px;height:8px;flex:none;
+      border-right:1.6px solid var(--ow-ink-400);border-bottom:1.6px solid var(--ow-ink-400);
+      transform:translateY(-2px) rotate(45deg);}
+    .field-hint{font-size:11px;color:var(--ow-ink-600);margin-top:4px;}
+    .req{margin-left:6px;padding:1px 6px;border-radius:99px;vertical-align:1px;
+      font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+      color:var(--ow-amber-ink);background:var(--ow-amber-soft);}
+
+    /* callouts used on both boards */
+    .cal{position:absolute;z-index:40;font-size:11px;line-height:1.42;max-width:236px;}
+    .cal b{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      margin-bottom:3px;}
+    .cal-bad{color:#F3C8C1;} .cal-bad b{color:#E38977;}
+    .cal-good{color:#CFE3DC;} .cal-good b{color:#7FC2AE;}
+    .cal .ln{position:absolute;background:currentColor;opacity:.5;}
+    .board-t{position:absolute;left:0;top:0;right:0;height:54px;z-index:30;
+      display:flex;align-items:center;gap:10px;padding:0 20px;box-sizing:border-box;}
+
+    /* =================================================================
+       ADD PRODUCT — proposed.
+       The form is a naming form. Everything below follows from that.
+       ================================================================= */
+    .b-bg{position:absolute;inset:0;background:var(--ow-steel-950);}
+
+    /* the head carries the ID, because an ID is a fact, not a field */
+    .mh-id{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ow-ink-400);}
+    .mh-id b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+      color:var(--ow-ink-600);background:var(--ow-steel-050);border-radius:var(--ow-r-sm);padding:2px 6px;}
+    .mh-step{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ow-ink-400);
+      letter-spacing:.04em;}
+
+    /* one sentence, at a measure, instead of three "i" bubbles */
+    .m-lede{font-size:12.5px;line-height:1.5;color:var(--ow-ink-600);margin:0 0 20px;max-width:62ch;}
+    .m-lede b{color:var(--ow-ink-900);font-weight:600;}
+
+    .f-stack{display:flex;flex-direction:column;gap:16px;}
+    .f-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .f-lab{display:flex;align-items:baseline;gap:0;font-size:12px;font-weight:600;color:var(--ow-ink-600);}
+    .f-lab .ct{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11px;font-weight:400;color:var(--ow-ink-400);}
+    .f-in{height:38px;display:flex;align-items:center;padding:0 11px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:7px;font-size:14px;background:#FBFCFD;
+      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .f-in.ph{color:var(--ow-ink-400);}
+    .f-in.big{height:42px;font-size:15px;}
+    .f-in.foc{border-color:var(--ow-steel-950);background:#fff;box-shadow:0 0 0 2px rgba(20,23,27,.12);}
+    .f-in.err{border-color:var(--ow-crimson);background:#fff;box-shadow:0 0 0 2px rgba(127,29,26,.14);}
+    .f-in .car{width:1px;height:18px;background:var(--ow-ink-900);margin-left:1px;}
+    .f-in .dd{margin-left:auto;width:8px;height:8px;flex:none;
+      border-right:1.6px solid var(--ow-ink-400);border-bottom:1.6px solid var(--ow-ink-400);
+      transform:translateY(-2px) rotate(45deg);}
+    .f-hint{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin-top:6px;}
+    .f-hint .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ow-ink-900);font-weight:500;}
+    .f-err{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;
+      color:var(--ow-crimson);margin-top:6px;}
+    .f-err svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+    /* the pivotal choice. Selected is STEEL, never the accent — the
+       accent belongs to the one action, and there is only one. */
+    .sold{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .sold-o{display:flex;gap:10px;align-items:flex-start;background:#fff;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);padding:12px 14px;}
+    .sold-o.on{border-color:var(--ow-steel-950);background:var(--ow-paper-2);
+      box-shadow:inset 2px 0 0 0 var(--ow-steel-950);}
+    .rd{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--ow-steel-400);
+      margin-top:2px;flex:none;background:#fff;box-sizing:border-box;}
+    .sold-o.on .rd{border:4.5px solid var(--ow-steel-950);}
+    .sold-t{font-size:13px;font-weight:600;color:var(--ow-ink-900);display:block;line-height:1.25;}
+    .sold-d{font-size:11.5px;color:var(--ow-ink-600);display:block;margin-top:3px;line-height:1.4;}
+    .sold-d em{font-style:normal;color:var(--ow-ink-900);font-weight:600;}
+
+    /* the three rare panes, behind one door */
+    .more{border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper-2);}
+    .more-h{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;box-sizing:border-box;}
+    .more-c{width:14px;height:14px;flex:none;color:var(--ow-ink-400);}
+    .more-c svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;display:block;}
+    .more-t{font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .more-s{margin-left:auto;font-size:11.5px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .more-b{border-top:1px solid var(--ow-rule);background:#fff;padding:16px 14px;
+      border-radius:0 0 var(--ow-r-lg) var(--ow-r-lg);}
+    .more-g{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 10px;}
+    .more-g + .more-g, .more-sec + .more-sec{margin-top:18px;padding-top:16px;
+      border-top:1px solid var(--ow-rule-soft);}
+
+    /* the footer says what is still missing, where the fault is */
+    .mf-note{margin-right:auto;font-size:11.5px;color:var(--ow-ink-600);line-height:1.4;max-width:46ch;}
+    .mf-note.bad{color:var(--ow-crimson);font-weight:500;}
+    .btn.dis{background:var(--ow-steel-100);color:var(--ow-steel-400);}
+
+    /* photo well */
+    .pw{display:flex;align-items:center;gap:14px;}
+    .pw-b{width:72px;height:72px;border-radius:var(--ow-r-lg);border:1px dashed var(--ow-rule);
+      background:var(--ow-paper-2);color:var(--ow-ink-400);flex:none;
+      display:flex;align-items:center;justify-content:center;}
+    .pw-b svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- step 2: the variant table ---- */
+    .vt{border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;background:#fff;}
+    .vt-h{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;
+      background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+    .vt-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .vt-n{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11px;color:var(--ow-ink-600);}
+    table.vtab{width:100%;border-collapse:collapse;table-layout:fixed;}
+    .vtab th{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);text-align:left;padding:7px 10px;background:var(--ow-paper-2);
+      border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
+    .vtab th.r, .vtab td.r{text-align:right;}
+    .vtab td{padding:0 10px;height:36px;border-bottom:1px solid var(--ow-rule-soft);
+      font-size:13px;color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .vtab tr:last-child td{border-bottom:0;}
+    .vtab tr.alt td{background:#FCFDFE;}
+    .vtab .ix{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      color:var(--ow-ink-400);}
+    .vtab .nm{font-weight:500;}
+    .vtab .sku{font-family:var(--mono);font-size:12px;letter-spacing:-.01em;color:var(--ow-ink-900);}
+    .vtab .mny{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
+      letter-spacing:-.02em;}
+    .vtab .dash{color:var(--ow-ink-400);}
+    .vtab tr.own td{background:var(--ow-paper-2);}
+    .vtab tr.own td:first-child{box-shadow:inset 2px 0 0 0 var(--ow-steel-950);}
+    .xb{width:22px;height:22px;border-radius:var(--ow-r-sm);color:var(--ow-ink-400);
+      display:inline-flex;align-items:center;justify-content:center;}
+    .xb svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .attr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) 30px;gap:10px;align-items:end;}
+    .backlink{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+      color:var(--ow-ink-600);}
+    .backlink svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .crumb{font-size:13px;font-weight:600;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+
+    /* the legend, light on the dim ground */
+    .leg{position:absolute;top:40px;width:392px;color:#DCE0E4;}
+    .leg-h{font-family:'Archivo Black',sans-serif;font-size:19px;color:#fff;margin:0 0 4px;
+      letter-spacing:-.015em;line-height:1.15;}
+    .leg-s{font-size:12px;color:#8E9BA8;margin:0 0 14px;line-height:1.45;}
+    .leg-g{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:#6E7A86;margin:16px 0 7px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);}
+    .leg-i{display:grid;grid-template-columns:19px minmax(0,1fr);column-gap:9px;margin-bottom:9px;}
+    .leg-n{width:19px;height:19px;border-radius:50%;background:rgba(28,107,88,.95);color:#fff;
+      font-family:var(--mono);font-size:10px;font-weight:600;
+      display:flex;align-items:center;justify-content:center;margin-top:1px;}
+    .leg-t{font-size:12px;line-height:1.45;color:#C6CDD4;}
+    .leg-t b{color:#fff;font-weight:600;}
+    .leg-t .mono{font-family:var(--mono);font-size:11px;}
+    .mk{position:absolute;z-index:45;width:19px;height:19px;border-radius:50%;
+      background:var(--ow-verdigris);color:#fff;border:2px solid #fff;box-sizing:border-box;
+      font-family:var(--mono);font-size:10px;font-weight:600;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.35);}
+    .st-cap{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:#8E9BA8;margin:0 0 3px;}
+    .st-sub{font-size:12px;color:#C6CDD4;line-height:1.45;margin:0 0 12px;max-width:66ch;}
+    .st-sub b{color:#fff;font-weight:600;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1010px">
+<div class="b-bg"></div>
+
+<div style="position:absolute;left:96px;top:40px;width:720px;">
+  <div class="modal" style="position:relative;max-width:720px;">
+
+    <div class="modal-head">
+      <h2>Add product</h2>
+      <span class="mh-id">will be filed as <b>P014</b></span>
+      <span class="modal-close" style="margin-left:14px;"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+    </div>
+
+    <div class="modal-body" style="padding:22px 24px 24px;">
+      <p class="m-lede">A product is the name the rest of the shop points at — the price book,
+        quotes, stock, and the agent app. <b>Only the name is required.</b> A price is not part
+        of this: it is entered per supplier in the Price Registry, and until one is there the
+        product cannot be quoted.</p>
+
+      <div class="f-stack">
+
+        <div>
+          <div class="f-lab">Product name<span class="req">Required</span></div>
+          <div class="f-in big foc" style="margin-top:6px;">Iron sheets — G28, 3m box profile<span class="car"></span></div>
+          <div class="f-hint">Written exactly like this on quotes, the catalogue and the agent app.</div>
+        </div>
+
+        <div>
+          <div class="f-lab" style="margin-bottom:8px;">Sold as</div>
+          <div class="sold">
+            <div class="sold-o on">
+              <span class="rd"></span>
+              <span><span class="sold-t">One item</span>
+                <span class="sold-d">A single thing, with one set of prices.</span></span>
+            </div>
+            <div class="sold-o">
+              <span class="rd"></span>
+              <span><span class="sold-t">Sizes or options</span>
+                <span class="sold-d">Each priced and searched on its own. <em>You build them next.</em></span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="f-row2">
+          <div>
+            <div class="f-lab">Category</div>
+            <div class="f-in" style="margin-top:6px;">Building materials<span class="dd"></span></div>
+          </div>
+          <div>
+            <div class="f-lab">Sub-category</div>
+            <div class="f-in" style="margin-top:6px;">Roofing<span class="dd"></span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="f-lab">Short description<span class="ct">46 / 120</span></div>
+          <div class="f-in" style="margin-top:6px;">Gauge 28 box profile, 3 metres, per sheet</div>
+          <div class="f-hint">One line you would read out to a customer.</div>
+        </div>
+
+        <div>
+          <div class="f-lab">Notes</div>
+          <div class="f-in ph" style="margin-top:6px;">Optional</div>
+          <div class="f-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
+        </div>
+
+        <div class="more">
+          <div class="more-h">
+            <span class="more-c"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            <span class="more-t">More settings</span>
+            <span class="more-s">Photo · Markup rules · Agent share — none set</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <span class="mf-note">Saving files it in the register. Nothing is sent and nothing is priced.</span>
+      <span class="btn btn-ghost">Cancel</span>
+      <span class="btn btn-accent">Save product</span>
+    </div>
+  </div>
+
+  <span class="mk" style="left:726px;top:20px;">1</span>
+  <span class="mk" style="left:-9px;top:112px;">2</span>
+  <span class="mk" style="left:-9px;top:212px;">3</span>
+  <span class="mk" style="left:-9px;top:330px;">4</span>
+  <span class="mk" style="left:726px;top:340px;">5</span>
+  <span class="mk" style="left:-9px;top:674px;">6</span>
+  <span class="mk" style="left:-9px;top:758px;">7</span>
+</div>
+
+<div class="leg" style="left:860px;">
+  <p class="leg-h">Proposed — step one of one</p>
+  <p class="leg-s">Same modal shell, same controls, same tokens. What changed is what the
+    screen claims to be: a form for naming a thing, sized to the thing it names.</p>
+
+  <div class="leg-g">Down the form</div>
+  <div class="leg-i"><span class="leg-n">1</span><span class="leg-t"><b>The ID is a fact, not a field.</b>
+    It moves into the head as <span class="mono">P014</span> — read-only ink where read-only
+    information belongs — and the dead disabled input is gone. One less control, and the
+    thing it withheld is now visible before you save.</span></div>
+  <div class="leg-i"><span class="leg-n">2</span><span class="leg-t"><b>One sentence, unfolded.</b>
+    Replaces three "i" bubbles, and says the thing the old form never said: a product with
+    no price cannot be quoted. Measure-limited, so it can never run 180 characters wide.</span></div>
+  <div class="leg-i"><span class="leg-n">3</span><span class="leg-t"><b>The required field is the biggest control on the screen</b>
+    — full width, 42px, and wide enough for "Iron sheets — G28, 3m box profile" without
+    clipping. The grid is declared, not automatic, so nothing reflows into four equal columns again.</span></div>
+  <div class="leg-g">Colour and consequence</div>
+  <div class="leg-i"><span class="leg-n">4</span><span class="leg-t"><b>The accent appears once.</b>
+    Selected "Sold as" is steel — an inset rule and a filled dot, a shape change rather than
+    a colour one. Oxide is reserved for Save, which is the one thing to do next.</span></div>
+  <div class="leg-i"><span class="leg-n">5</span><span class="leg-t"><b>The choice carries its own consequence.</b>
+    "Sizes or options — <b>you build them next</b>" tells you a second step exists before you
+    commit to it, and the button below changes its words to match.</span></div>
+  <div class="leg-g">What was taken away</div>
+  <div class="leg-i"><span class="leg-n">6</span><span class="leg-t"><b>The rail is gone.</b>
+    A four-door rail for a form with one door was the original fault. Photo, markup and
+    agent share sit behind <b>one</b> closed row that says what is set in it — so nothing is
+    hidden, and nothing is in the way. <span class="mono">6</span> controls on open instead of <span class="mono">14</span>.</span></div>
+  <div class="leg-i"><span class="leg-n">7</span><span class="leg-t"><b>The footer says what saving does and does not do.</b>
+    The app's law is that nothing sends itself; this is the screen saying so. On an invalid
+    form this same line names the missing field in crimson and Save goes flat — no toast
+    900px away from the fault.</span></div>
+  <div class="leg-g">Unchanged on purpose</div>
+  <div class="leg-i"><span class="leg-n">·</span><span class="leg-t">The modal shell, the <span class="mono">.btn</span> family,
+    <span class="mono">.field</span> ink and the Required chip are the app's own — no fourteenth button family, no
+    twenty-fourth colour, no new font size off the ramp.</span></div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>
