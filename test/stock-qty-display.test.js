@@ -94,8 +94,12 @@ const src = read('index.html');
   const log = extractFunction(src, 'renderStockLog', 'index.html');
   t.check(/\$\{e\.delta>0\?'\+':''\}\$\{fmtStockQty\(e\.delta\)\}/.test(log),
     'the Change column formats the delta');
-  t.check(/<td class="price">\$\{fmtStockQty\(e\.qtyAfter\)\}<\/td>/.test(log),
-    'and Resulting stock formats too — the column beside it cannot be the honest one alone');
+  /* The cell moved from a <td class="price"> to the layer table's
+     figure cell when the log was rebuilt on .ow-tbl. What the
+     assertion was ever about is unchanged: the column beside Change
+     cannot be the one that prints a raw 0.8500000000000001. */
+  t.check(/data-l="Stock after">\$\{fmtStockQty\(e\.qtyAfter\)\}</.test(log),
+    'and Stock after formats too — the column beside it cannot be the honest one alone');
   t.check(!/\$\{e\.delta\}/.test(log) && !/\$\{e\.qtyAfter\}/.test(log),
     'no raw quantity is left anywhere on the screen — desktop table or phone card');
   t.check(/fmtStockQty\(t\.inQty\)/.test(log) && /fmtStockQty\(t\.outQty\)/.test(log) && /fmtStockQty\(t\.net\)/.test(log),

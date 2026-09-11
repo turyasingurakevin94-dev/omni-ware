@@ -110,6 +110,12 @@ const env = (data, over) => ({
 
 const NAMES = ['cashCommitments', 'cashAhead', 'dueBalance', 'dueName', 'findDue',
   'rentAgreementsFor', 'periodOf', 'periodShift', 'periodEndDate',
+  /* Whole, not stubbed, for the same reason the promises are: what the
+     line still asks for on a loan and what the loans screen counts as
+     paid have to be one allocation, or the shop is told to find the same
+     instalment twice. loanSchedule under it stays a stub -- the
+     amortisation is tested where it lives. */
+  'loanRepayments', 'loanRemainingSchedule',
   /* Whole, not stubbed: the forecast and the chase queue must agree
      about what "waiting" and "broken" mean, or one of them is lying. */
   'promisesFor', 'promiseState', 'promiseLatest', 'promisesBroken'];
@@ -171,6 +177,71 @@ const build = (data, extraSrc, names, over) => compileScope(
     'next month’s rent is DERIVED, never generated — generateDuesForPeriod writes and saves, so reading ahead would quietly raise a liability onto the balance sheet');
   t.check(!/wage[^]{0,200}rentAgreementsFor|rentAgreementsFor[^]{0,400}kind: 'wage'/.test(body),
     'and wages for an unraised month are not derived at all: a month is not costed until somebody counts the days');
+}
+
+/* ---------- 1b. an instalment already paid is not still to pay ------- */
+/* The line quoted every instalment at its face, whatever had been handed
+   over. So the morning the owner paid this week's repayment the screen
+   went on asking for it: the one view whose job is what is STILL to go,
+   telling them to find the same money twice on the day they had just
+   done the right thing. Every other promise here is valued at its
+   balance -- dueBalance takes off what was paid, an open bill carries
+   what is still due -- and the loan was the one thing that was not. */
+{
+  const withRepayments = (rp) => Object.assign(makeData(), {
+    loans: [{ id: 1, lender: 'Centenary', closedOn: null, repayments: rp }],
+  });
+  const loansOn = (data) => build(data).cashCommitments(TODAY, 30).filter((x) => x.kind === 'loan');
+
+  /* Nothing paid: exactly as before. The stubbed schedule asks 500,000 on
+     1 August, 1 September and 1 October; only September is in the window. */
+  eq(loansOn(withRepayments([])).length, 1, 'with nothing repaid the instalment inside the window stands');
+  eq(loansOn(withRepayments([]))[0].amount, 500000, 'at the whole of it');
+
+  /* OLDEST FIRST, the way loanDuePosition counts arrears and the way a
+     lender credits money. 500,000 handed over covers AUGUST, which is
+     already behind — it does not strike September off. A shop that pays
+     one instalment while a week in arrears has caught up on the old one,
+     not paid the new one, and a line that said otherwise would let it
+     spend money the lender is about to ask for. */
+  const caughtUp = loansOn(withRepayments([{ date: '2026-08-20', amount: 500000 }]));
+  eq(caughtUp.length, 1, 'a payment that only catches up on a missed instalment leaves the next one on the line');
+  eq(caughtUp[0].amount, 500000, 'at its full face');
+
+  /* Both covered: September has been paid, so it is not money that is
+     going to leave the drawer again and it drops off the line. */
+  eq(loansOn(withRepayments([
+    { date: '2026-08-20', amount: 500000 },
+    { date: TODAY, amount: 500000 },
+  ])).length, 0, 'an instalment actually paid is off the line — it is not leaving the drawer twice');
+
+  /* PART PAID IS NEITHER. The remainder stays, not the whole of it and
+     not nothing, and the row says which it is. */
+  const part = loansOn(withRepayments([
+    { date: '2026-08-20', amount: 500000 },
+    { date: TODAY, amount: 300000 },
+  ]));
+  eq(part.length, 1, 'a part payment leaves the rest of the instalment on the line');
+  eq(part[0].amount, 200000, 'at the REMAINDER — the whole of it would ask twice, nothing at all would flatter the drawer');
+  eq(part[0].partPaid, true, 'and says so, because a figure smaller than the agreement needs a reason on its face');
+
+  /* And the floor of the line moves with it, which is the whole point:
+     safe to spend was 2,500,000 with the instalment on it. */
+  const paid = build(withRepayments([
+    { date: '2026-08-20', amount: 500000 },
+    { date: TODAY, amount: 500000 },
+  ])).cashAhead(TODAY, 30);
+  eq(paid.committed, 2000000, 'what falls due drops by the instalment already settled');
+  eq(paid.safeToSpend, 3000000, 'and safe to spend rises by exactly it');
+
+  /* WHAT IS OWED IS NOT WHAT IS STILL TO BE HANDED OVER. loanApplied
+     splits a payment fee-interest-principal to answer what the lender is
+     owed; this answers what leaves the drawer, and the whole instalment
+     leaves it. Reusing the balance here would put interest on the line
+     twice over. */
+  const body = extractFunction(src, 'loanRemainingSchedule', 'index.html');
+  t.check(/r\.payment/.test(body) && !/loanApplied\(/.test(body),
+    'the remainder is worked off the whole instalment, never off the outstanding balance');
 }
 
 /* ---------- 2. the line, and its floor -------------------------------- */

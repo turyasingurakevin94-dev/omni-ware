@@ -90,7 +90,7 @@ const env = (data) => ({
   promiseLatest: () => null, promisesBroken: () => 0,
   periodOf: () => '2026-08', periodShift: () => '2026-08', periodEndDate: () => '2026-08-31',
   rentAgreementsFor: () => [], findDue: () => null, dueName: () => '', dueBalance: () => 0,
-  loanSchedule: () => [],
+  loanRemainingSchedule: () => [],
   console, Date, JSON, Math, Number, String, Array, Object, Map, Set,
 });
 
