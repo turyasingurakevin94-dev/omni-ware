@@ -51,16 +51,23 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpCompanionIn', 'followUpSourcingProgress',
   'followUpPriceMoved', 'followUpGoneQuiet', 'followUpReasons', 'followUpClientsToContact',
   'followUpDigest', 'findFollowUp', 'addFollowUp', 'recordFollowUpContact',
-  'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought', 'followUpStatePill'];
+  'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought', 'followUpStatePill',
+  // The promised day and the crossings index, which followUpReasons and
+  // followUpClientsToContact now reach for.
+  'followUpPromised', 'followUpStanding', 'stockCrossingsByKey',
+  'setFollowUpPromise', 'setFollowUpDetails', 'unrecordFollowUpContacts'];
 
 let nextId = 1;
 const scope = compileScope([
   extractDeclaration(src, 'SOURCING_STATUS_ORDER', 'index.html'),
   extractDeclaration(src, 'SOURCING_SHORT_LABELS', 'index.html'),
   extractDeclaration(src, 'FOLLOW_UP_QUIET_DAYS_DEFAULT', 'index.html'),
+  extractDeclaration(src, 'FOLLOW_UP_STAGE_WORDS', 'index.html'),
+  extractDeclaration(src, 'fupDayISO', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
+  fmtShortDate: (iso) => String(iso || '').slice(0, 10),
   saveData: () => {},
   allocRowId: () => nextId++,
   stockKey: (pid, idx) => pid + '::' + (idx == null ? '' : idx),
@@ -648,16 +655,24 @@ const stockMove = (before, after, whenDays) => {
      none of them said what today's work IS. Five of the layer's own
      tiles do: the size of the queue, and then its composition, which is
      the four reasons followUpReasons already computes. A strip that
-     names the work is a triage line; one that counts rows is a header. */
+     names the work is a triage line; one that counts rows is a header.
+     The composition changed once more when the screen became the hub
+     for every client contact: the four kept-posted kinds are one tile
+     now (News), beside the day the owner promised, the money Chase would
+     ask for, and what is worth a word. The rule is the same -- the
+     strip names what the work IS -- and the sub-kinds are still on every
+     row as chips and on the Why row as counts. */
   eq((summary.match(/class="ow-mt\$\{/g) || []).length, 1,
     'the tiles are the layer’s, drawn from one template rather than five copies of a box');
   eq((summary.match(/\$\{tile\(/g) || []).length, 5,
     'and there are five of them — the queue, and then what the queue is made of');
-  ['To message', 'Goods arrived', 'Sourcing moved', 'Price changed', 'Gone quiet'].forEach((k) => {
+  ['To message', 'Promised', 'Money', 'News', 'Worth a word'].forEach((k) => {
     t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — the composition of the work, not a count of rows`);
   });
   t.check(/counts\[r\.kind\]/.test(summary),
-    'and the four are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
+    'and the kept-posted kinds are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
+  t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
+    'and the strip and the queue are drawn from the same hub rows, computed once per render');
 
   /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
      proved nothing: a map keyed per row still has the name and still
@@ -710,9 +725,14 @@ const stockMove = (before, after, whenDays) => {
 
 /* ---------- 12. the badge counts messages, not rows ------------------- */
 {
+  /* The badge read followUpClientsToContact; it reads the hub now, which
+     wraps that and adds the other engines' clients. Still CLIENTS: the
+     hub keys its rows on the customer, which the hub test proves. */
   const badge = extractFunction(src, 'renderFollowUpBadge', 'index.html');
-  t.check(/followUpClientsToContact\(Date\.now\(\)\)\.length/.test(badge),
+  t.check(/followUpHubRows\(Date\.now\(\)\)\.length/.test(badge),
     'the badge counts CLIENTS to contact — one client owed three updates is one message, and counting rows would promise three');
+  t.check(/renderFollowUpBadge\(\);/.test(extractFunction(src, 'refreshNavBadges', 'index.html')),
+    'and it refreshes with every other badge — it used to start hidden until the tab was opened');
 }
 
 process.exit(t.done() ? 1 : 0);

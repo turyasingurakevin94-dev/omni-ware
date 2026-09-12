@@ -8011,7 +8011,35 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .fup-it-w{grid-column:1;margin:3px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
     line-height:var(--ow-lh-snug);max-width:var(--ow-measure);}
-  .fup-it-a{grid-column:2;grid-row:1 / span 2;align-self:center;}
+  /* Close spans every row of the item -- the reason, the links line and
+     any inline field open under them -- rather than a fixed two. */
+  .fup-it-a{grid-column:2;grid-row:1 / -1;align-self:center;}
+  /* The links under one item: open the lead, name a day, fix the qty. */
+  .fup-it-l{grid-column:1;margin:4px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);}
+  /* An inline field opened by one of those links. The layer's field
+     anatomy, so it is the same 28px control as the header's. */
+  .fup-inline-f{grid-column:1;display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ow-sp-6);margin-top:var(--ow-sp-8);}
+  /* What else is true of them that the message does not say: a debt
+     Chase is leaving alone this week, a picture sent lately. Chips in a
+     row, as the chase card wears its own facts. */
+  .fup-w-facts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);padding:var(--ow-sp-8) var(--ow-sp-12);}
+  /* The row of reasons the queue can be narrowed to. */
+  .fup-why{padding:0 var(--ow-sp-12) var(--ow-sp-8);}
+  .fup-why .ow-seg{display:flex;flex-wrap:wrap;height:auto;}
+  .fup-why .ow-seg-b{flex:0 0 auto;height:28px;}
+  /* The acts under an item -- name a day, fix the qty, open the lead,
+     take a payment -- are links in a line, in ink rather than the accent:
+     the accent is the send, and a card wearing five oxide words beside
+     it would have five things to do next. */
+  .fup-link.fup-act{border:0;padding:0;color:var(--ink-soft);}
+  .fup-link.fup-act:hover{background:none;text-decoration:underline;color:var(--ink);}
+  .fup-tick{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
+  .fup-tick input{width:auto;margin:0;cursor:pointer;}
+  /* The modal's extra fields: who it is for, and how many. */
+  .fup-add-more{display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);align-items:flex-end;margin-top:var(--ow-sp-10);}
+  .fup-pick-wrap{margin-bottom:var(--ow-sp-12);}
+  /* Who is waiting for a product, on its own form. */
+  .fup-pm{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
 
   /* ---- the register, and the modal: rows to settle rather than work -- */
   .fup-row{
@@ -9032,6 +9060,11 @@
     .fup-w-foot .btn.ow-sm{flex:1 1 calc(50% - 3px);min-width:0;}
     .fup-w-foot .btn-accent{flex:1 1 100%;order:9;}
     .fup-sp{display:none;}
+    /* Ring and the list share a row under the name, each a thumb tall. */
+    .fup-w-head .fup-tel,.fup-w-head .fup-record{flex:1 1 calc(50% - 5px);min-height:var(--ow-tap);box-sizing:border-box;
+      display:inline-flex;align-items:center;justify-content:center;}
+    .fup-it-l{font-size:14px;}
+    .fup-it-a .btn{min-height:var(--ow-tap);box-sizing:border-box;}
     /* WHAT TO BUY ON A PHONE: each line a card -- the chip and the name,
        the instruction, the argument wrapped, the cost, then two thumb
        buttons: the tick as a labelled button, and Buy it. */
@@ -16475,7 +16508,7 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">Follow-ups</h1>
         <p class="ow-ph-sub">Who is waiting to hear from you, and what to tell them.</p>
-        <p class="ow-ph-help">Everyone who asked to be kept posted, with the ones who have something worth hearing first — goods back on the shelf, a sourcing ask that has moved on, a price off the figure they were quoted, or a silence that has gone on too long. One message per client, however many things they are waiting for, written from their own follow-ups for you to read, change and send with your own thumb. The app never sends anything by itself.</p>
+        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue: a day you said you would get back by, money past your terms that Chase would ask for today, goods back on the shelf, a sourcing ask that has moved on, a price off the figure they were quoted, something worth telling them, or a silence that has gone on too long. One message per client, however many things it covers, written from their own records for you to read, change and send with your own thumb. Ring them, take a payment, write down a day they promised, add to their list — all from here. The app never sends anything by itself.</p>
         <span class="ow-ph-sp"></span>
         <div class="ow-seg" id="fup_tabs">
           <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">To contact<span class="ow-seg-n" id="fupSegContact"></span></button>
@@ -16487,6 +16520,7 @@
           <label class="ow-f-l" for="fup_quiet">Quiet after</label>
           <div class="ow-f-in"><input class="ow-f-v" type="number" id="fup_quiet" min="1" step="1"><span class="ow-f-u">days</span></div>
         </div>
+        <button type="button" class="btn btn-ghost ow-sm" id="fup_add_any">Add a follow-up</button>
       </div>
       <div id="fupSummaryRow"></div>
       <div id="fup_contact_pane">
@@ -19655,13 +19689,29 @@
       </button>
     </div>
     <div class="modal-body">
-      <p class="preset-hint" id="followUpListHint"></p>
-      <div id="followUpListCurrent"></div>
-      <div class="field" style="margin-top:14px;">
-        <label>Add something they want updates on</label>
-        <input type="text" id="fup_add_search" placeholder="Search a product, or something we don't stock yet..." autocomplete="off">
+      <!-- WHO, when the modal was opened without a client. A name on file,
+           or a name and a number to put one on file. -->
+      <div class="fup-pick-wrap" id="fup_pick_wrap" hidden>
+        <p class="preset-hint">Who is it for? Pick a customer on file, or type a name and a phone number to add one.</p>
+        <div class="fup-add-more">
+          <label class="ow-f ow-f-grow"><span class="ow-f-l">Client</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="fup_who" list="dl_sourcing_customers" placeholder="Pick or type a name" autocomplete="off"></span></label>
+          <label class="ow-f"><span class="ow-f-l">Phone</span><span class="ow-f-in"><input type="text" class="ow-f-v" id="fup_who_phone" placeholder="if not on file"></span></label>
+          <button type="button" class="btn btn-ghost ow-sm" id="fup_who_use">Use this client</button>
+        </div>
       </div>
-      <div id="fup_add_results"></div>
+      <div id="fup_list_wrap">
+        <p class="preset-hint" id="followUpListHint"></p>
+        <div id="followUpListCurrent"></div>
+        <div class="field" style="margin-top:14px;">
+          <label>Add something they want updates on</label>
+          <input type="text" id="fup_add_search" placeholder="Search a product, or something we don't stock yet..." autocomplete="off">
+        </div>
+        <div class="fup-add-more">
+          <label class="ow-f"><span class="ow-f-l">How many</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="fup_add_qty" min="0" step="any" placeholder="if they said"></span></label>
+          <label class="ow-f ow-f-grow"><span class="ow-f-l">Note</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="fup_add_note" placeholder="Size, colour, what they said"></span></label>
+        </div>
+        <div id="fup_add_results"></div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="followUpListDone">Close</button>
@@ -19852,6 +19902,7 @@
            that must be filled. Still an <input>, because the save handler
            and fillIssuedId both work through .value. -->
       <span class="pf-id"><span id="p_id_hint">will be filed as</span><b id="p_id_shown"></b></span>
+      <span class="fup-pm" id="pm_waiting" hidden></span>
       <input type="hidden" id="p_id">
       <button class="modal-close" id="productModalClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -21663,6 +21714,9 @@ async function loadData(shopId){
       note:r.note||'', createdAt:r.created_at,
       closedAt:r.closed_at, closedReason:r.closed_reason||'',
       contacts: (r.payload && Array.isArray(r.payload.contacts)) ? r.payload.contacts : [],
+      // A day the owner said they would get back by. Rides in payload so
+      // a shop whose 0077 predates it reads null rather than failing.
+      promisedOn: (r.payload && r.payload.promisedOn) || null,
     })),
     nextFollowUpId: followUpRows.length ? Math.max(0,...followUpRows.map(r=>Number(r.id)||0))+1 : 1,
     /* WHAT A CUSTOMER SAID THEY WOULD DO, and when they said it. Never
@@ -22094,7 +22148,7 @@ function buildSyncRows(d, shopId){
       qty: f.qty==null ? null : Number(f.qty),
       note: f.note||null, created_at: f.createdAt||null,
       closed_at: f.closedAt||null, closed_reason: f.closedReason||null,
-      payload: {contacts: f.contacts||[]},
+      payload: {contacts: f.contacts||[], promisedOn: f.promisedOn||null},
     })),
     waPosts: (d.waPosts||[]).map(w=>({
       id:w.id, shop_id:shopId, date:dateOrNull(w.date), product_id:w.productId,
@@ -28182,6 +28236,7 @@ function resolveTab(tab){
 }
 function goToTab(tab){
   tab = resolveTab(tab);
+  if(currentActiveTab === 'followups' && tab !== 'followups') fupLeave();
   currentActiveTab = tab;
   lsSet('pbLastTab', tab);
   const navButtons = tabButtonsNow();
@@ -49520,7 +49575,7 @@ function custAttentionReason(r){
   /* Money past the shop's own terms, worst first. This is the only
      reason that is genuinely bad rather than merely worth a look. */
   if(r.debt > 0 && r.ageDays >= 0 && r.ageDays > terms){
-    return { tone: 'ow-bad', chip: terms > 0 ? `${r.ageDays} days past terms` : `${r.ageDays} days outstanding`, weight: r.debt,
+    return { key: 'terms', tone: 'ow-bad', chip: terms > 0 ? `${r.ageDays} days past terms` : `${r.ageDays} days outstanding`, weight: r.debt,
       why: r.phones.length
         ? `Oldest charge is <b>${r.ageDays} days</b> old &mdash; ${custTermsPhrase()}.${
             r.daysSinceLast !== null && terms > 0 && r.daysSinceLast <= terms ? ` They bought again ${r.daysSinceLast} days ago.` : ''}`
@@ -49532,7 +49587,7 @@ function custAttentionReason(r){
      balance with no dated charge has no age -- and saying so is better
      than inventing one. */
   if(r.debt > 0 && !r.phones.length){
-    return { tone: 'ow-bad', chip: 'No way to reach them', weight: r.debt,
+    return { key: 'nophone', tone: 'ow-bad', chip: 'No way to reach them', weight: r.debt,
       why: 'Carrying a balance with no phone number on the record, so there is nobody to ask.',
       fig: f(r.debt), basis: 'UGX owed', act: { label: 'Add a number', act: 'edit' } };
   }
@@ -49541,7 +49596,7 @@ function custAttentionReason(r){
      measured this on every open for as long as it has existed and no
      screen has ever shown it. */
   if(r.quiet){
-    return { tone: 'ow-warn', chip: `Quiet ${r.daysSinceLast} days`, weight: r.spend || r.stats.average,
+    return { key: 'quiet', tone: 'ow-warn', chip: `Quiet ${r.daysSinceLast} days`, weight: r.spend || r.stats.average,
       why: `Buys about every <b>${r.everyDays}</b> days and has not been in for <b>${r.daysSinceLast}</b>.${
         r.spend > 0 ? ` Worth <b>${f(r.spend)}</b> to you these 90 days.` : ''}${
         r.phones.length ? ` On ${esc(r.phones[0])}.` : ''}`,
@@ -49551,7 +49606,7 @@ function custAttentionReason(r){
   /* Still coming, but for less. The customer you lose slowly is the one
      nothing ever flags. */
   if(r.dropPct !== null && r.dropPct >= CUST_DROP_PCT){
-    return { tone: 'ow-warn', chip: `Spend down ${Math.round(r.dropPct)}%`, weight: r.spendPrev - r.spend,
+    return { key: 'spend_down', tone: 'ow-warn', chip: `Spend down ${Math.round(r.dropPct)}%`, weight: r.spendPrev - r.spend,
       why: `Spend has fallen: <b>${f(r.spend)}</b> these 90 days against <b>${f(r.spendPrev)}</b> the 90 before.`,
       fig: '−' + Math.round(r.dropPct) + '%', basis: 'against themselves',
       act: { label: 'Open the account', act: 'open' } };
@@ -49559,7 +49614,7 @@ function custAttentionReason(r){
   /* One order and then nothing. The cheapest customer a shop will ever
      keep is the one who has already bought once. */
   if(r.orderCount === 1 && r.daysSinceLast !== null && r.daysSinceLast > CUST_FIRST_SILENCE_DAYS){
-    return { tone: '', chip: 'First order, no return', weight: r.stats.sales,
+    return { key: 'first_order', tone: '', chip: 'First order, no return', weight: r.stats.sales,
       why: `Bought once, ${r.daysSinceLast} days ago, and nothing since. A first-time buyer who does not come back is the cheapest one to keep.`,
       fig: f(r.stats.sales), basis: 'UGX, one order',
       act: { label: 'Add a follow-up', act: 'follow' } };
@@ -51822,6 +51877,31 @@ function customerBrief(customerId){
           ? `no supplier has it, and ${pairSwapFault(c.substitutes[0])}`
           : `no supplier has it${who ? ` (${who})` : ''}` };
       }).filter(Boolean) };
+}
+
+/* THE REASON AS ONE PLAIN SENTENCE, for a message that is words rather
+   than a picture. Every figure in it is the brief's own -- the product
+   it picked, the quantity it weighed, the price it would quote today and
+   the price they last paid -- so it can say nothing the picture would
+   not. A key with no honest sentence returns '' and the line is simply
+   not offered. */
+function briefPlainLine(b){
+  if(!b || !b.reason || !b.product) return '';
+  const name = b.product.name;
+  const at = b.price != null ? ` — ${fmtUGX(b.price)}${b.unit ? ' per ' + b.unit : ''} today` : '';
+  const take = b.qty ? `${b.qty}${b.unit ? ' ' + b.unit : ''} of ` : '';
+  switch(b.reason.key){
+    case 'asked':  return `${name}, which you asked us about, is available${at}.`;
+    case 'rhythm': return `You usually take ${take}${name} about now${at}.`;
+    case 'price':  return b.lastPrice
+      ? `${name} is now ${fmtUGX(b.price)}${b.unit ? ' per ' + b.unit : ''} — down from the ${fmtUGX(b.lastPrice)} you last paid.`
+      : `${name} is cheaper than when you last bought it${at}.`;
+    case 'needs':  return `We also stock ${name}, which goes with what you usually take${at}.`;
+    case 'stage':  return `For where your site has reached, ${name} is what comes next${at}.`;
+    case 'return': return `It has been a while since your first order — ${name} is ready when you are${at}.`;
+    case 'swap':   return `${name} stands in for what you usually take while that is out${at}.`;
+    default: return '';
+  }
 }
 
 /* The queue: everybody with a reason and nothing holding them back,
@@ -55429,13 +55509,20 @@ function debtChaseInvoices(customerId){
    perfect, and a customer who spots a payment we missed should be told
    to say so rather than argued with. */
 const DEBT_CHASE_INVOICE_LINES = 6;
-function debtChaseMessage(row, ident){
+/* opts.bare drops the greeting and the sign-off, for a message that
+   already has both -- the Follow-ups hub puts the account inside one
+   message to a client that also carries their news. The two-argument
+   form is byte-for-byte what it always was. */
+function debtChaseMessage(row, ident, opts){
+  const bare = !!(opts && opts.bare);
   const who = (ident && ident.name) || '';
   const f = n=> fmtUGX(Math.round(n));
   const lines = [];
-  lines.push('Hello ' + (row.name || 'there') + ',');
-  lines.push('');
-  lines.push((who ? who + ' here. ' : '') + 'Our records show *' + f(row.debt)
+  if(!bare){
+    lines.push('Hello ' + (row.name || 'there') + ',');
+    lines.push('');
+  }
+  lines.push((who && !bare ? who + ' here. ' : '') + 'Our records show *' + f(row.debt)
     + '* still outstanding on your account.');
   const listed = (row.invoices||[]).reduce((s,i)=> s + i.due, 0);
   if(row.invoices && row.invoices.length && listed <= row.debt + 0.5){
@@ -55465,9 +55552,11 @@ function debtChaseMessage(row, ident){
   lines.push(row.promise && row.promise.state === 'broken'
     ? 'Please let us know today when it will reach us. If any of this does not match your own records, tell us and we will check it.'
     : 'Please let us know when we can expect payment. If any of this does not match your own records, tell us and we will check it.');
-  lines.push('');
-  lines.push('Thank you,');
-  lines.push([who, (ident && ident.phone) || ''].filter(Boolean).join(' · '));
+  if(!bare){
+    lines.push('');
+    lines.push('Thank you,');
+    lines.push([who, (ident && ident.phone) || ''].filter(Boolean).join(' · '));
+  }
   return lines.join('\n').trim();
 }
 
@@ -61556,8 +61645,14 @@ function productMarksWorthDrawing(rows){
   return !(faults.size === 1 && [...faults][0] !== null);
 }
 
+/* Who is waiting to hear about a product, read once per render of the
+   register -- open follow-ups on it, plus askers on the lead it grew
+   from -- so the row can say "3 waiting" without scanning the list per
+   line. Null until renderProducts fills it. */
+let pgAskers = null;
 function productLineHTML(r, tokens, marks=true){
   const { p, v, idx, kind } = r;
+  const waiting = pgAskers ? (pgAskers.get(p.id) || 0) : 0;
   const fault = marks ? productSetupFault(r) : null;
   const buy = kind === 'variable-empty' ? {price:null, suppliers:0, supplierId:null}
                                         : productBestBuy(p.id, idx);
@@ -61568,9 +61663,10 @@ function productLineHTML(r, tokens, marks=true){
   const openAttrs = `type="button" data-product-open="${esc(p.id)}"${
     idx == null ? '' : ` data-variant-idx="${idx}"`}`;
 
-  const chip = fault
+  const chip = (fault
     ? ` <span class="ow-cp ow-warn">${esc(PRODUCT_FAULTS[fault])}</span>`
-    : '';
+    : '') + (waiting && kind !== 'variant'
+    ? ` <span class="ow-cp">${waiting} waiting</span>` : '');
   const meta = `<span class="pg-meta"><span class="pg-id">${highlightTokens(p.id, tokens)}</span>${chip}${
     where ? `<span class="pg-dot" aria-hidden="true">&middot;</span><span class="pg-t" title="${esc(where)}">${
       highlightTokens(where, tokens)}</span>` : ''}</span>`;
@@ -61837,6 +61933,7 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
      about the same product -- the same rule the work queue follows. */
   const shown = listPageSlice('products', rows);
   const marks = productMarksWorthDrawing(rows);
+  pgAskers = waAskersByProduct();
   const built = shown.map(r=> productLineHTML(r, tokens, marks));
   /* Variants are drawn under a band carrying their product's name, ID,
      category and photograph once, instead of repeating the full product
@@ -62766,6 +62863,20 @@ function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
   refreshMarkupDefaultHint();
   editingProductId = id;
+  /* Who asked for this, and the door to them: the follow-ups hub with
+     the queue searched for this product. */
+  const pmw = document.getElementById('pm_waiting');
+  if(pmw){
+    const n = waAskersByProduct().get(p.id) || 0;
+    pmw.hidden = !n;
+    pmw.innerHTML = n ? `${n} client${n === 1 ? ' is' : 's are'} waiting to hear about this — <button type="button" class="fup-link fup-inline" id="pm_waiting_go">open Follow-ups</button>` : '';
+    const go = document.getElementById('pm_waiting_go');
+    if(go) go.addEventListener('click', ()=>{
+      closeModal('productModal');
+      fupQueueQuery = p.name; fupTab = 'contact'; fupWhy = 'all';
+      goToTab('followups');
+    });
+  }
   document.getElementById('p_id').value = p.id;
   document.getElementById('p_id').disabled = true;
   document.getElementById('p_id_hint').style.display = 'none';
@@ -72852,6 +72963,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
         if(!Array.isArray(f.contacts)) f.contacts = [];
         if(f.variantIdx === undefined) f.variantIdx = null;
         if(f.qty === undefined) f.qty = null;
+        if(f.promisedOn === undefined) f.promisedOn = null;
       });
       __owAllowMassDelete = true;
       saveData();
@@ -89100,7 +89212,7 @@ function followUpSubject(f){
   }
   const prod = (data.products||[]).find(p=> p.id === f.productId);
   if(!prod) return {kind:'gone', label:'(item no longer on file)', product:null, variantIdx:null, lead:null};
-  const idx = f.variantIdx==null ? null : f.variantIdx;
+  const idx = f.variantIdx==null ? null : Number(f.variantIdx);
   return {kind:'product', label: productDisplayLabel(prod, idx), product: prod, variantIdx: idx, lead:null};
 }
 
@@ -89158,24 +89270,50 @@ function followUpPriceNow(f){
 /* WHEN A SHELF WENT FROM EMPTY TO NOT EMPTY, since a moment. One
    reading, because two reasons now ask it: the thing they asked about
    coming back, and the thing that goes with it coming back. */
-function stockCrossedInSince(key, sinceMs){
+/* Every empty-to-not-empty crossing, keyed, in ONE pass over the log.
+   The queue asks the crossing question once per follow-up and again per
+   companion, and each ask used to walk the whole stock log -- on a shop
+   with a year of movements and fourteen lists that was the slowest thing
+   on the screen. The index is built once per render and handed down;
+   nothing else about the answer changes. */
+function stockCrossingsByKey(){
+  const out = new Map();
+  (data.stockLog||[]).forEach(l=>{
+    const delta = Number(l.delta)||0, after = Number(l.qtyAfter)||0;
+    if(!(delta > 0 && after > 0 && (after - delta) <= 0)) return;
+    const t = new Date(l.at || l.date).getTime();
+    if(isNaN(t)) return;
+    if(!out.has(l.key)) out.set(l.key, []);
+    out.get(l.key).push({t, qty: after, at: l.at || l.date});
+  });
+  return out;
+}
+function stockCrossedInSince(key, sinceMs, index){
   let latest = null;
+  const consider = (t, after, at)=>{
+    if(t <= sinceMs) return;
+    if(!latest || t > latest.t) latest = {t, qty: after, at};
+  };
+  if(index){
+    (index.get(key)||[]).forEach(x=> consider(x.t, x.qty, x.at));
+    return latest;
+  }
   (data.stockLog||[]).forEach(l=>{
     if(l.key !== key) return;
     const delta = Number(l.delta)||0, after = Number(l.qtyAfter)||0;
     if(!(delta > 0 && after > 0 && (after - delta) <= 0)) return;
     const t = new Date(l.at || l.date).getTime();
-    if(isNaN(t) || t <= sinceMs) return;
-    if(!latest || t > latest.t) latest = {t, qty: after, at: l.at || l.date};
+    if(isNaN(t)) return;
+    consider(t, after, l.at || l.date);
   });
   return latest;
 }
-function followUpBackInStock(f, nowMs){
+function followUpBackInStock(f, nowMs, ctx){
   const s = followUpSubject(f);
   if(s.kind !== 'product' || !s.product) return null;
   const key = stockKey(s.product.id, s.variantIdx);
   const since = followUpSinceMs(f);
-  const latest = stockCrossedInSince(key, since);
+  const latest = stockCrossedInSince(key, since, ctx && ctx.crossings);
   // Still has to be there NOW. It can arrive and sell out again before
   // anybody looks, and telling a client to come for goods that went
   // yesterday is worse than saying nothing.
@@ -89196,7 +89334,7 @@ function followUpBackInStock(f, nowMs){
    second -- and only where the thing they actually asked for is on the
    shelf too, because "your nails are in" to somebody whose sheets are
    not is not news, it is a wasted trip. */
-function followUpCompanionIn(f, nowMs){
+function followUpCompanionIn(f, nowMs, ctx){
   const s = followUpSubject(f);
   if(s.kind !== 'product' || !s.product) return null;
   if(getStockQty(s.product.id, s.variantIdx) <= 0) return null;
@@ -89205,7 +89343,7 @@ function followUpCompanionIn(f, nowMs){
   pairCompanionsFor(s.product.id, s.variantIdx, 0).forEach(c=>{
     if(found || c.why || !c.available) return;
     if(c.verbId !== 'needs' && c.verbId !== 'with') return;
-    const latest = stockCrossedInSince(stockKey(c.productId, c.variantIdx), since);
+    const latest = stockCrossedInSince(stockKey(c.productId, c.variantIdx), since, ctx && ctx.crossings);
     if(!latest) return;
     if(getStockQty(c.productId, c.variantIdx) <= 0) return;
     found = { c, latest };
@@ -89223,6 +89361,16 @@ function followUpCompanionIn(f, nowMs){
    stage at capture -- news is the difference between what they know and
    what is true. Never having been told counts as knowing the least: the
    baseline is the first stage, so a lead that has moved at all is news. */
+/* The stage, in the client's words. Shared by the progress reason and
+   the promised-day standing so the two can never describe one stage in
+   two ways. */
+const FOLLOW_UP_STAGE_WORDS = {
+  asked:   'we have it on our list to find',
+  looking: 'someone is out looking for it',
+  sourced: 'we have found who has it',
+  priced:  'we now know what it costs',
+  listed:  'we stock it now',
+};
 function followUpSourcingProgress(f){
   const s = followUpSubject(f);
   const lead = s.lead;
@@ -89232,12 +89380,7 @@ function followUpSourcingProgress(f){
   const toldIdx = SOURCING_STATUS_ORDER.indexOf(told);
   const nowIdx = SOURCING_STATUS_ORDER.indexOf(lead.status);
   if(nowIdx < 0 || toldIdx < 0 || nowIdx <= toldIdx) return null;
-  const WORDS = {
-    looking: 'someone is out looking for it',
-    sourced: 'we have found who has it',
-    priced:  'we now know what it costs',
-    listed:  'we stock it now',
-  };
+  const WORDS = FOLLOW_UP_STAGE_WORDS;
   return {kind:'sourcing_progress', status: lead.status,
     text: `${lead.name}: ${WORDS[lead.status] || SOURCING_SHORT_LABELS[lead.status]}`,
     short: (WORDS[lead.status] || SOURCING_SHORT_LABELS[lead.status]).replace(/^./, c=> c.toUpperCase()),
@@ -89264,11 +89407,45 @@ function followUpPriceMoved(f){
     detail: down ? 'Cheaper than when you told them' : 'Dearer than when you told them'};
 }
 
+/* ---- 3b. The day the owner said ------------------------------------
+   "I will get back to you by Friday" is a promise the client is holding,
+   and it outranks every piece of news: on the day it falls due the
+   client is owed a word whether or not anything has changed. The word
+   itself is DERIVED -- what is standing now, read live from the shelf or
+   the funnel -- because nothing here is invented, and a promise kept
+   with "nothing yet" is still a promise kept. */
+const fupDayISO = (ms)=> new Date(ms).toISOString().slice(0,10);
+function followUpStanding(f){
+  const s = followUpSubject(f);
+  if(s.kind === 'product' && s.product){
+    const q = getStockQty(s.product.id, s.variantIdx);
+    return q > 0 ? `it is in stock now, ${q} on hand` : 'it is still not in — we will tell you the moment it is';
+  }
+  if(s.kind === 'lead' && s.lead) return FOLLOW_UP_STAGE_WORDS[s.lead.status] || 'it is still on our list';
+  return 'it is no longer on our list';
+}
+function followUpPromised(f, nowMs){
+  const on = f && f.promisedOn;
+  if(!on) return null;
+  const today = fupDayISO(nowMs || Date.now());
+  if(on > today) return null;
+  const late = Math.max(0, Math.round((new Date(today).getTime() - new Date(on).getTime()) / 86400000));
+  const s = followUpSubject(f);
+  return {kind:'promised', promisedOn: on, lateDays: late,
+    text: `${s.label} — we said we would get back to you by ${fmtShortDate(on)}: ${followUpStanding(f)}`,
+    short: late ? `You said by ${fmtShortDate(on)} — ${late} day${late === 1 ? '' : 's'} past it` : `You said by today`,
+    detail: followUpStanding(f)};
+}
+
 /* ---- 4. Nobody has said anything ------------------------------------
    The fallback, and deliberately last: silence is what actually kills a
    follow-up list, but it must not compete with real news. A client owed
    three updates does not also need telling that nobody has rung. */
 function followUpGoneQuiet(f, nowMs){
+  /* A day named ahead is not silence: the client knows when to expect
+     a word, and nagging the owner before it would have them ring early
+     to say nothing. */
+  if(f && f.promisedOn && f.promisedOn > fupDayISO(nowMs || Date.now())) return null;
   const since = followUpSinceMs(f);
   if(!since) return null;
   const days = Math.floor((nowMs - since) / 86400000);
@@ -89285,12 +89462,13 @@ function followUpGoneQuiet(f, nowMs){
 
 // Every reason this follow-up is worth a message today. gone_quiet only
 // when nothing else speaks -- see above.
-function followUpReasons(f, nowMs){
+function followUpReasons(f, nowMs, ctx){
   if(!followUpIsOpen(f)) return [];
   const now = nowMs || Date.now();
   const news = [
-    followUpBackInStock(f, now),
-    followUpCompanionIn(f, now),
+    followUpPromised(f, now),
+    followUpBackInStock(f, now, ctx),
+    followUpCompanionIn(f, now, ctx),
     followUpSourcingProgress(f),
     followUpPriceMoved(f),
   ].filter(Boolean);
@@ -89306,8 +89484,9 @@ function followUpReasons(f, nowMs){
 function followUpClientsToContact(nowMs){
   const now = nowMs || Date.now();
   const byCustomer = new Map();
+  const ctx = {crossings: stockCrossingsByKey()};
   openFollowUps().forEach(f=>{
-    const reasons = followUpReasons(f, now);
+    const reasons = followUpReasons(f, now, ctx);
     if(!reasons.length) return;
     const key = String(f.customerId);
     if(!byCustomer.has(key)) byCustomer.set(key, {customerId: f.customerId, items: []});
@@ -89324,8 +89503,12 @@ function followUpClientsToContact(nowMs){
       // client whose goods have arrived should be rung before one who is
       // merely overdue a chat.
       hasNews: row.items.some(i=> i.reasons.some(r=> r.kind !== 'gone_quiet')),
+      // A day the owner named and that has come: ahead even of news,
+      // because it is the one thing on this screen the client is
+      // actually waiting by the phone for.
+      promised: row.items.some(i=> i.reasons.some(r=> r.kind === 'promised')),
     };
-  }).sort((a,b)=> (b.hasNews - a.hasNews) || b.items.length - a.items.length
+  }).sort((a,b)=> (b.promised - a.promised) || (b.hasNews - a.hasNews) || b.items.length - a.items.length
     || String(a.name).localeCompare(String(b.name)));
 }
 
@@ -89352,6 +89535,172 @@ function followUpDigest(row){
    digest so every other caller is unchanged. */
 function followUpWaUrl(row, text){
   return waComposeUrl(row.phone, text || followUpDigest(row));
+}
+
+/* ================= The hub: every client with a reason to hear from us
+
+   Four engines each knew one reason to contact a client and each had
+   its own page: kept-posted news here, a debt on Chase, a worth-telling
+   reason on Worth telling, a customer gone quiet on the Customers band.
+   The owner asked for ONE place. This joins them per CLIENT, without
+   forking any of them: every reason is read from the engine that owns
+   it, every stamp is written through the function that engine already
+   uses, and each engine's own hold-backs (no marketing to somebody
+   being chased; nobody chased twice in the rest period) still apply.
+
+   followUpClientsToContact is untouched underneath -- Today, the
+   morning brief and the Manager read it -- so the hub is a wrapper,
+   never a replacement. */
+const FUP_HUB_RANK = {promised: 5, money: 4, news: 3, telling: 2, quiet: 1};
+function followUpHubRows(nowMs){
+  const now = nowMs || Date.now();
+  const rows = new Map();
+  const at = (cid)=>{
+    const key = String(cid);
+    if(!rows.has(key)){
+      const c = (data.customers||[]).find(x=> String(x.id) === key) || null;
+      rows.set(key, {customerId: cid, customer: c, name: c ? c.name : '(customer no longer on file)',
+        phone: c ? (contactPhones(c)[0] || '') : '',
+        items: [], chase: null, telling: null, quiet: null, held: [],
+        kinds: new Set(), hasNews: false, promised: false, debt: c ? (Number(c.debt)||0) : 0});
+    }
+    return rows.get(key);
+  };
+
+  /* 1. Kept-posted news, exactly as the queue has always found it. */
+  followUpClientsToContact(now).forEach(r=>{
+    const row = at(r.customerId);
+    row.items = r.items; row.hasNews = r.hasNews; row.promised = r.promised;
+    row.kinds.add('news');
+    if(r.promised) row.kinds.add('promised');
+  });
+
+  /* 2. Money. Only what the Chase engine itself would chase today; a
+     debtor it is deliberately leaving alone is NAMED on their row if
+     they are here for anything else, and otherwise not a row at all. */
+  const chase = debtChaseRows();
+  chase.due.forEach(r=>{ const row = at(r.id); row.chase = r; row.kinds.add('money'); });
+  const holdMoney = (r, label)=>{ const row = rows.get(String(r.id)); if(row) row.held.push({engine:'chase', label}); };
+  chase.promised.forEach(r=> holdMoney(r, `owes ${fmtUGX(Math.round(r.debt))} — said ${fmtShortDate(r.promise.promisedOn)}`));
+  chase.resting.forEach(r=> holdMoney(r, `owes ${fmtUGX(Math.round(r.debt))} — chased ${r.chasedDaysAgo}d ago`));
+  chase.blocked.forEach(r=> holdMoney(r, r.why === 'drift' ? 'balance being checked' : 'owes, undated'));
+
+  /* 3. Worth telling, through its own queue and its own hold-backs. The
+     one reason it defers to us on is 'asked': a thing on the client's
+     follow-up list is this engine's to report, on this engine's stamp,
+     or "we can get it" nags between every real piece of news. */
+  const bookRows = customerBookRows();
+  const book = new Map(bookRows.map(r=> [String(r.id), r]));
+  briefQueue().forEach(b=>{
+    const cid = b.customer.id;
+    if(b.reason.key === 'asked' && followUpsForCustomer(cid).some(f=> followUpIsOpen(f)
+        && (followUpSubject(f).product||{}).id === b.reason.productId)) return;
+    const row = at(cid); row.telling = b; row.kinds.add('telling');
+  });
+
+  /* 4. The customer book's own worry: quiet by their own gap, spend
+     down, one order and nothing since. Past-terms is Chase's (above);
+     no-phone is a Customers-page act. Held back by the same rules as a
+     picture would be, and named when it is. */
+  bookRows.forEach(r=>{
+    const reason = custAttentionReason(r);
+    if(!reason || !['quiet','spend_down','first_order'].includes(reason.key)) return;
+    const held = briefHeldBack(r);
+    if(held){
+      const row = rows.get(String(r.id));
+      if(row && held.key !== 'nophone') row.held.push({engine:'quiet', label: held.label.toLowerCase()});
+      return;
+    }
+    const row = at(r.id); row.quiet = {sub: reason.key, reason}; row.kinds.add('quiet');
+  });
+
+  const out = [...rows.values()].filter(r=> r.kinds.size);
+  out.forEach(r=>{ r.rank = Math.max(...[...r.kinds].map(k=> FUP_HUB_RANK[k]||0)); });
+  const earliestPromise = (r)=> r.items.reduce((m,i)=>{
+    const p = i.reasons.find(x=> x.kind === 'promised');
+    return p && (!m || p.promisedOn < m) ? p.promisedOn : m; }, '');
+  const broke = (r)=> r.chase && r.chase.promise && r.chase.promise.state === 'broken' ? 1 : 0;
+  const weight = (r)=> r.telling ? r.telling.reason.weight : (r.quiet ? r.quiet.reason.weight : 0);
+  out.sort((a,b)=> (b.rank - a.rank)
+    || (a.rank === 5 && String(earliestPromise(a)).localeCompare(String(earliestPromise(b))))
+    || (a.rank === 4 && ((broke(b) - broke(a)) || (b.chase.debt - a.chase.debt)))
+    || (a.rank === 3 && (b.items.length - a.items.length))
+    || (a.rank <= 2 && (weight(b) - weight(a)))
+    || String(a.name).localeCompare(String(b.name)));
+  return out;
+}
+
+/* One message, in sections, each present only when there is something
+   in it. The kept-posted lines are followUpDigest's own -- r.text, the
+   full form, because the reader has no screen. The account section is
+   Chase's own message with its greeting and sign-off removed, so a
+   client is greeted once. A worth-telling line goes in only when the
+   owner ticks it: its natural form is the picture. */
+function followUpHubDigest(row, ticks){
+  const tk = ticks || {};
+  const first = String(row.name || '').trim().split(/\s+/)[0] || '';
+  const out = [`Hello${first ? ' ' + first : ''},`, ''];
+  const promised = [], news = [];
+  row.items.forEach(i=> i.reasons.forEach(r=> (r.kind === 'promised' ? promised : news).push('• ' + r.text)));
+  if(promised.length){
+    out.push('We said we would get back to you — here is where things stand:', '', ...promised, '');
+  }
+  if(news.length){
+    out.push('An update on what you asked us to keep you posted about:', '', ...news, '');
+  }
+  if(row.chase){
+    out.push(debtChaseMessage(row.chase, shopIdentity(), {bare:true}), '');
+  }
+  if(tk.telling && row.telling){
+    const line = briefPlainLine(row.telling);
+    if(line) out.push(line, '');
+  }
+  if(tk.quiet && row.quiet && row.quiet.sub !== 'spend_down'){
+    const r = row.quiet.reason;
+    const days = r.fig;
+    out.push(row.quiet.sub === 'first_order'
+      ? 'It has been a while since your first order with us — tell us what you need and we will have it ready.'
+      : `It has been ${days} days since your last order with us — tell us what you need and we will have it ready.`, '');
+  }
+  if(promised.length || news.length){
+    out.push('Let us know if you would like any of it put aside.');
+  }
+  const ident = shopIdentity();
+  out.push('', 'Thank you,', [ident && ident.name, ident && ident.phone].filter(Boolean).join(' · '));
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/* Everything one message told this client, stamped in ONE act through
+   each engine's own record -- and returned, so "It did not go" can take
+   every stamp back. Nothing here is written until the owner says the
+   message went; opening WhatsApp records nothing (see fupAwaiting). */
+function recordFollowUpClient(customerId, ticks){
+  const tk = ticks || {};
+  const row = fupHubRowsNow().find(r=> String(r.customerId) === String(customerId));
+  if(!row) return null;
+  const told = {customerId: String(customerId), name: row.name, ids: [], chased: false, briefKey: null, quietKey: null, notWritten: []};
+  row.items.forEach(i=>{ recordFollowUpContact(i.followUp.id, i.reasons[0] && i.reasons[0].kind); told.ids.push(i.followUp.id); });
+  if(row.chase){ markDebtChased(String(customerId)); told.chased = true; }
+  if(tk.telling && row.telling){
+    const rec = recordBriefSent(customerId, row.telling.reason.key, row.telling.product ? row.telling.product.id : '', row.telling.qty);
+    if(rec.ok) told.briefKey = row.telling.reason.key; else told.notWritten.push(rec.why);
+  }
+  if(tk.quiet && row.quiet){
+    const rec = recordBriefSent(customerId, row.quiet.sub, '', null);
+    if(rec.ok) told.quietKey = row.quiet.sub; else told.notWritten.push(rec.why);
+  }
+  delete fupDrafts[String(customerId)];
+  delete fupTicks[String(customerId)];
+  return told;
+}
+function unrecordFollowUpClient(told){
+  if(!told) return;
+  unrecordFollowUpContacts(told.ids);
+  if(told.chased) unmarkDebtChased(told.customerId);
+  if(told.briefKey || told.quietKey){
+    const r = undoBriefSent(told.customerId);
+    if(!r.ok) toast(r.why, 6000);
+  }
 }
 
 /* ---- writing ---------------------------------------------------------
@@ -89391,6 +89740,7 @@ function addFollowUp(customerId, subject, opts){
     createdAt: new Date().toISOString(),
     closedAt: null, closedReason: '',
     contacts: [],
+    promisedOn: null,
   };
   followUpsAll().push(f);
   saveData();
@@ -89406,6 +89756,11 @@ function recordFollowUpContact(id, reasonKind){
   if(!f) return null;
   const s = followUpSubject(f);
   f.contacts = f.contacts || [];
+  /* A day that had come is discharged by the contact -- getting back to
+     them IS what was promised. A day still ahead stands: they were told
+     early, and the promise was for the day. The date is kept on the
+     stamp so an undo can put it back. */
+  const dueDay = f.promisedOn && f.promisedOn <= fupDayISO(Date.now()) ? f.promisedOn : null;
   f.contacts.push({
     at: new Date().toISOString(),
     reason: reasonKind || '',
@@ -89414,7 +89769,32 @@ function recordFollowUpContact(id, reasonKind){
     // no price yet must not record one.
     priceToldUGX: followUpPriceNow(f),
     leadStatusTold: s.lead ? s.lead.status : null,
+    promisedWas: dueDay,
   });
+  if(dueDay) f.promisedOn = null;
+  saveData();
+  return f;
+}
+/* The day the owner says they will get back by. Null clears it. A date
+   in the wrong shape is refused rather than stored, because every reader
+   compares it as a string. */
+function setFollowUpPromise(id, iso){
+  const f = followUpById(id);
+  if(!f) return null;
+  const v = String(iso||'').trim();
+  if(v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  f.promisedOn = v || null;
+  saveData();
+  return f;
+}
+/* Quantity and note, editable after the fact: the quantity is what the
+   price basis is chosen on, so a row taken without one is priced by the
+   piece until somebody says otherwise. */
+function setFollowUpDetails(id, opts){
+  const f = followUpById(id);
+  if(!f) return null;
+  if(opts && 'qty' in opts) f.qty = (opts.qty!=null && opts.qty!=='') ? Number(opts.qty) : null;
+  if(opts && 'note' in opts) f.note = String(opts.note||'');
   saveData();
   return f;
 }
@@ -89485,8 +89865,38 @@ let fupLastTold = null;
    peer, which is a button you can press having sent nothing at all. It
    is asked as a consequence of the send instead. */
 let fupAwaiting = null;
+/* Which kind of reason the queue is narrowed to. 'all' is the hub. */
+let fupWhy = 'all';
+const FUP_WHY = [
+  ['all','All'], ['promised','Promised'], ['money','Money'], ['news','News'],
+  ['telling','Worth telling'], ['quiet','Quiet'],
+];
+/* Per client: which optional lines the owner has put in the message. A
+   worth-telling line is OFF by default (its natural form is the
+   picture); the quiet line is ON, because it is the whole of that row. */
+const fupTicks = Object.create(null);
+function fupTickState(cid){ return fupTicks[String(cid)] || {telling:false, quiet:true}; }
+/* The inline field open on the card, if any: {id, what}, what being
+   'date' | 'details' | 'promise'. One at a time. */
+let fupEditing = null;
+/* THE HUB ROWS, ONCE PER RENDER. followUpHubRows walks every engine, and
+   renderFollowUps used to ask the cheaper question five times in one
+   pass. Set for the duration of a render and read through here. */
+let fupPass = null;
+function fupHubRowsNow(){ return fupPass ? fupPass.rows : followUpHubRows(Date.now()); }
+/* Leaving the tab. A chat opened yesterday is not still "open with these
+   words" today; the draft stays, because typed words are the owner's. */
+function fupLeave(){ fupAwaiting = null; fupEditing = null; }
+/* Closed rows carry a free-text reason; three are written by this file.
+   The chip capitalises them so they sit beside the state pills. */
+const FUP_CLOSED_LABELS = {bought:'Bought', closed:'Closed', 'removed from the list':'Removed'};
+function fupClosedLabel(f){
+  const r = String((f && f.closedReason) || '').trim();
+  return FUP_CLOSED_LABELS[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'Closed');
+}
 
 const FUP_REASON_PILLS = {
+  promised:          {label:'Promised',       cls:'warn'},
   back_in_stock:     {label:'Back in stock',  cls:'good'},
   companion_in:      {label:'Goes-with in',   cls:'good'},
   sourcing_progress: {label:'Sourcing moved', cls:'good'},
@@ -89503,10 +89913,17 @@ function fupReasonChip(r){
 }
 // The chip the whole client wears: real news outranks mere silence.
 function fupRowChip(row){
+  if(row.kinds){
+    if(row.kinds.has('promised')) return FUP_REASON_PILLS.promised;
+    if(row.kinds.has('money')) return (row.chase.promise && row.chase.promise.state === 'broken')
+      ? {label:'Broken promise', cls:'bad'} : {label:'Owes money', cls:'warn'};
+  }
   for(const i of row.items){
     const r = i.reasons.find(x=> x.kind !== 'gone_quiet');
     if(r) return fupReasonChip(r);
   }
+  if(row.kinds && row.kinds.has('telling') && !row.items.length) return {label:'Worth telling', cls:''};
+  if(row.kinds && row.kinds.has('quiet') && !row.items.length) return {label: row.quiet.reason.chip, cls:''};
   return FUP_REASON_PILLS.gone_quiet;
 }
 /* fmtShortDate takes a DATE-ONLY string -- it appends its own midnight
@@ -89536,92 +89953,203 @@ function fupSetHTML(wrap, html){
   if(sel){ try{ back.setSelectionRange(sel[0], sel[1]); }catch(err){} }
 }
 
+/* What a hub row can be found by: the client, everything they are
+   waiting on, and the other reasons they are here. */
+function fupRowHay(row){
+  return [row.name,
+    ...row.items.map(i=> followUpSubject(i.followUp).label + ' ' + (i.followUp.note||'')),
+    row.chase ? 'owes money account debt' : '',
+    row.telling && row.telling.product ? row.telling.product.name : '',
+    row.quiet ? row.quiet.reason.chip : '',
+  ].join(' ').toLowerCase();
+}
+/* The one figure the queue row carries, by what put the client here:
+   days past the day the owner named, money owed, days since anything
+   was said, or the book's own figure for a quiet customer. */
+function fupRowValue(row, nowMs){
+  if(row.kinds.has('promised')){
+    let late = 0;
+    row.items.forEach(i=> i.reasons.forEach(r=>{ if(r.kind === 'promised') late = Math.max(late, r.lateDays||0); }));
+    return late > 0 ? {v: String(late), b: late === 1 ? 'day late' : 'days late'} : {v: 'today', b: 'you said'};
+  }
+  if(row.kinds.has('money')) return {v: fmtUGX(Math.round(row.chase.debt)), b: 'owed'};
+  if(row.items.length) return {v: String(fupDaysQuiet(row, nowMs)), b: 'days quiet'};
+  if(row.quiet) return {v: row.quiet.reason.fig, b: row.quiet.reason.basis};
+  return {v: '—', b: 'worth a word'};
+}
+
 function renderFollowUpsContact(){
   const wrap = document.getElementById('fup_contact_list');
   if(!wrap) return;
-  const now = Date.now();
-  const rows = followUpClientsToContact(now);
+  const now = fupPass ? fupPass.now : Date.now();
+  const rows = fupHubRowsNow();
   const tokens = searchTokens(fupQueueQuery);
-  const shown = !tokens.length ? rows : rows.filter(row=>{
-    const hay = `${row.name} ${row.items.map(i=> followUpSubject(i.followUp).label + ' ' + (i.followUp.note||'')).join(' ')}`.toLowerCase();
-    return tokens.every(t=> hay.includes(t));
-  });
+  const under = fupWhy === 'all' ? rows : rows.filter(r=> r.kinds.has(fupWhy));
+  const shown = !tokens.length ? under : under.filter(row=> matchesAllTokens(fupRowHay(row), tokens));
   if(!shown.some(r=> String(r.customerId) === String(fupSelectedCustomerId)))
     fupSelectedCustomerId = shown.length ? shown[0].customerId : null;
   const sel = shown.find(r=> String(r.customerId) === String(fupSelectedCustomerId)) || null;
+  const narrowed = !!(tokens.length || fupWhy !== 'all');
 
   /* ---- the queue ---- */
   const queueRow = (row)=> {
     const last = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
       .sort((a,b)=> new Date(b.at) - new Date(a.at))[0];
     const meta = [
-      `${row.items.length} thing${row.items.length === 1 ? '' : 's'}`,
-      last ? 'last told ' + fupDay(last.at) : 'never told',
+      row.items.length ? `${row.items.length} thing${row.items.length === 1 ? '' : 's'}` : '',
+      row.chase ? `owes ${fmtUGX(Math.round(row.chase.debt))}` : '',
+      row.telling ? 'worth telling' : '',
+      row.quiet ? row.quiet.reason.chip.toLowerCase() : '',
+      row.items.length ? (last ? 'last told ' + fupDay(last.at) : 'never told') : '',
       row.phone ? '' : 'no phone number on file',
     ].filter(Boolean).join(' · ');
-    const days = fupDaysQuiet(row, now);
+    const val = fupRowValue(row, now);
     return `<button type="button" class="ow-lr fup-pick${String(row.customerId) === String(fupSelectedCustomerId) ? ' ow-on' : ''}" data-cust="${esc(String(row.customerId))}">
       <span class="ow-lr-n"><span class="ow-lr-nm">${esc(row.name)}</span>${fupCp(fupRowChip(row))}</span>
-      <span class="ow-lr-v">${days}<span class="ow-lr-b">days quiet</span></span>
+      <span class="ow-lr-v">${esc(val.v)}<span class="ow-lr-b">${esc(val.b)}</span></span>
       <span class="ow-lr-m" title="${esc(meta)}">${esc(meta)}</span>
     </button>`;
   };
   const openN = openFollowUps().length;
+  const whyLabel = (FUP_WHY.find(w=> w[0] === fupWhy) || FUP_WHY[0])[1];
   let queueBody;
   if(shown.length) queueBody = shown.map(queueRow).join('');
-  else if(tokens.length) queueBody = `<p class="ow-mini">Nothing in the queue matches that. ${rows.length} client${rows.length === 1 ? ' is' : 's are'} waiting to hear from you — clear the search to see ${rows.length === 1 ? 'them' : 'them all'}.</p>`;
+  else if(narrowed) queueBody = `<p class="ow-mini">Nothing ${tokens.length ? 'in the queue matches that' : 'under ' + esc(whyLabel)}. ${rows.length} client${rows.length === 1 ? ' is' : 's are'} waiting to hear from you — ${tokens.length ? 'clear the search' : 'choose All'} to see ${rows.length === 1 ? 'them' : 'them all'}.</p>`;
   else queueBody = `<div class="ow-empty"><b>Nothing to tell anybody today</b><br>${openN
-    ? `${openN} follow-up${openN === 1 ? ' is' : 's are'} being watched. The moment one of them has news — goods in, a sourcing ask moving on, a price off the figure you quoted, or a silence past ${followUpQuietDays()} days — the client appears here.`
-    : 'Nobody is waiting on anything yet. Add a follow-up from a client’s record, from a sourcing ask, or from a line the picker came up short on.'}</div>`;
+    ? `${openN} follow-up${openN === 1 ? ' is' : 's are'} being watched, nobody is past your terms, and nobody has gone quiet. The moment one of them has news — goods in, a sourcing ask moving on, a price off the figure you quoted, a day you said you would ring, or a silence past ${followUpQuietDays()} days — the client appears here.`
+    : 'Nobody is waiting on anything yet. Add a follow-up with the button above, from a client’s record, from a sourcing ask, or from a line the picker came up short on.'}</div>`;
   const undo = fupLastTold
     ? `<p class="ow-mini">Recorded <b>${esc(fupLastTold.name)}</b> as told. <button type="button" class="fup-link fup-inline fup-undo">It did not go</button></p>`
     : '';
+  /* One row of reasons to narrow by, each with its count, so the owner
+     working the money first can see the money and nothing else. */
+  const whySeg = rows.length ? `<div class="fup-why"><div class="ow-seg" id="fup_why">${FUP_WHY.map(([k, label])=>{
+      const n = k === 'all' ? rows.length : rows.filter(r=> r.kinds.has(k)).length;
+      return `<button type="button" class="ow-seg-b${fupWhy === k ? ' ow-on' : ''}" data-fupwhy="${k}">${esc(label)} <span class="ow-seg-n">${n || ''}</span></button>`;
+    }).join('')}</div></div>` : '';
   const queuePanel = `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Clients to message</span>
-      <span class="ow-pan-n">${shown.length}${tokens.length ? ' of ' + rows.length : ''} of ${openN} watched</span></div>
+      <span class="ow-pan-n">${shown.length}${narrowed ? ' of ' + rows.length : ''} client${(narrowed ? rows.length : shown.length) === 1 ? '' : 's'} · ${openN} follow-up${openN === 1 ? '' : 's'} watched</span></div>
     ${rows.length || tokens.length ? `<div class="ow-tb"><label class="ow-f ow-f-grow"><span class="ow-f-l">Find in the queue</span><span class="ow-f-in"><input type="search" class="ow-f-v ow-f-t" id="fup_queue_search" placeholder="Client, item or note" value="${esc(fupQueueQuery)}"></span></label></div>` : ''}
+    ${whySeg}
     ${queueBody}${undo}
   </div>`;
 
   /* ---- the work: one client, one message ---- */
   let work;
   if(!sel){
-    work = `<div class="ow-pan fup-work"><div class="ow-empty"><b>Nothing to write.</b><br>When somebody on a follow-up list has something worth hearing, their message appears here, written from their own follow-ups, for you to read and send.</div></div>`;
+    work = `<div class="ow-pan fup-work"><div class="ow-empty"><b>Nothing to write.</b><br>When somebody has something worth hearing — news on their follow-ups, money past your terms, a day you said you would ring, or a silence — their message appears here, written from their own records, for you to read and send.</div></div>`;
   } else {
     const row = sel;
     const cid = String(row.customerId);
     const cust = row.customer;
+    const ticks = fupTickState(cid);
+    const edit = (id, what)=> !!(fupEditing && String(fupEditing.id) === String(id) && fupEditing.what === what);
+    /* The card renders the SHORT form -- the name is on the line above
+       it -- while the message keeps the full one, because it goes to
+       somebody with no screen in front of them. The one exception is a
+       price, which is money and gets the figure treatment. */
+    const why = (r)=> r.kind === 'price_moved'
+      ? `Now <b class="ow-fig">${esc(fmtUGX(r.now))}</b> at their quantity — ${r.down ? 'down' : 'up'} from the <b class="ow-fig">${esc(fmtUGX(r.was))}</b> they were quoted`
+      : esc(r.short || r.text);
+    /* The inline fields. Each is opened by the link on its own line and
+       closed by Set, Save or Cancel; the ids let fupSetHTML keep the
+       caret through the re-render. */
+    const cancel = `<button type="button" class="fup-link fup-edit-cancel">Cancel</button>`;
+    const editorFor = (f)=> {
+      const id = esc(String(f.id));
+      if(edit(f.id, 'date')) return `<div class="fup-inline-f">
+        <label class="ow-f"><span class="ow-f-l">Get back by</span><span class="ow-f-in"><input type="date" class="ow-f-v" id="fup_date" value="${esc(f.promisedOn||'')}"></span></label>
+        <button type="button" class="fup-link fup-date-set" data-id="${id}">Set</button>
+        ${f.promisedOn ? `<button type="button" class="fup-link fup-date-clear" data-id="${id}">Clear</button>` : ''}${cancel}
+      </div>`;
+      if(edit(f.id, 'details')) return `<div class="fup-inline-f">
+        <label class="ow-f"><span class="ow-f-l">How many</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="fup_qty" min="0" step="any" value="${f.qty==null ? '' : esc(String(f.qty))}"></span></label>
+        <label class="ow-f ow-f-grow"><span class="ow-f-l">Note</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="fup_note" value="${esc(f.note||'')}" placeholder="Size, colour, what they said"></span></label>
+        <button type="button" class="fup-link fup-details-save" data-id="${id}">Save</button>${cancel}
+      </div>`;
+      return '';
+    };
     const items = row.items.map(i=>{
       const f = i.followUp;
       const s = followUpSubject(f);
       const bought = followUpAlreadyBought(f);
-      /* The card renders the SHORT form -- the name is on the line above
-         it -- while the message keeps the full one, because it goes to
-         somebody with no screen in front of them. The one exception is a
-         price, which is money and gets the figure treatment. */
-      const why = (r)=> r.kind === 'price_moved'
-        ? `Now <b class="ow-fig">${esc(fmtUGX(r.now))}</b> at their quantity — ${r.down ? 'down' : 'up'} from the <b class="ow-fig">${esc(fmtUGX(r.was))}</b> they were quoted`
-        : esc(r.short || r.text);
+      const id = esc(String(f.id));
+      const links = [
+        s.lead ? `<button type="button" class="fup-link fup-act fup-lead" data-lead="${esc(String(s.lead.id))}">Open the lead</button>` : '',
+        `<button type="button" class="fup-link fup-act fup-when" data-id="${id}">${f.promisedOn ? 'Get back by ' + esc(fmtShortDate(f.promisedOn)) : 'Get back by…'}</button>`,
+        `<button type="button" class="fup-link fup-act fup-edit" data-id="${id}">${f.qty != null ? esc(String(f.qty)) + ' wanted' : 'Qty / note'}</button>`,
+      ].filter(Boolean).join(' · ');
       return `<div class="fup-it">
         <div class="fup-it-h">
           <span class="fup-it-n" title="${esc(s.label)}">${esc(s.label)}</span>
           ${i.reasons.map(r=> fupCp(fupReasonChip(r))).join('')}
         </div>
         <p class="fup-it-w">${i.reasons.map(why).join(' · ')}${f.note ? ' — ' + esc(f.note) : ''}${
-          bought ? ` — bought on ${esc(fupDay(bought.at))}, <button type="button" class="fup-link fup-inline fup-close" data-id="${esc(String(f.id))}" data-reason="bought">close it?</button>` : ''}</p>
-        <span class="fup-it-a"><button type="button" class="fup-link fup-close" data-id="${esc(String(f.id))}" data-reason="">Close</button></span>
+          bought ? ` — bought on ${esc(fupDay(bought.at))}, <button type="button" class="fup-link fup-inline fup-close" data-id="${id}" data-reason="bought">close it?</button>` : ''}</p>
+        <p class="fup-it-l">${links}</p>
+        ${editorFor(f)}
+        <span class="fup-it-a"><button type="button" class="fup-link fup-close" data-id="${id}" data-reason="">Close</button></span>
       </div>`;
     }).join('');
+
+    /* Their account, when Chase would chase them today. The message
+       carries Chase's own words for it; the two acts a debtor's row
+       offers -- a payment received, a day they named -- are here too. */
+    const ch = row.chase;
+    const account = !ch ? '' : `<div class="fup-it">
+        <div class="fup-it-h"><span class="fup-it-n">Their account</span>${fupCp(ch.promise && ch.promise.state === 'broken' ? {label:'Broken promise', cls:'bad'} : {label:'Owes money', cls:'warn'})}</div>
+        <p class="fup-it-w">Owes <b class="ow-fig">${esc(fmtUGX(Math.round(ch.debt)))}</b>, the oldest of it ${esc(agingDaysLabel(ch.ageDays).toLowerCase())}${
+          ch.invoices.length ? ` across ${ch.invoices.length} invoice${ch.invoices.length === 1 ? '' : 's'}` : ''}.${
+          ch.promise && ch.promise.state === 'broken' ? ` Said ${esc(fmtShortDate(ch.promise.promisedOn))} and did not pay.` : ''}${
+          ch.lastPaid ? ` Last paid ${esc(fmtShortDate(ch.lastPaid))}.` : ' Never paid.'}</p>
+        <p class="fup-it-l"><button type="button" class="fup-link fup-act fup-pay" data-cust="${esc(cid)}">Receive a payment</button> · <button type="button" class="fup-link fup-act fup-promise" data-cust="${esc(cid)}">They promised to pay on…</button></p>
+        ${edit(cid, 'promise') ? `<div class="fup-inline-f">
+          <label class="ow-f"><span class="ow-f-l">They said by</span><span class="ow-f-in"><input type="date" class="ow-f-v" id="fup_pdate"></span></label>
+          <label class="ow-f"><span class="ow-f-l">Amount</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="fup_pamt" min="0" step="any" placeholder="all of it"></span></label>
+          <button type="button" class="fup-link fup-promise-set" data-cust="${esc(cid)}">Set</button>${cancel}
+        </div>` : ''}
+      </div>`;
+
+    /* Worth telling: the picture is its natural form, so the send here
+       is the same share the Worth telling screen offers; a line in the
+       message is offered, off by default. */
+    const tb = row.telling;
+    const tellingLine = tb ? briefPlainLine(tb) : '';
+    const telling = !tb ? '' : `<div class="fup-it">
+        <div class="fup-it-h"><span class="fup-it-n" title="${esc(tb.product ? tb.product.name : '')}">${esc(tb.product ? tb.product.name : 'Worth telling')}</span>${fupCp({label: tb.reason.chip, cls:''})}</div>
+        <p class="fup-it-w">${tb.reason.why}</p>
+        <p class="fup-it-l">${tellingLine
+          ? `<label class="fup-tick"><input type="checkbox" class="fup-tick-in" data-cust="${esc(cid)}" data-tick="telling"${ticks.telling ? ' checked' : ''}> Put a line about this in the message</label>`
+          : '<span class="fup-row-meta">Sent as a picture, not as words</span>'}</p>
+        <span class="fup-it-a"><button type="button" class="btn btn-ghost ow-sm fup-picture" data-cust="${esc(cid)}">Send the picture</button></span>
+      </div>`;
+
+    /* The customer book's worry about them, in its own words. */
+    const qb = row.quiet;
+    const quietLine = !!(qb && qb.sub !== 'spend_down');
+    const quiet = !qb ? '' : `<div class="fup-it">
+        <div class="fup-it-h"><span class="fup-it-n">${esc(qb.reason.chip)}</span></div>
+        <p class="fup-it-w">${qb.reason.why}</p>
+        <p class="fup-it-l">${quietLine
+          ? `<label class="fup-tick"><input type="checkbox" class="fup-tick-in" data-cust="${esc(cid)}" data-tick="quiet"${ticks.quiet ? ' checked' : ''}> Put a line about this in the message</label>`
+          : '<span class="fup-row-meta">Worth a call rather than a line</span>'}</p>
+      </div>`;
+
     const waiting = String(fupAwaiting||'') === cid;
-    const draft = fupDrafts[cid] != null ? fupDrafts[cid] : followUpDigest(row);
+    const draft = fupDrafts[cid] != null ? fupDrafts[cid] : followUpHubDigest(row, ticks);
     const lines = Math.min(20, Math.max(9, draft.split('\n').length + 1));
     const lastAny = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
       .sort((a,b)=> new Date(b.at) - new Date(a.at))[0];
     const con = [
       row.phone ? esc(row.phone) : '<span class="fup-w-none">no phone number on file</span>',
       cust && cust.location ? esc(cust.location) : '',
-      lastAny ? `last told ${esc(fupDay(lastAny.at))}, ${fupDaysQuiet(row, now)} days ago` : 'never told anything',
+      row.items.length ? (lastAny ? `last told ${esc(fupDay(lastAny.at))}, ${fupDaysQuiet(row, now)} days ago` : 'never told anything') : '',
     ].filter(Boolean).join(' · ');
+    /* What else is true of them that the message does NOT say, and why:
+       a debt Chase is leaving alone this week, a picture sent lately. */
+    const facts = row.held.map(h=> `<span class="ow-cp">${esc(h.label)}</span>`).join('');
+    const nTold = row.items.length + (ch ? 1 : 0) + (tellingLine && ticks.telling ? 1 : 0) + (quietLine && ticks.quiet ? 1 : 0);
     work = `<div class="ow-pan fup-work" data-cust="${esc(cid)}">
       <div class="fup-w-head">
         <span class="ow-av">${esc(nameInitials(row.name))}</span>
@@ -89629,22 +90157,24 @@ function renderFollowUpsContact(){
           <div class="fup-w-name"><span class="fup-w-nm">${esc(row.name)}</span>${fupCp(fupRowChip(row))}</div>
           <div class="fup-w-con">${con}</div>
         </div>
+        ${row.phone ? `<a class="btn btn-ghost ow-sm fup-tel" href="tel:${esc(String(row.phone).replace(/\s+/g, ''))}">Ring</a>` : ''}
         ${cust ? `<button type="button" class="btn btn-ghost ow-sm fup-record" data-cust="${esc(cid)}">Their follow-up list</button>` : ''}
       </div>
-      ${items}
+      ${facts ? `<div class="fup-w-facts">${facts}</div>` : ''}
+      ${items}${account}${telling}${quiet}
       <div class="fup-w-msg">
         <div class="ow-msg-h"><span class="ow-msg-t">The message</span>
           <span class="ow-msg-to">${row.phone ? 'to WhatsApp ' + esc(row.phone) + ' — edit it before you send' : 'no number to send it to — copy it instead'}</span></div>
         <textarea class="ow-msg fup-msg" id="fup_msg" data-cust="${esc(cid)}" rows="${lines}">${esc(draft)}</textarea>
         <p class="ow-msg-n">${waiting
           ? 'WhatsApp is open with these words. Nothing is written down until you say it went — a chat opened is not a message sent, and a stamp saying they know when they were never told would hide the next real piece of news from you.'
-          : `Nothing has been sent. One message per client, however many things they are waiting for — and nothing is recorded until you say the message went.`}</p>
+          : `Nothing has been sent. One message per client, however many things it covers — and nothing is recorded until you say the message went.`}</p>
       </div>
       <div class="fup-w-foot">
         ${waiting
           ? `<button type="button" class="btn btn-ghost ow-sm fup-notsent" data-cust="${esc(cid)}">It did not go</button>
              <span class="fup-sp"></span>
-             <button type="button" class="btn btn-accent fup-told" data-cust="${esc(cid)}">It has gone — mark all ${row.items.length} told</button>`
+             <button type="button" class="btn btn-accent fup-told" data-cust="${esc(cid)}">It has gone — mark ${nTold === 1 ? 'it' : 'all ' + nTold} told</button>`
           : `<button type="button" class="btn btn-ghost ow-sm fup-told" data-cust="${esc(cid)}">Told them another way</button>
              <button type="button" class="btn btn-ghost ow-sm fup-copy" data-cust="${esc(cid)}">Copy</button>
              ${fupDrafts[cid] != null ? `<button type="button" class="btn btn-ghost ow-sm fup-reset" data-cust="${esc(cid)}">Put the wording back</button>` : ''}
@@ -89662,21 +90192,26 @@ function renderFollowUpsContact(){
 function renderFollowUpSummary(){
   const el = document.getElementById('fupSummaryRow');
   if(!el) return;
-  const now = Date.now();
+  const rows = fupHubRowsNow();
   const open = openFollowUps();
-  const clients = followUpClientsToContact(now).length;
-  const counts = {back_in_stock:0, sourcing_progress:0, price_moved:0, gone_quiet:0};
-  open.forEach(f=> followUpReasons(f, now).forEach(r=>{ if(counts[r.kind] != null) counts[r.kind]++; }));
+  /* Counted off the same rows the queue is drawn from, so the strip can
+     never disagree with the list beneath it. The kept-posted kinds keep
+     their own accumulator: they are what followUpReasons computes. */
+  const counts = {promised:0, back_in_stock:0, companion_in:0, sourcing_progress:0, price_moved:0, gone_quiet:0};
+  rows.forEach(row=> row.items.forEach(i=> i.reasons.forEach(r=>{ if(counts[r.kind] != null) counts[r.kind]++; })));
+  const news = counts.back_in_stock + counts.companion_in + counts.sourcing_progress + counts.price_moved;
+  const money = rows.filter(r=> r.chase).length;
+  const word = rows.filter(r=> r.telling).length + rows.filter(r=> r.quiet).length;
   const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
     <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
   el.innerHTML = `<div class="ow-strip ow-strip-5 fup-strip">
-    ${tile('To message', String(clients),
-      clients ? `client${clients === 1 ? '' : 's'} · one message each` : `nobody is owed a word · ${open.length} watched`,
-      clients ? '' : 'ow-good')}
-    ${tile('Goods arrived', String(counts.back_in_stock), 'things they asked for, now back in')}
-    ${tile('Sourcing moved', String(counts.sourcing_progress), 'further along than they were told')}
-    ${tile('Price changed', String(counts.price_moved), 'since the figure they were quoted')}
-    ${tile('Gone quiet', String(counts.gone_quiet), `nothing said for over ${followUpQuietDays()} days`)}
+    ${tile('To message', String(rows.length),
+      rows.length ? `client${rows.length === 1 ? '' : 's'} · one message each` : `nobody is owed a word · ${open.length} watched`,
+      rows.length ? '' : 'ow-good')}
+    ${tile('Promised', String(counts.promised), counts.promised ? 'days you said you would get back by' : 'no day you named has come', counts.promised ? 'ow-warn' : '')}
+    ${tile('Money', String(money), money ? 'past your terms, and Chase would ask today' : 'nobody Chase would ask today')}
+    ${tile('News', String(news), 'goods in, sourcing moved, a price off the quote')}
+    ${tile('Worth a word', String(word), `worth telling, or quiet · silence after ${followUpQuietDays()} days`)}
   </div>`;
 }
 
@@ -89763,8 +90298,9 @@ function renderFollowUpsAll(filter){
             const pill = followUpStatePill(f, now);
             return `<div class="ow-tbl-r${f.closedAt ? ' fup-closed' : ''}">
               <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(s.label)}">${esc(s.label)}</span>${
-                f.note ? `<span class="ow-tbl-s" title="${esc(f.note)}">${esc(f.note)}</span>` : ''}</div>
-              <div class="ow-tbl-c" data-l="State">${fupCp(f.closedAt && f.closedReason ? {label: f.closedReason, cls:''} : pill)}</div>
+                f.note ? `<span class="ow-tbl-s" title="${esc(f.note)}">${esc(f.note)}</span>` : ''}${
+                f.promisedOn && !f.closedAt ? `<span class="ow-tbl-s">get back by ${esc(fmtShortDate(f.promisedOn))}</span>` : ''}</div>
+              <div class="ow-tbl-c" data-l="State">${fupCp(f.closedAt ? {label: fupClosedLabel(f), cls:''} : pill)}</div>
               <div class="ow-tbl-n" data-l="Asked">${esc(f.createdAt ? fupDay(f.createdAt) : '—')}</div>
               <div class="ow-tbl-n" data-l="Last told">${last ? esc(fupDay(last.at)) : 'never'}</div>
               <div class="ow-tbl-a"><button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
@@ -89783,39 +90319,33 @@ function renderFollowUpsAll(filter){
 }
 
 function renderFollowUps(){
-  document.getElementById('fup_contact_pane').style.display = fupTab==='contact' ? '' : 'none';
-  document.getElementById('fup_all_pane').style.display = fupTab==='all' ? '' : 'none';
-  document.querySelectorAll('#fup_tabs .ow-seg-b').forEach(b=>
-    b.classList.toggle('ow-on', b.dataset.fuptab === fupTab));
-  const quiet = document.getElementById('fup_quiet');
-  if(quiet && document.activeElement !== quiet) quiet.value = followUpQuietDays();
-  const nC = document.getElementById('fupSegContact');
-  const nA = document.getElementById('fupSegAll');
-  if(nC) nC.textContent = String(followUpClientsToContact(Date.now()).length || '');
-  if(nA) nA.textContent = String(openFollowUps().length || '');
-  renderFollowUpSummary();
-  if(fupTab==='contact') renderFollowUpsContact();
-  else renderFollowUpsAll(fupRegisterQuery);
-  renderFollowUpBadge();
+  const now = Date.now();
+  fupPass = {now, rows: followUpHubRows(now)};
+  try{
+    document.getElementById('fup_contact_pane').style.display = fupTab==='contact' ? '' : 'none';
+    document.getElementById('fup_all_pane').style.display = fupTab==='all' ? '' : 'none';
+    document.querySelectorAll('#fup_tabs .ow-seg-b').forEach(b=>
+      b.classList.toggle('ow-on', b.dataset.fuptab === fupTab));
+    const quiet = document.getElementById('fup_quiet');
+    if(quiet && document.activeElement !== quiet) quiet.value = followUpQuietDays();
+    const nC = document.getElementById('fupSegContact');
+    const nA = document.getElementById('fupSegAll');
+    if(nC) nC.textContent = String(fupPass.rows.length || '');
+    if(nA) nA.textContent = String(openFollowUps().length || '');
+    renderFollowUpSummary();
+    if(fupTab==='contact') renderFollowUpsContact();
+    else renderFollowUpsAll(fupRegisterQuery);
+    renderFollowUpBadge();
+  } finally { fupPass = null; }
 }
 /* Clients, not follow-ups: the badge is a count of messages to send, and
-   one client owed three updates is one message. */
+   one client owed three updates -- or owed an update and a chase -- is
+   one message. */
 function renderFollowUpBadge(){
-  setNavBadge('navBadgeFollowUps', followUpClientsToContact(Date.now()).length,
-    'client(s) to update');
+  const n = fupPass ? fupPass.rows.length : followUpHubRows(Date.now()).length;
+  setNavBadge('navBadgeFollowUps', n, 'client(s) to update');
 }
 
-/* Recording every item this client was told about, in one act, because
-   one message told them about all of them. Returns what was recorded so
-   "It did not go" has something to take back. */
-function recordFollowUpClient(customerId){
-  const row = followUpClientsToContact(Date.now())
-    .find(r=> String(r.customerId) === String(customerId));
-  if(!row) return null;
-  row.items.forEach(i=> recordFollowUpContact(i.followUp.id, i.reasons[0] && i.reasons[0].kind));
-  delete fupDrafts[String(customerId)];
-  return {customerId: String(customerId), name: row.name, ids: row.items.map(i=> i.followUp.id)};
-}
 /* The undo. It pops the LAST contact off each follow-up rather than
    clearing the history: a client told in March and wrongly marked today
    goes back to having been told in March, not to never having been told
@@ -89826,6 +90356,8 @@ function unrecordFollowUpContacts(ids){
     if(!f || !(f.contacts||[]).length) return;
     const latest = f.contacts.reduce((a,b)=> (new Date(b.at) > new Date(a.at) ? b : a));
     f.contacts = f.contacts.filter(c=> c !== latest);
+    // The promise that contact discharged comes back with it.
+    if(latest.promisedWas && !f.promisedOn) f.promisedOn = latest.promisedWas;
   });
   saveData();
 }
@@ -89854,29 +90386,44 @@ function wireFollowUpsScreen(){
     if(e.target.id === 'fup_search'){ fupRegisterQuery = e.target.value; renderFollowUpsAll(fupRegisterQuery); return; }
     if(e.target.classList.contains('fup-msg')) fupDrafts[e.target.dataset.cust] = e.target.value;
   });
+  /* An optional line ticked in or out. The draft is rewritten only if
+     the owner has not touched it: typed words are theirs. */
+  screen.addEventListener('change', (e)=>{
+    if(!e.target.classList.contains('fup-tick-in')) return;
+    const cid = String(e.target.dataset.cust);
+    fupTicks[cid] = Object.assign({}, fupTickState(cid), {[e.target.dataset.tick]: e.target.checked});
+    if(fupDrafts[cid] != null) toast('The message keeps your own words — Put the wording back to see the line come and go', 4000);
+    renderFollowUpsContact();
+  });
 
   screen.addEventListener('click', (e)=>{
+    if(e.target.closest('#fup_add_any')){ openFollowUpListModal(null); return; }
     const state = e.target.closest('[data-fupstate]');
     if(state){ fupRegisterState = state.dataset.fupstate; renderFollowUpsAll(fupRegisterQuery); return; }
+    const why = e.target.closest('[data-fupwhy]');
+    if(why){ fupWhy = why.dataset.fupwhy; renderFollowUpsContact(); return; }
     const pick = e.target.closest('.fup-pick');
     if(pick){ if(String(fupAwaiting||'') !== String(pick.dataset.cust)) fupAwaiting = null;
+      fupEditing = null;
       fupSelectedCustomerId = pick.dataset.cust; renderFollowUpsContact(); return; }
 
-    const btn = e.target.closest('.fup-send, .fup-notsent, .fup-told, .fup-copy, .fup-reset, .fup-undo, .fup-record, .fup-close, .fup-reopen');
+    const btn = e.target.closest('.fup-send, .fup-notsent, .fup-told, .fup-copy, .fup-reset, .fup-undo, .fup-record, .fup-close, .fup-reopen, .fup-when, .fup-date-set, .fup-date-clear, .fup-edit, .fup-details-save, .fup-edit-cancel, .fup-lead, .fup-pay, .fup-promise, .fup-promise-set, .fup-picture');
     if(!btn) return;
     const draftOf = (cid)=> {
       const box = screen.querySelector('.fup-msg');
       return box && box.dataset.cust === String(cid) ? box.value : '';
     };
+    const rowOf = (cid)=> fupHubRowsNow().find(r=> String(r.customerId) === String(cid));
+    const val = (id)=> { const el = document.getElementById(id); return el ? el.value : ''; };
 
     if(btn.classList.contains('fup-send')){
       const cid = btn.dataset.cust;
-      const row = followUpClientsToContact(Date.now()).find(r=> String(r.customerId) === String(cid));
+      const row = rowOf(cid);
       if(!row) return;
       /* Opened in the same gesture, so the popup blocker leaves it alone,
          and NOTHING is recorded here -- see fupAwaiting. The footer asks
          whether it went the moment the owner comes back to the tab. */
-      window.open(followUpWaUrl(row, draftOf(cid)), '_blank');
+      window.open(followUpWaUrl(row, draftOf(cid) || followUpHubDigest(row, fupTickState(cid))), '_blank');
       fupAwaiting = cid;
       toast('WhatsApp is open — come back and say whether it went', 5000);
       renderFollowUps();
@@ -89889,16 +90436,23 @@ function wireFollowUpsScreen(){
     }
     if(btn.classList.contains('fup-told')){
       fupAwaiting = null;
-      fupLastTold = recordFollowUpClient(btn.dataset.cust);
-      if(fupLastTold) toast(`Recorded — ${fupLastTold.ids.length} item${fupLastTold.ids.length === 1 ? '' : 's'} marked as told`, 3500);
+      const cid = btn.dataset.cust;
+      fupLastTold = recordFollowUpClient(cid, fupTickState(cid));
+      if(fupLastTold){
+        const n = fupLastTold.ids.length + (fupLastTold.chased ? 1 : 0) + (fupLastTold.briefKey ? 1 : 0) + (fupLastTold.quietKey ? 1 : 0);
+        toast(`Recorded — ${n} thing${n === 1 ? '' : 's'} marked as told${fupLastTold.chased ? ', and the chase' : ''}`, 3500);
+        fupLastTold.notWritten.forEach(w=> toast(w, 7000));
+      } else {
+        toast('Nothing recorded — they are no longer in the queue. The news may already be marked told, or the row closed.', 5000);
+      }
       renderFollowUps();
       return;
     }
     if(btn.classList.contains('fup-copy')){
       const cid = btn.dataset.cust;
-      const row = followUpClientsToContact(Date.now()).find(r=> String(r.customerId) === String(cid));
+      const row = rowOf(cid);
       if(!row) return;
-      navigator.clipboard.writeText(draftOf(cid) || followUpDigest(row))
+      navigator.clipboard.writeText(draftOf(cid) || followUpHubDigest(row, fupTickState(cid)))
         .then(()=> toast('Message copied — it is not recorded as told until you say so'))
         .catch(()=> toast('Could not copy — select the text and copy it by hand'));
       return;
@@ -89910,7 +90464,7 @@ function wireFollowUpsScreen(){
     }
     if(btn.classList.contains('fup-undo')){
       if(fupLastTold){
-        unrecordFollowUpContacts(fupLastTold.ids);
+        unrecordFollowUpClient(fupLastTold);
         fupSelectedCustomerId = fupLastTold.customerId;
         toast(`${fupLastTold.name} is back in the queue`);
         fupLastTold = null;
@@ -89919,6 +90473,34 @@ function wireFollowUpsScreen(){
       return;
     }
     if(btn.classList.contains('fup-record')){ openFollowUpListModal(btn.dataset.cust); return; }
+    if(btn.classList.contains('fup-lead')){ openSourcingLead(btn.dataset.lead); return; }
+    if(btn.classList.contains('fup-pay')){ openCustomerDebtModal(btn.dataset.cust, 'payment'); return; }
+    if(btn.classList.contains('fup-picture')){
+      shareBrief(btn.dataset.cust).then(()=> renderFollowUps());
+      return;
+    }
+    /* The inline fields: open, set, clear, save, cancel. */
+    if(btn.classList.contains('fup-when')){ fupEditing = {id: btn.dataset.id, what:'date'}; renderFollowUpsContact(); return; }
+    if(btn.classList.contains('fup-edit')){ fupEditing = {id: btn.dataset.id, what:'details'}; renderFollowUpsContact(); return; }
+    if(btn.classList.contains('fup-promise')){ fupEditing = {id: btn.dataset.cust, what:'promise'}; renderFollowUpsContact(); return; }
+    if(btn.classList.contains('fup-edit-cancel')){ fupEditing = null; renderFollowUpsContact(); return; }
+    if(btn.classList.contains('fup-date-set')){
+      const v = val('fup_date');
+      if(!v){ toast('Pick the day you will get back to them by'); return; }
+      if(!setFollowUpPromise(btn.dataset.id, v)){ toast('That is not a day'); return; }
+      fupEditing = null; renderFollowUps(); return;
+    }
+    if(btn.classList.contains('fup-date-clear')){ setFollowUpPromise(btn.dataset.id, null); fupEditing = null; renderFollowUps(); return; }
+    if(btn.classList.contains('fup-details-save')){
+      setFollowUpDetails(btn.dataset.id, {qty: val('fup_qty'), note: val('fup_note')});
+      fupEditing = null; renderFollowUps(); return;
+    }
+    if(btn.classList.contains('fup-promise-set')){
+      const r = addPaymentPromise(btn.dataset.cust, val('fup_pdate'), Number(val('fup_pamt')) || null, '');
+      if(!r.ok){ toast(r.why, 6000); return; }
+      toast('Written down — Chase will leave them alone until that day');
+      fupEditing = null; renderFollowUps(); return;
+    }
     if(btn.classList.contains('fup-close')) closeFollowUp(btn.dataset.id, btn.dataset.reason || 'closed');
     else reopenFollowUp(btn.dataset.id);
     renderFollowUps();
@@ -89980,9 +90562,10 @@ function renderFollowUpListModal(){
       <div class="fup-row-main">
         <span class="fup-row-who">${esc(s.label)}</span>
         <span class="fup-row-item">${f.closedAt
-          ? `Closed${f.closedReason ? ' — ' + esc(f.closedReason) : ''}`
-          : last ? `Last told ${esc(savedAgoLabel(last.at))}`
-                 : `Never followed up · added ${esc(savedAgoLabel(f.createdAt))}`}</span>
+          ? esc(fupClosedLabel(f))
+          : (last ? `Last told ${esc(savedAgoLabel(last.at))}`
+                  : `Never followed up · added ${esc(savedAgoLabel(f.createdAt))}`)
+            + (f.promisedOn ? ` · get back by ${esc(fmtShortDate(f.promisedOn))}` : '')}</span>
       </div>
       <button type="button" class="fup-link ${f.closedAt ? 'fup-list-reopen' : 'fup-list-close'}"
         data-id="${esc(String(f.id))}">${f.closedAt ? 'Reopen' : 'Remove'}</button>
@@ -90013,12 +90596,25 @@ function renderFollowUpAddResults(){
 }
 
 function openFollowUpListModal(customerId){
-  followUpListCustomerId = customerId;
+  followUpListCustomerId = customerId || null;
   const c = (data.customers||[]).find(x=> String(x.id) === String(customerId));
   document.getElementById('followUpListTitle').textContent =
-    c ? `Follow-up list — ${c.name}` : 'Follow-up list';
-  document.getElementById('fup_add_search').value = '';
-  renderFollowUpListModal();
+    c ? `Follow-up list — ${c.name}` : (customerId ? 'Follow-up list' : 'Add a follow-up');
+  ['fup_add_search','fup_add_qty','fup_add_note','fup_who','fup_who_phone'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = ''; });
+  /* No client named: the modal opens on WHO first. The datalist is the
+     shop's own customers, the same one the sourcing ask form reads. */
+  const pick = document.getElementById('fup_pick_wrap');
+  const list = document.getElementById('fup_list_wrap');
+  if(pick && list){
+    pick.hidden = !!followUpListCustomerId;
+    list.hidden = !followUpListCustomerId;
+    if(!followUpListCustomerId){
+      document.getElementById('dl_sourcing_customers').innerHTML =
+        (data.customers||[]).map(x=> `<option value="${esc(x.name)}"></option>`).join('');
+    }
+  }
+  if(followUpListCustomerId) renderFollowUpListModal();
   openModal('followUpListModal');
 }
 
@@ -90049,13 +90645,33 @@ function wireFollowUpListModal(){
   if(!modal) return;
   const search = document.getElementById('fup_add_search');
   if(search) search.addEventListener('input', renderFollowUpAddResults);
+  /* Who it is for, when the modal was opened without a client: a name on
+     file, or a name and a number to put on file -- the same resolver the
+     sourcing ask form uses, so a walk-in becomes one customer record,
+     not two. */
+  const use = document.getElementById('fup_who_use');
+  if(use) use.addEventListener('click', async ()=>{
+    const name = document.getElementById('fup_who').value.trim();
+    const phone = document.getElementById('fup_who_phone').value.trim();
+    if(!name){ toast('Who is it for?'); return; }
+    const hit = sourcingFindCustomerByName(name);
+    const who = hit ? {customerId: hit.id, customerName: hit.name} : await sourcingResolveAsker(name, phone);
+    if(!who.customerId){ toast('Not a customer yet — add a phone number and they will be put on file', 5000); return; }
+    if(!hit) saveData();
+    openFollowUpListModal(who.customerId);
+  });
   modal.addEventListener('click', (e)=>{
     const btn = e.target.closest('.fup-list-add, .fup-list-close, .fup-list-reopen');
     if(!btn) return;
     if(btn.classList.contains('fup-list-add')){
       const row = followUpAddResults(search.value).find(r=> r.key === btn.dataset.key);
       if(!row) return;
-      addFollowUp(followUpListCustomerId, row.subject, {});
+      /* The quantity is what the price basis is chosen on, so it is
+         asked for here rather than assumed to be one. */
+      const qtyEl = document.getElementById('fup_add_qty');
+      const noteEl = document.getElementById('fup_add_note');
+      addFollowUp(followUpListCustomerId, row.subject,
+        {qty: qtyEl && qtyEl.value !== '' ? Number(qtyEl.value) : null, note: noteEl ? noteEl.value.trim() : ''});
       toast(`Added — they will be flagged when there is news about ${row.label}`, 3500);
     } else if(btn.classList.contains('fup-list-close')){
       // Closed, not deleted. "They went elsewhere" is worth keeping and is
@@ -90066,6 +90682,7 @@ function wireFollowUpListModal(){
     }
     renderFollowUpListModal();
     renderFollowUpBadge();
+    if(document.getElementById('tab-followups').style.display !== 'none') renderFollowUps();
   });
   const close = ()=>{ followUpListCustomerId = null; closeModal('followUpListModal'); };
   document.getElementById('followUpListClose').addEventListener('click', close);
@@ -90443,11 +91060,20 @@ function captureSourcingLeadAndSave(req){
     res.lead.voided = false;
     res.lead.droppedAt = null;
   }
+  /* An ask that names a customer -- or comes from a number that is one
+     -- puts them on follow-ups for the lead, so "let me know when you
+     get it" is kept without anybody remembering to tick anything. A
+     follow-up is a record, not a send; the toast says it was made, and
+     their list offers Remove. Deduped by addFollowUp. */
+  const cid = (req && req.customerId) || (req && req.phone && (waMatchCustomer(req.phone)||{}).id) || null;
+  const enrolled = cid ? addFollowUp(cid, {leadId: res.lead.id}, {qty: req.qty, note: req.variant}) : null;
   saveData();
   renderSourcingBadge();
+  renderFollowUpBadge();
   if(document.getElementById('tab-sourcing').style.display !== 'none') renderSourcing();
-  toast(sourcingCaptureToast(res), 7000);
-  return res;
+  const who = enrolled && (data.customers||[]).find(c=> String(c.id) === String(cid));
+  toast(sourcingCaptureToast(res) + (who ? ` ${who.name} is on follow-ups for it — they will be flagged when it moves.` : ''), 7000);
+  return Object.assign(res, {followUp: enrolled});
 }
 
 /* ---------------- Stages ----------------
@@ -94224,6 +94850,7 @@ function refreshNavBadges(){
   renderChaseBadge();
   renderConsignBadge();
   renderPricingBadge();
+  renderFollowUpBadge();
 }
 function renderAll(){
   renderPresets();

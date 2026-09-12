@@ -175,6 +175,10 @@ const scope = compileScope([
   cashFlowStatement: () => ({ tradingIn: 0, debtCollected: 0, stockOut: 0, operatingOut: 0, operating: 0, investing: 0, financing: 0, netMovement: 0 }),
   renderSourcing: () => {},
   renderSourcingBadge: () => {},
+  // The capture door now enrols a known customer; the assistant stages no customers here.
+  renderFollowUpBadge: () => {},
+  waMatchCustomer: () => null,
+  addFollowUp: () => null,
   goToTab: () => {}, refreshNavBadges: () => {},
   currentActiveTab: 'quote',
 }, ['names']);
