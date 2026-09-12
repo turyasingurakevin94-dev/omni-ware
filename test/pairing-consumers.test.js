@@ -523,18 +523,33 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
 
 /* ---- 16. what the screen itself says --------------------------------- */
 {
-  const rail = extractFunction(src, 'tellingRailHTML', 'index.html');
-  t.check(/needs:'Needs it too'/.test(rail) && /swap:'Out — offered instead'/.test(rail),
+  /* Worth telling is not a screen any more; its queue, its rules and its
+     score are the Follow-ups hub's third tab, and its rail's two claims
+     moved with them. The claims are unchanged -- every reason is named
+     rather than printed as a key, and the panel that says it is the
+     whole algorithm counts the rules it runs on -- so they are asserted
+     where they now live: the label map, and the rules panel. */
+  const names = extractDeclaration(src, 'HUB_SCORE_LABELS', 'index.html');
+  t.check(/needs:'Needs it too'/.test(names) && /swap:'Out — offered instead'/.test(names),
     'the scoreboard has a name for each new reason rather than printing its key');
-  t.check(/Companions come from rules you wrote/.test(rail),
+  const rules = extractFunction(src, 'renderFollowUpScore', 'index.html');
+  t.check(/Companions come from rules you wrote/.test(rules),
     'and the panel that claims to be the whole algorithm counts the rules too');
   const why = extractFunction(src, 'briefWhyHTML', 'index.html');
   t.check(!/Under <b>Also buy<\/b>/.test(why), 'the reasoning no longer names a heading the picture stopped using');
   t.check(/The reason names/.test(why),
     'and says so where the list has no room for the very thing the reason is about');
-  const row = extractFunction(src, 'tellingRowHTML', 'index.html');
-  t.check(/b\.unit \|\| \(b\.product && b\.product\.unit\)/.test(row),
-    'the queue prints the unit the price was worked in');
+  /* The queue row that printed `b.unit || (b.product && b.product.unit)`
+     went with the screen. That fallback was a SECOND copy of a
+     resolution customerBrief had already done -- its pickUnit chain
+     ends in the product's own unit -- so the claim is asserted at the
+     one place the unit is decided, and at the one place it now reaches
+     the client. */
+  const brief0 = extractFunction(src, 'customerBrief', 'index.html');
+  t.check(/\(product && product\.unit\) \|\| ''/.test(brief0),
+    'the unit the price was worked in is resolved once, ending at the product’s own');
+  const line = extractFunction(src, 'briefPlainLine', 'index.html');
+  t.check(/b\.unit/.test(line), 'and it is what the client is told the price is per');
   const brief = extractFunction(src, 'customerBrief', 'index.html');
   t.check(/briefPriceNow\(pick, pickVar, qty\)/.test(brief),
     'and prices the pick at the quantity the reason weighed');

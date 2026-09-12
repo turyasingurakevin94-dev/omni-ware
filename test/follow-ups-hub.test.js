@@ -49,7 +49,9 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'recordFollowUpContact', 'setFollowUpPromise', 'setFollowUpDetails', 'closeFollowUp',
   'reopenFollowUp', 'unrecordFollowUpContacts',
   'followUpHubRows', 'followUpHubDigest', 'fupHubRowsNow', 'recordFollowUpClient',
-  'unrecordFollowUpClient', 'briefPlainLine', 'debtChaseMessage'];
+  'unrecordFollowUpClient', 'briefPlainLine', 'debtChaseMessage',
+  'followUpBoughtSince', 'followUpAlreadyBought', 'hubScoreboard', 'hubScoreLabels', 'moneyWhy',
+  'followUpHeldBack', 'fupChasedWords'];
 
 let nextId = 1;
 let scope = null, err = null;
@@ -61,9 +63,15 @@ try {
     extractDeclaration(src, 'FOLLOW_UP_QUIET_DAYS_DEFAULT', 'index.html'),
     extractDeclaration(src, 'FOLLOW_UP_STAGE_WORDS', 'index.html'),
     extractDeclaration(src, 'FUP_HUB_RANK', 'index.html'),
+    extractDeclaration(src, 'HUB_SCORE_LABELS', 'index.html'),
+    extractDeclaration(src, 'FUP_MONEY_UNMEASURABLE', 'index.html'),
+    extractDeclaration(src, 'TELL_WORKED_DAYS', 'index.html'),
     extractDeclaration(src, 'DEBT_CHASE_INVOICE_LINES', 'index.html'),
     extractDeclaration(src, 'fupDayISO', 'index.html'),
-    ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    ...NAMES.filter((n) => !['hubScoreLabels', 'moneyWhy'].includes(n)).map((n) => extractFunction(src, n, 'index.html')),
+    // compileScope hands back functions only, so the label map is reached through one.
+    'function hubScoreLabels(){ return HUB_SCORE_LABELS; }',
+    'function moneyWhy(){ return FUP_MONEY_UNMEASURABLE; }',
   ], {
     data,
     saveData: () => {},
@@ -84,6 +92,10 @@ try {
     shopIdentity: () => ({ name: 'OMNI-WARE', phone: '0700 000 000' }),
     /* The other engines, as the hub sees them: what each would say today. */
     debtChaseRows: () => data.__chase || { due: [], resting: [], blocked: [], promised: [] },
+    /* The picture half of the score, as briefScoreboard would answer it. */
+    briefScoreboard: () => data.__pics || { told: 0, worked: 0, worth: 0, byReason: {} },
+    briefHeldList: () => data.__heldList || [],
+    savedQuoteTotal: (q) => Number(q && q.total) || 0,
     briefQueue: () => data.__brief || [],
     customerBookRows: () => data.__book || [],
     custAttentionReason: (r) => r.__reason || null,
@@ -262,6 +274,71 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   eq(scope.recordFollowUpClient('C1', {}), null, 'a client not in the queue records nothing, and says so by returning null');
 }
 
+/* ---------- 4b. did any of it work, across the whole screen ----------- */
+{
+  reset();
+  /* Two ledgers, because the shop keeps two: a picture shared is a row
+     in briefsSent, a client told about a follow-up is a stamp on that
+     follow-up. The score has to read both or it reports on the half of
+     the screen that sends pictures. */
+  data.__pics = { told: 4, worked: 1, worth: 500000, byReason: { rhythm: { told: 3, worked: 1 }, asked: { told: 1, worked: 0 } } };
+  const f = fu({ customerId: 'C1', productId: 'P1' });
+  f.contacts = [{ at: ago(10), reason: 'back_in_stock' }, { at: ago(3), reason: 'promised' }];
+  // Bought two days after being told it was back in — inside the fortnight.
+  data.savedQuotes = [{ id: 'Q1', invoiced: true, invoicedTs: NOW - 8 * DAY, invoicedAt: ago(8),
+    customerId: 'C1', total: 90000, items: [{ productId: 'P1', variantIdx: null }] }];
+  const sc = scope.hubScoreboard();
+  eq(sc.told, 6, 'every telling counts — four pictures and two follow-up stamps');
+  eq(sc.worked, 2, 'and an order inside the fortnight counts once for the picture and once for the stamp it followed');
+  eq(sc.byReason.back_in_stock.worked, 1, 'credited to the reason they were actually told');
+  eq(sc.byReason.promised.worked, 0, 'and not to a reason whose telling came after the order');
+  eq(sc.worth, 590000, 'what those orders were worth is added to the picture half rather than replacing it');
+  const labels = scope.hubScoreLabels();
+  t.check(labels.needs === 'Needs it too'
+    && labels['swap'] === 'Out — offered instead'
+    && labels.back_in_stock === 'Back in stock',
+    'every reason has a name rather than printing its key — the picture’s reasons and the queue’s alike');
+
+  /* THE HONEST GAP. presetDebtChases holds only the latest chase per
+     customer and pruneDebtChases drops it the moment a balance clears --
+     exactly the case that would prove the chase worked. So the score
+     reports how many stand chased and refuses to compute a rate. */
+  data.presetDebtChases = { C2: '2026-08-14', C8: '2026-08-15' };
+  const sc2 = scope.hubScoreboard();
+  eq(sc2.chases, 2, 'the money side says how many stand chased');
+  t.check(sc2.byReason.chase == null && sc2.byReason.money == null,
+    'and claims no conversion for them — every rate that ledger could give is wrong in the same direction');
+  t.check(/dropped the moment they owe nothing/.test(scope.moneyWhy())
+    && !/presetDebtChases/.test(extractFunction(src, 'hubScoreboard', 'index.html').replace(/Object\.keys\(data\.presetDebtChases \|\| \{\}\)\.length/, '')),
+    'and the reason is said in words, in one place, rather than left for the reader to wonder about');
+
+  /* A telling about something the shop cannot sell yet cannot convert.
+     Counting it in the denominator would make "sourcing moved" read as
+     the worst thing this screen does. */
+  reset();
+  data.__pics = { told: 0, worked: 0, worth: 0, byReason: {} };
+  data.sourcingLeads = [{ id: 'SRC-1', name: 'Gypsum board', status: 'priced', voided: false, productId: null }];
+  const lead = fu({ customerId: 'C1', productId: null, leadId: 'SRC-1' });
+  lead.contacts = [{ at: ago(5), reason: 'sourcing_progress' }];
+  const sc3 = scope.hubScoreboard();
+  eq(sc3.told, 0, 'a telling about goods that are still being found is not in the rate');
+  eq(sc3.notYet, 1, 'it is counted on its own, and named');
+}
+
+/* ---------- 4c. one reader for "did they buy it" --------------------- */
+{
+  reset();
+  const f = fu({ customerId: 'C1', productId: 'P1', createdAt: ago(30) });
+  data.savedQuotes = [{ id: 'Q1', invoiced: true, invoicedTs: NOW - 20 * DAY, invoicedAt: ago(20),
+    customerId: 'C1', total: 1000, items: [{ productId: 'P1', variantIdx: null }] }];
+  t.check(!!scope.followUpAlreadyBought(f),
+    'they already bought it, asked without a window — the row can be closed');
+  t.check(!!scope.followUpBoughtSince(f, NOW - 25 * DAY, 14),
+    'and the same reader, given a window, answers whether telling them worked');
+  t.check(!scope.followUpBoughtSince(f, NOW - 25 * DAY, 2),
+    'an order outside the window is not an answer to the telling');
+}
+
 /* ---------- 5. the index answers the same as the scan ----------------- */
 {
   reset();
@@ -292,13 +369,24 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
   t.check(/class="btn btn-ghost ow-sm fup-tel" href="tel:/.test(contact),
     'Ring is a tel: link — the owner’s own thumb, the only kind of sending allowed');
-  t.check(/fup-pay/.test(contact) && /fup-promise/.test(contact) && /fup-when/.test(contact) && /fup-edit/.test(contact) && /fup-lead/.test(contact) && /fup-picture/.test(contact),
+  /* THE PICTURE IS LOOKED AT BEFORE IT IS SENT. This used to pin
+     `fup-picture`, a bare "Send the picture" button whose whole job was
+     to call shareBrief -- a price list built from the client's own
+     dealings, leaving the shop, that the owner had never seen. The claim
+     the old assertion made is unchanged (the picture is reachable from
+     the card); what changed is that reaching it now shows it. */
+  t.check(/fup-pay/.test(contact) && /fup-promise/.test(contact) && /fup-when/.test(contact)
+    && /fup-edit/.test(contact) && /fup-lead/.test(contact) && /fup-see-picture/.test(contact),
     'a payment, a promise, a day, the qty, the lead and the picture are all reachable from the card');
+  t.check(/customerBriefPanelHTML\(cid\)/.test(contact) && !/fup-picture"/.test(contact),
+    'and the picture is the SAME panel the client’s account draws — one builder, so the filmstrip approved here and the one there can never say different things');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
   t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire) && /addPaymentPromise\(/.test(wire)
     && /openSourcingLead\(/.test(wire) && /shareBrief\(/.test(wire),
     'each through the door that page already uses, never a copy of it');
   t.check(/unrecordFollowUpClient\(fupLastTold\)/.test(wire), 'and "it did not go" undoes every stamp, not only ours');
+  t.check(/data-tell/.test(wire) && /saveBriefGif\(/.test(wire) && /undoBriefSent\(/.test(wire),
+    'the picture panel’s own Share, Save and Undo are wired on the ids it already uses, rather than a second vocabulary for one panel');
   t.check(/fupLeave\(\)/.test(extractFunction(src, 'goToTab', 'index.html')),
     'leaving the tab forgets an open chat — a stale "WhatsApp is open with these words" was greeting people a day later');
   t.check(!/data-fupwhy="\$\{k\}">\$\{esc\(label\)\}<span/.test(contact) && /data-fupwhy=/.test(contact),
@@ -308,6 +396,62 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
     'the products register says who is waiting, read once per render');
   t.check(/pm_waiting_go/.test(extractFunction(src, 'editProduct', 'index.html')), 'and the product form opens the hub on them');
   t.check(!/\.send\(|wa-send/.test(extractFunction(src, 'followUpHubDigest', 'index.html')), 'nothing here sends anything');
+}
+
+/* ---------- 7. the held-back panel, and the drop it closes ----------- */
+{
+  reset();
+  /* Chase is resting a debtor it asked two days ago. followUpHubRows
+     names that on the card of somebody who is in the queue for another
+     reason -- but a debtor in it for NOTHING else used to fall out of
+     the app entirely: no row, no note, no mention. */
+  data.__chase = { due: [], resting: [chaseRow('C8', { chasedDaysAgo: 2, debt: 300000 })],
+    promised: [chaseRow('C2', { promise: { state: 'waiting', promisedOn: day(4), madeOn: day(-1) } })],
+    blocked: [chaseRow('C6', { why: 'drift' })] };
+  data.__brief = [{ customer: data.customers[4], reason: { key: 'rhythm', productId: 'P1', chip: 'Due by rhythm', weight: 4, why: 'y' }, product: data.products[0] }];
+  data.__heldList = null;
+  const rows = scope.followUpHubRows(NOW);
+  const held = scope.followUpHeldBack(NOW, rows);
+  const names = held.list.map((h) => h.name);
+  t.check(names.includes('Owes Plain') && names.includes('Amina Nabirye') && names.includes('Terms Late'),
+    'a debtor Chase is resting, one who named a day and one whose balance is being checked are all NAMED — not one of them was a row in the queue, and they used to fall out of the app entirely');
+  eq(held.list.find((h) => h.name === 'Owes Plain').label, 'chased 2d ago',
+    'each in the engine’s own words for why');
+  eq(scope.fupChasedWords(0), 'chased today',
+    'and today is called today — "chased 0d ago" is not how anybody says it');
+
+  reset();
+  /* Somebody who IS in the queue carries their hold on their own card,
+     so the panel does not say it twice. */
+  fu({ customerId: 'C1', createdAt: ago(30) });
+  data.__chase = { due: [], resting: [chaseRow('C1', { chasedDaysAgo: 1, debt: 90000 })], promised: [], blocked: [] };
+  const rows2 = scope.followUpHubRows(NOW);
+  const held2 = scope.followUpHeldBack(NOW, rows2);
+  t.check(!held2.list.some((h) => String(h.customerId) === 'C1'),
+    'a client already in the queue is not listed again — their hold is on their own card, where the reader is already looking');
+  eq(held2.alsoInQueue, 1, 'and the panel counts them instead, so the split is visible rather than a gap');
+}
+
+/* ---------- 8. the rules tab, and one strip at a time --------------- */
+{
+  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/data-fuptab="score"/.test(sec) && /id="fup_score_pane"/.test(sec),
+    'the score has a tab of its own and a pane to draw into');
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 3, 'three tabs, and no more');
+  const score = extractFunction(src, 'renderFollowUpScore', 'index.html');
+  t.check(/briefsSentTable/.test(score) && /0091_briefs_sent\.sql/.test(score),
+    'the record-keeping table is named when it is missing — that warning had no other home once Worth telling went, and without it recordBriefSent fails into a toast nobody keeps');
+  t.check(/still works/.test(score),
+    'and it does not take the whole screen down: the queue on To contact does not need that table');
+  t.check(!/btn-accent/.test(score), 'nothing on that tab is an act, so it carries no accent at all');
+  t.check(/HUB_SCORE_LABELS\[k\]/.test(score),
+    'every bar is named rather than printing its key — the old panel drew one labelled "spend_down"');
+  eq((score.match(/class="ow-mt\$\{/g) || []).length, 1, 'its tiles come from one template, like every other strip');
+  const render = extractFunction(src, 'renderFollowUps', 'index.html');
+  t.check(/fupSummaryRow[\s\S]*?display = fupTab==='score' \? 'none' : ''/.test(render),
+    'and the work strip is hidden while the score is shown — two metric strips whose first tiles nearly agree is worse than either alone');
+  t.check(/Worth telling/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
+    'the absorbed screen’s name is still spoken, on the row that narrows the queue by why');
 }
 
 process.exit(t.done() ? 1 : 0);

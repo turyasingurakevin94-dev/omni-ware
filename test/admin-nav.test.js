@@ -36,7 +36,7 @@
  *
  * Run: node test/admin-nav.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('admin nav');
 const src = read('index.html');
@@ -227,6 +227,41 @@ const INDEX = railIndex();
     const lost = carried.filter((w) => !al.keywords.includes(w));
     t.check(lost.length === 0,
       `and it carries the search words of both screens it replaced${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
+  }
+  /* AND THE SAME AGAIN, with one difference worth stating. Worth telling
+     lost its row; Follow-ups kept its. The assets check above demands
+     that the surviving LABEL name both halves, because "Assets" and
+     "Loans" are two subjects sharing no word -- somebody looking for a
+     loan would never guess "Assets".
+     This merge is not that. Worth telling was never a subject: it was
+     one of the six REASONS to send one client one message, and it is
+     still called that inside the screen, on the row that narrows the
+     queue by why. So the label stays one word, and the check holds the
+     two things a merge can actually lose -- the words people search by,
+     and the name still being spoken at the destination. */
+  {
+    const fu = INDEX.find((x) => x.tab === 'followups') || { label: '', keywords: '' };
+    const carried = ['worth', 'telling', 'marketing', 'recommend', 'brief',
+      'picture', 'gif', 'promote', 'campaign', 'offer', 'suggest'];
+    const lost = carried.filter((w) => !fu.keywords.includes(w));
+    t.check(lost.length === 0,
+      `Follow-ups carries the search words of the screen it absorbed${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
+    /* NOT "broadcast". WhatsApp is the real answer for it, and the note
+       above the Follow-ups button already records this law for the word
+       "stock": claiming a word another screen owns buries that screen
+       for its own most obvious search. */
+    const wa = INDEX.find((x) => x.tab === 'whatsapp') || { keywords: '' };
+    t.check(!/broadcast/.test(fu.keywords) && /broadcast/.test(wa.keywords),
+      'and not "broadcast", which is WhatsApp\'s own most obvious search, and still its');
+    t.check(!INDEX.some((x) => x.tab === 'telling') && !/id="tab-telling"/.test(src),
+      'Worth telling is not a destination any more, and has no section left behind');
+    const alias = extractFunction(src, 'resolveTab', 'index.html');
+    t.check(/if\(tab === 'telling'\)\{[^}]*fupWhy = 'telling'[^}]*return 'followups'; \}/.test(alias),
+      'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
+    const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+    const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
+    t.check(/Worth telling/.test(why) || /Worth telling/.test(sec),
+      'and the name it absorbed is still spoken at the destination, on the row that narrows the queue by why');
   }
   t.check(groupOf['compare'] === 'Buy' && groupOf['suppliers'] === 'Buy'
     && groupOf['purchase-invoices'] === 'Buy',

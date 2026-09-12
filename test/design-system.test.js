@@ -457,10 +457,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       retired: ['panel', 'dir-summary-row', 'dir-summary-card', 'st-bar', 'st-tabs', 'st-tab', 'search-bar',
                 'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
                 'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in'],
-      renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll', 'fupCp'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-cp', 'ow-av',
-                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-fig', 'ow-empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
+      /* AND WORTH TELLING'S BUILDERS, which outlived its screen.
+         That entry said the same brief was drawn three times -- a row in
+         the fortnight's queue, the reasoning under that row, and a panel
+         on the client's own account -- and that a second copy of
+         briefStripHTML would be free to show the owner a filmstrip the
+         picture does not match. It is drawn TWICE now, here and on the
+         account, and that is exactly why this screen opens
+         customerBriefPanelHTML rather than laying the frames out again.
+         The ratchet follows the builders, and the builders are this
+         screen's now. */
+      renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
+                'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
+                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
+                'briefNoteBody', 'briefLeftOffHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
+                    'ow-grid-l', 'ow-grid', 'ow-side', 'ow-stack',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-lr', 'ow-msg',
+                    'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
+                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
+                    'ow-empty', 'ow-mini',
+                    /* The reasoning under a picture makes three different
+                       demands on the owner -- go and fix, weigh before
+                       sending, simply know -- and they arrived in one grey.
+                       Three blocks under their own heading, plus the
+                       picture's own measure under a rule. */
+                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
+                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
     },
     /* Consignment. A card per consignor, each one always fully open --
        an avatar, a title, a private four-tile stat strip and their whole
@@ -922,37 +947,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid', 'ow-stack',
                     'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
                     'ow-sr-k', 'ow-sr-v'],
-    },
-    /* Worth telling. A new screen rather than a converted one, so it
-       retires nothing -- but it is ratcheted from its first day, which
-       is the only moment a screen is ever free of its own history.
-
-       Six renderers, and the reason they are listed together is the
-       same as the customers list above: the SAME brief is drawn three
-       times -- as a row in the fortnight's queue, as the reasoning that
-       opens under that row, and as a panel on the customer's own
-       account screen. A second copy of briefStripHTML would be free to
-       show the owner a filmstrip that the picture does not match, and
-       the picture is the thing being approved. */
-    telling: {
-      retired: [],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
-             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
-      renders: ['renderTelling', 'tellingRowHTML', 'tellingRailHTML',
-                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
-                'briefNoteBody', 'briefLeftOffHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
-                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
-                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-empty', 'ow-mini', 'ow-grid', 'ow-side',
-                    /* The reasoning under a picture makes three different
-                       demands on the owner -- go and fix, weigh before
-                       sending, simply know -- and they arrived in one grey.
-                       Three blocks under their own heading, plus the
-                       picture's own measure under a rule. */
-                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
-                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
     },
     /* Movements. The page head was on the layer already; the log under
        it was not. It emitted a <table> for the console and a second

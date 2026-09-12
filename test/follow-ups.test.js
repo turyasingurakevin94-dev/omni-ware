@@ -51,7 +51,7 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpCompanionIn', 'followUpSourcingProgress',
   'followUpPriceMoved', 'followUpGoneQuiet', 'followUpReasons', 'followUpClientsToContact',
   'followUpDigest', 'findFollowUp', 'addFollowUp', 'recordFollowUpContact',
-  'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought', 'followUpStatePill',
+  'closeFollowUp', 'reopenFollowUp', 'followUpBoughtSince', 'followUpAlreadyBought', 'followUpStatePill',
   // The promised day and the crossings index, which followUpReasons and
   // followUpClientsToContact now reach for.
   'followUpPromised', 'followUpStanding', 'stockCrossingsByKey',
