@@ -23,7 +23,7 @@
  *
  * Run: node test/balance-sheet-asat.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('balance sheet as at');
 const src = read('index.html');
@@ -45,10 +45,14 @@ const scope = compileScope([
   extractFunction(src, 'consignmentRows', 'index.html'),
   extractFunction(src, 'consignmentOwedTotal', 'index.html'),
   extractFunction(src, 'purchaseInvoiceTotal', 'index.html'),
+  extractDeclaration(src, 'PAY_BASES', 'index.html'),
   extractFunction(src, 'dueBalance', 'index.html'),
   extractFunction(src, 'duePaidBy', 'index.html'),
   extractFunction(src, 'dueBasis', 'index.html'),
   extractFunction(src, 'dueAccruedAsAt', 'index.html'),
+  extractFunction(src, 'monthChargeFraction', 'index.html'),
+  extractFunction(src, 'dueCostAccruedTo', 'index.html'),
+  extractFunction(src, 'duePositionAsAt', 'index.html'),
   extractFunction(src, 'dueAccruedOutstanding', 'index.html'),
   extractFunction(src, 'periodEndDate', 'index.html'),
   extractFunction(src, 'daysBetweenISO', 'index.html'),

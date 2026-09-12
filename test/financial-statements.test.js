@@ -81,7 +81,20 @@ const scope = compileScope([
   extractFunction(src, 'duePaidBy', 'index.html'),
   extractFunction(src, 'dueBasis', 'index.html'),
   extractFunction(src, 'dueAccruedAsAt', 'index.html'),
+  extractFunction(src, 'dueCostAccruedTo', 'index.html'),
+  extractFunction(src, 'duePositionAsAt', 'index.html'),
   extractFunction(src, 'dueAccruedOutstanding', 'index.html'),
+  extractFunction(src, 'duePrepaidAsAt', 'index.html'),
+  extractFunction(src, 'duesPrepaidAsAt', 'index.html'),
+  extractFunction(src, 'cashIsSpreadCost', 'index.html'),
+  extractFunction(src, 'spreadCostTxns', 'index.html'),
+  extractFunction(src, 'spreadDays', 'index.html'),
+  extractFunction(src, 'spreadCostBetween', 'index.html'),
+  extractFunction(src, 'spreadCostRows', 'index.html'),
+  extractFunction(src, 'spreadPrepaidOf', 'index.html'),
+  extractFunction(src, 'spreadAccruedOf', 'index.html'),
+  extractFunction(src, 'spreadPrepaidAsAt', 'index.html'),
+  extractFunction(src, 'spreadAccruedAsAt', 'index.html'),
   extractFunction(src, 'periodEndDate', 'index.html'),
   extractFunction(src, 'daysBetweenISO', 'index.html'),
   extractFunction(src, 'duesOwed', 'index.html'),
@@ -95,6 +108,8 @@ const scope = compileScope([
   extractFunction(src, 'assetCoverInMonth', 'index.html'),
   extractFunction(src, 'assetRowFraction', 'index.html'),
   extractDeclaration(src, 'DUE_KINDS', 'index.html'),
+  // dueBasis is reached for every wage now that its month is costed by the day.
+  extractDeclaration(src, 'PAY_BASES', 'index.html'),
   extractFunction(src, 'dueCostBetween', 'index.html'),
   extractFunction(src, 'dueCostRows', 'index.html'),
   extractFunction(src, 'dueSettledCashIds', 'index.html'),
@@ -130,6 +145,12 @@ const scope = compileScope([
   extractFunction(src, 'loanOutstanding', 'index.html'),
   extractFunction(src, 'dayBeforeISO', 'index.html'),
   extractFunction(src, 'loanInterestPaidBetween', 'index.html'),
+  extractFunction(src, 'loanChargedTo', 'index.html'),
+  extractFunction(src, 'loanInterestChargedBetween', 'index.html'),
+  extractFunction(src, 'loanInstalmentChargesBetween', 'index.html'),
+  extractFunction(src, 'loanChargesForPeriod', 'index.html'),
+  extractFunction(src, 'loanChargesOwedAt', 'index.html'),
+  extractFunction(src, 'loansChargesOwedAt', 'index.html'),
   extractFunction(src, 'liveLoans', 'index.html'),
   extractFunction(src, 'loansOutstandingAt', 'index.html'),
   extractFunction(src, 'loanInterestForPeriod', 'index.html'),
@@ -312,20 +333,51 @@ const reset = () => {
     'and a whole month is still exactly a month, which is why no month-end figure moved');
   t.check(is.loanFees === 600000, 'and the fee the lender kept is a cost of the month it was drawn');
 
-  // Interest reaches the statement too, but only once a repayment has
-  // actually been made -- it is charged on the cash basis phase 1 settled
-  // on, so an untouched loan costs nothing yet.
-  t.check(is.interest === 0, 'a loan with nothing repaid has cost no interest yet');
-  // A month later, so a month's interest has actually accrued -- a
-  // repayment made the day after drawdown has cost nothing yet, which is
-  // the cash basis working rather than a gap.
+  /* INTEREST IS CHARGED, NOT PAID. It used to reach the statement only
+     inside a repayment, on the day the repayment was made -- the cash
+     basis -- so a month the shop missed showed no cost of borrowing and
+     the month it caught up showed two. Rent, wages and depreciation had
+     all moved off that basis and interest was left behind on it. It is
+     charged now as the lender charges it: one period at a time, whether
+     or not the instalment was paid. */
+  const monthOfInterest = 20000000 * 0.20 / 12;
+  t.check(is.interest === 0, 'three days into a loan nothing has been charged yet');
+  const untouched = scope.incomeStatement('2026-09-01', '2026-09-30');
+  t.check(r(untouched.interest) === r(monthOfInterest),
+    `a month the shop did not pay still cost a month's interest (got ${r(untouched.interest)})`);
   data.loans[0].repayments = [{ date: '2026-09-01', amount: 800000 }];
   const withInterest = scope.incomeStatement('2026-09-01', '2026-09-30');
-  t.check(r(withInterest.interest) === r(20000000 * 0.20 / 12),
-    `the interest inside a repayment is a cost of the month it was paid (got ${r(withInterest.interest)})`);
+  t.check(r(withInterest.interest) === r(monthOfInterest),
+    `and paying it on time charges exactly the same month (got ${r(withInterest.interest)})`);
   t.check(scope.incomeStatement('2026-08-01', TODAY).interest === 0,
-    'and none of it lands in the month before it was paid');
+    'and none of it lands before it was charged');
+  // Paid six weeks late: the charge stays in September, and October is
+  // charged once -- not for the arrears as well.
+  data.loans[0].repayments = [{ date: '2026-10-15', amount: 800000 }];
+  t.check(r(scope.incomeStatement('2026-09-01', '2026-09-30').interest) === r(monthOfInterest),
+    'a repayment made late does not move the charge to the month the money finally left');
+  t.check(r(scope.incomeStatement('2026-10-01', '2026-10-31').interest) === r(monthOfInterest),
+    'and the month it was caught up in is charged for itself alone');
+  /* What has been charged and not paid is OWED. The sheet carried the
+     principal alone, so a month's interest left profit and was owed to
+     nobody. */
   data.loans[0].repayments = [];
+  const sep = scope.balanceSheetAsAt('2026-09-30');
+  t.check(r(sep.loanCharges) === r(monthOfInterest),
+    `interest charged and unpaid is owed to the lender (got ${r(sep.loanCharges)})`);
+  t.check(r(sep.loans) === r(20000000 + monthOfInterest),
+    'inside the loans line, beside the principal');
+  /* THE CHARGE ON EVERY INSTALMENT reached no statement at all: it was
+     taken off each repayment first, and the repayment is filed under
+     Loan Repayment, which is not a running cost. It is a cost of
+     borrowing and lands beside the interest. */
+  data.loans[0].feePerInstallment = 50000;
+  const charged = scope.incomeStatement('2026-09-01', '2026-09-30');
+  t.check(charged.loanInstalmentCharges === 50000 && charged.loanFees === 50000,
+    `the instalment charge is a cost of the month it fell due (got ${charged.loanFees})`);
+  t.check(scope.incomeStatement('2026-08-01', TODAY).loanFees === 600000,
+    'while the month of drawdown carries the arrangement fee and no instalment yet');
+  data.loans[0].feePerInstallment = 0;
   /* The point is WHERE depreciation sits, not what it is: above
      operating profit, below gross. Written against the charge the same
      window produces rather than a copy of it, so this keeps testing the
@@ -475,6 +527,93 @@ const reset = () => {
   t.check(scope.balanceSheetToday().staffAndRent === 0,
     'a shop that has paid everybody carries no such liability');
   data.dues = [];
+}
+
+/* ---------- 4b. paid in advance ---------------------------------------- */
+/*
+ * The profit and loss charges rent by the day. The sheet did not
+ * follow: a month's rent paid on the 1st left cash on the 1st, nothing
+ * stood in for the thirty days it had bought, and net worth fell by the
+ * month while profit had fallen by a day. The difference sat in "kept
+ * in the business", where nobody could explain it.
+ */
+{
+  reset();
+  data.cashDays[TODAY].opening = { cash: 5000000, momo: 0, bank: 0 };
+  const rentDue = (over) => Object.assign({ id: 9, kind: 'rent', refId: 'R1', period: '2026-08', dueDate: '2026-08-01',
+    amount: 620000, days: null, rate: 620000, paid: 0, payments: [] }, over);
+  // August's rent, due on the 1st and paid on the 1st. Today is the 3rd.
+  data.dues = [rentDue({ paid: 620000, payments: [{ date: '2026-08-01', amount: 620000, cashTxnId: 5 }] })];
+  data.cashTxns = [txn({ id: 5, date: '2026-08-01', type: 'payment', category: 'Rent', amount: 620000 })];
+  const bs = scope.balanceSheetToday();
+  t.check(r(bs.prepaid) === r(620000 * 28 / 31),
+    `twenty-eight days of a month paid on the 1st are still an asset on the 3rd (got ${r(bs.prepaid)})`);
+  t.check(bs.staffAndRent === 0, 'and nothing is owed on it');
+  t.check(Math.abs(bs.assets - (bs.cash + bs.receivables + bs.inventory + bs.fixedAssets + bs.prepaid)) < 0.01,
+    'inside total assets');
+  const is = scope.incomeStatement('2026-08-01', TODAY);
+  t.check(r(is.opexRows['Rent']) === r(620000 * 3 / 31), 'while the profit and loss has charged three days');
+  t.check(Math.abs((620000 - bs.prepaid) - is.opexRows['Rent']) < 0.01,
+    'so net worth moved by exactly what profit did');
+
+  // Unpaid and not yet due: the days occupied are owed all the same.
+  data.dues = [rentDue({ dueDate: '2026-08-28' })];
+  data.cashTxns = [];
+  const bs2 = scope.balanceSheetToday();
+  t.check(r(bs2.staffAndRent) === r(620000 * 3 / 31),
+    `rent not yet due is owed for the days occupied (got ${r(bs2.staffAndRent)})`);
+  t.check(bs2.prepaid === 0, 'and none of it is in advance');
+
+  // Unpaid and fallen due: the landlord is owed the month, and the days
+  // not yet reached are shown as paid for in advance -- the paying is
+  // still to come, but the sheet must not net the two into a figure the
+  // landlord's own book would not recognise.
+  data.dues = [rentDue()];
+  const bs3 = scope.balanceSheetToday();
+  t.check(bs3.staffAndRent === 620000, 'rent fallen due and unpaid is owed whole');
+  t.check(r(bs3.prepaid) === r(620000 * 28 / 31), 'with the days not yet reached as paid for in advance');
+  reset();
+}
+
+/* ---------- 4c. a running cost that covers a stretch of days ---------- */
+/*
+ * A trading licence for the year, paid in August. Counted on the day it
+ * was paid it made August a bad month and the eleven after it better
+ * than they were -- exactly what the van did before the asset register.
+ */
+{
+  reset();
+  data.cashDays[TODAY].opening = { cash: 5000000, momo: 0, bank: 0 };
+  data.cashTxns = [
+    txn({ id: 1, date: '2026-08-02', type: 'expense', category: 'Licences', amount: 365000,
+      coversFrom: '2026-08-01', coversTo: '2027-07-31' }),
+    txn({ id: 2, date: '2026-08-02', type: 'expense', category: 'Transport', amount: 40000 }),
+  ];
+  const is = scope.incomeStatement('2026-08-01', TODAY);
+  t.check(r(is.opexRows['Licences']) === r(365000 * 3 / 365),
+    `three days of a year's licence are charged, not the year (got ${r(is.opexRows['Licences'])})`);
+  t.check(is.opexRows['Transport'] === 40000, 'while an entry with no days on it is still a cost of the day it was paid');
+  t.check(r(scope.incomeStatement('2027-03-01', '2027-03-31').opexRows['Licences']) === r(365000 * 31 / 365),
+    'and a month next year, long after the money left, carries its own share');
+  const cf = scope.cashFlowStatement('2026-08-01', TODAY);
+  t.check(cf.operatingOut === 405000, 'the cash flow is untouched: the money left on the day it left');
+  const bs = scope.balanceSheetToday();
+  t.check(r(bs.prepaid) === r(365000 * 362 / 365),
+    `the days not yet reached are paid for in advance (got ${r(bs.prepaid)})`);
+  t.check(Math.abs((365000 - bs.prepaid) - is.opexRows['Licences']) < 0.01,
+    'so net worth moved by exactly what profit did');
+  /* Dated after the days it covers -- a bill for last month paid next
+     week -- the days already gone are owed, not in advance. */
+  data.cashTxns = [txn({ id: 3, date: '2026-08-10', type: 'expense', category: 'Power', amount: 310000,
+    coversFrom: '2026-07-04', coversTo: '2026-08-03' })];
+  const bill = scope.balanceSheetToday();
+  t.check(bill.prepaid === 0 && bill.accruedCosts === 310000,
+    `a bill covering days already gone, not yet paid, is owed in full (got ${bill.accruedCosts})`);
+  t.check(Math.abs(bill.liabilities - (bill.payables + bill.loans + bill.staffAndRent + bill.accruedCosts)) < 0.01,
+    'inside total liabilities');
+  t.check(r(scope.incomeStatement('2026-07-01', '2026-07-31').opexRows['Power']) === r(310000 * 28 / 31),
+    'while July carries the twenty-eight days of it that were July\u2019s');
+  reset();
 }
 
 /* ---------- 5. where the money went ----------------------------------- */

@@ -38,7 +38,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 const store = { dues: [], staff: [], rentAgreements: [] };
 const TODAY = '2026-08-22';
 const NAMES = ['duePaidBy', 'dueAccruedAsAt', 'dueAccruedOutstanding', 'dueBalance',
-  'dueBasis', 'duesOwed', 'duesOwedAsAt', 'periodEndDate', 'daysBetweenISO'];
+  'dueBasis', 'duesOwed', 'duesOwedAsAt', 'periodEndDate', 'daysBetweenISO',
+  'monthChargeFraction', 'dueCostAccruedTo', 'duePositionAsAt', 'duePrepaidAsAt'];
 let fns = null, err = null;
 try {
   fns = compileScope(
@@ -86,6 +87,46 @@ if (fns) {
       'rent already fallen due is owed whole');
     t.check(dueAccruedAsAt(r, '2026-08-01') === 0,
       'and before its day it is not owed at all — a tenancy falls due on a date, not by the night');
+  }
+
+  /* ---------- 2b. but the days occupied have COST, and the sheet says so */
+  /*
+   * The profit and loss charges rent by the day. The balance sheet has to
+   * follow, or paying a month's rent on the 2nd took the whole month off
+   * net worth while profit had lost two days of it -- and the difference
+   * sat in "kept in the business", a figure nobody could explain.
+   */
+  {
+    const { duePositionAsAt, duePrepaidAsAt } = fns;
+    // Due on the 28th, unpaid, read on the 22nd: nothing has fallen due,
+    // 22 days have been occupied.
+    const late = rent({ dueDate: '2026-08-28' });
+    const p = duePositionAsAt(late, TODAY);
+    t.check(Math.round(p.owed) === Math.round(600000 * 22 / 31),
+      `rent not yet due is still owed for the days occupied (got ${Math.round(p.owed)})`);
+    t.check(p.prepaid === 0, 'and none of it is paid in advance');
+    // Due on the 2nd, unpaid: the landlord is owed the month; nine days
+    // of it are days not yet reached.
+    const q = duePositionAsAt(rent(), TODAY);
+    t.check(q.owed === 600000, 'rent fallen due is owed whole');
+    t.check(Math.round(q.prepaid) === Math.round(600000 * 9 / 31),
+      `with the days not yet reached shown as paid for in advance (got ${Math.round(q.prepaid)})`);
+    // Due on the 2nd, paid on the 2nd: nothing owed, nine days in hand.
+    const paid = rent({ payments: [{ date: '2026-08-02', amount: 600000 }], paid: 600000 });
+    t.check(dueAccruedOutstanding(paid, TODAY) === 0, 'a month paid owes nothing');
+    t.check(Math.round(duePrepaidAsAt(paid, TODAY)) === Math.round(600000 * 9 / 31),
+      'and the nine days not yet used are an asset');
+    // The identity that keeps the sheet and the statement together.
+    [late, rent(), paid].forEach(d => {
+      const x = duePositionAsAt(d, TODAY);
+      t.check(Math.abs((x.owed - x.prepaid) - (x.cost - x.paid)) < 0.01,
+        'owed less prepaid is always cost less paid');
+    });
+    t.check(duePrepaidAsAt(rent(), '2026-09-15') === 0, 'once the month is over nothing is in advance');
+    // A wage is unchanged by any of this: it was already earned by the day.
+    const w = duePositionAsAt(wage(), TODAY);
+    t.check(Math.round(w.owed) === Math.round(320000 * 22 / 31) && w.prepaid === 0,
+      'a running wage is owed for the days worked and none of it is in advance');
   }
 
   /* ---------- 3. a daily-paid month is already the days worked ------ */

@@ -5347,15 +5347,21 @@
   .till-foot-note{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);
     flex-wrap:wrap;padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
   .till-foot-note input[type=time],
+  .till-foot-note input[type=date],
   .till-foot-note select{
     border:0;background:transparent;color:var(--ink);
     font-family:inherit;font-size:11.5px;font-weight:600;padding:3px 5px;
     border-bottom:1px dashed var(--ow-rule);border-radius:0;cursor:pointer;
   }
   .till-foot-note input[type=time]:hover,
+  .till-foot-note input[type=date]:hover,
   .till-foot-note select:hover{border-bottom-color:var(--ink-soft);}
   .till-foot-note input[type=time]:focus,
+  .till-foot-note input[type=date]:focus,
   .till-foot-note select:focus{outline:none;border-bottom-color:var(--accent);border-bottom-style:solid;}
+  /* The note reads as a full line under the two dates, in the same
+     caption voice as the rest of the foot, and it is measured. */
+  .till-covers-note{flex-basis:100%;max-width:var(--ow-measure);font-size:11px;font-weight:400;color:var(--ink-soft);line-height:1.35;}
 
   @media (max-width:560px){
     .till-input{font-size:32px;}
@@ -20581,6 +20587,14 @@
         </div>
 
         <div class="till-foot-note">
+          <span>Pays for the days</span>
+          <input type="date" id="cb_out_covers_from" aria-label="Covers from">
+          <span>to</span>
+          <input type="date" id="cb_out_covers_to" aria-label="Covers to">
+          <span class="till-covers-note">Optional. A licence, insurance or several months&rsquo; rent paid at once: the profit and loss spreads it across those days, the cash book keeps it on the day it left.</span>
+        </div>
+
+        <div class="till-foot-note">
           <span>Recorded at</span>
           <input type="time" id="cb_out_time">
           <span id="cb_out_datenote"></span>
@@ -21307,7 +21321,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -21326,7 +21340,8 @@ async function loadData(shopId){
     sb.from('rival_prices').select('side').limit(1),
     sb.from('customers').select('site_stage').limit(1),
     sb.from('manager_notes').select('id').limit(1),
-    sb.from('product_links').select('to_variant_idx, from_variant_idx').limit(1)
+    sb.from('product_links').select('to_variant_idx, from_variant_idx').limit(1),
+    sb.from('cash_txns').select('covers_from, covers_to').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -21389,6 +21404,10 @@ async function loadData(shopId){
      migration lands would fail the whole cash_txns upsert and the shop
      would silently stop recording money. */
   cashTransferColumn = !(transferColR && transferColR.error);
+  /* 0095, guarding the same busy write for the same reason: the days a
+     running cost pays for. Without the columns the entry still saves,
+     and the statement counts it on the day it was paid, as before. */
+  cashCoversColumns = !(coversColR && coversColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -21520,7 +21539,7 @@ async function loadData(shopId){
     cashDays,
     // quoteId stays null rather than 0: null means this receipt was not
     // taken for a counter sale, which is the ordinary case.
-    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time, quoteId: t.quote_id==null ? null : Number(t.quote_id), transferId: t.transfer_id==null ? null : Number(t.transfer_id)})),
+    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time, quoteId: t.quote_id==null ? null : Number(t.quote_id), transferId: t.transfer_id==null ? null : Number(t.transfer_id), coversFrom: t.covers_from || null, coversTo: t.covers_to || null})),
     nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
     quote,
     // lineId, not id -- quote items have never had an `id`, so this read
@@ -21836,6 +21855,7 @@ let briefsSentTable = false;
 let siteStageColumn = false;
 let linkSizeColumn = false;
 let cashTransferColumn = false;
+let cashCoversColumns = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -21936,7 +21956,9 @@ function buildSyncRows(d, shopId){
       // Guarded: every cash entry goes up on every save, so sending this
       // before 0076 lands would fail the whole upsert and the shop would
       // stop recording money rather than merely lose the link.
-      ...(cashTransferColumn ? {transfer_id: t.transferId==null ? null : t.transferId} : {})
+      ...(cashTransferColumn ? {transfer_id: t.transferId==null ? null : t.transferId} : {}),
+      // Guarded the same way, for the same reason -- see 0095.
+      ...(cashCoversColumns ? {covers_from: dateOrNull(t.coversFrom), covers_to: dateOrNull(t.coversTo)} : {})
     })),
     savedQuotes: d.savedQuotes.map(q=>({
       id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
@@ -57828,9 +57850,12 @@ function debPrintList(){
    rule that keeps a loan's repayments when its terms are edited.
 
    Paying a due goes through addCashPayment() under the same categories
-   that were always there, so this feeds the income statement through
-   cashIsOperatingExpense() exactly as a hand-typed entry did. The P&L
-   stays cash-basis; what is owed is shown here, not accrued there. */
+   that were always there. The income statement no longer reads those
+   payments, though: it charges each month to the days it is FOR, from
+   the dues themselves (dueCostRows), and drops the payments that settle
+   them so nothing counts twice. What is owed is shown here and on the
+   balance sheet; what it cost is on the profit and loss; and the two
+   agree by construction -- see duePositionAsAt. */
 
 const DUE_KINDS = {
   rent: {label:'Rent', cashCategory:'Rent'},
@@ -58342,12 +58367,74 @@ function dueAccruedAsAt(d, asOf){
   const done = Math.min(total, Math.max(0, daysBetweenISO(start, on) + 1));
   return amount * (done / total);
 }
-// What is still owed of what has been earned, as at a day.
-function dueAccruedOutstanding(d, asOf){
+/* ---- What a month has COST by a day, against what has fallen due ----
+
+   Two different questions about the same month, and the sheet needs
+   both. dueAccruedAsAt above is what has FALLEN DUE -- rent whole on
+   its day, wages as the days are worked. This is what the month has
+   COST so far: the same day-by-day apportioning the profit and loss
+   charges it on (dueCostBetween), so the two statements read one rule.
+
+   Where the two part company is exactly the balance sheet's business:
+
+     rent due on the 2nd, unpaid, read on the 22nd
+       the landlord is owed the whole month -- it has fallen due -- but
+       only 22 days of it have been used. The other nine are paid-for
+       days not yet reached: an asset, "paid in advance", even though
+       the paying is still to come. The sheet shows both rather than
+       netting them into a figure nobody could check against the
+       landlord's own book.
+
+     rent due on the 2nd, paid on the 2nd, read on the 22nd
+       nothing is owed, and nine days are paid for in advance. Without
+       that line the whole month left net worth on the 2nd while the
+       profit and loss charged two days of it, and "kept in the
+       business" -- the balancing figure -- fell by a month's rent on
+       payday and quietly recovered by the 31st.
+
+     rent due on the 28th, unpaid, read on the 22nd
+       nothing has fallen due, but 22 days have been occupied. That is
+       owed -- accrued rent -- and the profit and loss has already
+       charged it, so the sheet carries it.
+
+   OWED LESS PREPAID IS ALWAYS COST LESS PAID. That identity is what
+   keeps the sheet and the statement on one footing: a month moves net
+   worth by exactly what it moved profit. */
+function dueCostAccruedTo(d, asOf){
+  if(d.amount === null || d.amount === undefined) return null;
+  const amount = Number(d.amount)||0;
+  const period = String(d.period||'');
+  if(!period) return amount;
   const on = asOf || todayISO();
-  const acc = dueAccruedAsAt(d, on);
-  if(acc === null) return null;
-  return Math.max(0, acc - duePaidBy(d, on));
+  if(on < period + '-01') return 0;
+  // A daily-paid month already IS the days worked; it is not spread.
+  if(d.kind === 'wage' && dueBasis(d) === 'daily') return amount;
+  return amount * monthChargeFraction(period, period + '-01', on);
+}
+function duePositionAsAt(d, asOf){
+  const on = asOf || todayISO();
+  const due = dueAccruedAsAt(d, on);
+  if(due === null) return null;
+  const cost = dueCostAccruedTo(d, on);
+  const paid = duePaidBy(d, on);
+  // Recognised on the sheet: whichever is further along, falling due or
+  // being used up. Never less than what the profit and loss has charged.
+  const recognised = Math.max(due, cost);
+  return {
+    owed: Math.max(0, recognised - paid),
+    prepaid: Math.max(0, Math.max(paid, recognised) - cost),
+    cost, paid, due,
+  };
+}
+// What is still owed of what has been earned or fallen due, as at a day.
+function dueAccruedOutstanding(d, asOf){
+  const p = duePositionAsAt(d, asOf);
+  return p === null ? null : p.owed;
+}
+// Days paid for, or fallen due, that the calendar has not reached yet.
+function duePrepaidAsAt(d, asOf){
+  const p = duePositionAsAt(d, asOf);
+  return p === null ? null : p.prepaid;
 }
 function dueIsSettled(d){
   const bal = dueBalance(d);
@@ -69800,9 +69887,12 @@ function cbDocHTML(idn){
 }
 function cbCellHTML(t){
   const idn = cbRowIdentity(t);
+  // An entry that pays for a stretch of days says so on its line, since
+  // it is the one kind of entry the profit and loss will not show whole.
+  const covers = (t.coversFrom && t.coversTo) ? `<span class="sep">&middot;</span><span class="t">pays for ${esc(t.coversFrom)} to ${esc(t.coversTo)}</span>` : '';
   return `<div class="cb-led-who" title="${esc(idn.who)}">${esc(idn.who)}</div>
     <div class="cb-led-sub"><span class="t">${esc(idn.detail)}</span>${
-      idn.doc ? `<span class="sep">&middot;</span>${cbDocHTML(idn)}` : ''}</div>`;
+      idn.doc ? `<span class="sep">&middot;</span>${cbDocHTML(idn)}` : ''}${covers}</div>`;
 }
 
 const CB_ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
@@ -69940,6 +70030,8 @@ function resetCashTxnForms(){
   document.getElementById('cb_out_category').value = '';
   document.getElementById('cb_out_desc').value = '';
   document.getElementById('cb_out_time').value = new Date().toTimeString().slice(0,5);
+  document.getElementById('cb_out_covers_from').value = '';
+  document.getElementById('cb_out_covers_to').value = '';
   document.getElementById('cb_out_cancel').style.display = 'none';
   document.getElementById('cbOutTitle').textContent = 'Cash Out';
 
@@ -70579,6 +70671,20 @@ async function saveCashTxn(column){
   }
 
   const type = column==='in' ? 'receipt' : document.getElementById('cb_out_type').value;
+  /* The days a payment pays for, when the shop says so. Both or
+     neither: one date alone is not a stretch of anything, and a range
+     running backwards would spread the cost over no days at all. */
+  let coversFrom = null, coversTo = null;
+  if(column==='out'){
+    coversFrom = document.getElementById('cb_out_covers_from').value || null;
+    coversTo = document.getElementById('cb_out_covers_to').value || null;
+    if((coversFrom && !coversTo) || (!coversFrom && coversTo)){
+      toast('Give both the first and the last day it pays for, or neither'); return;
+    }
+    if(coversFrom && coversTo && coversFrom > coversTo){
+      toast('The last day it pays for comes before the first'); return;
+    }
+  }
   const record = {
     date: currentCbDate(),
     account: document.getElementById(prefix+'account').value,
@@ -70587,10 +70693,13 @@ async function saveCashTxn(column){
     amount,
     description,
     time: document.getElementById(prefix+'time').value || new Date().toTimeString().slice(0,5),
+    coversFrom, coversTo,
   };
   if(editingCashTxnId && editingCashTxnColumn===column){
     const idx = data.cashTxns.findIndex(t=>t.id===editingCashTxnId);
-    data.cashTxns[idx] = {...record, id: editingCashTxnId};
+    /* Spread over links the form does not carry -- a counter sale's
+       quoteId, a transfer's other leg -- so an edit keeps them. */
+    data.cashTxns[idx] = {...data.cashTxns[idx], ...record, id: editingCashTxnId};
   } else {
     data.cashTxns.push({...record, id: allocRowId('cashTxn')});
   }
@@ -70629,6 +70738,10 @@ function editCashTxn(id){
   document.getElementById(prefix+'amount').value = tillGroup(String(t.amount));
   document.getElementById(prefix+'desc').value = t.description;
   document.getElementById(prefix+'time').value = t.time;
+  if(column==='out'){
+    document.getElementById('cb_out_covers_from').value = t.coversFrom || '';
+    document.getElementById('cb_out_covers_to').value = t.coversTo || '';
+  }
   document.getElementById(column==='in' ? 'cbInTitle' : 'cbOutTitle').textContent = column==='in' ? 'Edit cash in' : 'Edit cash out';
   document.getElementById(prefix+'cancel').style.display = 'inline-block';
   /* Drawn AFTER the record is loaded, so the account button and the
@@ -75227,14 +75340,15 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
 
    Conventions, chosen once and applied everywhere:
 
-     whole months     an asset bought on the 3rd and one bought on the
-                      28th both take a full month's charge for that
-                      month. Daily proration is more precise and, for a
-                      shop deciding what a van is worth, precision nobody
-                      uses is just noise.
-     from acquisition the month it was acquired is charged; the month it
-                      was disposed of is not. So a thing owned for one
-                      month is charged once, not twice or never.
+     by the day       the schedule is one row per calendar month, and
+                      the month it arrived in and the month it left in
+                      carry only the days it was owned for. A statement
+                      for part of a month takes that part of the row.
+                      See assetSchedule and monthChargeFraction.
+     from acquisition the day it was acquired is the first day charged,
+                      and the day it was disposed of is the last. A
+                      thing owned for one month is charged once, not
+                      twice or never.
      never below salvage
                       both methods stop there. Reducing balance would
                       otherwise approach zero forever and straight line
@@ -75391,11 +75505,10 @@ function assetSchedule(asset, untilISO){
    figure this app has ever shown is exactly what it was, and only
    part-month windows move.
 
-   What is deliberately NOT changed: the month an asset is bought in is
-   still charged from the first of that month rather than from the day it
-   arrived. That is the acquisition convention the schedule is built on,
-   it changes what an asset costs over its whole life, and it is a
-   separate decision from what a window covers. */
+   The acquisition month is apportioned too, by assetSchedule: an asset
+   bought on the 28th is charged for the days from the 28th. The two
+   apportionings are separate decisions -- what a row covers, and what a
+   window covers -- and both are by the day now. */
 function monthChargeFraction(monthISO, fromISO, toISO){
   const [y, m] = String(monthISO).split('-').map(Number);
   if(!y || !m) return 0;
@@ -75733,13 +75846,16 @@ function loanTrueCostRate(loan){
   return loanRateFor(loanSchedule(loan).map(r=> r.payment),
     loanNetAdvanced(loan), loanPeriodsPerYear(loan));
 }
-/* The fee as a cost of the period it was charged in.
+/* The arrangement fee as a cost of the period the loan was drawn in.
 
-   Expensed when the loan was drawn rather than spread over the term.
-   Spreading it is more correct, and it would be the only accrual in an
-   otherwise cash-basis P&L -- a lone exception is worse than a
-   consistent simplification. Stated here so phase 4 does not have to
-   rediscover the decision. */
+   Expensed on drawdown rather than spread over the term. The reason
+   this was first decided -- "it would be the only accrual in an
+   otherwise cash-basis P&L" -- no longer holds, since rent, wages,
+   depreciation and interest all accrue now. It stays because it is a
+   one-off cost of GETTING the money, paid on one day, and a shopkeeper
+   reading the month they borrowed expects to see it there; the charge
+   on every instalment, which is a cost of KEEPING the money, is spread
+   as each instalment falls due (loanChargesForPeriod). */
 function loanFeesForPeriod(fromISO, toISO){
   return liveLoans()
     .filter(l=> String(l.startedOn||'') >= String(fromISO) && String(l.startedOn||'') <= String(toISO))
@@ -75883,8 +75999,9 @@ function loanApplied(loan, asOfISO){
     feesPaid, feesUnpaid: feesAccrued };
 }
 function loanOutstanding(loan, asOfISO){ return loanApplied(loan, asOfISO).balance; }
-// Interest actually paid inside a period -- the P&L line, on the same
-// cash basis phase 1 settled on for operating costs.
+// Interest actually paid inside a period. Kept for the loan screens;
+// the profit and loss reads loanInterestChargedBetween below, because a
+// month the shop did not pay is not a month the borrowing cost nothing.
 function loanInterestPaidBetween(loan, fromISO, toISO){
   const before = loanApplied(loan, dayBeforeISO(fromISO)).interestPaid;
   const upTo = loanApplied(loan, toISO).interestPaid;
@@ -75903,8 +76020,85 @@ function loansOutstandingAt(asOfISO){
     .filter(l=> String(l.startedOn||'') <= String(asOfISO))
     .reduce((s,l)=> s + loanOutstanding(l, asOfISO), 0);
 }
+/* ---- Interest and charges as the lender CHARGES them ----
+
+   The profit and loss used to take interest from the repayments: the
+   interest inside whatever was handed over, on the day it was handed
+   over. That was the cash basis, chosen when every running cost was on
+   it. Rent, wages and depreciation are not any more, and interest left
+   on that footing did exactly what rent did before it was fixed: a
+   month the shop missed its instalment showed NO cost of borrowing, and
+   the month it caught up showed two. The statement flattered the shop
+   in the very month it fell behind.
+
+   Interest is charged whether or not it is paid. loanApplied already
+   accrues it period by period on the balance as it stood, up to the
+   last repayment; this walks the same way and then carries on to the
+   date asked, so a loan nobody has paid still costs what it costs.
+   WHOLE PERIODS, exactly as loanApplied counts them, so this figure and
+   the payoff figure can never disagree about what has been charged. For
+   a monthly loan that is one charge in every calendar month, which is
+   what a monthly statement wants; a shop that pays on time sees the
+   same numbers it always did, and only a shop that is late or early
+   sees them move to the month they belong to.
+
+   THE SAME FOR THE CHARGE ON EVERY INSTALMENT. loanApplied has always
+   taken the per-instalment fee off each repayment first, and the cash
+   book files the whole repayment under Loan Repayment, which is not a
+   running cost. So a bike loan's 13,000 a week -- 676,000 a year, more
+   than its interest -- reached no statement at all. It is a cost of
+   borrowing, and it lands beside the interest. */
+function loanChargedTo(loan, asOfISO){
+  const asOf = String(asOfISO || todayISO());
+  const started = String(loan.startedOn||'');
+  if(!started || started > asOf) return { interest: 0, fees: 0, unpaidInterest: 0, unpaidFees: 0 };
+  const applied = loanApplied(loan, asOf);
+  const reps = loanRepayments(loan).filter(rp=> String(rp.date||'') <= asOf);
+  const lastISO = reps.length ? String(reps[reps.length-1].date||'') : started;
+  const periods = Math.max(0, loanPeriodsBetween(loan, lastISO, asOf));
+  let tailInterest = 0, tailFees = 0;
+  // Nothing accrues on a loan that is cleared; the balance says so.
+  if(applied.balance > 1e-9 && periods > 0){
+    const P = loanPrincipal(loan), n = loanInstallments(loan);
+    const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
+    tailInterest = loan.method === 'flat'
+      ? (P * annual * (n/loanPeriodsPerYear(loan))) / n * periods
+      : applied.balance * loanPeriodRate(loan) * periods;
+    tailFees = loanFeePerInstallment(loan) * periods;
+  }
+  const unpaidInterest = applied.accruedUnpaid + tailInterest;
+  const unpaidFees = (applied.feesUnpaid||0) + tailFees;
+  return {
+    interest: applied.interestPaid + unpaidInterest,
+    fees: applied.feesPaid + unpaidFees,
+    unpaidInterest, unpaidFees,
+  };
+}
+// The profit-and-loss lines: what was charged inside a window, paid or not.
+function loanInterestChargedBetween(loan, fromISO, toISO){
+  return Math.max(0, loanChargedTo(loan, toISO).interest - loanChargedTo(loan, dayBeforeISO(fromISO)).interest);
+}
+function loanInstalmentChargesBetween(loan, fromISO, toISO){
+  return Math.max(0, loanChargedTo(loan, toISO).fees - loanChargedTo(loan, dayBeforeISO(fromISO)).fees);
+}
 function loanInterestForPeriod(fromISO, toISO){
-  return liveLoans().reduce((s,l)=> s + loanInterestPaidBetween(l, fromISO, toISO), 0);
+  return liveLoans().reduce((s,l)=> s + loanInterestChargedBetween(l, fromISO, toISO), 0);
+}
+function loanChargesForPeriod(fromISO, toISO){
+  return liveLoans().reduce((s,l)=> s + loanInstalmentChargesBetween(l, fromISO, toISO), 0);
+}
+/* What is owed to the lender BESIDE the principal: interest and charges
+   already charged and not yet paid. The profit and loss has counted
+   them, so the balance sheet has to owe them, or a cost would have left
+   profit and arrived nowhere. */
+function loanChargesOwedAt(loan, asOfISO){
+  const c = loanChargedTo(loan, asOfISO);
+  return { interest: c.unpaidInterest, fees: c.unpaidFees, total: c.unpaidInterest + c.unpaidFees };
+}
+function loansChargesOwedAt(asOfISO){
+  return liveLoans()
+    .filter(l=> String(l.startedOn||'') <= String(asOfISO))
+    .reduce((s,l)=> s + loanChargesOwedAt(l, asOfISO).total, 0);
 }
 /* Agreed against actual: is the shop keeping up?
 
@@ -76506,13 +76700,24 @@ function inventoryValue(){
    and the payments that settle them are dropped from the cash side so
    nothing is counted twice.
 
+   LOAN INTEREST AND CHARGES ARE THE PERIODS THEY ARE CHARGED FOR, not
+   the day a repayment happened to be made -- see loanChargedTo. A month
+   the shop fell behind used to show no cost of borrowing at all.
+
+   A RUNNING COST THAT COVERS A STRETCH OF TIME can say so. A year's
+   insurance, a licence, a quarter's rent typed straight into the cash
+   book: the entry carries the days it pays for (coversFrom/coversTo)
+   and the statement charges each period its share of those days, the
+   same day-by-day rule rent and depreciation follow. See
+   spreadCostRows.
+
    EVERY OTHER RUNNING COST IS STILL CASH. Transport, power, airtime and
-   the rest have no month behind them and no subledger to give them one,
-   so they land when they were paid, exactly as before. That is still a
-   mixture and it is still deliberate; what changed is that the two lines
-   big enough to swing a month's profit are no longer among the ones that
-   move depending on when somebody happened to pay. It is named on the
-   statement so nobody has to guess. */
+   the rest have no month behind them and no stretch of days written on
+   them, so they land when they were paid, exactly as before. That is
+   still a mixture and it is still deliberate; what changed is that
+   every cost big enough to swing a month's profit now belongs to the
+   days it is for rather than to the day somebody happened to pay. It is
+   named on the statement so nobody has to guess. */
 function incomeStatement(fromISO, toISO){
   const invoices = anInvoicesInRange(fromISO, toISO);
   const trade = anOverallTotals(invoices);
@@ -76526,7 +76731,11 @@ function incomeStatement(fromISO, toISO){
 
   const depreciation = depreciationForPeriod(fromISO, toISO);
   const interest = loanInterestForPeriod(fromISO, toISO);
-  const loanFeesCharged = loanFeesForPeriod(fromISO, toISO);
+  // Arrangement fees on the day the loan was drawn, plus the charge the
+  // lender adds to every instalment, as each falls due.
+  const loanArrangementFees = loanFeesForPeriod(fromISO, toISO);
+  const loanInstalmentCharges = loanChargesForPeriod(fromISO, toISO);
+  const loanFeesCharged = loanArrangementFees + loanInstalmentCharges;
 
   // Selling a thing for more or less than the books said it was worth is
   // a correction for having guessed its life wrong, not trading -- so it
@@ -76546,6 +76755,7 @@ function incomeStatement(fromISO, toISO){
     grossMarginPct: trade.sales>0 ? grossProfit/trade.sales*100 : 0,
     opexRows, opex, depreciation, operatingProfit,
     disposals, disposalGain, interest, loanFees: loanFeesCharged,
+    loanArrangementFees, loanInstalmentCharges,
     netProfit,
     netMarginPct: trade.sales>0 ? netProfit/trade.sales*100 : 0,
     invoiceCount: invoices.length,
@@ -76681,6 +76891,23 @@ function duesOwedAsAt(asOf){
       && String(d.period||'') + '-01' <= on).length,
   };
 }
+/* Rent and wages paid for -- or fallen due for -- days the calendar has
+   not reached: the asset side of duePositionAsAt. Plus any running cost
+   whose cash entry says which days it covers and has days still to come
+   (spreadPrepaidAsAt). */
+function duesPrepaidAsAt(asOf){
+  const on = asOf || todayISO();
+  const rows = (data.dues||[])
+    .map(d=> ({d, amt: duePrepaidAsAt(d, on)}))
+    .filter(x=> x.amt !== null && x.amt > 0.5);
+  const by = (k)=> rows.filter(x=> x.d.kind===k).reduce((s,x)=> s + x.amt, 0);
+  const spread = spreadPrepaidAsAt(on);
+  return {
+    wages: by('wage'), rent: by('rent'), other: spread.total,
+    total: rows.reduce((s,x)=> s + x.amt, 0) + spread.total,
+    count: rows.length + spread.count,
+  };
+}
 
 function balanceSheetToday(){ return balanceSheetAsAt(todayISO()); }
 
@@ -76694,16 +76921,30 @@ function balanceSheetAsAt(asOfISO){
   const receivables = receivablesAsAt(asOf);
   const inv = stockValueAsAt(asOf);
   const fixed = fixedAssetsNBVAt(asOf);
-  const assets = cash.total + receivables + inv.value + fixed;
+  /* Days already paid for and not yet reached: a month's rent handed
+     over on the 2nd is not gone on the 2nd. Without this the sheet lost
+     the whole month on payday while the profit and loss charged two
+     days of it, and the balancing figure absorbed the difference. */
+  const prepaid = duesPrepaidAsAt(asOf);
+  const assets = cash.total + receivables + inv.value + fixed + prepaid.total;
 
   const payables = payablesAsAt(asOf);
-  const loans = loansOutstandingAt(asOf);
-  /* Wages and rent already fallen due and not yet paid. Its own line
-     rather than folded into payables: a supplier, a member of staff and
-     a landlord are three different creditors, and the one you can least
-     afford to keep waiting is not the one on an invoice. */
+  /* The principal, and the interest and charges already charged against
+     it and not yet paid. The profit and loss counts those the moment
+     they are charged, so a sheet that carried the principal alone would
+     have the cost leave profit and be owed to nobody. */
+  const loanPrincipalOwed = loansOutstandingAt(asOf);
+  const loanCharges = loansChargesOwedAt(asOf);
+  const loans = loanPrincipalOwed + loanCharges;
+  /* Wages and rent already fallen due or already used and not yet paid.
+     Its own line rather than folded into payables: a supplier, a member
+     of staff and a landlord are three different creditors, and the one
+     you can least afford to keep waiting is not the one on an invoice.
+     Running costs used and not yet paid -- a bill covering days already
+     gone, entered against a later payday -- sit with them. */
   const staffAndRent = duesOwedAsAt(asOf);
-  const liabilities = payables + loans + staffAndRent.total;
+  const accruedCosts = spreadAccruedAsAt(asOf);
+  const liabilities = payables + loans + staffAndRent.total + accruedCosts.total;
 
   // Owner money in and out, from the cash book. What is left of equity
   // after it is retained earnings -- and it is a PLUG, not a computed
@@ -76728,9 +76969,10 @@ function balanceSheetAsAt(asOfISO){
     inventoryEstimated: !!inv.estimated,
     cashAccounts: cash.byAccount, cash: cash.total,
     receivables, inventory: inv.value, inventoryUncostedQty: inv.uncostedQty,
-    fixedAssets: fixed, assets,
-    payables, loans, liabilities,
+    fixedAssets: fixed, prepaid: prepaid.total, prepaidDetail: prepaid, assets,
+    payables, loans, loanPrincipal: loanPrincipalOwed, loanCharges, liabilities,
     staffAndRent: staffAndRent.total, staffAndRentDetail: staffAndRent,
+    accruedCosts: accruedCosts.total, accruedCostsDetail: accruedCosts,
     ownerCapital: ownerIn, ownerDrawings: ownerOut,
     retainedEarnings: equity - (ownerIn - ownerOut), equity,
   };
@@ -77406,11 +77648,13 @@ function financialRatios(is, bs, cf){
   const annualise = (v)=> days>0 ? v * (RATIO_DAYS_IN_YEAR/days) : null;
 
   const shortTermLoans = loansDueWithin(12, bs.asOf);
-  const currentAssets = bs.cash + bs.receivables + bs.inventory;
+  const currentAssets = bs.cash + bs.receivables + bs.inventory + (bs.prepaid||0);
   /* Wages and rent owed belong here without argument: they are not due
      within the year, they are due within the month. Leaving them out
-     flattered every liquidity ratio on the page. */
-  const currentLiabilities = bs.payables + bs.staffAndRent + shortTermLoans;
+     flattered every liquidity ratio on the page. So do interest and
+     charges already charged and unpaid, and running costs used and not
+     yet paid. */
+  const currentLiabilities = bs.payables + bs.staffAndRent + shortTermLoans + (bs.loanCharges||0) + (bs.accruedCosts||0);
   const annualRevenue = annualise(is.revenue);
   const annualCOGS = annualise(is.costOfSales);
   const annualNet = annualise(is.netProfit);
@@ -77453,7 +77697,7 @@ function financialRatios(is, bs, cf){
         { label:'Borrowing as a share of assets', value:pct(safeRatio(bs.liabilities, bs.assets)), unit:'%',
           good:(v)=>v<=50, read:'How much of what the shop owns is really the lenders’.' },
         { label:'Interest cover', value:safeRatio(is.operatingProfit, is.interest), unit:'x',
-          good:(v)=>v>=3, read:'How many times over the trading profit covers the interest. Blank means none is being paid.' },
+          good:(v)=>v>=3, read:'How many times over the trading profit covers the interest. Blank means none is being charged.' },
       ]},
     ],
   };
@@ -77693,21 +77937,50 @@ function stDrillData(key, ctx){
      the same way it nets on the statement. Without that the panel would
      total more than the line it was opened from and the drill-down's own
      agreement check would call the statement wrong. */
+  /* Rent and wages are the months they are for, so opening one of those
+     lines shows the MONTHS -- each for the share of it falling in the
+     window -- beside any cash entry in the category that settles no
+     month at all. The payments that do settle a month are left out,
+     exactly as the statement leaves them out; listing them would double
+     what the line says, and the panel's own check would then call the
+     statement wrong. A cash entry that covers a stretch of days is
+     shown for the share of those days in the window, likewise. */
+  const settledCash = dueSettledCashIds();
+  const dueKindFor = (cat)=> Object.keys(DUE_KINDS).find(k=> DUE_KINDS[k].cashCategory === cat) || null;
+  const accruedRowsFor = (cat)=>{
+    const kind = dueKindFor(cat);
+    if(!kind) return [];
+    return (data.dues||[]).filter(d=> d && d.kind === kind)
+      .map(d=>{
+        const v = dueCostBetween(d, from, to);
+        const whole = Math.abs(v - (Number(d.amount)||0)) < 0.5;
+        return { d: d.dueDate || (String(d.period||'') + '-01'), l: `${dueName(d)} — ${periodLabel(d.period)}`,
+          s: whole ? 'the month, counted against the days it is for' : 'the share of the month falling in this period', v };
+      })
+      .filter(r=> r.v > 0.5);
+  };
+  const spreadRowsFor = (cat)=> spreadCostTxns()
+    .filter(t=> (t.category || 'Uncategorised') === cat)
+    .map(t=> ({ ...txnRow(t), s: `${txnRow(t).s} · covers ${t.coversFrom} to ${t.coversTo}, this period's share`,
+      v: spreadCostBetween(t, from, to) }))
+    .filter(r=> r.v > 0.5);
   const opexRowsFor = (cat)=> byDateDesc(
     cat === CASH_VARIANCE_LINE
       ? cash.filter(t=> cashIsCashShortage(t) || cashIsCashOverage(t))
           .map(t=> cashIsCashOverage(t) ? {...txnRow(t), v: -(Number(t.amount)||0)} : txnRow(t))
-      : cash.filter(t=> cashIsOperatingExpense(t)
-          && (cat==null || (t.category || 'Uncategorised') === cat)).map(txnRow));
+      : cash.filter(t=> cashIsOperatingExpense(t) && !settledCash.has(String(t.id)) && !cashIsSpreadCost(t)
+          && (cat==null || (t.category || 'Uncategorised') === cat)).map(txnRow)
+          .concat(accruedRowsFor(cat), spreadRowsFor(cat)));
   const depreciationRows = ()=> liveFixedAssets()
     .map(a=> ({ d: a.acquiredOn, l: a.name, s: 'wear over this period', v: assetChargeBetween(a, from, to) }))
     .filter(r=> r.v > 0.5);
   const interestRows = ()=> liveLoans()
-    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'interest paid this period', v: loanInterestPaidBetween(l, from, to) }))
+    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'interest charged this period, paid or not', v: loanInterestChargedBetween(l, from, to) }))
     .filter(r=> r.v > 0.5);
   const feeRows = ()=> liveLoans()
     .filter(l=> String(l.startedOn||'') >= from && String(l.startedOn||'') <= to)
-    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'arrangement fees', v: loanFees(l) }))
+    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'arrangement fees, on drawdown', v: loanFees(l) }))
+    .concat(liveLoans().map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'instalment charges falling due this period', v: loanInstalmentChargesBetween(l, from, to) })))
     .filter(r=> r.v > 0.5);
 
   /* The cash-flow buckets, named once so "unclassified" can be their
@@ -77735,17 +78008,19 @@ function stDrillData(key, ctx){
   if(key && key.indexOf('pl:opex:') === 0){
     const cat = key.slice('pl:opex:'.length);
     return { title: cat, expect: is.opexRows[cat] || 0,
-      note: 'Every cash entry in this category over the period.',
+      note: dueKindFor(cat)
+        ? 'The months this period is charged for, each for the share of it falling inside the period, and any cash entry in this category that settles no month.'
+        : 'Every cash entry in this category over the period; one that covers a stretch of days is shown for this period\u2019s share of those days.',
       rows: opexRowsFor(cat) };
   }
   if(key === 'pl:depreciation') return { title: 'Depreciation', expect: is.depreciation,
     note: 'Wear charged on each thing the shop owns, for this period. No money moved — the cash left when the asset was bought.',
     rows: depreciationRows() };
   if(key === 'pl:interest') return { title: 'Loan interest', expect: is.interest,
-    note: 'The interest portion of repayments made this period, per loan.',
+    note: 'What each loan was charged this period, whether or not the instalment was paid. A month behind is still a month that cost.',
     rows: interestRows() };
-  if(key === 'pl:loanfees') return { title: 'Loan arrangement fees', expect: is.loanFees,
-    note: 'Fees on loans taken out this period.',
+  if(key === 'pl:loanfees') return { title: 'Loan fees and charges', expect: is.loanFees,
+    note: 'Arrangement fees on loans drawn this period, and the charge added to each instalment that fell due in it.',
     rows: feeRows() };
   if(key === 'pl:disposals') return { title: 'Assets sold above or below book value', expect: is.disposalGain, signed: true,
     note: 'What each asset fetched against what the books said it was worth.',
@@ -77876,7 +78151,8 @@ function stDrillData(key, ctx){
         // A month still running is shown as the part of it earned so far,
         // said out loud rather than left to look like a short month.
         const part = String(x.dueDate||'') > asOf && bal > 0.5;
-        return { d: x.dueDate, l: who, s: (x.period || '') + (part ? ' · earned so far, this month is still running' : ''), v: bal };
+        const partNote = x.kind === 'wage' ? ' · earned so far, this month is still running' : ' · days occupied so far, the rent is not yet due';
+        return { d: x.dueDate, l: who, s: (x.period || '') + (part ? partNote : ''), v: bal };
       })
       .filter(r=> r && r.v > 0.5);
     return { title: 'Wages and rent owed', expect: bs.staffAndRent,
@@ -77884,11 +78160,38 @@ function stDrillData(key, ctx){
         + (bs.staffAndRentDetail.uncostedCount ? ` ${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages are not yet costed and count as nothing here.` : ''),
       rows: byDateDesc(rows) };
   }
+  if(key === 'bs:prepaid'){
+    const rows = (data.dues||[])
+      .map(x=>{
+        const amt = duePrepaidAsAt(x, asOf);
+        if(amt === null || amt <= 0.5) return null;
+        return { d: x.dueDate, l: `${dueName(x)} — ${x.kind === 'wage' ? 'wages' : 'rent'}`,
+          s: `${periodLabel(x.period)} · days not yet reached`, v: amt };
+      })
+      .filter(Boolean)
+      .concat(spreadCostTxns()
+        .map(t=> ({ ...txnRow(t), s: `covers ${t.coversFrom} to ${t.coversTo} · days after ${asOf}`, v: spreadPrepaidOf(t, asOf) }))
+        .filter(r=> r.v > 0.5));
+    return { title: 'Paid in advance', expect: bs.prepaid,
+      note: 'Days already paid for, or already fallen due, that the calendar has not reached. They come off the profit and loss as the days pass.',
+      rows: byDateDesc(rows) };
+  }
+  if(key === 'bs:accrued') return { title: 'Running costs used, not yet paid', expect: bs.accruedCosts,
+    note: 'Cash entries covering days already gone, dated after ' + asOf + '. The profit and loss has charged those days; the money had not left yet.',
+    rows: byDateDesc(spreadCostTxns()
+      .map(t=> ({ ...txnRow(t), s: `covers ${t.coversFrom} to ${t.coversTo} · days up to ${asOf}, paid ${t.date}`, v: spreadAccruedOf(t, asOf) }))
+      .filter(r=> r.v > 0.5)) };
   if(key === 'bs:loans') return { title: 'Loans outstanding', expect: bs.loans,
-    note: 'What is still owed on each loan' + (asOf < today ? ` as at ${asOf}` : '') + '.',
+    note: 'What is still owed on each loan' + (asOf < today ? ` as at ${asOf}` : '') + ': the principal, and any interest and charges already charged and not yet paid.',
     rows: byValueDesc(liveLoans()
       .filter(l=> String(l.startedOn||'') <= String(asOf))
-      .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: `borrowed ${fmtUGX(Math.round(Number(l.principal)||0))}`, v: loanOutstanding(l, asOf) }))
+      .flatMap(l=>{
+        const charges = loanChargesOwedAt(l, asOf);
+        return [
+          { d: l.startedOn, l: l.lender || 'Loan', s: `borrowed ${fmtUGX(Math.round(Number(l.principal)||0))} · principal still owed`, v: loanOutstanding(l, asOf) },
+          { d: l.startedOn, l: l.lender || 'Loan', s: 'interest and charges already charged, not yet paid', v: charges.total },
+        ];
+      })
       .filter(r=> r.v > 0.5)) };
   if(key === 'bs:ownerin') return { title: 'Money the owner put in', expect: bs.ownerCapital,
     note: 'Every owner investment recorded in the cash book' + (asOf < today ? ` up to ${asOf}` : '') + '.',
@@ -79030,13 +79333,16 @@ function stProfitAndLoss(ctx){
       <tr class="st-gap"><td colspan="3"></td></tr>
       ${(is.disposalGain||prev.disposalGain) ? stLine('Assets sold above or below book value', is.disposalGain, prev.disposalGain, {drill:'pl:disposals'}) : ''}
       ${(is.interest||prev.interest) ? stLine('Loan interest', -is.interest, -prev.interest, {drill:'pl:interest'}) : ''}
-      ${(is.loanFees||prev.loanFees) ? stLine('Loan arrangement fees', -is.loanFees, -prev.loanFees, {drill:'pl:loanfees'}) : ''}
+      ${(is.loanFees||prev.loanFees) ? stLine('Loan fees and charges', -is.loanFees, -prev.loanFees, {hint:'arrangement fees when drawn, instalment charges as they fall due', drill:'pl:loanfees'}) : ''}
       ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
     <p class="st-read">Sales counted when invoiced. Rent and wages counted against the months
       they are for, spread across those months&rsquo; days, so a short period shows its own
-      share rather than a whole month or none; every other running cost is counted when it
-      was paid. ${stComparisonNote(ctx)}</p>
+      share rather than a whole month or none. A running cost whose cash entry says which days
+      it covers is spread across those days the same way. Depreciation is spread by the day.
+      Loan interest and instalment charges are counted when the lender charges them, whether
+      or not they have been paid. Every other running cost is counted when it was paid.
+      ${stComparisonNote(ctx)}</p>
   </section>`;
 }
 
@@ -79054,6 +79360,7 @@ function stBalanceSheet({bs}){
           ? {hint:`how many were on the shelf that day is exact; what they were worth is today's unit cost, since the lots as they stood then were not kept${bs.inventoryUncostedQty ? ` — and ${bs.inventoryUncostedQty} units have no cost on file at all` : ''}`}
           : (bs.inventoryUncostedQty ? {hint:`${bs.inventoryUncostedQty} units have no cost on file and count as nothing`} : {})))}
       ${stLine('Equipment and vehicles', bs.fixedAssets, null, {hint:'after depreciation', drill:'bs:fixed'})}
+      ${bs.prepaid > 0.5 ? stLine('Paid in advance', bs.prepaid, null, {hint:'rent, wages and running costs already paid for days not yet reached', drill:'bs:prepaid'}) : ''}
       ${stLine('Total', bs.assets, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What the shop owes</td></tr>
@@ -79062,7 +79369,9 @@ function stBalanceSheet({bs}){
         bs.staffAndRentDetail.uncostedCount
           ? {hint:`${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages not yet costed, so not counted here`}
           : {hint:'months already worked or occupied, not yet paid'}))}
-      ${stLine('Loans outstanding', bs.loans, null, {drill:'bs:loans'})}
+      ${bs.accruedCosts > 0.5 ? stLine('Running costs used, not yet paid', bs.accruedCosts, null, {hint:'bills covering days already gone, entered against a later payment date', drill:'bs:accrued'}) : ''}
+      ${stLine('Loans outstanding', bs.loans, null, Object.assign({drill:'bs:loans'},
+        bs.loanCharges > 0.5 ? {hint:`including ${fmtUGX(Math.round(bs.loanCharges))} of interest and charges already charged and not yet paid`} : {}))}
       ${stLine('Total', bs.liabilities, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What is left over — yours</td></tr>
@@ -79082,7 +79391,7 @@ function stBalanceSheet({bs}){
     <p class="st-read">${bs.assets>0
       ? `${Math.round(bs.liabilities/bs.assets*100)}% of what the shop owns is financed by what it owes.`
       : 'There is nothing on the books yet.'}
-      Wages and rent owed are counted from the month they fall due, while the cost of them reaches the profit and loss when they are actually paid. That mixture is deliberate: it is what lets this sheet show money the shop genuinely owes its people without restating every profit figure the app has ever shown. Retained earnings absorbs the difference, and is a balancing figure rather than a computed one.
+      Wages and rent owed are the months already worked or occupied and not yet paid; paid in advance is the days already paid for and not yet reached. Both follow the same day-by-day rule the profit and loss charges those costs on, so a month moves net worth by exactly what it moved profit. Loans outstanding include interest and charges the lender has already charged and the shop has not yet paid. Kept in the business is still a balancing figure rather than a computed one.
       ${bs.historic
         ? `Rebuilt as at ${esc(bs.asOf)} from the dated records: cash from the cash book, debtors and creditors from their own ledgers, equipment and loans from their schedules. Stock is the exception — how many were on the shelf that day is exact, but their value is at today's unit cost, because the lots as they stood then were never kept.`
         : `Cash and mobile money are where the book stands this minute — the last figure counted or opened, plus everything that has moved since. Counting the drawer at close corrects them; it is not what they wait for.`}</p>
@@ -79721,7 +80030,7 @@ function renderAssetsLoans(){
     <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">This year</span>
       <span class="ow-pan-n">${esc(yearStart)} &ndash; ${esc(today)}</span></div>
       ${sr('Depreciation charged', fmtUGX(Math.round(depreciationForPeriod(yearStart, today))))}
-      ${sr('Interest paid', fmtUGX(Math.round(interestYr)))}
+      ${sr('Interest charged', fmtUGX(Math.round(interestYr)))}
       ${sr('Repaid to lenders', fmtUGX(Math.round(repaid)))}
       <p class="ow-mini">Depreciation and interest are costs and reach the Profit &amp; loss. Money repaid off the principal is not a cost &mdash; it only moves.</p>
     </div>
@@ -80913,11 +81222,97 @@ function uncostedDuesInRange(fromISO, toISO){
    by category", which is what the cash flow and the dashboards ask it. */
 function statementOpexRows(cashRows, fromISO, toISO){
   const settled = dueSettledCashIds();
-  const out = cashOpexRows((cashRows||[]).filter(t=> !settled.has(String(t.id))));
+  // A payment that settles a month, and an entry that names the days it
+  // covers, both leave the cash side: each comes back below as the
+  // share of it that belongs to this window.
+  const out = cashOpexRows((cashRows||[]).filter(t=> !settled.has(String(t.id)) && !cashIsSpreadCost(t)));
   const accrued = dueCostRows(fromISO, toISO);
   Object.keys(accrued).forEach(k=>{ out[k] = (out[k]||0) + accrued[k]; });
+  const spread = spreadCostRows(fromISO, toISO);
+  Object.keys(spread).forEach(k=>{ out[k] = (out[k]||0) + spread[k]; });
   Object.keys(out).forEach(k=>{ if(Math.abs(out[k]) < 0.5) delete out[k]; });
   return out;
+}
+
+/* ================= A RUNNING COST THAT COVERS A STRETCH OF DAYS =========
+
+   A year's insurance, a trading licence, a quarter's rent paid straight
+   into the cash book with no agreement behind it: one payment, many
+   months of cover. Counted on the day it was paid, the month of paying
+   looked terrible and the months that followed looked better than they
+   were -- the same shape a van made before the asset register existed.
+
+   The cash entry can now say which days it pays for: coversFrom and
+   coversTo, both inclusive. That is the whole of the record; everything
+   below is arithmetic on it and a date, so nothing accumulates and
+   nothing can drift.
+
+     the profit and loss   charges each period its share of the days
+                           (spreadCostBetween), by the day -- the rule
+                           rent and depreciation already follow.
+     the balance sheet     carries the days paid for and not yet reached
+                           as PAID IN ADVANCE (spreadPrepaidOf), and the
+                           days already gone on an entry dated after
+                           them as RUNNING COSTS USED, NOT YET PAID
+                           (spreadAccruedOf). Prepaid less accrued is
+                           always paid less used, so the sheet moves by
+                           exactly what the statement charged.
+     the cash flow         is untouched. Money left on the day it left.
+
+   An entry with no days on it is what every entry was before this: a
+   cost of the day it was paid. Only a running cost can be spread -- a
+   stock purchase or a loan repayment with days written on it is still
+   what it is, and cashIsOperatingExpense keeps it out. */
+function cashIsSpreadCost(t){
+  return !!(t && cashIsOperatingExpense(t) && t.coversFrom && t.coversTo
+    && String(t.coversFrom) <= String(t.coversTo));
+}
+function spreadCostTxns(){
+  return (data.cashTxns||[]).filter(cashIsSpreadCost);
+}
+// Inclusive days between two ISO dates; 0 when they are backwards or bad.
+function spreadDays(fromISO, toISO){
+  const a = new Date(String(fromISO)+'T00:00:00Z'), b = new Date(String(toISO)+'T00:00:00Z');
+  if(isNaN(a.getTime()) || isNaN(b.getTime()) || a > b) return 0;
+  return Math.round((b - a) / 86400000) + 1;
+}
+// The share of one entry falling inside a window, by the day.
+function spreadCostBetween(t, fromISO, toISO){
+  const total = spreadDays(t.coversFrom, t.coversTo);
+  if(!total) return 0;
+  const a = String(fromISO) > String(t.coversFrom) ? String(fromISO) : String(t.coversFrom);
+  const b = String(toISO) < String(t.coversTo) ? String(toISO) : String(t.coversTo);
+  return (Number(t.amount)||0) * spreadDays(a, b) / total;
+}
+// By category, under the same names the cash book uses.
+function spreadCostRows(fromISO, toISO){
+  const out = {};
+  spreadCostTxns().forEach(t=>{
+    const v = spreadCostBetween(t, fromISO, toISO);
+    if(!v) return;
+    const k = t.category || 'Uncategorised';
+    out[k] = (out[k]||0) + v;
+  });
+  return out;
+}
+// Paid, and covering days after the date: an asset until those days pass.
+function spreadPrepaidOf(t, asOf){
+  if(String(t.date||'') > String(asOf)) return 0;
+  if(!spreadDays(t.coversFrom, t.coversTo)) return 0;
+  return Math.max(0, (Number(t.amount)||0) - spreadCostBetween(t, t.coversFrom, asOf));
+}
+// Not yet paid, and covering days already gone: owed for those days.
+function spreadAccruedOf(t, asOf){
+  if(String(t.date||'') <= String(asOf)) return 0;
+  return spreadCostBetween(t, t.coversFrom, asOf);
+}
+function spreadPrepaidAsAt(asOf){
+  const rows = spreadCostTxns().map(t=> spreadPrepaidOf(t, asOf)).filter(v=> v > 0.5);
+  return { total: rows.reduce((s,v)=> s + v, 0), count: rows.length };
+}
+function spreadAccruedAsAt(asOf){
+  const rows = spreadCostTxns().map(t=> spreadAccruedOf(t, asOf)).filter(v=> v > 0.5);
+  return { total: rows.reduce((s,v)=> s + v, 0), count: rows.length };
 }
 
 /* A preset list with a category the app depends on guaranteed to be in
@@ -94971,8 +95366,9 @@ const ASSISTANT_TOOLS = {
     if(input.statement === 'balance_sheet'){
       const bs = balanceSheetAsAt(input.as_of || todayISO());
       return { as_of: bs.asOf, cash: apRound(bs.cash), owed_by_customers: apRound(bs.receivables),
-        stock_value: apRound(bs.inventory), equipment: apRound(bs.fixedAssets), assets: apRound(bs.assets),
+        stock_value: apRound(bs.inventory), equipment: apRound(bs.fixedAssets), paid_in_advance: apRound(bs.prepaid), assets: apRound(bs.assets),
         owed_to_suppliers: apRound(bs.payables), wages_and_rent_owed: apRound(bs.staffAndRent),
+        running_costs_used_not_yet_paid: apRound(bs.accruedCosts),
         loans: apRound(bs.loans), liabilities: apRound(bs.liabilities), equity: apRound(bs.equity) };
     }
     const r = apMonthRange(input.from, input.to);

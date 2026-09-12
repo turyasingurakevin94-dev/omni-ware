@@ -66,6 +66,9 @@ const scope = compileScope([
   extractFunction(src, 'loanRateFor', 'index.html'),
   extractFunction(src, 'dayBeforeISO', 'index.html'),
   extractFunction(src, 'loanInterestPaidBetween', 'index.html'),
+  extractFunction(src, 'loanChargedTo', 'index.html'),
+  extractFunction(src, 'loanInterestChargedBetween', 'index.html'),
+  extractFunction(src, 'loanInstalmentChargesBetween', 'index.html'),
   extractFunction(src, 'liveLoans', 'index.html'),
   extractFunction(src, 'loansOutstandingAt', 'index.html'),
   extractFunction(src, 'loanInterestForPeriod', 'index.html'),
@@ -196,7 +199,16 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
   data.loans = [loan({ repayments: [pay(2, inst), pay(3, inst)] })];
 
   t.check(r(scope.loanInterestForPeriod('2026-02-01', '2026-02-28')) === 200000,
-    'interest lands in the month it was actually paid -- the cash basis phase 1 settled on');
+    'interest lands in the month the lender charged it -- which, paid on time, is the month it was paid');
+  /* And paid LATE, it stays where it was charged. The old cash basis
+     moved it to whichever month the money finally left, so a shop that
+     fell behind showed no cost of borrowing while it did. */
+  data.loans = [loan({ repayments: [pay(4, 2 * inst)] })];
+  t.check(r(scope.loanInterestForPeriod('2026-02-01', '2026-02-28')) === 200000,
+    'a month the shop did not pay still cost a month\'s interest');
+  t.check(r(scope.loanInterestForPeriod('2026-04-01', '2026-04-30')) === 200000,
+    'and the month it caught up is charged once, not for the arrears as well');
+  data.loans = [loan({ repayments: [pay(2, inst), pay(3, inst)] })];
   t.check(r(scope.loanInterestForPeriod('2026-01-01', '2026-03-31'))
     === r(scope.loanInterestForPeriod('2026-02-01', '2026-02-28'))
       + r(scope.loanInterestForPeriod('2026-03-01', '2026-03-31')),

@@ -494,12 +494,12 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   const bs = (/function balanceSheetAsAt[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const staffAndRent = duesOwedAsAt\(asOf\);/.test(bs),
     'the balance sheet asks what is owed to staff and the landlord');
-  t.check(/const liabilities = payables \+ loans \+ staffAndRent\.total;/.test(bs),
+  t.check(/const liabilities = payables \+ loans \+ staffAndRent\.total \+ accruedCosts\.total;/.test(bs),
     'and it is inside total liabilities, not merely reported beside them');
   t.check(/staffAndRent: staffAndRent\.total/.test(bs),
     'on its own line, since a supplier, a member of staff and a landlord are three different creditors');
 
-  t.check(/const currentLiabilities = bs\.payables \+ bs\.staffAndRent \+ shortTermLoans;/.test(code),
+  t.check(/const currentLiabilities = bs\.payables \+ bs\.staffAndRent \+ shortTermLoans \+ \(bs\.loanCharges\|\|0\) \+ \(bs\.accruedCosts\|\|0\);/.test(code),
     'and in current liabilities, because wages are due within the month rather than the year');
 
   /* The dashboard's working-capital gap is what somebody glances at
@@ -510,11 +510,16 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   t.check(/const owedToStaffAndLandlord = duesOwedTotal\(\);/.test(code),
     'reading the same figure the balance sheet reads, rather than adding it up a second way');
 
-  /* The mixed basis is named on the sheet rather than left to be
-     discovered -- the same thing the P&L already does about sales being
-     counted when invoiced and costs when paid. */
-  t.check(/Wages and rent owed are counted from the month they fall due, while the cost of them reaches the profit and loss when they are actually paid/.test(code),
-    'and the sheet says out loud that the liability and the expense land on different bases');
+  /* The basis is named on the sheet rather than left to be discovered.
+     It used to name a MIXED basis -- liability when due, cost when paid
+     -- and that stopped being true when the profit and loss began
+     charging rent and wages to the days they are for. The sheet follows
+     the same rule now, with the days paid for and not yet reached as an
+     asset, and says so. */
+  t.check(/Wages and rent owed are the months already worked or occupied and not yet paid; paid in advance is the days already paid for and not yet reached/.test(code),
+    'and the sheet says out loud that the liability and the asset follow the rule the profit and loss charges on');
+  t.check(/stLine\('Paid in advance', bs\.prepaid/.test(code),
+    'with the days paid for in advance on their own line');
 }
 
 /* ---------- deleting a worker deletes their ghost wages -------------

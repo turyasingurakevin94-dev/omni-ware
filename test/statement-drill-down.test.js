@@ -57,7 +57,11 @@ const env = {
   assetIsDisposed: () => false,
   liveLoans: () => store.loans,
   loanOutstanding: (l, asOf) => l._outstanding != null ? l._outstanding : 0,
-  loanInterestPaidBetween: (l) => l._interest || 0,
+  loanInterestChargedBetween: (l) => l._interest || 0,
+  loanInstalmentChargesBetween: () => 0,
+  loanChargesOwedAt: () => ({ interest: 0, fees: 0, total: 0 }),
+  // Prepaid rent is the sheet's business; the drill only lists it.
+  duePrepaidAsAt: () => 0,
   loanFees: (l) => l._fees || 0,
   cashOnHandFor: (account, asOf) => store.cashTxns
     .filter(t => t.account === account && String(t.date || '') <= asOf)
@@ -79,6 +83,10 @@ const NAMES = [
   'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
   'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal', 'cashIsDebtCollection', 'invoiceBackedCashTxnIds',
   'cashIsCashShortage', 'cashIsCashOverage',
+  // A rent or wage line opens onto its months, so the month arithmetic
+  // and the settled-payment filter come along.
+  'dueSettledCashIds', 'dueCostBetween', 'monthChargeFraction', 'dueName', 'periodLabel',
+  'cashIsSpreadCost', 'spreadCostTxns', 'spreadDays', 'spreadCostBetween', 'spreadPrepaidOf', 'spreadAccruedOf',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
   // The drill labels read through the same who-paid resolver the cash
@@ -98,6 +106,7 @@ try {
       extractDeclaration(src, 'CASH_OVERAGE_CATEGORY', 'index.html'),
       extractDeclaration(src, 'CASH_VARIANCE_LINE', 'index.html'),
       extractDeclaration(src, 'ST_DRILL_MAX_ROWS', 'index.html'),
+      extractDeclaration(src, 'DUE_KINDS', 'index.html'),
       // cashHas is a const arrow, so it is pulled as a declaration.
       extractDeclaration(src, 'cashHas', 'index.html'),
       'let stDrillKey = null; function setDrillKey(k){ stDrillKey = k; }',
@@ -209,6 +218,36 @@ if (fns) {
     reconciles(stDrillData('bs:retained', ctx), 'retained earnings');
     ['tradingin', 'debtcollected', 'stockout', 'opexpaid', 'borrowed', 'ownerin', 'ownerout', 'repaid', 'equipment', 'assetsale', 'unclassified']
       .forEach(k => reconciles(stDrillData('cf:' + k, ctx), 'cash flow — ' + k));
+  }
+
+  /* ---------- 1a. a rent line opens onto its months ------------------ */
+  /*
+   * The statement charges rent to the days it is for, from the month
+   * raised on Payroll & rent, and drops the payment that settled it. The
+   * preview used to list the PAYMENT -- so opening "Rent" on a 21-day
+   * statement showed a whole month against a line carrying 21 days, and
+   * the panel's own check reported the statement as at fault.
+   */
+  {
+    const ctx = ctxFor();
+    store.dues = [{ id: 1, kind: 'rent', refId: 'R1', period: '2026-08', dueDate: '2026-08-01', amount: 310000, paid: 310000,
+      payments: [{ date: '2026-08-01', amount: 310000, cashTxnId: 77 }] }];
+    store.cashTxns.push({ id: 77, date: '2026-08-01', account: 'cash', type: 'payment', category: 'Rent', amount: 310000, description: 'August rent' });
+    ctx.is.opexRows = { Rent: 310000 * 21 / 31 };
+    const d = stDrillData('pl:opex:Rent', ctx);
+    reconciles(d, 'rent, read from the month rather than the payment');
+    t.check(d.rows.length === 1 && /August 2026/.test(d.rows[0].l),
+      'one row: the month, for the share of it in the window -- not the payment that settled it');
+    /* And a cost that names the days it pays for is shown for this
+       window's share of them, on the same principle. */
+    store.cashTxns.push({ id: 78, date: '2026-08-05', account: 'bank', type: 'expense', category: 'Licences', amount: 365000,
+      description: 'Trading licence', coversFrom: '2026-08-01', coversTo: '2027-07-31' });
+    ctx.is.opexRows = { Licences: 365000 * 21 / 365 };
+    const lic = stDrillData('pl:opex:Licences', ctx);
+    reconciles(lic, 'a licence spread over its year');
+    t.check(lic.rows.length === 1 && /covers 2026-08-01 to 2027-07-31/.test(lic.rows[0].s),
+      'shown once, for this period\u2019s share, and saying which days it covers');
+    store.dues = []; store.cashTxns = store.cashTxns.filter(t => t.id !== 77 && t.id !== 78);
   }
 
   /* ---------- 1b. a withdrawal is nowhere near the expenses ---------- */
