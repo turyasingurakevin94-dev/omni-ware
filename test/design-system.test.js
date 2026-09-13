@@ -100,7 +100,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        (55, not 56, was a second elevation on a tab: the statements'
        active document tab lifted itself off the tray it sat in; it is
        underscored now, and depth on this app is hairlines.) */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
+    /* 57, not 56, and this one goes up too -- but it is not an
+       elevation. Follow-ups' metric strip became the filter: press Money
+       and the queue below shows the fifteen clients past your terms. The
+       chosen tile needed the layer's own mark for "this one is chosen",
+       and the layer already has one -- .ow-lr.ow-on wears the quiet
+       paper and a 3px steel bar down its left edge, drawn as a border.
+
+       A tile cannot use that border: .ow-mt's left border is the strip's
+       own hairline divider, so overwriting it would move the divider
+       rather than mark the tile. So the same bar, on top, as an INSET
+       shadow -- which is what the elevation rule allows beside
+       var(--ow-lift) and none, and what .tl-x and .pr-tbl .tl-on already
+       use for exactly this mark. It paints inside the box; nothing
+       floats. */
+    'shadows': [57, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour

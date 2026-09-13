@@ -8032,10 +8032,25 @@
      double border, not a section. */
   .fup-pic{grid-column:1;margin-top:var(--ow-sp-8);min-width:0;}
   .fup-pic > .ow-pan{border:0;border-radius:0;}
-  /* The row of reasons the queue can be narrowed to. */
-  .fup-why{padding:0 var(--ow-sp-12) var(--ow-sp-8);}
-  .fup-why .ow-seg{display:flex;flex-wrap:wrap;height:auto;}
-  .fup-why .ow-seg-b{flex:0 0 auto;height:28px;}
+  /* THE STRIP IS THE FILTER, so its tiles are buttons.
+
+     .ow-mt is a div on thirty other screens and carries no button reset.
+     This one is written as its own class at the SAME specificity and
+     EARLIER in the file, so everything .ow-mt and the phone block go on
+     to say about padding and borders still lands -- the tile keeps the
+     layer's own geometry at both widths and only stops looking like a
+     browser button.
+
+     The chosen tile wears .ow-on, the layer's word for "this one is
+     chosen", drawn as .ow-lr.ow-on is: the quiet paper and one steel
+     bar. On a row that bar is on the left; in a strip that runs across,
+     it is on top. */
+  .fup-mt{-webkit-appearance:none;appearance:none;display:block;width:100%;
+    box-sizing:border-box;margin:0;border:0;background:none;font:inherit;
+    color:inherit;text-align:left;cursor:pointer;}
+  .fup-strip .ow-mt:hover{background:var(--ow-paper-2);}
+  .fup-strip .ow-mt:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .fup-strip .ow-mt.ow-on{background:var(--ow-paper-2);box-shadow:inset 0 3px 0 var(--ow-steel-950);}
   /* The acts under an item -- name a day, fix the qty, open the lead,
      take a payment -- are links in a line, in ink rather than the accent:
      the accent is the send, and a card wearing five oxide words beside
@@ -16510,16 +16525,31 @@
     <section id="tab-followups" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Follow-ups</h1>
-        <p class="ow-ph-sub">Who is waiting to hear from you, and what to tell them.</p>
-        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue: a day you said you would get back by, money past your terms that Chase would ask for today, goods back on the shelf, a sourcing ask that has moved on, a price off the figure they were quoted, something worth telling them, or a silence that has gone on too long. One message per client, however many things it covers, written from their own records for you to read, change and send with your own thumb. Ring them, take a payment, write down a day they promised, add to their list — all from here. Something worth telling goes as a picture built from their own dealings — what they buy, how many they take, what they pay — one per client per fortnight; look at it on their card before you send. The app never sends anything by itself.</p>
+        <p class="ow-ph-sub">Who is waiting to hear from you.</p>
+        <!-- THE EXPLANATION, ALL OF IT, BEHIND THE "i".
+
+             The screen used to argue with itself in grey: nine lines of
+             paragraph on the reference tab, two more under the rules, a
+             disclaimer under Held back and another under the picture. A
+             caveat that has to be read once does not belong on a screen
+             read every morning -- but it cannot be deleted either,
+             because two of this app's laws are why it exists: named
+             rather than dropped, and a failure must name itself. So the
+             whole argument is here, and what stays on the surface beside
+             each figure is one short line. -->
+        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue — the five tiles above name the reasons, and pressing one shows only those clients. One reason each, the dearest first, so nobody is listed twice. One message per client, however many things it covers, written from their own records for you to change and send. Ring them, take a payment, write down a day they promised, add to their list — all from here. The app never sends anything by itself.</p>
+        <p class="ow-ph-help"><b>Held back</b> is who is deliberately not being messaged today: anyone told inside the last fortnight, chased in the last week, past your terms, or with no number on file. Somebody you are chasing for money does not also get a picture of cement — they get the statement. They are named rather than dropped, and a client already in the queue carries their hold on their own card. Something worth telling goes as a <b>picture</b> built from their own dealings, one per client per fortnight; look at it before you send.</p>
+        <p class="ow-ph-help"><b>Whether any of it works.</b> Bought within a fortnight is not proof the message did it — somebody due cement would have bought cement anyway. It is the only measure the books can honestly give, and a reason that never converts sinks down the ranking on its own. Tellings about goods still being sourced are left out: there is nothing on the shelf to buy yet. Money is not counted and cannot be — a chase note is dropped the moment the client owes nothing, which is exactly when the chase worked, so any rate would flatter you. The rules on <b>Register</b> are the whole algorithm: no model, and a site stage is asked once, goes stale by itself, and is set on the client’s own record.</p>
         <span class="ow-ph-sp"></span>
+        <!-- TWO VIEWS, NOT THREE. "Did it work" was a third peer of the
+             work, and it brought its own metric strip with it -- so the
+             page's own furniture moved as you switched, and the reference
+             material sat where the eye looks for the queue. The register
+             IS the history and the score MEASURES it, so they share one
+             view: the table, and the 304px rail beside it. -->
         <div class="ow-seg fup-tabs" id="fup_tabs">
-          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">To contact<span class="ow-seg-n" id="fupSegContact"></span></button>
-          <button type="button" class="ow-seg-b" data-fuptab="all">Every follow-up<span class="ow-seg-n" id="fupSegAll"></span></button>
-          <!-- No count. The only countable thing on that tab is site
-               stages to ask, and a figure beside these words would read
-               as a count of rules. -->
-          <button type="button" class="ow-seg-b" data-fuptab="score">Did it work</button>
+          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Work<span class="ow-seg-n" id="fupSegContact"></span></button>
+          <button type="button" class="ow-seg-b" data-fuptab="all">Register<span class="ow-seg-n" id="fupSegAll"></span></button>
         </div>
         <!-- The one rule this screen turns on, in the header beside the
              name rather than in a form above the work. -->
@@ -16535,9 +16565,6 @@
       </div>
       <div id="fup_all_pane" style="display:none;">
         <div id="fup_all_list"></div>
-      </div>
-      <div id="fup_score_pane" style="display:none;">
-        <div id="fup_score_list"></div>
       </div>
     </section>
 
@@ -28230,6 +28257,10 @@ function resolveTab(tab){
      getElementById('tab-telling').style and throws before anything
      renders. */
   if(tab === 'telling'){ fupTab = 'contact'; fupWhy = 'telling'; return 'followups'; }
+  /* And the score's own door. It was a peer view; the measurement is now
+     the Register's rail, so a saved last-tab or an old link lands on the
+     material rather than on a pane that is gone. */
+  if(tab === 'score'){ fupTab = 'all'; return 'followups'; }
   return tab;
 }
 function goToTab(tab){
@@ -28651,11 +28682,18 @@ function foldPageInstructions(){
      would hide the one thing on the screen that goes stale. Marking the
      paragraph is the whole difference between a rule and a hope. */
   document.querySelectorAll('.page-head, .ow-ph').forEach(head=>{
+    /* ALL of them, not the first. foldInstruction has always taken a
+       list -- the price form folds three notes into one bubble -- and
+       the bubble already spaces its own children. Every other console
+       header carries exactly one .ow-ph-help, so this is a no-op for
+       them; Follow-ups carries three, because it absorbed a screen's
+       worth of argument and one run-on paragraph is not a way to read
+       it. */
     const p = head.classList.contains('ow-ph')
-      ? head.querySelector(':scope > p.ow-ph-help')
-      : head.querySelector(':scope > p');
+      ? [...head.querySelectorAll(':scope > p.ow-ph-help')]
+      : [head.querySelector(':scope > p')].filter(Boolean);
     const h1 = head.querySelector('h1');
-    if(!p || !h1 || !p.textContent.trim()) return;
+    if(!p.length || !h1 || !p.some(x=> x.textContent.trim())) return;
     if(foldInstruction(h1, p, 'What this screen is for')) n++;
   });
   return n;
@@ -53325,7 +53363,21 @@ function briefAlsoWords(a, mine){
    counting them. Three fits the phone; the total and the count always
    cover the whole account. */
 const BRIEF_OWED_NAMED_MAX = 3;
-function briefWhyHTML(b){
+/* TWO DISPOSITIONS OF ONE ARGUMENT.
+
+   Called plainly, this is the whole reasoning under the picture, as the
+   client's own account screen has always drawn it: an account is a place
+   to READ, and everything the shop knows about why this list looks like
+   this belongs open on it.
+
+   Called with {fold:true}, only the part that cannot wait is left on the
+   surface -- the amber weigh-before-you-send block, and the measure of
+   what the client will actually see -- and the reasoning goes behind a
+   link. That is for Follow-ups, which is a place to ACT: eight lines of
+   argument between the picture and the Send button is eight lines read
+   once and scrolled past every morning after. Same builder either way,
+   so the two screens can never come to different views of one client. */
+function briefWhyHTML(b, opts){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const words = briefWordCount(briefFrames(b));
   const bits = [];
@@ -53449,11 +53501,25 @@ function briefWhyHTML(b){
 
   /* The order is the order of the demand: what must be done, what must
      be weighed, what is merely worth knowing. */
-  return `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>
-    ${fix.length ? `<div class="ow-bn ow-bn-fix">${briefNoteBody('Left off \u2014 and where to fix it', fix)}</div>` : ''}
-    ${watch.length ? `<div class="ow-bn ow-bn-watch">${briefNoteBody('Before you send', watch)}</div>` : ''}
-    ${note.length ? `<div class="ow-bn ow-bn-note">${briefNoteBody('Not on the picture', note)}</div>` : ''}
-    <p class="ow-bn-f">The customer sees <b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}. You see this.</p>`;
+  const lead = `<p class="tl-why">${bits.join(' ') || 'Nothing has changed about this customer this fortnight. The list is still theirs &mdash; what they buy, how it is packed, what they pay &mdash; it is simply not urgent.'}</p>`;
+  const fixBn = fix.length ? `<div class="ow-bn ow-bn-fix">${briefNoteBody('Left off \u2014 and where to fix it', fix)}</div>` : '';
+  const watchBn = watch.length ? `<div class="ow-bn ow-bn-watch">${briefNoteBody('Before you send', watch)}</div>` : '';
+  const noteBn = note.length ? `<div class="ow-bn ow-bn-note">${briefNoteBody('Not on the picture', note)}</div>` : '';
+  const seen = `<b>${briefRowCount(b) - cut}</b> priced lines in <b>${words}</b> words, across ${frames.length} picture${frames.length === 1 ? '' : 's'}`;
+  if(opts && opts.fold){
+    const open = !!opts.open;
+    /* The measure line carries the door, because it is the one sentence
+       on this side of the glass that is ABOUT the reasoning: it says what
+       the client sees, and the link says what you would see. */
+    return `${watchBn}
+    <p class="ow-bn-f">They see ${seen}. <button type="button" class="fup-link fup-inline fup-see-why" data-cust="${esc(String(b.customer.id))}">${open ? 'Hide the reasoning' : 'Why these lines'}</button></p>
+    ${open ? lead + fixBn + noteBn : ''}`;
+  }
+  return `${lead}
+    ${fixBn}
+    ${watchBn}
+    ${noteBn}
+    <p class="ow-bn-f">The customer sees ${seen}. You see this.</p>`;
 }
 
 
@@ -53866,7 +53932,12 @@ function cfReadStage(prev){
    Every customer has one, whether or not the queue has anything to say
    about them this fortnight. The queue decides who is worth telling; the
    picture is always there to look at and to send by hand. */
-function customerBriefPanelHTML(customerId){
+/* opts is passed straight through to briefWhyHTML: the account screen
+   calls this with none and gets the whole argument open, Follow-ups asks
+   for the folded form. One panel, so the filmstrip approved before a send
+   and the one on the client's own account can never say different
+   things. */
+function customerBriefPanelHTML(customerId, opts){
   const b = customerBrief(customerId);
   if(!b) return '';
   if(!(b.groups || []).length){
@@ -53904,7 +53975,7 @@ function customerBriefPanelHTML(customerId){
       <span class="cu-sp"></span>
       ${held ? `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${esc(held.label)}</span>` : ''}
     </div>
-    ${briefWhyHTML(b)}
+    ${briefWhyHTML(b, opts)}
   </div>`;
 }
 
@@ -89380,7 +89451,7 @@ function followUpHubRows(nowMs){
       const c = (data.customers||[]).find(x=> String(x.id) === key) || null;
       rows.set(key, {customerId: cid, customer: c, name: c ? c.name : '(customer no longer on file)',
         phone: c ? (contactPhones(c)[0] || '') : '',
-        items: [], chase: null, telling: null, quiet: null, held: [],
+        items: [], chase: null, telling: null, quiet: null, held: [], book: null,
         kinds: new Set(), hasNews: false, promised: false, debt: c ? (Number(c.debt)||0) : 0});
     }
     return rows.get(key);
@@ -89434,6 +89505,12 @@ function followUpHubRows(nowMs){
   });
 
   const out = [...rows.values()].filter(r=> r.kinds.size);
+  /* The customer book's own row for each of them, which this function has
+     always read and never carried. It is how a worth-telling row can say
+     how long since the client last bought instead of an em-dash, and it
+     is the same reading the Customers page ranks on -- so the two
+     screens cannot come to different views of one client's rhythm. */
+  out.forEach(r=>{ r.book = book.get(String(r.customerId)) || null; });
   out.forEach(r=>{ r.rank = Math.max(...[...r.kinds].map(k=> FUP_HUB_RANK[k]||0)); });
   const earliestPromise = (r)=> r.items.reduce((m,i)=>{
     const p = i.reasons.find(x=> x.kind === 'promised');
@@ -89816,9 +89893,20 @@ let fupLastTold = null;
 let fupAwaiting = null;
 /* Which kind of reason the queue is narrowed to. 'all' is the hub. */
 let fupWhy = 'all';
+/* THE LENSES THE QUEUE CAN BE NARROWED TO, and what each is called.
+   These were six chips in a row under the search -- a third level of
+   navigation in the top third of the screen, under three tabs and a
+   search, all competing to be the thing you pressed first. The five
+   metric tiles were already saying the same five words with the same
+   five figures, so the tiles ARE the filter now and the chips are gone.
+
+   'word' is the tile's own lens: five hub kinds, four kind-tiles, so
+   Worth a word covers both worth-telling and gone-quiet. 'telling' and
+   'quiet' remain because they are reachable in their own right -- the
+   retired Worth telling page's door lands on 'telling'. */
 const FUP_WHY = [
   ['all','All'], ['promised','Promised'], ['money','Money'], ['news','News'],
-  ['telling','Worth telling'], ['quiet','Quiet'],
+  ['word','Worth a word'], ['telling','Worth telling'], ['quiet','Quiet'],
 ];
 /* Per client: which optional lines the owner has put in the message. A
    worth-telling line is OFF by default (its natural form is the
@@ -89835,8 +89923,12 @@ function fupTickState(cid, row){
   return {telling: only, quiet: true};
 }
 /* The inline field open on the card, if any: {id, what}, what being
-   'date' | 'details' | 'promise'. One at a time. */
+   'date' | 'details' | 'promise' | 'picture'. One at a time. */
 let fupEditing = null;
+/* Whose picture has its reasoning open, if anybody's. Its own slot rather
+   than fupEditing's, because it opens INSIDE the open picture and the two
+   have to be able to be open at once. */
+let fupPicWhy = null;
 /* THE HUB ROWS, ONCE PER RENDER. followUpHubRows walks every engine, and
    renderFollowUps used to ask the cheaper question five times in one
    pass. Set for the duration of a render and read through here. */
@@ -89849,7 +89941,7 @@ function edit2(id, what){
 }
 /* Leaving the tab. A chat opened yesterday is not still "open with these
    words" today; the draft stays, because typed words are the owner's. */
-function fupLeave(){ fupAwaiting = null; fupEditing = null; }
+function fupLeave(){ fupAwaiting = null; fupEditing = null; fupPicWhy = null; }
 /* Closed rows carry a free-text reason; three are written by this file.
    The chip capitalises them so they sit beside the state pills. */
 const FUP_CLOSED_LABELS = {bought:'Bought', closed:'Closed', 'removed from the list':'Removed'};
@@ -89924,9 +90016,10 @@ const FUP_HELD_SHOWN = 6;
 function fupHeldPanelHTML(nowMs, rows){
   const {list, alsoInQueue} = followUpHeldBack(nowMs, rows);
   const shown = list.slice(0, FUP_HELD_SHOWN);
-  const also = alsoInQueue
-    ? `<p class="ow-mini">${alsoInQueue} client${alsoInQueue === 1 ? '' : 's'} in the queue above also carry something held back — said on their own card, rather than twice on one screen.</p>`
-    : '';
+  /* Counted in the eyebrow rather than explained in a footer. The split
+     -- why somebody in the queue carries their hold on their own card
+     instead of here -- reads in full behind the "i". */
+  const also = alsoInQueue ? ` · ${alsoInQueue} in the queue` : '';
   const body = shown.length
     ? shown.map(h=> `<div class="ow-sr"><span class="ow-sr-k">${esc(h.name)}</span>
         <span class="ow-sr-v${h.kind === 'terms' || h.kind === 'chased' ? ' ow-warn' : ''}">${esc(h.label)}${
@@ -89935,9 +90028,8 @@ function fupHeldPanelHTML(nowMs, rows){
         ? `<p class="ow-mini">and ${list.length - shown.length} more.</p>` : '')
     : '<p class="ow-mini">Nobody is being kept back.</p>';
   return `<div class="ow-pan fup-held">
-    <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${list.length}</span></div>
-    ${body}${also}
-    <p class="ow-mini">Somebody you are chasing for money does not also get a picture of cement. They get the statement.</p>
+    <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${list.length}${also}</span></div>
+    ${body}
   </div>`;
 }
 
@@ -89951,6 +90043,28 @@ function fupRowHay(row){
     row.quiet ? row.quiet.reason.chip : '',
   ].join(' ').toLowerCase();
 }
+/* WHICH LENSES A ROW FALLS UNDER. One reading, used by the strip's
+   figures AND by the queue's filter, so a tile that says four can never
+   open a list of three.
+
+   row.kinds is not that reading: it marks every client with an item as
+   'news' because that is what the RANKING needs -- a day you named
+   outranks goods arriving, and both outrank a silence. For the filter,
+   news means the kept-posted kinds only: a client whose single reason is
+   a day you promised is not news, they are Promised. */
+const FUP_NEWS_KINDS = ['back_in_stock', 'companion_in', 'sourcing_progress', 'price_moved'];
+function fupRowLenses(row){
+  const has = (fn)=> row.items.some(i=> i.reasons.some(fn));
+  const out = new Set(['all']);
+  if(row.kinds.has('promised')) out.add('promised');
+  if(row.chase) out.add('money');
+  if(has(r=> FUP_NEWS_KINDS.includes(r.kind))) out.add('news');
+  if(row.telling) out.add('telling');
+  if(row.quiet || has(r=> r.kind === 'gone_quiet')) out.add('quiet');
+  if(out.has('telling') || out.has('quiet')) out.add('word');
+  return out;
+}
+
 /* The one figure the queue row carries, by what put the client here:
    days past the day the owner named, money owed, days since anything
    was said, or the book's own figure for a quiet customer. */
@@ -89963,7 +90077,19 @@ function fupRowValue(row, nowMs){
   if(row.kinds.has('money')) return {v: fmtUGX(Math.round(row.chase.debt)), b: 'owed'};
   if(row.items.length) return {v: String(fupDaysQuiet(row, nowMs)), b: 'days quiet'};
   if(row.quiet) return {v: row.quiet.reason.fig, b: row.quiet.reason.basis};
-  return {v: '—', b: 'worth a word'};
+  /* WORTH TELLING, AND NOTHING ELSE TRUE OF THEM. This read
+     "— worth a word", which is the chip beside it saying nothing twice:
+     a figure column that states nothing is worse than no column.
+
+     What the row actually wants is the fact that makes the telling worth
+     anything -- how long since this client last bought. The customer
+     book has measured it on every open for as long as it has existed;
+     followUpHubRows already reads that book and now carries the row. */
+  const b = row.book;
+  if(b && !b.orderCount) return {v: 'never', b: 'bought from you'};
+  if(b && b.daysSinceLast != null)
+    return {v: String(b.daysSinceLast), b: b.daysSinceLast === 1 ? 'day since they bought' : 'days since they bought'};
+  return {v: '—', b: 'no dated order on file'};
 }
 
 function renderFollowUpsContact(){
@@ -89972,7 +90098,7 @@ function renderFollowUpsContact(){
   const now = fupPass ? fupPass.now : Date.now();
   const rows = fupHubRowsNow();
   const tokens = searchTokens(fupQueueQuery);
-  const under = fupWhy === 'all' ? rows : rows.filter(r=> r.kinds.has(fupWhy));
+  const under = fupWhy === 'all' ? rows : rows.filter(r=> fupRowLenses(r).has(fupWhy));
   const shown = !tokens.length ? under : under.filter(row=> matchesAllTokens(fupRowHay(row), tokens));
   if(!shown.some(r=> String(r.customerId) === String(fupSelectedCustomerId)))
     fupSelectedCustomerId = shown.length ? shown[0].customerId : null;
@@ -89983,13 +90109,17 @@ function renderFollowUpsContact(){
   const queueRow = (row)=> {
     const last = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
       .sort((a,b)=> new Date(b.at) - new Date(a.at))[0];
+    /* THE ROW RULE. The chip names the kind, the figure and its basis
+       carry the number, and this line says only what neither of them has
+       said. It used to say all three: a row read "Christine [Worth
+       telling]" and then a meta line beginning "worth telling", and
+       "owes 460,000" under a figure column already reading 460,000
+       owed. A word that appears twice in one row teaches the eye to
+       stop reading one of them. */
     const meta = [
       row.items.length ? `${row.items.length} thing${row.items.length === 1 ? '' : 's'}` : '',
-      row.chase ? `owes ${fmtUGX(Math.round(row.chase.debt))}` : '',
-      row.telling ? 'worth telling' : '',
-      row.quiet ? row.quiet.reason.chip.toLowerCase() : '',
       row.items.length ? (last ? 'last told ' + fupDay(last.at) : 'never told') : '',
-      row.phone ? '' : 'no phone number on file',
+      row.phone ? '' : 'no phone on file',
     ].filter(Boolean).join(' · ');
     const val = fupRowValue(row, now);
     return `<button type="button" class="ow-lr fup-pick${String(row.customerId) === String(fupSelectedCustomerId) ? ' ow-on' : ''}" data-cust="${esc(String(row.customerId))}">
@@ -90002,31 +90132,32 @@ function renderFollowUpsContact(){
   const whyLabel = (FUP_WHY.find(w=> w[0] === fupWhy) || FUP_WHY[0])[1];
   let queueBody;
   if(shown.length) queueBody = shown.map(queueRow).join('');
-  else if(narrowed) queueBody = `<p class="ow-mini">Nothing ${tokens.length ? 'in the queue matches that' : 'under ' + esc(whyLabel)}. ${rows.length} client${rows.length === 1 ? ' is' : 's are'} waiting to hear from you — ${tokens.length ? 'clear the search' : 'choose All'} to see ${rows.length === 1 ? 'them' : 'them all'}.</p>`;
-  else queueBody = `<div class="ow-empty"><b>Nothing to tell anybody today</b><br>${openN
-    ? `${openN} follow-up${openN === 1 ? ' is' : 's are'} being watched, nobody is past your terms, and nobody has gone quiet. The moment one of them has news — goods in, a sourcing ask moving on, a price off the figure you quoted, a day you said you would ring, or a silence past ${followUpQuietDays()} days — the client appears here.`
-    : 'Nobody is waiting on anything yet. Add a follow-up with the button above, from a client’s record, from a sourcing ask, or from a line the picker came up short on.'}</div>`;
+  else if(narrowed) queueBody = `<p class="ow-mini">Nothing ${tokens.length ? 'in the queue matches that' : 'under ' + esc(whyLabel)}. ${rows.length} client${rows.length === 1 ? ' is' : 's are'} waiting to hear from you — ${tokens.length ? 'clear the search' : 'press <b>To message</b>'} to see ${rows.length === 1 ? 'them' : 'them all'}.</p>`;
+  /* NOT ENOUGH IS AN ANSWER, and it names the next act. The long version
+     -- every reason that would put somebody here -- is behind the "i"
+     now: it is the same list the header already gives, and a screen with
+     nothing on it does not need it twice. */
+  else queueBody = `<div class="ow-empty"><b>Nothing to tell anybody today.</b><br>${openN
+    ? `${openN} watched, none owed a word today.<br>Add one with <b>Add a follow-up</b>.`
+    : 'Nobody is waiting on anything yet.<br>Add one with <b>Add a follow-up</b>, or from a client’s record.'}</div>`;
   const undo = fupLastTold
     ? `<p class="ow-mini">Recorded <b>${esc(fupLastTold.name)}</b> as told. <button type="button" class="fup-link fup-inline fup-undo">It did not go</button></p>`
     : '';
-  /* One row of reasons to narrow by, each with its count, so the owner
-     working the money first can see the money and nothing else. */
-  const whySeg = rows.length ? `<div class="fup-why"><div class="ow-seg" id="fup_why">${FUP_WHY.map(([k, label])=>{
-      const n = k === 'all' ? rows.length : rows.filter(r=> r.kinds.has(k)).length;
-      return `<button type="button" class="ow-seg-b${fupWhy === k ? ' ow-on' : ''}" data-fupwhy="${k}">${esc(label)} <span class="ow-seg-n">${n || ''}</span></button>`;
-    }).join('')}</div></div>` : '';
+  /* The panel wears the lens's own name, because the tile that opened it
+     is the only other thing on the screen that says it -- and a list
+     headed "Clients to message" under a pressed Money tile is a heading
+     that has not noticed. */
   const queuePanel = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Clients to message</span>
-      <span class="ow-pan-n">${shown.length}${narrowed ? ' of ' + rows.length : ''} client${(narrowed ? rows.length : shown.length) === 1 ? '' : 's'} · ${openN} follow-up${openN === 1 ? '' : 's'} watched</span></div>
+    <div class="ow-pan-h"><span class="ow-pan-t">${fupWhy === 'all' ? 'To message' : esc(whyLabel)}</span>
+      <span class="ow-pan-n">${shown.length}${narrowed ? ' of ' + rows.length : ''} client${(narrowed ? rows.length : shown.length) === 1 ? '' : 's'}</span></div>
     ${rows.length || tokens.length ? `<div class="ow-tb"><label class="ow-f ow-f-grow"><span class="ow-f-l">Find in the queue</span><span class="ow-f-in"><input type="search" class="ow-f-v ow-f-t" id="fup_queue_search" placeholder="Client, item or note" value="${esc(fupQueueQuery)}"></span></label></div>` : ''}
-    ${whySeg}
     ${queueBody}${undo}
   </div>`;
 
   /* ---- the work: one client, one message ---- */
   let work;
   if(!sel){
-    work = `<div class="ow-pan fup-work"><div class="ow-empty"><b>Nothing to write.</b><br>When somebody has something worth hearing — news on their follow-ups, money past your terms, a day you said you would ring, or a silence — their message appears here, written from their own records, for you to read and send.</div></div>`;
+    work = `<div class="ow-pan fup-work"><div class="ow-empty"><b>Nothing to write.</b><br>A client picked on the left opens here, with their message already written.</div></div>`;
   } else {
     const row = sel;
     const cid = String(row.customerId);
@@ -90119,7 +90250,7 @@ function renderFollowUpsContact(){
         <p class="fup-it-l">${tellingLine
           ? `<label class="fup-tick"><input type="checkbox" class="fup-tick-in" data-cust="${esc(cid)}" data-tick="telling"${ticks.telling ? ' checked' : ''}> Put a line about this in the message</label> · `
           : '<span class="fup-row-meta">Sent as a picture, not as words</span> · '}<button type="button" class="fup-link fup-act fup-see-picture" data-cust="${esc(cid)}">${picOpen ? 'Hide the picture' : 'See the picture'}</button></p>
-        ${picOpen ? `<div class="fup-pic">${customerBriefPanelHTML(cid)}</div>` : ''}
+        ${picOpen ? `<div class="fup-pic">${customerBriefPanelHTML(cid, {fold: true, open: String(fupPicWhy||'') === cid})}</div>` : ''}
       </div>`;
 
     /* The customer book's worry about them, in its own words. */
@@ -90165,7 +90296,7 @@ function renderFollowUpsContact(){
         <textarea class="ow-msg fup-msg" id="fup_msg" data-cust="${esc(cid)}" rows="${lines}">${esc(draft)}</textarea>
         <p class="ow-msg-n">${waiting
           ? 'WhatsApp is open with these words. Nothing is written down until you say it went — a chat opened is not a message sent, and a stamp saying they know when they were never told would hide the next real piece of news from you.'
-          : `Nothing has been sent. One message per client, however many things it covers — and nothing is recorded until you say the message went.`}</p>
+          : 'Nothing has been sent until you say it went.'}</p>
       </div>
       <div class="fup-w-foot">
         ${waiting
@@ -90184,32 +90315,45 @@ function renderFollowUpsContact(){
     <div class="ow-stack fup-left">${queuePanel}${fupHeldPanelHTML(now, rows)}</div>${work}</div>`);
 }
 
-/* The five numbers worth knowing before opening anything: how much work
-   there is, and -- because the same strip has to say what the work IS --
-   what kind of news is standing. */
+/* THE FIVE TILES, WHICH ARE ALSO THE FILTER.
+
+   They were a read-only strip above six chips that named the same five
+   things with the same five figures. A strip and a chip row saying the
+   same words, one of them pressable and the smaller one at that, is not
+   two controls -- it is one control and a label for it. So the tile is
+   the control: press Money and the queue below shows the fifteen clients
+   past your terms, and the tile you pressed carries the only underline
+   on the screen.
+
+   Every figure is the number of clients THAT LENS OPENS, through
+   fupRowLenses -- the same reading the queue filters by -- because a
+   tile that says four and opens three is worse than no tile. The
+   kept-posted kinds are still counted on their own, off followUpReasons,
+   for the one subtitle that needs to know whether a day has come. */
 function renderFollowUpSummary(){
   const el = document.getElementById('fupSummaryRow');
   if(!el) return;
   const rows = fupHubRowsNow();
   const open = openFollowUps();
-  /* Counted off the same rows the queue is drawn from, so the strip can
-     never disagree with the list beneath it. The kept-posted kinds keep
-     their own accumulator: they are what followUpReasons computes. */
   const counts = {promised:0, back_in_stock:0, companion_in:0, sourcing_progress:0, price_moved:0, gone_quiet:0};
   rows.forEach(row=> row.items.forEach(i=> i.reasons.forEach(r=>{ if(counts[r.kind] != null) counts[r.kind]++; })));
-  const news = counts.back_in_stock + counts.companion_in + counts.sourcing_progress + counts.price_moved;
-  const money = rows.filter(r=> r.chase).length;
-  const word = rows.filter(r=> r.telling).length + rows.filter(r=> r.quiet).length;
-  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
-    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const lenses = rows.map(fupRowLenses);
+  const n = (k)=> k === 'all' ? rows.length : lenses.filter(s=> s.has(k)).length;
+  /* .ow-on is the layer's word for "this one is chosen" -- the same one
+     .ow-lr and .ow-seg-b wear. The Worth a word tile reads as chosen for
+     its own lens and for either half of it, because the retired page's
+     door still opens 'telling' on its own. */
+  const on = (k)=> k === fupWhy || (k === 'word' && (fupWhy === 'telling' || fupWhy === 'quiet'));
+  const tile = (label, k, sub, tone)=> `<button type="button" class="ow-mt fup-mt${on(k) ? ' ow-on' : ''}${tone ? ' ' + tone : ''}" data-fupwhy="${k}" aria-pressed="${on(k) ? 'true' : 'false'}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${n(k)}</span><p class="ow-mt-s">${sub}</p></button>`;
   el.innerHTML = `<div class="ow-strip ow-strip-5 fup-strip">
-    ${tile('To message', String(rows.length),
-      rows.length ? `client${rows.length === 1 ? '' : 's'} · one message each` : `nobody is owed a word · ${open.length} watched`,
+    ${tile('To message', 'all',
+      rows.length ? 'one message each' : `nobody is owed a word · ${open.length} watched`,
       rows.length ? '' : 'ow-good')}
-    ${tile('Promised', String(counts.promised), counts.promised ? 'days you said you would get back by' : 'no day you named has come', counts.promised ? 'ow-warn' : '')}
-    ${tile('Money', String(money), money ? 'past your terms, and Chase would ask today' : 'nobody Chase would ask today')}
-    ${tile('News', String(news), 'goods in, sourcing moved, a price off the quote')}
-    ${tile('Worth a word', String(word), `worth telling, or quiet · silence after ${followUpQuietDays()} days`)}
+    ${tile('Promised', 'promised', counts.promised ? 'days you named' : 'none due today', counts.promised ? 'ow-warn' : '')}
+    ${tile('Money', 'money', n('money') ? 'past your terms' : 'nobody past your terms')}
+    ${tile('News', 'news', 'goods, sourcing, price')}
+    ${tile('Worth a word', 'word', 'or gone quiet')}
   </div>`;
 }
 
@@ -90307,30 +90451,40 @@ function renderFollowUpsAll(filter){
           }).join('');
         }).join('')}
       </div>
-      <p class="ow-mini">Clients with something still open come first. A client whose list is entirely settled is history, not work.</p>`;
+      <p class="ow-mini">Clients with something still open come first.</p>`;
 
-  fupSetHTML(wrap, `<div class="ow-pan">
+  /* THE HISTORY, AND WHAT IT CAME TO. The table is the register; the
+     rail is renderFollowUpScore -- the measurement of that same history,
+     and the rules it was produced by. They were separate views, which
+     left this one with an empty right half and put the measurement where
+     the eye looks for work. Nothing on either side is an act, so there
+     is no accent anywhere on this view. */
+  fupSetHTML(wrap, `<div class="ow-grid"><div class="ow-stack"><div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Every follow-up ever taken</span>
       <span class="ow-pan-n">${openTotal} open · ${all.length - openTotal} closed</span></div>
     ${bar}${body}
-  </div>`);
+  </div></div><div class="ow-side">${renderFollowUpScore()}</div></div>`);
 }
 
 /* ================= The rules, and whether any of it works ============
 
-   Everything on this tab is about the screen rather than about one
-   client: what the queue runs on, whether the messages it produces ever
-   lead to an order, and the one errand that makes the reasons better --
-   asking a client where their site has reached.
+   Everything here is about the screen rather than about one client: what
+   the queue runs on, and whether the messages it produces ever lead to
+   an order.
 
-   Nothing here is an act, so there is no accent on it at all. */
+   THE REGISTER'S RAIL, not a third view. It was a peer tab, which put
+   the measurement of history where the eye looks for the work and left
+   the register with an empty right half. The register IS the history and
+   this MEASURES it, so they are one view: the grouped table, and these
+   two panels in the 304px rail beside it.
+
+   Returns its HTML rather than writing a pane of its own, because the
+   pane is gone. Nothing here is an act, so there is no accent on it at
+   all. */
 function renderFollowUpScore(){
-  const wrap = document.getElementById('fup_score_list');
-  if(!wrap) return;
   const rows = fupHubRowsNow();
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const all = (data.customers||[]).length;
-  const held = followUpHeldBack(fupPass ? fupPass.now : Date.now(), rows);
   const score = hubScoreboard();
   const staged = (data.customers||[]).filter(c=> customerSiteStage(c).stage).length;
   const toAsk = (data.customers||[]).filter(c=> !customerSiteStage(c).fresh);
@@ -90342,34 +90496,16 @@ function renderFollowUpScore(){
      what "derived, never invented" is for. */
   const yielded = Math.max(0, briefQueue().length - telling);
 
-  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
-    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
-  const heldBreak = held.list.length
-    ? Object.entries(held.list.reduce((m, h)=>{ m[h.kind] = (m[h.kind]||0)+1; return m; }, {}))
-        .map(([k, n])=> `${n} ${k === 'told' ? 'told inside the fortnight' : k === 'chased' ? 'being chased'
-          : k === 'terms' ? 'past terms' : k === 'promised' ? 'named a day' : k === 'nophone' ? 'with no number' : 'being checked'}`)
-        .join(' · ')
-    : 'nobody is being kept back';
-  const strip = `<div class="ow-strip fup-strip">
-    ${tile('Told, then bought', briefsSentTable ? `${score.worked}<span class="ow-u">of ${score.told}</span>` : '—',
-      briefsSentTable ? `within ${TELL_WORKED_DAYS} days · ${f(score.worth)} UGX` : 'cannot be read yet — one update outstanding')}
-    ${tile('Held back', String(held.list.length), heldBreak)}
-    ${tile('Worth telling', String(telling),
-      `of ${all} on the book${yielded ? ` · ${yielded} yield to a follow-up already open on the same item` : ' · each with one true reason'}`)}
-    ${tile('Site stage on file', `${staged}<span class="ow-u">of ${all}</span>`,
-      `${toAsk.length} to ask — the one thing that says what comes next`)}
-  </div>`;
-
   if(!briefsSentTable || !productLinksTable){
-    /* The queue on To contact works without these tables; what cannot
-       be done is writing down that somebody was told. Said here rather
-       than taking the whole screen down, which is what the retired page
-       did. */
-    fupSetHTML(wrap, `${strip}<div class="ow-pan"><div class="ow-empty">
+    /* The queue on Work works without these tables; what cannot be done
+       is writing down that somebody was told. Said here rather than
+       taking the whole screen down, which is what the retired page did
+       -- and the register beside this rail still reads, because the
+       history is in the follow-ups themselves. */
+    return `<div class="ow-pan"><div class="ow-empty">
       <b>The record of what was told needs one update.</b>
-      <span>Paste ${!productLinksTable ? '<b>supabase/migrations/0090_product_links.sql</b>' : ''}${!productLinksTable && !briefsSentTable ? ' and ' : ''}${!briefsSentTable ? '<b>supabase/migrations/0091_briefs_sent.sql</b>' : ''} into the Supabase SQL editor and reload. The queue on <b>To contact</b> still works. What cannot be written down yet is that somebody was told — so a picture the app cannot remember sending would go to the same client every day, and nothing here can say whether any of it worked.</span>
-    </div></div>`);
-    return;
+      <span>Paste ${!productLinksTable ? '<b>supabase/migrations/0090_product_links.sql</b>' : ''}${!productLinksTable && !briefsSentTable ? ' and ' : ''}${!briefsSentTable ? '<b>supabase/migrations/0091_briefs_sent.sql</b>' : ''} into the Supabase SQL editor and reload. The queue on <b>Work</b> still works. What cannot be written down yet is that somebody was told — so a picture the app cannot remember sending would go to the same client every day, and nothing here can say whether any of it worked.</span>
+    </div></div>`;
   }
 
   const pct = (a, b)=> b ? Math.round(a / b * 100) : 0;
@@ -90382,16 +90518,27 @@ function renderFollowUpScore(){
     ${score.told ? `<div class="ow-sr"><span class="ow-sr-k">Told</span><span class="ow-sr-v">${score.told}</span></div>
       ${bar(`Bought within ${TELL_WORKED_DAYS} days`, score.worked, score.told)}
       <div class="ow-sr"><span class="ow-sr-k">Worth, those orders</span><span class="ow-sr-v">${f(score.worth)}</span></div>
-      ${reasons.map(([k, v])=> bar(HUB_SCORE_LABELS[k] || k, v.worked, v.told)).join('')}
-      <p class="ow-mini">“Bought within ${TELL_WORKED_DAYS} days” is not proof the message did it — somebody due cement would have bought cement anyway. It is the only measure the books can honestly give, and a reason that never converts sinks down the ranking on its own.</p>`
-      : '<p class="ow-mini">Nothing told yet. Once a message has gone this counts, per reason, whether an order followed inside a fortnight — which is the only measure the books can honestly give.</p>'}
-    ${score.notYet ? `<p class="ow-mini">${score.notYet} telling${score.notYet === 1 ? '' : 's'} about goods still being sourced ${score.notYet === 1 ? 'is' : 'are'} left out of the rate: there is nothing on the shelf for them to buy yet, so counting them would libel the reason.</p>` : ''}
-    <p class="ow-mini">${esc(FUP_MONEY_UNMEASURABLE)}</p>
+      ${reasons.map(([k, v])=> bar(HUB_SCORE_LABELS[k] || k, v.worked, v.told)).join('')}`
+      : '<p class="ow-mini">Nothing told yet. Once a message has gone this counts, per reason, whether an order followed inside a fortnight.</p>'}
+    <!-- A FIGURE WITHHELD SAYS SO WHERE THE FIGURE WOULD HAVE BEEN. The
+         whole argument -- a chase note is dropped the moment the client
+         owes nothing, which is exactly when the chase worked -- is
+         FUP_MONEY_UNMEASURABLE, and it reads in full behind the "i". A
+         rate that is absent from a list of rates needs a row, not a
+         paragraph, or it reads as a rate of nothing. -->
+    <div class="ow-sr"><span class="ow-sr-k">Money</span><span class="ow-sr-v ow-warn">not counted</span></div>
+    <p class="ow-mini">Not proof — somebody due cement buys cement anyway.${
+      score.notYet ? ` ${score.notYet} left out: nothing on the shelf to buy yet.` : ''}${
+      yielded ? ` ${yielded} yield to a follow-up already open on the same item.` : ''} Money is not counted: a cleared chase deletes its own record.</p>
   </div>`;
 
   const rules = `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">The rules</span></div>
-    <div class="ow-sr"><span class="ow-sr-k">One reason each, the dearest first</span><span class="ow-sr-v">${FUP_WHY.length - 1} <span class="ow-u">kinds</span></span></div>
+    <!-- Off FUP_HUB_RANK, which is the table that actually enforces one
+         reason each: it is the ranking, so it cannot drift from the
+         number of kinds there are. FUP_WHY used to be counted here and
+         has since grown a lens that is two of them at once. -->
+    <div class="ow-sr"><span class="ow-sr-k">One reason each, the dearest first</span><span class="ow-sr-v">${Object.keys(FUP_HUB_RANK).length} <span class="ow-u">kinds</span></span></div>
     <div class="ow-sr"><span class="ow-sr-k">A silence is worth reporting after</span><span class="ow-sr-v">${followUpQuietDays()} <span class="ow-u">days</span></span></div>
     <div class="ow-sr"><span class="ow-sr-k">One picture per customer every</span><span class="ow-sr-v">${TELL_EVERY_DAYS} <span class="ow-u">days</span></span></div>
     <div class="ow-sr"><span class="ow-sr-k">Never inside a chase by</span><span class="ow-sr-v">${TELL_AFTER_CHASE_DAYS} <span class="ow-u">days</span></span></div>
@@ -90404,40 +90551,32 @@ function renderFollowUpScore(){
       const nRules = new Set(live.map(pairRuleKey)).size;
       const figures = new Set(live.filter(l=> l.qty != null).map(pairRuleKey)).size;
       return `<div class="ow-sr"><span class="ow-sr-k">Companions come from rules you wrote</span><span class="ow-sr-v">${nRules}</span></div>
-      <p class="ow-mini">${figures} of ${nRules} carry a figure &mdash; only those can put a quantity on a picture. What goes with what is where they are written.</p>`; })()}
-    <p class="ow-mini">These are the whole algorithm. There is no model behind them — at ${all} customers the rules are more accurate than anything trained, and you can read why every row is here.</p>
+      <div class="ow-sr"><span class="ow-sr-k">Of those, carrying a figure</span><span class="ow-sr-v">${figures} <span class="ow-u">can size a line</span></span></div>`; })()}
+    <!-- SIX OF 116 NAMES, ON A SCREEN THAT CANNOT SET A STAGE. The
+         errand had a panel of its own here: a list of clients to ask,
+         with no way to ask any of them, because a stage is set on the
+         client's own record. One figure and a door is the whole of what
+         this screen can honestly offer. -->
+    <div class="ow-sr"><span class="ow-sr-k">Site stage on file</span><span class="ow-sr-v">${staged} <span class="ow-u">of ${all}</span></span></div>
+    <p class="ow-mini">This is the whole of it — no model.${
+      toAsk.length ? ` <button type="button" class="fup-link fup-inline fup-stage-door">${toAsk.length} stage${toAsk.length === 1 ? '' : 's'} to ask</button>, on each client&rsquo;s own record.` : ' Every client has a fresh stage.'}</p>
   </div>`;
 
-  const stages = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Site stage to ask</span><span class="ow-pan-n">${toAsk.length}</span></div>
-    ${toAsk.slice(0, 6).map(c=>{
-      const st = customerSiteStage(c);
-      return `<div class="ow-sr"><span class="ow-sr-k">${esc(c.name)}</span>
-        <span class="ow-sr-v">${st.stage ? `${esc(st.stage.label)} &middot; ${st.ageDays}d` : '&mdash;'}</span></div>`;
-    }).join('') || '<p class="ow-mini">Every customer has a fresh one.</p>'}
-    ${toAsk.length > 6 ? `<p class="ow-mini">and ${toAsk.length - 6} more.</p>` : ''}
-    <p class="ow-mini">A stage is asked once and goes stale by itself: it carries the day it was set, and one older than ${SITE_STAGE_STALE_DAYS} days stops counting until somebody confirms it. It is set on the client’s own record.</p>
-  </div>`;
-
-  /* The measurement takes the work column; the rules and the errand are
-     context, which is what the 304px rail is for -- the same division
-     the retired page used. */
-  fupSetHTML(wrap, `${strip}<div class="ow-grid"><div class="ow-stack">${work}</div><div class="ow-side">${rules}${stages}</div></div>`);
+  return work + rules;
 }
 
 function renderFollowUps(){
   const now = Date.now();
   fupPass = {now, rows: followUpHubRows(now)};
   try{
-    document.getElementById('fup_contact_pane').style.display = fupTab==='contact' ? '' : 'none';
-    document.getElementById('fup_all_pane').style.display = fupTab==='all' ? '' : 'none';
-    document.getElementById('fup_score_pane').style.display = fupTab==='score' ? '' : 'none';
-    /* ONE metric strip on screen at a time. The summary above the panes
-       counts today's work; the score tab carries its own four figures
-       about the screen itself, and two strips whose first tiles nearly
-       agree is worse than either alone. */
-    const sum = document.getElementById('fupSummaryRow');
-    if(sum) sum.style.display = fupTab==='score' ? 'none' : '';
+    const work = fupTab === 'contact';
+    document.getElementById('fup_contact_pane').style.display = work ? '' : 'none';
+    document.getElementById('fup_all_pane').style.display = work ? 'none' : '';
+    /* ONE STRIP, ON BOTH VIEWS, ALWAYS. It used to be hidden on the
+       third tab, which carried four figures of its own -- so switching
+       view moved the page's own furniture, and the eye had to find the
+       queue again each time. The five tiles are now also the filter, and
+       a filter that disappears on the other view is not one. */
     document.querySelectorAll('#fup_tabs .ow-seg-b').forEach(b=>
       b.classList.toggle('ow-on', b.dataset.fuptab === fupTab));
     const quiet = document.getElementById('fup_quiet');
@@ -90446,9 +90585,8 @@ function renderFollowUps(){
     const nA = document.getElementById('fupSegAll');
     if(nC) nC.textContent = String(fupPass.rows.length || '');
     if(nA) nA.textContent = String(openFollowUps().length || '');
-    if(fupTab!=='score') renderFollowUpSummary();
-    if(fupTab==='contact') renderFollowUpsContact();
-    else if(fupTab==='score') renderFollowUpScore();
+    renderFollowUpSummary();
+    if(work) renderFollowUpsContact();
     else renderFollowUpsAll(fupRegisterQuery);
     renderFollowUpBadge();
   } finally { fupPass = null; }
@@ -90516,8 +90654,20 @@ function wireFollowUpsScreen(){
     if(e.target.closest('#fup_add_any')){ openFollowUpListModal(null); return; }
     const state = e.target.closest('[data-fupstate]');
     if(state){ fupRegisterState = state.dataset.fupstate; renderFollowUpsAll(fupRegisterQuery); return; }
+    /* THE STRIP IS THE FILTER, so pressing a tile has to redraw the
+       strip as well as the queue: the underline moves with the lens, and
+       a selected state the render does not refresh is a lie. */
     const why = e.target.closest('[data-fupwhy]');
-    if(why){ fupWhy = why.dataset.fupwhy; renderFollowUpsContact(); return; }
+    if(why){
+      fupWhy = why.dataset.fupwhy;
+      fupTab = 'contact';
+      renderFollowUps();
+      return;
+    }
+    /* The stage is set on the client's own record, so the rail's figure
+       carries the door rather than a list of names this screen could do
+       nothing with. */
+    if(e.target.closest('.fup-stage-door')){ goToTab('customers'); return; }
     const pick = e.target.closest('.fup-pick');
     if(pick){ if(String(fupAwaiting||'') !== String(pick.dataset.cust)) fupAwaiting = null;
       fupEditing = null;
@@ -90537,7 +90687,7 @@ function wireFollowUpsScreen(){
         return;
       }
     }
-    const btn = e.target.closest('.fup-send, .fup-notsent, .fup-told, .fup-copy, .fup-reset, .fup-undo, .fup-record, .fup-close, .fup-reopen, .fup-when, .fup-date-set, .fup-date-clear, .fup-edit, .fup-details-save, .fup-edit-cancel, .fup-lead, .fup-pay, .fup-promise, .fup-promise-set, .fup-see-picture');
+    const btn = e.target.closest('.fup-send, .fup-notsent, .fup-told, .fup-copy, .fup-reset, .fup-undo, .fup-record, .fup-close, .fup-reopen, .fup-when, .fup-date-set, .fup-date-clear, .fup-edit, .fup-details-save, .fup-edit-cancel, .fup-lead, .fup-pay, .fup-promise, .fup-promise-set, .fup-see-picture, .fup-see-why');
     if(!btn) return;
     const draftOf = (cid)=> {
       const box = screen.querySelector('.fup-msg');
@@ -90607,7 +90757,16 @@ function wireFollowUpsScreen(){
     if(btn.classList.contains('fup-pay')){ openCustomerDebtModal(btn.dataset.cust, 'payment'); return; }
     if(btn.classList.contains('fup-see-picture')){
       const cid = String(btn.dataset.cust);
-      fupEditing = edit2(cid, 'picture') ? null : {id: cid, what:'picture'};
+      const wasOpen = edit2(cid, 'picture');
+      fupEditing = wasOpen ? null : {id: cid, what:'picture'};
+      // Closing the picture takes its reasoning with it.
+      if(wasOpen) fupPicWhy = null;
+      renderFollowUpsContact();
+      return;
+    }
+    if(btn.classList.contains('fup-see-why')){
+      const cid = String(btn.dataset.cust);
+      fupPicWhy = String(fupPicWhy||'') === cid ? null : cid;
       renderFollowUpsContact();
       return;
     }

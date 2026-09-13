@@ -378,8 +378,20 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   t.check(/fup-pay/.test(contact) && /fup-promise/.test(contact) && /fup-when/.test(contact)
     && /fup-edit/.test(contact) && /fup-lead/.test(contact) && /fup-see-picture/.test(contact),
     'a payment, a promise, a day, the qty, the lead and the picture are all reachable from the card');
-  t.check(/customerBriefPanelHTML\(cid\)/.test(contact) && !/fup-picture"/.test(contact),
+  /* ONE BUILDER, TWO DISPOSITIONS. The panel is still the account
+     screen's -- that is the whole point, and a second copy of
+     briefStripHTML would be free to show a filmstrip the picture does
+     not match. What is new is the argument: an account is a place to
+     READ and keeps the reasoning open, while this is a place to ACT and
+     folds it behind a link, because eight lines of argument between the
+     picture and Send are read once and scrolled past every morning
+     after. Asserted as the option rather than the bare call, so the fold
+     cannot quietly become a second panel. */
+  t.check(/customerBriefPanelHTML\(cid, \{fold: true/.test(contact) && !/fup-picture"/.test(contact),
     'and the picture is the SAME panel the client’s account draws — one builder, so the filmstrip approved here and the one there can never say different things');
+  const why0 = extractFunction(src, 'briefWhyHTML', 'index.html');
+  t.check(/opts && opts\.fold/.test(why0) && /ow-bn-watch/.test(why0) && /fup-see-why/.test(why0),
+    'and the folded form still leaves the amber weigh-before-you-send block on the surface — a warning behind a link is a warning nobody reads');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
   t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire) && /addPaymentPromise\(/.test(wire)
     && /openSourcingLead\(/.test(wire) && /shareBrief\(/.test(wire),
@@ -389,8 +401,15 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
     'the picture panel’s own Share, Save and Undo are wired on the ids it already uses, rather than a second vocabulary for one panel');
   t.check(/fupLeave\(\)/.test(extractFunction(src, 'goToTab', 'index.html')),
     'leaving the tab forgets an open chat — a stale "WhatsApp is open with these words" was greeting people a day later');
-  t.check(!/data-fupwhy="\$\{k\}">\$\{esc\(label\)\}<span/.test(contact) && /data-fupwhy=/.test(contact),
-    'the queue can be narrowed by why');
+  /* THE LENS MOVED FROM A CHIP ROW TO THE STRIP. It was six .ow-seg-b
+     chips under the search -- a third level of navigation in the top
+     third of the screen, under three tabs and a search. The claim is
+     unchanged (the queue can be narrowed by why) and now points at the
+     five tiles, which were already saying those words with those
+     figures. */
+  const summary0 = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+  t.check(!/data-fupwhy/.test(contact) && /data-fupwhy=/.test(summary0),
+    'the queue can be narrowed by why, from the strip rather than a chip row beneath it');
   t.check(/\$\{waiting\}/.test(extractFunction(src, 'productLineHTML', 'index.html'))
     && /pgAskers = waAskersByProduct\(\);/.test(extractFunction(src, 'renderProducts', 'index.html')),
     'the products register says who is waiting, read once per render');
@@ -432,26 +451,48 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   eq(held2.alsoInQueue, 1, 'and the panel counts them instead, so the split is visible rather than a gap');
 }
 
-/* ---------- 8. the rules tab, and one strip at a time --------------- */
+/* ---------- 8. the measurement, and one strip for the whole screen --- */
 {
+  /* TWO VIEWS, NOT THREE.
+
+     "Did it work" was a third peer of the work, and it brought a metric
+     strip of its own -- four tiles about the screen itself, shown while
+     the five about today's work were hidden. So the page's own furniture
+     moved as you switched views, and the reference material sat where
+     the eye looks for the queue while the register beside it ran a table
+     down two thirds of the width with an empty right half.
+
+     The register IS the history and the score MEASURES it, so they are
+     one view: the grouped table, and these panels in the 304px rail.
+     renderFollowUpScore still exists and still owns every claim below --
+     it returns the rail rather than writing a pane of its own. */
   const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-  t.check(/data-fuptab="score"/.test(sec) && /id="fup_score_pane"/.test(sec),
-    'the score has a tab of its own and a pane to draw into');
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 3, 'three tabs, and no more');
+  t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
+    'the measurement is not a view of its own any more');
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
+  const all0 = extractFunction(src, 'renderFollowUpsAll', 'index.html');
+  t.check(/ow-side/.test(all0) && /renderFollowUpScore\(\)/.test(all0),
+    'and it is the register’s rail, drawn beside the history it measures rather than in a tab of its own');
   const score = extractFunction(src, 'renderFollowUpScore', 'index.html');
   t.check(/briefsSentTable/.test(score) && /0091_briefs_sent\.sql/.test(score),
     'the record-keeping table is named when it is missing — that warning had no other home once Worth telling went, and without it recordBriefSent fails into a toast nobody keeps');
   t.check(/still works/.test(score),
-    'and it does not take the whole screen down: the queue on To contact does not need that table');
-  t.check(!/btn-accent/.test(score), 'nothing on that tab is an act, so it carries no accent at all');
+    'and it does not take the whole screen down: the queue on Work does not need that table');
+  t.check(!/btn-accent/.test(score), 'nothing in that rail is an act, so it carries no accent at all');
   t.check(/HUB_SCORE_LABELS\[k\]/.test(score),
     'every bar is named rather than printing its key — the old panel drew one labelled "spend_down"');
-  eq((score.match(/class="ow-mt\$\{/g) || []).length, 1, 'its tiles come from one template, like every other strip');
+  t.check(!/class="ow-mt/.test(score),
+    'and it carries no strip of its own — ONE strip on this screen, the same five tiles on both views, so switching does not move the page’s furniture');
+  /* A withheld rate has to say so where the rate would have been. The
+     three paragraphs that used to argue it read in full behind the "i";
+     what stays beside the other rates is the row. */
+  t.check(/Money<\/span><span class="ow-sr-v ow-warn">not counted/.test(score),
+    'money is named as not counted, in the list of rates, rather than left out of it');
   const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(/fupSummaryRow[\s\S]*?display = fupTab==='score' \? 'none' : ''/.test(render),
-    'and the work strip is hidden while the score is shown — two metric strips whose first tiles nearly agree is worse than either alone');
+  t.check(!/fupTab==='score'/.test(render) && /renderFollowUpSummary\(\);/.test(render),
+    'and the strip is drawn on every render rather than hidden on one view');
   t.check(/Worth telling/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
-    'the absorbed screen’s name is still spoken, on the row that narrows the queue by why');
+    'the absorbed screen’s name is still spoken, on the lens that narrows the queue by why');
 }
 
 process.exit(t.done() ? 1 : 0);

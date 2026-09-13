@@ -271,7 +271,12 @@ const src = read('index.html');
   t.check(/updateMobileTopbarTitle/.test(src) && /\.page-head h1/.test(src),
     'which is what the phone title bar still reads');
 
-  t.check(/if\(!p \|\| !h1 \|\| !p\.textContent\.trim\(\)\) return;/.test(pageFn),
+  /* Same guard, over a list. foldPageInstructions takes every
+     .ow-ph-help a header carries rather than only the first -- Follow-ups
+     absorbed a screen's worth of argument and carries three -- so the
+     question is whether ANY of them has words in it. A header with an
+     empty one is still left alone. */
+  t.check(/if\(!p\.length \|\| !h1 \|\| !p\.some\(x=> x\.textContent\.trim\(\)\)\) return;/.test(pageFn),
     'a screen with no description, or an empty one, is left alone rather than given an empty bubble');
   t.check(/if\(!title \|\| !kept\.length\) return null;/.test(fn),
     'and so is any heading handed nothing to fold');
