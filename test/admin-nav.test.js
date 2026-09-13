@@ -262,6 +262,33 @@ const INDEX = railIndex();
     const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
     t.check(/Worth telling/.test(why) || /Worth telling/.test(sec),
       'and the name it absorbed is still spoken at the destination, on the row that narrows the queue by why');
+
+    /* AND CHASE DEBTS, absorbed the same way and by the same reading:
+       both screens were already built on debtChaseRows(). The two things
+       a merge can lose are the same two, so they are checked the same
+       way -- the words, and the name still being spoken where the work
+       landed. */
+    const chased = ['chase', 'collect', 'overdue', 'late', 'payment', 'demand', 'debt', 'owed'];
+    const lostC = chased.filter((w) => !fu.keywords.includes(w));
+    t.check(lostC.length === 0,
+      `Follow-ups carries the search words of the chase screen too${lostC.length ? ' — lost ' + lostC.join(', ') : ''}`);
+    /* NOT "owing", "who owes" or "aging". Debtors owns the whole book
+       and those are its most obvious searches; this row owns the ASKING.
+       Same law as "broadcast" above, applied to the other side of it. */
+    const deb = INDEX.find((x) => x.tab === 'analytics-debtors') || { keywords: '' };
+    t.check(!/owing/.test(fu.keywords) && /owing/.test(deb.keywords),
+      'and not "owing", which is the Debtors list\'s own most obvious search, and still its');
+    t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
+      'Chase debts is not a destination any more, and has no section left behind');
+    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+      'but the old door still opens it, on the money lens it meant — same resolve, same reason');
+    t.check(/'money','Money'/.test(why),
+      'and the queue it brought is a named lens at the destination, not a filter somebody has to build');
+    /* The badge did not go dark with the row. A debtor the money lens
+       would ask today is a hub row, so the rail still carries that
+       count -- under Follow-ups, where the work is. */
+    t.check(!/navBadgeChase/.test(src) && /id="navBadgeFollowUps"/.test(src),
+      'its rail badge went with its row, and the count lives on the badge of the row that took the work');
   }
   t.check(groupOf['compare'] === 'Buy' && groupOf['suppliers'] === 'Buy'
     && groupOf['purchase-invoices'] === 'Buy',

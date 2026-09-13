@@ -112,13 +112,17 @@ eq(unexpected.length, 0,
      Margin and Clearance merged into Pricing and their two panels -- an
      icon, a title, a subtitle and a single number field apiece, above
      the money, on every visit -- became one field each in that screen's
-     rail. Three form panels remain, all on the real head.
+     rail. And three until Chase debts became the money lens on
+     Follow-ups, taking with it the panel that held its two rules -- they
+     are two fields in that lens's toolbar now, which is the same move
+     What to buy and the Price registry made before it. Two form panels
+     remain, both on the real head.
 
      The count is a guard that this check is still finding panels to
      check, not a claim that there should be a particular number of them.
      What it protects is the line below: whatever panels exist wrap their
      icon in .fp-icon, which is the only thing that sizes it. */
-  t.check(heads >= 3, `the preset panels use the real head (${heads} found)`);
+  t.check(heads >= 2, `the preset panels use the real head (${heads} found)`);
   /* fp-icon must WRAP the svg, never be put on it: the only rule that
      sizes the icon and gives it fill:none is
      `.form-panel-head .fp-icon .icon`, so an svg wearing fp-icon itself
@@ -127,9 +131,14 @@ eq(unexpected.length, 0,
     'and fp-icon wraps the svg rather than being put on it — the rule that sizes it is .form-panel-head .fp-icon .icon');
   /* Every literal svg inside one carries the sizing class. An icon put
      there by an ICON_* constant is that constant's business, and every
-     one of those already spells `class="icon"` itself. */
+     one of those already spells `class="icon"` itself.
+
+     One literal icon left: of the two panels, the consignment one draws
+     its icon from ICON_STORE. The clock that went with Chase debts' rules
+     panel was the other. Same guard as above -- that there is still a
+     literal icon to check -- and the same line under it doing the work. */
   const literal = (src.match(/<span class="fp-icon">\s*<svg[^>]*>/g) || []);
-  t.check(literal.length >= 2, `the literal icons were found (${literal.length})`);
+  t.check(literal.length >= 1, `the literal icons were found (${literal.length})`);
   eq(literal.filter((x) => !/class="icon/.test(x)).length, 0,
     'every one of them wraps an svg that carries the class which sizes it');
 }

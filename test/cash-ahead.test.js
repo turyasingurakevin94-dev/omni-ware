@@ -419,7 +419,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     'what has no date sits beside the line with its age');
   t.check(/because nobody has named a day for it/.test(html),
     'and says WHY it is not on the line — nobody has said when');
-  t.check(/They promised/.test(html) && /Chase debts/.test(html),
+  t.check(/They promised/.test(html) && /Follow-ups/.test(html),
     'pointing at where a day IS written down, now that there is somewhere');
   t.check(!/said they would pay/.test(html) && !/ow-ah-ghost/.test(html),
     'while a shop nobody has promised anything gets no promise row and no second line, rather than an empty heading');
@@ -461,7 +461,7 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/goes under on/.test(tight) && /nothing you can safely commit today/.test(tight),
     'a shop that cannot is told plainly');
   t.check(/Short <b>1,500,000<\/b> by then/.test(tight), 'by how much');
-  t.check(/Chase debts/.test(tight), 'and pointed at the thing that closes it');
+  t.check(/Follow-ups/.test(tight), 'and pointed at the thing that closes it');
   t.check(/ow-ah-neg/.test(tight), 'and the line is drawn going into the ground below nothing');
 
   const empty = build(Object.assign(makeData(), { dues: [], loans: [], rentAgreements: [] }),
@@ -588,7 +588,7 @@ const drawBuy = (over) => {
      is not "nothing needs buying". */
   t.check(/There is nothing safe to spend, so the plan is empty/.test(emptyPlan),
     'and the screen says WHY it is empty, rather than leaving three noughts to be read as "nothing needed"');
-  t.check(/Chase debts/.test(emptyPlan), 'pointing at the thing that changes it');
+  t.check(/Follow-ups/.test(emptyPlan), 'pointing at the thing that changes it');
   /* And at the reading that does the arithmetic that sentence used to
      stand in for. "Collecting is what makes it affordable" names a
      lever and no hand to pull it; the section underneath names who,

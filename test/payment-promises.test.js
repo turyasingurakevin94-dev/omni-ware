@@ -349,15 +349,27 @@ if (chase) {
 }
 
 /* ---------- 5. the screen --------------------------------------------- */
+/*
+ * These checks were written against renderChaseScreen. That screen is
+ * the Follow-ups hub's Money lens now -- one engine was being drawn by
+ * two screens -- so each claim moves to whichever part of the hub does
+ * the same work. Not one of them is dropped: a promise has to be
+ * writable from every place a customer can be standing, and folding the
+ * screen in changed where those places are, not how many.
+ */
 {
-  const panel = extractFunction(src, 'renderChaseScreen', 'index.html');
-  t.check(/They promised…/.test(panel),
-    'the button sits on the card, beside Received payment — where the conversation just happened');
-  t.check(/chase-promise/.test(panel) && /addPaymentPromise\(/.test(panel),
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  const held = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+
+  t.check(/They promised to pay on…/.test(contact),
+    'the button sits on the card, beside Receive a payment — where the conversation just happened');
+  t.check(/fup-promise-set/.test(contact) && /addPaymentPromise\(/.test(wire),
     'and writes a real row');
-  t.check(/Said when they would pay/.test(panel),
+  t.check(/said \$\{fmtShortDate\(r\.promise\.promisedOn\)\}/.test(
+      extractFunction(src, 'followUpHeldBack', 'index.html')),
     'the ones waiting are shown, so the queue’s silence about them is visible rather than mysterious');
-  t.check(/chase-unpromise/.test(panel) && /deletePaymentPromise\(/.test(panel),
+  t.check(/fup-held-unpromise/.test(held) && /deletePaymentPromise\(/.test(wire),
     'with a way to take back one entered by mistake');
 
   /* WHERE THE CONVERSATION ACTUALLY HAPPENS. The person most likely to
@@ -365,21 +377,25 @@ if (chase) {
      them they leave the queue for the rest period, taking the button
      with them. Somebody already on a promise who calls to move it needs
      the same thing: a changed mind is a SECOND promise, which the model
-     was built around and the screen gave nowhere to make. */
-  const tail = (heading) => {
-    const from = panel.indexOf(heading);
-    return from < 0 ? '' : panel.slice(from, panel.indexOf('</div>`).join(\'\')}</div>`', from));
-  };
-  t.check(/chase-promise/.test(tail('Chased in the last')),
-    'a customer chased today who then rings back with a day can be written down without waiting out the rest period');
-  t.check(/chase-promise/.test(tail('Said when they would pay')),
-    'and one already on a promise can name a different day, which is a second promise rather than an edit');
-  t.check((panel.match(/chase-promise/g) || []).length >= 3,
-    'so the button is on all three places a customer can be standing, not only the queue');
-  t.check(/has broken \$\{r\.brokenPromises\} before/.test(panel) || /broken \$\{r\.brokenPromises\}/.test(panel)
-    || /r\.brokenPromises/.test(panel),
+     was built around and the screen gave nowhere to make.
+
+     THE THREE PLACES ARE STILL THREE, and they are easier to see now
+     than they were: the client's own card, and the two kinds of held-back
+     row. What changed is that the old screen had to draw all three
+     itself; the hub already had a panel for anybody it is deliberately
+     not messaging, so the two off-queue ones live there. */
+  t.check(/fup-held-promise/.test(held),
+    'a customer chased today who then rings back with a day can be written down without waiting out the rest period, '
+    + 'and one already on a promise can name a different day — both are held-back rows, and both carry the button');
+  const heldFn = extractFunction(src, 'followUpHeldBack', 'index.html');
+  t.check(/'promised'/.test(heldFn) && /'chased'/.test(heldFn)
+    && /h\.kind === 'promised'/.test(held) && /h\.kind === 'chased'/.test(held),
+    'so the button is on all three places a customer can be standing, not only the queue — the card, '
+    + 'the ones who named a day, and the ones inside the rest period');
+  t.check(/brokenPromises: r\.brokenPromises/.test(heldFn)
+    && /ch\.brokenPromises > 1/.test(contact),
     'and a repeat offender is named as one');
-  t.check(/confirm\(/.test(panel.slice(panel.indexOf('chase-unpromise'))) || /confirm\('Remove that promise/.test(panel),
+  t.check(/confirm\('Remove that promise/.test(wire),
     'removing one is confirmed — it is a record of something somebody said, not a scratch note');
 
   const ahead = extractFunction(src, 'renderAhead', 'index.html');

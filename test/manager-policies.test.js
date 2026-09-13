@@ -48,7 +48,10 @@ const calls = { saveData: 0 };
 const env = {
   data,
   saveData: () => { calls.saveData++; },
-  renderChaseScreen: () => {}, renderChaseBadge: () => {}, renderSavedQuotes: () => {},
+  /* The chase-policy tool redraws the screen those two dials shape.
+     That was Chase debts; it is the Follow-ups hub's Money lens now, so
+     the stub follows the call. */
+  renderFollowUps: () => {}, renderSavedQuotes: () => {},
   debtChaseRows: () => ({ due: [{ id: 1 }, { id: 2 }], resting: [{ id: 3 }], blocked: [] }),
   productVariantLabel: (p, vi) => p.name + (vi != null ? ' — ' + p.variants[vi].name : ''),
   /* What goes with what, as the shop's other standing rules are read:

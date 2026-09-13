@@ -202,23 +202,67 @@ if (scope) {
 }
 
 /* ---------- 5. the wiring --------------------------------------------- */
+/*
+ * WHERE THIS QUEUE IS NOW. It had a screen of its own until the app
+ * noticed it was drawing the same rows twice: the Follow-ups hub has
+ * always been built on debtChaseRows(), carried all four of its bands,
+ * written the demand with debtChaseMessage and stamped it with
+ * markDebtChased. Two screens were reading one engine and writing one
+ * ledger, and only the hub could put the money in the same message as
+ * the delivery the same client is waiting for.
+ *
+ * So everything above this line is untouched -- the engine is the
+ * subject of sections 1 to 4 and it did not move. What changed is which
+ * screen draws it, and these checks follow it there. The door that said
+ * "chase" still opens, on the lens it meant.
+ */
 {
-  t.check(/id="tab-chase"/.test(src) && /data-tab="chase"/.test(src),
-    'Chase debts is its own screen on the rail');
-  const go = extractFunction(src, 'goToTab', 'index.html');
-  t.check(/if\(tab==='chase'\) renderChaseScreen\(\);/.test(go), 'and redraws on entry');
-  const panel = extractFunction(src, 'renderChaseScreen', 'index.html');
-  t.check(/waComposeUrl\(r\.phone, msgFor\(r\.id\)\)/.test(panel),
+  /* Anchored on the rail itself, not on the whole file. A door
+     ELSEWHERE may still carry the old key -- Analysis offers one, and
+     the Manager's own door is keyed 'chase' -- and that is the point of
+     the alias below rather than something to stamp out: every goToTab
+     call already written goes on working. What must not exist is a
+     second home for this work in the map. */
+  const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+  t.check(!/id="tab-chase"/.test(src) && !/data-tab="chase"/.test(sidebar),
+    'Chase debts is not a destination of its own any more');
+  const alias = extractFunction(src, 'resolveTab', 'index.html');
+  t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+    'but the old door still opens it, on the money lens it meant — resolved once at the top of goToTab, '
+    + 'so a saved last-tab cannot boot into a section that is gone');
+  t.check(!/function renderChaseScreen/.test(src) && !/renderChaseBadge/.test(src),
+    'and the screen and the badge that served it are gone rather than left unreachable');
+
+  /* THE FOUR ACTS THAT MADE IT A SCREEN, each still performed, each on
+     the hub. These were checked against renderChaseScreen; they are
+     checked against the functions that do the same work now. */
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  const digest = extractFunction(src, 'followUpHubDigest', 'index.html');
+  const record = extractFunction(src, 'recordFollowUpClient', 'index.html');
+  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+  t.check(/debtChaseMessage\(row\.chase, shopIdentity\(\), \{bare:true\}\)/.test(digest),
+    'the demand is still written from the customer’s own invoices — the same builder, dropping only the '
+    + 'greeting and sign-off the hub’s message already has');
+  t.check(/followUpWaUrl\(row, draftOf\(cid\)/.test(wire),
     'sending opens WhatsApp with the message written — the same door the quote sender uses');
-  t.check(/markDebtChased\(r\.id\)/.test(panel), 'and taking it away records the chase');
-  t.check(/openCustomerDebtModal\(btn\.dataset\.id, 'payment'\)/.test(panel),
+  t.check(/if\(row\.chase\)\{ markDebtChased\(String\(customerId\)\); told\.chased = true; \}/.test(record),
+    'and saying it went records the chase');
+  t.check(/unrecordFollowUpClient/.test(src)
+    && /if\(told\.chased\) unmarkDebtChased\(told\.customerId\);/.test(extractFunction(src, 'unrecordFollowUpClient', 'index.html')),
+    'while "It did not go" takes that stamp back — the undo the old footer offered, now covering every '
+    + 'engine the one message spoke for');
+  t.check(/fup-pay/.test(contact) && /openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire),
     'a customer who pays is received through the same door as the Debtors list');
-  t.check(/chase-msg/.test(panel) && /msgFor\(r\.id\)/.test(panel),
+  t.check(/class="ow-msg fup-msg"/.test(contact) && /draftOf\(cid\) \|\| followUpHubDigest/.test(wire),
     'the message is editable, and what SENDS is what the owner sees — not a copy of it');
-  const badge = extractFunction(src, 'renderChaseBadge', 'index.html');
-  t.check(/debtChaseRows\(\)\.due\.length/.test(badge),
-    'the rail count comes off the same derivation, so it cannot disagree with the list');
-  t.check(/renderChaseBadge\(\);/.test(extractFunction(src, 'refreshNavBadges', 'index.html')),
+
+  /* The badge did not go dark, it went to the row that now owns the
+     work: a debtor the money lens would ask today is a hub row, so the
+     count on the rail did not change when the screen went. */
+  const badge = extractFunction(src, 'renderFollowUpBadge', 'index.html');
+  t.check(/followUpHubRows\(Date\.now\(\)\)\.length/.test(badge),
+    'the rail count comes off the hub’s own rows, which are built from this derivation among others');
+  t.check(/renderFollowUpBadge\(\);/.test(extractFunction(src, 'refreshNavBadges', 'index.html')),
     'and refreshes with every other badge');
   t.check(/chaseAfterDays:d\.presetChaseAfterDays/.test(src) && /debtChases:d\.presetDebtChases\|\|\{\}/.test(src)
     && /presetChaseAfterDays: presets\.chaseAfterDays != null/.test(src),
@@ -227,47 +271,95 @@ if (scope) {
 
 /* ---------- 6. a queue, and one debtor being worked ------------------ */
 /*
- * Two shapes before this one. First the spare parts: .buy-controls with
- * the queue's state in a hint, .buy-tail/.buy-row as shopping rows, a
- * dashed line between debtors. Then a card per debtor -- which put five
- * editable messages on one screen, four of which nobody was about to
- * send. Now the console shows the queue on the left and ONE debtor's
- * work on the right: their invoices, their message, their buttons; the
- * phone shows that debtor open and the rest as rows. The queue's state
- * is the layer's strip, and the ones deliberately not asked are named
- * in one panel rather than dropped.
+ * Three shapes before this one. First the spare parts: .buy-controls
+ * with the queue's state in a hint, .buy-tail/.buy-row as shopping rows,
+ * a dashed line between debtors. Then a card per debtor -- which put
+ * five editable messages on one screen, four of which nobody was about
+ * to send. Then its own console: the queue left, one debtor's work
+ * right.
+ *
+ * Now it is a LENS on a queue that was already drawing these same rows.
+ * The shape is the one that console arrived at -- a queue of .ow-lr rows
+ * and one client's work beside it -- because that is the shape the hub
+ * already had. What this section checks is that folding it in dropped
+ * nothing: the four things the old screen could say that the card could
+ * not, each with a home.
  */
 {
-  const panel = extractFunction(src, 'renderChaseScreen', 'index.html');
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  const held = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  const heldRows = extractFunction(src, 'followUpHeldBack', 'index.html');
+  const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
 
-  t.check(/class="ow-pan ch-work" data-id=/.test(panel) && /class="ow-lr ch-row/.test(panel) && !/class="chase-row"/.test(panel),
-    'the debtor being worked is one panel with everything needed to send; the rest are rows in a queue');
-  t.check(/let chaseSelectedId = null;/.test(src) && /chaseSelectedId = btn\.dataset\.id;/.test(panel),
-    'and clicking a row makes it the one being worked');
-  t.check(/class="ow-strip ch-strip/.test(panel) && /'To chase'/.test(panel) && /'Between them'/.test(panel),
-    'what the queue holds is in the layer’s strip, like every converted screen');
-  t.check(!/chase_summary/.test(src),
-    'and not in a hint beside the settings — that element is gone');
-  t.check(/Deliberately not asked/.test(panel) && /Said when they would pay/.test(panel)
-    && /Chased in the last/.test(panel) && /Held back until the balance is checked/.test(panel)
-    && !/class="buy-tail"/.test(panel) && !/class="buy-row"/.test(panel),
-    'the promised, resting and held-back accounts are named in one panel, in three groups, rather than dropped');
-  /* The message is the layer's .ow-msg and still the textarea the
-     handlers read through data-msg; nothing about how it is sent moved. */
-  t.check(/<textarea class="ow-msg chase-msg" data-msg=/.test(panel) && /Nothing has been sent\./.test(panel),
-    'the message is the layer’s message box, and it says nothing has been sent');
-  t.check(/class="form-panel chase-controls"/.test(src) && /<label for="chase_after">/.test(src),
-    'the two rules the queue obeys are labelled fields in a form');
-  t.check(/id="chase_after"/.test(src) && /id="chase_rest"/.test(src),
-    'keeping the ids — the listeners bind to them at parse time with no null guard');
+  /* 1. THE LENS ITSELF. 'money' is one of the six reasons the queue
+        narrows by, and it is the one the retired door lands on. */
+  t.check(/\['money','Money'\]/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
+    'the money queue is a named lens on the hub, not a filter somebody has to construct');
 
-  /* Send last. It was first, so the three quieter buttons trailed off
-     after the loud one and the eye had to come back for them. */
-  const iSend = panel.indexOf('chase-send');
-  const iCopy = panel.indexOf('chase-copy');
-  const iReceive = panel.indexOf('chase-receive');
-  t.check(iReceive > 0 && iReceive < iCopy && iCopy < iSend,
-    'and the strongest action is last in the row, where the thumb lands');
+  /* 2. WHAT THE MESSAGE QUOTES. The invoice-by-invoice table was the one
+        instrument the old screen had that the card did not: the owner
+        checks the lines add to the balance BEFORE the demand goes. It is
+        drawn from row.chase.invoices -- debtChaseInvoices, the same
+        reading the message itself is written from. */
+  t.check(/What the message quotes/.test(contact)
+    && /ch\.invoices\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(contact),
+    'the invoices behind the demand are on the client’s card, so the arithmetic can be read before it is sent');
+  t.check(/class="ow-tbl-f"><div class="ow-tbl-c">Balance/.test(contact),
+    'ending with the balance they add to, which is what makes it a check rather than a list');
+  t.check(/The invoices on file add up to more than this balance/.test(contact)
+    && /No invoice stands behind this balance/.test(contact),
+    'and where they do NOT stand behind the balance it says which of the two reasons it is — the same two '
+    + 'the message itself distinguishes, rather than printing a breakdown the shop cannot stand behind');
+
+  /* 3. THE ONES DELIBERATELY NOT ASKED. Three groups in a panel of their
+        own on the old screen; the hub's Held back panel, which already
+        named them in Chase's own words, now carries their acts too. A
+        held-back client is by definition not in the queue, so there is
+        no card of theirs to put these on. */
+  t.check(/chase\.promised\.forEach/.test(heldRows) && /chase\.resting\.forEach/.test(heldRows)
+    && /chase\.blocked\.forEach/.test(heldRows),
+    'the promised, resting and held-back accounts are all still named rather than dropped');
+  t.check(/fup-held-promise/.test(held) && /fup-held-unpromise/.test(held) && /fup-held-again/.test(held),
+    'with the acts they need: a different day, a day they never named, and a chase that can be repeated');
+  t.check(/promiseId: r\.promise\.id/.test(heldRows),
+    'the promise carries its own id, so "They did not say that" removes the row it is standing on');
+
+  /* 4. THE POSITION. "To chase", "Between them" and "Oldest" were three
+        tiles of a strip this screen does not have room for -- it holds
+        five, and the other four are other people's work. The count keeps
+        its tile and the two figures become its basis, so no figure that
+        was on screen before this fold is off it now. */
+  t.check(/tile\('Money', String\(money\)/.test(summary)
+    && /between them/.test(summary) && /oldest \$\{agingDaysLabel/.test(summary),
+    'what the queue holds — how many, how much between them, and how old the oldest — is in the layer’s strip');
+
+  /* 5. THE TWO RULES. They were a sentence and a fold-out form in the
+        old header. They are fields in THIS screen's header now, beside
+        Quiet after, which is where this screen has always kept the one
+        rule it turns on -- so being fields is one tap fewer than the
+        fold-out was, and the three rules of the screen are one group.
+        On screen only under the lens they decide: they settle nothing
+        under any other, and three rule fields do not fit a phone header.
+        Read on Did it work whatever lens is open, so choosing the lens
+        is never the only way to find out what the rule is. */
+  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/id="fup_chase_after"/.test(sec) && /id="fup_chase_rest"/.test(sec)
+    && /class="fup-rules"/.test(sec),
+    'the two rules the queue obeys are fields in the header, grouped with the rule that was already there');
+  const render = extractFunction(src, 'renderFollowUps', 'index.html');
+  t.check(/fupTab === 'contact' && fupWhy === 'money'/.test(render) && /field\.hidden = !moneyLens/.test(render),
+    'and they are on screen only while the lens they decide is the one being read');
+  /* The layer's own field paints, so [hidden] alone could not hide it --
+     the trap css-class-hooks exists for, and the companion it demands. */
+  t.check(src.indexOf('.ow-f[hidden]{display:none;}') > src.indexOf('.ow-f{display:flex'),
+    'with the [hidden] companion that lets a field actually hide, written after the rule it outranks');
+  t.check(/Money is asked for after/.test(extractFunction(src, 'renderFollowUpScore', 'index.html'))
+    && /And nobody is asked twice inside/.test(extractFunction(src, 'renderFollowUpScore', 'index.html')),
+    'and both are written down where every other rule of this screen is');
+  t.check(/\['fup_chase_after', 'presetChaseAfterDays', 7\], \['fup_chase_rest', 'presetChaseRestDays', 3\]/.test(
+      extractFunction(src, 'wireFollowUpsScreen', 'index.html')),
+    'bound once at parse time, as the rule beside them is — they sit in the static header, not in the '
+    + 'region that redraws, so there is nothing for a delegated listener to survive');
 
   /* THE SPARE PARTS ARE GONE. Four screens wore them because they were
      there. A dead rule in the stylesheet is how a fifth ends up in one. */
@@ -281,6 +373,17 @@ if (scope) {
      so the last wearer went with it and so did the rules. */
   t.check(!/\.chase-mini\{/.test(src) && !/\.chase-tail h4\{/.test(src),
     'and the two that outlived it are gone as well, now their last wearer has');
+  /* And the console vocabulary the screen itself wore. Nothing in the
+     file reaches for a .ch-* class any more, so the rules go the same
+     way the families above did -- the comment where they stood says so
+     and names where each part went. */
+  t.check(!/\.ch-work\{/.test(src) && !/\.ch-qr\{/.test(src) && !/\.ch-strip\{/.test(src)
+    && !/\.ch-rules\{/.test(src) && !/\.ch-w-body\{/.test(src),
+    'and its own .ch-* console vocabulary goes with it, rather than sitting in the stylesheet unworn');
+  t.check(!/class="form-panel chase-controls"/.test(src) && !/id="chase_after"/.test(src)
+    && !/id="chase_rest"/.test(src) && !/id="chase_rules_btn"/.test(src),
+    'the rules form and the three ids its listeners bound to at parse time are gone together — a listener '
+    + 'left behind would throw on boot at getElementById(...).addEventListener');
 }
 
 process.exit(t.done() ? 1 : 0);

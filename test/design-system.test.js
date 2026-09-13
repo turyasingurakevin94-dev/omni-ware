@@ -394,18 +394,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: 'renderQuoteItems',
       rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
     },
-    /* Chase debts. The page head and the .panel wrapper went; the
-       card-per-debtor (.chase-card, .chase-list) and the private strip
-       (.sum-strip) became the layer's strip, list rows, panels and the
-       message box. .chase-mini outlived this screen for a while because
-       the creditors list wore it; that screen is a console now too, so
-       the rules are gone from the file entirely. */
-    chase: {
-      retired: ['page-head', 'panel', 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub'],
-      renders: 'renderChaseScreen',
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-tbl', 'ow-cp'],
-    },
     /* What to buy. The form above the list became two fields in the
        header; the private list, row, chip, order card and basket became
        the layer's table, chip, panels and basket bar. .pp-facts and
@@ -454,9 +442,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        them, and it is a list to edit rather than a queue to work -- but
        this screen may not emit the card families again. */
     followups: {
+      /* AND CHASE DEBTS' RETIRED FAMILIES. Its own entry stood below
+         this one and named .chase-card, .chase-list, .chase-acts,
+         .chase-facts and the private .sum-strip -- the card-per-debtor
+         and the hand-rolled strip its console replaced. That screen is
+         this one's Money lens now, so the families it may never wear
+         again are this screen's to refuse: the ratchet follows the
+         markup, and the markup is here. Its own .ch-* vocabulary is NOT
+         added to the list, because nothing in the app wears it at all
+         any more -- a name belongs here when a screen could plausibly
+         reach for it again, and css-class-hooks is what catches a class
+         with no rule behind it. */
       retired: ['panel', 'dir-summary-row', 'dir-summary-card', 'st-bar', 'st-tabs', 'st-tab', 'search-bar',
                 'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
-                'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill'],
+                'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill',
+                'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
       /* AND WORTH TELLING'S BUILDERS, which outlived its screen.
