@@ -27,7 +27,8 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const data = { products: [] };
-const NAMES = ['invoicePaymentProgress', 'savedQuoteTotal', 'quoteItemSellPrice'];
+const NAMES = ['invoicePaymentProgress', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'savedQuoteTotal', 'quoteItemSellPrice'];
 let scope = null; let err = null;
 try {
   scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), { data }, NAMES);

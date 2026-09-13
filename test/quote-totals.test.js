@@ -59,16 +59,34 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * The documents were never wrong. The screen was.
  */
 {
-  const sellSum = /\.reduce\(\(s,it\)=> s \+ \(Number\(it\.qty\)\|\|0\)\*quoteItemSellPrice\(it\), 0\)/;
-  t.check(sellSum.test(clientPrint), 'the printed quotation totals the sell price');
-  t.check(sellSum.test(whatsapp), 'so does the WhatsApp message');
+  /* WAS: each document had to be caught totalling the SELL with its own
+     inline reduce, because the screen had been caught totalling the cost.
+     Both documents now draw the figure from savedQuoteTotal instead --
+     the app's one answer to what this order comes to, goods and charges
+     together -- so what is pinned is stronger than it was: not that each
+     has the right arithmetic, but that neither has arithmetic of its own
+     to get wrong. A hand-rolled sum reappearing in either is the old bug
+     growing back. */
+  const ownSum = /\.reduce\(\(s,it\)=> s \+ \(Number\(it\.qty\)\|\|0\)\*quoteItemSellPrice\(it\), 0\)/;
+  t.check(/const grand = savedQuoteTotal\(data\.quote\);/.test(clientPrint) && !ownSum.test(clientPrint),
+    'the printed quotation totals through the app’s one total, not its own');
+  t.check(/const grand = savedQuoteTotal\(data\.quote\);/.test(whatsapp) && !ownSum.test(whatsapp),
+    'so does the WhatsApp message');
+  /* And both NAME the charges rather than burying them in a total that is
+     bigger than the lines above it. */
+  t.check(/orderChargeLines\(data\.quote\)/.test(clientPrint) && /orderChargeLines\(data\.quote\)/.test(whatsapp),
+    'and each prints what the charges are for, not just a larger total');
   /* The screen must reach the same figure by the same arithmetic. It does
      it a line at a time -- sell comes from quoteItemSellPrice, lineSell is
      qty times it, grandSell is their sum -- which is the same sum. */
   t.check(/const sell = quoteItemSellPrice\(it\);/.test(items),
     'and the screen prices every line through the same function');
-  t.check(/The client pays<\/div>[\s\S]{0,120}?\$\{fmtUGX\(grandSell\)\}/.test(items),
-    'so the table foots with what the client pays, not what the shop paid');
+  /* paysTotal is grandSell plus the charges. The words "The client pays"
+     must sit over the WHOLE bill: a foot that stops at the goods sends a
+     rep to the door with a figure the invoice will not match. */
+  t.check(/The client pays<\/div>[\s\S]{0,120}?\$\{fmtUGX\(paysTotal\)\}/.test(items)
+    && /const paysTotal = grandSell \+ chargesTotal;/.test(items),
+    'so the table foots with the whole bill, not what the shop paid and not the goods alone');
   t.check(!/Grand total<\/(?:td|div)>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
     'and never again puts the cost under the words a rep says out loud');
 }
@@ -81,8 +99,12 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
 {
   t.check(/Costs you<\/div>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
     'the cost is still on the page, named as the shop’s');
-  t.check(/You keep<\/div>[\s\S]{0,160}?\$\{fmtUGX\(profit\)\}/.test(items),
-    'and so is what is left over');
+  /* The label gained a qualifier once charges existed -- "You keep on the
+     items" -- because what a delivery costs the shop is not known until
+     somebody records it, and counting an uncosted one as kept would read
+     as pure profit. The figure is still profit and still there. */
+  t.check(/You keep\$\{chargesTotal > 0 \? ' on the items' : ''\}<\/div>[\s\S]{0,200}?\$\{fmtUGX\(profit\)\}/.test(items),
+    'and so is what is left over, said to be about the items once it is only about them');
   /* A rule between the client's columns and the shop's, so no cost
      figure sits in the run of client figures. */
   /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
@@ -94,8 +116,13 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'which is a real rule, not just a class name');
   t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
     'and every row honours it');
-  t.check((items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === 3,
-    'as do all three rows of the foot, so the rule runs the length of the document');
+  /* Five in the template, three on screen at a time: Items and Charges
+     are drawn only when there is a charge to tell them apart, and then
+     they replace nothing -- they sit above the same three. Every foot row
+     carries the divider either way, which is what this pins. */
+  const footRows = (items.match(/<div class="ow-tbl-f q-foot/g) || []).length;
+  t.check(footRows === 5 && (items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === footRows,
+    `every row of the foot carries the divider, so the rule runs the length of the document (${footRows})`);
 
   // The supplier copy is the shop's own document and must keep the cost.
   t.check(/it\.price/.test(supplierPrint) && !/quoteItemSellPrice/.test(supplierPrint),
@@ -105,7 +132,10 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
 /* ---------- 4. the client's figure leads ----------------------------- */
 {
   t.check(/Client pays<\/div>/.test(bar), 'the summary opens with the client’s figure');
-  t.check(/qp-says-value">\$\{fmtUGX\(grandSell\)\}/.test(bar), 'and that figure is the sell total');
+  /* pays = grandSell + charges. The bar is read out mid-call, so it is
+     the one place the figure must be the whole bill. */
+  t.check(/qp-says-value">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges;/.test(bar),
+    'and that figure is the whole bill, goods and charges');
   /* It used to be one of four equal cells labelled "Total sell" -- the
      jargon on a screen whose whole job is a sentence somebody speaks. */
   // Against what RENDERS: the comment recording why it changed quotes the
@@ -117,7 +147,8 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      numbers that decision needs, the cost is derivable, and the full
      three-line account still lives in the table footer above (section 2
      pins it there). */
-  t.check(/You keep <b/.test(bar), 'with what the shop keeps under it, quieter');
+  t.check(/You keep\$\{charges > 0 \? ' on the items' : ''\} <b/.test(bar),
+    'with what the shop keeps under it, quieter, and said to be about the items when a charge is uncosted beside it');
   /* Checked against the TEMPLATE, not the whole function -- the comment
      explaining why "Costs you" left quotes the phrase, and should. */
   t.check(!/Costs you <b>/.test(bar),
@@ -146,8 +177,10 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      The distinction is bought and sold BOTH being nothing. A quote that
      has been priced and still keeps nothing is a real warning and must
      stay red: that is the case this bar exists to catch. */
-  t.check(/const empty = grandSell <= 0 && grandBuy <= 0;/.test(bar),
-    'an empty quote is told apart from a losing one by there being no cost either');
+  /* A quote carrying only a charge is not empty either, so the third
+     term joins the other two rather than replacing them. */
+  t.check(/const empty = grandSell <= 0 && grandBuy <= 0 && charges <= 0;/.test(bar),
+    'an empty quote is told apart from a losing one by nothing being bought, sold or charged');
   t.check(/if\(empty\) pillClass = 'quiet';/.test(bar),
     'and reads as no reading rather than as a loss');
   t.check(/else if\(grandSell<=0 \|\| profit<=0\) pillClass = 'danger';/.test(bar),
@@ -162,7 +195,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      figure. The figure now takes the pill's own class, so grey on an
      empty quote is the SAME decision as the grey pill rather than a
      second one that happens to match. */
-  t.check(/You keep <b class="\$\{pillClass\}">/.test(bar),
+  t.check(/You keep\$\{charges > 0 \? ' on the items' : ''\} <b class="\$\{pillClass\}">/.test(bar),
     'and the keep figure takes the pill’s reading rather than working out a second one');
   t.check(/\.qp-shopline b\.quiet\{color:var\(--ink-soft\);\}/.test(src),
     'so "You keep 0" goes grey with it rather than reporting zero in profit-green');

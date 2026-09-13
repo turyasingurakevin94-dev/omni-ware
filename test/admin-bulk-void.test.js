@@ -53,6 +53,7 @@ const env = {
 let warning = null;
 let confirmAnswer = true;
 const NAMES = [
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'invoiceDebtDesired',
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'customerLedgerTotal', 'customerDebtDrift', 'setInvoicesVoided',

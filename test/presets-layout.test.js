@@ -512,7 +512,12 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
      were wrong -- so what is pinned here is every way a fold differs
      from a door. */
   const folds = [...section.matchAll(/data-fold="([a-z-]+)"/g)].map((m) => m[1]);
-  t.check(folds.length === 8, `every panel folds (${folds.length})`);
+  /* Nine since the shop gained a list of what it charges for besides the
+     goods. The number is not the point and never was -- what is pinned is
+     that a panel ADDED to this page folds like the rest, so the page
+     cannot creep back towards the five thousand pixels it started at.
+     Raise it with a panel; never lower it to make a run go green. */
+  t.check(folds.length === 9, `every panel folds (${folds.length})`);
   t.check(new Set(folds).size === folds.length, 'each under its own name, so what you left open can be found again');
 
   /* NOT EXCLUSIVE. The doors showed one pane and closed the rest; a

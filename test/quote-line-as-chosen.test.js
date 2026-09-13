@@ -84,7 +84,7 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
 
 /* ---- 1b. the packing list and the invoice check say it the same way --- */
 {
-  const NAMES = ['quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
+  const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal', 'orderChargeLines', 'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
   const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
     data: { customers: [], suppliers: [] },
     esc: (x)=> String(x == null ? '' : x),

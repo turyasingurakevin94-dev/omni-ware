@@ -40,6 +40,7 @@ const TODAY = '2026-08-05';
 const data = { savedQuotes: [], agents: [], customers: [] };
 const NAMES = ['agentOrders', 'agentStanding', 'agentRosterPosition', 'agentPhantomCustomer',
   'agentLinePriced', 'orderEarnings', 'agentTermConsequence',
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'daysSinceDate'];
 let scope = null; let err = null;
 try {

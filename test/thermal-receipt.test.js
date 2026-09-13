@@ -38,7 +38,7 @@ const src = read('index.html');
    the paper is the only record they keep. Stubbing them here would let
    the receipt drift away from the invoice printed for the same order. */
 const NAMES = ['receiptNum', 'receiptNumberLabel', 'nextPaymentId', 'paymentMethodLabel',
-  'shopIdentity', 'printedShopName', 'buildReceiptHTML', 'savedQuoteTotal',
+  'shopIdentity', 'printedShopName', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal', 'orderChargeLines', 'buildReceiptHTML', 'savedQuoteTotal',
   'invoiceBalanceDue', 'quoteClientName', 'invoiceNumberLabel',
   'quoteLinePack', 'quoteLineQtyText', 'quoteLineEach'];
 

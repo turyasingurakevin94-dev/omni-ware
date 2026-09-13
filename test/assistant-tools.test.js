@@ -56,7 +56,8 @@ const lastSyncedStub = {
 };
 
 const NAMES = [
-  'buildQuoteRecord', 'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue',
+  'buildQuoteRecord', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue',
   'invoiceNumberLabel', 'customerOutstandingInvoices', 'customerOrdersFor',
   'recordCustomerPayment', 'applyCustomerPaymentAllocations', 'syncInvoiceDebtCharge',
   'applyInvoiceDebtCharge', 'invoiceDebtDesired', 'resolveInvoiceCustomer',

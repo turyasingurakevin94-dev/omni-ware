@@ -30,7 +30,8 @@ const store = { savedQuotes: [], quote: { client: {}, items: [], savedId: null }
 let loadSavedQuote = null, err = null;
 try {
   ({ loadSavedQuote } = compileScope(
-    [extractFunction(src, 'loadSavedQuote', 'index.html')],
+    [extractFunction(src, 'orderCharges', 'index.html'),
+     extractFunction(src, 'loadSavedQuote', 'index.html')],
     { data: store, toast: () => {}, saveData: () => {}, renderQuoteAll: () => {} },
     ['loadSavedQuote'],
   ));

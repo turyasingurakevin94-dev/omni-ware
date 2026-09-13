@@ -336,7 +336,7 @@ const src = read('index.html');
      also what lets the phone drop the pill: at 390px the bar has about
      150 pixels for the money, and the two together need closer to 180. */
   const bar2 = extractFunction(src, 'renderQuoteFinbar', 'index.html');
-  t.check(/You keep <b class="\$\{pillClass\}">/.test(bar2),
+  t.check(/You keep\$\{charges > 0 \? ' on the items' : ''\} <b class="\$\{pillClass\}">/.test(bar2),
     'the keep figure carries the same reading as the pill, not just the sign of the profit');
   t.check(!/style="color:/.test(bar2),
     'and takes it from a class rather than an inline colour, so a rule can reach it');

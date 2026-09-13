@@ -23,6 +23,7 @@ const src = read('index.html');
 
 const data = { customers: [], savedQuotes: [], nextCustomerDebtLogId: 1 };
 const NAMES = [
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'invoiceBalanceDue', 'invoiceDebtDesired',
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'debtLogIsInvoiceOwned', 'customerLedgerTotal', 'customerDebtDrift', 'customersWithDebtDrift',
