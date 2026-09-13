@@ -35,6 +35,7 @@ ICONS = {
     'search': '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/>',
     'right': '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
     'left': '<path d="M15 5.5L8.5 12l6.5 6.5"/>',
+    'down': '<path d="M5.5 9L12 15.5 18.5 9"/>',
     'phone': '<path d="M6.4 3.2h3.1l1.6 4-2.1 1.5a12.4 12.4 0 0 0 5.8 5.8l1.5-2.1 4 1.6v3.1'
              'a2 2 0 0 1-2.2 2A17.3 17.3 0 0 1 2.6 5.4a2 2 0 0 1 2-2.2z"/>',
     'plus': '<path d="M12 5v14M5 12h14"/>',
@@ -60,10 +61,10 @@ def icon(name, cls=''):
 
 
 def tabbar(active):
-    out = ['<div class="ph-tab-bar">']
+    out = ['<div class="tabs">']
     for key, label in TABS:
         on = ' on' if label == active else ''
-        out.append(f'  <div class="ph-tb{on}">{icon(key)}{label}</div>')
+        out.append(f'  <div class="tab{on}">{icon(key)}{label}</div>')
     out.append('</div>')
     return '\n'.join(out)
 
@@ -96,7 +97,7 @@ HEAD = """<!doctype html>
 
 
 def build(out, body, w, h, extra=()):
-    css = (HERE / '_phone.css').read_text()
+    css = (HERE / '_app.css').read_text()
     for f in extra:
         css += (HERE / f).read_text()
     src = expand((HERE / body).read_text())
@@ -106,12 +107,6 @@ def build(out, body, w, h, extra=()):
 
 if __name__ == '__main__':
     PH = (390, 844)
-    build('Main.dc.html',      'body_sell.html',      *PH)
-    build('Browse.dc.html',    'body_browse.html',    *PH)
-    build('Quote.dc.html',     'body_quote.html',     *PH)
-    build('Customers.dc.html', 'body_customers.html', *PH)
-    build('Money.dc.html',     'body_money.html',     *PH)
-    build('Empty.dc.html',     'body_empty.html',     *PH)
-    build('Stale.dc.html',     'body_stale.html',     *PH)
-    build('Account.dc.html',   'body_account.html',   *PH)
-    build('Before.dc.html',    'body_before.html',    1560, 1370, ['_before.css'])
+    build('Main.dc.html', 'body_a.html', *PH)
+    build('DirectionB.dc.html', 'body_b.html', *PH)
+    build('DirectionC.dc.html', 'body_c.html', *PH)
