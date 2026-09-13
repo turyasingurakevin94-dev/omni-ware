@@ -1,0 +1,692 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* Tokens, verbatim from index.html's own :root blocks. */
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
+      --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
+      --ow-sp-24:24px; --ow-sp-32:32px;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
+      --ow-t-16:16px; --ow-t-20:20px; --ow-t-28:28px;
+      --ow-lh-tight:1.2; --ow-lh-snug:1.35; --ow-lh-normal:1.5;
+      --ow-fw-400:400; --ow-fw-500:500; --ow-fw-600:600; --ow-fw-700:700;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-tap:44px; --ow-measure:76ch;
+      --bg:var(--ow-steel-050); --panel:var(--ow-paper);
+      --ink:var(--ow-ink-900); --ink-soft:var(--ow-ink-600);
+      --line:var(--ow-rule); --accent:var(--ow-oxide);
+      --good:var(--ow-verdigris); --danger:var(--ow-crimson); --navy:var(--ow-steel-950);
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: the navy top bar and the 220px rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 var(--ow-sp-12);margin-bottom:var(--ow-sp-16);}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-ph-nm{display:flex;align-items:center;gap:7px;}
+    /* The "i" the long explanation folds behind. */
+    .ow-ph-i{width:17px;height:17px;flex:none;border:1px solid var(--ow-rule);border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:var(--ow-ink-600);background:var(--ow-paper);}
+
+    /* ---- fields, segments, buttons ---- */
+    .ow-f{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+    .ow-f-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-8);
+      min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+    .ow-f-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;}
+    .ow-seg{display:inline-flex;align-items:center;gap:var(--ow-sp-2);padding:var(--ow-sp-2);box-sizing:border-box;height:34px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-seg-b{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:100%;padding:0 var(--ow-sp-12);
+      box-sizing:border-box;border-radius:var(--ow-r-sm);white-space:nowrap;
+      font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+    .ow-seg-b.ow-on{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+    .ow-seg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+    .ow-seg-b.ow-on .ow-seg-n{color:var(--ow-steel-100);}
+    .btn{padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;text-align:center;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;}
+    .btn-accent{background:var(--accent);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+    .btn.ow-sm{padding:0 var(--ow-sp-10);height:28px;font-size:var(--ow-t-12);}
+    .btn .icon{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the metric strip ---- */
+    .ow-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-strip.ow-strip-5{grid-template-columns:repeat(5,1fr);}
+    .ow-mt{padding:var(--ow-sp-10) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);margin:0 0 var(--ow-sp-4);}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;
+      font-weight:var(--ow-fw-500);letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-4) 0 0;line-height:1.35;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+
+    /* ---- panels and layout ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:var(--ow-sp-8);height:34px;
+      padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:var(--ow-sp-16);align-items:start;}
+    .ow-grid-l{display:grid;grid-template-columns:372px minmax(0,1fr);gap:var(--ow-sp-16);align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+    .ow-stack{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+
+    /* ---- rows, chips, figures ---- */
+    .ow-tb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-tb-n{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:var(--ow-sp-10);
+      width:100%;min-height:var(--ow-tap);padding:var(--ow-sp-6) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;text-align:left;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-600);letter-spacing:.02em;height:18px;padding:0 var(--ow-sp-6);
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;}
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);color:var(--ow-ink-600);
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .ow-sr{display:flex;align-items:center;gap:var(--ow-sp-8);height:30px;
+      padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-sr:last-of-type{border-bottom:0;}
+    .ow-sr-k{flex:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-sr-v{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
+    .ow-sr-v .ow-u{font-size:.75em;color:var(--ow-ink-400);margin-left:3px;}
+    .ow-sr-v.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .ow-sr-v.ow-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+    .ow-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-fig-b{display:block;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);white-space:normal;}
+    .ow-fig-none{color:var(--ow-ink-400);font-weight:var(--ow-fw-500);}
+    .ow-mini{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:var(--ow-sp-32);text-align:center;color:var(--ow-ink-600);font-size:var(--ow-t-13);}
+
+    /* ---- the message box ---- */
+    .ow-msg{display:block;width:100%;box-sizing:border-box;margin:0;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:var(--ow-sp-10) var(--ow-sp-12);font-family:'Inter',system-ui,sans-serif;
+      font-size:var(--ow-t-13);line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-6);}
+    .ow-msg-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-msg-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-6) 0 0;
+      line-height:1.45;max-width:var(--ow-measure);}
+
+    /* ---- the register table ---- */
+    .ow-tbl{--ow-tbl-cols:1fr auto;display:grid;grid-template-columns:var(--ow-tbl-cols);}
+    .ow-tbl-h,.ow-tbl-r{display:grid;grid-column:1/-1;grid-template-columns:var(--ow-tbl-cols);
+      align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-top:1px solid var(--ow-rule-soft);}
+    .ow-tbl-h{border-top:0;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);border-bottom:1px solid var(--ow-rule);}
+    .ow-tbl-h + .ow-tbl-r{border-top:0;}
+    .ow-tbl-r{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+    .ow-tbl-g{grid-column:1/-1;display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+      padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);
+      border-top:1px solid var(--ow-rule);font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+    .ow-tbl-g .ow-tbl-gs{margin-left:auto;font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+    .ow-tbl-c{min-width:0;}
+    .ow-tbl-p{display:block;min-width:0;font-weight:var(--ow-fw-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+    .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:var(--ow-fw-600);letter-spacing:.06em;}
+    .ow-tbl-a{display:flex;align-items:center;gap:var(--ow-sp-6);justify-self:end;}
+    .ow-tbl.fup-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 96px 108px auto;}
+    .fup-tbl .ow-tbl-r.fup-closed{background:var(--ow-paper-2);}
+    .fup-closed .ow-tbl-p{color:var(--ow-ink-400);text-decoration:line-through;}
+    .fup-tbl .ow-tbl-g .ow-av{width:22px;height:22px;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);}
+
+
+    /* ==== Inventory's own, matched to index.html ==== */
+    /* The find bar. Search IS this screen, so it is wide and carries its
+       own mark rather than a field label; the three that narrow it sit
+       beside it as the layer's fields. */
+    .iv-find{display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;margin-bottom:var(--ow-sp-8);}
+    .iv-fb{display:flex;align-items:center;gap:var(--ow-sp-8);height:34px;flex:1 1 320px;min-width:0;
+      padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      background:var(--ow-paper);color:var(--ow-ink-400);font-size:var(--ow-t-13);}
+    .iv-fb svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-tog{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:28px;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-tog i{width:13px;height:13px;border:1px solid var(--ow-rule);border-radius:3px;
+      background:var(--ow-steel-950);display:inline-block;position:relative;}
+    .iv-tog i::after{content:"";position:absolute;left:3px;top:1px;width:4px;height:7px;
+      border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(42deg);}
+    .iv-fr{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:0 0 var(--ow-sp-12);}
+    /* The repair line: a finding, so amber, and folded until opened. */
+    .iv-fix{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-12);
+      margin-bottom:var(--ow-sp-16);border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r);
+      background:var(--ow-amber-faint);font-size:var(--ow-t-12);color:var(--ow-amber-ink);}
+    .iv-fix svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .iv-fix b{font-weight:var(--ow-fw-600);}
+    .iv-fix .sp{flex:1;}
+    /* The stock table and the movements table are both the layer's. */
+    /* The stock list is NOT the layer's table -- it is this screen's own
+       grid, verbatim from index.html. Six tracks; the first two are the
+       row's photo and its open caret. */
+    .iv-h{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:var(--ow-sp-10);padding:0 var(--ow-sp-12);height:28px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .iv-h span{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
+    .iv-h .iv-r{text-align:right;}
+    .iv-row{display:grid;grid-template-columns:18px 28px minmax(0,1fr) 108px 104px 152px;
+      align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);min-height:var(--ow-tap);}
+    .iv-row:last-of-type{border-bottom:0;}
+    .iv-nm{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-sub{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .iv-n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);white-space:nowrap;}
+    .iv-n.none{color:var(--ow-ink-400);font-weight:var(--ow-fw-500);}
+    .iv-cr{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .iv-ph{width:22px;height:22px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);}
+    .ow-tbl.sl-tbl{--ow-tbl-cols:78px minmax(0,1fr) 116px 92px 96px minmax(0,1.15fr) 86px;}
+    .sl-c-d,.sl-c-t{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .sl-c-d{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .sl-c-n{font-size:var(--ow-t-12);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-fig.ow-good{color:var(--ow-verdigris);}
+    .ow-fig.ow-bad{color:var(--ow-crimson);}
+    /* The real class from index.html. Inside .ow-tbl it is a grid item,
+       so it has to span every column or it lands in the 78px date
+       column and wraps -- which is exactly what it did first time. */
+    .log-more-row{grid-column:1/-1;display:flex;justify-content:center;
+      padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+    .log-more-row .btn{padding:6px 16px;font-size:12px;}
+
+    /* ==================================================================
+       FORECASTS — one roof for what is coming.
+       Everything below is either the OW layer's own rule, copied from
+       index.html, or a canvas-only stand-in for a screen-private class
+       (.ow-dy-*, .ow-ck*, .ow-ah-* → .ah-*, .bp-*, .ctb-*) at the exact
+       values the app ships.
+       ================================================================== */
+    .main{padding:24px 40px 32px;}
+    .ow-ph{margin-bottom:var(--ow-sp-16);}
+    .ow-ph-sub b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ow-f-v.fc-ph{color:var(--ow-ink-400);font-family:'Inter',system-ui,sans-serif;}
+    .ow-pan-nt{font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:0;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;}
+    .fc-hc{margin-left:auto;}
+    .ow-pan-nt + .fc-hc, .ow-pan-nt + .ow-pan-n{margin-left:auto;}
+    .ow-fig-none{color:var(--ow-ink-400) !important;font-weight:var(--ow-fw-500);}
+    .fc-dim{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .fc-broke{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    /* The roof: the strip every lens shares. */
+    .fc-roof{margin-bottom:var(--ow-sp-16);}
+    .fc-roof .ow-mt-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    /* The day's own strip sits INSIDE the panel that names the day. */
+    .ow-strip.fc-day-s{border:0;border-radius:0;}
+    .ow-mt-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ow-mini b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .ow-mini a{color:var(--ow-oxide);text-decoration:none;font-weight:var(--ow-fw-500);}
+    .ow-mini.fc-lead{border-top:0;border-bottom:1px solid var(--ow-rule-soft);}
+
+    /* ---- the day being walked, in the panel head ---- */
+    .ow-dy-nav{display:flex;align-items:stretch;height:26px;flex:none;margin-left:var(--ow-sp-8);
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper);}
+    .ow-dy-b{display:flex;align-items:center;justify-content:center;width:26px;flex:none;color:var(--ow-ink-600);}
+    .ow-dy-b.dis{color:var(--ow-ink-400);background:var(--ow-paper-2);}
+    .ow-dy-i{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ow-dy-nav .ow-dy-i{width:14px;height:14px;}
+    .ow-dy-d{display:flex;align-items:center;padding:0 var(--ow-sp-8);border-left:1px solid var(--ow-rule);
+      border-right:1px solid var(--ow-rule);font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+
+    /* ---- how the day closes ---- */
+    .ow-ck{display:flex;align-items:flex-start;gap:var(--ow-sp-8);
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-ck .ow-dy-i{width:15px;height:15px;margin-top:1px;}
+    .ow-ck.ow-good{color:var(--ow-verdigris);}
+    .ow-ck.ow-warn{color:var(--ow-amber-ink);}
+    .ow-ck.ow-bad{color:var(--ow-crimson);}
+    .ow-ck.ow-idle{color:var(--ow-ink-400);}
+    .ow-ck-b{flex:1;min-width:0;}
+    .ow-ck-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+    .ow-ck-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:1px;line-height:1.4;}
+
+    /* ---- the register table, this screen's tracks ---- */
+    .ow-tbl.fc-buy{--ow-tbl-cols:minmax(0,1fr) 64px 118px 128px;}
+    .ow-tbl.fc-pay{--ow-tbl-cols:minmax(0,1fr) 124px 128px;}
+    .ow-tbl.fc-sh{--ow-tbl-cols:minmax(0,1fr) 84px 118px;}
+    .ow-tbl.fc-work{--ow-tbl-cols:minmax(0,1fr);}
+    .ow-tbl .ow-tbl-g{padding:var(--ow-sp-6) var(--ow-sp-12);font-size:var(--ow-t-12);}
+    .ow-tbl .ow-tbl-g:first-child{border-top:0;}
+    .ow-tbl-nb{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .ow-tbl-f{grid-column:1/-1;display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .ow-tbl-f .ow-tbl-gs{margin-left:auto;font-size:var(--ow-t-11);}
+    .ow-tbl > .ow-mini{grid-column:1/-1;}
+    .ow-tbl-r{min-height:var(--ow-tap);}
+
+    /* ---- the runway (the app's .ow-ah-*, drawn here as .ah-*) ---- */
+    .ah-plot{position:relative;padding:var(--ow-sp-10) var(--ow-sp-12) 0;}
+    .ah-svg{display:block;width:100%;height:auto;}
+    .ah-grid{stroke:var(--ow-rule-soft);stroke-width:1;}
+    .ah-zero{stroke:var(--ow-ink-400);stroke-width:1;}
+    .ah-neg{fill:var(--ow-crimson-soft);}
+    .ah-axis{stroke:var(--ow-rule);stroke-width:1;}
+    .ah-tick{stroke:var(--ow-rule);stroke-width:1;}
+    .ah-xl,.ah-xl-t,.ah-cap{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    .ah-yl{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11px;fill:var(--ow-ink-600);}
+    .ah-rail{fill:var(--ow-steel-100);}
+    .ah-rail.ah-rail-low{fill:var(--ow-ink-900);}
+    .ah-line{fill:none;stroke:var(--ow-ink-900);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+    .ah-ghost{fill:none;stroke:var(--ow-ink-400);stroke-width:1.5;stroke-dasharray:5 4;stroke-linejoin:round;}
+    .ah-dot{fill:var(--ow-paper);stroke:var(--ow-ink-900);stroke-width:2;}
+    .ah-dot.ah-low{fill:var(--ow-ink-900);}
+    .ah-dot.ah-start{stroke-width:1.8;}
+    .ah-lowlab,.ah-lowsub,.ah-endlab,.ah-endghost{paint-order:stroke fill;stroke:var(--ow-paper);
+      stroke-width:3px;stroke-linejoin:round;}
+    .ah-lowrule{stroke:var(--ow-rule);stroke-width:1;stroke-dasharray:3 3;}
+    .ah-lowlab{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;fill:var(--ow-ink-900);}
+    .ah-lowlab.ah-bad{fill:var(--ow-crimson);}
+    .ah-lowsub{font-size:11px;fill:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    .ah-endlab{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11px;font-weight:600;fill:var(--ow-ink-900);}
+    .ah-endghost{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11px;fill:var(--ow-ink-400);}
+    .ah-lg{display:flex;align-items:center;gap:var(--ow-sp-16);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+    .ah-lg-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ah-lg-k{width:20px;height:0;border-top:2px solid var(--ow-ink-900);flex:none;}
+    .ah-lg-k.ah-lg-ghost{border-top:1.5px dashed var(--ow-ink-400);}
+    .ah-lg-k.ah-lg-bar{width:6px;height:11px;border:0;background:var(--ow-steel-100);}
+    .ah-lg-n{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);max-width:52ch;line-height:1.45;}
+    .ah-lg-n b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+
+    /* ---- the ledger: the same walk, in words (app grid, four tracks) ---- */
+    .ah-h{display:grid;grid-template-columns:96px minmax(0,1fr) 112px 148px;gap:var(--ow-sp-10);
+      padding:var(--ow-sp-6) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ah-h-r{text-align:right;}
+    .ah-lr{display:grid;grid-template-columns:96px minmax(0,1fr) 112px 148px;align-items:center;gap:var(--ow-sp-10);
+      width:100%;min-height:var(--ow-tap);padding:var(--ow-sp-6) var(--ow-sp-12);box-sizing:border-box;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ah-when{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-when-d{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+    .ah-what{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-what-s{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ah-out{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+    .ah-bal{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ah-bal-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);letter-spacing:0;color:var(--ow-ink-600);}
+    .ah-lr.ah-low{background:var(--ow-paper-2);}
+    .ah-lr.ah-low .ah-bal-b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+    .ah-lr.ah-said{border-bottom:1px dashed var(--ow-rule-soft);}
+    .ah-said .ah-out{color:var(--ow-verdigris);}
+    .ah-said .ah-bal{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-400);font-style:italic;letter-spacing:0;white-space:normal;}
+    .ah-set{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-12);}
+    .ah-set-f{display:flex;align-items:center;height:30px;width:74px;padding:0 var(--ow-sp-8);box-sizing:border-box;flex:none;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    .ah-set-l{min-width:0;font-size:var(--ow-t-11);line-height:1.4;color:var(--ow-ink-600);}
+    /* An undated bill in the rail: who, how old, how much, and the act. */
+    .fc-und{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-top:1px solid var(--ow-rule-soft);}
+    .fc-und-n{flex:1;min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .fc-und-s{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);margin-top:1px;}
+
+    /* ---- the plan (the app's .bp-*, verbatim) ---- */
+    .ow-tbl.bp-tbl{--ow-tbl-cols:28px 84px minmax(0,1fr) 128px auto;}
+    .bp-tbl .ow-tbl-r{align-items:start;}
+    .bp-line.picked{background:var(--ow-paper-2);}
+    .bp-ck{display:block;width:16px;height:16px;margin-top:2px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);position:relative;}
+    .bp-ck.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);}
+    .bp-ck.on::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;
+      border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);}
+    .bp-when{padding-top:1px;}
+    .bp-it{min-width:0;}
+    .bp-do{display:block;font-size:12px;color:var(--ink);margin-top:1px;line-height:1.4;}
+    .bp-do b{font-weight:600;}
+    .bp-w{display:block;min-width:0;font-size:11px;color:var(--ink-soft);line-height:1.4;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bp-fg{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);}
+    .bp-fg.bad{color:var(--ow-crimson);}
+    .bp-fg.good{color:var(--ow-verdigris);}
+    .bp-d{color:var(--ow-rule);margin:0 7px;}
+    .bp-cost .ow-fig-b{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ink-soft);}
+    .bp-ord{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center;
+      padding:9px 12px;}
+    .bp-ord-m{min-width:0;}
+    .bp-ord-s{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .bp-ord-l{font-size:11px;color:var(--ink-soft);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bp-ord-t{text-align:right;}
+    .bp-ord-a{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;}
+    .bp-tot{background:var(--ow-paper-2);}
+    .bp-tot .ow-sr-k{color:var(--ink);font-weight:600;}
+    .bp-tot .ow-sr-v{font-weight:600;}
+    .bp-sr{display:flex;align-items:center;gap:8px;padding:8px 12px;}
+    .bp-sr-n{flex:1;min-width:0;}
+    .bp-sr-n b{display:block;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bp-sr-n em{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);margin-top:1px;
+      font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ctb-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:3px;align-items:center;
+      padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+    .ctb-row:first-of-type{border-top:0;}
+    .ctb-who{display:block;min-width:0;font-size:12px;font-weight:600;color:var(--ink);}
+    .ctb-who em{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--ink-soft);margin-top:1px;
+      font-variant-numeric:tabular-nums;}
+    .ctb-gets{grid-column:1/-1;font-size:11px;color:var(--ink);line-height:1.4;font-variant-numeric:tabular-nums;}
+    .ctb-gets b{font-weight:600;}
+    .ctb-gets em{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);font-variant-numeric:normal;}
+    .ctb-short{color:var(--ink-soft);}
+    /* The basket bar on the desk: the layer's .ow-bk, at the foot of the
+       stack. It floats -- it is the one thing here that takes --ow-lift. */
+    .fc-redo{margin-left:var(--ow-sp-8);height:24px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-11);}
+    /* Pinned to the foot of the console, the way the app docks it. */
+    .fc-bk{position:absolute;left:40px;right:40px;bottom:16px;display:flex;align-items:center;gap:12px;margin:0;
+      padding:10px 12px 10px 16px;background:var(--ow-steel-950);color:var(--ow-paper);
+      border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+    .fc-bk .ow-bk-say{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--ow-steel-100);}
+    .fc-bk .ow-bk-b,.fc-bk .ow-bk-m{color:var(--ow-paper);font-weight:600;}
+    .fc-bk .ow-bk-m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .fc-bk .ow-bk-a{display:flex;gap:8px;align-items:center;flex:none;}
+    .fc-bk .btn-accent{padding:0 14px;height:32px;font-size:13px;}
+    .fc-bk .fc-bk-clear{height:28px;padding:0 10px;font-size:12px;color:var(--ow-steel-100);border:1px solid var(--ow-steel-800);}
+
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:1120px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Insight</span><span>/</span><span>Forecasts</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <!-- THE RAIL AFTER. Three groups each lost a row -- Buy lost What to
+       buy, Money lost What's coming, Insight lost The day -- and Insight
+       gained one. Every old name lives on as a search keyword of the new
+       row, so the word already in the owner's head still lands. -->
+  <div class="sidebar">
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"></path><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"></path></svg><span>Compare prices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"></path></svg><span>Sourcing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"></path><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"></path><path d="M9 21v-6h6v6"></path></svg><span>Suppliers</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg><span>Purchase invoices</span></div>
+    <div class="nav-section-label">Money</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg><span>Cash book</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg><span>Consignment</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"></path><path d="M7 20V11"></path><path d="M12 20V6"></path><path d="M17 20v-6"></path><path d="M6.2 8.4l6-4.4 5.6 4.6"></path></svg><span>Pricing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span>Debtors</span><span class="nav-badge">2</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"></path><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"></path></svg><span>Creditors</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 18v-4M12 18v-7M16 18v-2"></path></svg><span>Statements</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path><path d="M12 12h.01"></path></svg><span>Payroll &amp; rent</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4Z"></path><path d="M3 7v10l9 4 9-4V7"></path><path d="M12 11v10"></path></svg><span>Assets &amp; loans</span></div>
+    <div class="nav-section-label">Insight</div>
+    <!-- The mark: a horizon with the sun not yet over it. What has not
+         happened yet, drawn rather than borrowed. -->
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h18"></path><path d="M6.5 17a5.5 5.5 0 0 1 11 0"></path><path d="M12 7V4M5.4 9.4L3.5 7.5M18.6 9.4l1.9-1.9"></path><path d="M9 21h6"></path></svg><span>Forecasts</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg><span>Manager</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Analysis</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 15l4-5 3 3 5-7"></path></svg><span>Sales analytics</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 9l4 5 3-3 5 7"></path></svg><span>Purchase analytics</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"></path></svg><span>Map</span></div>
+  </div>
+
+  <div class="main">
+      <div class="ow-ph">
+        <div class="ow-ph-nm">
+          <h1 class="ow-ph-t">Forecasts</h1>
+          <span class="ow-ph-i">i</span>
+        </div>
+        <p class="ow-ph-sub">Tuesday 8 September at 16:40, against what a typical Tuesday ends at.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- THE LENS. Three horizons of one question -- what is coming --
+             never more than one at a time. The counts are the things on
+             each that want a decision: the day's open checks, the lines
+             that run out inside the window, the bills with no day named. -->
+        <div class="ow-seg">
+          <div class="ow-seg-b ow-on">Today<span class="ow-seg-n">1</span></div>
+          <div class="ow-seg-b">Stock<span class="ow-seg-n">7</span></div>
+          <div class="ow-seg-b">Cash<span class="ow-seg-n">19</span></div>
+        </div>
+        <div class="btn btn-ghost ow-sm">Print the day</div>
+        <div class="btn btn-accent ow-sm"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle></svg>Count the till</div>
+      </div>
+      <!-- THE ROOF. One strip on every lens, and it is the reason the
+           three screens are one: safe to spend is what the buying plan
+           budgets from, the plan is what the shelf needs before it runs
+           out, and today is what the cash comes from. Four figures, each
+           the other lens's headline, so switching never means losing the
+           figure you switched away from. -->
+      <div class="ow-strip fc-roof">
+        <div class="ow-mt"><p class="ow-mt-l">Safe to spend</p><span class="ow-mt-v">2,110,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">the lowest the cash line gets, on 29 Sep &mdash; not the 6,850,000 in hand</p></div>
+        <div class="ow-mt ow-warn"><p class="ow-mt-l">To have back in time</p><span class="ow-mt-v">3,420,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">7 lines, 14 days of cover &middot; 1,600,800 of it is over what is safe to spend</p></div>
+        <div class="ow-mt ow-bad"><p class="ow-mt-l">Run out</p><span class="ow-mt-v">2<span class="ow-u">lines</span></span>
+          <p class="ow-mt-s">iron sheets G28 and binding wire, today &middot; next is cement, in 2 days</p></div>
+        <div class="ow-mt"><p class="ow-mt-l">Today so far</p><span class="ow-mt-v">8,910,000<span class="ow-u">UGX</span></span>
+          <p class="ow-mt-s">invoiced by 16:40 &middot; a typical Tuesday ends at 9,380,000</p></div>
+      </div>
+
+      <div class="ow-grid">
+        <div class="ow-stack">
+          <!-- THE DAY BEING READ. The stepper is the panel's, not the
+               page's: the page is Forecasts, and the day is the subject
+               of this one region. Walking back reads the record of a
+               closed day in the same shape. -->
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Tuesday, 8 September 2026</span>
+              <span class="ow-pan-nt">still trading &mdash; the four figures are what it has done so far</span>
+              <span class="ow-cp fc-hc">Today</span>
+              <div class="ow-dy-nav">
+                <span class="ow-dy-b"><svg class="ow-dy-i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg></span>
+                <span class="ow-dy-d">2026-09-08</span>
+                <span class="ow-dy-b dis"><svg class="ow-dy-i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></span>
+              </div>
+            </div>
+            <div class="ow-strip fc-day-s">
+              <div class="ow-mt"><p class="ow-mt-l">Sales invoiced</p><span class="ow-mt-v">8,910,000</span>
+                <p class="ow-mt-s">21 sales &middot; a typical Tuesday ends at <b>9,380,000</b></p></div>
+              <div class="ow-mt"><p class="ow-mt-l">Gross profit</p><span class="ow-mt-v">1,131,000</span>
+                <p class="ow-mt-s">12.7% margin &middot; typical ends at <b>1,240,000</b>, 13.2%</p></div>
+              <div class="ow-mt"><p class="ow-mt-l">Debt collected</p><span class="ow-mt-v">2,970,000</span>
+                <p class="ow-mt-s">4 people paid &middot; typical ends at <b>1,910,000</b></p></div>
+              <div class="ow-mt"><p class="ow-mt-l">Through the till</p><span class="ow-mt-v">4,120,000</span>
+                <p class="ow-mt-s">27 movements &middot; typical ends at <b>5,720,000</b></p></div>
+            </div>
+            <p class="ow-mini">No verdict while the day is trading: a sale carries a date and no time, so where a typical Tuesday stood at 16:40 cannot be read, and a part day beside whole ones reads as a bad day every afternoon. What a typical Tuesday <b>ends at</b> can be read &mdash; the middle of the last 5, 4 Aug to 1 Sep &mdash; and that is the figure beside each. The verdict arrives when the till is counted.</p>
+          </div>
+
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">Money that came in</span><span class="ow-pan-nt">what was invoiced, and separately what actually arrived</span></div>
+            <div class="ow-tbl fc-buy">
+              <div class="ow-tbl-g">Who bought<span class="ow-tbl-gs">8 buyers &middot; 8,910,000</span></div>
+              <div class="ow-tbl-h"><div class="ow-tbl-c">Customer</div><div class="ow-tbl-n">Orders</div><div class="ow-tbl-n">Sales</div><div class="ow-tbl-n">Gross profit</div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Ssekitoleko Hardware</span><span class="ow-tbl-s">3 invoices</span></div><div class="ow-tbl-n">3</div><div class="ow-tbl-n">4,180,000</div><div class="ow-tbl-n">512,000<span class="ow-tbl-nb">12.2% margin</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Kato Construction Ltd</span><span class="ow-tbl-s">INV-2338</span></div><div class="ow-tbl-n">1</div><div class="ow-tbl-n">2,640,000</div><div class="ow-tbl-n">291,000<span class="ow-tbl-nb">11.0% margin</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Mulongo &amp; Sons</span><span class="ow-tbl-s">2 invoices</span></div><div class="ow-tbl-n">2</div><div class="ow-tbl-n">1,455,000</div><div class="ow-tbl-n">203,500<span class="ow-tbl-nb">14.0% margin</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Walk-in</span><span class="ow-tbl-s">9 counter sales</span></div><div class="ow-tbl-n">9</div><div class="ow-tbl-n">635,000</div><div class="ow-tbl-n">124,500<span class="ow-tbl-nb">19.6% margin</span></div></div>
+              <div class="ow-tbl-f"><span>4 more buyers, not listed</span><span class="ow-tbl-gs">sorted by what they took, largest first</span></div>
+            </div>
+            <div class="ow-tbl fc-pay">
+              <div class="ow-tbl-g">Who paid<span class="ow-tbl-gs">4 people &middot; 2,970,000</span></div>
+              <div class="ow-tbl-h"><div class="ow-tbl-c">Customer</div><div class="ow-tbl-c">Arrived by</div><div class="ow-tbl-n">Amount</div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Kato Construction Ltd</span><span class="ow-tbl-s">INV-2291, 38 days old</span></div><div class="ow-tbl-c fc-dim">Mobile money</div><div class="ow-tbl-n">1,500,000</div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Ssekitoleko Hardware</span><span class="ow-tbl-s">INV-2310, 19 days old</span></div><div class="ow-tbl-c fc-dim">Cash</div><div class="ow-tbl-n">850,000</div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Namirembe Building Supplies</span><span class="ow-tbl-s">INV-2264, 51 days old</span></div><div class="ow-tbl-c fc-dim">Bank</div><div class="ow-tbl-n">400,000</div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Mulongo &amp; Sons</span><span class="ow-tbl-s">INV-2333, 6 days old</span></div><div class="ow-tbl-c fc-dim">Cash</div><div class="ow-tbl-n">220,000</div></div>
+            </div>
+          </div>
+
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">The shelf</span><span class="ow-pan-nt">what ran out is what the Stock lens is already counting</span></div>
+            <div class="ow-tbl fc-sh">
+              <div class="ow-tbl-g">Ran out<span class="ow-tbl-gs">2 lines</span></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Iron sheets &mdash; G28, 3m box profile</span><span class="ow-tbl-s">15:20</span></div><div class="ow-tbl-n">&minus;92</div><div class="ow-tbl-n"><span class="ow-fig ow-bad">0</span><span class="ow-tbl-nb">nothing left</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Binding wire 16g &mdash; 5kg roll</span><span class="ow-tbl-s">11:48</span></div><div class="ow-tbl-n">&minus;18</div><div class="ow-tbl-n"><span class="ow-fig ow-bad">0</span><span class="ow-tbl-nb">nothing left</span></div></div>
+              <div class="ow-tbl-g">Came in<span class="ow-tbl-gs">3 deliveries</span></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Cement &mdash; Hima 50kg</span><span class="ow-tbl-s">Sembeguya Steel &middot; GRN 4471</span></div><div class="ow-tbl-n">+300</div><div class="ow-tbl-n">412<span class="ow-tbl-nb">on the shelf</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Iron sheets &mdash; G32, 2m</span><span class="ow-tbl-s">Sembeguya Steel &middot; GRN 4471</span></div><div class="ow-tbl-n">+180</div><div class="ow-tbl-n">246<span class="ow-tbl-nb">on the shelf</span></div></div>
+              <div class="ow-tbl-f"><span>Went out &middot; 11 lines, and 2 counted</span><span class="ow-tbl-gs">not listed on the forecast &mdash; open the day sheet</span></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="ow-side">
+          <!-- WHAT STANDS BETWEEN TODAY AND BEING CLOSED. The one thing
+               on this lens that is genuinely ahead: a day is not on the
+               record until it is counted. -->
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">How the day closes</span><span class="ow-cp ow-warn fc-hc">1 to do</span></div>
+            <div class="ow-ck ow-good"><svg class="ow-dy-i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg><div class="ow-ck-b"><div class="ow-ck-t">The cash book was opened</div><div class="ow-ck-s">Opened with 6,850,000 across cash, mobile money and bank.</div></div></div>
+            <div class="ow-ck ow-idle"><svg class="ow-dy-i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle></svg><div class="ow-ck-b"><div class="ow-ck-t">The till is not counted yet</div><div class="ow-ck-s">Until all three accounts are counted the till figure is what the book says, not what is in the drawer.</div></div></div>
+            <div class="ow-ck ow-good"><svg class="ow-dy-i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg><div class="ow-ck-b"><div class="ow-ck-t">27 movements recorded</div><div class="ow-ck-s">7,300,000 in, 3,180,000 out.</div></div></div>
+            <div class="ow-ck ow-warn"><svg class="ow-dy-i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4.5M12 15.5v.01"></path></svg><div class="ow-ck-b"><div class="ow-ck-t">One finished order carries no invoice</div><div class="ow-ck-s">Bwaise Roofing Works. Nothing they sold is in the figures above.</div></div></div>
+            <p class="ow-mini">Counting is what closes a day. <b>Count the till</b> in the header is the one act on this lens, and it is only ever here &mdash; on a day already counted there is nothing to do, and the sheet prints instead.</p>
+          </div>
+
+          <!-- THE WEEK, AT THIS RATE. The one forecast the app already
+               makes about the shop's own effort: the Manager's target,
+               compared with the calendar. It is drawn here without a
+               meeting and without spending a shilling of AI credit --
+               the same derivation the dashboard's pace line uses. -->
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">This week, at this rate</span><span class="ow-cp ow-bad fc-hc">Behind</span></div>
+            <div class="ow-sr"><span class="ow-sr-k">The target, set on Monday</span><span class="ow-sr-v">12,000,000</span></div>
+            <div class="ow-sr"><span class="ow-sr-k">Collected so far</span><span class="ow-sr-v">6,420,000</span></div>
+            <div class="ow-sr"><span class="ow-sr-k">Level today would be</span><span class="ow-sr-v ow-bad">7,200,000</span></div>
+            <div class="ow-sr"><span class="ow-sr-k">At this rate the week ends at</span><span class="ow-sr-v">10,700,000</span></div>
+            <p class="ow-mini">780,000 short of level, with 3 days left. The two whose money closes it are on the <b>Cash</b> lens, ranked. <a href="#">Open the Manager</a></p>
+          </div>
+
+          <div class="ow-pan">
+            <div class="ow-pan-h"><span class="ow-pan-t">The work</span></div>
+            <div class="ow-tbl fc-work">
+              <div class="ow-tbl-g">Orders that moved<span class="ow-tbl-gs">3</span></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Kato Construction Ltd</span><span class="ow-tbl-s">Loading &middot; 11:12</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Namirembe Building Supplies</span><span class="ow-tbl-s">Ready &middot; 13:40</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Bwaise Roofing Works</span><span class="ow-tbl-s">Picking &middot; 16:05</span></div></div>
+              <div class="ow-tbl-g">Days named<span class="ow-tbl-gs">2</span></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Bwaise Roofing Works</span><span class="ow-tbl-s">said 12 Sep &middot; 610,000</span></div></div>
+              <div class="ow-tbl-r"><div class="ow-tbl-c"><span class="ow-tbl-p">Nakawa Site Stores</span><span class="ow-tbl-s">said 15 Sep &middot; the whole balance</span></div></div>
+              <p class="ow-mini">A day a customer named is their word, not money. It is drawn dashed on the <b>Cash</b> lens and never counted in what is safe to spend.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
