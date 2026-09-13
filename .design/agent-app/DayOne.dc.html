@@ -402,6 +402,51 @@
     .m.next .p i{background:#fff;}
 
     .fineprint{font-size:12px;color:var(--ink-3);line-height:1.5;margin:0 4px;}
+
+    /* ================= the self-set target =================
+       0024_agent_goals.sql has held daily_target and monthly_target since
+       it was written, with a comment saying it drives "the progress ring
+       on the agent app's Home tab once that lands". It never landed. The
+       hero paced against the agent's own best month instead, which is a
+       number he cannot move. A target he sets himself is the stronger
+       loop, and the row is private to him -- the RLS policy is
+       agent_id = current_agent_id(shop_id), so the shop cannot read it. */
+    .goal-h{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--on-dark-2);}
+    .goal-h .t{font-weight:600;color:var(--on-dark);}
+    .goal-h .pct{margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:600;
+      color:var(--on-dark);letter-spacing:-.02em;}
+    .goal-edit{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+      flex:none;border-radius:8px;background:rgba(255,255,255,.11);border:1px solid var(--hair-dark);}
+    .goal-edit svg{width:14px;height:14px;stroke:var(--on-dark-2);}
+    .pace{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--on-dark-2);
+      margin-top:9px;line-height:1.4;}
+    .pace b{color:var(--on-dark);font-weight:600;}
+    .pace .fig{font-weight:600;color:var(--on-dark);}
+    /* Behind pace on the 24th is information, not a failure -- amber at
+       most, never crimson. Ahead gets the mint the earnings hero uses. */
+    .pace.up b,.pace.up .fig{color:var(--mint);}
+
+    /* setting it */
+    .seg{display:flex;gap:3px;background:var(--page);border-radius:12px;padding:3px;}
+    .seg span{flex:1;text-align:center;padding:11px 0;border-radius:9px;font-size:15px;
+      font-weight:600;color:var(--ink-2);}
+    .seg span.on{background:var(--card);color:var(--ink);font-weight:700;box-shadow:var(--sh);}
+    .presets{display:flex;gap:8px;}
+    .preset{flex:1;min-width:0;padding:10px 8px;border-radius:12px;background:var(--page);text-align:center;}
+    .preset .l{font-size:11px;font-weight:600;color:var(--ink-3);}
+    .preset .v{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:-.03em;margin-top:2px;}
+    .preset.on{background:var(--nero);}
+    .preset.on .l{color:var(--on-dark-3);} .preset.on .v{color:#fff;}
+    .said{font-size:14px;color:var(--ink-2);line-height:1.5;}
+    .said b{color:var(--ink);font-weight:600;}
+    .private{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-3);}
+    .private svg{width:15px;height:15px;stroke:var(--ink-3);}
+
+    /* the target, on the chart */
+    .chart{position:relative;}
+    .tline{position:absolute;left:14px;right:14px;height:0;border-top:1.5px dashed var(--oxide);}
+    .tline span{position:absolute;left:0;top:-17px;font-family:var(--mono);font-size:11px;
+      font-weight:600;color:var(--oxide);background:var(--card);padding:0 3px;letter-spacing:-.02em;}
   </style>
 </helmet>
 <div class="app" style="width:390px;height:844px">
@@ -432,6 +477,16 @@
           <div class="goal-say" style="margin-top:0;">
             Everything you add on top of the shop's price is yours. Once orders start landing,
             <b>this is where you watch it build.</b>
+          </div>
+          <!-- No target and no best month yet, so there is nothing honest to
+               pace against. Ask for one instead of drawing an empty bar. -->
+          <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:11px 13px;
+                      border-radius:13px;background:rgba(255,255,255,.08);border:1px solid var(--hair-dark);">
+            <span style="flex:1;font-size:13px;color:var(--on-dark-2);line-height:1.4;">
+              Pick a number to go for this month &mdash; only you will see it.
+            </span>
+            <span style="flex:none;height:36px;padding:0 14px;border-radius:10px;background:var(--oxide);
+                         color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;">Set it</span>
           </div>
         </div>
       </div>

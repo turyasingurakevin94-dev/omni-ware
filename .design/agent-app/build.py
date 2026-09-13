@@ -58,6 +58,10 @@ ICONS = {
     'plus': '<path d="M12 5v14M5 12h14"/>',
     'minus': '<path d="M5 12h14"/>',
     'tick': '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    'pencil': '<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 5.5l4 4"/>',
+    'lock': '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/>'
+            '<path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+    'flag': '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h11l-2 3.5 2 3.5h-11"/>',
     # standing: three bars of a podium, middle tallest
     'podium': '<path d="M3.5 20.5h17"/><rect x="4" y="13" width="4.6" height="7.5" rx="1"/>'
               '<rect x="9.7" y="7.5" width="4.6" height="13" rx="1"/>'
@@ -120,11 +124,23 @@ HEAD = """<!doctype html>
 """
 
 
+def check_balance(name, src):
+    """<div> vs </div>. An unclosed div does not fail to render -- it
+    swallows the rest of the page into whatever was left open, which is
+    how a whole screen once came out inside the dark hero."""
+    opens = len(re.findall(r'<div\b', src))
+    closes = len(re.findall(r'</div>', src))
+    if opens != closes:
+        raise SystemExit(f'{name}: {opens} <div> vs {closes} </div> -- unbalanced by {opens - closes}')
+
+
 def build(out, body, w, h, extra=()):
     css = (HERE / '_field.css').read_text()
     for f in extra:
         css += (HERE / f).read_text()
-    src = expand((HERE / body).read_text())
+    raw = (HERE / body).read_text()
+    check_balance(body, raw)
+    src = expand(raw)
     (HERE / out).write_text(HEAD % (css, w, h, src))
     print(f'built {out}  {w}x{h}')
 
@@ -133,6 +149,7 @@ if __name__ == '__main__':
     PH = (390, 844)
     build('Main.dc.html',     'body_home.html',     *PH)
     build('Standing.dc.html', 'body_standing.html', *PH)
+    build('SetTarget.dc.html','body_target.html',    *PH)
     build('Sell.dc.html',    'body_sell.html',    *PH)
     build('AddItem.dc.html', 'body_add.html',     *PH)
     build('Order.dc.html',   'body_order.html',   *PH)
