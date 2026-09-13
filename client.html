@@ -20,6 +20,7 @@
     --ground:#F4F1EA;     /* warm linen, the page behind it */
     --pale:#FAF8F4;       /* an opening row */
     --warm:#F7F5F0;       /* a stated fact, or a failure */
+    --mat:#EDE8DF;        /* behind a photograph */
     --ink:#1A1714;        /* warm near-black */
     --ink-2:#6B635A;
     --meta:#9A9187;
@@ -33,9 +34,9 @@
     --go:#14594A;
     --go-deep:#0E3F35;
     --owe:#9B3A22;
-    /* The rest of the nineteen — the mat and mark behind a photograph,
-       the three advice tones — arrive with the screens that use them.
-       A token nothing renders is a colour nobody has had to get right. */
+    /* The three advice tones arrive with the screen that uses them —
+       quantity advice, which needs product_links. A token nothing renders
+       is a colour nobody has had to get right. */
     --sans:'Public Sans','Helvetica Neue',Arial,sans-serif;
     --serif:'Newsreader',Georgia,'Times New Roman',serif;
   }
@@ -105,6 +106,69 @@
   a{color:var(--go);text-decoration:none;}
   a:hover{color:var(--go-deep);}
   [hidden]{display:none !important;}
+
+  /* A PHOTOGRAPH SITS ON A MAT. Square, ruled, never rounded and never
+     shadowed — a rounded, shadowed thumbnail turns a ledger into a shop.
+     overflow:hidden so a photograph of any shape is cropped to the mat
+     rather than deciding the row's height. */
+  .img{background:var(--mat);border:1px solid var(--rule-firm);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .img img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* No photograph is a FACT, said in words. A grey rectangle pretending
+     to be one is the shop guessing at something it has not got. */
+  .img-none{background:var(--warm);border-style:dashed;}
+
+  /* The aisles. overflow-x:auto, never hidden: hidden made every aisle
+     past the fourth unreachable on a phone, which is the whole catalogue
+     for a shop with more than four categories. */
+  .aisles{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:2px;}
+  .aisles::-webkit-scrollbar{display:none;}
+  .aisle{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;flex-shrink:0;
+    min-height:44px;padding:0 14px;border-radius:4px;border:1px solid var(--rule-soft);
+    background:var(--paper);font-size:13.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+  .aisle-on{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600;}
+
+  .search{all:unset;box-sizing:border-box;display:block;width:100%;min-height:48px;
+    padding:0 14px 0 40px;background:var(--warm);border:1px solid var(--rule);border-radius:4px;
+    font-size:15px;font-family:var(--sans);}
+  .search-wrap{position:relative;}
+  .search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;}
+
+  /* A row in the ledger is a button, because the whole row is the target.
+     A 15px name with a tappable 15px name inside it is a row most thumbs
+     miss. */
+  .listrow{all:unset;box-sizing:border-box;display:flex;align-items:flex-start;gap:13px;
+    width:100%;padding:14px 20px;min-height:78px;cursor:pointer;text-align:left;}
+  .listrow+.listrow{border-top:1px solid var(--hair);}
+  .listrow:active{background:var(--pale);}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;padding:16px 20px;}
+  .gcell{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:7px;
+    min-width:0;cursor:pointer;}
+
+  /* The view switch. One tap between a ledger and a gallery; the ledger
+     is the default because a trade customer reordering already knows what
+     they want. */
+  .vsw{display:flex;border:1px solid var(--rule-firm);border-radius:4px;overflow:hidden;flex-shrink:0;}
+  .vsw button{all:unset;box-sizing:border-box;width:44px;height:44px;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;background:var(--paper);}
+  .vsw button+button{border-left:1px solid var(--rule-firm);}
+  .vsw button[aria-pressed="true"]{background:var(--ink);}
+
+  .step{all:unset;box-sizing:border-box;width:52px;height:52px;flex-shrink:0;
+    border:1px solid var(--rule-firm);border-radius:4px;background:var(--paper);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .step:active{background:var(--pale);}
+  .step[disabled]{opacity:.4;cursor:default;}
+  .qty{all:unset;box-sizing:border-box;flex-grow:1;min-width:0;text-align:center;
+    font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;padding:0 4px;}
+
+  .topbar{display:flex;align-items:center;gap:8px;padding:0 16px 0 6px;min-height:56px;
+    background:var(--paper);border-bottom:1px solid var(--rule);}
+  .back{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;flex-shrink:0;cursor:pointer;}
 
   .chev{flex-shrink:0;}
   .brand{font-size:11.5px;font-weight:600;letter-spacing:.16em;}
@@ -234,8 +298,57 @@
     <div class="spacer"></div>
 
     <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
-      <button class="btn btn-go" type="button" id="orderAgain">Order again</button>
+      <button class="btn btn-go" type="button" id="orderAgain">What we stock</button>
       <div class="meta" style="text-align:center;">Prices you see are yours. Nothing is charged here.</div>
+    </div>
+  </section>
+
+  <!-- 4 · What we stock -->
+  <section id="scBrowse" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="browseBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">What we stock</div>
+      <div class="vsw" role="group" aria-label="How to show them">
+        <button type="button" id="viewList" aria-pressed="true" aria-label="As a list">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <button type="button" id="viewGrid" aria-pressed="false" aria-label="As photographs">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B635A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div style="background:var(--paper);border-bottom:1px solid var(--rule);padding:0 20px 14px;display:flex;flex-direction:column;gap:12px;">
+      <div class="search-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input class="search" id="browseSearch" type="search" autocomplete="off"
+               aria-label="Search what we stock" placeholder="Search &mdash; mabati, cement, nails&hellip;">
+      </div>
+      <div class="aisles" id="browseAisles"></div>
+    </div>
+
+    <div class="lbl" id="browseCount" style="padding:18px 20px 8px;"></div>
+    <div id="browseBody"></div>
+
+    <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
+      <div class="meta">Not listed? Ask us &mdash; we source what we do not keep on the shelf.</div>
+    </div>
+  </section>
+
+  <!-- 5 · One item -->
+  <section id="scItem" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="itemBack" aria-label="Back to what we stock">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" id="itemTitle" style="font-size:17px;font-weight:600;"></div>
+    </div>
+    <div id="itemBody"></div>
+    <div class="spacer"></div>
+    <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
+      <div class="meta" id="itemFoot"></div>
     </div>
   </section>
 
@@ -326,7 +439,7 @@ async function api(action, extra){
   return data;
 }
 
-const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount'];
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem'];
 function show(id){
   SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
   window.scrollTo(0, 0);
@@ -612,6 +725,11 @@ document.getElementById('whoBtn').onclick = () => {
 document.getElementById('signOut').onclick = async () => {
   const token = store(K_TOKEN);
   store(K_TOKEN, null);
+  /* The catalogue carries THIS customer's own prices. Signing out has to
+     take them with it, or the next person to pick up the handset and tap
+     Back is reading them. */
+  stock = null; item = null; aisle = ''; itemQty = 1;
+  document.getElementById('browseSearch').value = '';
   document.getElementById('whoSheet').hidden = true;
   document.getElementById('whoBtn').setAttribute('aria-expanded', 'false');
   document.getElementById('whoChev').style.transform = '';
@@ -620,12 +738,382 @@ document.getElementById('signOut').onclick = async () => {
   if(token){ try{ await api('signout', { token }); }catch(_){ /* the token is gone locally either way */ } };
 };
 
-/* Nothing sends itself, and nothing pretends to work. Ordering is not
-   built yet, so the button says so rather than doing nothing. */
-document.getElementById('orderAgain').onclick = () => {
-  const bar = document.getElementById('orderAgain').parentElement;
-  bar.querySelector('.meta').textContent = 'Ordering is not open on the portal yet. Ring the shop or call in as you do now.';
+/* ---------- what we stock ------------------------------------------- */
+/* Fetched once per sign-in and held here, not in localStorage: it carries
+   this customer's own prices, and a price cached on a shared handset is a
+   price somebody else can read. Gone when the tab is. */
+let stock = null;
+let aisle = '';
+let view = 'list';
+
+const AVAIL = {
+  'in-stock': 'In stock',
+  'to-order': 'We order this in',
+  'out': 'Out of stock just now',
 };
+
+document.getElementById('orderAgain').onclick = () => openBrowse();
+document.getElementById('browseBack').onclick = () => show('scAccount');
+document.getElementById('itemBack').onclick = () => show('scBrowse');
+
+async function openBrowse(){
+  show('scBrowse');
+  if(!stock){
+    document.getElementById('browseBody').innerHTML =
+      '<div class="sheet" style="padding:26px 20px;"><div class="meta">Fetching what we stock&hellip;</div></div>';
+    try{
+      const r = await api('catalogue', { token: store(K_TOKEN) });
+      stock = Array.isArray(r.items) ? r.items : [];
+    }catch(err){
+      if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+      document.getElementById('browseBody').innerHTML =
+        '<div class="sheet" style="padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+      document.getElementById('browseCount').textContent = '';
+      return;
+    }
+  }
+  renderAisles();
+  renderBrowse();
+}
+
+function matching(){
+  const q = document.getElementById('browseSearch').value.trim().toLowerCase();
+  return (stock || []).filter(it => {
+    if(aisle && (it.category || '') !== aisle) return false;
+    if(!q) return true;
+    return (it.name + ' ' + it.variantLabel + ' ' + it.category + ' ' + it.subcategory)
+      .toLowerCase().includes(q);
+  });
+}
+
+function renderAisles(){
+  const counts = {};
+  (stock || []).forEach(it => { const c = it.category || ''; counts[c] = (counts[c] || 0) + 1; });
+  const names = Object.keys(counts).filter(Boolean).sort();
+  /* "All" is a chip like the others, so there is always somewhere to tap
+     back to — an aisle you cannot leave is a catalogue with one aisle. */
+  document.getElementById('browseAisles').innerHTML =
+    ['', ...names].map(name =>
+      '<button type="button" class="aisle' + (aisle === name ? ' aisle-on' : '') + '" data-aisle="'
+      + esc(name) + '"' + (aisle === name ? ' aria-pressed="true"' : ' aria-pressed="false"') + '>'
+      + esc(name || 'All') + '</button>').join('');
+  document.getElementById('browseAisles').querySelectorAll('.aisle').forEach(b => {
+    b.onclick = () => { aisle = b.dataset.aisle; renderAisles(); renderBrowse(); };
+  });
+}
+
+/* A photograph, or the fact that there is not one. Never a grey rectangle
+   standing in for one: a customer deciding between two finishes needs to
+   know the difference between "this is what it looks like" and "we have
+   not photographed it". */
+function imgHTML(it, size){
+  const box = size === 'cell' ? 'width:100%;aspect-ratio:4/3;max-width:100%;'
+    : size === 'item' ? 'width:96px;height:96px;'
+    : 'width:48px;height:48px;';
+  const ico = size === 'row' ? 18 : 26;
+  if(it.image) return '<span class="img" style="' + box + '"><img src="' + esc(it.image)
+    + '" alt="" loading="lazy" decoding="async"></span>';
+  /* Where there is room, the absence is WORDED. A customer choosing
+     between two finishes has to be able to tell "this is what it looks
+     like" from "we have not photographed it", and a plain grey square
+     says the first while meaning the second.
+
+     NOT at 48px in the ledger, though the canvas puts it there. Rendered
+     against real rows it landed on every un-photographed line — below the
+     held price and below "Out of stock just now", which are the two lines
+     that actually change what a customer does. A rule meant to stop a
+     customer being misled had ended up burying the things they needed to
+     read. The dashed, crossed-through mat at 48px is not disguising
+     itself as a photograph in the first place; at 96px and in the gallery,
+     where a plain box could be mistaken for one, the words stay. */
+  const words = size === 'row' ? ''
+    : '<span class="meta" style="font-size:10.5px;">No photograph</span>';
+  return '<span class="img img-none" style="' + box + 'flex-direction:column;gap:7px;">'
+    + '<svg width="' + ico + '" height="' + ico
+    + '" viewBox="0 0 24 24" fill="none" stroke="#C7BFB2" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<rect x="4" y="5" width="16" height="14"/><path d="M4 19L20 5"/></svg>' + words + '</span>';
+}
+
+function unitWord(it){ return it.unit || 'each'; }
+
+/* Enough English for the units a hardware shop uses — sheet, bundle, box,
+   bag, piece, bunch. Appending a bare "s" gave "boxs" and "bunchs".
+   An abbreviation is left alone: kg, m, pc are already both, and "kgs"
+   is not a word anybody at a counter says. */
+function many(word){
+  const w = String(word || '');
+  if(!w || w.length <= 2) return w;
+  return /(s|x|z|ch|sh)$/i.test(w) ? w + 'es' : w + 's';
+}
+
+/* The line under a name: how it is sold, and the pack if there is one. */
+function packLine(it){
+  const bits = [];
+  if(it.unit) bits.push('per ' + it.unit);
+  if(it.packQty > 0 && it.packUnit) bits.push(it.packQty + ' to a ' + it.packUnit);
+  return bits.join(' · ');
+}
+
+function renderBrowse(){
+  const rows = matching();
+  const label = aisle || 'Everything';
+  document.getElementById('browseCount').textContent = stock && stock.length
+    ? label + ' · ' + rows.length + ' ' + plural(rows.length, 'item', 'items')
+    : '';
+  const body = document.getElementById('browseBody');
+
+  if(!stock || !stock.length){
+    body.innerHTML = '<div class="sheet" style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing listed yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What we keep will appear here, with your own price against each one.</div></div>';
+    return;
+  }
+  if(!rows.length){
+    const q = document.getElementById('browseSearch').value.trim();
+    body.innerHTML = '<div class="sheet" style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here matches' + (q ? ' &ldquo;' + esc(q) + '&rdquo;' : '') + '</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">Try another word, or another aisle. We also source what we do not keep on the shelf.</div></div>';
+    return;
+  }
+
+  body.innerHTML = view === 'grid'
+    ? '<div class="grid">' + rows.map((it, i) => cellHTML(it, i)).join('') + '</div>'
+    : '<div class="sheet">' + rows.map((it, i) => rowHTML(it, i)).join('') + '</div>';
+  body.querySelectorAll('[data-i]').forEach(el => {
+    el.onclick = () => openItem(rows[Number(el.dataset.i)]);
+  });
+}
+
+/* Only the exceptions are said on a list. "In stock" against every line is
+   noise that makes the two lines that matter invisible. */
+function exceptionHTML(it){
+  if(it.availability === 'in-stock') return '';
+  return '<span style="display:block;margin-top:4px;font-size:11.5px;color:var(--ink-2);">'
+    + esc(AVAIL[it.availability] || '') + '</span>';
+}
+
+function heldHTML(it){
+  if(!it.heldFrom) return '';
+  return '<span style="margin-top:5px;display:flex;align-items:center;gap:5px;">'
+    + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>'
+    + '<span style="font-size:11.5px;color:var(--ink);font-weight:600;">Your price, held from '
+    + esc(longDate(it.heldFrom)) + '</span></span>';
+}
+
+function cheaperHTML(it){
+  if(!(it.nextMinQty > 0) || it.nextPrice == null) return '';
+  return '<span style="display:block;margin-top:4px;font-size:11.5px;color:var(--ink-2);">Cheaper from '
+    + esc(it.nextMinQty) + ' — ' + money(it.nextPrice) + ' ' + esc(unitWord(it) ? 'a ' + unitWord(it) : 'each') + '</span>';
+}
+
+function figureHTML(it){
+  if(!it.available) return '<span class="meta" style="display:block;text-align:right;">Ask us</span>';
+  /* A price that cannot be bought today is still the price. It goes grey
+     rather than away, because a customer planning a job needs the number
+     as much as a customer buying one. */
+  const grey = it.availability === 'out' ? 'color:var(--meta);' : '';
+  return '<span class="fig" style="display:block;font-size:18px;' + grey + '">' + money(it.unitPrice) + '</span>'
+    + '<span class="meta" style="display:block;margin-top:1px;">' + esc(it.unit ? 'per ' + it.unit : 'each') + '</span>';
+}
+
+function rowHTML(it, i){
+  return '<button type="button" class="listrow" data-i="' + i + '">'
+    + imgHTML(it, 'row')
+    + '<span class="grow" style="display:block;">'
+    +   '<span class="trunc" style="display:block;font-size:15px;font-weight:500;">' + esc(it.name)
+    +     (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</span>'
+    +   (packLine(it) ? '<span class="meta trunc" style="display:block;margin-top:3px;">' + esc(packLine(it)) + '</span>' : '')
+    +   heldHTML(it) + cheaperHTML(it) + exceptionHTML(it)
+    + '</span>'
+    + '<span style="text-align:right;flex-shrink:0;">' + figureHTML(it) + '</span>'
+    + '</button>';
+}
+
+function cellHTML(it, i){
+  return '<button type="button" class="gcell" data-i="' + i + '">'
+    + imgHTML(it, 'cell')
+    + '<span class="trunc" style="display:block;font-size:14px;font-weight:500;">' + esc(it.name)
+    +   (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</span>'
+    + '<span style="display:flex;align-items:baseline;gap:6px;">'
+    +   (it.available
+        ? '<span class="fig" style="font-size:16px;' + (it.availability === 'out' ? 'color:var(--meta);' : '') + '">'
+          + money(it.unitPrice) + '</span><span class="meta">' + esc(it.unit ? 'per ' + it.unit : 'each') + '</span>'
+        : '<span class="meta">Ask us</span>')
+    + '</span>'
+    + (it.heldFrom ? '<span class="meta" style="color:var(--ink);font-weight:600;">Your held price</span>' : '')
+    + exceptionHTML(it)
+    + '</button>';
+}
+
+function setView(next){
+  view = next;
+  const l = document.getElementById('viewList'), g = document.getElementById('viewGrid');
+  l.setAttribute('aria-pressed', String(next === 'list'));
+  g.setAttribute('aria-pressed', String(next === 'grid'));
+  l.querySelector('svg').setAttribute('stroke', next === 'list' ? '#FFFFFF' : '#6B635A');
+  g.querySelector('svg').setAttribute('stroke', next === 'grid' ? '#FFFFFF' : '#6B635A');
+  renderBrowse();
+}
+document.getElementById('viewList').onclick = () => setView('list');
+document.getElementById('viewGrid').onclick = () => setView('grid');
+document.getElementById('browseSearch').addEventListener('input', renderBrowse);
+
+/* ---------- one item ------------------------------------------------- */
+/* The ladder is fetched ONCE when the screen opens and every further
+   quantity is resolved against it here. A request per tap of the plus
+   button would put a network round trip between a thumb and a figure, on
+   a handset on a building site. */
+let item = null;
+let itemQty = 1;
+
+async function openItem(it){
+  item = { it, priced: null };
+  itemQty = 1;
+  document.getElementById('itemTitle').textContent = it.name;
+  document.getElementById('itemFoot').textContent = '';
+  document.getElementById('itemBody').innerHTML =
+    '<div class="sheet" style="padding:26px 20px;"><div class="meta">Working out your price&hellip;</div></div>';
+  show('scItem');
+  try{
+    const r = await api('price', {
+      token: store(K_TOKEN), productId: it.productId, variantIdx: it.variantIdx, qty: 1,
+    });
+    if(item && item.it === it){ item.priced = r; renderItem(); }
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('itemBody').innerHTML =
+      '<div class="sheet" style="padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+  }
+}
+
+/* The rung a quantity actually earns: the highest breakpoint it clears.
+   The ladder always carries a rung at 1, so there is always one to find
+   and no fallback to get wrong. */
+function rungFor(tiers, qty){
+  let best = null;
+  (tiers || []).forEach(r => {
+    if(qty >= r.minQty && (!best || r.minQty >= best.minQty)) best = r;
+  });
+  return best;
+}
+
+function renderItem(){
+  const it = item.it, p = item.priced || {};
+  const tiers = Array.isArray(p.tiers) ? p.tiers : [];
+  const rung = rungFor(tiers, itemQty);
+  const unit = p.unit || it.unit || '';
+  const packQty = Number(p.packQty) || 0;
+  const packUnit = p.packUnit || '';
+
+  /* An item with no price row comes back as "out", because there is no
+     live row to order against — but on this screen that renders as "Out
+     of stock just now" directly above "We have no price on file", which
+     are two different facts and only one of them is true. The price block
+     says the real one, so the availability line stands down. */
+  const avail = p.available ? (AVAIL[p.availability] || '') : '';
+  const availTick = p.availability === 'in-stock'
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>'
+    : '';
+
+  let priceBlock = '';
+  if(p.available && rung){
+    const line = rung.unitPrice * itemQty;
+    /* Which side of the pack this quantity sits on, said in the shop's own
+       words rather than "wholesale" and "retail" — a customer buying
+       fourteen sheets is not buying wholesale, they are buying more than a
+       bundle. */
+    const next = tiers.filter(r => r.minQty > itemQty).sort((a,b)=>a.minQty-b.minQty)[0];
+    const explain = [];
+    if(packQty > 0 && packUnit && itemQty >= packQty){
+      explain.push('You are buying by the ' + esc(packUnit) + ', so this is the ' + esc(packUnit) + ' price.');
+    }
+    if(next){
+      explain.push('From ' + esc(next.minQty) + ' it is ' + money(next.unitPrice) + ' '
+        + (unit ? 'a ' + esc(unit) : 'each') + '.');
+    }
+    priceBlock =
+      '<div class="sheet" style="border-top:0;padding:20px;display:flex;flex-direction:column;gap:5px;">'
+      + '<div class="lbl">Your price</div>'
+      + '<div style="display:flex;align-items:baseline;gap:8px;">'
+      +   '<span style="font-size:13px;color:var(--ink-2);font-weight:600;letter-spacing:.04em;">UGX</span>'
+      +   '<span class="fig" style="font-size:34px;line-height:1.1;">' + money(line) + '</span>'
+      + '</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-2);">' + money(rung.unitPrice) + ' '
+      +   (unit ? 'a ' + esc(unit) : 'each')
+      +   (p.heldFrom ? ' · held from ' + esc(longDate(p.heldFrom)) : '') + '</div>'
+      + (explain.length
+        ? '<div style="margin-top:10px;padding-top:12px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-2);line-height:1.5;">'
+          + explain.join(' ') + '</div>'
+        : '')
+      + '</div>';
+  }else{
+    priceBlock = '<div class="sheet" style="border-top:0;padding:20px;display:flex;flex-direction:column;gap:6px;">'
+      + '<div class="lbl">Your price</div>'
+      + '<div class="ser" style="font-size:20px;">We have no price on file</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;">Ask us and we will quote it.</div></div>';
+  }
+
+  document.getElementById('itemBody').innerHTML =
+    '<div class="sheet" style="border-top:0;padding:16px 20px 18px;display:flex;gap:16px;">'
+    +   imgHTML(it, 'item')
+    +   '<div class="grow" style="display:flex;flex-direction:column;gap:4px;">'
+    +     '<div style="font-size:16.5px;font-weight:600;line-height:1.3;">' + esc(it.name)
+    +       (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</div>'
+    +     (packLine(it) ? '<div class="meta" style="font-size:12.5px;">' + esc(packLine(it)) + '</div>' : '')
+    +     (it.note ? '<div class="meta" style="font-size:12.5px;">' + esc(it.note) + '</div>' : '')
+    +     (avail ? '<div style="margin-top:4px;display:flex;align-items:center;gap:5px;">' + availTick
+    +       '<span style="font-size:11.5px;color:' + (p.availability === 'in-stock' ? 'var(--ink)' : 'var(--ink-2)')
+    +       ';font-weight:600;">' + esc(avail) + '</span></div>' : '')
+    +   '</div>'
+    + '</div>'
+    + (p.available
+      ? '<div class="sheet" style="border-top:0;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">'
+        /* Always the plural. It is a label on a box asking for a count,
+           not a sentence about the count that is in it — "How many sheet"
+           reads as a typo however correct it is at one. */
+        + '<div class="lbl">How many' + (unit ? ' ' + esc(many(unit)) : '') + '</div>'
+        + '<div style="display:flex;align-items:center;gap:14px;">'
+        +   '<button class="step" type="button" id="qtyDown" aria-label="One fewer"' + (itemQty <= 1 ? ' disabled' : '') + '>'
+        +     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>'
+        +   '<input class="qty" id="qtyBox" inputmode="numeric" aria-label="How many" value="' + esc(itemQty) + '">'
+        +   '<button class="step" type="button" id="qtyUp" aria-label="One more">'
+        +     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+        + '</div>'
+        + (packQty > 1 && packUnit && itemQty >= packQty
+          ? '<div class="meta" style="text-align:center;">' + esc(packSplit(itemQty, packQty, packUnit, unit)) + '</div>'
+          : '')
+        + '</div>'
+      : '')
+    + priceBlock;
+
+  const down = document.getElementById('qtyDown'), up = document.getElementById('qtyUp');
+  if(down) down.onclick = () => setQty(itemQty - 1);
+  if(up) up.onclick = () => setQty(itemQty + 1);
+  const box = document.getElementById('qtyBox');
+  if(box){
+    box.addEventListener('change', () => setQty(parseInt(box.value, 10)));
+    box.addEventListener('blur', () => setQty(parseInt(box.value, 10)));
+  }
+  /* Said once, on the screen where a customer would look for the button
+     that is not there. */
+  document.getElementById('itemFoot').textContent =
+    'Ordering is not open on the portal yet — this is what it would cost you.';
+}
+
+/* "11 bundles and 8 loose". A trade customer orders in bundles and thinks
+   in bundles, and 140 is not a number of bundles. */
+function packSplit(qty, packQty, packUnit, unit){
+  const whole = Math.floor(qty / packQty), loose = qty % packQty;
+  const a = whole + ' ' + plural(whole, packUnit, many(packUnit));
+  return loose ? a + ' and ' + loose + ' loose' : a;
+}
+
+function setQty(next){
+  const n = Math.max(1, Math.min(99999, Math.floor(Number(next) || 1)));
+  if(n === itemQty){ renderItem(); return; }
+  itemQty = n;
+  renderItem();
+}
 
 /* ---------- boot ----------------------------------------------------- */
 (async function boot(){

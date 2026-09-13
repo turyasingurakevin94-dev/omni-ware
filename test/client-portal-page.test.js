@@ -219,27 +219,46 @@ function load() {
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n')
-    .replace(/\bmargin(-\w+)?\s*:/g, 'SPACING:');
+    // A CSS margin ends at a semicolon or the close of a style attribute.
+    // A JavaScript object key does not -- `{ margin: p.margin }` runs on
+    // to a comma or a brace -- so requiring the terminator clears the
+    // spacing declarations and leaves a leak named `margin:` exposed.
+    .replace(/\bmargin(-\w+)?\s*:\s*[^;"'}\n,]*[;"']/g, 'SPACING');
   // No \b on the supplier stems. `supplierSku` and `showSupplierName` are
   // exactly how one would really arrive -- camelCase, where a word boundary
   // does not exist -- and the first version of this sweep let both through.
   // `cost` and `margin` keep their boundaries: they are ordinary English
   // and the page is allowed to contain the word "costs" in a sentence.
-  const banned = /(supplier|wholesale|markup|rival[_ ]?price|sourcing[_ ]?lead)|\b(margin|cost)\b/i;
+  /* `cost` and `margin` are ordinary English and this file is mostly
+     prose: "this is what it would cost you" is a sentence to a customer,
+     not the shop's cost column. Banning the bare word made the sweep
+     start arguing with the copy. What must never appear is either of them
+     as a VALUE the page handles — a property read, an object key, or the
+     start of a camelCase name — so that is what is matched. The supplier
+     stems keep their bare-word ban: none of them has an innocent use. */
+  const banned = /(supplier|wholesale|markup|rival[_ ]?price|sourcing[_ ]?lead)|[.'"\[]\s*(cost|margin)\b|\b(cost|margin)\s*:|\b(cost|margin)[A-Z]/i;
   const m = banned.exec(prose);
   t.check(!m, `the page names nothing supplier-shaped${m ? ` (found "${m[0]}")` : ''}`);
   // and the narrowing above is doing no more than it claims
-  t.check(banned.test('margin: 0.2'.replace(/\bmargin(-\w+)?\s*:/g, 'SPACING:')) === false
-    && banned.test('margin, cost'.replace(/\bmargin(-\w+)?\s*:/g, 'SPACING:')) === true,
-    'a CSS margin is cleared; a margin named as a value is still caught');
+  const strip = (x) => x.replace(/\bmargin(-\w+)?\s*:\s*[^;"'}\n,]*[;"']/g, 'SPACING');
+  [['style="margin:0 auto;"', false], ['margin-top:2px;', false], ['style="margin:0"', false]]
+    .forEach(([css, want]) => t.check(banned.test(strip(css)) === want, `CSS ${css} is cleared`));
+  [['{ margin: p.margin }', true], ['{ cost: x }', true], ['it.margin', true]]
+    .forEach(([js, want]) => t.check(banned.test(strip(js)) === want, `but ${js} is not`));
   // The sweep has to still be reading the page. Without this, a stripper
   // that returned '' would report a clean bill of health forever.
   t.check(prose.includes('renderAccount') && prose.includes('FN_URL')
     && prose.length > src.length / 3,
     `after stripping there is still a page to search (${prose.length} of ${src.length} chars)`);
   ['supplier_sku', 'supplierName', 'showSupplierId', 'wholesalePrice',
-   'markupPct', 'rivalPrice', 'sourcingLead', 'unit cost'].forEach(bad => {
+   'markupPct', 'rivalPrice', 'sourcingLead',
+   // the narrowed forms: cost and margin as things the page HANDLES
+   'p.cost', 'cost: 400', 'costPrice', 'it.margin', 'margin: 1', "row['cost']"].forEach(bad => {
     t.check(banned.test(prose + ' ' + bad), `and it would fail on ${bad}`);
+  });
+  // ...while leaving the copy alone.
+  ['what it would cost you', 'at no cost', 'the cost of waiting'].forEach(ok => {
+    t.check(!banned.test(ok), `and not on the sentence "${ok}"`);
   });
   t.check(!/service_role|SERVICE_ROLE|anon[_-]?key/i.test(src),
     'and carries no key -- every request is an unauthenticated POST the function authorises by token');
