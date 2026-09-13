@@ -57,6 +57,11 @@ ICONS = {
              'a2 2 0 0 1-2.2 2A17.3 17.3 0 0 1 2.6 5.4a2 2 0 0 1 2-2.2z"/>',
     'plus': '<path d="M12 5v14M5 12h14"/>',
     'minus': '<path d="M5 12h14"/>',
+    'tick': '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    # standing: three bars of a podium, middle tallest
+    'podium': '<path d="M3.5 20.5h17"/><rect x="4" y="13" width="4.6" height="7.5" rx="1"/>'
+              '<rect x="9.7" y="7.5" width="4.6" height="13" rx="1"/>'
+              '<rect x="15.4" y="16" width="4.6" height="4.5" rx="1"/>',
     'warn': '<path d="M12 3.5l9 15.5H3z"/><path d="M12 9.5v4M12 16.4v.1"/>',
     'wifi-off': '<path d="M3 3l18 18"/><path d="M9.2 15.4a4 4 0 0 1 5.6 0"/>'
                 '<path d="M6.1 12.1a8.5 8.5 0 0 1 3.2-2"/><path d="M17.9 12.1a8.5 8.5 0 0 0-3.4-2.1"/>'
@@ -126,7 +131,8 @@ def build(out, body, w, h, extra=()):
 
 if __name__ == '__main__':
     PH = (390, 844)
-    build('Main.dc.html',    'body_home.html',    *PH)
+    build('Main.dc.html',     'body_home.html',     *PH)
+    build('Standing.dc.html', 'body_standing.html', *PH)
     build('Sell.dc.html',    'body_sell.html',    *PH)
     build('AddItem.dc.html', 'body_add.html',     *PH)
     build('Order.dc.html',   'body_order.html',   *PH)
