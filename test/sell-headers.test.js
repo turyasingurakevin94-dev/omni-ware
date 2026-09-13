@@ -51,7 +51,13 @@ const sectionOf = (tab) => {
     'the fold walks both header shapes, so converting one does not delete its explanation');
   t.check(/head\.classList\.contains\('ow-ph'\)/.test(fn),
     'and tells them apart explicitly');
-  t.check(/querySelector\(':scope > p\.ow-ph-help'\)/.test(fn),
+  /* ALL of them, not the first. foldInstruction has always taken a list
+     -- the price form folds three notes into one bubble -- so the only
+     thing that changed is the count. Follow-ups absorbed a screen's
+     worth of argument, and one run-on paragraph is not a way to read it;
+     every other console header carries exactly one, so this is a no-op
+     for them. Still only what is MARKED, which is the claim. */
+  t.check(/querySelectorAll\(':scope > p\.ow-ph-help'\)/.test(fn),
     'folding only what is MARKED as the longer explanation');
   t.check(/querySelector\(':scope > p'\)/.test(fn),
     'while the old shape still folds its whole paragraph, as it always did');

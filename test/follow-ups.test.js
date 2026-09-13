@@ -662,8 +662,18 @@ const stockMove = (before, after, whenDays) => {
      ask for, and what is worth a word. The rule is the same -- the
      strip names what the work IS -- and the sub-kinds are still on every
      row as chips and on the Why row as counts. */
-  eq((summary.match(/class="ow-mt\$\{/g) || []).length, 1,
+  /* STILL ONE TEMPLATE, AND NOW IT IS A BUTTON. The strip used to be a
+     read-only row above six filter chips that named the same five things
+     with the same five figures -- one control and a label for it, with
+     the label bigger. The tile is the control now, so the template
+     carries .fup-mt (the button reset, written at .ow-mt's own
+     specificity and earlier in the file so the layer's geometry still
+     lands at both widths) and data-fupwhy. One template is the claim
+     that has not changed. */
+  eq((summary.match(/class="ow-mt fup-mt\$\{/g) || []).length, 1,
     'the tiles are the layer’s, drawn from one template rather than five copies of a box');
+  eq((summary.match(/data-fupwhy=/g) || []).length, 1,
+    'and every one of them is the filter, from that same template — the six chips under the search are gone');
   eq((summary.match(/\$\{tile\(/g) || []).length, 5,
     'and there are five of them — the queue, and then what the queue is made of');
   ['To message', 'Promised', 'Money', 'News', 'Worth a word'].forEach((k) => {
@@ -671,6 +681,12 @@ const stockMove = (before, after, whenDays) => {
   });
   t.check(/counts\[r\.kind\]/.test(summary),
     'and the kept-posted kinds are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
+  /* THE STRONGER FORM OF THAT SAME CLAIM. A tile that is pressable has
+     to open what it counted: "Money 15" that opens fourteen rows is
+     worse than no tile. Both figures and filter go through fupRowLenses,
+     which is one reading of one row -- so they cannot drift. */
+  t.check(/fupRowLenses/.test(summary) && /fupRowLenses/.test(contact),
+    'and the figure on a tile is the number of clients its own filter opens, through one shared reading');
   t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
     'and the strip and the queue are drawn from the same hub rows, computed once per render');
 

@@ -324,14 +324,28 @@ if (scope) {
   t.check(/promiseId: r\.promise\.id/.test(heldRows),
     'the promise carries its own id, so "They did not say that" removes the row it is standing on');
 
-  /* 4. THE POSITION. "To chase", "Between them" and "Oldest" were three
-        tiles of a strip this screen does not have room for -- it holds
-        five, and the other four are other people's work. The count keeps
-        its tile and the two figures become its basis, so no figure that
-        was on screen before this fold is off it now. */
-  t.check(/tile\('Money', String\(money\)/.test(summary)
-    && /between them/.test(summary) && /oldest \$\{agingDaysLabel/.test(summary),
-    'what the queue holds — how many, how much between them, and how old the oldest — is in the layer’s strip');
+  /* 4. THE POSITION IS DEBTORS', AND STAYS THERE. "To chase", "Between
+        them" and "Oldest" were three tiles on the retired screen, and
+        two of them are a reading of the whole book. That screen knew it:
+        it borrowed the Debtors aging bar and labelled it "the whole
+        book, not just this queue", with a note saying the age filter
+        belongs on the screen that owns the book. This queue is
+        deliberately a subset -- it is who is past your terms TODAY,
+        rested and de-duplicated -- so a total computed over it describes
+        a slice of the shop rather than the shop.
+
+        So the fold does not move those figures, it declines to draw them
+        twice. The count keeps the tile it always had; the sub stays the
+        short label the approved canvas gives all five; and the help says
+        where the book is, so the division the app states in three other
+        places is readable and not merely true. */
+  t.check(/tile\('Money', 'money', n\('money'\) \? 'past your terms'/.test(summary),
+    'the Money tile keeps the canvas’s own sub, in the shape the other four wear');
+  t.check(!/moneyOwed|moneyNote/.test(contact) && !/moneyOwed/.test(summary),
+    'and no total is worked out over this queue — a position over a subset is a position nobody can trust');
+  const sect = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/what the whole book comes to, and how much of it is old, is <b>Debtors<\/b>/.test(sect),
+    'the money lens names where that reading does live, rather than leaving the owner to wonder why it is not here');
 
   /* 5. THE TWO RULES. They were a sentence and a fold-out form in the
         old header. They are fields in THIS screen's header now, beside
