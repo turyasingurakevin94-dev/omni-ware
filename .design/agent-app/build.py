@@ -21,6 +21,15 @@ ICONS = {
               '<path d="M17.3 6.1a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/>',
     'note': '<path fill-rule="evenodd" d="M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z'
             'm9 3.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2z"/>',
+    # --- tab bar, inactive: drawn as outlines, not as stroked silhouettes ---
+    'spark_o': '<path d="M6 16.2a6 6 0 0 1 12 0"/><path d="M3 19.6h18"/>'
+               '<path d="M12 3.8v2.2M5.1 7.1l1.6 1.6M18.9 7.1l-1.6 1.6"/>',
+    'tag_o': '<path d="M13.4 3.5H5.5A2 2 0 0 0 3.5 5.5v7.9c0 .53.21 1.04.59 1.41l6.1 6.1'
+             'a2 2 0 0 0 2.82 0l7.9-7.9a2 2 0 0 0 0-2.82l-6.1-6.1A2 2 0 0 0 13.4 3.5z"/>'
+             '<circle cx="7.7" cy="7.7" r="1.35"/>',
+    'people_o': '<circle cx="9.1" cy="8.2" r="3.4"/>'
+                '<path d="M2.9 19.6v-.8c0-3.2 2.75-5.4 6.2-5.4s6.2 2.2 6.2 5.4v.8"/>'
+                '<circle cx="17.6" cy="9" r="2.5"/><path d="M17.6 14.2c2.3.2 3.8 2 3.8 4.3v1.1"/>',
     # --- the six categories, drawn as the thing itself ---
     'roofing': '<path d="M3.5 17.5l4-11h13l-4 11z"/><path d="M11.5 6.5l-4 11M15.5 6.5l-4 11"/>',
     'fastener': '<path d="M9.2 3h5.6l1.7 2.6-1.7 2.6H9.2L7.5 5.6z"/><path d="M10.3 8.2V21M13.7 8.2V21"/>'
@@ -36,6 +45,14 @@ ICONS = {
     'right': '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
     'left': '<path d="M15 5.5L8.5 12l6.5 6.5"/>',
     'down': '<path d="M5.5 9L12 15.5 18.5 9"/>',
+    'up': '<path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>',
+    # Home: a sunrise over the yard -- the day starting, not a house.
+    'spark': '<path fill-rule="evenodd" d="M12 2.6a1 1 0 0 1 1 1v2.2a1 1 0 1 1-2 0V3.6a1 1 0 0 1 1-1z'
+             'M4.4 5.8a1 1 0 0 1 1.4 0l1.5 1.5a1 1 0 1 1-1.4 1.4L4.4 7.2a1 1 0 0 1 0-1.4z'
+             'M19.6 5.8a1 1 0 0 1 0 1.4l-1.5 1.5a1 1 0 0 1-1.4-1.4l1.5-1.5a1 1 0 0 1 1.4 0z'
+             'M12 9.4a6.2 6.2 0 0 0-6.1 5.2h12.2A6.2 6.2 0 0 0 12 9.4z'
+             'M2.6 17.6a1 1 0 0 1 1-1h16.8a1 1 0 1 1 0 2H3.6a1 1 0 0 1-1-1z'
+             'M6.6 20.6a1 1 0 0 1 1-1h8.8a1 1 0 1 1 0 2H7.6a1 1 0 0 1-1-1z"/>',
     'phone': '<path d="M6.4 3.2h3.1l1.6 4-2.1 1.5a12.4 12.4 0 0 0 5.8 5.8l1.5-2.1 4 1.6v3.1'
              'a2 2 0 0 1-2.2 2A17.3 17.3 0 0 1 2.6 5.4a2 2 0 0 1 2-2.2z"/>',
     'plus': '<path d="M12 5v14M5 12h14"/>',
@@ -52,7 +69,7 @@ ICONS = {
            '<path d="M15.5 16.5L20 12l-4.5-4.5M20 12H9"/>',
 }
 
-TABS = [('tag', 'Sell'), ('people', 'Customers'), ('note', 'Money')]
+TABS = [('spark', 'Home'), ('tag', 'Sell'), ('people', 'Clients')]
 
 
 def icon(name, cls=''):
@@ -63,8 +80,9 @@ def icon(name, cls=''):
 def tabbar(active):
     out = ['<div class="tabs">']
     for key, label in TABS:
-        on = ' on' if label == active else ''
-        out.append(f'  <div class="tab{on}">{icon(key)}{label}</div>')
+        hit = label == active
+        mark = icon(key if hit else key + '_o')
+        out.append(f'  <div class="tab{" on" if hit else ""}">{mark}{label}</div>')
     out.append('</div>')
     return '\n'.join(out)
 
@@ -97,7 +115,7 @@ HEAD = """<!doctype html>
 
 
 def build(out, body, w, h, extra=()):
-    css = (HERE / '_app.css').read_text()
+    css = (HERE / '_field.css').read_text()
     for f in extra:
         css += (HERE / f).read_text()
     src = expand((HERE / body).read_text())
@@ -107,6 +125,6 @@ def build(out, body, w, h, extra=()):
 
 if __name__ == '__main__':
     PH = (390, 844)
-    build('Main.dc.html', 'body_a.html', *PH)
-    build('DirectionB.dc.html', 'body_b.html', *PH)
-    build('DirectionC.dc.html', 'body_c.html', *PH)
+    build('Main.dc.html',  'body_home.html',  *PH)
+    build('Sell.dc.html',  'body_sell.html',  *PH)
+    build('Order.dc.html', 'body_order.html', *PH)
