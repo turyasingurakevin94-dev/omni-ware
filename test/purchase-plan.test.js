@@ -257,13 +257,34 @@ if (scope) {
 
 /* ---------- 5. the wiring ---------------------------------------------- */
 {
-  t.check(/id="tab-buying"/.test(src) && /data-tab="buying"/.test(src),
-    'What to buy is its own screen on the rail');
+  /* WHAT TO BUY IS A LENS, NOT A SCREEN. It, What's coming and The day
+     asked one question -- what is coming -- at three horizons, from
+     three different groups of the rail, and the dependency between them
+     was only ever in the code: the first line of renderPurchasePlanPanel
+     reads cashAhead().safeToSpend, because the plan a shop can afford IS
+     the low point of the cash line. They are the three lenses of
+     Forecasts now.
+
+     What this check meant -- that the plan is reachable in one press
+     from the rail rather than buried inside another screen -- still
+     holds, and the row that reaches it is Forecasts. The old key is not
+     abandoned: resolveTab turns 'buying' into the Stock lens, so every
+     door already written, a saved last-tab and the Manager's own moves
+     all still land on the plan. */
+  t.check(/id="tab-forecasts"/.test(src) && /data-tab="forecasts"/.test(src),
+    'the plan is one press from the rail, as the Stock lens of Forecasts');
+  const resolve = extractFunction(src, 'resolveTab', 'index.html');
+  t.check(/if\(tab === 'buying'\)\{ fcLens = 'stock'; return 'forecasts'; \}/.test(resolve),
+    "and the old door still opens it — 'buying' presses the Stock lens rather than throwing on a section that is gone");
+  t.check(/data-fclens="stock"/.test(src), 'which the lens switch can be pressed to directly');
   t.check(/id="buy_plan"/.test(src) && /id="buy_budget"/.test(src) && /id="buy_cover"/.test(src),
     'with its budget and cover controls');
   const go = extractFunction(src, 'goToTab', 'index.html');
-  t.check(/if\(tab==='buying'\) renderPurchasePlanPanel\(\);/.test(go),
+  t.check(/if\(tab==='forecasts'\) renderForecasts\(\);/.test(go),
     'and redraws on entry, like every other data screen');
+  const rf = extractFunction(src, 'fcApplyLens', 'index.html');
+  t.check(/if\(fcLens === 'stock'\) renderPurchasePlanPanel\(\);/.test(rf),
+    'which draws the plan when the Stock lens is the one open');
   const panel = extractFunction(src, 'renderPurchasePlanPanel', 'index.html');
 
   /* The owner's complaint: every row offered to "source" a product the
@@ -399,10 +420,27 @@ if (scope) {
   t.check(iDo > 0 && iDo < iWhy && iWhy < iFacts,
     'the row says what to buy before it says why — it used to be the other way round, in the smallest text on the screen');
 
-  t.check(/class="ow-strip"/.test(panel) && /'The plan comes to'/.test(panel)
-    && /'Left of your budget'/.test(panel),
-    'the two figures the screen turns on are in the layer’s strip, like every converted screen');
-  t.check(!/Plan total <b>/.test(panel), 'and no longer a footnote under the list');
+  /* THE TWO FIGURES OUTLIVED THE STRIP THEY WERE IN. This lens gave its
+     own four tiles to the strip above all three Forecasts lenses, which
+     already carries the two of them that are not about buying alone --
+     what the shelf needs back in time, and what has run out. The other
+     two went where their arithmetic already lives rather than into a
+     second 64px band of figures: the plan's total onto the head of the
+     panel that lists it, and what is left of the budget onto the foot of
+     "Where the budget came from", which is the sum it belongs to.
+
+     So the claim is no longer "they are in a strip" -- it is that
+     neither figure was quietly dropped on the way, and that each is
+     beside the thing it is a figure ABOUT. */
+  const planHeadAt = panel.indexOf('Buy these, in this order');
+  const planHead = panel.slice(planHeadAt, panel.indexOf('</div>', planHeadAt));
+  t.check(planHeadAt > 0 && /num\(plan\.spend\)/.test(planHead),
+    'what the plan comes to is in the head of the panel that lists it');
+  t.check(/sr\('Left of it', num\(left\), true\)/.test(panel),
+    'and what is left of the budget is the last row of the sum that works the budget out');
+  t.check(!/class="ow-strip"/.test(panel),
+    'and this lens draws no strip of its own — two stacked is 128px of figures before the work starts');
+  t.check(!/Plan total <b>/.test(panel), 'and neither is a footnote under the list');
 
   /* The two figures live in the page header as labelled fields, beside
      the name of the screen rather than as a form above the list. The

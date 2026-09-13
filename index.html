@@ -13496,6 +13496,80 @@
   }
 
   /* ==================================================================
+     FORECASTS. Three horizons of one question, and the strip that makes
+     them one screen rather than three behind one door.
+
+     Almost nothing here is new. The lens is .ow-seg, the strip is
+     .ow-strip, and each lens draws with the vocabulary it already had --
+     .ow-ah-* for the cash runway, .bp-* for the plan, .ow-dy-* and
+     .ow-ck for the day. What is here is the four things the layer had no
+     word for: a pane that is one of three, the acts that belong to a
+     lens rather than to the screen, the strip's own floor, and the
+     header on a phone, where three horizons and their acts will not
+     share a line with a 26px page name.                               */
+
+  /* One view at a time. hidden rather than emptied, so coming back to a
+     lens costs nothing and every id the three renderers write into is in
+     the document at all times -- which is why not one of them needed a
+     line changed to move in here. */
+  .ow-fc-pane[hidden]{display:none;}
+
+  /* THE ACTS BELONG TO THE LENS. Ghost buttons and fields, so they line
+     up on the header's baseline beside the segment, and they go with
+     their lens rather than sitting greyed out on the other two. */
+  .ow-fc-acts{display:flex;align-items:flex-end;gap:var(--ow-sp-8);flex:none;}
+  .ow-fc-acts[hidden]{display:none;}
+
+  /* THE DAY'S CLOSING CHECKS, GIVEN BACK THEIR OWN SHAPE.
+
+     .ow-ck is the day's, and Purchase invoices redefines it LATER in
+     this file as a four-track grid -- 16px, the text, 146px, auto -- for
+     its duplicate-bill finding, which is a full-width row with a figure
+     and a button on it. The day's checks are a 304px rail: 16 + 146 +
+     three gaps leaves about 80px for the text, so every detail line
+     wrapped two words at a time and the one accent button on the screen
+     came out reading "the cash" on two lines.
+
+     This shipped, and it shipped before this screen was folded into
+     Forecasts -- the same rail, the same break, on The day as it stood.
+     A modifier fixes it without touching the screen that took the name:
+     two classes beat one whatever the source order, so this wins where
+     it applies and nowhere else. */
+  .ow-ck.ow-dy-ck{display:flex;align-items:flex-start;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);}
+  .ow-ck.ow-dy-ck .ow-ck-b{flex:1;min-width:0;}
+  /* Both are spans, and both are lines of their own: the title names
+     the check and the detail says what it means. Run together they read
+     as one sentence with a bold opening, which is not what a check is. */
+  .ow-ck.ow-dy-ck .ow-ck-t{display:block;font-size:var(--ow-t-12);
+    white-space:normal;overflow:visible;}
+  .ow-ck.ow-dy-ck .ow-ck-s{display:block;}
+  .ow-ck-a.ow-dy-ck-a{display:block;padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);}
+
+  /* The strip's floor. Gone rather than empty before the first render:
+     a bordered box with nothing in it reads as a screen that failed. */
+  .ow-fc-roof{margin-bottom:var(--ow-sp-16);}
+  .ow-fc-roof:empty{display:none;}
+
+  @media (max-width:820px){
+    /* 820 is a switch, not a reflow. The segment goes full width at a
+       44px tap -- the layer already does that -- and the acts take the
+       row under it rather than trailing off the end of a 26px page
+       name. Two small controls are not two decisions: Today and Print
+       share a row, as do the plan's two fields. */
+    .ow-fc-lens{flex:1 1 100%;}
+    .ow-fc-acts{flex:1 1 100%;flex-wrap:wrap;gap:var(--ow-sp-8);}
+    .ow-fc-acts > .btn.ow-sm{flex:1 1 0;min-width:0;min-height:var(--ow-tap);
+      box-sizing:border-box;justify-content:center;}
+    .ow-fc-acts > .ow-f{flex:1 1 0;min-width:0;}
+    .ow-fc-acts .ow-f-in{min-width:0;height:var(--ow-tap);}
+    .ow-fc-acts .ow-dy-nav{flex:1 1 100%;height:auto;}
+    .ow-fc-acts .ow-dy-b{width:var(--ow-tap);min-height:var(--ow-tap);}
+    .ow-fc-acts .ow-dy-d{flex:1;width:auto;min-height:var(--ow-tap);font-size:var(--ow-t-14);}
+  }
+
+  /* ==================================================================
      WHAT'S COMING — the cash runway
 
      The screen answers one question: can I commit money today, and when
@@ -13509,7 +13583,6 @@
      worked out, and the acts that change it happen here.
      ================================================================== */
 
-  .ow-ah-strip{margin-bottom:var(--ow-sp-16);}
   .ow-ah-runwrap{padding:var(--ow-sp-12) var(--ow-sp-12) 0;}
   /* The chart and the card that reads it share one box, so the card can
      be placed against the crosshair rather than against the page.
@@ -15379,15 +15452,19 @@
       </div>
       <div class="nav-group" data-group="Buy">
         <button type="button" class="nav-section-label" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <!-- Deliberately NOT carrying "restock", for the reason in the
-             Follow-ups note above: search matches on SUBSTRINGS, so the
-             word contains "stock" and put this screen above Inventory
-             for the most obvious search in the app. "runs out" and
-             "reorder" say the same thing without stealing it. -->
-        <button data-tab="buying" title="What to buy" data-keywords="reorder replenish refill buying budget plan copilot runs out running low purchase">
-          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-          <span class="nav-label">What to buy</span>
-        </button>
+        <!-- What to buy had a row here. It is the Stock lens of
+             Forecasts under Insight now: what the shelf will need is a
+             question about what has not happened yet, and it is answered
+             against the cash line, which was three rail groups away.
+
+             Its words went with it, including the standing note that
+             "restock" may never be one of them -- search matches on
+             SUBSTRINGS, so that word contains "stock" and would put the
+             row above Inventory for the most obvious search in the app.
+
+             This group keeps the four screens about CHOOSING what to buy
+             and who from, which is a different job from knowing what the
+             shelf is about to need. -->
         <button data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
           <span class="nav-label">Compare prices</span>
@@ -15476,10 +15553,11 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
           <span class="nav-label">Creditors</span>
         </button>
-        <button data-tab="ahead" title="What falls due, and what it leaves you" data-keywords="cash forecast ahead coming due rent wages loan commitments tight short budget runway">
-          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 15h3M14 15h2"/></svg>
-          <span class="nav-label">What&#39;s coming</span>
-        </button>
+        <!-- What's coming had a row here, between the two ledgers it
+             reads from. It is the Cash lens of Forecasts under Insight
+             now. Debtors and Creditors stay where they are: they are the
+             books as they stand, which is a thing you act on, and the
+             line ahead is a thing you study. Its words went with it. -->
         <button data-tab="statements" title="Profit, position and cash flow" data-keywords="profit loss balance sheet cash flow accounts">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-4M12 18v-7M16 18v-2"/></svg>
           <span class="nav-label">Statements</span>
@@ -15495,12 +15573,28 @@
       </div>
       <div class="nav-group" data-group="Insight">
         <button type="button" class="nav-section-label" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <!-- Deliberately NOT carrying "sales", "orders" or "stock":
-             those words belong to screens named after them, and a
-             keyword outranks nothing but it does compete. -->
-        <button data-tab="day" title="The day — one day as it happened" data-keywords="today yesterday what happened diary journal log back">
-          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 15h3"/></svg>
-          <span class="nav-label">The day</span>
+        <!-- ONE ROW WHERE THREE WERE. The day, What to buy and What's
+             coming were one question -- what is coming -- asked over the
+             next few hours, the next fortnight and the next thirty days,
+             from three different groups of this rail.
+
+             Every word all three answered to is here, because a merge
+             that costs the owner the name already in their head is a
+             merge that costs them the screen. "what to buy", "whats
+             coming" and "the day" all still land here, and so does every
+             keyword each of the three rows carried.
+
+             Deliberately NOT carrying "stock", "sales" or "orders",
+             though one of the lenses is called Stock: those words belong
+             to screens named after them, search matches on SUBSTRINGS,
+             and a keyword that stole "stock" from Inventory would cost
+             the app its most obvious search. A lens name is not searched
+             -- only the label, the group and these words are. -->
+        <button data-tab="forecasts" title="Forecasts &mdash; what is coming, at three horizons" data-keywords="forecast forecasts what to buy reorder replenish refill buying budget plan copilot runs out running low purchase cash ahead whats coming what is coming falls due rent wages loan commitments tight short runway safe to spend the day today yesterday what happened diary journal log back">
+          <!-- A horizon with the sun not yet over it: what has not
+               happened yet, drawn rather than borrowed. -->
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h18"/><path d="M6.5 17a5.5 5.5 0 0 1 11 0"/><path d="M12 7V4M5.4 9.4L3.5 7.5M18.6 9.4l1.9-1.9"/><path d="M9 21h6"/></svg>
+          <span class="nav-label">Forecasts</span>
         </button>
         <button data-tab="manager" title="Manager — the morning meeting" data-keywords="manager meeting plan advice strategy moves run the business mind">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
@@ -16630,44 +16724,119 @@
       <div id="pairingsWrap"></div>
     </section>
 
-    <!-- STAFF -->
-    <!-- ONE DAY, WHOLE. Everything here is what the books recorded ON
-         that day; nothing is a live balance, so a Tuesday reads as
-         Tuesday rather than as Tuesday's sales beside this afternoon's
-         debtors.
+    <!-- ================= FORECASTS =================
+         Everything the books say about what has NOT happened yet, at the
+         three horizons a shop actually asks about, behind one door.
 
-         THE DAY IS THE SUBJECT, so walking it lives in the header. It
-         had a bordered region of its own, 82px tall, holding four
-         controls above the work -- which is the shape of a filter on a
-         report, and this is not a report about days, it is one day. -->
-    <section id="tab-day" style="display:none;">
+         It was three doors in three different groups of the rail: What's
+         coming under Money, What to buy under Buy, The day under
+         Insight. Three page headers, three strips, one question -- what
+         is coming -- and nothing on any of them saying that the answers
+         depend on each other. They always have:
+         renderPurchasePlanPanel has read cashAhead().safeToSpend since
+         the day it was written, because the plan a shop can afford IS
+         the low point of the cash line. The screens never said so.
+
+         ONE STRIP ACROSS ALL THREE LENSES, and it is the argument for
+         the merge rather than a menu: each of its four tiles is another
+         lens's headline, so switching horizon never loses the figure you
+         switched away from. The strip is rendered once, by
+         renderForecasts, from the three engines' own derivations.
+
+         WHAT "FORECAST" IS ALLOWED TO MEAN HERE. What to buy's own help
+         text says "nothing here is a forecast -- every figure comes from
+         an invoice or the Price Registry", and that law holds under this
+         roof. A run-out day is the shelf divided by a measured rate. The
+         cash line is the drawer minus bills somebody named a day for. A
+         typical Tuesday is the middle of the last five. Derived, never
+         invented, and every tile says what it is derived from.
+
+         NOTHING IN THE ENGINES MOVED. cashAhead, purchasePlan, dayRecord
+         and their three renderers keep their names and every law they
+         own; each draws into a lens instead of a section of its own, and
+         every id they write into -- ah_body, buy_plan, dayBody,
+         dayMeetingWrap, buy_cover, buy_budget, day_date -- is still
+         here, which is why not one of them needed editing to move. -->
+    <section id="tab-forecasts" style="display:none;">
       <div class="ow-ph">
-        <h1 class="ow-ph-t">The day</h1>
-        <p class="ow-ph-sub">Every figure is what the books recorded on that day &mdash; never how things stand now.</p>
-        <p class="ow-ph-help">One day as it happened: who bought, who paid, what moved on the shelf, what the orders did, and the meeting held that morning with what became of each move. The four figures at the top are set against a typical day of the SAME WEEKDAY &mdash; the middle of the last five, because a Tuesday against a Sunday says nothing, and where fewer than three are on the books there is no comparison rather than one drawn from two days. Under them, whether the day is properly on the record at all: whether the cash book was opened, whether the till was counted and agreed, and whether anything finished that day is still sitting without an invoice. Nothing here reads a live balance and nothing here posts, pays or closes anything &mdash; a row opens what is behind it, and the sheet prints. A day still trading is not compared with anything, because a part day set beside whole ones reads as a bad day every afternoon.</p>
+        <h1 class="ow-ph-t">Forecasts</h1>
+        <!-- THE SUB BELONGS TO THE LENS. Three horizons are three
+             different claims about what the figures below are, and one
+             line trying to cover all three would be true of none of
+             them. fcApplyLens writes it. -->
+        <p class="ow-ph-sub" id="fc_sub"></p>
+        <!-- Three explanations, one bubble. foldPageInstructions takes
+             every .ow-ph-help in a header -- Follow-ups already carries
+             three -- so each horizon keeps the whole of the argument its
+             own screen had, rather than losing it to a merge. -->
+        <p class="ow-ph-help"><b>Today.</b> One day as it happened: who bought, who paid, what moved on the shelf, what the orders did, and the meeting held that morning with what became of each move. The four figures are set against a typical day of the SAME WEEKDAY &mdash; the middle of the last five, because a Tuesday against a Sunday says nothing, and where fewer than three are on the books there is no comparison rather than one drawn from two days. Under them, whether the day is properly on the record at all: whether the cash book was opened, whether the till was counted and agreed, and whether anything finished that day is still sitting without an invoice. Nothing on this lens reads a live balance and nothing on it posts, pays or closes anything &mdash; a row opens what is behind it, and the sheet prints. A day still trading is not compared with anything, because a part day set beside whole ones reads as a bad day every afternoon.</p>
+        <p class="ow-ph-help"><b>Stock.</b> What is worth buying, worked out from the shop&#39;s own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held &mdash; where the price on file for the whole month&#39;s quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget is what the Cash lens says is safe to spend; what does not fit is named rather than dropped. Nothing is ordered until you send it, and nothing here is a forecast &mdash; every figure comes from an invoice or the Price Registry.</p>
+        <p class="ow-ph-help"><b>Cash.</b> The line starts at what the cash book says you hold and steps down on each day something you have already promised falls due. It is a step rather than a slope because money does not drain away between payments &mdash; it sits still and then goes. Safe to spend is the LOWEST point the line reaches, not what it ends on: ending the month with something left is no comfort if you are under water in the middle of it, and the buying plan budgets from that lowest figure. Only money with a day somebody actually named is on the line; everything else is counted below it, undated, and each becomes part of the line the day you name one. A debtor&#39;s word is drawn too, dashed, and is never counted in what is safe to spend.</p>
         <span class="ow-ph-sp"></span>
-        <div class="ow-dy-nav">
-          <button type="button" class="ow-dy-b" id="day_prev" title="The day before" aria-label="The day before">
-            <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-          </button>
-          <!-- A bare date input clips its own value with no marker, so
-               it is sized for the longest date it can hold. -->
-          <input type="date" class="ow-dy-d" id="day_date" aria-label="The day being read">
-          <button type="button" class="ow-dy-b" id="day_next" title="The day after" aria-label="The day after">
-            <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-          </button>
+        <!-- THE LENS. Three horizons of one question, never two at once.
+             The counts are the things on each that want a decision, not
+             the size of each list: what is still open on the day, how
+             many lines the plan would buy, how many bills carry no day
+             yet. A count that meant three different things would mean
+             nothing. -->
+        <div class="ow-seg ow-fc-lens" id="fc_lens" role="tablist" aria-label="Which horizon">
+          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="today">Today<span class="ow-seg-n" id="fc_n_today"></span></button>
+          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="stock">Stock<span class="ow-seg-n" id="fc_n_stock"></span></button>
+          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="cash">Cash<span class="ow-seg-n" id="fc_n_cash"></span></button>
         </div>
-        <button type="button" class="btn btn-ghost ow-sm" id="day_today">Today</button>
-        <!-- Ghost or accent depending on the day: renderDay hands it the
-             accent only when the day is closed and there is nothing left
-             to do, because then printing IS the one thing to do next. -->
-        <button type="button" class="btn btn-ghost ow-sm" id="day_print" title="Print this day as a sheet">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
-          Print the day
-        </button>
+        <!-- THE ACTS BELONG TO THE LENS TOO, and they are the screens'
+             own, unchanged and by their own ids. The Cash lens has none:
+             naming a day happens on the bill's own row, and on a healthy
+             day there is nothing here to do. -->
+        <span class="ow-fc-acts" id="fc_acts_today" hidden>
+          <span class="ow-dy-nav">
+            <button type="button" class="ow-dy-b" id="day_prev" title="The day before" aria-label="The day before">
+              <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <!-- A bare date input clips its own value with no marker, so
+                 it is sized for the longest date it can hold. -->
+            <input type="date" class="ow-dy-d" id="day_date" aria-label="The day being read">
+            <button type="button" class="ow-dy-b" id="day_next" title="The day after" aria-label="The day after">
+              <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </span>
+          <button type="button" class="btn btn-ghost ow-sm" id="day_today">Today</button>
+          <!-- Ghost or accent depending on the day: renderDay hands it the
+               accent only when the day is closed and there is nothing left
+               to do, because then printing IS the one thing to do next. -->
+          <button type="button" class="btn btn-ghost ow-sm" id="day_print" title="Print this day as a sheet">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
+            Print the day
+          </button>
+        </span>
+        <span class="ow-fc-acts" id="fc_acts_stock" hidden>
+          <!-- The two figures the whole plan turns on, as fields in the
+               header rather than a form above the list. The ids stay: the
+               listeners below bind to them at parse time with no null
+               guard. The budget's suffix says whether it was worked out
+               from the cash line or typed. -->
+          <label class="ow-f"><span class="ow-f-l">Cover</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_cover" min="1" step="1"><span class="ow-f-u">days</span></span></label>
+          <label class="ow-f"><span class="ow-f-l">Budget</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_budget" min="0" step="any" placeholder="safe to spend"><span class="ow-f-u" id="buy_budget_src">worked out</span></span></label>
+          <button type="button" class="btn ow-sm" id="buy_redo_btn" title="Read the shelf and the price book again">Redo the plan</button>
+        </span>
       </div>
-      <div id="dayBody"></div>
-      <div id="dayMeetingWrap"></div>
+
+      <!-- The strip every lens shares. Empty until renderForecasts has
+           something to put in it, and gone rather than empty when it
+           has not -- four tiles reading nothing is four figures that
+           mean nothing. -->
+      <div class="ow-fc-roof" id="fc_roof"></div>
+
+      <div class="ow-fc-pane" id="fc_pane_today" hidden>
+        <div id="dayBody"></div>
+        <div id="dayMeetingWrap"></div>
+      </div>
+      <div class="ow-fc-pane" id="fc_pane_stock" hidden>
+        <div id="buy_plan"></div>
+      </div>
+      <div class="ow-fc-pane" id="fc_pane_cash" hidden>
+        <div id="ah_body"></div>
+      </div>
     </section>
 
     <section id="tab-manager" style="display:none;">
@@ -17477,27 +17646,6 @@
       </div>
     </section>
 
-    <!-- WHAT FALLS DUE, AND WHAT IT LEAVES. The app's only forward view
-         of cash was one averaged number -- "about two months left" --
-         which cannot say which DAY is tight. Three things here carry a
-         real date: a raised due, a loan instalment, and the day of the
-         month a rent agreement falls on. Those go on a line. Nothing
-         else does, because nothing else has a date to go on. -->
-    <!-- WHAT'S COMING. A balance falling over a window of days, so the
-         screen draws one: the runway leads, the ledger under it is the
-         same walk in words, and the two acts that move the line -- naming
-         a day, ringing somebody -- happen here rather than being
-         described as journeys to other screens. -->
-    <section id="tab-ahead" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">What&#39;s coming</h1>
-        <p class="ow-ph-sub">What you have already promised, against what you hold</p>
-        <p class="ow-ph-help">The line starts at what the cash book says you hold this morning and steps down on each day something you have already promised falls due. It is a step rather than a slope because money does not drain away between payments &mdash; it sits still and then goes. Safe to spend is the LOWEST point the line reaches, not what it ends on: ending the month with something left is no comfort if you are under water in the middle of it, and the buying plan budgets from that lowest figure. Only money with a day somebody actually named is on the line; everything else is counted below it, undated, and each becomes part of the line the day you name one. A debtor&#39;s word is drawn too, dashed, and is never counted in what is safe to spend.</p>
-        <span class="ow-ph-sp"></span>
-      </div>
-
-      <div id="ah_body"></div>
-    </section>
 
     <!-- FINANCIAL STATEMENTS -->
     <section id="tab-statements" style="display:none;">
@@ -18332,27 +18480,6 @@
     <div id="printArea"></div>
 
     <!-- COMPARE -->
-    <!-- WHAT TO BUY: the Procurement Copilot's own screen. A ranked
-         restock plan derived from real demand, real stock, the cheapest
-         priced supplier at the needed quantity, and the cash on hand.
-         Every row carries its evidence; nothing is predicted. -->
-    <section id="tab-buying" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">What to buy</h1>
-        <p class="ow-ph-sub">Ranked by what each line earned in 30 days. Nothing is ordered until you send it.</p>
-        <p class="ow-ph-help">What is worth buying, worked out from the shop's own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held — where the price on file for the whole month's quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget starts at the cash on hand; what does not fit is named rather than dropped. Nothing here is a forecast — every figure comes from an invoice or the Price Registry.</p>
-        <span class="ow-ph-sp"></span>
-        <!-- The two figures the whole plan turns on, as fields in the
-             header rather than a form above the list. The ids stay: the
-             listeners below bind to them at parse time with no null
-             guard. The budget's suffix says whether it was worked out
-             from the cash line or typed. -->
-        <label class="ow-f"><span class="ow-f-l">Cover</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_cover" min="1" step="1"><span class="ow-f-u">days</span></span></label>
-        <label class="ow-f"><span class="ow-f-l">Budget</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_budget" min="0" step="any" placeholder="safe to spend"><span class="ow-f-u" id="buy_budget_src">worked out</span></span></label>
-        <button type="button" class="btn ow-sm" id="buy_redo_btn" title="Read the shelf and the price book again">Redo the plan</button>
-      </div>
-      <div id="buy_plan"></div>
-    </section>
 
     <section id="tab-compare" style="display:none;">
       <div class="ow-ph">
@@ -28310,6 +28437,24 @@ function resolveTab(tab){
      into getElementById('tab-stock-movements').style and throws before
      anything renders. */
   if(tab === 'stock-movements'){ invLens = 'moves'; return 'inventory'; }
+  /* AND THE THREE HORIZONS. What's coming, What to buy and The day were
+     one question -- what is coming -- asked over the next thirty days,
+     the next fortnight and the next few hours, from three different
+     groups of the rail. They are the three lenses of Forecasts now, and
+     each old key presses its own lens rather than landing on whichever
+     one happened to be open.
+
+     This is not only for saved links. Every door the app already has
+     into those three comes through here: the Manager's moves, the
+     dashboard's "See what falls due", the empty day's "See what falls
+     due that day", openDoor's buy entry, the assistant's tab list, and
+     lsGet('pbLastTab') at boot -- which is the one that matters most,
+     because a shop whose last screen was What to buy would otherwise
+     boot into getElementById('tab-buying').style and throw before
+     anything renders. */
+  if(tab === 'ahead'){ fcLens = 'cash'; return 'forecasts'; }
+  if(tab === 'buying'){ fcLens = 'stock'; return 'forecasts'; }
+  if(tab === 'day'){ fcLens = 'today'; return 'forecasts'; }
   return tab;
 }
 function goToTab(tab){
@@ -28358,7 +28503,6 @@ function goToTab(tab){
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
   if(tab==='sourcing') renderSourcing();
-  if(tab==='buying') renderPurchasePlanPanel();
   if(tab==='consignment') renderConsignment();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
@@ -28378,7 +28522,7 @@ function goToTab(tab){
     renderMomoLedger(true);
   }
   if(tab==='map') renderMap();
-  if(tab==='ahead') renderAhead();
+  if(tab==='forecasts') renderForecasts();
   if(tab==='statements') renderStatements();
   if(tab==='manager') renderManager();
   // Every other data tab redraws on entry; this one only ever drew at
@@ -28409,10 +28553,6 @@ function goToTab(tab){
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
   if(tab==='analytics-debtors') renderDebtorsList();
   if(tab==='analytics-creditors') renderCreditorsList();
-  /* Opens on today unless the owner has already walked back to a day --
-     coming back to the screen you left should show the day you left it
-     on, not silently jump to now. */
-  if(tab==='day') dayGo(dayShown || todayISO());
 }
 
 /* ONE delegated listener rather than forty-five bound ones. Same
@@ -78455,6 +78595,175 @@ function aheadRunwaySVG(a, small){
    does that stop being true -- so the shape of the answer leads and
    everything under it is the detail behind it. */
 let aheadDayEditId = null;   // the bill having a day named on it
+/* ================= FORECASTS — the three horizons ===================
+
+   One screen, three lenses, and one strip across all three.
+
+   THE STRIP IS THE ARGUMENT. What to buy has always budgeted from what
+   What's coming says is safe to spend -- renderPurchasePlanPanel reads
+   cashAhead().safeToSpend on its first line -- and The day's takings are
+   where next month's cash comes from. Three screens, one dependency, and
+   no way to see it. Each tile of this strip is another lens's headline,
+   so switching horizon never loses the figure you switched away from.
+
+   NOTHING HERE DERIVES ANYTHING NEW. Every figure is read from the three
+   engines that already owned it: cashAhead, purchasePlan, dayRecord and
+   dayTypical. If this file and a lens ever disagreed about a figure, the
+   fault would be here -- so this asks them rather than working it out.  */
+let fcLens = 'cash';
+
+/* What each lens claims the figures below it are. Three horizons are
+   three different claims, and one line covering all three would be true
+   of none of them -- so the sub belongs to the lens, and Today's says
+   which day is being read, because that is the thing that goes stale. */
+const FC_SUB = {
+  today: ()=> {
+    const d = dayShown || todayISO();
+    return d >= todayISO()
+      ? `Today so far, against what a typical ${dayWeekday(d)} ends at — never a live balance.`
+      : 'Every figure is what the books recorded on that day — never how things stand now.';
+  },
+  stock: ()=> 'What runs out, and what it costs to have it back in time.',
+  cash: ()=> 'What you have already promised, against what you hold.',
+};
+const FC_KEYS = ['today', 'stock', 'cash'];
+
+/* The lens, applied. Panes and acts are hidden rather than emptied, so
+   nothing has to be re-rendered to come back, and every id the three
+   renderers write into stays in the document at all times -- which is
+   why none of them needed a line changed to move in here. */
+function fcApplyLens(){
+  if(!FC_SUB[fcLens]) fcLens = 'cash';
+  FC_KEYS.forEach(k=>{
+    const pane = document.getElementById('fc_pane_' + k);
+    if(pane) pane.hidden = k !== fcLens;
+    const acts = document.getElementById('fc_acts_' + k);
+    if(acts) acts.hidden = k !== fcLens;
+  });
+  document.querySelectorAll('#fc_lens .ow-seg-b[data-fclens]').forEach(b=>{
+    const on = b.dataset.fclens === fcLens;
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const sub = document.getElementById('fc_sub');
+  if(sub) sub.textContent = FC_SUB[fcLens]();
+  /* Opens on today unless the owner has already walked back to a day --
+     coming back to the lens you left should show the day you left it
+     on, not silently jump to now. */
+  if(fcLens === 'today') dayGo(dayShown || todayISO());
+  if(fcLens === 'stock') renderPurchasePlanPanel();
+  if(fcLens === 'cash') renderAhead();
+}
+
+/* THE STRIP. Rendered after the lens, so on Stock the plan it reports is
+   the very plan drawn below it -- renderPurchasePlanPanel settles the
+   holds and the orders before it plans, and a strip that planned first
+   would be reporting a shop that no longer exists by the time the list
+   under it was drawn. */
+function fcRenderRoof(){
+  const el = document.getElementById('fc_roof');
+  if(!el) return;
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const today = todayISO();
+
+  /* ---- what the cash line says ---- */
+  const days = cashAheadDays();
+  const a = cashAhead(today, days);
+  /* The plan spends the 30-day figure whatever window the Cash lens is
+     set to look over, so when the two differ the tile says which one it
+     is showing. Two figures called "safe to spend" that are not the same
+     figure is exactly the confusion this strip exists to end. */
+  const planAhead = days === CASH_AHEAD_DAYS ? a : cashAhead(today, CASH_AHEAD_DAYS);
+  const short = a.tightest.balance < 0;
+
+  /* ---- what the shelf will need ---- */
+  const budget = buyBudget != null ? buyBudget : planAhead.safeToSpend;
+  const plan = purchasePlan(budget, null, today);
+  const over = plan.didNotFit.reduce((t, l)=> t + l.cost, 0);
+  const all = plan.lines.concat(plan.didNotFit);
+  const need = plan.spend + over;
+  const outLines = all.filter(l=> l.kind !== 'stock' && l.daysLeft <= 0);
+  const nextUp = all.filter(l=> l.daysLeft != null && l.daysLeft > 0)
+    .sort((x, y)=> x.daysLeft - y.daysLeft)[0];
+
+  /* ---- what today has done ---- */
+  const d = dayRecord(today);
+  const typ = dayTypical(today);
+  const hasTyp = typ.count >= DAY_TYPICAL_MIN;
+  const weekday = dayWeekday(today);
+  const now = new Date();
+  const clock = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const none = (label, sub)=> tile(label, '<span class="ow-fig-none">&mdash;</span>', sub);
+
+  el.innerHTML = `<div class="ow-strip">
+    ${tile('Safe to spend', `${f(a.safeToSpend)}<span class="ow-u">UGX</span>`,
+      (short
+        /* BOTH FACTS, because the two tiles this replaced carried two:
+           that you cannot cover what you have promised, and by how much.
+           On the desk the runway's own low-point label says the figure
+           too; on the phone that label is suppressed, and this is the
+           only place it is said. */
+        ? `short <b>${f(Math.abs(a.tightest.balance))}</b> by <b>${esc(fmtShortDate(a.tightest.date))}</b> &mdash; there is nothing you can safely commit today`
+        : a.commitments.length
+          ? `the lowest the cash line gets, on <b>${esc(fmtShortDate(a.tightest.date))}</b> &mdash; not the ${f(a.onHand)} in hand`
+          : `all of what you hold &mdash; nothing you have promised falls inside ${days} days`)
+      + (days === CASH_AHEAD_DAYS ? ' &middot; the plan budgets from this'
+        : ` &middot; the plan budgets from the ${CASH_AHEAD_DAYS}-day figure, not this one`),
+      short ? 'ow-bad' : a.safeToSpend > 0 ? 'ow-good' : 'ow-warn')}
+    ${all.length
+      ? tile('To have back in time', `${f(need)}<span class="ow-u">UGX</span>`,
+          `${all.length} ${all.length === 1 ? 'line runs' : 'lines run'} short inside ${plan.coverDays} days &middot; ${
+            over > 0 ? `<b>${f(over)}</b> of it over the budget` : 'every one of them fits the budget'}`,
+          over > 0 ? 'ow-warn' : '')
+      : none('To have back in time', `nothing on the shelf runs short inside ${plan.coverDays} days`)}
+    ${tile('Run out', String(outLines.length),
+      /* ONE NAME AND A COUNT. Two names and a tail ran to three lines in
+         a 64px tile and pushed the basis off the bottom of it; a tile
+         that has to be read as a sentence is not a tile. The list itself
+         is one press away on the Stock lens. */
+      (outLines.length
+        ? `${esc(outLines[0].name)}${outLines.length > 1 ? ` and ${outLines.length - 1} more` : ''}, nothing left to sell`
+        : 'nothing has run out')
+      + (nextUp ? ` &middot; next is ${esc(nextUp.name)}, in ${Math.max(0, Math.floor(nextUp.daysLeft))} days` : ''),
+      outLines.length ? 'ow-bad' : '')}
+    ${tile('Today so far', `${f(d.sold.total)}<span class="ow-u">UGX</span>`,
+      `${d.sold.count === 1 ? '1 sale' : d.sold.count + ' sales'} by ${clock} &middot; ${
+        hasTyp ? `a typical ${weekday} ends at <b>${f(typ.sales)}</b>`
+          : `no earlier ${weekday} to set it against`}`)}
+  </div>`;
+
+  /* THE COUNTS ARE THE THINGS WANTING A DECISION, not the size of each
+     list: what is still open on today, how many lines the plan would
+     buy, how many bills carry no day yet. A count that meant three
+     different kinds of thing would mean nothing -- and Today's is about
+     TODAY even while an earlier day is being read, because that is the
+     one the owner can still do something about. */
+  const undated = credOpenInvoices().filter(x=> !x.dueOn).length;
+  const act = dayClosing(today).act ? 1 : 0;
+  const setN = (id, n)=> { const x = document.getElementById(id); if(x) x.textContent = n ? String(n) : ''; };
+  setN('fc_n_today', act);
+  setN('fc_n_stock', plan.lines.length);
+  setN('fc_n_cash', undated);
+}
+
+function renderForecasts(){
+  fcApplyLens();
+  fcRenderRoof();
+}
+
+/* The lens switch. Delegated from the document like every other nav
+   click, so it keeps working across a re-render. */
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('#fc_lens .ow-seg-b[data-fclens]');
+  if(!b) return;
+  if(b.dataset.fclens === fcLens) return;
+  fcLens = b.dataset.fclens;
+  renderForecasts();
+});
+
 function renderAhead(){
   const el = document.getElementById('ah_body');
   if(!el) return;
@@ -78467,44 +78776,24 @@ function renderAhead(){
   const undated = credOpenInvoices().filter(x=> !x.dueOn)
     .sort((x, y)=> (y.ageDays - x.ageDays) || (y.due - x.due));
 
-  /* ---- the strip ----
-     SAFE TO SPEND LEADS. It is the lowest point the line reaches, it is
-     what the buying plan budgets from, and it is the only figure here
-     that answers "can I buy stock today". In hand is the figure that
-     misleads -- some of it is already spent -- so it comes second and
-     the leading tile says what it is measured from. */
-  const strip = `<div class="ow-strip ow-ah-strip">
-    <div class="ow-mt ${short ? 'ow-bad' : a.safeToSpend > 0 ? 'ow-good' : 'ow-warn'}">
-      <p class="ow-mt-l">Safe to spend</p>
-      <span class="ow-mt-v">${b(a.safeToSpend)}<span class="ow-u">UGX</span></span>
-      <p class="ow-mt-s">${short
-        ? `The line goes under on <b>${esc(fmtShortDate(a.tightest.date))}</b>. There is nothing you can safely commit today`
-        : a.commitments.length
-          ? `The lowest the line gets, on <b>${esc(fmtShortDate(a.tightest.date))}</b> &mdash; not the ${b(a.onHand)} beside it`
-          : 'All of it. Nothing you have promised falls inside the window'}${
-        days === CASH_AHEAD_DAYS ? ' &middot; this is what <b>What to buy</b> budgets from'
-          : ` &middot; <b>What to buy</b> budgets from the ${CASH_AHEAD_DAYS}-day figure, not this one`}</p>
-    </div>
-    <div class="ow-mt">
-      <p class="ow-mt-l">In hand today</p>
-      <span class="ow-mt-v">${b(a.onHand)}<span class="ow-u">UGX</span></span>
-      <p class="ow-mt-s">Across the drawer and the accounts, as the cash book has it</p>
-    </div>
-    <div class="ow-mt${a.committed ? ' ow-warn' : ''}">
-      <p class="ow-mt-l">Falls due in ${days} days</p>
-      <span class="ow-mt-v">${b(a.committed)}<span class="ow-u">UGX</span></span>
-      <p class="ow-mt-s">${a.commitments.length} payment${a.commitments.length === 1 ? '' : 's'}, every one carrying a day somebody set${
-        a.unknown ? ` &middot; <b>${a.unknown}</b> not costed yet` : ''}</p>
-    </div>
-    <div class="ow-mt${short ? ' ow-bad' : ''}">
-      <p class="ow-mt-l">The tightest day</p>
-      <span class="ow-mt-v">${a.commitments.length ? esc(fmtShortDate(a.tightest.date)) : '&mdash;'}</span>
-      <p class="ow-mt-s">${a.commitments.length
-        ? (short ? `Short <b>${b(Math.abs(a.tightest.balance))}</b> by then, unless money comes in first`
-                 : `In ${Math.max(0, daysBetweenISO(a.from, a.tightest.date))} days &middot; it leaves you <b>${b(a.tightest.balance)}</b>`)
-        : 'Nothing falls due, so there is no tight day'}</p>
-    </div>
-  </div>`;
+  /* ---- NO STRIP OF ITS OWN ----
+     This lens had four tiles: safe to spend, in hand today, what falls
+     due in the window, and the tightest day. The screen's strip is the
+     one above all three lenses now, and it leads with the same figure
+     this one led with -- so the question is what became of the other
+     three, and the answer is that every one of them was already said
+     twice on this screen.
+
+     In hand today and Falls due in the window are the first two rows of
+     "How the line is worked out", in the rail, under the sentence that
+     explains them. The tightest day is the basis line under safe to
+     spend, the inked dot on the runway, the dashed rule that drops from
+     it, and the badge on its own row in the ledger. Nothing is lost; a
+     second 64px band of figures is.
+
+     Two strips stacked is the fault this console was built to end: 128px
+     of numbers before the work starts, on the screen whose whole answer
+     is a shape. */
 
   /* ---- the runway ----
      THE READING, WHERE THE POINTER IS. The line answers "when does it
@@ -78717,7 +79006,7 @@ function renderAhead(){
     <p class="ow-mini">Nothing here is a guess. A month of wages nobody has counted the days for is named as missing rather than estimated, and a bill nobody has dated is counted below the line, never on it.</p>
   </div>`;
 
-  el.innerHTML = `${strip}<div class="ow-grid"><div class="ow-stack">${runway}${ledger}${pools}</div><div class="ow-side">${rail}</div></div>`;
+  el.innerHTML = `<div class="ow-grid"><div class="ow-stack">${runway}${ledger}${pools}</div><div class="ow-side">${rail}</div></div>`;
 
   /* ---- reading a day off the line ----
 
@@ -83605,16 +83894,20 @@ function renderPurchasePlanPanel(){
   const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
   const out = plan.lines.concat(plan.didNotFit).filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
   const open = buyOrdersOpenRows(todayISO());
-  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
-    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
-  const strip = `<div class="ow-strip">
-    ${tile('The plan comes to', `${num(plan.spend)}<span class="ow-u">UGX</span>`, plan.lines.length ? `${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}, best earners first` : 'nothing to buy inside it')}
-    ${left == null
-      ? tile('Budget', '—', 'nothing to work to yet — type one above')
-      : tile('Left of your budget', `${num(left)}<span class="ow-u">UGX</span>`, `of ${num(plan.budget)} ${buyBudget == null ? 'safe to spend' : 'you typed'}`, left > 0 ? '' : 'ow-warn')}
-    ${tile('On order', `${num(plan.onOrder || 0)}<span class="ow-u">UGX</span>`, open.length ? `${open.length} ${open.length === 1 ? 'order' : 'orders'} out, already on order and nothing owed yet` : 'nothing out on order')}
-    ${tile(out === 1 ? 'has run out' : 'have run out', String(out), out ? 'nothing left to sell today' : 'nothing has run out', out ? 'ow-bad' : '')}
-  </div>`;
+  /* ---- NO STRIP OF ITS OWN ----
+     This lens had four tiles: what the plan comes to, what is left of
+     the budget, what is on order, and how many lines have run out. The
+     screen's strip is the one above all three lenses now, and it already
+     carries the two of those that are not about this lens alone -- what
+     the shelf needs back in time, and what has run out.
+
+     The other two go where their arithmetic already lives rather than
+     into a second band of figures: the plan's total onto the head of the
+     panel that lists it, and what is left of the budget onto the foot of
+     "Where the budget came from", which is the sum it belongs to. What
+     is on order was always said twice over -- the "On the way" panel
+     heads with it, and the note under that panel says what it does to
+     the budget. */
 
   /* ---- on the way, FIRST: a buyer who cannot see it buys it twice ---- */
   const ordPanel = !open.length ? '' : `<div class="ow-pan">
@@ -83647,7 +83940,7 @@ function renderPurchasePlanPanel(){
   const picked = plan.lines.concat(plan.didNotFit).filter(l=> buyOrderBasket.has(String(l.tag))).length;
   const ranOut = plan.ranOut || [];
   const nothing = !plan.lines.length && !plan.sourceFirst.length && !ranOut.length && !plan.didNotFit.length;
-  let work = strip + ordPanel;
+  let work = ordPanel;
   if(nothing){
     work += `<div class="ow-pan"><div class="ow-empty"><b>Nothing to buy.</b><br>${plan.coming.length
       ? 'Everything that was running short is on an order already out.'
@@ -83661,7 +83954,7 @@ function renderPurchasePlanPanel(){
     /* The best few, by what they earn. The rest are one tap away --
        the owner asked for a recommendation, not a catalogue. */
     work += `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Buy these, in this order</span><span class="ow-pan-n">${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}${picked ? ` · ${picked} ticked` : ''}</span></div>
+      <div class="ow-pan-h"><span class="ow-pan-t">Buy these, in this order</span><span class="ow-pan-n">${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}${plan.lines.length ? ' · ' + num(plan.spend) : ''}${picked ? ` · ${picked} ticked` : ''}</span></div>
       ${plan.lines.length
         ? table(listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')) + listMoreButtonHTML('buyPlan', plan.lines.length, 'lines')
         : '<p class="ow-mini">Nothing fits inside the budget. What is below is what the shop would buy with more.</p>'}
@@ -83702,6 +83995,11 @@ function renderPurchasePlanPanel(){
       : sr('You typed', num(buyBudget), true)}
     ${plan.onOrder ? sr(`Out on ${open.length} ${open.length === 1 ? 'order' : 'orders'}`, '−' + num(plan.onOrder)) : ''}
     ${sr('The plan works to', num(plan.budget == null ? 0 : plan.budget), true)}
+    ${/* AND WHAT IS LEFT OF IT -- the last row of the sum, where a reader
+         who has just watched the budget be worked out can see what the
+         plan did not spend. It was a strip tile 600px above, with
+         nothing around it to check it against. */
+      plan.budget == null ? '' : sr('Left of it', num(left), true)}
     ${buyBudget == null
       ? (ahead.committed > 0
         ? `<p class="ow-mini">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
@@ -87655,7 +87953,7 @@ function renderDay(){
     <div class="ow-tbl ow-dy-sh">${shelf}</div></div>` : '';
 
   /* ---- is it properly on the record -------------------------------- */
-  const checks = closing.checks.map(c=> `<div class="ow-ck ow-${c.mark}">
+  const checks = closing.checks.map(c=> `<div class="ow-ck ow-dy-ck ow-${c.mark}">
     <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true">${DAY_MARKS[c.mark]}</svg>
     <span class="ow-ck-b"><span class="ow-ck-t">${esc(c.title)}</span>
       <span class="ow-ck-s">${esc(c.detail)}</span></span></div>`).join('');
@@ -87675,7 +87973,7 @@ function renderDay(){
         <span class="ow-tbl-n">${a.out ? esc(bare(a.out)) : '&mdash;'}</span></div>`).join('')
     + `<div class="ow-dy-till ow-dy-till-t"><span class="ow-dy-till-k">Net through the till</span>
         <span class="ow-tbl-n">${esc(f(d.cash.in - d.cash.out))}</span></div>`;
-  const act = closing.act ? `<div class="ow-ck-a">
+  const act = closing.act ? `<div class="ow-ck-a ow-dy-ck-a">
     <button type="button" class="btn btn-accent ow-sm" data-day-tab="${esc(closing.act.tab)}">${esc(closing.act.label)}</button>
     <p class="ow-ck-s">${esc(closing.act.why)}</p></div>` : '';
   const closingPan = `<div class="ow-pan">

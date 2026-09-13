@@ -405,7 +405,15 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/Safe to spend/.test(html) && html.indexOf('Safe to spend') < html.indexOf('In hand today'),
     'the strip opens on what is safe to spend, ahead of the cash in hand');
   t.check(/In hand today/.test(html) && html.includes('5,000,000'), 'and carries the cash in hand');
-  t.check(/Falls due in 30 days/.test(html) && html.includes('2,500,000'), 'against what is promised');
+  /* WHAT IS PROMISED, IN THE RAIL RATHER THAN A TILE. This screen gave
+     up its own strip to the one above all three Forecasts lenses, and
+     three of its four tiles were already said twice on it. Falls due was
+     one: "How the line is worked out" has carried it, with the figure
+     and under the sentence that explains it, since the day that panel
+     was written. The claim is unchanged -- the screen states what is
+     promised, with the figure -- and it is now checked where a reader
+     can check the arithmetic around it. */
+  t.check(/Falls due in the window/.test(html) && html.includes('2,500,000'), 'against what is promised');
   t.check(/safe to spend/.test(html), 'and names what is safe to spend');
   t.check(/tightest day/.test(html) && /2026-09-05/.test(html), 'and the day it is tightest');
   t.check(/leaves 4,600,000/.test(html) && /leaves 2,500,000/.test(html),
@@ -455,14 +463,19 @@ const build = (data, extraSrc, names, over) => compileScope(
 
   const tight = draw({ cashOnHandByAccount: () => ({ total: 1000000, byAccount: [] }) });
   /* The red-railed paragraph is gone: the line itself goes into a
-     crimson field and the strip says it in the tile a reader is already
-     looking at. The two facts it carried -- that you cannot cover what
-     you have promised, and by how much -- are both still stated. */
-  t.check(/goes under on/.test(tight) && /nothing you can safely commit today/.test(tight),
-    'a shop that cannot is told plainly');
-  t.check(/Short <b>1,500,000<\/b> by then/.test(tight), 'by how much');
+     crimson field and the figures are said in the tile a reader is
+     already looking at. The two facts it carried -- that you cannot
+     cover what you have promised, and by how much -- are both still
+     stated, and BOTH ARE NOW SAID BY THE STRIP ABOVE THE LENS rather
+     than by this function, because the strip is one screen's strip
+     across all three horizons. So they are checked against the function
+     that says them: fcRenderRoof, drawn below with this same shop.
+     What renderAhead must still do is MARK it -- the ground below
+     nothing, and the row that goes under -- and that is checked here. */
+  t.check(/ow-ah-neg/.test(tight), 'the line is drawn going into the ground below nothing');
+  t.check(/under water/.test(tight),
+    'and the row where it happens says so, so the ledger and the picture agree');
   t.check(/Follow-ups/.test(tight), 'and pointed at the thing that closes it');
-  t.check(/ow-ah-neg/.test(tight), 'and the line is drawn going into the ground below nothing');
 
   const empty = build(Object.assign(makeData(), { dues: [], loans: [], rentAgreements: [] }),
     AHEAD.map((n) => extractFunction(src, n, 'index.html')), AHEAD, Object.assign({}, aheadStubs));
@@ -470,6 +483,82 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/Nothing falls due in the next 30 days/.test(el.innerHTML), 'a clear window says so');
   t.check(/not the same as nothing being owed/.test(el.innerHTML),
     'and refuses to let that read as owing nothing — the undated pools are still there');
+}
+
+/* ---------- 6b. the strip above all three lenses ---------------------- *
+ *
+ * What's coming gave up its own four tiles when it became the Cash lens
+ * of Forecasts, and What to buy gave up its four. One strip stands above
+ * all three lenses instead, and it is the reason they are one screen:
+ * every tile on it is another lens's headline, so switching horizon
+ * never loses the figure you switched away from.
+ *
+ * Two claims that used to be made by the two strips are made here now,
+ * and they are the two that must never go quiet:
+ *   - a shop that cannot commit anything is told so, and by how much;
+ *   - a line with nothing left is COUNTED even when there is no money.
+ * Both were tested against renderAhead and renderPurchasePlanPanel while
+ * those functions said them. They are tested against fcRenderRoof now,
+ * which is the function that says them.                                */
+{
+  const roofEl = { innerHTML: '' };
+  const counts = { fc_n_today: { textContent: '' }, fc_n_stock: { textContent: '' },
+                   fc_n_cash: { textContent: '' } };
+  const drawRoof = (over) => {
+    roofEl.innerHTML = '';
+    compileScope([extractFunction(src, 'fcRenderRoof', 'index.html')], Object.assign({
+      document: { getElementById: (id) => (id === 'fc_roof' ? roofEl : counts[id] || null) },
+      esc: (x) => String(x == null ? '' : x),
+      fmtShortDate: (d) => String(d),
+      todayISO: () => TODAY,
+      CASH_AHEAD_DAYS: 30,
+      cashAheadDays: () => 30,
+      buyBudget: null,
+      cashAhead: () => ({ days: 30, onHand: 1000000, committed: 2500000, safeToSpend: 0, unknown: 0,
+        commitments: [{ dueOn: '2026-08-31', label: 'Milly', amount: 1200000 }],
+        tightest: { date: '2026-09-05', balance: -1500000 } }),
+      purchasePlan: () => ({ budget: 0, budgetBefore: 0, onOrder: 0, coverDays: 14, spend: 0,
+        lines: [], didNotFit: [], sourceFirst: [], coming: [] }),
+      dayRecord: () => ({ sold: { total: 0, count: 0 } }),
+      dayTypical: () => ({ count: 0, sales: 0 }),
+      DAY_TYPICAL_MIN: 3,
+      dayWeekday: () => 'Thursday',
+      dayClosing: () => ({ act: null }),
+      credOpenInvoices: () => [],
+    }, over || {}), ['fcRenderRoof']).fcRenderRoof();
+    return roofEl.innerHTML;
+  };
+
+  const under = drawRoof();
+  t.check(/there is nothing you can safely commit today/.test(under),
+    'a shop that cannot commit is told plainly, on the tile a reader meets first');
+  t.check(/short <b>1,500,000<\/b> by <b>2026-09-05<\/b>/.test(under),
+    'and by how much, and by when — the phone suppresses the chart\'s own low-point label, so this is the only place it is said there');
+  t.check(/ow-bad/.test(under), 'and the tile is marked bad, not merely reported');
+
+  /* SILENCE IS NOT EVIDENCE, the strip's half. With nothing safe to
+     spend every candidate goes to didNotFit and `lines` is empty -- so a
+     count taken over `lines` would report that nothing had run out on
+     the exact morning the shelves were emptiest. */
+  const broke = drawRoof({
+    purchasePlan: () => ({ budget: 0, budgetBefore: 0, onOrder: 0, coverDays: 14, spend: 0,
+      lines: [], sourceFirst: [], coming: [],
+      didNotFit: [{ kind: 'shelf', daysLeft: 0, name: 'ABC Black Screws', cost: 210000 }] }),
+  });
+  t.check(/Run out/.test(broke) && /ABC Black Screws/.test(broke),
+    'a line that has run out is COUNTED even when the shop cannot afford it — being broke is a reason to say it louder, not to fall silent');
+  t.check(/To have back in time/.test(broke) && /210,000/.test(broke),
+    'and what it would cost to have it back is stated, over the budget or not');
+
+  /* THE COUNTS ARE THINGS WANTING A DECISION, not the size of a list.
+     A count that meant three different kinds of thing would mean
+     nothing, so each lens's is named: today's open act, the lines the
+     plan would buy, the bills carrying no day. */
+  drawRoof({ credOpenInvoices: () => [{ dueOn: null }, { dueOn: null }, { dueOn: '2026-09-01' }],
+             dayClosing: () => ({ act: { label: 'Count the till' } }) });
+  eq(counts.fc_n_cash.textContent, '2', 'the Cash lens counts the bills nobody has named a day for');
+  eq(counts.fc_n_today.textContent, '1', 'and Today counts what is still open on it');
+  eq(counts.fc_n_stock.textContent, '', 'and a lens with nothing to decide carries no count at all');
 }
 
 /* ---------- 7. the buy plan stops offering the rent ------------------- */
@@ -579,8 +668,15 @@ const drawBuy = (over) => {
 
   const emptyPlan = broke({ didNotFit: [{ kind: 'shelf', daysLeft: 0, name: 'ABC Black Screws', cost: 210000, qty: 20,
     reason: 'Out now', supplier: 'ABC', unitCost: 10500, unit: 'Box', units30: 1, earned30: 116000, kept: 4 }] });
-  t.check(/have run out|has run out/.test(emptyPlan),
-    'a line that has run out is COUNTED even when the shop cannot afford it — being broke is a reason to say it louder, not to fall silent');
+  /* The COUNT of what has run out is the Forecasts strip's tile now --
+     checked in section 6b against fcRenderRoof, which is the function
+     that says it. What this function must still do is not fall silent
+     about the LINE: with nothing safe to spend it goes to didNotFit, and
+     a screen that drew it without its chip would be reporting a line
+     that is merely dear rather than one there is none of. */
+  t.check(/Over this budget/.test(emptyPlan) && /Out now/.test(emptyPlan)
+       && /ABC Black Screws/.test(emptyPlan),
+    'a line that has run out is NAMED even when the shop cannot afford it — being broke is a reason to say it louder, not to fall silent');
   eq(buyAsked[0], 0, 'the plan is still budgeted on nought rather than on the cash in hand');
 
   /* WHY THE PLAN IS EMPTY. Three noughts over a list headed "Over this

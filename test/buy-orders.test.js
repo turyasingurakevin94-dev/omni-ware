@@ -466,8 +466,18 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     t.check(/bp-ord late/.test(html),
       'and a day that has gone by is marked, because somebody named that day');
     t.check(/It came/.test(html), 'with the door that turns it into stock and a bill');
-    t.check(/already on order/.test(html),
-      'the budget says what it is holding back, or a figure that quietly shrank is a screen nobody trusts');
+    /* THE PHRASE MOVED, THE CLAIM DID NOT. "already on order" was the
+       sub-line of a strip tile, and this screen gave up its strip to the
+       one above all three Forecasts lenses. The claim -- that a budget
+       which shrank says what is holding the money back -- is now made
+       twice, in the two places a reader is already looking: the note
+       under the orders themselves, and a row of the sum in the rail that
+       works the budget out. Both are checked, because a screen that
+       stated it in only one of them would be weaker than the tile was. */
+    t.check(/already out on/.test(html) && /the plan is working to/.test(html),
+      'the budget says what it is holding back, beside the orders holding it');
+    t.check(/Out on 1 order/.test(html) && /The plan works to/.test(html),
+      'and again as a row of the sum that works the budget out, or a figure that quietly shrank is a screen nobody trusts');
     t.check(/Covered by an order already out/.test(html) && /Cement/.test(html),
       'and the line missing from the plan is NAMED as covered, never silently dropped');
   }

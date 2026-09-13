@@ -99,8 +99,17 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
     'the phone\'s bottom bar is a <nav>, which is why the one selector covers it');
   const sidebar = src.slice(src.indexOf('<aside class="sidebar"'), src.indexOf('</aside>', src.indexOf('<aside class="sidebar"')));
   t.check(/<nav>/.test(sidebar), 'and the sidebar\'s rows live in a <nav> too');
-  t.check((sidebar.match(/data-tab=/g) || []).length > 35,
-    `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — this release moves no row`);
+  /* A FLOOR, so that a rail which quietly lost half its rows to a bad
+     edit fails here. It is not a promise that no row ever moves: rows
+     have been folded into other screens repeatedly -- Movements into
+     Inventory, Chase and Worth telling into Follow-ups, Loans into
+     Assets -- and each time the count fell by design and the floor with
+     it. This release folds What's coming, What to buy and The day into
+     Forecasts, so the rail went 37 -> 35 and the floor 35 -> 33. What
+     the check still means is that every destination is ON the rail
+     rather than behind a menu, which is the claim that matters. */
+  t.check((sidebar.match(/data-tab=/g) || []).length > 33,
+    `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — none of them behind a menu`);
 }
 
 process.exit(t.done() ? 1 : 0);

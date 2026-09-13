@@ -216,7 +216,11 @@ const src = read('index.html');
     : new RegExp('<' + piece + '[\\s>]').test(body);
 
   const starts = [...src.matchAll(/<section id="tab-([a-z0-9-]+)"/g)];
-  t.check(starts.length > 35, `every screen in the app is checked (${starts.length})`);
+  /* A floor under the walk, not a count of the app: if the regex above
+     stopped matching, every check below would pass by checking nothing.
+     37 -> 35 when What's coming, What to buy and The day became the
+     three lenses of Forecasts. */
+  t.check(starts.length > 33, `every screen in the app is checked (${starts.length})`);
   const blank = [];
   starts.forEach((m, i) => {
     const body = src.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : src.length);

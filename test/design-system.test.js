@@ -408,18 +408,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: 'renderQuoteItems',
       rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
     },
-    /* What to buy. The form above the list became two fields in the
-       header; the private list, row, chip, order card and basket became
-       the layer's table, chip, panels and basket bar. .pp-facts and
-       .pp-why were Rival prices' verdict facts, and went with that
-       screen when it became the registry's Rivals side. */
-    buying: {
-      retired: ['page-head', 'panel', 'form-panel', 'pp-controls', 'pp-list', 'pp-row', 'pp-top', 'pp-when',
-                'pp-empty', 'pp-ord', 'pp-basket', 'sum-strip', 'sum-cell'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-f'],
-      renders: 'renderPurchasePlanPanel',
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-pan', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-note', 'ow-cp', 'ow-bk'],
-    },
     /* The Price registry. The form panel became fields in the layer's
        toolbar, the summary the strip, the card grid the layer's cards
        with the rail beside them. .price-card and .price-grid are not
@@ -812,39 +800,54 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          one template. What this list can see is what the screen writes
          itself, and that is what it holds to. */
     },
-    /* THE DAY. The last screen in the app still emitting .sum-strip and
-       .ah-row -- families this file's own source marks "not to be
-       reached for again" -- and 2,620px of one column on a 1,440px
-       screen, with four headline figures and nothing to measure them
-       against.
+    /* FORECASTS — the three screens that answer "what is coming".
 
-       The eight lists survive with the same derivations; they are
-       arranged rather than rewritten. .sum-strip became .ow-strip
-       carrying a comparison line, the eight .pw-tail sections became
-       .ow-tbl with .ow-tbl-g bands -- so the phone gets that component's
-       own card skin for nothing -- and the day picker left its 82px
-       bordered region for the page header, because the day is what the
-       screen is about rather than a filter on it.
+       It was three entries in this list: What to buy, The day, and a
+       What's coming that never earned one. They were three screens in
+       three groups of the rail asking one question at three horizons,
+       and the dependency between them was only ever in the code --
+       renderPurchasePlanPanel reads cashAhead().safeToSpend on its first
+       line, because the plan a shop can afford IS the low point of the
+       cash line. So they are one screen with three lenses now, and this
+       is one entry: the union of what both screens had retired, the
+       union of what they were held to, and every function that draws
+       into any of the three panes.
 
-       .mgr-sec-title, .mgr-keyline and .mgr-objective went with them:
-       the Manager's own section title, worn on a screen that is not the
-       Manager, was a fourth opinion about what a heading looks like.
-       .ah-* and .pw-* stay in the FILE -- Cash ahead and Margin still
-       wear them -- and .mgr-move stays because renderDayMeeting draws
-       the Manager's real move cards rather than a second set of its own.
-       Only this screen may not emit the families again, which is what
-       this list means. */
-    day: {
-      retired: ['page-head', 'panel', 'an-toolbar', 'field',
+       TWO SCREENS GAVE UP THEIR OWN STRIPS to the one above all three
+       lenses, which is why fcRenderRoof is named here. It is the
+       function that emits .ow-strip and .ow-mt now; renderAhead and
+       renderPurchasePlanPanel no longer do, and this list would have
+       been satisfied by either of them alone before. Naming the roof
+       keeps the claim true rather than quietly weakening it.
+
+       AND renderAhead IS NAMED FOR THE FIRST TIME. What's coming was
+       never in this list -- it was drawn as a console without being
+       written down as one. Folding it in is the moment to hold it to
+       the same rule as the two beside it.
+
+       .ah-* and .pw-* stay in the FILE -- Margin still wears them, and
+       the cash runway's own classes are .ow-ah-*, which are different
+       tokens -- and .mgr-move stays because renderDayMeeting draws the
+       Manager's real move cards rather than a second set of its own.
+       Only this screen may not emit the retired families again, which
+       is what this list means. */
+    forecasts: {
+      retired: ['page-head', 'panel', 'form-panel', 'an-toolbar', 'field',
+                'pp-controls', 'pp-list', 'pp-row', 'pp-top', 'pp-when',
+                'pp-empty', 'pp-ord', 'pp-basket', 'pp-more',
                 'sum-strip', 'sum-cell', 'sum-value', 'sum-label',
-                'pw-tail', 'pw-empty', 'pp-more',
+                'pw-tail', 'pw-empty',
                 'ah-sub', 'ah-rows', 'ah-row', 'ah-when', 'ah-what', 'ah-amt', 'ah-left', 'ah-kind',
                 'mgr-sec-title', 'mgr-keyline', 'mgr-objective', 'mgr-why'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-dy-nav', 'ow-dy-b', 'ow-dy-d'],
-      renders: ['renderDay', 'renderDayMeeting', 'dayTile'],
-      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-strip', 'ow-mt', 'ow-mt-v', 'ow-mt-d',
-                    'ow-grid', 'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g',
-                    'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-f',
+             'ow-seg', 'ow-seg-b', 'ow-seg-n',
+             'ow-dy-nav', 'ow-dy-b', 'ow-dy-d',
+             'ow-fc-pane', 'ow-fc-acts', 'ow-fc-roof'],
+      renders: ['fcRenderRoof', 'renderAhead', 'renderPurchasePlanPanel',
+                'renderDay', 'renderDayMeeting', 'dayTile'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-v', 'ow-mt-d', 'ow-grid', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+                    'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g', 'ow-tbl-note',
+                    'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty', 'ow-bk'],
     },
     /* Invoices. A filing cabinet became a register. The .panel.qp-panel
        wrapper and its .an-toolbar of .field boxes became the layer's
