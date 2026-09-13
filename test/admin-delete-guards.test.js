@@ -42,7 +42,7 @@ const env = {
 };
 const NAMES = [
   'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue', 'creditorTotalOwed',
-  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'customerOutstandingInvoices',
   'deleteSupplier', 'deleteCustomer',
 ];

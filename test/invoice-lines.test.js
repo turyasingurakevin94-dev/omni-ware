@@ -42,6 +42,9 @@ const data = { customers: [], products: [], savedQuotes: [] };
 const scope = compileScope([
   extractDeclaration(src, 'apRound', 'index.html'),
   extractDeclaration(src, 'AP_INVOICE_LINES_MAX', 'index.html'),
+  extractFunction(src, 'orderCreditTerms', 'index.html'),
+  extractFunction(src, 'orderCreditCharge', 'index.html'),
+  extractFunction(src, 'savedQuoteCashTotal', 'index.html'),
   extractFunction(src, 'orderChargesTotal', 'index.html'),
   extractFunction(src, 'orderCharges', 'index.html'),
   extractFunction(src, 'chargeAmount', 'index.html'),

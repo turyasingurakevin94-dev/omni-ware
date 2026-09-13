@@ -96,6 +96,9 @@ const scope = compileScope([
   extractDeclaration(src, 'AP_MAX_STEPS', 'index.html'),
   extractDeclaration(src, 'apRound', 'index.html'),
   extractDeclaration(src, 'AP_INVOICE_LINES_MAX', 'index.html'),
+  extractFunction(src, 'orderCreditTerms', 'index.html'),
+  extractFunction(src, 'orderCreditCharge', 'index.html'),
+  extractFunction(src, 'savedQuoteCashTotal', 'index.html'),
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
   /* Explicit because it is a real dependency of every money-moving tool.

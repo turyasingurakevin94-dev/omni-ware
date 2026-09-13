@@ -71,7 +71,7 @@ const FNS = [
   'creditorOutstandingInvoices', 'creditorTotalOwed',
   'allocateCreditorPayment', 'generatePurchaseInvoicesForQuote',
   'removePurchaseInvoicesForQuote', 'orderStockReturnParts', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning',
-  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'invoiceBalanceDue',
 ];
 /* Three of these moved to shared-worker.js when Awaiting Goods

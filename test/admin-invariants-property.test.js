@@ -100,7 +100,7 @@ const NAMES = [
   // been received, so the test for that comes with it.
   'quoteLineReceived', 'quoteLineComesOffShelf',
   'addCashReceipt', 'addCashPayment', 'removeCashTxnsByIds',
-  'quoteItemSellPrice', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'quoteItemSellPrice', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'invoiceBalanceDue', 'invoiceDebtDesired',
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'customerLedgerTotal', 'customerDebtDrift', 'customerOutstandingInvoices',

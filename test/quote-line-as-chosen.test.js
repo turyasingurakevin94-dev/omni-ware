@@ -84,7 +84,14 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
 
 /* ---- 1b. the packing list and the invoice check say it the same way --- */
 {
-  const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal', 'orderChargeLines', 'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
+  /* The check prints the whole bill, so the whole bill chain comes
+     along -- charges and the price of credit both. Extracted, never
+     stubbed: a copy of the arithmetic here would go on passing after
+     the real one changed. */
+  const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal', 'orderChargeLines',
+    'savedQuoteCashTotal', 'shopCreditPct', 'custTermsDays', 'orderTakesCredit', 'orderCreditTerms',
+    'orderCreditCharge', 'creditTermLabel', 'orderCreditOffer', 'orderBillLines', 'orderCreditCheckHTML',
+    'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
   const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
     data: { customers: [], suppliers: [] },
     esc: (x)=> String(x == null ? '' : x),

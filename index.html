@@ -6242,6 +6242,21 @@
      pointer. This line does not -- the taps on it are the chips and the
      mark in the gutter -- so it must not claim otherwise. */
   .q-chg-add-line{cursor:default;}
+  /* CREDIT IS CHARGED ON EVERYTHING ABOVE IT, and one hairline says so
+     where a sentence would have to. It is the only rule the row needs:
+     everything else about it is a charge's, because on the document it
+     is the same kind of thing -- a line on the bill that is not a good. */
+  .q-doc .ow-tbl-r.q-credit{border-top:1px solid var(--ow-rule-soft);}
+  /* EXCEPT THAT ITS SUB CARRIES A FIGURE, and the sub line ellipsises.
+     "3% of 160,00" is a tenth of what the client would pay in cash and
+     looks entirely plausible -- the exact fault the figure column three
+     rules below refuses to allow. So this one wraps instead of being
+     cut: a caption on two lines is readable, a clipped price is wrong. */
+  .q-doc .q-credit .q-item-sub .q-item-unit{flex:1 1 auto;white-space:normal;
+    overflow:visible;text-overflow:clip;}
+  /* What they would pay instead, beside the offer that would change it.
+     Quiet: it is the consequence of the chip, not a second offer. */
+  .q-cr-says{font-size:var(--ow-t-12);color:var(--ink-soft);margin-left:var(--ow-sp-8);}
   @media (max-width:820px){
     /* 820 is a switch. The charge keeps the card shape .q-line already
        wears -- name and × on the first line, figures under it -- and
@@ -6279,6 +6294,9 @@
     /* The words take the whole first line, so the mark in the gutter has
        something to sit beside and the taps start a line of their own. */
     .q-chg-add-t{flex:1 1 100%;}
+    /* 390px has no room for a chip and its consequence side by side, and
+       the consequence is the half that must not be cut: it is a figure. */
+    .q-cr-says{flex:1 1 100%;margin-left:0;margin-top:var(--ow-sp-4);}
     /* Kept to a thumb's height and trimmed everywhere else: at the
        console's padding each tap ran 165px, so four of them stacked four
        deep and the add row alone was 223px of a 844px screen. Two to a
@@ -13043,7 +13061,23 @@
        and the way to take it back. */
     .ow-ot-cc-v{flex:1 1 auto;}
     .ow-ot-cc-v + .btn.ow-sm{flex:0 0 auto;}
+    /* The sentence takes the width and the act closes it, at a size a
+       thumb can find. */
+    .ow-ot-cred-t{flex:1 1 100%;}
+    .ow-ot-cred .btn.ow-sm{flex:1 1 100%;min-height:var(--ow-tap);}
   }
+  /* CASH OR CREDIT, on the last screen where it is still a question. A
+     bordered line rather than a tinted one: an order going on credit is
+     ordinary trade, not a warning, and this app tints only what is
+     wrong. The one case that IS wrong -- a bill already paid in full
+     still carrying a charge for waiting -- takes the amber the cash
+     banner beside it already uses for the same kind of fault. */
+  .ow-ot-cred{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-8);
+    margin-top:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
+    background:var(--ow-paper);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ot-cred.ow-warn{border-color:transparent;background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-ot-cred-t{flex:1 1 220px;min-width:0;line-height:1.45;}
   .ow-ot-note{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.45;margin:var(--ow-sp-10) 0 0;max-width:var(--ow-measure);}
   .ow-ot-acts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);margin-top:var(--ow-sp-12);align-items:center;}
   .ow-ot-tl{display:flex;flex-direction:column;}
@@ -13286,7 +13320,29 @@
   .ow-db-strip{margin-bottom:var(--ow-sp-16);}
   .ow-strip.ow-db-s2{grid-template-columns:repeat(2,1fr);}
   .ow-strip.ow-db-s3{grid-template-columns:repeat(3,1fr);}
-  .ow-db-ag-pan,.ow-db-clear{margin-bottom:var(--ow-sp-16);}
+  .ow-db-ag-pan,.ow-db-clear,.ow-db-cr-pan{margin-bottom:var(--ow-sp-16);}
+  /* THE PRICE OF WAITING. A rule and its consequence, in that order and
+     on the same panel: the box is typed into on the left, the sentence
+     it changes is underneath. No tint and no accent -- lending is this
+     shop's ordinary trade, and the figure in the sentence is doing all
+     the arguing this panel is allowed to do. */
+  .ow-db-cr{padding:var(--ow-sp-12);}
+  .ow-db-cr-set{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-6);
+    font-size:var(--ow-t-13);color:var(--ink);}
+  .ow-db-cr-in{min-width:0;width:92px;}
+  .ow-db-cr-in .ow-f-v{width:100%;text-align:right;letter-spacing:-.02em;}
+  /* Where the other half of the rule lives. Quiet, because it is a
+     direction rather than a figure -- and it is the reason there is no
+     second box here to disagree with the first. */
+  .ow-db-cr-w{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-db-cr-r{margin:var(--ow-sp-10) 0 0;font-size:var(--ow-t-13);line-height:1.5;
+    color:var(--ow-ink-600);max-width:var(--ow-measure);}
+  @media (max-width:820px){
+    /* The rule reads as a sentence that wraps, and the box keeps a
+       thumb-sized height like every other field on a phone. */
+    .ow-db-cr-in{height:var(--ow-tap);}
+    .ow-db-cr-w{flex:1 1 100%;}
+  }
 
   /* FIVE COLUMNS, NOT FOUR. .ow-q-r's own tracks are
      18px / 1fr / 152px / 128px, which is right for a queue whose middle
@@ -22048,7 +22104,7 @@ async function loadData(shopId){
       invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
       amountPaid:Number(q.amount_paid)||0, voided:!!q.voided, date:q.date,
       client:{name:'', phone:''}, items:[], savedAt:null, payments:[], customerId:null, debtCharged:0,
-      charges:[],
+      charges:[], credit:null,
       ...(q.payload||{})
     })),
     nextSavedQuoteId: (savedQuotesR.data||[]).length ? Math.max(0,...savedQuotesR.data.map(q=>q.id||0))+1 : 1,
@@ -22279,6 +22335,15 @@ async function loadData(shopId){
        nothing left to say. */
     presetBuyOrders: (presets.buyOrders && typeof presets.buyOrders === 'object') ? presets.buyOrders : {},
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
+    /* What credit costs, as a percent of the bill being waited for. The
+       TERM it buys is chaseAfterDays above -- the shop's own terms, read
+       through custTermsDays() so the chase queue and the price of credit
+       can never mean different things by "thirty days".
+
+       Zero, not a default rate: a shop that has not decided what its
+       money is worth must not start billing customers for it because the
+       app guessed. */
+    presetCreditPct: presets.creditPct != null ? Number(presets.creditPct) : 0,
     presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
     /* When each debtor was last chased, customer id -> date. Kept with
        the shop's settings rather than on the customer, because it is not
@@ -22467,7 +22532,7 @@ function buildSyncRows(d, shopId){
       date:dateOrNull(q.date), status:q.status, invoiced:q.invoiced, invoiced_at:dateOrNull(q.invoicedAt),
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, charges:q.charges||[], savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
+      payload:{client:q.client, items:q.items, charges:q.charges||[], credit:q.credit||null, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
         // The admin's decision about a short pick. Admin-owned on purpose:
         // it is not in WORKER_OWNED_KEYS (worker.html), so a worker save
         // merging onto the server row leaves whatever was decided here
@@ -22619,7 +22684,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -36469,8 +36534,17 @@ function renderQuoteItems(){
      grandSell and nothing else -- so a percent service is a percent of
      what the client pays for the items, never of another charge. */
   const chargesTotal = orderChargesTotal(data.quote);
-  const paysTotal = grandSell + chargesTotal;
+  /* THE TWO PRICES. cashTotal is what it comes to if they pay now;
+     paysTotal is what it comes to if they take the shop's terms. The
+     foot says the second, the credit row's own sub says the first, and
+     the offer row says both -- so whichever way the quote is standing,
+     the rep can read the other one off the screen rather than work it
+     out at the counter. */
+  const cashTotal = grandSell + chargesTotal;
+  const creditCharge = orderCreditCharge(data.quote);
+  const paysTotal = cashTotal + creditCharge;
   const takesCharges = orderTakesCharges(data.quote);
+  const takesCredit = orderTakesCredit(data.quote);
 
   /* The client's side of the quote first, then the shop's, with a rule
      between them. "Price each" is the wording the printed quotation
@@ -36504,7 +36578,7 @@ function renderQuoteItems(){
       <div class="q-foot-x q-shop-first"></div>
     </div>
     <div class="ow-tbl-f q-foot q-foot-keep">
-      <div class="q-foot-l"${chargesTotal > 0 ? ' title="On the items. What a delivery or a cut actually costs the shop is not known until somebody records it, and counting it as nothing kept would read as pure profit."' : ''}>You keep${chargesTotal > 0 ? ' on the items' : ''}</div>
+      <div class="q-foot-l"${chargesTotal > 0 || creditCharge > 0 ? ' title="On the items. What a delivery or a cut actually costs the shop is not known until somebody records it, and what waiting for the money costs is on no book at all — so neither is counted here as kept."' : ''}>You keep${chargesTotal > 0 || creditCharge > 0 ? ' on the items' : ''}</div>
       <div class="ow-tbl-n q-foot-v ow-fig${profit < 0 ? ' ow-bad' : ''}">${fmtUGX(profit)}</div>
       <div class="q-foot-x q-shop-first"></div>
     </div>`;
@@ -36537,12 +36611,12 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-shop-first">Supplier</div>
       <div class="ow-tbl-n">Buy @</div>
       <div class="ow-tbl-n">Margin</div>
-    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${footHtml}
+    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${takesCredit ? creditOfferRowHTML(data.quote) : ''}${footHtml}
   </div>`;
 
-  if(takesCharges) wireQuoteCharges(wrap);
+  if(takesCharges || takesCredit) wireQuoteCharges(wrap);
 
-  renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal);
+  renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditCharge);
 
   wrap.querySelectorAll('[data-line]').forEach(row=>{
     const lineId = Number(row.dataset.line);
@@ -36958,6 +37032,73 @@ function chargeAddRowHTML(){
   </div>`;
 }
 
+/* THE CREDIT ROW, and the offer that precedes it.
+
+   Credit is a line on the bill, so it is a line on the document -- the
+   same eight tracks the charges ride, marked as not-a-good by the same
+   three empty cells. What it does not share with a charge is what it is
+   a percent OF: a charge resolves against the items, and credit against
+   the whole amount the shop is waiting for, charges included. The row
+   says which in its own sub, because two percents on one document that
+   resolve against different figures would otherwise be read as an
+   arithmetic mistake.
+
+   THE SUB NAMES THE CASH PRICE, which is the point of the whole feature:
+   "3% of 155,000" beside a foot reading 159,650 is both prices on one
+   screen, and the owner can say them in one breath instead of quoting
+   one and discovering the other at the counter.
+
+   A hairline above the row says what no wording has to: everything over
+   it is what it is charged on.
+
+   NO RATE, NO OFFER. A shop that has not priced its credit is not
+   nagged on every quote it writes -- the app raises it on Debtors,
+   where the money actually is, beside the figure that says what it is
+   costing. An offer of credit at no charge is the exact thing this
+   feature exists to stop the shop making by accident. */
+function creditRowHTML(q, cash){
+  const t = orderCreditTerms(q);
+  if(!t) return '';
+  const amount = orderCreditCharge(q);
+  const label = creditTermLabel(t);
+  return `<div class="ow-tbl-r q-line q-charge q-credit" data-credit="1">
+    <div class="ow-tbl-c q-gutter">
+      <span class="q-row-num"></span>
+      <button type="button" class="q-remove-icon" data-cr-del="1" title="Take the credit off — the client pays the cash price" aria-label="Take the credit off"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="ow-tbl-c q-name-cell">
+      <span class="ow-tbl-p" title="${esc(label)}">${esc(label)}</span>
+      <span class="q-item-sub"><span class="ow-tbl-s q-item-unit">Credit &middot; ${esc(String(t.pct))}% of ${
+        /* The figure is one word. Left breakable, the line wrapped
+           between the number and its currency and the price read as
+           ending where it did not. */
+        esc(fmtUGX(cash)).replace(/ /g, '&nbsp;')}</span></span>
+    </div>
+    <div class="ow-tbl-n"></div>
+    <div class="ow-tbl-n" data-l="Rate"><div class="q-sell-cell">
+      <input type="number" class="ow-gi" data-cr-pct="1" min="0" step="any" value="${Number(t.pct)}"
+        aria-label="What the credit on this order costs, as a percent">
+      <span class="q-chg-pct">%</span></div></div>
+    <div class="ow-tbl-n" data-l="Comes to" title="What waiting for this money adds to the client's bill">${
+      amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
+    <div class="ow-tbl-c q-shop-first"></div>
+    <div class="ow-tbl-n"></div>
+    <div class="ow-tbl-n"></div>
+  </div>`;
+}
+
+function creditOfferRowHTML(q){
+  const offer = orderCreditOffer(q);
+  if(!offer) return '';
+  const term = offer.days > 0 ? `${offer.days} days` : 'your terms';
+  return `<div class="ow-tbl-r q-add-row-trailing q-chg-add-row">
+    <div class="ow-tbl-c q-gutter">
+      <button class="q-add-icon" data-cr-on="1" title="Put this order on credit" aria-label="Put this order on credit"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="q-add-row-placeholder q-chg-add-line"><span class="q-chg-add-t">Or on credit</span><button type="button" class="q-chg-sug" data-cr-on="1">${esc(term)}<b>+${esc(String(offer.pct))}%</b></button><span class="q-cr-says">they pay ${esc(fmtUGX(offer.total))} instead of ${esc(fmtUGX(offer.cash))}</span></div>
+  </div>`;
+}
+
 function wireQuoteCharges(wrap){
   const q = data.quote;
   const redraw = ()=>{ saveData(); renderQuoteItems(); };
@@ -36998,19 +37139,50 @@ function wireQuoteCharges(wrap){
     redraw();
     if(ch) toast(`${ch.label || 'Charge'} taken off`);
   }));
+
+  /* The credit, agreed and taken back off in the same place the charges
+     are. Both say what happened out loud: this is the price the client
+     was told, and a price that changes silently is the one thing a
+     counter argument is made of. */
+  wrap.querySelectorAll('[data-cr-on]').forEach(btn=> btn.addEventListener('click', ()=>{
+    if(!setOrderCredit(q, true)){ toast('Set what credit costs on Debtors first'); return; }
+    redraw();
+    toast(`On credit — the client pays ${fmtUGX(savedQuoteTotal(q))}`);
+  }));
+  wrap.querySelectorAll('[data-cr-del]').forEach(btn=> btn.addEventListener('click', ()=>{
+    setOrderCredit(q, false);
+    redraw();
+    toast(`Credit taken off — the client pays ${fmtUGX(savedQuoteTotal(q))}`);
+  }));
+  /* The shop's rate is the default, not the rule: this order can be
+     agreed at another. Typed onto the order's own frozen terms, so it
+     changes this bill and no other. */
+  wrap.querySelectorAll('[data-cr-pct]').forEach(inp=> inp.addEventListener('change', ()=>{
+    if(!q.credit) return;
+    const v = Math.max(0, Number(inp.value) || 0);
+    if(v > 0) q.credit.pct = v; else q.credit = null;
+    redraw();
+  }));
 }
 
-function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal){
+function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTotal){
   const bar = document.getElementById('q_finbar');
   if(!bar) return;
-  /* What the client pays includes the charges -- it is the figure said
-     down the phone, and a bar that leaves one out sends a rep to argue
-     at the door. What is KEPT is still worked out on the goods alone:
-     a delivery nobody has costed is not profit, it is a delivery
-     nobody has costed, and this app reports missing rather than
-     scoring it as zero. */
+  /* What the client pays includes the charges and the credit -- it is
+     the figure said down the phone, and a bar that leaves one out sends
+     a rep to argue at the door. What is KEPT is still worked out on the
+     goods alone: a delivery nobody has costed is not profit, it is a
+     delivery nobody has costed, and this app reports missing rather than
+     scoring it as zero.
+
+     The split names the two separately rather than adding them up. They
+     are different kinds of money -- one is work the shop did, the other
+     is time the shop waited -- and a single "charged" figure covering
+     both would be the one number on this bar that cannot be checked
+     against a row above it. */
   const charges = Math.max(0, Number(chargesTotal)||0);
-  const pays = grandSell + charges;
+  const credit = Math.max(0, Number(creditTotal)||0);
+  const pays = grandSell + charges + credit;
   const marginPct = grandSell>0 ? (profit/grandSell*100) : 0;
   /* An EMPTY quote is not a losing one. With nothing on it every figure
      is zero, and zero scored as danger painted a red 0% across the
@@ -37020,7 +37192,7 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal){
 
      Nothing bought and nothing sold is the empty case; anything priced
      that still keeps nothing is a real warning and keeps its red. */
-  const empty = grandSell <= 0 && grandBuy <= 0 && charges <= 0;
+  const empty = grandSell <= 0 && grandBuy <= 0 && charges <= 0 && credit <= 0;
   let pillClass = 'good';
   if(empty) pillClass = 'quiet';
   else if(grandSell<=0 || profit<=0) pillClass = 'danger';
@@ -37036,8 +37208,8 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal){
       <div class="qp-says-value">${fmtUGX(pays)}</div>
     </div>
     <div class="qp-shopline">
-      ${charges > 0 ? `<span class="qp-split">${fmtUGX(grandSell)} of items, ${fmtUGX(charges)} charged</span>` : ''}
-      <span>You keep${charges > 0 ? ' on the items' : ''} <b class="${pillClass}">${fmtUGX(profit)}</b></span>
+      ${charges > 0 || credit > 0 ? `<span class="qp-split">${fmtUGX(grandSell)} of items${charges > 0 ? `, ${fmtUGX(charges)} charged` : ''}${credit > 0 ? `, ${fmtUGX(credit)} on credit` : ''}</span>` : ''}
+      <span>You keep${charges > 0 || credit > 0 ? ' on the items' : ''} <b class="${pillClass}">${fmtUGX(profit)}</b></span>
       <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
     </div>
   `;
@@ -37157,8 +37329,9 @@ document.getElementById('q_print_quote_btn').addEventListener('click', ()=>{
   }).join('');
   /* The charges sit under the items on the same table, each named, so
      the client reads what they are being asked to pay for rather than a
-     total that is bigger than the lines above it. */
-  const chargeRows = orderChargeLines(data.quote).map(l=> `<tr>
+     total that is bigger than the lines above it. The price of credit
+     rides here too, and last: it is charged on everything above it. */
+  const chargeRows = orderBillLines(data.quote).map(l=> `<tr>
       <td>${esc(l.label)}</td>
       <td></td>
       <td></td>
@@ -37298,7 +37471,7 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
   /* A charge takes the ITEM and PRICE columns and leaves QTY empty:
      there is one delivery, and printing "1" under a quantity column
      invites somebody to ask for two. */
-  const chargeRows = orderChargeLines(data.quote).map(l=>
+  const chargeRows = orderBillLines(data.quote).map(l=>
     `${waPadEnd(l.label,W_ITEM)} ${waPadStart('',W_QTY)} ${waPadStart(waFmtNum(l.amount),W_PRICE)}`);
   const grand = savedQuoteTotal(data.quote);
   const totalRow = `${waPadEnd('TOTAL',W_ITEM+W_QTY+1)} ${waPadStart(waFmtNum(grand),W_PRICE)}`;
@@ -37344,7 +37517,7 @@ function buildSalesGroupQuoteMessage(items, client, q){
      and a "1" under a quantity column invites somebody to ask for two.
      They are deliberately absent from the Ref section below, which is
      about where to BUY each line, and a delivery is not bought. */
-  const chargeLines = q ? orderChargeLines(q) : [];
+  const chargeLines = q ? orderBillLines(q) : [];
   const chargeRows = chargeLines.map(l=>
     `${waPadEnd(l.label,W_ITEM)} ${waPadStart('',W_QTY)}`);
   const goods = items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
@@ -37695,10 +37868,165 @@ function orderChargeLines(q){
   })).filter(l=> l.amount > 0);
 }
 
-/* THE ONE FIGURE every document the client holds is drawn from: the
-   goods, plus what the shop is charging to get them there. */
-function savedQuoteTotal(q){
+/* WHAT THE CREDIT COSTS, BECAUSE IT WAS NEVER FREE.
+
+   The shop is already a lender. Goods leave the door today and the money
+   comes back in thirty days, ninety days, or after somebody is chased --
+   and in between the shop has funded a builder's site out of its own
+   working capital, borrowed or not. Until now that was given away: the
+   same price whether a customer paid at the counter or the following
+   quarter, which is a straight transfer of margin to whoever pays last.
+
+   So an order has a CASH price and a CREDIT price, and the customer
+   chooses out loud while the goods are still on the floor. Taking credit
+   puts the shop's rate on the bill as a line the invoice prints, charged
+   on the WHOLE amount being waited for -- the goods and the charges
+   alike, because a delivery invoiced today and paid for in ninety days
+   is financed exactly like the cement that rode on the same lorry.
+
+   THE TERM IS THE SHOP'S OWN TERM, not a second one. custTermsDays()
+   already answers "who is late" for the chase queue and the customer
+   book, and its own comment says why: so the two cannot disagree about
+   it. A credit term of its own would be a second number also called
+   "your terms", and the shop would end up chasing money it had just sold
+   thirty days of.
+
+   THE RATE IS FROZEN ONTO THE ORDER the moment credit is agreed -- the
+   same rule, for the same reason, as a charge freezing its label. An
+   invoice records what was agreed, so lifting the shop's rate next month
+   must never rewrite what a customer was billed last month. */
+function shopCreditPct(){
+  const n = Number(data.presetCreditPct);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/* An agent's order is refused credit at the door, for the reason it is
+   refused charges: the agent app recomputes what it owes from its own
+   line prices, so anything added here would make the two disagree about
+   the same order. */
+function orderTakesCredit(q){
+  return !!q && !q.originAgentId;
+}
+
+function orderCreditTerms(q){
+  const c = q && q.credit;
+  if(!c || !(Number(c.pct) > 0)) return null;
+  return { pct: Number(c.pct), days: Math.max(0, Number(c.days) || 0) };
+}
+
+/* WHAT IT COMES TO IF THEY PAY NOW. Split out from savedQuoteTotal the
+   way the goods were split out for the charges: the credit rate has to
+   have something to be a percent OF that can never include itself. */
+function savedQuoteCashTotal(q){
   return savedQuoteGoodsTotal(q) + orderChargesTotal(q);
+}
+
+function orderCreditCharge(q){
+  const t = orderCreditTerms(q);
+  if(!t) return 0;
+  return Math.round(savedQuoteCashTotal(q) * t.pct / 100);
+}
+
+/* Frozen with the rate it was agreed at, so a document reprinted next
+   year still says the term the customer actually took. */
+function creditTermLabel(t){
+  const d = t ? Math.max(0, Number(t.days) || 0) : 0;
+  return d > 0 ? `Credit — ${d} days` : 'Credit';
+}
+
+/* WHAT CREDIT WOULD COST, on an order that has not taken it -- so the
+   owner can say both prices in one breath instead of quoting one and
+   discovering the other at the counter.
+
+   Null when the shop has set no rate. Offering credit at no charge is
+   the exact thing this feature exists to stop the shop doing by
+   accident, and an offer of "0 UGX on 30 days" printed beside a real
+   price would make it look deliberate. */
+function orderCreditOffer(q){
+  if(!orderTakesCredit(q) || orderCreditTerms(q)) return null;
+  const pct = shopCreditPct();
+  if(!(pct > 0)) return null;
+  const cash = savedQuoteCashTotal(q);
+  const amount = Math.round(cash * pct / 100);
+  if(!(amount > 0)) return null;
+  return { pct, days: custTermsDays(), amount, cash, total: cash + amount };
+}
+
+/* Agreeing the credit, or taking it back off. The rate and the term are
+   copied onto the order here and read from it everywhere after, which is
+   what freezing them means in practice. */
+function setOrderCredit(q, on){
+  if(!q) return false;
+  if(!on){ q.credit = null; return true; }
+  if(!orderTakesCredit(q)) return false;
+  const pct = shopCreditPct();
+  if(!(pct > 0)) return false;
+  q.credit = { pct, days: custTermsDays(), agreedAt: todayISO() };
+  return true;
+}
+
+/* EVERYTHING ON THE BILL THAT IS NOT GOODS, in the order a document
+   prints it: the charges, then the credit last, because it is charged on
+   everything above it and a reader should meet it there.
+
+   Documents draw from here rather than from orderChargeLines, so one
+   cannot print a credit line the next leaves out. The cost-capture block
+   still reads the raw charges -- asking what a financing fee cost the
+   shop to provide would be a question with no answer. */
+function orderBillLines(q){
+  const lines = orderChargeLines(q);
+  const t = orderCreditTerms(q);
+  const amount = orderCreditCharge(q);
+  if(t && amount > 0) lines.push({ label: creditTermLabel(t), amount, credit: true });
+  return lines;
+}
+
+/* THE ONE FIGURE every document the client holds is drawn from: the
+   goods, what the shop is charging to get them there, and what waiting
+   for the money is worth. */
+function savedQuoteTotal(q){
+  return savedQuoteCashTotal(q) + orderCreditCharge(q);
+}
+
+/* WHAT THE BOOK OF DEBT IS EARNING, AND WHAT IT IS NOT.
+
+   Read off the open INVOICES rather than off customer balances, because
+   a rate is agreed on a bill and only a bill can say whether it was. A
+   customer's balance is a sum of paper with different terms on it.
+
+   The figure this exists to show is the one nobody bills for: money out
+   on credit that was never priced. It is stated as ONE TERM of it at the
+   shop's own rate -- not as an annual rate, not compounded, not summed
+   over how many terms it has actually been out -- because that is the
+   figure the owner can check by eye against a rate they set themselves,
+   and a bigger number arrived at by a longer calculation would be
+   arguing rather than reporting. What it does say sharply is how much of
+   the unpriced money is out past the terms the shop itself set. */
+function creditBookReading(){
+  const pct = shopCreditPct();
+  const terms = custTermsDays();
+  let out = 0, priced = 0, charged = 0, unpriced = 0, over = 0, overCount = 0, undated = 0;
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    const bal = invoiceBalanceDue(q);
+    if(!(bal > 0.5)) return;
+    out += bal;
+    if(orderCreditCharge(q) > 0){ priced += bal; charged += orderCreditCharge(q); return; }
+    unpriced += bal;
+    /* An age nobody knows is not an age of zero -- the same rule the
+       aging bands keep. It is counted and named, never quietly filed
+       as inside the terms. */
+    const age = invoiceOpenDays(q);
+    if(age == null){ undated += bal; return; }
+    if(age > terms){ over += bal; overCount += 1; }
+  });
+  return {
+    pct, terms,
+    out: Math.round(out), priced: Math.round(priced), charged: Math.round(charged),
+    unpriced: Math.round(unpriced), over: Math.round(over), overCount, undated: Math.round(undated),
+    forgone: pct > 0 ? Math.round(unpriced * pct / 100) : 0,
+    overForgone: pct > 0 ? Math.round(over * pct / 100) : 0,
+  };
 }
 
 // Read-only lookup for the Order Tracking card -- matches the same way
@@ -40220,7 +40548,7 @@ function orderInvoiceCheckHTML(q){
      has always been savedQuoteTotal, which now carries them -- so without
      these rows the owner's last look before money moves showed three
      lines and a figure bigger than three lines come to. */
-  const chargeRows = orderChargeLines(q).map(l=>
+  const chargeRows = orderBillLines(q).map(l=>
     `<div class="ow-ot-ck-r"><span class="ow-ot-ck-n" title="${esc(l.label)}">${esc(l.label)}</span><span class="ow-ot-ck-q">${esc(fmtUGX(l.amount))}</span></div>`).join('');
   const total = savedQuoteTotal(q);
   const cust = q.customerId ? (data.customers || []).find(c=> String(c.id) === String(q.customerId)) : null;
@@ -40230,7 +40558,44 @@ function orderInvoiceCheckHTML(q){
   const money = cust
     ? `Bills ${fmtUGX(total)}${paid > 0 ? ` · ${fmtUGX(paid)} already paid` : ''}. ${esc(cust.name)} owes ${fmtUGX(owed)} now, ${fmtUGX(owed + adds)} after.`
     : `Bills ${fmtUGX(total)}${paid > 0 ? ` · ${fmtUGX(paid)} already paid` : ''}. No customer account on this order, so nothing is booked to one.`;
-  return `<p class="ow-ot-h ow-ot-h2">Before you invoice</p><div class="ow-ot-ck">${(rows + chargeRows) || '<div class="ow-ot-ck-r"><span class="ow-ot-ck-n">No lines on this order</span></div>'}</div><p class="ow-ot-note">${money} Invoicing also takes the goods off the shelf and raises each supplier's bill.</p>`;
+  return `<p class="ow-ot-h ow-ot-h2">Before you invoice</p><div class="ow-ot-ck">${(rows + chargeRows) || '<div class="ow-ot-ck-r"><span class="ow-ot-ck-n">No lines on this order</span></div>'}</div><p class="ow-ot-note">${money} Invoicing also takes the goods off the shelf and raises each supplier's bill.</p>${orderCreditCheckHTML(q)}`;
+}
+
+/* CASH OR CREDIT, ASKED AT THE LAST MOMENT IT IS STILL A QUESTION.
+
+   The rep may have quoted both prices days ago, but which one the
+   customer takes is settled when the goods change hands -- and that is
+   this screen, seconds before the bill is raised. After invoicing it is
+   a record, not a choice, so the control is gone: the way to change a
+   raised bill is to undo the invoice, which this app already offers and
+   already says out loud.
+
+   PAID IN FULL AND STILL ON CREDIT IS NAMED, not silently corrected.
+   Somebody who has handed over the whole cash price is not borrowing,
+   and a credit line left on that bill would charge them for a wait that
+   never happened -- but the app does not know whether the money was
+   counted before or after the terms were agreed, and quietly dropping a
+   line off a bill is not a thing it may do. So it says so and leaves
+   the decision where it belongs. */
+function orderCreditCheckHTML(q){
+  const t = orderCreditTerms(q);
+  const cash = savedQuoteCashTotal(q);
+  const paid = Number(q.amountPaid) || 0;
+  if(t){
+    const amount = orderCreditCharge(q);
+    const settled = paid >= cash - 0.5;
+    return `<div class="ow-ot-cred${settled ? ' ow-warn' : ''}">
+      <span class="ow-ot-cred-t">On credit &mdash; ${esc(creditTermLabel(t).replace('Credit — ', ''))} at ${esc(String(t.pct))}%, adding <span class="ow-fig">${esc(fmtUGX(amount))}</span>.${
+        settled ? ' They have already paid the whole cash price, so this is charging for a wait that did not happen.' : ''}</span>
+      <button type="button" class="btn btn-ghost ow-sm" data-cr-off="1" data-id="${q.id}">Take it off</button>
+    </div>`;
+  }
+  const offer = orderCreditOffer(q);
+  if(!offer) return '';
+  return `<div class="ow-ot-cred">
+      <span class="ow-ot-cred-t">Paying later? ${esc(offer.days > 0 ? offer.days + ' days' : 'Your terms')} at ${esc(String(offer.pct))}% adds <span class="ow-fig">${esc(fmtUGX(offer.amount))}</span> &mdash; they pay ${esc(fmtUGX(offer.total))} instead of ${esc(fmtUGX(offer.cash))}.</span>
+      <button type="button" class="btn btn-ghost ow-sm" data-cr-on-order="1" data-id="${q.id}">Put it on credit</button>
+    </div>`;
 }
 
 /* INVOICE ALL DELIVERED. The owner invoices personally, one at a time,
@@ -40517,6 +40882,22 @@ function renderSavedQuotes(){
 /* Everything the screen can do, from one listener bound once at parse
    time -- so an act never depends on which render last wired it, and a
    row opens in place with no listener of its own. */
+/* Cash or credit, settled on the order. The id rides on the button for
+   the reason the charge-cost buttons carry one: the expanded panel is a
+   SIBLING of .ow-ot-r rather than a child, so climbing for the row finds
+   nothing. And it says what it did, because it has just changed what the
+   customer owes. */
+function otSetOrderCredit(btn, on){
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(btn.dataset.id));
+  if(!q){ toast('That order is no longer on the board — reopen it and try again'); return; }
+  if(q.invoiced){ toast('This bill is already raised — undo the invoice to change its terms'); return; }
+  if(!setOrderCredit(q, on)){ toast('Set what credit costs on Debtors first'); return; }
+  saveData();
+  renderSavedQuotes();
+  toast(on ? `On credit — ${quoteClientName(q)} pays ${fmtUGX(savedQuoteTotal(q))}`
+           : `Credit taken off — ${quoteClientName(q)} pays ${fmtUGX(savedQuoteTotal(q))}`);
+}
+
 /* RECORDING A FARE MOVES MONEY, so it does exactly one thing and says
    what it did. The payment is written to the cash book through the same
    addCashPayment every other spend goes through -- so it appears in the
@@ -40601,6 +40982,10 @@ document.getElementById('tab-quote-saved').addEventListener('click', (e)=>{
   if(pay){ otRecordChargeCost(pay); return; }
   const undo = t.closest('[data-cc-undo]');
   if(undo){ otUnlinkChargeCost(undo); return; }
+  const crOn = t.closest('[data-cr-on-order]');
+  if(crOn){ otSetOrderCredit(crOn, true); return; }
+  const crOff = t.closest('[data-cr-off]');
+  if(crOff){ otSetOrderCredit(crOff, false); return; }
   const act = t.closest('[data-act]');
   if(act){ otAct(act.dataset.act, Number(act.dataset.id), act); return; }
   if(t.closest('[data-trip-gap]')){ openBuyingList(); return; }
@@ -41350,7 +41735,7 @@ function buildReceiptHTML(q, payment, idx){
      below used to print the TOTAL beside a count of the items, so a
      roll with a delivery on it said three items came to more than
      three items do. */
-  const chargeLines = orderChargeLines(q);
+  const chargeLines = orderBillLines(q);
   const goods = savedQuoteGoodsTotal(q);
   const total = savedQuoteTotal(q);
   const balance = invoiceBalanceDue(q);
@@ -41713,7 +42098,7 @@ function buildQuoteA5HTML(q){
      bill -- so without these rows the document footed with a figure
      larger than the lines that made it, which is the one thing a
      customer holding a piece of paper will always notice. */
-  const chargeRows = orderChargeLines(q).map(l=> `<tr>
+  const chargeRows = orderBillLines(q).map(l=> `<tr>
       <td>${esc(l.label)}</td>
       <td></td>
       <td></td>
@@ -44332,17 +44717,24 @@ function anInvoiceTotals(q){
     sales += iqty*sell; cost += c.cost; qty += iqty; estimatedQty += c.estimatedQty;
   });
   const services = orderChargesTotal(q);
-  return {sales, cost, qty, estimatedQty, services, takings: sales+services,
+  /* What waiting for the money earned. Kept apart from services for the
+     reason services were kept apart from goods: it is a different kind
+     of income with a different cost behind it -- a delivery costs a
+     fare, and credit costs the shop the use of its own money, which is
+     on no book here at all. Folding the two together would put a figure
+     with no cost under a line that has one. */
+  const credit = orderCreditCharge(q);
+  return {sales, cost, qty, estimatedQty, services, credit, takings: sales+services+credit,
     profit: sales-cost, margin: sales>0 ? (sales-cost)/sales*100 : 0};
 }
 function anOverallTotals(invoices){
-  const totals = {sales:0, cost:0, qty:0, estimatedQty:0, services:0, count:invoices.length};
+  const totals = {sales:0, cost:0, qty:0, estimatedQty:0, services:0, credit:0, count:invoices.length};
   invoices.forEach(q=>{
     const t = anInvoiceTotals(q);
     totals.sales += t.sales; totals.cost += t.cost; totals.qty += t.qty;
-    totals.estimatedQty += t.estimatedQty; totals.services += t.services;
+    totals.estimatedQty += t.estimatedQty; totals.services += t.services; totals.credit += t.credit;
   });
-  totals.takings = totals.sales + totals.services;
+  totals.takings = totals.sales + totals.services + totals.credit;
   totals.profit = totals.sales - totals.cost;
   totals.margin = totals.sales>0 ? totals.profit/totals.sales*100 : 0;
   return totals;
@@ -56916,6 +57308,80 @@ function wireDebtDriftFix(wrap){
    problem, and three small fresh ones are not, however many rows they
    fill. Every band is clickable and so is every segment: the picture of
    the problem and the way into it are one control. */
+/* WHAT THE WAITING IS WORTH, AND THE RATE THAT DECIDES IT, on one panel.
+
+   The rate is SET HERE rather than on the settings page, because this
+   app keeps a rule beside the figure it changes: type 3 into this box
+   and the sentence under it moves. On The shop it would be a number
+   with no consequence in sight, and it is read there instead, with the
+   other five rules that are set where they bite.
+
+   THE TERM IS NOT SET HERE. It is the shop's own terms -- the same
+   figure the money queue waits out before it chases -- so it is shown
+   and pointed at, never re-typed. Two boxes both meaning "thirty days"
+   is how two screens start disagreeing about who is late.
+
+   The sentence is arithmetic, not advocacy. It says what one term of
+   the unpriced money would have come to at the shop's own rate and
+   stops there: no annualising, no compounding, no summing over how many
+   terms it has actually been out. The owner can check every figure in
+   it against a rate they set themselves, which is the only way a number
+   like this earns being believed. */
+function debCreditPanelHTML(){
+  const r = creditBookReading();
+  const f = (n)=> fmtUGX(Math.round(n));
+  const term = r.terms > 0 ? `${r.terms} days` : 'from day one';
+  let read;
+  if(r.out <= 0){
+    read = `Nothing is owed to you, so nothing is waiting. This is what credit will cost when you give it.`;
+  } else if(!(r.pct > 0)) {
+    read = `<span class="ow-fig">${f(r.out)}</span> is out on credit and none of it is priced— the shop is lending at no charge. `
+      + (r.over > 0 ? `<span class="ow-fig">${f(r.over)}</span> of it is already past your terms.` : `Put a rate in the box and every order you agree on credit carries it.`);
+  } else {
+    const bits = [];
+    if(r.priced > 0) bits.push(`<span class="ow-fig">${f(r.priced)}</span> of it was priced, earning <span class="ow-fig">${f(r.charged)}</span>`);
+    if(r.unpriced > 0) bits.push(`<span class="ow-fig">${f(r.unpriced)}</span> was not — at ${r.pct}% that is <span class="ow-fig">${f(r.forgone)}</span> a term you did not charge`);
+    read = `<span class="ow-fig">${f(r.out)}</span> is out on credit. ${bits.join('; ')}.`;
+    /* When every unpriced shilling is also overdue, the second sentence
+       would be the first one's figures again under a different heading.
+       It says the fact instead, and the figure stays said once. */
+    if(r.over > 0 && r.over >= r.unpriced){
+      read += ` All of the unpriced is already past your ${term === 'from day one' ? 'terms' : term}, on ${r.overCount} invoice${r.overCount===1?'':'s'}.`;
+    } else if(r.over > 0){
+      read += ` Of the unpriced, <span class="ow-fig">${f(r.over)}</span> on ${r.overCount} invoice${r.overCount===1?'':'s'} is past your ${term === 'from day one' ? 'terms' : term} — ${f(r.overForgone)} a term.`;
+    }
+    if(r.undated > 0) read += ` ${f(r.undated)} has no date behind it, so no term can be counted against it.`;
+  }
+  return `<div class="ow-pan ow-db-cr-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">What the waiting is worth</span>
+      <span class="ow-pan-n ow-hide-sm">set the price here, where you can see what it is costing</span>
+    </div>
+    <div class="ow-db-cr">
+      <label class="ow-db-cr-set" for="deb_credit_pct">Credit costs
+        <span class="ow-f-in ow-db-cr-in"><input type="number" id="deb_credit_pct" class="ow-f-v" min="0" max="100" step="any"
+          value="${shopCreditPct() > 0 ? shopCreditPct() : ''}" placeholder="0" aria-label="What credit costs, as a percent of the bill"><span class="ow-f-u">%</span></span>
+        for your terms of <span class="ow-fig">${esc(term)}</span><span class="ow-db-cr-w">set with the chase rule, on Follow-ups</span></label>
+      <p class="ow-db-cr-r">${read}</p>
+    </div>
+  </div>`;
+}
+
+function wireDebCreditRate(wrap){
+  const box = wrap.querySelector('#deb_credit_pct');
+  if(!box) return;
+  box.addEventListener('change', ()=>{
+    /* A rate outside nothing-to-everything is not a rate. Nothing is a
+       real answer -- it means this shop does not charge for credit --
+       so it is kept rather than refused. */
+    const v = Number(box.value);
+    data.presetCreditPct = (Number.isFinite(v) && v > 0 && v <= 100) ? v : 0;
+    box.value = data.presetCreditPct > 0 ? data.presetCreditPct : '';
+    saveData();
+    renderDebtorsPosition();
+  });
+}
+
 function renderDebtorsPosition(){
   const wrap = document.getElementById('debPositionWrap');
   if(!wrap) return;
@@ -56935,7 +57401,8 @@ function renderDebtorsPosition(){
       <div class="ow-empty"><b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
       ${any ? 'Every customer on file is settled up. A balance appears here the moment somebody takes goods on credit.'
             : 'Debts appear here once a customer takes goods on credit.'}</div>
-    </div>`;
+    </div>${debCreditPanelHTML()}`;
+    wireDebCreditRate(wrap);
     return;
   }
 
@@ -57027,8 +57494,9 @@ function renderDebtorsPosition(){
       <div class="ow-db-ag-bar" role="group" aria-label="What you are owed, split by age">${segs}</div>
       <div class="ow-db-ag-l">${legend}</div>
     </div>
-  </div>`;
+  </div>${debCreditPanelHTML()}`;
 
+  wireDebCreditRate(wrap);
   wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
     // Clicking the band you are already in takes the filter off, so the
     // way out is the same control as the way in.
@@ -72020,10 +72488,11 @@ function renderPresetBand(){
   </div>`;
 }
 
-/* THE SIX RULES THAT ARE NOT SET HERE. buy_cover on What to buy,
+/* THE SEVEN RULES THAT ARE NOT SET HERE. buy_cover on What to buy,
    pr_target and pr_days on Pricing, chase_after and chase_rest on
-   Follow-ups, pw_days on the Price registry -- all of them write to this
-   shop's own presets blob and none of them has ever been on this page.
+   Follow-ups, the price of credit on Debtors, pw_days on the Price
+   registry -- all of them write to this shop's own presets blob and
+   none of them has ever been on this page.
 
    They stay set there, beside the figures they change, so a number is
    never altered without its consequence on screen. They are READ here,
@@ -72048,6 +72517,14 @@ const PRESET_OUTSIDE_RULES = [
   { name:'Rest between chases', tab:'chase', where:'Follow-ups, under Money', unit:'days',
     what:'How long a debtor is left alone after being asked, before they can be asked again.',
     get:()=> Math.max(0, Number(data.presetChaseRestDays)||0) },
+  /* THE PRICE OF CREDIT, set on Debtors because that is the only screen
+     that can show what it is worth -- the book of money already out,
+     and what a term of the unpriced part would have come to. The TERM
+     it buys is the chase grace above; there is deliberately no second
+     figure here for it. */
+  { name:'Credit costs', tab:'analytics-debtors', where:'Debtors', unit:'%',
+    what:'What an order charges for taking the shop’s terms instead of paying now.',
+    get:()=> shopCreditPct() },
   { name:'Watch a supplier price for', tab:'prices', where:'Price registry', unit:'days',
     what:'How long a quoted price stays on the registry’s watch list.',
     get:()=> Math.max(1, Number(data.presetPriceWatchDays)||180) },
@@ -77777,7 +78254,20 @@ function incomeStatement(fromISO, toISO){
      ought to be measured against; the split is printed above it so the
      goods can still be read on their own. */
   const serviceIncome = trade.services;
-  const revenue = trade.sales + serviceIncome;
+  /* WHAT THE WAITING EARNED. Revenue, and on the same accrual as the
+     rest of it -- counted in the period of the invoice that carries it,
+     not spread across the days the money is actually out. The shop
+     agreed a price for a term and billed it once; the statement says so
+     once, in the month it was billed.
+
+     It carries NO cost of sales, and that is not an oversight: what
+     credit costs this shop is the use of its own money, which appears
+     on these books only if it was borrowed -- and then it is already
+     below, as loan interest. Giving this line an invented cost to make
+     it look like the others would be the one figure on the statement
+     with nothing under it. */
+  const creditIncome = trade.credit;
+  const revenue = trade.sales + serviceIncome + creditIncome;
   /* WHAT THE SERVICES COST, charged to the period of the invoice they
      rode rather than the day the driver was paid -- the matching this
      statement already does for rent and wages, and the reason those
@@ -77797,7 +78287,7 @@ function incomeStatement(fromISO, toISO){
 
   return {
     from: fromISO, to: toISO,
-    revenue, itemSales: trade.sales, serviceIncome,
+    revenue, itemSales: trade.sales, serviceIncome, creditIncome,
     costOfService, uncostedServices,
     costOfSales: trade.cost, grossProfit,
     grossMarginPct: revenue>0 ? grossProfit/revenue*100 : 0,
@@ -78995,18 +79485,25 @@ function stDrillData(key, ctx){
      Revenue to the two together. */
   const invoiceRows = (pick)=> byDateDesc(anInvoicesInRange(from, to)
     .filter(q=> (pick !== 'services' && pick !== 'servicecost') || orderChargesTotal(q) > 0)
+    /* An invoice that took no credit has nothing to say on this line,
+       and listing it at zero would bury the handful that did among
+       every bill of the month. */
+    .filter(q=> pick !== 'credit' || orderCreditCharge(q) > 0)
     .map(q=>{
       const t = anInvoiceTotals(q);
       const chargeNames = pick === 'services'
         ? orderChargeLines(q).map(l=> l.label).join(', ') : '';
       const cc = pick === 'servicecost' ? orderChargesCost(q) : null;
+      const cr = pick === 'credit' ? orderCreditTerms(q) : null;
       return { d: q.invoicedAt || q.date, l: invoiceNumberLabel(q),
         s: `${(q.client && q.client.name) || 'Unnamed client'}${
           chargeNames ? ' · ' + chargeNames : ''}${
+          cr ? ` · ${cr.pct}% on ${fmtUGX(savedQuoteCashTotal(q))}${cr.days > 0 ? `, ${cr.days} days` : ''}` : ''}${
           cc && cc.uncosted ? ` · ${cc.uncosted} charge${cc.uncosted===1?'':'s'} nobody has costed` : ''}${
           pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
         v: pick==='cost' ? t.cost : pick==='services' ? t.services
           : pick==='servicecost' ? cc.total
+          : pick==='credit' ? t.credit
           : pick==='takings' ? t.takings : t.sales,
         go: `inv:${q.id}` };
     }));
@@ -79078,7 +79575,7 @@ function stDrillData(key, ctx){
   };
 
   if(key === 'pl:revenue') return { title: 'Revenue', expect: is.revenue,
-    note: 'Every invoice raised in the period, goods and charges together — sales count when invoiced, whether or not they have been paid.',
+    note: 'Every invoice raised in the period — goods, what was charged to move them, and what was charged for waiting to be paid. Sales count when invoiced, whether or not they have been paid.',
     rows: invoiceRows('takings') };
   if(key === 'pl:itemsales') return { title: 'Item sales', expect: is.itemSales,
     note: 'The goods on every invoice raised in the period, without what was charged to move them.',
@@ -79089,6 +79586,9 @@ function stDrillData(key, ctx){
   if(key === 'pl:services') return { title: 'Service income', expect: is.serviceIncome,
     note: 'What each invoice charged besides the goods — delivery, fetching, cutting. Invoices that carried no charge are left out.',
     rows: invoiceRows('services') };
+  if(key === 'pl:credit') return { title: 'Credit charges', expect: is.creditIncome,
+    note: 'What each invoice charged for being paid later, at the rate agreed on that bill and on the whole of it. Invoices settled at the cash price are left out.',
+    rows: invoiceRows('credit') };
   if(key === 'pl:cogs') return { title: 'Cost of sales', expect: is.costOfSales,
     note: 'What the goods on those same invoices cost the shop.',
     rows: invoiceRows('cost') };
@@ -80559,10 +81059,11 @@ function stProfitAndLoss(ctx){
       <span class="st-doc-when">${esc(from)} to ${esc(to)} · ${is.invoiceCount} invoice${is.invoiceCount===1?'':'s'}</span></header>
     <table class="st-table">
       ${stHead('This period', 'Period before')}
-      ${(is.serviceIncome || prev.serviceIncome) ? `
+      ${(is.serviceIncome || prev.serviceIncome || is.creditIncome || prev.creditIncome) ? `
       ${stLine('Item sales', is.itemSales, prev.itemSales, {delta:true, higherIsBetter:true, drill:'pl:itemsales'})}
-      ${stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice', delta:true, higherIsBetter:true, drill:'pl:services'})}
+      ${(is.serviceIncome || prev.serviceIncome) ? stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice', delta:true, higherIsBetter:true, drill:'pl:services'}) : ''}
       ${(is.costOfService || prev.costOfService) ? stLine('Cost of service', -is.costOfService, -prev.costOfService, {hint:'what those deliveries and cuts were paid for — lifted out of running costs so the same money is not charged twice', drill:'pl:costofservice'}) : ''}
+      ${(is.creditIncome || prev.creditIncome) ? stLine('Credit charges', is.creditIncome, prev.creditIncome, {hint:'what customers paid for being paid later — no cost of sales behind it, because what it costs the shop is the use of its own money', delta:true, higherIsBetter:true, drill:'pl:credit'}) : ''}
       ${stLine('Revenue', is.revenue, prev.revenue, {cls:'st-total', delta:true, higherIsBetter:true, drill:'pl:revenue'})}`
       : stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
       ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost', drill:'pl:cogs'})}
@@ -86151,8 +86652,13 @@ function standingPoliciesData(){
   });
   const openSizes = pairProductRows().reduce((n, x)=> n + x.gaps, 0);
   return {
+    /* The chase rule and the price of credit are one setting seen from
+       two ends -- how long the shop waits before asking, and what that
+       wait is sold for -- so the manager is told both together or it
+       will advise on the queue while knowing nothing about the price. */
     chase: { after_days: Math.max(0, Number(data.presetChaseAfterDays)||0),
-      rest_days: Math.max(0, Number(data.presetChaseRestDays)||0) },
+      rest_days: Math.max(0, Number(data.presetChaseRestDays)||0),
+      credit_pct: shopCreditPct() },
     restock: { default_cover_days: Number(data.presetRestockCoverDays)||14,
       rules_count: reorder.length, rules: reorder },
     stages: { limits, alerts_on: !!data.presetStageAlerts },

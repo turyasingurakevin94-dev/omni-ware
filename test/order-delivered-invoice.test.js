@@ -70,6 +70,14 @@ const sharedJs = read('shared-worker.js');
 {
   const data = { customers: [{ id: 'C1', name: 'Musa Hardware', debt: 400000 }] };
   const scope = compileScope([
+    extractFunction(src, 'shopCreditPct', 'index.html'),
+    extractFunction(src, 'orderTakesCredit', 'index.html'),
+    extractFunction(src, 'orderCreditOffer', 'index.html'),
+    extractFunction(src, 'savedQuoteCashTotal', 'index.html'),
+    extractFunction(src, 'orderCreditCheckHTML', 'index.html'),
+    extractFunction(src, 'orderCreditCharge', 'index.html'),
+    extractFunction(src, 'orderCreditTerms', 'index.html'),
+    extractFunction(src, 'orderBillLines', 'index.html'),
     extractFunction(src, 'orderCharges', 'index.html'),
     extractFunction(src, 'chargeAmount', 'index.html'),
     extractFunction(src, 'savedQuoteGoodsTotal', 'index.html'),

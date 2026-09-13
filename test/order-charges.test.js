@@ -32,6 +32,11 @@ const code = src;
 const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
   'chargeCostTxn', 'chargeCostOf', 'orderChargesCost', 'chargeCostedCashIds',
   'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
+  /* The bill total now has a third part -- what waiting for the money
+     costs -- and this file's subject is what the CHARGES come to. The
+     credit chain rides along so the totals are the real ones; every
+     order here takes no credit, so it adds nothing and proves it. */
+  'savedQuoteCashTotal', 'orderCreditTerms', 'orderCreditCharge',
   'savedQuoteTotal', 'anInvoiceTotals'];
 
 /* What a charge COST is read back off the cash book, so the scope needs
@@ -198,12 +203,16 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
   eq(lines[0].label, 'Delivery', 'each printed charge is named');
   eq(lines[1].amount, 75000, 'and a percent reaches the paper as shillings, not as a percent');
 
-  /* Every client-facing document draws from this one list, so one cannot
-     print a delivery the next leaves out. */
+  /* Every client-facing document draws from ONE list, so one cannot
+     print a delivery the next leaves out. That list is orderBillLines,
+     which is these charges plus the price of credit -- the charges
+     reach the paper through it, never around it. */
   ['buildQuoteA5HTML', 'buildReceiptHTML', 'orderInvoiceCheckHTML'].forEach((fn)=>{
-    t.check(/orderChargeLines\(q\)/.test(extractFunction(src, fn, 'index.html')),
-      `${fn} draws its charges from the one list`);
+    t.check(/orderBillLines\(q\)/.test(extractFunction(src, fn, 'index.html')),
+      `${fn} draws what it prints from the one bill list`);
   });
+  t.check(/function orderBillLines\(q\)\{\s*const lines = orderChargeLines\(q\);/.test(src),
+    'and that list starts from these charges, so nothing can print one without the other');
   const receipt = extractFunction(src, 'buildReceiptHTML', 'index.html');
   t.check(/item\$\{items\.length===1\?'':'s'\}`, receiptNum\(goods\)\)/.test(receipt),
     'and the receipt’s "n items" line totals the items, not the bill they ride on');
@@ -240,7 +249,7 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
  * missing key is invisible to arithmetic.
  */
 {
-  t.check(/payload:\{client:q\.client, items:q\.items, charges:q\.charges\|\|\[\], savedAt:q\.savedAt,/.test(src),
+  t.check(/payload:\{client:q\.client, items:q\.items, charges:q\.charges\|\|\[\], credit:q\.credit\|\|null, savedAt:q\.savedAt,/.test(src),
     'the charges are named in the payload the sync sends');
   t.check(/client:\{name:'', phone:''\}, items:\[\], savedAt:null, payments:\[\], customerId:null, debtCharged:0,\n\s*charges:\[\],/.test(src),
     'and in the defaults an order saved before charges existed reads back through');
@@ -263,7 +272,9 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
  */
 {
   const NAMES2 = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
-    'orderChargeLines', 'waPadEnd', 'waPadStart', 'waFmtNum', 'waFitQty', 'waQtyLabel',
+    'orderChargeLines', 'savedQuoteCashTotal', 'orderCreditTerms', 'orderCreditCharge',
+    'creditTermLabel', 'orderBillLines',
+    'waPadEnd', 'waPadStart', 'waFmtNum', 'waFitQty', 'waQtyLabel',
     'waAbbrUnit', 'quoteLinePack', 'buildSalesGroupQuoteMessage'];
   const g = compileScope(
     [extractDeclaration(src, 'WA_UNIT_ABBR', 'index.html')]

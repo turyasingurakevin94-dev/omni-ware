@@ -32,7 +32,7 @@ const store = { products: [] };
 let fns = null, err = null;
 try {
   fns = compileScope(
-    ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+    ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'agentPrepayOutstanding']
       .map(n => extractFunction(src, n, 'index.html')),
     { data: store, quoteSuggestedPrice: () => null, quoteSuggestedStockPrice: () => null },
