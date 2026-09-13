@@ -30,10 +30,17 @@ const src = read('index.html');
 const code = src;
 
 const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
-  'orderChargesCost', 'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
+  'chargeCostTxn', 'chargeCostOf', 'orderChargesCost', 'chargeCostedCashIds',
+  'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
   'savedQuoteTotal', 'anInvoiceTotals'];
 
+/* What a charge COST is read back off the cash book, so the scope needs
+   one. A live binding rather than a copy: the reversal case empties it
+   and expects the readers to notice. */
+const store = { cashTxns: [], savedQuotes: [] };
+
 const s = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
+  data: store,
   // What a LINE sells for is not this file's subject: the price on the
   // fixture is the price, so the goods total is arithmetic a reader can
   // check by eye.
@@ -135,22 +142,48 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
     'the charge is nowhere among them, so picking, costing and the shelf never meet it');
 }
 
-/* ---------- 5. what it COST the shop, and what nobody has said ---------- *
- * A delivery nobody has costed and a delivery that cost nothing are
- * different facts, and one figure cannot tell them apart.
+/* ---------- 5. what it COST the shop is a PAYMENT, not a figure -------- *
+ * A delivery costs what the driver was handed, and that money leaves the
+ * drawer -- so it is already a cash entry, and the honest way to say what
+ * the delivery cost is to point at that entry rather than type the amount
+ * a second time beside it. Two copies of one figure is the drift this app
+ * writes migrations about, and a typed cost with no money behind it is a
+ * number invented to make a margin look answered.
+ *
+ * A delivery nobody has costed and a delivery that cost nothing are still
+ * different facts, and one figure still cannot tell them apart.
  */
 {
+  store.cashTxns = [
+    { id: 900, date:'2026-09-13', account:'cash', type:'payment', category:'Transport', amount:40000 },
+  ];
   const mixed = order({ charges: [
-    { id:1, label:'Delivery', type:'fixed', value:60000, cost:40000 },
-    { id:2, label:'Cutting', type:'fixed', value:20000, cost:null },
+    { id:1, label:'Delivery', type:'fixed', value:60000, costTxnId:900 },
+    { id:2, label:'Cutting', type:'fixed', value:20000, costTxnId:null },
   ]});
   const c = s.orderChargesCost(mixed);
-  eq(c.total, 40000, 'what is known is added up');
-  eq(c.uncosted, 1, 'and what nobody has priced is counted, not read as free');
+  eq(c.total, 40000, 'what was actually paid is added up, read back off the cash book');
+  eq(c.uncosted, 1, 'and what nobody has paid for is counted, not read as free');
 
-  const none = order({ charges: [{ id:1, label:'Delivery', type:'fixed', value:60000, cost:null }] });
+  const none = order({ charges: [{ id:1, label:'Delivery', type:'fixed', value:60000, costTxnId:null }] });
   eq(s.orderChargesCost(none).total, 0, 'an entirely uncosted set costs nothing so far');
   eq(s.orderChargesCost(none).uncosted, 1, 'and says so rather than looking cheap');
+
+  /* REVERSE THE PAYMENT AND THE COST GOES WITH IT. This is the whole
+     reason the amount is not stored on the charge: a figure left behind
+     with nothing under it would go on claiming the shop paid a fare it
+     has taken back. */
+  store.cashTxns = [];
+  eq(s.orderChargesCost(mixed).total, 0, 'a payment reversed in the cash book takes the cost with it');
+  eq(s.orderChargesCost(mixed).uncosted, 2, 'and the charge reads as uncosted again, which is the truth');
+
+  /* The statement lifts those entries out of running costs, so one fare
+     is never both a cost of service and a cost of running the shop. */
+  store.cashTxns = [{ id: 900, amount: 40000 }];
+  store.savedQuotes = [mixed];
+  const claimed = s.chargeCostedCashIds();
+  t.check(claimed.has('900'),
+    'and the statement can find the entry a charge has claimed, so the same fare is never charged twice');
 }
 
 /* ---------- 6. what a document is allowed to print ---------------------- */
@@ -288,6 +321,43 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
     'the Item sales line opens pl:itemsales');
   t.check(/'Service income'[\s\S]{0,300}?drill:'pl:services'/.test(pl),
     'the Service income line opens pl:services');
+}
+
+/* ---------- 12. one fare, charged once ---------------------------------- *
+ * Paying a driver is money out under Transport, and left alone it is a
+ * running cost of the day it was paid. Named as what a delivery cost, it
+ * belongs against the service income that delivery earned instead --
+ * and counting it in both places would charge the shop twice for one
+ * fare. Driven in the harness on a 12,750 delivery costed at 9,000:
+ *
+ *   recorded   cost of service 9,000 · Transport 0 · gross profit -9,000
+ *   unlinked   cost of service 0 · Transport 9,000 · gross profit back
+ *
+ * The cash entry survives the unlink either way: this screen does not
+ * quietly reverse a payment somebody really made.
+ */
+{
+  const opex = (/function statementOpexRows\(cashRows, fromISO, toISO\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const costed = chargeCostedCashIds\(\);/.test(opex)
+    && /!costed\.has\(String\(t\.id\)\)/.test(opex),
+    'an entry a charge has claimed leaves its running-cost category, the way a settled month already does');
+
+  const inc = (/function incomeStatement\(fromISO, toISO\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/costOfService \+= c\.total;/.test(inc) && /uncostedServices \+= c\.uncosted;/.test(inc),
+    'and comes back as the cost of the service, in the period of the invoice it rode');
+  t.check(/const grossProfit = revenue - trade\.cost - costOfService;/.test(inc),
+    'so gross profit carries it, and a delivery stops reading as kept in full');
+
+  /* An uncosted charge understates that cost and flatters the line, so
+     the statement says so rather than letting it pass as answered. */
+  const checks = (/function statementChecks\(is, bs, cf\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(is\.uncostedServices > 0\)/.test(checks) && /no cost recorded/.test(checks),
+    'and a charge nobody has costed is named on the trust checks, never passed off as free');
+
+  /* The unlink leaves the money where it was. */
+  const unlink = (/function otUnlinkChargeCost\(btn\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/ch\.costTxnId = null;/.test(unlink) && !/removeCashTxn|splice/.test(unlink),
+    'unlinking forgets the payment, it does not reverse it — the cash book is where money is taken back');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -12998,6 +12998,52 @@
   .ow-ot-cash-v{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);}
   .ow-ot-tp{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
     border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);font-size:var(--ow-t-13);}
+  /* WHAT THE CHARGES COST. A row per charge: what it is and what it
+     earned on the left, and on the right either the fare already
+     recorded or the three fields that record one. The figure is money
+     leaving the drawer, so it wears the money face and never truncates;
+     a fare above what was charged reads crimson, because a delivery that
+     lost money is the one thing this block exists to show. */
+  .ow-ot-cc{display:flex;flex-direction:column;}
+  .ow-ot-cc-r{display:flex;align-items:center;gap:var(--ow-sp-10);flex-wrap:wrap;
+    padding:var(--ow-sp-6) 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-ot-cc-r:last-child{border-bottom:0;}
+  .ow-ot-cc-n{flex:1 1 160px;min-width:0;}
+  .ow-ot-cc-l{display:block;min-width:0;font-size:var(--ow-t-13);color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-cc-s{display:block;margin-top:1px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  /* The form WRAPS INSIDE ITS COLUMN. The expansion is a 1.2fr/1fr grid,
+     so at console width this side is about 412px -- three fields and a
+     button laid end to end are wider than that, and a form that does not
+     give way spills under the panel beside it. Each control keeps a floor
+     it can still be read at and gives up the rest, so the fields take the
+     first line and Record closes the second, at the end where it acts. */
+  .ow-ot-cc-f{flex:1 1 auto;min-width:0;display:flex;align-items:center;
+    justify-content:flex-end;gap:var(--ow-sp-6);flex-wrap:wrap;}
+  .ow-ot-cc-amt{flex:1 1 112px;min-width:0;}
+  .ow-ot-cc-amt .ow-f-v{width:100%;text-align:right;letter-spacing:-.02em;}
+  .ow-ot-cc-sel{flex:1 1 116px;min-width:0;}
+  .ow-ot-cc-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);
+    font-size:var(--ow-t-13);color:var(--ink);white-space:nowrap;}
+  .ow-ot-cc-v.ow-bad{color:var(--ow-crimson);}
+  @media (max-width:820px){
+    /* IT IS A FORM ON THE PHONE, not a row that wraps. Three controls
+       and a button sharing what is left of 390px squeezed the amount to
+       about ninety pixels, and an <input> cannot ellipsis -- so its
+       placeholder read "what it co", which is the fault this app's own
+       truncation rule exists to prevent. The figure being typed gets the
+       whole line; the two lists share the next; the button closes it. */
+    .ow-ot-cc-n{flex:1 1 100%;}
+    .ow-ot-cc-f{flex:1 1 100%;gap:var(--ow-sp-6);}
+    .ow-ot-cc-amt{flex:1 1 100%;width:auto;min-width:0;height:var(--ow-tap);}
+    .ow-ot-cc-sel{flex:1 1 calc(50% - var(--ow-sp-4));min-width:0;height:var(--ow-tap);}
+    .ow-ot-cc-f .btn.ow-sm{flex:1 1 100%;min-height:var(--ow-tap);}
+    /* Already recorded is two things on one line, not three: the figure
+       and the way to take it back. */
+    .ow-ot-cc-v{flex:1 1 auto;}
+    .ow-ot-cc-v + .btn.ow-sm{flex:0 0 auto;}
+  }
   .ow-ot-note{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.45;margin:var(--ow-sp-10) 0 0;max-width:var(--ow-measure);}
   .ow-ot-acts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);margin-top:var(--ow-sp-12);align-items:center;}
   .ow-ot-tl{display:flex;flex-direction:column;}
@@ -37563,6 +37609,31 @@ function orderChargesTotal(q){
   return charges.reduce((s, ch)=> s + chargeAmount(ch, goods), 0);
 }
 
+/* WHAT A CHARGE COST THE SHOP IS A PAYMENT, NOT A FIGURE SOMEBODY TYPED.
+
+   A delivery costs what the driver was handed. That money leaves the
+   drawer, so it is already a cash entry -- and the honest way to say
+   what the delivery cost is to point at that entry, not to type the
+   number a second time beside it. Two copies of one amount is the drift
+   this app writes migrations about, and a typed cost with no money
+   behind it is a figure invented to make a margin look answered.
+
+   So a charge carries costTxnId and nothing else, and the amount is read
+   back from the cash book every time. Reverse the payment and the charge
+   goes back to reading UNCOSTED, which is the truth: nothing was paid.
+
+   A delivery the shop's own boy made on a motorcycle whose fuel was
+   bought last week costs nothing extra, and that is a real answer -- it
+   stays uncosted rather than being given a made-up figure. */
+function chargeCostTxn(ch){
+  if(!ch || ch.costTxnId == null) return null;
+  return (data.cashTxns||[]).find(t=> String(t.id) === String(ch.costTxnId)) || null;
+}
+function chargeCostOf(ch){
+  const t = chargeCostTxn(ch);
+  return t ? Math.round(Number(t.amount)||0) : null;
+}
+
 /* What the charges COST the shop, and how many of them nobody has costed.
    The count is returned rather than folded in, because a delivery nobody
    has priced yet and a delivery that cost nothing are different facts and
@@ -37571,11 +37642,23 @@ function orderChargesTotal(q){
 function orderChargesCost(q){
   let total = 0, uncosted = 0;
   orderCharges(q).forEach(ch=>{
-    const c = ch ? Number(ch.cost) : NaN;
-    if(ch && ch.cost != null && Number.isFinite(c)) total += c;
-    else uncosted += 1;
+    const c = chargeCostOf(ch);
+    if(c == null) uncosted += 1; else total += c;
   });
   return { total: Math.round(total), uncosted };
+}
+
+/* Every cash entry a charge has claimed. The statement needs this to
+   keep the money to ONE line: an entry costing a delivery is lifted out
+   of its running-cost category and charged against the service income it
+   earned instead. Exactly what dueSettledCashIds does for a payment that
+   settles an accrued month. */
+function chargeCostedCashIds(){
+  const ids = new Set();
+  (data.savedQuotes||[]).forEach(q=> orderCharges(q).forEach(ch=>{
+    if(ch && ch.costTxnId != null) ids.add(String(ch.costTxnId));
+  }));
+  return ids;
 }
 
 /* Charges are the shop's own, and an agent order has no room for them:
@@ -39967,6 +40050,7 @@ function orderRowBodyHTML(q){
     ${orderCashStripHTML(q)}
     ${q.status === 'draft' && orderSupplierGroups(q).length ? `<p class="ow-ot-h ow-ot-h2">Suppliers</p><div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>` : ''}
     ${orderLoadFormHTML(q)}
+    ${orderChargeCostHTML(q)}
     ${orderInvoiceCheckHTML(q)}
     <p class="ow-ot-note">${esc(facts.join(' · '))}</p>
     <div class="ow-ot-acts">${acts}</div>
@@ -40053,6 +40137,66 @@ function otFocusLoad(id){
   const first = [...f.querySelectorAll('[data-car]')].find(x=> x.closest('label') && x.closest('label').style.display !== 'none');
   if(first) first.focus();
 }
+/* WHAT THE DELIVERY COST, ASKED WHERE THE DELIVERY IS.
+
+   The shop charges for moving goods; until somebody says what moving
+   them cost, that income reads as kept in full and the statement says
+   so. This is where it is answered -- on the order, once it is out or
+   delivered, which is when the fare is actually known and the person
+   who handed it over is the person looking at this screen.
+
+   RECORDING IT MOVES REAL MONEY. There is no "cost" field to type into:
+   the amount is written to the cash book as a payment, out of an account
+   the owner picks, and the charge keeps only the id of that entry. So
+   the drawer and the statement cannot disagree about a fare, and an
+   entry reversed in the cash book takes the cost with it rather than
+   leaving a figure behind with nothing under it.
+
+   NOT COSTING ONE IS AN ANSWER. A delivery the shop's own boy made on a
+   motorcycle fuelled last week cost nothing extra. That is left
+   uncosted, counted, and named on the statement's trust checks -- never
+   filled in with a guess to make the line look finished. */
+function orderChargeCostHTML(q){
+  if(q.voided) return '';
+  if(q.status !== 'pending_delivery' && q.status !== 'completed') return '';
+  const goods = savedQuoteGoodsTotal(q);
+  const charges = orderCharges(q).map((ch, i)=> ({ ch, i, amount: chargeAmount(ch, goods) }))
+    .filter(x=> x.amount > 0);
+  if(!charges.length) return '';
+  const accounts = ACCOUNTS.map(a=> `<option value="${esc(a.key)}">${esc(a.label)}</option>`).join('');
+  const cats = (data.presetExpenseCategories || []).map(c=>
+    `<option value="${esc(c)}"${c === 'Transport' ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  const rows = charges.map(({ch, i, amount})=>{
+    const cost = chargeCostOf(ch);
+    const kept = cost == null ? null : amount - cost;
+    return `<div class="ow-ot-cc-r" data-cc="${i}">
+      <div class="ow-ot-cc-n"><span class="ow-ot-cc-l" title="${esc(ch.label||'Charge')}">${esc(ch.label||'Charge')}</span>
+        <span class="ow-ot-cc-s">charged ${esc(fmtUGX(amount))}${
+          kept == null ? '' : ` · kept ${esc(fmtUGX(kept))}`}</span></div>
+      ${cost == null ? `
+        <div class="ow-ot-cc-f">
+          <label class="sr-only" for="cc_amt_${q.id}_${i}">What ${esc(ch.label||'this charge')} cost</label>
+          <span class="ow-f-in ow-ot-cc-amt"><input type="number" id="cc_amt_${q.id}_${i}" class="ow-f-v" data-cc-amt="${i}" min="0" step="any" placeholder="what it cost"></span>
+          <label class="sr-only" for="cc_acc_${q.id}_${i}">Paid from</label>
+          <span class="ow-f-in ow-ot-cc-sel"><select id="cc_acc_${q.id}_${i}" class="ow-f-sel" data-cc-acc="${i}">${accounts}</select></span>
+          <label class="sr-only" for="cc_cat_${q.id}_${i}">Recorded as</label>
+          <span class="ow-f-in ow-ot-cc-sel"><select id="cc_cat_${q.id}_${i}" class="ow-f-sel" data-cc-cat="${i}">${cats}</select></span>
+          <button type="button" class="btn btn-ghost ow-sm" data-cc-pay="${i}" data-id="${q.id}">Record</button>
+        </div>`
+      : `<div class="ow-ot-cc-f">
+          <span class="ow-ot-cc-v${kept < 0 ? ' ow-bad' : ''}">${esc(fmtUGX(cost))}</span>
+          <button type="button" class="btn btn-ghost ow-sm" data-cc-undo="${i}" data-id="${q.id}" title="Unlink this payment — the cash entry stays in the book">Not this one</button>
+        </div>`}
+    </div>`;
+  }).join('');
+  const c = orderChargesCost(q);
+  return `<p class="ow-ot-h ow-ot-h2">What the charges cost you</p>
+    <div class="ow-ot-cc">${rows}</div>
+    <p class="ow-ot-note">${c.uncosted
+      ? `${c.uncosted} of ${charges.length} not recorded — ${c.uncosted === 1 ? 'it counts' : 'they count'} as kept in full until somebody says what ${c.uncosted === 1 ? 'it' : 'they'} cost. Nothing extra to pay is a real answer; leave it.`
+      : 'Recorded. Each one is a payment in the cash book, charged against the service income it earned rather than against running costs.'}</p>`;
+}
+
 /* THE CHECK BEFORE INVOICING. What invoicing is about to do, said in
    figures the owner can look at against the goods: every line as ordered
    against what was picked, the total, and what it puts on the customer's
@@ -40373,6 +40517,49 @@ function renderSavedQuotes(){
 /* Everything the screen can do, from one listener bound once at parse
    time -- so an act never depends on which render last wired it, and a
    row opens in place with no listener of its own. */
+/* RECORDING A FARE MOVES MONEY, so it does exactly one thing and says
+   what it did. The payment is written to the cash book through the same
+   addCashPayment every other spend goes through -- so it appears in the
+   drawer, in the day, and in the cash flow like any other -- and the
+   charge keeps only its id. Nothing here stores an amount twice. */
+function otRecordChargeCost(btn){
+  /* The order comes off the button, NOT off an ancestor row: the
+     expanded panel is a sibling of .ow-ot-r rather than inside it, so
+     climbing for one finds nothing. It did exactly that for a while and
+     said nothing at all -- which is the one thing a failure here may
+     never do, because the owner has typed an amount and pressed a button
+     that moves money. */
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(btn.dataset.id));
+  const ch = q ? orderCharges(q)[Number(btn.dataset.ccPay)] : null;
+  if(!q || !ch){ toast('That charge is no longer on this order — reopen it and try again'); return; }
+  const box = btn.closest('.ow-ot-cc-r');
+  const amount = Math.round(Number(box.querySelector('[data-cc-amt]').value) || 0);
+  if(!(amount > 0)){ toast('Say what it cost first'); return; }
+  const account = box.querySelector('[data-cc-acc]').value;
+  const category = box.querySelector('[data-cc-cat]').value;
+  const who = quoteClientName(q);
+  const id = addCashPayment(account, amount, category,
+    `${ch.label || 'Charge'} on ${invoiceNumberLabel(q)}${who ? ' — ' + who : ''}`, todayISO());
+  if(id == null){ toast('That payment could not be recorded'); return; }
+  ch.costTxnId = id;
+  saveData();
+  renderSavedQuotes();
+  toast(`${ch.label || 'Charge'} cost ${fmtUGX(amount)} — recorded in the cash book`);
+}
+
+/* Unlinks, and says plainly that the money is still in the book. Deleting
+   the entry instead would be this screen quietly reversing a payment
+   somebody really made; the cash book is where money is taken back. */
+function otUnlinkChargeCost(btn){
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(btn.dataset.id));
+  const ch = q ? orderCharges(q)[Number(btn.dataset.ccUndo)] : null;
+  if(!q || !ch){ toast('That charge is no longer on this order — reopen it and try again'); return; }
+  ch.costTxnId = null;
+  saveData();
+  renderSavedQuotes();
+  toast('Unlinked — the payment is still in the cash book, back under its own running cost');
+}
+
 function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
   const sid = el && el.dataset ? el.dataset.sid : null;
@@ -40410,6 +40597,10 @@ document.getElementById('tab-quote-saved').addEventListener('click', (e)=>{
   if(!t || !t.closest) return;
   const lens = t.closest('[data-lens]');
   if(lens && lens.closest('#ot_seg')){ otStageLens = lens.dataset.lens; renderSavedQuotes(); return; }
+  const pay = t.closest('[data-cc-pay]');
+  if(pay){ otRecordChargeCost(pay); return; }
+  const undo = t.closest('[data-cc-undo]');
+  if(undo){ otUnlinkChargeCost(undo); return; }
   const act = t.closest('[data-act]');
   if(act){ otAct(act.dataset.act, Number(act.dataset.id), act); return; }
   if(t.closest('[data-trip-gap]')){ openBuyingList(); return; }
@@ -77587,13 +77778,27 @@ function incomeStatement(fromISO, toISO){
      goods can still be read on their own. */
   const serviceIncome = trade.services;
   const revenue = trade.sales + serviceIncome;
-  const grossProfit = revenue - trade.cost;
+  /* WHAT THE SERVICES COST, charged to the period of the invoice they
+     rode rather than the day the driver was paid -- the matching this
+     statement already does for rent and wages, and the reason those
+     payments leave the cash side above. A charge nobody has costed adds
+     nothing here and is COUNTED instead, because an uncosted delivery
+     flatters this line and the reader has to be told how much of it is
+     unanswered. */
+  let costOfService = 0, uncostedServices = 0;
+  invoices.forEach(q=>{
+    const c = orderChargesCost(q);
+    costOfService += c.total;
+    uncostedServices += c.uncosted;
+  });
+  const grossProfit = revenue - trade.cost - costOfService;
   const operatingProfit = grossProfit - opex - depreciation;
   const netProfit = operatingProfit + disposalGain - interest - loanFeesCharged;
 
   return {
     from: fromISO, to: toISO,
     revenue, itemSales: trade.sales, serviceIncome,
+    costOfService, uncostedServices,
     costOfSales: trade.cost, grossProfit,
     grossMarginPct: revenue>0 ? grossProfit/revenue*100 : 0,
     opexRows, opex, depreciation, operatingProfit,
@@ -78307,6 +78512,18 @@ function statementChecks(is, bs, cf){
     checks.push({ ok: false, label: 'Cost of sales resting on estimates',
       detail: `${is.estimatedCostUnits} unit${is.estimatedCostUnits===1?'':'s'} sold in this period had no recorded purchase cost, so their cost is the quoted estimate rather than what was actually paid.` });
   }
+  /* AN UNCOSTED DELIVERY FLATTERS THE ONE LINE IT BELONGS TO. Service
+     income carries its own cost now, so a charge nobody has said the
+     fare for reads as kept in full -- which is exactly the 100% margin
+     this whole feature was built to stop showing. Said as a caveat
+     rather than a fault: a delivery the shop's own boy made really did
+     cost nothing extra, and the app cannot tell that from a fare nobody
+     wrote down. Only the owner can. */
+  if(is.uncostedServices > 0){
+    checks.push({ ok: null, label: `${is.uncostedServices} charge${is.uncostedServices===1?'':'s'} with no cost recorded`,
+      detail: `${is.uncostedServices} of the charges invoiced in this period ${is.uncostedServices===1?'has':'have'} no payment behind ${is.uncostedServices===1?'it':'them'}, so ${is.uncostedServices===1?'it counts':'they count'} as kept in full. `
+        + `That is right for a delivery your own people made at no extra cost, and wrong for a fare that was paid and never written down — record it on the order and it moves out of running costs onto the line it belongs to.` });
+  }
   if(bs.inventoryUncostedQty > 0){
     checks.push({ ok: false, label: 'Stock with no cost on file',
       detail: `${bs.inventoryUncostedQty} unit${bs.inventoryUncostedQty===1?'':'s'} on the shelf were never given a purchase cost, so they are valued at nothing. Stock is understated by whatever they cost.` });
@@ -78777,16 +78994,19 @@ function stDrillData(key, ctx){
      states: Item sales to the goods, Service income to the charges,
      Revenue to the two together. */
   const invoiceRows = (pick)=> byDateDesc(anInvoicesInRange(from, to)
-    .filter(q=> pick !== 'services' || orderChargesTotal(q) > 0)
+    .filter(q=> (pick !== 'services' && pick !== 'servicecost') || orderChargesTotal(q) > 0)
     .map(q=>{
       const t = anInvoiceTotals(q);
       const chargeNames = pick === 'services'
         ? orderChargeLines(q).map(l=> l.label).join(', ') : '';
+      const cc = pick === 'servicecost' ? orderChargesCost(q) : null;
       return { d: q.invoicedAt || q.date, l: invoiceNumberLabel(q),
         s: `${(q.client && q.client.name) || 'Unnamed client'}${
           chargeNames ? ' · ' + chargeNames : ''}${
+          cc && cc.uncosted ? ` · ${cc.uncosted} charge${cc.uncosted===1?'':'s'} nobody has costed` : ''}${
           pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
         v: pick==='cost' ? t.cost : pick==='services' ? t.services
+          : pick==='servicecost' ? cc.total
           : pick==='takings' ? t.takings : t.sales,
         go: `inv:${q.id}` };
     }));
@@ -78863,6 +79083,9 @@ function stDrillData(key, ctx){
   if(key === 'pl:itemsales') return { title: 'Item sales', expect: is.itemSales,
     note: 'The goods on every invoice raised in the period, without what was charged to move them.',
     rows: invoiceRows('sales') };
+  if(key === 'pl:costofservice') return { title: 'Cost of service', expect: is.costOfService,
+    note: 'What the shop paid out for the charges on each invoice — the fare handed to a driver, read back from the cash book entry it was paid as. A charge nobody has costed is left out and named on the statement.',
+    rows: invoiceRows('servicecost') };
   if(key === 'pl:services') return { title: 'Service income', expect: is.serviceIncome,
     note: 'What each invoice charged besides the goods — delivery, fetching, cutting. Invoices that carried no charge are left out.',
     rows: invoiceRows('services') };
@@ -80338,7 +80561,8 @@ function stProfitAndLoss(ctx){
       ${stHead('This period', 'Period before')}
       ${(is.serviceIncome || prev.serviceIncome) ? `
       ${stLine('Item sales', is.itemSales, prev.itemSales, {delta:true, higherIsBetter:true, drill:'pl:itemsales'})}
-      ${stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice, and carrying no cost of sales yet', delta:true, higherIsBetter:true, drill:'pl:services'})}
+      ${stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice', delta:true, higherIsBetter:true, drill:'pl:services'})}
+      ${(is.costOfService || prev.costOfService) ? stLine('Cost of service', -is.costOfService, -prev.costOfService, {hint:'what those deliveries and cuts were paid for — lifted out of running costs so the same money is not charged twice', drill:'pl:costofservice'}) : ''}
       ${stLine('Revenue', is.revenue, prev.revenue, {cls:'st-total', delta:true, higherIsBetter:true, drill:'pl:revenue'})}`
       : stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
       ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost', drill:'pl:cogs'})}
@@ -82239,10 +82463,18 @@ function uncostedDuesInRange(fromISO, toISO){
    by category", which is what the cash flow and the dashboards ask it. */
 function statementOpexRows(cashRows, fromISO, toISO){
   const settled = dueSettledCashIds();
+  /* A THIRD KIND OF ENTRY LEAVES HERE. Paying a driver is money out
+     under Transport, and left alone it is a running cost of the day it
+     was paid. But once it is named as what a delivery cost, it belongs
+     against the service income that delivery earned -- and counting it
+     in both places would charge the shop twice for one fare. It comes
+     back as costOfService, in the period of the invoice it rides. */
+  const costed = chargeCostedCashIds();
   // A payment that settles a month, and an entry that names the days it
   // covers, both leave the cash side: each comes back below as the
   // share of it that belongs to this window.
-  const out = cashOpexRows((cashRows||[]).filter(t=> !settled.has(String(t.id)) && !cashIsSpreadCost(t)));
+  const out = cashOpexRows((cashRows||[]).filter(t=> !settled.has(String(t.id))
+    && !costed.has(String(t.id)) && !cashIsSpreadCost(t)));
   const accrued = dueCostRows(fromISO, toISO);
   Object.keys(accrued).forEach(k=>{ out[k] = (out[k]||0) + accrued[k]; });
   const spread = spreadCostRows(fromISO, toISO);
