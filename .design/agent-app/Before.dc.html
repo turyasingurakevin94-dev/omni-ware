@@ -1,0 +1,476 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* Tokens, verbatim from index.html's own :root. Nothing here is new. */
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B;
+      /* NOT the console's #8A939C. That is 3.12:1 on paper -- it clears AA
+         only at 20px, and this token carries the search placeholder, the
+         unit after every price and the inactive tab label. agent.html's
+         own :root already holds the third ink step at #6B7480 (4.73:1)
+         because this surface is read standing up in direct sun. */
+      --ow-ink-400:#6B7480;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
+      --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
+      --ow-sp-24:24px; --ow-sp-32:32px;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-tap:44px;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ============ THE PHONE SHELL ============
+       44px navy top bar, a scroll region, 60px white tab bar. The page
+       name lives in the top bar rather than as a 26px slab in the body:
+       on a four-screen app the tab bar already says where you are, and
+       the 50px it saves is the difference between the day's work being
+       above the fold and below it. */
+    .ph{position:absolute;inset:0;background:var(--ow-steel-050);overflow:hidden;
+      display:flex;flex-direction:column;}
+    .ph-top{height:44px;flex:none;background:var(--ow-steel-950);color:#fff;display:flex;align-items:center;
+      gap:10px;padding:0 12px 0 14px;}
+    .ph-top .mk{width:24px;height:24px;border-radius:6px;background:var(--ow-oxide);color:#fff;flex:none;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:9px;}
+    .ph-top .ttl{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-top .sp{flex:1;}
+    .ph-top svg{width:20px;height:20px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    /* The agent's own initials. Steel, not oxide -- an avatar is a label,
+       not the thing to do next. */
+    .ph-me{width:30px;height:30px;flex:none;border-radius:var(--ow-r-pill);background:var(--ow-steel-800);
+      color:#C7CFD8;font-size:11px;font-weight:600;letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;}
+    .ph-scroll{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+    .ph-tab-bar{height:60px;flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);
+      display:grid;grid-template-columns:repeat(3,1fr);align-items:center;}
+    .ph-tb{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ow-ink-400);font-size:10px;font-weight:600;}
+    .ph-tb svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    /* Active is FILLED, inactive is stroked -- a shape change reads at a
+       glance where a colour change alone does not. Ink, never oxide: the
+       accent is spent on the one thing to do, not on saying where you are. */
+    .ph-tb.on{color:var(--ow-ink-900);}
+    .ph-tb.on svg{fill:currentColor;stroke:none;}
+
+    /* ============ THE PIECES ============ */
+    .fig{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+    .ph-sec{display:flex;align-items:baseline;gap:8px;font-size:11px;font-weight:600;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);padding:16px 16px 7px;}
+    .ph-sec-n{margin-left:auto;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ow-ink-600);
+      display:flex;align-items:center;gap:3px;}
+    .ph-sec-n svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* The navy "next" slab. One per screen, and the only place the oxide
+       appears: the highest-value unfinished thing, and the one tap that
+       finishes it. */
+    .ow-bk{display:flex;align-items:center;gap:12px;margin:12px 16px 0;
+      padding:11px 11px 11px 14px;background:var(--ow-steel-950);color:var(--ow-paper);
+      border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+    .ow-bk-say{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--ow-steel-100);}
+    .ow-bk-b{color:var(--ow-paper);font-size:14px;font-weight:600;display:block;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;}
+    .ow-bk-m{color:var(--ow-paper);font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .ow-bk .btn-accent{padding:0 14px;min-height:44px;font-size:14px;border-radius:var(--ow-r);
+      background:var(--ow-oxide);color:#fff;display:inline-flex;align-items:center;font-weight:700;flex:none;}
+
+    /* "2 more need you" -- a 44px row, hairline top and bottom. */
+    .ph-more{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:12px;padding:0 16px;
+      background:var(--ow-paper);border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);
+      font-size:14px;font-weight:500;}
+    .ph-more .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;}
+    .ph-more svg{width:18px;height:18px;margin-left:auto;flex:none;
+      fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* Search. The hero of Sell -- not a greeting. */
+    .ph-find{display:flex;align-items:center;gap:9px;margin:12px 16px 0;height:48px;padding:0 13px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .ph-find svg{width:19px;height:19px;flex:none;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-find span{font-size:15px;color:var(--ow-ink-400);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+    /* Chips. 44px tall so they are tappable in a yard. */
+    .ph-chips{display:flex;gap:8px;padding:10px 16px 0;}
+    .ph-chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 13px;flex:none;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);
+      font-size:14px;font-weight:600;color:var(--ow-ink-900);}
+    .ph-chip .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      font-weight:600;color:var(--ow-ink-600);}
+    .ph-chip.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:#fff;}
+    .ph-chip.on .n{color:var(--ow-steel-100);}
+
+    /* Categories. Name and count, and a mark that means the thing --
+       no coloured disc behind it: a disc per category is colour that
+       marks everything, which marks nothing. */
+    .ph-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 16px;}
+    .ph-cat{display:flex;flex-direction:column;justify-content:space-between;min-height:56px;padding:9px 10px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);}
+    .ph-cat svg{width:22px;height:22px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-cat-n{font-size:13px;font-weight:600;line-height:1.25;margin-top:7px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-cat-c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);}
+
+    /* The one shelf, and the product grid. Same card either way. */
+    .ph-shelf{display:flex;gap:10px;padding:0 16px;overflow:hidden;}
+    .ph-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 16px;}
+    .ph-pc{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:11px 12px 12px;display:flex;flex-direction:column;min-width:0;}
+    .ph-shelf .ph-pc{width:167px;flex:none;}
+    .ph-pc-n{font-size:14px;font-weight:600;line-height:1.3;min-width:0;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .ph-pc-u{font-size:11px;color:var(--ow-ink-600);margin-top:3px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* Money never truncates, and never carries the accent: a price is a
+       size, not a warning. */
+    /* margin-top:auto pins the price to the foot of the card, and the basis
+       line below it always reserves its slot -- so the figures line up
+       across a row whether or not a card carries a chip or a bulk hint.
+       A column of money that does not line up is unreadable at a glance,
+       which is the only way it is read. */
+    .ph-pc-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;font-weight:600;
+      letter-spacing:-.02em;margin-top:auto;padding-top:8px;white-space:nowrap;}
+    .ph-pc-p .u{font-size:11px;font-weight:400;color:var(--ow-ink-400);letter-spacing:0;}
+    .ph-pc-b{font-size:11px;color:var(--ow-ink-600);margin-top:3px;min-height:16px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-pc-t{display:flex;gap:5px;margin-bottom:7px;}
+
+    /* Chips that carry a state. good / caution / bad, and no fourth. */
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;flex:none;}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+
+    /* The dense list row -- customers, orders, quote lines. 56px, hairline
+       separated, on paper. Four of these fit where the old floating cards
+       fitted two. */
+    .ph-rows{background:var(--ow-paper);border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-r{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:11px;
+      min-height:56px;padding:9px 16px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-r:last-child{border-bottom:0;}
+    .ph-r-av{grid-row:1 / span 2;width:36px;height:36px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;}
+    .ph-r-n{display:flex;align-items:center;gap:6px;min-width:0;font-size:15px;font-weight:600;line-height:1.25;}
+    .ph-r-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-r-m{grid-column:2;font-size:12px;color:var(--ow-ink-600);line-height:1.35;margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-r-v{grid-column:3;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;letter-spacing:-.02em;}
+    .ph-r-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:400;
+      color:var(--ow-ink-600);letter-spacing:0;margin-top:2px;}
+    /* Any mark inside a row. Without this an inline <svg> falls back to
+       fill:black / stroke:none and paints a solid blob. */
+    .ph-r svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-r-v svg{width:18px;height:18px;stroke:var(--ow-ink-400);}
+    .ph-r-ic{grid-column:3;grid-row:1 / span 2;width:44px;height:44px;border-radius:var(--ow-r);flex:none;
+      border:1px solid var(--ow-rule);display:flex;align-items:center;justify-content:center;}
+    .ph-r-ic svg{width:19px;height:19px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* The 2x2 metric block. Hairline dividers, no per-tile border. */
+    .ph-mt{display:grid;grid-template-columns:1fr 1fr;background:var(--ow-paper);
+      border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-mt > div{padding:12px 16px;border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ph-mt > div:nth-child(odd){border-left:0;}
+    .ph-mt > div:nth-child(-n+2){border-top:0;}
+    .ph-mt-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin:0 0 4px;}
+    .ph-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;font-weight:500;
+      letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ph-mt-v .u{font-size:.5em;color:var(--ow-ink-400);margin-left:.2em;letter-spacing:0;}
+    .ph-mt-s{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;}
+
+    /* Buttons. The existing family, one size modifier. */
+    .ph-btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:var(--ow-r);
+      font-size:15px;font-weight:700;}
+    .ph-btn.accent{background:var(--ow-oxide);color:#fff;}
+    .ph-btn.ghost{background:var(--ow-paper);color:var(--ow-ink-900);border:1px solid var(--ow-rule);}
+    .ph-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ph-foot{flex:none;background:var(--ow-paper);border-top:1px solid var(--ow-rule);padding:10px 16px 12px;
+      display:flex;align-items:center;gap:12px;}
+
+    .ph-empty{padding:36px 24px;text-align:center;color:var(--ow-ink-600);font-size:14px;line-height:1.5;}
+    .ph-note{font-size:12px;color:var(--ow-ink-600);margin:8px 16px 0;line-height:1.45;}
+    .ph-back{display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 10px;background:var(--ow-paper);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-back svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-back .t{font-size:16px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-back .sp{flex:1;}
+
+    /* The banner. Amber is caution -- a state, never the accent. */
+    .ph-warn{display:flex;align-items:flex-start;gap:9px;padding:9px 16px;background:var(--ow-amber-soft);
+      border-bottom:1px solid var(--ow-rule-soft);font-size:12px;line-height:1.4;color:var(--ow-amber-ink);}
+    .ph-warn svg{width:16px;height:16px;flex:none;margin-top:1px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .ph-warn b{font-weight:600;}
+
+    /* The segmented control -- "Your view / Client view" on the quote,
+       because the agent turns the phone round and shows it. */
+    .ph-tabs{display:flex;gap:2px;margin:12px 16px 0;background:var(--ow-steel-050);
+      border:1px solid var(--ow-rule-soft);padding:3px;border-radius:var(--ow-r-lg);}
+    .ph-tabs span{flex:1;text-align:center;padding:11px 0;border-radius:var(--ow-r);font-size:14px;
+      font-weight:600;color:var(--ow-ink-600);}
+    .ph-tabs span.on{background:var(--ow-paper);color:var(--ow-ink-900);font-weight:700;box-shadow:0 1px 3px rgba(20,30,40,.13);}
+
+    /* A quote line. Qty leads, because that is what gets changed. */
+    .ph-q{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:11px;
+      min-height:56px;padding:9px 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .ph-q:last-child{border-bottom:0;}
+    .ph-q-qty{grid-row:1 / span 2;min-width:44px;height:44px;padding:0 6px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);display:flex;align-items:center;justify-content:center;flex:none;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;}
+    .ph-q-n{font-size:14px;font-weight:600;line-height:1.3;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-q-m{grid-column:2;font-size:11px;color:var(--ow-ink-600);margin-top:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-q-v{grid-column:3;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;letter-spacing:-.02em;}
+
+    /* An answered fold: the question, the answer, and a tap to change it. */
+    .ph-ans{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 16px;background:var(--ow-paper);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-ans-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);flex:none;width:64px;}
+    .ph-ans-v{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ph-ans-v .q{font-weight:400;color:var(--ow-ink-400);}
+    .ph-ans svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* Month nav. Ghost both ways -- moving through time is not the action. */
+    .ph-mon{display:flex;align-items:center;gap:8px;height:48px;padding:0 6px;background:var(--ow-paper);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .ph-mon .b{width:44px;height:44px;border-radius:var(--ow-r);display:flex;align-items:center;justify-content:center;flex:none;}
+    .ph-mon .b svg{width:20px;height:20px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .ph-mon .b.off svg{stroke:var(--ow-steel-100);}
+    .ph-mon .m{flex:1;text-align:center;font-size:15px;font-weight:600;}
+
+    /* Six months. A month with no orders is a hairline and a dash, never
+       a bar of zero -- an empty column that looks measured is a lie. */
+    /* On paper, not on the page ground: steel-100 bars on steel-050 is a
+       6% difference and the chart disappears in sunlight. */
+    .ph-bars{display:grid;grid-template-columns:repeat(6,1fr);align-items:end;gap:9px;
+      height:112px;margin:0 16px;padding:10px 12px 8px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);}
+    .ph-bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px;}
+    .ph-bar .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+    .ph-bar .b{width:100%;background:var(--ow-steel-100);border-radius:var(--ow-r-sm) var(--ow-r-sm) 0 0;}
+    .ph-bar.now .b{background:var(--ow-steel-800);}
+    .ph-bar.now .v{color:var(--ow-ink-900);}
+    .ph-bar .none{width:100%;height:2px;background:var(--ow-rule-soft);}
+    .ph-bar .l{font-size:11px;color:var(--ow-ink-600);}
+    .ph-bar.now .l{font-weight:600;color:var(--ow-ink-900);}
+
+    /* One line, not a table: where you stand against the other agents. */
+    .ph-rank{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;background:var(--ow-paper);
+      border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);
+      font-size:13px;color:var(--ow-ink-600);}
+    .ph-rank b{font-weight:600;color:var(--ow-ink-900);}
+    .ph-rank svg{width:18px;height:18px;margin-left:auto;flex:none;fill:none;stroke:var(--ow-ink-400);
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* A figure that could not be read says so, and says when it was last
+       true. It never falls back to zero. */
+    .ph-mt-v.unread{color:var(--ow-ink-400);}
+    .ph-mt-s.unread{color:var(--ow-amber-ink);}
+
+    /* ---- the Before board ---- */
+    .bd{position:absolute;inset:0;background:var(--ow-steel-050);padding:28px 32px;overflow:hidden;
+      display:grid;grid-template-columns:352px 352px 352px auto;grid-template-rows:auto 1fr;
+      column-gap:24px;row-gap:18px;}
+    .bd-h{grid-column:1 / -1;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 13px;}
+    .bd-h h1{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .bd-h p{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .bd-h .sp{flex:1;}
+    .bd-sh{display:flex;flex-direction:column;gap:10px;min-width:0;}
+    .bd-sh-t{display:flex;align-items:baseline;gap:8px;font-size:11px;font-weight:600;
+      letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .bd-sh-t span{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-weight:400;letter-spacing:0;text-transform:none;}
+    .bd-fr{position:relative;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);overflow:hidden;align-self:start;}
+    .bd-fr img{display:block;width:100%;}
+    /* Numbered callouts, pinned onto the shot. */
+    .bd-n{position:absolute;width:22px;height:22px;border-radius:var(--ow-r-pill);
+      background:var(--ow-crimson);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;
+      display:flex;align-items:center;justify-content:center;
+      outline:3px solid rgba(255,255,255,.85);}
+
+    .bd-side{display:flex;flex-direction:column;gap:14px;min-width:0;}
+    .bd-tab{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .bd-tab-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);
+      font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .bd-tab table{width:100%;border-collapse:collapse;}
+    .bd-tab td{padding:6px 12px;border-top:1px solid var(--ow-rule-soft);font-size:12px;vertical-align:baseline;}
+    .bd-tab tr:first-child td{border-top:0;}
+    .bd-tab td.k{color:var(--ow-ink-600);white-space:nowrap;}
+    .bd-tab td.v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;
+      text-align:right;white-space:nowrap;letter-spacing:-.02em;}
+    .bd-tab td.v.bad{color:var(--ow-crimson);}
+    .bd-tab td.w{font-size:11px;color:var(--ow-ink-600);text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+    .bd-faults{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      padding:2px 0;align-self:start;}
+    .bd-f{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:10px;
+      padding:8px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .bd-f:first-child{border-top:0;}
+    .bd-f-n{width:22px;height:22px;border-radius:var(--ow-r-pill);background:var(--ow-crimson-soft);
+      color:var(--ow-crimson);font-family:var(--mono);font-size:11px;font-weight:600;
+      display:flex;align-items:center;justify-content:center;}
+    .bd-f-t{font-size:12px;font-weight:600;line-height:1.35;}
+    .bd-f-b{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin-top:2px;}
+  </style>
+</helmet>
+<div class="app" style="width:1560px;height:1370px">
+  <div class="bd">
+
+    <div class="bd-h">
+      <h1>As it stands today</h1>
+      <p>Three of the four tabs, booted from agent.html against seeded data. Every figure on the right is counted out of the file, not estimated.</p>
+      <span class="sp"></span>
+      <p>Each shot is the whole screen at 390px wide, tab bar removed &middot; not a redrawing</p>
+    </div>
+
+    <div class="bd-sh">
+      <div class="bd-sh-t">Home <span>909px tall</span></div>
+      <div class="bd-fr">
+        <img src="before-home.jpg" alt="">
+        <span class="bd-n" style="left:52px;top:150px;">1</span>
+        <span class="bd-n" style="left:250px;top:384px;">2</span>
+        <span class="bd-n" style="left:44px;top:566px;">3</span>
+      </div>
+    </div>
+
+    <div class="bd-sh">
+      <div class="bd-sh-t">Sell <span>1348px tall</span></div>
+      <div class="bd-fr">
+        <img src="before-sell.jpg" alt="">
+        <span class="bd-n" style="left:24px;top:70px;">4</span>
+        <span class="bd-n" style="left:32px;top:308px;">5</span>
+        <span class="bd-n" style="left:24px;top:578px;">6</span>
+      </div>
+    </div>
+
+    <div class="bd-sh">
+      <div class="bd-sh-t">Earnings <span>1310px tall</span></div>
+      <div class="bd-fr">
+        <img src="before-earnings.jpg" alt="">
+        <span class="bd-n" style="left:26px;top:196px;">7</span>
+        <span class="bd-n" style="left:26px;top:404px;">8</span>
+        <span class="bd-n" style="left:232px;top:642px;">9</span>
+      </div>
+    </div>
+
+    <div class="bd-side">
+
+      <div class="bd-tab">
+        <div class="bd-tab-h">Counted out of agent.html<span style="margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;">house system</span></div>
+        <table>
+          <tr><td class="k">font sizes</td><td class="v bad">17</td><td class="w">7</td></tr>
+          <tr><td class="k">&nbsp;&nbsp;of them half-pixel</td><td class="v bad">6</td><td class="w">0</td></tr>
+          <tr><td class="k">font weights</td><td class="v bad">6</td><td class="w">4</td></tr>
+          <tr><td class="k">&nbsp;&nbsp;not a loaded face</td><td class="v bad">3</td><td class="w">0</td></tr>
+          <tr><td class="k">radii</td><td class="v bad">21</td><td class="w">4</td></tr>
+          <tr><td class="k">box-shadows</td><td class="v bad">19</td><td class="w">1</td></tr>
+          <tr><td class="k">gradients</td><td class="v bad">3</td><td class="w">0</td></tr>
+          <tr><td class="k">hex colours</td><td class="v bad">33</td><td class="w">23</td></tr>
+          <tr><td class="k">&nbsp;&nbsp;off the palette</td><td class="v bad">13</td><td class="w">0</td></tr>
+          <tr><td class="k">oxide per screen</td><td class="v bad">5&ndash;9</td><td class="w">1</td></tr>
+        </table>
+      </div>
+
+      <div class="bd-faults">
+        <div class="bd-f">
+          <span class="bd-f-n">1</span>
+          <div>
+            <div class="bd-f-t">A score that cannot be explained</div>
+            <div class="bd-f-b">86% is the mean of a backlog score, a repeat rate and a completion rate &mdash; three unrelated ratios averaged into a number no agent can act on. Its third tick restates the opportunities list below it.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">2</span>
+          <div>
+            <div class="bd-f-t">The accent spent five times over</div>
+            <div class="bd-f-b">Avatar, &ldquo;View earnings&rdquo;, the First Sale card, three quick-action discs and the active tab all carry oxide on one screen. A colour that marks everything marks nothing.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">3</span>
+          <div>
+            <div class="bd-f-t">Badges outrank the work</div>
+            <div class="bd-f-b">Nine achievements and a streak take a full band, clipped mid-word at the edge, while the one useful list reads &ldquo;Nothing needs you right now.&rdquo;</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">4</span>
+          <div>
+            <div class="bd-f-t">168px of greeting</div>
+            <div class="bd-f-b">A full-bleed oxide hero saying &ldquo;Hi, Brian Okello&rdquo; sits above the only control on the screen. The agent knows their own name.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">5</span>
+          <div>
+            <div class="bd-f-t">Marks that mean nothing</div>
+            <div class="bd-f-b">Fasteners is a sunburst, Paint an unreadable glyph, Cement a battery. Half the discs are oxide-soft and half blue-soft on no rule at all.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">6</span>
+          <div>
+            <div class="bd-f-t">Five shelves before the shelf</div>
+            <div class="bd-f-b">Solutions, Order again, Earns you a bonus, Your cluster and Buy more pay less all run before the product grid. And every price is painted oxide: a price is a size, not a warning.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">7</span>
+          <div>
+            <div class="bd-f-t">A screen dressed as a bank card</div>
+            <div class="bd-f-b">Gradient, a decorative disc bleeding off the corner, BRIAN OKELLO / OMNI-WARE embossed along the bottom. 400px spent on looking like a Visa.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">8</span>
+          <div>
+            <div class="bd-f-t">Four months of measured zero</div>
+            <div class="bd-f-b">Apr&ndash;Jul had no orders, so the chart draws four bars of zero. A zero that looks measured cannot be told from a real one.</div>
+          </div>
+        </div>
+        <div class="bd-f">
+          <span class="bd-f-n">9</span>
+          <div>
+            <div class="bd-f-t">A failure delivered as a toast</div>
+            <div class="bd-f-b">It floats over the content, then vanishes. The section it failed to fill goes on saying &ldquo;No bonus opportunities right now&rdquo; &mdash; a different statement, and untrue.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
