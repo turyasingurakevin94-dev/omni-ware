@@ -124,20 +124,30 @@ if (s) {
 
   t.check(/function revealPurchaseInvoice\(piId\)/.test(code) && /function revealOrderFor\(piId\)/.test(code),
     'both directions have a reveal');
-  // They work by filling the destination tab's own search box before
-  // switching, because goToTab() re-renders each list from that box.
-  // The window is 400 rather than 120 because filling the box turned out
-  // to be only half the job: both registers ALSO filter by a date range
-  // and hide voided documents, and neither was reset for a reader
-  // arriving from another screen -- so a bill from last month, or one
-  // that had been voided, landed them on an empty list with its own
-  // number typed above it. Those two guards sit between the box and the
-  // switch, and are checked in their own right below.
-  t.check(/document\.getElementById\('pi_doc_search'\)[\s\S]{0,400}goToTab\('purchase-invoices'\)/.test(code),
-    'revealing a purchase invoice fills its search box before switching tab');
+  /* They work by filling the SHARED search box before switching lens,
+     because goToTab() -> invApplySide() re-renders whichever register is
+     open from that box.
+
+     The two registers are ONE SCREEN now -- Sales and Purchases are
+     lenses over one filter bar -- so there is one search box, one date
+     range and one Hide voided rather than two copies of each. That is
+     what this check has to hold: the tab switch it used to assert was
+     the expensive half of the link, not the useful one.
+
+     The window is 400 rather than 120 because filling the box turned out
+     to be only half the job: the register ALSO filters by a date range
+     and hides voided documents, and neither was reset for a reader
+     arriving from another screen -- so a bill from last month, or one
+     that had been voided, landed them on an empty list with its own
+     number typed above it. Those two guards sit between the box and the
+     switch, and are checked in their own right below. */
+  t.check(/document\.getElementById\('inv_doc_search'\)[\s\S]{0,400}invSide = 'buys';[\s\S]{0,80}goToTab\('invoices'\)/.test(code),
+    'revealing a purchase invoice fills the shared search box, then opens the Purchases lens');
+  t.check(!/'pi_doc_search'/.test(code) && !/'pi_doc_range_preset'/.test(code),
+    'and there is no second copy of that bar left to disagree with it');
 
   const reveals = [
-    ['revealPurchaseInvoice', 'pi_doc_hide_voided', 'pi_doc_range_preset'],
+    ['revealPurchaseInvoice', 'inv_doc_hide_voided', 'inv_doc_range_preset'],
     ['revealInvoice', 'inv_doc_hide_voided', 'inv_doc_range_preset'],
   ];
   reveals.forEach(([fn, hide, preset]) => {
@@ -152,8 +162,21 @@ if (s) {
   t.check(/document\.getElementById\('inv_doc_search'\)[\s\S]{0,120}goToTab\('invoices'\)/.test(code),
     'and revealing an order does the same');
 
-  t.check(/wrap\.querySelectorAll\('\[data-pi\]'\)[\s\S]{0,160}revealPurchaseInvoice/.test(code),
-    'the order card wires its forward links');
+  /* THE FORWARD LINK ASKS ABOUT THE ORDER, not about the one number
+     pressed. An order that raised three bills is one question with three
+     answers, so following any of them shows all three under a crumb
+     naming the order -- with the one pressed open. revealPurchaseInvoice
+     is still the fallback for a bill with no order behind it, which is
+     every restock (generatePurchaseInvoiceForRestock sets quoteId: null). */
+  t.check(/wrap\.querySelectorAll\('\[data-pi\]'\)[\s\S]{0,460}revealBillsForOrder/.test(code),
+    'the order card wires its forward links to the order they belong to');
+  t.check(/wrap\.querySelectorAll\('\[data-pi\]'\)[\s\S]{0,460}revealPurchaseInvoice/.test(code),
+    'and falls back to the single bill when there is no order behind it');
+  const focus = (/function revealBillsForOrder\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/invFocusOrderId = q\.id/.test(focus) && !/inv_doc_search/.test(focus),
+    'it sets a focus rather than typing into the shared bar, so the Sales list it left is untouched');
+  t.check(/invFocusOrderId = null;[\s\S]{0,60}invSide = 'sales';/.test(code),
+    'and Back to Sales is one press, which is the whole of what the merge buys');
   t.check(/wrap\.querySelectorAll\('\[data-order-pi\]'\)[\s\S]{0,160}revealOrderFor/.test(code),
     'and the purchase invoice card wires its link back');
   t.check((code.match(/ev\.stopPropagation\(\);/g) || []).length >= 2,

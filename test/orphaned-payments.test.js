@@ -74,7 +74,7 @@ const src = read('index.html');
       payments: [{ amount: 210000, cashTxnId: 11 }] }];
 
     const held = cashTxnDependents([11]);
-    t.check(held.length === 1 && /PINV-0262/.test(held[0].what) && held[0].where === 'Purchase invoices',
+    t.check(held.length === 1 && /PINV-0262/.test(held[0].what) && held[0].where === 'Invoices, under Purchases',
       'the entry knows which bill is standing on it');
     t.check(cashTxnDependents([12]).length === 0, 'and an entry nothing leans on knows that too');
 
@@ -84,7 +84,7 @@ const src = read('index.html');
       'deleting it from the Cash Book is REFUSED — the bill would be left saying it was paid');
     t.check(said.some((m) => /PINV-0262/.test(m) && /210,000/.test(m)),
       'and the refusal names the bill and the figure rather than saying "cannot delete"');
-    t.check(said.some((m) => /Reverse the payment on Purchase invoices/.test(m)),
+    t.check(said.some((m) => /Reverse the payment on Invoices, under Purchases/.test(m)),
       'and names the one place that can undo it properly, which removes both sides');
 
     deleteCashTxn(12);

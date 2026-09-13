@@ -87,7 +87,18 @@ const INDEX = railIndex();
 {
   const EVERY_TAB = [
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
-    'compare', 'sourcing', 'suppliers', 'purchase-invoices',
+    'compare', 'sourcing', 'suppliers',
+    /* Purchase invoices is NOT in this list, and that is deliberate. An
+       order, the invoice it becomes and the bills it raises against its
+       suppliers are ONE THING moving through the business --
+       purchaseInvoicesForOrder() has always known it, and the sales row
+       has always carried its "Raised" links. What those links could not
+       do was land anywhere: the reveal had to change tab, type the
+       number into the other screen's search box, widen its date range
+       and drop its voided filter, and getting back meant undoing all
+       four by hand. They are two LENSES on one screen now, over one
+       filter bar. The ratchet that replaces this line is below, where
+       the words are checked to still reach the register. */
     'products', 'prices', 'inventory',
     /* Stock movements is NOT in this list, and that is the third answer
        this app has given to one question. It began stacked under
@@ -293,9 +304,30 @@ const INDEX = railIndex();
     t.check(!/navBadgeChase/.test(src) && /id="navBadgeFollowUps"/.test(src),
       'its rail badge went with its row, and the count lives on the badge of the row that took the work');
   }
+  /* Buying stock was one job across three screens until the supplier's
+     bill became the other lens of Invoices. Buy keeps the screens about
+     CHOOSING what to buy and from whom; what a supplier then billed you
+     is the same transaction as what you billed your customer, and lives
+     with it under Sell. */
   t.check(groupOf['compare'] === 'Buy' && groupOf['suppliers'] === 'Buy'
-    && groupOf['purchase-invoices'] === 'Buy',
-    'buying stock is one job across three screens');
+    && groupOf['sourcing'] === 'Buy' && groupOf['buying'] === 'Buy',
+    'choosing what to buy, and from whom, is one job across four screens');
+  {
+    t.check(!INDEX.some((x) => x.tab === 'purchase-invoices')
+      && !/id="tab-purchase-invoices"/.test(src),
+      'Purchase invoices is not a destination any more, and has no section left behind');
+    const alias = (/function resolveTab\(tab\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+    t.check(/if\(tab === 'purchase-invoices'\)\{[^}]*invSide = 'buys'[^}]*return 'invoices'; \}/.test(alias),
+      'but the old door still opens it, on the lens it meant — same resolve, same reason');
+    /* A merge is only honest if what people search by still reaches the
+       screen that took the work. These are the words the retired row
+       carried, and they are on the row that took it. */
+    const inv = INDEX.find((x) => x.tab === 'invoices') || { keywords: '' };
+    ['supplier', 'payables', 'goods received', 'purchase'].forEach((w) => {
+      t.check(inv.keywords.includes(w),
+        `and "${w}" still reaches the register, from the row that took the work`);
+    });
+  }
   t.check(groupOf['quote'] === 'Sell' && groupOf['invoices'] === 'Sell'
     && groupOf['customers'] === 'Sell' && groupOf['agents'] === 'Sell',
     'selling holds the quote, the invoice, the customer and the agent');

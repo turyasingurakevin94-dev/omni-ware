@@ -841,7 +841,7 @@ if (scope) {
      supplier payment. */
   t.check(/asked how much you are paying now/.test(render),
     'and the confirm says so before the bill is raised');
-  t.check(/pay later from Purchase invoices/.test(render),
+  t.check(/pay later from Invoices, under Purchases/.test(render),
     'while closing that box without paying is still an option, as it was before');
   /* Scoped to where the claim actually lives -- the save handler -- and
      not to a slice of the first 4,000 characters after the modal opens.
