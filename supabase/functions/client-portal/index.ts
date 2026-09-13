@@ -115,12 +115,32 @@ export function safeEqual(a: string, b: string): boolean {
 
 const PIN_TTL_MS = 10 * 60 * 1000;
 const PIN_MAX_ATTEMPTS = 3;
+// Three wrong tries and a PERSON has to be involved again: asking for
+// another PIN does not hand out three more guesses, only an admin issuing
+// one does (client-accounts), or the customer signing in successfully.
+//
+// This is the whole defence, and without it the rest is decorative. A PIN
+// is four figures — one in ten thousand — and a counter that resets every
+// time a new PIN is minted turns that into three fresh guesses on demand:
+// burn the attempts, ask for another, repeat. At the shop ceiling of 40
+// starts an hour that is roughly 120 guesses an hour against a fresh
+// secret each round, which works out near a coin-flip inside a day. Three
+// guesses TOTAL until a human vouches for you is a number no amount of
+// patience improves on.
+//
+// The cost is a customer who mistypes three times has to ring the shop.
+// At twenty trade accounts that is a phone call, and the same phone call
+// that opened the account in the first place.
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-// One request per phone per minute, and a ceiling per shop per hour.
-// The first stops somebody hammering a number; the second stops a script
-// walking through them. Same reasoning as catalogue-public, which is the
-// only other endpoint here that a stranger can reach.
-const START_WINDOW_MS = 60 * 1000;
+// A ceiling per shop per hour, stopping a script walking through numbers.
+// Same reasoning as catalogue-public, which is the only other endpoint
+// here a stranger can reach.
+//
+// There was a per-phone window here too. It is gone because the rule it
+// approximated is now exact: a live PIN is never replaced, so asking
+// twice in a minute already does nothing, and asking after the ceiling
+// does nothing either. A window measured in seconds was a weaker version
+// of both.
 const START_SHOP_WINDOW_MS = 60 * 60 * 1000;
 const START_SHOP_MAX = 40;
 
@@ -209,14 +229,38 @@ Deno.serve(async (req) => {
       // Nothing below changes the shape of the reply. Not found, suspended
       // and asking twice in a minute all look identical from outside.
       if (account && account.status === "active") {
-        const askedRecently = account.pin_expires_at
-          && Date.parse(account.pin_expires_at) > Date.now() - PIN_TTL_MS + START_WINDOW_MS;
-        if (!askedRecently) {
+        // A LIVE PIN IS NEVER REPLACED. Two reasons, and the first is the
+        // one that makes the shop workable: client-accounts issues a PIN
+        // an admin reads out to a customer, and if the customer's first
+        // tap on this screen minted a second one, the figures they were
+        // just given would be dead before they typed them.
+        //
+        // The second is that re-minting on demand is the rotation attack
+        // the ceiling above exists to stop. Once a PIN is spent — used,
+        // expired, or its three tries gone — there is nothing to protect
+        // and a new one may be minted; while it is live there is.
+        //
+        // The old guard here compared pin_expires_at against
+        // `now - PIN_TTL + START_WINDOW`, which is the sign inverted: it
+        // suppressed minting for a PIN issued up to NINETEEN minutes ago,
+        // including one that had already expired, so a customer whose PIN
+        // ran out tapped "Ask for another" and got a cheerful reply and no
+        // PIN for the next nine minutes.
+        const live = account.pin_hash
+          && account.pin_expires_at
+          && Date.parse(account.pin_expires_at) > Date.now()
+          && (account.pin_attempts || 0) < PIN_MAX_ATTEMPTS;
+        // Nothing is minted while the ceiling is hit either, PIN live or
+        // not: a new PIN here would carry the old attempt count anyway and
+        // be unusable, and minting one would be this endpoint quietly
+        // pretending it had helped.
+        const locked = (account.pin_attempts || 0) >= PIN_MAX_ATTEMPTS;
+        if (!live && !locked) {
           const pin = mintPin();
           await admin.from("client_accounts").update({
             pin_hash: await hashPin(pin, shopId, account.customer_id),
             pin_expires_at: new Date(Date.now() + PIN_TTL_MS).toISOString(),
-            pin_attempts: 0,
+            // pin_attempts is deliberately NOT reset. See PIN_MAX_ATTEMPTS.
           }).eq("shop_id", shopId).eq("customer_id", account.customer_id);
         }
       }
@@ -252,7 +296,11 @@ Deno.serve(async (req) => {
         return json({ error: "That PIN has run out. Ask for another." }, 401);
       }
       if ((account.pin_attempts || 0) >= PIN_MAX_ATTEMPTS) {
-        return json({ error: "Too many tries. Ask for a new PIN." }, 429);
+        // Names the only thing that actually helps. "Ask for a new PIN"
+        // was advice this endpoint had stopped taking: start will not mint
+        // past the ceiling, so the customer would have tapped it and
+        // waited for a PIN that was never coming.
+        return json({ error: "Too many wrong tries. Ring the shop for a new PIN." }, 429);
       }
 
       const ok = safeEqual(account.pin_hash, await hashPin(pin, shopId, account.customer_id));
@@ -260,7 +308,10 @@ Deno.serve(async (req) => {
         const attempts = (account.pin_attempts || 0) + 1;
         await admin.from("client_accounts").update({ pin_attempts: attempts })
           .eq("shop_id", shopId).eq("customer_id", account.customer_id);
-        return json({ error: "That PIN is not right", triesLeft: Math.max(0, PIN_MAX_ATTEMPTS - attempts) }, 401);
+        return json({
+          error: "That PIN is not right",
+          triesLeft: Math.max(0, PIN_MAX_ATTEMPTS - attempts),
+        }, 401);
       }
 
       // Spent on use. A PIN that still works after it has been used is a

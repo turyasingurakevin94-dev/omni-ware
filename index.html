@@ -5126,6 +5126,37 @@
 
   .cf-foot-note{font-size:11.5px;color:var(--ink-soft);padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
 
+  /* ---- THE PORTAL ACCOUNT ----------------------------------------
+     A login the shop hands out, and the one screen in this app that
+     shows a secret. The PIN is minted in the reply to a button press
+     and stored only as a hash, so what is on screen here is the only
+     copy that will ever exist -- which is why it is the largest thing
+     in the block and why the note under it is not a hint but a
+     warning. */
+  .cf-portal{display:flex;flex-direction:column;gap:9px;align-items:flex-start;
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .cf-portal-state{font-size:13px;line-height:1.55;color:var(--ink);}
+  .cf-portal-state b{font-weight:700;}
+  .cf-portal-meta{font-size:12px;line-height:1.5;color:var(--ink-soft);}
+  .cf-portal-acts{display:flex;flex-wrap:wrap;gap:8px;}
+  /* The PIN itself. Monospaced and spaced out because it is going to be
+     read aloud down a telephone, and 7111 read off a proportional font
+     at 13px is how a customer ends up typing 7ttt. */
+  .cf-pin{display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:100%;
+    background:var(--ow-verdigris-soft);border:1px solid var(--ow-verdigris);border-radius:10px;padding:13px 15px;}
+  .cf-pin-figs{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:34px;font-weight:700;letter-spacing:.32em;color:var(--ow-verdigris);line-height:1.1;}
+  .cf-pin-say{font-size:12.5px;line-height:1.55;color:var(--ink);}
+  .cf-pin-say b{font-weight:700;}
+  .cf-pin-acts{display:flex;flex-wrap:wrap;gap:8px;}
+  .cf-portal-warn{font-size:12.5px;line-height:1.5;border-radius:8px;padding:8px 10px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cf-portal-note{font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
+
+  .cf-terms{display:flex;flex-wrap:wrap;gap:10px;}
+  .cf-terms-one{display:flex;flex-direction:column;gap:5px;flex:1 1 190px;min-width:0;}
+  .cf-terms-one span{font-size:12px;color:var(--ink-soft);}
+
   /* ================= THE TILL ======================================
      Cash In and Cash Out are where every shilling in the business gets
      typed. They were a six-field form in which the amount -- the one
@@ -18832,6 +18863,38 @@
           <div id="c_owes"></div>
         </div>
 
+        <!-- THE PORTAL ACCOUNT. Editing only, like the balance above:
+             an account is a login attached to a customer who exists, and
+             there is nothing to attach one to while the form is still
+             being filled in. Hidden entirely where 0096 has not landed
+             -- a shop without the table is not a shop with a broken
+             button, it is a shop that has not turned the portal on. -->
+        <div class="cf-block" id="c_portal_block" style="display:none;">
+          <span class="cf-label">Their portal account</span>
+          <div id="c_portal"></div>
+        </div>
+
+        <!-- TERMS AND A LIMIT. On the customer, not on the account: a
+             customer has thirty-day terms whether or not they ever sign
+             in, and 0096 puts the columns here for that reason. Both
+             empty means NOBODY HAS SAID, which is not the same as cash
+             terms or a limit of zero, and the portal shows neither line
+             unless there is one. -->
+        <div class="cf-block" id="c_terms_block" style="display:none;">
+          <span class="cf-label">What you have agreed with them</span>
+          <div class="cf-terms">
+            <label class="cf-terms-one">
+              <span>Days to pay</span>
+              <input id="c_terms_days" type="number" min="0" step="1" placeholder="Nobody has said" autocomplete="off">
+            </label>
+            <label class="cf-terms-one">
+              <span>Most they may owe at once</span>
+              <input id="c_credit_limit" type="number" min="0" step="any" placeholder="No limit set" autocomplete="off">
+            </label>
+          </div>
+          <div class="cf-consequence" id="c_terms_hint"></div>
+        </div>
+
         <!-- WHERE THEIR BUILD HAS REACHED. One question, and the one
              thing that says what a customer will need NEXT rather than
              more of what they bought last. A rhythm can only ever say
@@ -21596,7 +21659,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -21616,7 +21679,14 @@ async function loadData(shopId){
     sb.from('customers').select('site_stage').limit(1),
     sb.from('manager_notes').select('id').limit(1),
     sb.from('product_links').select('to_variant_idx, from_variant_idx').limit(1),
-    sb.from('cash_txns').select('covers_from, covers_to').limit(1)
+    sb.from('cash_txns').select('covers_from, covers_to').limit(1),
+    /* 0096, the two halves of the client portal. The table says whether
+       the portal exists at all here; the columns say whether terms and a
+       limit can be written. Probed apart because a shop can have the
+       accounts table and an older customers, and the write below would
+       then fail EVERY customer save over two fields nothing else reads. */
+    sb.from('client_accounts').select('customer_id').limit(1),
+    sb.from('customers').select('terms_days, credit_limit').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -21717,6 +21787,11 @@ async function loadData(shopId){
      upsert carrying a column the table lacks would fail every pairing
      save, over a size nobody there has chosen yet. */
   linkSizeColumn = !(linkSizeColR && linkSizeColR.error);
+  /* 0096. A shop without the table has no portal, which is what it had
+     yesterday -- the customer form hides the block rather than offering a
+     button that cannot work, and nothing else in the app changes. */
+  clientAccountsTable = !(clientAccountsR && clientAccountsR.error);
+  customerTermsColumns = !(termsColR && termsColR.error);
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -21762,6 +21837,12 @@ async function loadData(shopId){
          forever. Absent on a shop that has not applied 0092, which
          reads as no stage rather than as a wrong one. */
       siteStage:c.site_stage||'', siteStageAt:c.site_stage_at||'',
+      /* NULL IS NOT ZERO here and the ?? is load-bearing. `||` would turn
+         a customer who must pay cash (0 days) into one nobody has agreed
+         terms with, and a customer barred from owing anything (a limit of
+         0) into one with no limit at all -- in both cases reading the
+         strictest agreement in the book as the loosest. */
+      termsDays: c.terms_days ?? null, creditLimit: c.credit_limit ?? null,
       debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
@@ -22131,6 +22212,10 @@ let paymentPromisesTable = false;
 let productLinksTable = false;
 let briefsSentTable = false;
 let siteStageColumn = false;
+// Set by loadData, both from 0096. See the probes there for why a write
+// cannot assume either.
+let clientAccountsTable = false;
+let customerTermsColumns = false;
 let linkSizeColumn = false;
 let cashTransferColumn = false;
 let cashCoversColumns = false;
@@ -22186,7 +22271,16 @@ function buildSyncRows(d, shopId){
        unknown column -- so the whole customers table would stop syncing
        over a field nothing else depends on. */
     customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||null, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null,
-      ...(siteStageColumn ? {site_stage:c.siteStage||null, site_stage_at:dateOrNull(c.siteStageAt)} : {})})),
+      ...(siteStageColumn ? {site_stage:c.siteStage||null, site_stage_at:dateOrNull(c.siteStageAt)} : {}),
+      /* 0096's two, on their own probe for the same reason as the stage
+         columns above: sent to a shop without them, every customer write
+         would fail on an unknown column. `== null ? null :` rather than
+         `|| null` for the same reason the read uses ??: nought days and a
+         nought limit are both real agreements. */
+      ...(customerTermsColumns ? {
+        terms_days: c.termsDays == null ? null : Number(c.termsDays),
+        credit_limit: c.creditLimit == null ? null : Number(c.creditLimit),
+      } : {})})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
       shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
@@ -54730,6 +54824,14 @@ function editCustomer(id){
   document.getElementById('customerFormTitle').textContent = 'Edit customer';
   cfFillLinkPicker(c);
   cfShowOwed(c);
+  cfShowTerms(c);
+  /* Drawn twice on purpose. The first pass is synchronous, so the block
+     is on screen with the rest of the form rather than appearing a beat
+     later; the second follows the one network call this form makes. A
+     shop whose function is unreachable keeps a form that works and a
+     portal block that says it cannot tell, which is true. */
+  cfShowPortal(c);
+  cfLoadPortalAccounts().then(()=>{ if(editingCustomerId === id) cfShowPortal(c); });
   cfRefresh();
   cfShowIssuedId();
   openModal('customerModal');
@@ -54737,13 +54839,22 @@ function editCustomer(id){
 }
 function resetCustomerForm(){
   editingCustomerId = null;
-  ['c_id','c_name','c_phone','c_phone2','c_location','c_debt','c_debt_since','c_notes'].forEach(id=>document.getElementById(id).value='');
+  /* The PIN goes with the form. It is on screen and nowhere else, so
+     leaving it rendered would mean the next customer opened in this modal
+     shows the last one's credential for the moment before it redraws. */
+  cfPinShown = null;
+  ['c_id','c_name','c_phone','c_phone2','c_location','c_debt','c_debt_since','c_notes',
+   'c_terms_days','c_credit_limit'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
   cfFillStages('', '');
   document.getElementById('c_debt_undated').checked = false;
   fillIssuedId('c_id', 'customer', 'C', 3, data.customers);
   cfFillLinkPicker(null);
   document.getElementById('customerFormTitle').textContent = 'Add customer';
   cfShowOwed(null);
+  cfShowTerms(null);
+  cfShowPortal(null);
   cfRefresh();
   cfShowIssuedId();
 }
@@ -54822,6 +54933,244 @@ function sfShowLinkHint(supplier){
     + (owed || owing
       ? `You owe them <b>${esc(fmtUGX(Math.round(owing)))}</b> and they owe you <b>${esc(fmtUGX(Math.round(owed)))}</b>.`
       : 'Neither side owes the other anything at the moment.');
+}
+
+/* ---- THE PORTAL ACCOUNT ------------------------------------------
+   A login the shop hands out. Everything here goes through the
+   client-accounts Edge Function: the tables are admin-only under RLS and
+   could be written from here directly, but a PIN has to be MINTED and
+   HASHED, and doing that in a browser would mean the hashing rule living
+   in two places and drifting the first time one of them is edited.
+
+   Nothing on this screen is ever put in `data`. An account is not the
+   shop's record of a customer, it is a credential, and the sync engine
+   diffs `data` against the server every few seconds -- a PIN that got in
+   there would be written back out, kept in lastSynced, and carried into
+   every backup the shop ever takes. */
+let clientAccountsByCustomer = null;   // customerId -> account view, or null if never loaded
+let cfPinShown = null;                 // the one PIN on screen, cleared when the form closes
+
+async function cfLoadPortalAccounts(){
+  if(!clientAccountsTable) return null;
+  try{
+    const { data: res, error } = await sb.functions.invoke('client-accounts', {
+      body: { shopId: currentShopId, action: 'list' },
+    });
+    if(error || !res || res.error) throw new Error((res && res.error) || error.message);
+    clientAccountsByCustomer = {};
+    (res.accounts||[]).forEach(a=> clientAccountsByCustomer[a.customerId] = a);
+    return clientAccountsByCustomer;
+  }catch(e){
+    clientAccountsByCustomer = null;
+    return null;
+  }
+}
+
+/* The PIN goes on screen and nowhere else. It exists in the reply to the
+   button press and in this string; there is no copy in the database to
+   read back, which is the whole reason the note under it is worded the
+   way it is rather than as a gentle suggestion. */
+function cfRenderPin(pin, expiresAt){
+  cfPinShown = { pin, expiresAt };
+  cfShowPortal(data.customers.find(c=>c.id===editingCustomerId) || null);
+}
+
+/* The account holds the last nine digits, because that is the only form
+   in which one person is one person. Nobody at the shop has a number
+   written down that way, so it goes back on screen as they know it. */
+function cfPhoneAsWritten(p){
+  const d = String(p||'').replace(/\D/g,'');
+  return d.length === 9 ? '0' + d : (d || '');
+}
+
+function cfPinGoodUntil(expiresAt){
+  const t = Date.parse(expiresAt||'');
+  if(!Number.isFinite(t)) return '';
+  const mins = Math.round((t - Date.now())/60000);
+  if(mins <= 0) return 'It has already run out — issue another.';
+  if(mins < 90) return `Good for ${mins} more ${mins===1?'minute':'minutes'}.`;
+  return 'Good until ' + new Date(t).toLocaleString('en-GB',
+    { weekday:'long', hour:'2-digit', minute:'2-digit' }) + '.';
+}
+
+function cfShowPortal(c){
+  const block = document.getElementById('c_portal_block');
+  if(!block) return;
+  /* Hidden outright where 0096 has not landed. A shop without the table
+     is not a shop with a broken button -- it is a shop that has not
+     turned the portal on, and showing a control that cannot work would
+     make the missing migration look like a bug in the app. */
+  block.style.display = (c && clientAccountsTable) ? '' : 'none';
+  if(!c || !clientAccountsTable) return;
+
+  const el = document.getElementById('c_portal');
+  const a = clientAccountsByCustomer && clientAccountsByCustomer[c.id];
+  const pin = cfPinShown;
+
+  const pinCard = pin ? `
+    <div class="cf-pin">
+      <div class="cf-pin-figs">${esc(pin.pin)}</div>
+      <div class="cf-pin-say"><b>Read these four figures to ${esc(c.name||c.id)} now.</b>
+        ${esc(cfPinGoodUntil(pin.expiresAt))}</div>
+      <div class="cf-pin-acts">
+        <button type="button" class="cf-act" id="c_pin_copy">Copy</button>
+      </div>
+      <div class="cf-pin-say">This is the only time they will be shown. The shop keeps no copy —
+        closing this form loses them, and the only way back is a new PIN.</div>
+    </div>` : '';
+
+  if(!a){
+    el.innerHTML = pinCard || `
+      <div class="cf-portal">
+        <div class="cf-portal-state">No portal account.</div>
+        <div class="cf-portal-meta">Opening one lets ${esc(c.name||'them')} sign in and see their own
+          balance, their terms and everything they have bought. They see no supplier and no cost — ever.</div>
+        <div class="cf-portal-acts"><button type="button" class="cf-act" id="c_portal_open">Open an account</button></div>
+        <div class="cf-portal-note">They sign in with the phone number above, so get that right first.</div>
+      </div>`;
+  }else{
+    const suspended = a.status === 'suspended';
+    const lines = [];
+    if(suspended) lines.push('<div class="cf-portal-warn">Suspended. They cannot sign in, and any device that was signed in has been signed out.</div>');
+    /* The quiet, awful one: they sign in fine and their own history is
+       missing, because the portal finds orders by the number on the
+       CUSTOMER row and the account signs in on the number it was opened
+       with. Somebody edited one of them afterwards. */
+    if(!a.phoneMatchesCustomer) lines.push(`<div class="cf-portal-warn">They sign in on
+      <b>${esc(cfPhoneAsWritten(a.phone))}</b>, but their customer record now says <b>${esc(c.phone||'nothing')}</b>.
+      They will sign in and find none of their own orders. Issuing a new PIN moves the account onto
+      the number above.</div>`);
+    if(a.lockedOut && !suspended) lines.push('<div class="cf-portal-warn">Locked out — three wrong tries. Asking for another PIN on the portal will not help them; only a new PIN from here will.</div>');
+
+    /* Not "Suspended" and not "Open": those are said by the warning
+       above, and a state line that repeats the box under it is a line
+       that stops being read. Locked out is the same: the warning says it
+       AND says the way out, and "Open, nobody signed in" would have been
+       actively wrong there — an account nobody can sign into is not
+       open. */
+    const state = (suspended || a.lockedOut) ? null
+      : a.pinLive ? 'A PIN is outstanding'
+      : a.devices ? `Signed in on ${a.devices} ${a.devices===1?'device':'devices'}`
+      : 'Open, nobody signed in';
+    const meta = [];
+    meta.push('Signs in on ' + esc(cfPhoneAsWritten(a.phone)));
+    if(a.lastSeenAt) meta.push('last used ' + new Date(a.lastSeenAt).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}));
+    else meta.push('never used');
+    if(a.pinLive && a.pinExpiresAt) meta.push(esc(cfPinGoodUntil(a.pinExpiresAt)).replace(/\.$/,''));
+
+    el.innerHTML = pinCard + `
+      <div class="cf-portal">
+        ${state ? `<div class="cf-portal-state"><b>${esc(state)}.</b></div>` : ''}
+        <div class="cf-portal-meta">${meta.join(' &middot; ')}</div>
+        ${lines.join('')}
+        <div class="cf-portal-acts">
+          ${/* No PIN button on a suspended account. open/reissue sets
+                status back to active, so offering one here would let a
+                suspension be lifted by a button that says nothing about
+                lifting it -- and the shop suspends people over disputes.
+                Letting them back in is its own decision, taken first. */
+            suspended ? ''
+              : `<button type="button" class="cf-act" id="c_portal_reissue">${a.pinLive ? 'Replace the PIN' : 'Issue a PIN'}</button>`}
+          ${a.devices ? '<button type="button" class="cf-act" id="c_portal_revoke">Sign out their devices</button>' : ''}
+          <button type="button" class="cf-act" id="c_portal_${suspended?'restore':'suspend'}">${suspended?'Let them back in':'Suspend'}</button>
+        </div>
+      </div>`;
+  }
+
+  const copy = document.getElementById('c_pin_copy');
+  if(copy) copy.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(cfPinShown ? cfPinShown.pin : '');
+      toast('Copied — paste it into WhatsApp before you close this');
+    }catch(e){
+      /* A clipboard the browser will not open loses nothing: the figures
+         are on screen at 34px to be read out, which is how they were
+         always going to reach the customer anyway. */
+      toast('Could not copy — read the figures out instead', 4000);
+    }
+  });
+  const wire = (id, act, confirmMsg) => {
+    const b = document.getElementById(id);
+    if(b) b.addEventListener('click', ()=> cfPortalAct(c, act, confirmMsg));
+  };
+  wire('c_portal_open', 'open');
+  wire('c_portal_reissue', 'reissue',
+    a && a.pinLive ? 'The PIN they already have will stop working. Issue a new one?' : null);
+  wire('c_portal_revoke', 'revoke',
+    'Every device they are signed in on gets signed out. They will need a new PIN to get back in. Go on?');
+  wire('c_portal_suspend', 'suspend',
+    'They will not be able to sign in, and anything signed in now gets signed out. Their record and their history are untouched. Suspend?');
+  wire('c_portal_restore', 'restore', null);
+}
+
+async function cfPortalAct(c, action, confirmMsg){
+  if(confirmMsg && !confirm(confirmMsg)) return;
+  const el = document.getElementById('c_portal');
+  el.innerHTML = '<div class="cf-portal"><div class="cf-portal-meta">Working&hellip;</div></div>';
+  try{
+    const { data: res, error } = await sb.functions.invoke('client-accounts', {
+      body: { shopId: currentShopId, action, customerId: c.id },
+    });
+    /* invoke() surfaces a non-2xx as `error` with the body unread, so the
+       sentence the function wrote -- which names the customer holding a
+       clashing number, or the missing digits -- would be replaced by
+       "Edge Function returned a non-2xx status code". Read the body. */
+    const said = (res && res.error) || (error && error.context && await error.context.json().then(b=>b.error).catch(()=>null));
+    if(said) throw new Error(said);
+    if(error) throw error;
+    await cfLoadPortalAccounts();
+    if(res && res.pin) cfRenderPin(res.pin, res.expiresAt);
+    else { cfPinShown = null; cfShowPortal(c); }
+    if(res && res.revoked != null) toast(`${res.revoked} ${res.revoked===1?'device':'devices'} signed out`);
+  }catch(e){
+    cfPinShown = null;
+    await cfLoadPortalAccounts();
+    cfShowPortal(c);
+    toast((e && e.message) || 'That did not work', 6000);
+  }
+}
+
+/* ---- TERMS AND A LIMIT -------------------------------------------
+   Read back as null when the box is empty, never as 0: an empty box
+   means nobody has said, and 0 days is cash terms -- a real and much
+   stricter agreement. The portal shows a line only where there is one. */
+function cfReadTerms(){
+  if(!customerTermsColumns) return {};
+  const num = (id)=>{
+    const raw = document.getElementById(id).value.trim();
+    if(raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  return { termsDays: num('c_terms_days'), creditLimit: num('c_credit_limit') };
+}
+function cfShowTerms(c){
+  const block = document.getElementById('c_terms_block');
+  if(!block) return;
+  block.style.display = (c && customerTermsColumns) ? '' : 'none';
+  if(!c || !customerTermsColumns) return;
+  document.getElementById('c_terms_days').value = c.termsDays == null ? '' : c.termsDays;
+  document.getElementById('c_credit_limit').value = c.creditLimit == null ? '' : c.creditLimit;
+  cfTermsHint();
+}
+function cfTermsHint(){
+  const el = document.getElementById('c_terms_hint');
+  if(!el) return;
+  const t = cfReadTerms();
+  const bits = [];
+  if(t.termsDays == null) bits.push('No terms agreed.');
+  else if(t.termsDays === 0) bits.push('Cash — payment on the day.');
+  else bits.push(`<b>${t.termsDays}</b> days to pay.`);
+  if(t.creditLimit == null) bits.push('No limit set.');
+  else bits.push(`They may owe up to <b>${esc(fmtUGX(Math.round(t.creditLimit)))}</b> at once.`);
+  /* Says what the customer will READ, because that is the only place
+     these two figures are ever shown -- nothing in this app enforces
+     either of them, and a hint that implied otherwise would have the
+     shop believing an invoice would be stopped. */
+  el.innerHTML = bits.join(' ') + ' '
+    + (t.termsDays == null && t.creditLimit == null
+      ? 'Their portal shows neither line.'
+      : 'Shown to them on their portal. Nothing here stops an invoice — it is what you have agreed, written down.');
 }
 
 function cfShowOwed(c){
@@ -54976,6 +55325,13 @@ function cfRefresh(){
 ['c_name','c_phone','c_location','c_debt','c_debt_since'].forEach(id=>
   document.getElementById(id).addEventListener('input', cfRefresh));
 document.getElementById('c_debt_undated').addEventListener('change', cfRefresh);
+/* The two 0096 fields update their own consequence line rather than
+   riding cfRefresh: that one is about the OPENING balance and duplicates,
+   neither of which an edit-only field has anything to say about. */
+['c_terms_days','c_credit_limit'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', cfTermsHint);
+});
 function deleteCustomer(id){
   // Refused while they still owe, for the same reason as deleteSupplier():
   // the Debtors List maps data.customers, so this hides the balance rather
@@ -55045,6 +55401,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
       ...data.customers[idx], id, name, location, phone, phone2,
       notes: document.getElementById('c_notes').value.trim(),
       ...cfReadStage(data.customers[idx]),
+      ...cfReadTerms(),
     };
     // Through linkCustomerSupplier so BOTH records are written and any
     // previous partner on either side is released.

@@ -186,6 +186,9 @@
     <div style="padding:0 28px 12px;display:flex;flex-direction:column;gap:12px;">
       <button class="btn btn-go" type="submit" form="pinForm" id="pinBtn">Sign in</button>
       <button class="btn btn-line" type="button" id="pinAgain">Ask for another</button>
+      <!-- Says where the ceiling is BEFORE it is hit, because the moment
+           after is the moment this button stops being the answer. -->
+      <div class="meta" style="text-align:center;">Three wrong tries and only the shop can let you back in.</div>
     </div>
     <div style="padding:6px 28px calc(22px + env(safe-area-inset-bottom));">
       <div class="meta" style="text-align:center;line-height:1.5;">
@@ -338,6 +341,11 @@ function fail(message, retry){
 let pendingPhone = '';
 let pinDeadline = 0;
 let clockTimer = null;
+/* Three wrong tries and only the shop can issue another. Held here
+   because the clock below would otherwise run down and say "ask for
+   another" over the top of a message saying that will not work — the
+   countdown knows the time is up, it does not know why. */
+let pinLocked = false;
 
 document.getElementById('signInForm').addEventListener('submit', async (ev) => {
   ev.preventDefault();
@@ -373,15 +381,31 @@ function openPin(){
     + esc(pendingPhone.replace(/\D/g,'').slice(-3)) + '</strong>. Ask for them at the counter or on WhatsApp.';
   ['pin1','pin2','pin3','pin4'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('pinSay').hidden = true;
+  pinLocked = false;
+  setPinAgain();
   show('scPin');
   tickClock();
   clearInterval(clockTimer); clockTimer = setInterval(tickClock, 1000);
   document.getElementById('pin1').focus();
 }
 
+/* The one control that stops being an answer. While a PIN is merely
+   spent, asking again works; once the tries are gone, start refuses to
+   mint and the button would do nothing at all. It says which. */
+function setPinAgain(){
+  const b = document.getElementById('pinAgain');
+  b.disabled = pinLocked;
+  b.textContent = pinLocked ? 'Only the shop can help now' : 'Ask for another';
+}
+
 function tickClock(){
   const left = Math.max(0, pinDeadline - Date.now());
   const el = document.getElementById('pinClock');
+  if(pinLocked){
+    el.innerHTML = 'Ring the shop for a new PIN.';
+    clearInterval(clockTimer);
+    return;
+  }
   if(left <= 0){
     el.innerHTML = 'That PIN has run out. Ask for another.';
     clearInterval(clockTimer);
@@ -428,13 +452,19 @@ document.getElementById('pinForm').addEventListener('submit', async (ev) => {
   }catch(err){
     const say = document.getElementById('pinSay');
     const left = err.triesLeft;
+    // 429 is the ceiling already reached; triesLeft 0 is this try reaching
+    // it. Either way the next PIN comes from a person.
+    if(err.status === 429 || left === 0){ pinLocked = true; setPinAgain(); tickClock(); }
     say.innerHTML = '<div class="say"><strong style="font-weight:600;">' + esc(err.message) + '.</strong> '
       + (left > 0
           /* What the function ACTUALLY does after three: it stops
-             accepting that PIN and you ask the shop for another. There is
-             no timed lock-out, so this does not claim one. */
-          ? esc(left + ' ' + plural(left,'try','tries') + ' left, then this PIN stops working and you ask for another.')
-          : 'That PIN is finished. Ask for another.')
+             accepting PINs for this number until somebody at the shop
+             issues a new one. There is no timed lock-out, so this does not
+             claim one — and it does not send them to the button below
+             either, because asking for another PIN is exactly what stops
+             working. Only a person can let them back in. */
+          ? esc(left + ' ' + plural(left,'try','tries') + ' left, then you will need to ring the shop for a new one.')
+          : 'Ring the shop for a new one — asking here will not help now.')
       + '</div>';
     say.hidden = false;
     boxes.forEach(b => { b.value = ''; });

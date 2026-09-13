@@ -181,8 +181,22 @@ function load() {
   t.check(!/setTimeout|lock/i.test(fn.slice(fn.indexOf('action === "verify"'), fn.indexOf('action === "account"'))) ||
     !/fifteen|15 minutes/.test(src),
     'because verify has none to promise -- three wrong tries and the PIN is simply finished');
-  t.check(/stops working and you ask for another/.test(src),
+  t.check(/ring the shop for a new one/i.test(src),
     'and the page says what actually happens instead');
+  // The specific trap: after three tries the "Ask for another" button on
+  // this very screen is the one thing that will NOT help, because start
+  // refuses to mint past the ceiling. The page has to KNOW it is locked,
+  // or the countdown runs out and cheerfully contradicts the message
+  // above it.
+  t.check(/let pinLocked = false;/.test(src), 'the page tracks being locked out');
+  t.check(/err\.status === 429 \|\| left === 0/.test(src),
+    'set both by the ceiling already reached and by this try reaching it');
+  t.check(/if\(pinLocked\)\{[\s\S]{0,120}Ring the shop for a new PIN/.test(src),
+    'and the countdown says so rather than "ask for another"');
+  t.check(/b\.disabled = pinLocked;/.test(src),
+    'and the button that would not work is disabled, not left looking live');
+  t.check(/only the shop can let you back in/i.test(src),
+    'the ceiling is named before it is hit, not only after');
   t.check(/PIN_MAX_ATTEMPTS = 3;/.test(fn) && /triesLeft/.test(src),
     'the count shown to the customer comes from the server, not from a number typed into the page');
 }
