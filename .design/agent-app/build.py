@@ -61,6 +61,13 @@ ICONS = {
     'pencil': '<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 5.5l4 4"/>',
     'lock': '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/>'
             '<path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+    'sheet_f': '<path d="M2.5 17.5l4.5-11h14.5l-4.5 11z"/>',
+    'pipe_f': '<path d="M6.5 3h3.4v7.2a4.4 4.4 0 0 0 4.4 4.4H21v3.4h-6.7A7.8 7.8 0 0 1 6.5 10.2z"/>',
+    'nail_f': '<path d="M8.6 2.5h6.8l1.5 3-2 2v14a1 1 0 0 1-2 0v-14l-2-2z"/>',
+    'bag_f': '<path d="M6 4.5h12l2 16H4z"/>',
+    'image': '<rect x="3" y="4.5" width="18" height="15" rx="2.5"/>'
+             '<circle cx="8.6" cy="10" r="1.7"/><path d="M3.4 17l4.8-4.6 3.4 3.2 3.4-3.2 5.4 5.1"/>',
+    'expand': '<path d="M9 3.5H3.5V9M15 3.5h5.5V9M9 20.5H3.5V15M15 20.5h5.5V15"/>',
     'flag': '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h11l-2 3.5 2 3.5h-11"/>',
     # standing: three bars of a podium, middle tallest
     'podium': '<path d="M3.5 20.5h17"/><rect x="4" y="13" width="4.6" height="7.5" rx="1"/>'
@@ -150,6 +157,7 @@ if __name__ == '__main__':
     build('Main.dc.html',     'body_home.html',     *PH)
     build('Standing.dc.html', 'body_standing.html', *PH)
     build('SetTarget.dc.html','body_target.html',    *PH)
+    build('CustomerView.dc.html','body_customerview.html', *PH)
     build('Sell.dc.html',    'body_sell.html',    *PH)
     build('AddItem.dc.html', 'body_add.html',     *PH)
     build('Order.dc.html',   'body_order.html',   *PH)
