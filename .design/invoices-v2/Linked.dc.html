@@ -1,0 +1,468 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* Tokens, verbatim from index.html's own :root blocks. */
+    :root{
+      --ow-steel-950:#14171B; --ow-steel-800:#252A31; --ow-steel-400:#8A939C;
+      --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+      --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+      --ow-oxide:#B23A26; --ow-oxide-deep:#8E2C1C; --ow-oxide-light:#C9573F; --ow-oxide-soft:#F6E7E3;
+      --ow-verdigris:#1C6B58; --ow-verdigris-soft:#E2EFEB;
+      --ow-amber:#B0700A; --ow-amber-soft:#FBEFD9; --ow-amber-faint:#FEFAF2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+      --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+      --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+      --ow-sp-2:2px; --ow-sp-4:4px; --ow-sp-6:6px; --ow-sp-8:8px;
+      --ow-sp-10:10px; --ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
+      --ow-sp-24:24px; --ow-sp-32:32px;
+      --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+      --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
+      --ow-t-16:16px; --ow-t-20:20px; --ow-t-28:28px;
+      --ow-lh-tight:1.2; --ow-lh-snug:1.35; --ow-lh-normal:1.5;
+      --ow-fw-400:400; --ow-fw-500:500; --ow-fw-600:600; --ow-fw-700:700;
+      --ow-lift:0 4px 16px rgba(15,20,25,.14);
+      --ow-tap:44px; --ow-measure:76ch;
+      --bg:var(--ow-steel-050); --panel:var(--ow-paper);
+      --ink:var(--ow-ink-900); --ink-soft:var(--ow-ink-600);
+      --line:var(--ow-rule); --accent:var(--ow-oxide);
+      --good:var(--ow-verdigris); --danger:var(--ow-crimson); --navy:var(--ow-steel-950);
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+
+    /* ---- chrome: the navy top bar and the 220px rail ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.07);z-index:3;}
+    .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#8E9BA8;font-weight:500;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:18px;height:18px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 10px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;z-index:2;}
+    .nav-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+      color:#7C8894;padding:12px 12px 6px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;}
+    .nav-b .nav-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .nav-b.active{background:var(--ow-oxide);color:#fff;font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+    .nav-b.active .nav-badge{background:rgba(255,255,255,.24);}
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;padding:26px 40px 32px;box-sizing:border-box;overflow:hidden;}
+
+    /* ---- page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 var(--ow-sp-12);margin-bottom:var(--ow-sp-16);}
+    .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-ph-nm{display:flex;align-items:center;gap:7px;}
+    /* The "i" the long explanation folds behind. */
+    .ow-ph-i{width:17px;height:17px;flex:none;border:1px solid var(--ow-rule);border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:var(--ow-ink-600);background:var(--ow-paper);}
+
+    /* ---- fields, segments, buttons ---- */
+    .ow-f{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+    .ow-f-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-f-in{display:flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-8);
+      min-width:124px;box-sizing:border-box;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-f-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+    .ow-f-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;}
+    .ow-seg{display:inline-flex;align-items:center;gap:var(--ow-sp-2);padding:var(--ow-sp-2);box-sizing:border-box;height:34px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+    .ow-seg-b{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:100%;padding:0 var(--ow-sp-12);
+      box-sizing:border-box;border-radius:var(--ow-r-sm);white-space:nowrap;
+      font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+    .ow-seg-b.ow-on{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+    .ow-seg-n{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+    .ow-seg-b.ow-on .ow-seg-n{color:var(--ow-steel-100);}
+    .btn{padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;text-align:center;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;}
+    .btn-accent{background:var(--accent);color:#fff;}
+    .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+    .btn.ow-sm{padding:0 var(--ow-sp-10);height:28px;font-size:var(--ow-t-12);}
+    .btn .icon{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- the metric strip ---- */
+    .ow-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-strip.ow-strip-5{grid-template-columns:repeat(5,1fr);}
+    .ow-mt{padding:var(--ow-sp-10) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);}
+    .ow-mt:first-child{border-left:0;}
+    .ow-mt-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);margin:0 0 var(--ow-sp-4);}
+    .ow-mt-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;
+      font-weight:var(--ow-fw-500);letter-spacing:-.03em;line-height:1.1;display:block;}
+    .ow-mt-v .ow-u{font-size:.55em;color:var(--ow-ink-400);margin-left:.3em;letter-spacing:0;}
+    .ow-mt-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-4) 0 0;line-height:1.35;}
+    .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
+    .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+    .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
+
+    /* ---- panels and layout ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:var(--ow-sp-8);height:34px;
+      padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:var(--ow-sp-16);align-items:start;}
+    .ow-grid-l{display:grid;grid-template-columns:372px minmax(0,1fr);gap:var(--ow-sp-16);align-items:start;}
+    .ow-side{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+    .ow-stack{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+
+    /* ---- rows, chips, figures ---- */
+    .ow-tb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-tb-n{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:12px;}
+    .search svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:var(--ow-sp-10);
+      width:100%;min-height:var(--ow-tap);padding:var(--ow-sp-6) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;text-align:left;}
+    .ow-lr:last-child{border-bottom:0;}
+    .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+    .ow-lr-n{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);line-height:1.3;}
+    .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-m{grid-column:1;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-600);letter-spacing:.02em;height:18px;padding:0 var(--ow-sp-6);
+      border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-cp-d{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;}
+    .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);color:var(--ow-ink-600);
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:.02em;
+      display:flex;align-items:center;justify-content:center;flex:none;}
+    .ow-sr{display:flex;align-items:center;gap:var(--ow-sp-8);height:30px;
+      padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-sr:last-of-type{border-bottom:0;}
+    .ow-sr-k{flex:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-sr-v{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
+    .ow-sr-v .ow-u{font-size:.75em;color:var(--ow-ink-400);margin-left:3px;}
+    .ow-sr-v.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .ow-sr-v.ow-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+    .ow-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-fig-b{display:block;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);white-space:normal;}
+    .ow-fig-none{color:var(--ow-ink-400);font-weight:var(--ow-fw-500);}
+    .ow-mini{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+    .ow-empty{padding:var(--ow-sp-32);text-align:center;color:var(--ow-ink-600);font-size:var(--ow-t-13);}
+
+    /* ---- the message box ---- */
+    .ow-msg{display:block;width:100%;box-sizing:border-box;margin:0;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+      padding:var(--ow-sp-10) var(--ow-sp-12);font-family:'Inter',system-ui,sans-serif;
+      font-size:var(--ow-t-13);line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);}
+    .ow-msg-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-6);}
+    .ow-msg-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-msg-to{margin-left:auto;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-msg-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-6) 0 0;
+      line-height:1.45;max-width:var(--ow-measure);}
+
+    /* ---- the register table ---- */
+    .ow-tbl{--ow-tbl-cols:1fr auto;display:grid;grid-template-columns:var(--ow-tbl-cols);}
+    .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;grid-template-columns:var(--ow-tbl-cols);
+      align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-top:1px solid var(--ow-rule-soft);}
+    .ow-tbl-f{background:var(--ow-paper-2);border-top:1px solid var(--ow-rule);
+      font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);}
+    .ow-tbl-h{border-top:0;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);border-bottom:1px solid var(--ow-rule);}
+    .ow-tbl-h + .ow-tbl-r{border-top:0;}
+    .ow-tbl-r{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+    .ow-tbl-g{grid-column:1/-1;display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+      padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);
+      border-top:1px solid var(--ow-rule);font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+    .ow-tbl-g .ow-tbl-gs{margin-left:auto;font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+    .ow-tbl-c{min-width:0;}
+    .ow-tbl-p{display:block;min-width:0;font-weight:var(--ow-fw-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+    .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:var(--ow-fw-600);letter-spacing:.06em;}
+    .ow-tbl-a{display:flex;align-items:center;gap:var(--ow-sp-6);justify-self:end;}
+    .ow-tbl.fup-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 96px 108px auto;}
+    .fup-tbl .ow-tbl-r.fup-closed{background:var(--ow-paper-2);}
+    .fup-closed .ow-tbl-p{color:var(--ow-ink-400);text-decoration:line-through;}
+    .fup-tbl .ow-tbl-g .ow-av{width:22px;height:22px;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);}
+
+
+    /* ==== The two registers, matched to index.html ==== */
+    /* The shared filter bar. On the two screens today these fields sit
+       INSIDE .ow-ph and wrap with it; here they are one row of their own
+       because they now serve both lenses, and a bar that belongs to
+       neither lens in particular should not sit among the page name's
+       own furniture. */
+    .iv-find{display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;
+      margin-bottom:var(--ow-sp-16);}
+    /* The header's filter fields. Search is the FIRST control on both
+       registers today and stays first: at this volume neither list is
+       read whole, it is narrowed to a question and then read. */
+    .ow-ph-f{flex:none;}
+    .inv-f-search{flex:1 1 240px;min-width:0;max-width:340px;}
+    .ow-ph-f .ow-f-in{height:30px;min-width:0;width:100%;color:var(--ow-ink-600);
+      font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);}
+    .ow-ph-f .ow-f-in.mono{font-family:var(--mono);}
+    .inv-ck{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:30px;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+    .inv-ck i{width:13px;height:13px;border:1px solid var(--ow-rule);border-radius:3px;
+      background:var(--ow-steel-950);display:inline-block;position:relative;flex:none;}
+    .inv-ck i::after{content:"";position:absolute;left:3px;top:1px;width:4px;height:7px;
+      border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(42deg);}
+    /* The sales register, verbatim tracks from index.html. */
+    .ow-tbl.inv-tbl{--ow-tbl-cols:34px 68px 74px minmax(150px,520px) 126px 148px 168px auto;}
+    .inv-tbl .ow-tbl-h,.inv-tbl .ow-tbl-r,.inv-tbl .ow-tbl-f{gap:var(--ow-sp-10);}
+    .inv-tbl .ow-tbl-r{align-items:center;}
+    .inv-c-doc .ow-link{font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:var(--ow-t-12);color:var(--ow-oxide);font-weight:var(--ow-fw-600);}
+    .inv-c-date{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);font-size:var(--ow-t-12);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .inv-c-who{min-width:0;}
+    .inv-ckbox{width:13px;height:13px;border:1px solid var(--ow-rule);border-radius:3px;
+      background:var(--ow-paper);display:inline-block;}
+    /* THE LINK THAT ALREADY EXISTS. A sales row names the supplier bills
+       the order raised; today pressing one leaves the screen. */
+    .lifecycle-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 0;}
+    .lifecycle-links .lc-label{font-size:10px;font-weight:700;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .lc-link{display:inline-flex;align-items:baseline;gap:6px;font-size:12px;font-weight:700;
+      color:var(--ow-oxide);border-bottom:1px solid currentColor;padding:1px 0;}
+    .lc-sup{font-size:10.5px;font-weight:500;color:var(--ow-ink-600);}
+    .inv-meta{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+    .inv-meta-t{font-size:var(--ow-t-11);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* The purchase register, verbatim tracks from index.html. */
+    .ow-pi-h{display:grid;grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;
+      gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pi-h span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-pi-h-r{text-align:right;}
+    .ow-pi-r{display:grid;grid-template-columns:18px minmax(0,1fr) 186px 92px 146px;
+      gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);align-items:center;
+      border-bottom:1px solid var(--ow-rule-soft);min-height:var(--ow-tap);}
+    .ow-pi-r:last-of-type{border-bottom:0;}
+    .pi-cr{width:13px;height:13px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .pi-nm{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pi-sub{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:1px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pi-for,.pi-dt{font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pi-dt{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .pi-amt{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);white-space:nowrap;}
+    .pi-amt .ow-pi-u{font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+      font-size:var(--ow-t-11);color:var(--ow-ink-600);letter-spacing:0;margin-left:var(--ow-sp-4);}
+    /* The checks band, which only the buying side has. */
+    .pi-ck{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);}
+    .pi-ck:last-of-type{border-bottom:0;}
+    .pi-ck svg{width:15px;height:15px;fill:none;stroke-width:1.8;stroke-linecap:round;
+      stroke-linejoin:round;flex:none;}
+    .pi-ck.ok{color:var(--ow-verdigris);} .pi-ck.ok svg{stroke:var(--ow-verdigris);}
+    .pi-ck.warn{color:var(--ow-amber-ink);} .pi-ck.warn svg{stroke:var(--ow-amber-ink);}
+    .pi-ck b{font-weight:var(--ow-fw-600);}
+    .pi-ck span.t{color:var(--ow-ink-600);}
+    /* The band under the rejected split, counting what it costs. Its
+       own rule because .iv-fix belongs to Inventory: without one the
+       icon has no size and paints a black triangle the width of the
+       frame, which is what the first render of this artboard did. */
+    .inv-cost{display:flex;align-items:flex-start;gap:var(--ow-sp-10);
+      padding:var(--ow-sp-10) var(--ow-sp-12);margin-top:var(--ow-sp-16);
+      border:1px solid var(--ow-crimson-soft);border-radius:var(--ow-r);
+      background:#FCF3F2;font-size:var(--ow-t-12);line-height:var(--ow-lh-snug);
+      color:var(--ow-crimson);max-width:var(--ow-measure);}
+    .inv-cost svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-top:1px;}
+    .inv-cost b{font-weight:var(--ow-fw-600);}
+    /* The crumb that follows a link between the two lenses. */
+    .inv-crumb{display:flex;align-items:center;gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-12);
+      padding:var(--ow-sp-8) var(--ow-sp-12);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r);background:var(--ow-paper);font-size:var(--ow-t-12);
+      color:var(--ow-ink-600);}
+    .inv-crumb svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;flex:none;}
+    .inv-crumb b{color:var(--ow-ink-900);font-family:var(--mono);font-weight:var(--ow-fw-600);}
+    .inv-crumb .back{margin-left:auto;color:var(--ow-oxide);font-weight:var(--ow-fw-600);
+      border-bottom:1px solid currentColor;}
+
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:820px">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OW</div>
+      <div class="tag">OMNI&#8209;WARE</div>
+    </div>
+    <div class="tb-where"><span class="g">Sell</span><span>/</span><span>Invoices</span></div>
+    <span class="tb-sp"></span>
+    <svg class="tb-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section-label">Sell</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.5 12.5L12.5 20.5a2 2 0 0 1-2.8 0l-6.2-6.2a2 2 0 0 1-.6-1.4V4.5a1 1 0 0 1 1-1h8.4a2 2 0 0 1 1.4.6l6.8 6.8a2 2 0 0 1 0 2.6z"></path><circle cx="7.5" cy="7.5" r="1.2"></circle></svg><span>New quote</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h10M4 12h10M4 18h6"></path><path d="M16 16.5l2 2 4-4.5"></path></svg><span>Order tracking</span><span class="nav-badge">2</span></div>
+    <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V5a2 2 0 0 1 2-2z"></path><path d="M8 9h7M8 13h5"></path></svg><span>Invoices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"></path><path d="M16 6.2a3 3 0 0 1 0 5.6M17.5 19.5a5.4 5.4 0 0 0-2.2-4.3"></path></svg><span>Customers</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 5.5h16v10H9.5L4 19.5z"></path><path d="M8.5 10.2h5.5M8.5 13h3.2"></path></svg><span>Follow&#8209;ups</span><span class="nav-badge">1</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3"></circle><path d="M6 20a6 6 0 0 1 12 0"></path><path d="M17.5 4.5l1.8 1.8-1.8 1.8"></path></svg><span>Sales agents</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3.4-6.5"></path><path d="M20 4v4.5h-4.5"></path></svg><span>WhatsApp</span></div>
+    <div class="nav-section-label">Buy</div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3.5 4.5h2.2l2 10.5h10l1.8-7.5H7"></path><circle cx="9" cy="19" r="1.4"></circle><circle cx="16.5" cy="19" r="1.4"></circle></svg><span>What to buy</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M5 8h14"></path><path d="M5 8l-2.5 5.5h5zM19 8l-2.5 5.5h5z"></path></svg><span>Compare prices</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"></path></svg><span>Sourcing</span></div>
+    <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9.5h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M3 9.5L5 4h14l2 5.5"></path><path d="M12 4v5.5"></path></svg><span>Suppliers</span></div>
+    <!-- Purchase invoices had a row here. It is the Invoices screen's
+         second lens now: the Buy section keeps the four screens that are
+         about CHOOSING what to buy and from whom. -->
+  </div>
+
+  <div class="main">
+      <div class="ow-ph">
+        <div class="ow-ph-nm">
+          <h1 class="ow-ph-t">Invoices</h1>
+          <span class="ow-ph-i">i</span>
+        </div>
+        <p class="ow-ph-sub">Every bill a supplier has given you, and whether it is right.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- THE LENS. Money in and money out of one transaction. -->
+        <div class="ow-seg">
+          <div class="ow-seg-b">Sales<span class="ow-seg-n">86</span></div>
+          <div class="ow-seg-b ow-on">Purchases<span class="ow-seg-n">124</span></div>
+        </div>
+        <div class="btn btn-ghost ow-sm"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"></path><rect x="4" y="9" width="16" height="7" rx="1.5"></rect><path d="M8 13h8v7H8z"></path></svg>Print list</div>
+      </div>
+
+      <!-- ONE FILTER BAR FOR BOTH. These four controls are already
+           identical on the two screens today -- same search-first
+           placement, same seven date presets, same Hide voided, same
+           .inv-f classes. Two copies of one bar is what made following a
+           link between them expensive: the destination's range and
+           voided filter had to be rewritten on arrival. -->
+      <div class="iv-find">
+        <div class="ow-f ow-ph-f inv-f-search">
+          <span class="ow-f-l">Search</span>
+          <span class="ow-f-in">Doc No. / supplier / item&hellip;</span>
+        </div>
+        <div class="ow-f ow-ph-f"><span class="ow-f-l">Date range</span>
+          <span class="ow-f-in">Last 30 days</span></div>
+        <label class="inv-ck"><i></i>Hide voided</label>
+      </div>
+
+      <!-- WHAT THE MERGE IS FOR. Pressing "PB-0210" on INV-0104's row
+           lands here: the same screen, the same filter bar, the
+           Purchases lens narrowed to that order's bills. Today the same
+           press changes tab, types the number into the OTHER screen's
+           search box, widens its date range, drops its voided filter and
+           raises a toast -- and getting back means undoing all of it by
+           hand, because the sales list you left is gone.
+
+           The crumb is the whole difference: one press back, to a list
+           that never went anywhere. -->
+      <div class="inv-crumb">
+        <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+        <span>The 2 bills raised by</span> <b>INV-0104</b> <span>&middot; Sarah Namono, 12 Sep</span>
+        <span class="back">Back to Sales</span>
+      </div>
+
+      <!-- NO STRIP HERE. The four figures above describe the range; this
+           is two documents out of it, and a strip that kept saying
+           28,140,000 over a list of 1,750,000 would be answering a
+           question nobody asked. The pair's own total is the foot. -->
+      <div class="ow-pan">
+        <div class="ow-pan-h"><span class="ow-pan-t">Raised by this order</span><span class="ow-pan-n">2 bills</span></div>
+        <div class="ow-pi-h">
+          <span></span><span>Supplier and bill</span><span>What it was for</span>
+          <span>Dated</span><span class="ow-pi-h-r">Billed</span>
+        </div>
+        <div class="ow-pi-r">
+          <svg class="pi-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+          <span class="pi-nm">Mulongo Hardware<span class="pi-sub">PB-0210</span></span>
+          <span class="pi-for">40 pcs iron sheets G28 3m</span>
+          <span class="pi-dt">12 Sep</span>
+          <span class="pi-amt">1,200,000<span class="ow-pi-u">owed</span></span>
+        </div>
+        <div class="ow-pi-r">
+          <svg class="pi-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+          <span class="pi-nm">Bwaise Steel<span class="pi-sub">PB-0211</span>
+            <span class="ow-cp ow-warn" style="margin-top:4px;">Above what you last paid</span></span>
+          <span class="pi-for">11 bags cement Hima 50kg</span>
+          <span class="pi-dt">12 Sep</span>
+          <span class="pi-amt">550,000<span class="ow-pi-u">owed</span></span>
+        </div>
+        <div class="ow-pi-r" style="background:var(--ow-paper-2);border-top:1px solid var(--ow-rule);">
+          <span></span>
+          <span class="pi-nm" style="font-weight:600;">The two bills</span>
+          <span class="pi-for"></span>
+          <span class="pi-dt"></span>
+          <span class="pi-amt">1,750,000</span>
+        </div>
+      </div>
+
+      <!-- BOTH ENDS OF ONE TRANSACTION, WHICH IS THE READING NEITHER
+           SCREEN CAN GIVE TODAY. Every figure here is already derived --
+           the order's total, the bills it raised, purchaseInvoiceTotal
+           on each -- and this is the first place they are set beside
+           each other. Nothing new is computed: what was margin on the
+           quote is read against what the suppliers actually billed. -->
+      <div class="ow-pan" style="margin-top:16px;">
+        <div class="ow-pan-h"><span class="ow-pan-t">This order, both ends</span>
+          <span class="ow-pan-n">from the order and its bills</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Invoiced to Sarah Namono</span><span class="ow-sr-v">1,750,000</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Billed by suppliers, on 2 bills</span><span class="ow-sr-v">1,750,000</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Still due from the customer</span><span class="ow-sr-v ow-warn">1,750,000</span></div>
+        <div class="ow-sr"><span class="ow-sr-k">Still owed to the suppliers</span><span class="ow-sr-v ow-warn">1,750,000</span></div>
+        <p class="ow-mini">The two totals agree here because every line on this order was bought in for it. They will not agree on an order filled from the shelf, and the difference is not margin &mdash; what the goods cost the shop is on the shelf&rsquo;s own cost record, not on a supplier&rsquo;s bill.</p>
+      </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
