@@ -66,7 +66,7 @@ def build(out, body, w, h, lens, phone=False, strip='_strip.html', rail='_rail.h
 
 subprocess.run([sys.executable, str(d / 'render.py')], check=True, cwd=d)
 build('Main.dc.html',  'body_cash.html',  1440, 1120, 'cash')
-build('Stock.dc.html', 'body_stock.html', 1440, 1120, 'stock')
+build('Stock.dc.html', 'body_stock.html', 1440, 1240, 'stock')
 build('Today.dc.html', 'body_today.html', 1440, 1120, 'today')
 build('Empty.dc.html', 'body_empty.html', 1440, 640,  'cash', strip='_strip_empty.html')
 build('Phone.dc.html', 'body_phone.html', 390, 844, 'cash', phone=True)

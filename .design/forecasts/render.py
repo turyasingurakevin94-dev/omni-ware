@@ -22,8 +22,7 @@ COMMITS = [
 ]
 PROMISES = [
   {"date":"2026-09-13","amount":640000,"label":"Kato Construction Ltd"},
-  {"date":"2026-09-22","amount":250000,"label":"Sarah Namono"},
-  {"date":"2026-10-01","amount":480000,"label":"Peter Ssebowa"},
+  {"date":"2026-09-22","amount":180000,"label":"Sarah Namono"},
 ]
 
 def ylab(v, small):
