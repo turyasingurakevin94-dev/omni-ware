@@ -23,10 +23,11 @@
  *
  * Run: node test/order-charges.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('order charges');
 const src = read('index.html');
+const code = src;
 
 const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
   'orderChargesCost', 'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
@@ -217,6 +218,76 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
      through to the saved record. */
   t.check(/charges: JSON\.parse\(JSON\.stringify\(orderCharges\(q\)\)\),/.test(src),
     'and editing a saved order carries its charges in, by copy');
+}
+
+/* ---------- 10. the group message says what the client pays ------------ *
+ * The sales group gets a copy of every saved order. It went out totalling
+ * the GOODS while the invoice, the receipt and the customer all said a
+ * larger figure -- so the one message the shop's own people read carried
+ * a number that matched nothing. The charges ride the item column with
+ * the quantity left empty: there is one delivery, and a "1" under a
+ * quantity column invites somebody to ask for two.
+ */
+{
+  const NAMES2 = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+    'orderChargeLines', 'waPadEnd', 'waPadStart', 'waFmtNum', 'waFitQty', 'waQtyLabel',
+    'waAbbrUnit', 'quoteLinePack', 'buildSalesGroupQuoteMessage'];
+  const g = compileScope(
+    [extractDeclaration(src, 'WA_UNIT_ABBR', 'index.html')]
+      .concat(NAMES2.map((n)=> extractFunction(src, n, 'index.html'))), {
+    quoteItemSellPrice: (it)=> Number(it.sellPrice) || 0,
+  }, NAMES2);
+
+  const items = [{ productId:'P001', productName:'Cement', unit:'Bag', qty:30, sellPrice:32000 }];
+  const withCharges = { items, charges: [
+    { id:1, service:'Delivery', label:'Delivery', type:'fixed', value:60000 },
+    { id:2, service:'Urgent', label:'Urgent', type:'percent', value:5 },
+  ]};
+  const msg = g.buildSalesGroupQuoteMessage(items, { name:'Kato' }, withCharges);
+
+  // 30 x 32,000 = 960,000 of goods, 60,000 carried, 5% of the goods = 48,000.
+  t.check(/TOTAL\s+1,068,000/.test(msg),
+    `the total is the whole bill, not the goods alone (${(/TOTAL\s+([\d,]+)/.exec(msg) || [])[1]})`);
+  t.check(/Delivery/.test(msg) && /Urgent/.test(msg),
+    'and each charge is named, so the total is explained rather than just larger');
+
+  /* The Ref section is about where to BUY each line. A delivery is not
+     bought, so it must not appear there beside a supplier. */
+  const ref = msg.slice(msg.indexOf('Ref:'));
+  t.check(!/Delivery/.test(ref) && !/Urgent/.test(ref),
+    'while the sourcing list below stays about goods, which is all it can be about');
+
+  /* An order with no charges reads exactly as it did before any of this. */
+  const plain = g.buildSalesGroupQuoteMessage(items, { name:'Kato' }, { items, charges: [] });
+  t.check(/TOTAL\s+960,000/.test(plain), 'an order with no charge on it totals the goods, as it always did');
+  t.check(plain === g.buildSalesGroupQuoteMessage(items, { name:'Kato' }),
+    'and a caller that passes no order at all is unchanged, so nothing else that builds this message breaks');
+}
+
+/* ---------- 11. every statement line opens its own figure -------------- *
+ * The drill-down adds its rows up and compares them against the line it
+ * was opened from -- "a preview that quietly showed less than the
+ * statement would teach a reader to distrust exactly the thing built to
+ * earn trust". Splitting revenue into two lines broke that: Item sales
+ * opened a panel that expected REVENUE and listed only the goods.
+ */
+{
+  const drill = (/function stDrillData\(key, ctx\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(key === 'pl:itemsales'\)[\s\S]{0,240}?rows: invoiceRows\('sales'\)/.test(drill)
+    && /if\(key === 'pl:itemsales'\)[\s\S]{0,80}?expect: is\.itemSales/.test(drill),
+    'Item sales opens the goods, and expects the goods');
+  t.check(/if\(key === 'pl:services'\)[\s\S]{0,240}?rows: invoiceRows\('services'\)/.test(drill)
+    && /if\(key === 'pl:services'\)[\s\S]{0,80}?expect: is\.serviceIncome/.test(drill),
+    'Service income opens the charges, and expects the charges');
+  t.check(/if\(key === 'pl:revenue'\)[\s\S]{0,260}?rows: invoiceRows\('takings'\)/.test(drill),
+    'and Revenue opens the two together, so it agrees whether or not anything was charged');
+  /* Each line points at the key that states its own figure. */
+  const pl = (/function stProfitAndLoss\(ctx\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/stLine\('Item sales'[^)]*drill:'pl:itemsales'/.test(pl.replace(/\s+/g, ' '))
+    || /'Item sales'[\s\S]{0,160}?drill:'pl:itemsales'/.test(pl),
+    'the Item sales line opens pl:itemsales');
+  t.check(/'Service income'[\s\S]{0,300}?drill:'pl:services'/.test(pl),
+    'the Service income line opens pl:services');
 }
 
 process.exit(t.done() ? 1 : 0);

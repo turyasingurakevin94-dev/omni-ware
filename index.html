@@ -37280,7 +37280,7 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
 // group opens automatically with the quote already copied to the clipboard.
 // Change this if the group link ever changes.
 const SALES_GROUP_WA_LINK = 'https://chat.whatsapp.com/DdAAC9RCXJg4TDXw3mDPwX?s=cl&p=a&ilr=1';
-function buildSalesGroupQuoteMessage(items, client){
+function buildSalesGroupQuoteMessage(items, client, q){
   const W_ITEM=14, W_QTY=6;
   const DIVIDER = '-'.repeat(W_ITEM+W_QTY+1);
 
@@ -37290,9 +37290,21 @@ function buildSalesGroupQuoteMessage(items, client){
     const qtyLabel = waQtyLabel(it, W_QTY);
     return `${waPadEnd(it.productName,W_ITEM)} ${waPadStart(qtyLabel,W_QTY)}`;
   });
-  const grand = items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
+  /* THE CHARGES BELONG ON THIS MESSAGE, and the reason is the TOTAL.
+     This went out saying 155,000 on an order the client pays 167,750
+     for -- so whoever read it in the group had a figure that matched no
+     invoice, no receipt and nothing the customer had been told. They
+     take the ITEM column and leave QTY empty: there is one delivery,
+     and a "1" under a quantity column invites somebody to ask for two.
+     They are deliberately absent from the Ref section below, which is
+     about where to BUY each line, and a delivery is not bought. */
+  const chargeLines = q ? orderChargeLines(q) : [];
+  const chargeRows = chargeLines.map(l=>
+    `${waPadEnd(l.label,W_ITEM)} ${waPadStart('',W_QTY)}`);
+  const goods = items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
+  const grand = goods + chargeLines.reduce((s,l)=> s + l.amount, 0);
   const totalRow = `${waPadEnd('TOTAL',W_ITEM)} ${waPadStart(waFmtNum(Math.round(grand)),W_QTY)}`;
-  const table = [headerRow, DIVIDER, ...rows, DIVIDER, totalRow].join('\n');
+  const table = [headerRow, DIVIDER, ...rows, ...chargeRows, DIVIDER, totalRow].join('\n');
 
   // Group items by supplier so each supplier appears on exactly one line.
   const bySupplier = {};
@@ -37758,7 +37770,7 @@ function setSavedQuoteStatus(id, status, opts){
    chats -- so the best a webpage can do is put the message on the
    clipboard and open the group for a single paste. */
 function shareOrderToSalesGroup(q){
-  const msg = buildSalesGroupQuoteMessage(q.items, q.client);
+  const msg = buildSalesGroupQuoteMessage(q.items, q.client, q);
   const openGroupAndToast = (copied)=>{
     window.open(SALES_GROUP_WA_LINK, '_blank');
     toast(copied
@@ -78757,12 +78769,27 @@ function stDrillData(key, ctx){
   const byDateDesc = (rows)=> rows.sort((a,b)=> String(b.d||'').localeCompare(String(a.d||'')));
   const byValueDesc = (rows)=> rows.sort((a,b)=> b.v - a.v);
   const cash = dashCashTxnsInRange(from, to);
-  const invoiceRows = (pick)=> byDateDesc(anInvoicesInRange(from, to).map(q=>{
-    const t = anInvoiceTotals(q);
-    return { d: q.invoicedAt || q.date, l: invoiceNumberLabel(q),
-      s: `${(q.client && q.client.name) || 'Unnamed client'}${pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
-      v: pick==='cost' ? t.cost : t.sales, go: `inv:${q.id}` };
-  }));
+  /* FOUR PICKS, because the statement now separates what the goods
+     came to from what the shop charged to get them there. A panel whose
+     rows do not add up to the line it was opened from makes the
+     statement look wrong about itself -- the agreement check says so in
+     as many words -- so every line drills to the figure it actually
+     states: Item sales to the goods, Service income to the charges,
+     Revenue to the two together. */
+  const invoiceRows = (pick)=> byDateDesc(anInvoicesInRange(from, to)
+    .filter(q=> pick !== 'services' || orderChargesTotal(q) > 0)
+    .map(q=>{
+      const t = anInvoiceTotals(q);
+      const chargeNames = pick === 'services'
+        ? orderChargeLines(q).map(l=> l.label).join(', ') : '';
+      return { d: q.invoicedAt || q.date, l: invoiceNumberLabel(q),
+        s: `${(q.client && q.client.name) || 'Unnamed client'}${
+          chargeNames ? ' · ' + chargeNames : ''}${
+          pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
+        v: pick==='cost' ? t.cost : pick==='services' ? t.services
+          : pick==='takings' ? t.takings : t.sales,
+        go: `inv:${q.id}` };
+    }));
   /* The short/over line is two categories under one name, so opening it
      has to fetch both -- and the money found carries a negative value,
      the same way it nets on the statement. Without that the panel would
@@ -78831,8 +78858,14 @@ function stDrillData(key, ctx){
   };
 
   if(key === 'pl:revenue') return { title: 'Revenue', expect: is.revenue,
-    note: 'Every invoice raised in the period — sales count when invoiced, whether or not they have been paid.',
+    note: 'Every invoice raised in the period, goods and charges together — sales count when invoiced, whether or not they have been paid.',
+    rows: invoiceRows('takings') };
+  if(key === 'pl:itemsales') return { title: 'Item sales', expect: is.itemSales,
+    note: 'The goods on every invoice raised in the period, without what was charged to move them.',
     rows: invoiceRows('sales') };
+  if(key === 'pl:services') return { title: 'Service income', expect: is.serviceIncome,
+    note: 'What each invoice charged besides the goods — delivery, fetching, cutting. Invoices that carried no charge are left out.',
+    rows: invoiceRows('services') };
   if(key === 'pl:cogs') return { title: 'Cost of sales', expect: is.costOfSales,
     note: 'What the goods on those same invoices cost the shop.',
     rows: invoiceRows('cost') };
@@ -80304,9 +80337,9 @@ function stProfitAndLoss(ctx){
     <table class="st-table">
       ${stHead('This period', 'Period before')}
       ${(is.serviceIncome || prev.serviceIncome) ? `
-      ${stLine('Item sales', is.itemSales, prev.itemSales, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
-      ${stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice, and carrying no cost of sales yet', delta:true, higherIsBetter:true})}
-      ${stLine('Revenue', is.revenue, prev.revenue, {cls:'st-total', delta:true, higherIsBetter:true})}`
+      ${stLine('Item sales', is.itemSales, prev.itemSales, {delta:true, higherIsBetter:true, drill:'pl:itemsales'})}
+      ${stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice, and carrying no cost of sales yet', delta:true, higherIsBetter:true, drill:'pl:services'})}
+      ${stLine('Revenue', is.revenue, prev.revenue, {cls:'st-total', delta:true, higherIsBetter:true, drill:'pl:revenue'})}`
       : stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
       ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost', drill:'pl:cogs'})}
       ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
