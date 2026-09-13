@@ -363,8 +363,22 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
   /* Wiring: each control must reach the right list, and the delete must
      reach the purgeable one specifically. */
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-  t.check(/id="ls_signout_mine"/.test(code) && /lsMyOtherRows\(lsRows, myUser, mine\)/.test(code),
-    'the "my other devices" button signs out your own, elsewhere');
+  /* A CLASS, NOT AN ID, because this act has two homes. The tidy bar
+     carries it and so does the opened "You" group, and renderLoginSessions
+     fills #ls_list and #ls_tidy in the SAME pass -- so both were on
+     screen whenever that group was open with other devices signed in.
+     Both wore id="ls_signout_mine"; getElementById returns the first in
+     document order, and #ls_list comes first, so the tidy bar's button
+     reached nothing. It looked live and was dead. .ls-revoke beside it
+     was already the idiom for an action that repeats. */
+  t.check(/class="btn btn-ghost ls-signout-mine"/.test(code)
+    && /class="btn btn-ghost ow-sm ls-signout-mine"/.test(code),
+    'the "my other devices" button is a class, because it has two homes on one screen');
+  t.check(/document\.querySelectorAll\('\.ls-signout-mine'\)\.forEach/.test(code)
+    && /lsMyOtherRows\(lsRows, myUser, mine\)/.test(code),
+    'and BOTH of them are wired, to sign out your own account elsewhere');
+  t.check(!/id="ls_signout_mine"/.test(code),
+    'with no id left for a second element to collide with');
   t.check(/\.delete\(\)\.in\('id', old\.map\(r=> r\.id\)\)/.test(code)
     && /const old = lsPurgeableRows\(lsRows, Date\.now\(\)\);/.test(code),
     'and the only delete on this page runs over lsPurgeableRows — never over the whole list');

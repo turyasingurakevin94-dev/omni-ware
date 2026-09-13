@@ -231,8 +231,26 @@ const reset = () => {
   t.check(/function wireRunCarousel\(trackId, prevId, nextId\)/.test(src),
     'the sideways track is one implementation taking ids');
   t.check(/wireRunCarousel\('dr_track', 'dr_prev', 'dr_next'\)/.test(src)
-    && /wireRunCarousel\('pr_track', 'pr_prev', 'pr_next'\)/.test(src),
+    && /wireRunCarousel\('pu_track', 'pu_prev', 'pu_next'\)/.test(src),
     'used by both the delivery runs and the pickup runs');
+  /* AND THE PICKUP SET IS pu_, NOT pr_. It was pr_ once, which is
+     PAYROLL's prefix: that screen's month stepper owns pr_prev and
+     pr_next, is static markup so it is in the document at all times, and
+     comes first in document order. wireRunCarousel looks its arguments
+     up with getElementById, so while this modal was open it wired
+     Payroll's two month buttons and these arrows did nothing at all --
+     no error, nothing on screen to say so. The three carousels are dr_,
+     bl_ and pu_, and none of them may take a prefix a screen owns. */
+  /* Counted on the file, not matched near a class name: the paragraph
+     above names id="pr_prev" in prose, and a check that reads prose as
+     markup is the trap section-structure already records. */
+  const payroll = (/<section id="tab-payroll"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/id="pr_prev"/.test(payroll) && /id="pr_next"/.test(payroll),
+    'pr_prev and pr_next belong to Payroll’s month stepper');
+  t.check((src.match(/\sid="pr_prev"/g) || []).length === 1
+    && (src.match(/\sid="pr_next"/g) || []).length === 1
+    && (src.match(/\sid="pu_prev"/g) || []).length === 1,
+    'and to it alone — two elements sharing an id made one of them unreachable, silently');
 
   const fn = (/function wireRunCarousel[\s\S]*?\n\}/.exec(src) || [''])[0];
   t.check(!/openModal\(/.test(fn),

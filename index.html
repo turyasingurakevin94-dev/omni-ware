@@ -32563,13 +32563,19 @@ function openPickupRuns(){
     </div>` : ''}
     ${cards.length ? `
     <div class="dr-carousel">
-      <button type="button" class="dr-nav prev" id="pr_prev" aria-label="Previous place">
+      <!-- pu_, not pr_. Payroll owns pr_prev and pr_next: its month
+           stepper is static markup, so it is in the document at all
+           times and EARLIER than this modal -- getElementById handed
+           wireRunCarousel those two buttons and these arrows did nothing
+           at all, silently. The delivery carousel next door is dr_ and
+           the buy-lines one bl_; pickup runs is pu_. -->
+      <button type="button" class="dr-nav prev" id="pu_prev" aria-label="Previous place">
         <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <div class="dr-track" id="pr_track" tabindex="0" role="group" aria-label="Pickup clusters, scroll sideways">
+      <div class="dr-track" id="pu_track" tabindex="0" role="group" aria-label="Pickup clusters, scroll sideways">
         ${cards.join('')}
       </div>
-      <button type="button" class="dr-nav next" id="pr_next" aria-label="Next place">
+      <button type="button" class="dr-nav next" id="pu_next" aria-label="Next place">
         <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </button>
     </div>
@@ -32578,7 +32584,7 @@ function openPickupRuns(){
         ? `Nowhere to go — all ${settled} bought-in line${settled===1?'':'s'} on this board ${settled===1?'has':'have'} already arrived.`
         : 'Nothing on the board has to be bought in.'}</p>`}`;
 
-  wireRunCarousel('pr_track', 'pr_prev', 'pr_next');
+  wireRunCarousel('pu_track', 'pu_prev', 'pu_next');
   openModal('pickupRunsModal');
 }
 
@@ -46669,7 +46675,7 @@ function renderLoginSessions(){
     </button>`
     + (youOpen ? `<div class="ls-x">${listPageSlice('sessions', mineRows).map(deviceRow).join('')}
       ${listMoreButtonHTML('sessions', mineRows.length, 'of your devices')}
-      ${myOthers ? `<div class="ls-x-a"><button type="button" class="btn btn-ghost ow-sm" id="ls_signout_mine">Sign out my other ${myOthers} device${myOthers===1?'':'s'}</button></div>` : ''}
+      ${myOthers ? `<div class="ls-x-a"><button type="button" class="btn btn-ghost ow-sm ls-signout-mine">Sign out my other ${myOthers} device${myOthers===1?'':'s'}</button></div>` : ''}
     </div>` : '') : '';
 
   wrap.innerHTML = answer
@@ -46725,8 +46731,15 @@ function renderLoginSessions(){
     } catch(e){ toast('Could not sign those out: ' + ((e && e.message) || e)); }
   }));
 
-  const mineOut = document.getElementById('ls_signout_mine');
-  if(mineOut) mineOut.addEventListener('click', async ()=>{
+  /* ONE ACT, TWO PLACES, SO IT IS A CLASS. This was an id on both --
+     the tidy bar's button and the one inside the opened "You" group,
+     which are filled from the same pass into #ls_list and #ls_tidy and
+     are BOTH on screen whenever that group is open with other devices
+     signed in. getElementById returns the first in document order, so
+     the tidy bar's button was reaching nothing: it looked live, it was
+     dead, and nothing anywhere said so. .ls-revoke above is the idiom
+     this file already had for an action that repeats. */
+  document.querySelectorAll('.ls-signout-mine').forEach(mineOut=> mineOut.addEventListener('click', async ()=>{
     const others = lsMyOtherRows(lsRows, myUser, mine);
     if(!others.length) return;
     if(!confirm(`Sign out your account on ${others.length} other device${others.length===1?'':'s'}?`
@@ -46738,7 +46751,7 @@ function renderLoginSessions(){
       toast(`Signed out ${others.length} of your other device${others.length===1?'':'s'}`);
       await loadLoginSessions();
     } catch(e){ toast('Could not sign those out: ' + ((e && e.message) || e)); }
-  });
+  }));
 
   const bulkOut = document.getElementById('ls_signout_stale');
   if(bulkOut) bulkOut.addEventListener('click', async ()=>{
@@ -46782,7 +46795,7 @@ function lsTidyBarHTML(rows, nowMs){
     typeof owDeviceId === 'function' ? owDeviceId() : null).length;
   if(!stale && !old && !mineElsewhere) return '';
   return `<div class="ls-tidy-row">
-    ${mineElsewhere ? `<button type="button" class="btn btn-ghost" id="ls_signout_mine">Sign out my other ${mineElsewhere} device${mineElsewhere===1?'':'s'}</button>` : ''}
+    ${mineElsewhere ? `<button type="button" class="btn btn-ghost ls-signout-mine">Sign out my other ${mineElsewhere} device${mineElsewhere===1?'':'s'}</button>` : ''}
     ${stale ? `<button type="button" class="btn btn-ghost" id="ls_signout_stale">Sign out ${stale} not used in ${LS_STALE_DAYS} days</button>` : ''}
     ${old ? `<button type="button" class="btn btn-ghost" id="ls_purge">Remove ${old} record${old===1?'':'s'} older than ${LS_PURGE_DAYS} days</button>` : ''}
     ${revoked ? `<span class="ls-tidy-note">${revoked} signed-out record${revoked===1?'':'s'} kept — removing one would let that device register again.</span>` : ''}
