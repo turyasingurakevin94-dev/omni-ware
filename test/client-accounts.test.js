@@ -70,9 +70,13 @@ const portalCode = strip(portal);
   const list = code.slice(code.indexOf('action === "list"'), code.indexOf('const customerId'));
   t.check(!/\bpin\b/.test(list.replace(/pinLive|pinExpiresAt|pin_hash|pin_expires_at|pin_attempts/g, '')),
     'list carries no PIN of any kind');
-  t.check(/pin_hash/.test(code.slice(code.indexOf('accountView'))) === true
-    && !/pin_hash:/.test(code.match(/function accountView[\s\S]*?\n\}/)[0]),
-    'and accountView reads pin_hash only to say whether one is outstanding, never to return it');
+  // Matched first, then checked. `.match(...)[0]` on a regex that stops
+  // matching throws a TypeError, and a thrown test prints a stack trace
+  // where a sentence should be.
+  const viewFn = code.match(/function accountView[\s\S]*?\n\}/);
+  t.check(!!viewFn, 'accountView is found');
+  t.check(!!viewFn && /pin_hash/.test(viewFn[0]) && !/pin_hash:/.test(viewFn[0]),
+    'and it reads pin_hash only to say whether one is outstanding, never to return it');
 
   t.check(!/console\.log|console\.error|console\.warn/.test(code),
     'nothing is logged — a logged PIN is a PIN in a retention system');

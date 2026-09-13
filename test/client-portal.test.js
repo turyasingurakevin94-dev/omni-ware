@@ -39,13 +39,78 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
 /* ---------- 2. supplier identity never reaches a customer ------------- */
 {
   const forbidden = ['supplier_id', 'supplier_sku', 'suppliers', 'price_source',
-                     'rival_prices', 'candidates', 'markup', 'margin'];
+                     'rival_prices', 'candidates', 'margin'];
   forbidden.forEach((word) => {
     t.check(!new RegExp(`\\b${word}\\b`).test(noComments),
       `the code never names ${word} -- the bypass vector and the cost columns stay out`);
   });
-  t.check(!/\bfrom\(["'](prices|suppliers|rival_prices|sourcing_leads)["']\)/.test(noComments),
-    'and it never reads the price registry, the supplier list or the market record at all');
+  t.check(!/\bfrom\(["'](suppliers|rival_prices|sourcing_leads)["']\)/.test(noComments),
+    'the supplier list, the market record and the sourcing leads are never read at all');
+
+  /* `prices` USED to be on that list, and the pricing actions took it off.
+     It has to come off: a portal that quotes a price reads the price
+     table, and no amount of wishing changes that. What replaces the ban
+     is stricter than the ban was.
+
+     REDACTION BY QUERY. agent-catalog reads prices with select("*") and
+     picks fields on the way out, so every supplier column is in memory
+     and one careless spread would ship it. Here the supplier columns are
+     never fetched, so there is nothing in memory to leak and no
+     destructure to get right. That is the claim, and this is what
+     enforces it. */
+  const cols = /const PRICE_COLS = "([^"]+)"/.exec(noComments);
+  t.check(!!cols, 'the price columns are named in one place');
+  if (cols) {
+    const named = cols[1].split(',').map(c => c.trim());
+    ['supplier_id', 'supplier_sku', 'price_source', 'cost'].forEach((c) => {
+      t.check(!named.includes(c), `the price query never asks for ${c}`);
+    });
+    t.check(named.includes('wholesale') && named.includes('retail'),
+      'it does ask for the two cost columns, which is what a price is computed FROM');
+    t.check(!/\bfrom\("prices"\)\.select\((?!PRICE_COLS)/.test(noComments)
+      && !/from\("prices"\)[\s\S]{0,40}select\("\*"\)/.test(noComments),
+      'and every read of prices goes through that one list, never a star');
+  }
+
+  /* Markup columns ARE read now — a price is cost plus the shop's rule —
+     so the old blanket ban on the word would have to go. It was passing
+     by accident anyway: \bmarkup\b never matched wholesale_markup_value,
+     because an underscore is a word character. The real rule was always
+     about what LEAVES, so that is what is checked. */
+  const bodies = [];
+  for (let i = noComments.indexOf('return json('); i >= 0; i = noComments.indexOf('return json(', i + 1)) {
+    let d = 0, j = i + 'return json('.length - 1;
+    for (; j < noComments.length; j++) {
+      if (noComments[j] === '(') d++;
+      else if (noComments[j] === ')' && --d === 0) break;
+    }
+    bodies.push(noComments.slice(i, j + 1));
+  }
+  t.check(bodies.length > 10, `every response was found (${bodies.length})`);
+  const leaky = bodies.filter(b => /\b(cost|markup|wholesale|retail|floorPrice|ourPrice)\b/i.test(b));
+  t.check(leaky.length === 0,
+    `no response names a cost, a markup or a raw tier${leaky.length ? `:\n${leaky[0].slice(0, 200)}` : ''}`);
+
+  /* The catalogue's rows are built inside a .map() and reach the browser
+     as `items`, so they are NOT inside any return json(...) and the scan
+     above walks straight past them. Planting `wholesale: row.wholesale`
+     on a catalogue row proved it: eight leaks planted, seven caught, and
+     the one that got through was a raw cost column on every item in the
+     shop. Keys, not call sites, is the check that covers both. */
+  [['cost', /\bcost:\s/], ['wholesale', /\bwholesale:\s/], ['retail', /\bretail:\s/],
+   ['ourPrice', /\bourPrice:/], ['floorPrice', /\bfloorPrice:/], ['margin', /\bmargin:/]]
+    .forEach(([name, re]) => {
+      t.check(!re.test(noComments), `no object anywhere in the file carries a ${name} key`);
+    });
+
+  /* `tiers` is the one word that means two opposite things. On a prices
+     row it is the shop's COST ladder; on a response it is the customer's
+     price ladder. Sending the first under the name of the second would
+     hand over every breakpoint the shop buys at, and would read as
+     perfectly ordinary in review. */
+  const tierAssigns = noComments.match(/tiers:\s*[^,\n]+/g) || [];
+  t.check(tierAssigns.length > 0 && tierAssigns.every(a => /customerPriceLadder/.test(a)),
+    `every tiers field sent out is a computed price ladder, never a row's own (${tierAssigns.join(' | ') || 'none'})`);
 }
 
 /* ---------- 3. a quote line gives up sellPrice, never price ----------- */

@@ -175,6 +175,221 @@ export function oldestDays(rows: any[], today: string): number | null {
 }
 
 // ---------------------------------------------------------------------
+// Pricing
+//
+// The five functions below are duplicated VERBATIM from agent-catalog,
+// which is the house pattern and not an oversight: Edge Functions here
+// deploy one file at a time through the dashboard, so a shared import
+// would fail to deploy. test/client-portal-pricing.test.js compares both
+// copies character for character. If either changes, change both.
+//
+// What is NOT copied is the agent's discount apparatus — computeFloorPrice,
+// resolveDiscountPcts, buildFloorPriceLadder and the word "floor price"
+// itself. An agent's price is a share of the margin between cost and our
+// price; a customer has no discount and no share of anything, so bringing
+// that vocabulary across would mean carrying a concept with no meaning
+// here and a variable called `margin` inside the customer boundary.
+// customerUnitPrice() below composes the copied math into the one number
+// a customer is owed.
+// ---------------------------------------------------------------------
+
+type MarkupKind = "wholesale" | "retail";
+type MarkupRule = { type: string; value: number } | null;
+
+function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind, dflt: any = null): MarkupRule {
+  if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
+    const v = product.variants[variantIdx];
+    const vVal = Number(v[kind + "MarkupValue"]) || 0;
+    if (vVal > 0) return { type: v[kind + "MarkupType"], value: vVal };
+  }
+  const colVal = Number(product[kind + "_markup_value"]) || 0;
+  if (colVal > 0) return { type: product[kind + "_markup_type"], value: colVal };
+  // The shop default rule (app_settings.presets.defaultMarkup), threaded in
+  // as an ARGUMENT per request -- never module state; requests interleave in
+  // one isolate. Mirrors the last step of index.html's effectiveMarkupRule.
+  const dVal = dflt ? Number(dflt[kind + "Value"]) || 0 : 0;
+  if (dVal > 0) return { type: dflt[kind + "Type"] === "fixed" ? "fixed" : "percent", value: dVal };
+  return null;
+}
+
+// A fixed wholesale markup is naturally an amount added to the PACK price
+// (e.g. +10,000 on a 300,000/ctn cost -> 310,000/ctn = 15,500/dzn), not the
+// per-unit price -- wholesale is bought and sold by the pack. Percent
+// markups don't need this (they scale identically either way). Mirrors
+// index.html's own suggestedSellingPrice() exactly.
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0, dflt: any = null): number | null {
+  if (basePrice == null) return null;
+  const rule = effectiveMarkupRule(product, variantIdx, kind, dflt);
+  if (!rule) return null;
+  if (rule.type === "fixed") {
+    const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
+    return basePrice + fixedPerUnit;
+  }
+  return basePrice * (1 + rule.value / 100);
+}
+
+// One shared tier list (row.tiers) covers both sides of the wholesale/
+// retail curve -- a tier only counts toward "wholesale" if it needs at
+// least a full pack to unlock (the same qty-vs-pack-size line that
+// already decides which of the two applies below), otherwise it counts
+// toward "retail". Nothing declares which side a tier belongs to; its own
+// minQty does.
+function tieredUnitPrice(row: any, qty: number, kind: MarkupKind): number | null {
+  const base = row[kind];
+  if (base == null) return null;
+  const packQty = Number(row.pack_qty) || 0;
+  const tiers = (Array.isArray(row.tiers) ? row.tiers : []).filter((t: any) =>
+    kind === "wholesale" ? (packQty > 0 && t.minQty >= packQty) : (packQty === 0 || t.minQty < packQty)
+  );
+  if (!tiers.length) return Number(base);
+  let best = Number(base), bestMinQty = 0;
+  tiers.forEach((t: any) => {
+    if (t.price != null && qty >= t.minQty && t.minQty >= bestMinQty) { best = Number(t.price); bestMinQty = t.minQty; }
+  });
+  return best;
+}
+
+// Cheapest-by-wholesale, tie-broken by retail -- the same ranking the
+// admin app's own quote builder uses, so "the best row" means one thing
+// across the app.
+function pickBestPriceRow(rows: any[]): any | null {
+  const priced = rows.filter((r) => !r.out_of_stock);
+  if (!priced.length) return null;
+  return priced.slice().sort((a, b) => {
+    const aw = a.wholesale != null ? a.wholesale : Infinity;
+    const bw = b.wholesale != null ? b.wholesale : Infinity;
+    if (aw !== bw) return aw - bw;
+    const ar = a.retail != null ? a.retail : Infinity;
+    const br = b.retail != null ? b.retail : Infinity;
+    return ar - br;
+  })[0];
+}
+
+// A price row saved before the tier-list rework (or one that's only ever
+// had flat wholesale/retail typed, never a tier) has no `tiers` of its
+// own -- synthesize one so the ladder still reflects its real prices
+// instead of coming back empty.
+function effectiveTiers(row: any): { minQty: number; price: number }[] {
+  if (Array.isArray(row.tiers) && row.tiers.length) return row.tiers;
+  const synthesized: { minQty: number; price: number }[] = [];
+  if (row.retail != null) synthesized.push({ minQty: 1, price: Number(row.retail) });
+  if (row.wholesale != null && Number(row.pack_qty) > 0) synthesized.push({ minQty: Number(row.pack_qty), price: Number(row.wholesale) });
+  return synthesized;
+}
+
+// ---------------------------------------------------------------------
+// New here, not a copy of anything.
+
+// The best row to quote from, INCLUDING out-of-stock ones as a last
+// resort. pickBestPriceRow drops them, which is right when the answer is
+// going to be charged — but a customer looking at a shelf they cannot
+// buy from today is better served by "Ridge nails, 11,400 a kg, out of
+// stock just now" than by the item vanishing from the list. Whether it
+// can actually be bought is said separately, by availabilityOf().
+function quotableRow(rows: any[]): any | null {
+  return pickBestPriceRow(rows) || (rows.length ? pickBestPriceRow(rows.map((r) => ({ ...r, out_of_stock: false }))) : null);
+}
+
+// In stock, orderable, or neither. Deliberately three words and no date:
+// a delivery date on a line this shop does not hold is a promise made
+// with somebody else's lorry.
+function availabilityOf(rows: any[], onShelf: number): "in-stock" | "to-order" | "out" {
+  if (onShelf > 0) return "in-stock";
+  return pickBestPriceRow(rows) ? "to-order" : "out";
+}
+
+// What we last charged THIS customer for THIS item, keyed
+// productId::variantIdx.
+//
+// Matched on the NORMALISED PHONE, which is where this parts company with
+// index.html's lastPriceToClient(): that one matches q.client.name, and a
+// name match would hand "Nakato Grace" the price history of "Nakato Grace
+// Ltd". The admin app has a human reading the screen who would notice; a
+// portal answering by itself at ten at night does not.
+//
+// Only an explicit sellPrice counts. quoteItemSellPrice() in the admin app
+// falls back to re-deriving a sell price from the line's `price` — which
+// is cost — and re-deriving anything from cost inside this boundary is
+// exactly the code path that must not exist here. A line with no sellPrice
+// simply has no memory, which shows up as today's price.
+function rememberedPrices(quotes: any[], mine: string): Record<string, { price: number; at: string }> {
+  const out: Record<string, { price: number; at: string }> = {};
+  if (!mine) return out;
+  (quotes || []).forEach(function (q) {
+    if (q.voided) return;
+    if (normalisePhone(q.client_phone) !== mine) return;
+    const items = q.payload && q.payload.items;
+    if (!Array.isArray(items)) return;
+    const at = String(q.date || "");
+    items.forEach(function (it: any) {
+      if (!it || !it.productId) return;
+      const sell = Number(it.sellPrice);
+      if (!(sell > 0)) return;
+      const key = it.productId + "::" + (it.variantIdx == null ? "" : String(it.variantIdx));
+      // >= so that among orders on the same day the later one in the list
+      // wins, rather than whichever happened to be walked first.
+      if (!out[key] || at >= out[key].at) out[key] = { price: sell, at };
+    });
+  });
+  return out;
+}
+
+// THE ONE NUMBER A CUSTOMER IS OWED.
+//
+// Today's price is the shop's own markup rule applied to this quantity's
+// tier — the same figure the admin quote builder shows. A remembered
+// price then leads, subject to two bounds:
+//
+//   · never below today's cost. No promise is worth selling at a loss,
+//     and this is the rule the admin app already enforces.
+//
+//   · NEVER ABOVE today's price. This bound does not exist in the admin
+//     app, and it has to exist here. There, "the remembered price leads"
+//     is a recommendation to a person who can see both numbers and
+//     override; here it would be an automatic decision to charge a
+//     returning customer more than a stranger walking in off the street
+//     would pay, at ten at night, with nobody watching. A portal built to
+//     earn trust cannot have that in it.
+//
+// Returns cost so the caller can apply the floor. Cost never leaves this
+// function's caller either — see the response builders.
+function customerUnitPrice(product: any, row: any, qty: number, dflt: any, held: { price: number; at: string } | null) {
+  if (!row) return null;
+  const packQty = Number(row.pack_qty) || 0;
+  const kind: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
+  const variantIdx = row.variant_idx == null || row.variant_idx === "" ? null : Number(row.variant_idx);
+  const cost = tieredUnitPrice(row, qty, kind);
+  if (cost == null) return null;
+  // A product with no markup rule anywhere prices at cost, exactly as it
+  // does for an agent: a shop that has not said what it makes on an item
+  // has not said what it charges for it either.
+  const today = suggestedSellingPrice(product, cost, kind, variantIdx, packQty, dflt) ?? cost;
+  const holds = !!held && held.price >= cost && held.price <= today;
+  return {
+    unitPrice: holds ? held!.price : today,
+    heldFrom: holds ? held!.at : null,
+    cost,
+    unit: row.unit || "",
+    packUnit: row.pack_unit || "",
+    packQty,
+  };
+}
+
+// Every quantity breakpoint this row has, each priced the way a real
+// order at exactly that quantity would be. Lets one screen show the whole
+// curve — "cheaper by the bag from 25kg" — without a second request per
+// quantity, and without ever sending a cost.
+function customerPriceLadder(product: any, row: any, dflt: any, held: { price: number; at: string } | null) {
+  const minQtys = Array.from(
+    new Set<number>([1, ...effectiveTiers(row).map((t) => Number(t.minQty))]),
+  ).filter((q) => q > 0).sort((a, b) => a - b);
+  return minQtys.map((minQty) => {
+    const r = customerUnitPrice(product, row, minQty, dflt, held);
+    return r ? { minQty, unitPrice: r.unitPrice } : null;
+  }).filter((x) => x != null) as { minQty: number; unitPrice: number }[];
+}
+
+// ---------------------------------------------------------------------
 
 async function sessionAccount(shopId: string, token: string) {
   if (!token) return null;
@@ -397,6 +612,153 @@ Deno.serve(async (req) => {
         },
         orders,
       });
+    }
+
+    // -----------------------------------------------------------------
+    // catalogue / price — what we stock, and what it costs THEM
+    //
+    // Both need a session. That is the whole strategy in one line: there
+    // is no price on this endpoint without a verified account, and the
+    // price there is belongs to that account.
+    //
+    // COLUMNS ARE NAMED, NOT STARRED. agent-catalog reads prices with
+    // select("*") and hand-picks fields on the way out, which is one edit
+    // away from a leak. Here the supplier columns are never fetched at
+    // all: supplier_id, supplier_sku and price_source are not in the
+    // select, so they are not in memory, so no future spread of a row
+    // could carry them. The redaction is done by the query.
+    // -----------------------------------------------------------------
+    if (action === "catalogue" || action === "price") {
+      const session = await sessionAccount(shopId, String(body.token ?? ""));
+      if (!session) return json({ error: "Sign in again" }, 401);
+      const customerId = session.customer_id;
+
+      const PRICE_COLS = "product_id, variant_idx, wholesale, retail, pack_qty, unit, pack_unit, tiers, out_of_stock";
+      const PRODUCT_COLS = "id, name, image, category, subcategory, short_description, variants, "
+        + "wholesale_markup_type, wholesale_markup_value, retail_markup_type, retail_markup_value";
+
+      const [{ data: settingsRow }, { data: customer }] = await Promise.all([
+        admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
+        admin.from("customers").select("phone").eq("shop_id", shopId).eq("id", customerId).maybeSingle(),
+      ]);
+      if (!customer) return json({ error: "Sign in again" }, 401);
+      const presets = settingsRow?.presets || {};
+      const defaultMarkup = presets.defaultMarkup || null;
+      const mine = normalisePhone(customer.phone);
+
+      // Their own past orders, for the remembered price. Never anybody
+      // else's: the filter lives in rememberedPrices and is the same
+      // normalised-phone match the account action uses.
+      const { data: quotes } = await admin.from("saved_quotes")
+        .select("client_phone, date, voided, payload")
+        .eq("shop_id", shopId).eq("status", "order").eq("voided", false)
+        .order("id", { ascending: false }).limit(200);
+      const held = rememberedPrices(quotes || [], mine);
+
+      if (action === "price") {
+        const productId = String(body.productId ?? "");
+        const variantIdx = body.variantIdx == null || body.variantIdx === "" ? null : Number(body.variantIdx);
+        const qty = Number(body.qty ?? 1);
+        if (!productId || !(qty > 0)) return json({ error: "productId and a quantity are required" }, 400);
+
+        // prices.variant_idx stores a real SQL NULL for a non-variant
+        // product, so .is() and .eq() have to be picked per case or a
+        // non-variant product's rows silently match nothing.
+        let q = admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId).eq("product_id", productId);
+        q = variantIdx == null ? q.is("variant_idx", null) : q.eq("variant_idx", String(variantIdx));
+        const [{ data: product }, { data: rows }, { data: stockRow }] = await Promise.all([
+          admin.from("products").select(PRODUCT_COLS).eq("shop_id", shopId).eq("id", productId).maybeSingle(),
+          q,
+          admin.from("stock").select("qty").eq("shop_id", shopId)
+            .eq("key", productId + (variantIdx == null ? "" : "::" + variantIdx)).maybeSingle(),
+        ]);
+        if (!product) return json({ error: "We do not have that item" }, 404);
+
+        const row = quotableRow(rows || []);
+        const availability = availabilityOf(rows || [], Number(stockRow?.qty) || 0);
+        const key = productId + "::" + (variantIdx == null ? "" : String(variantIdx));
+        const priced = row ? customerUnitPrice(product, row, qty, defaultMarkup, held[key] || null) : null;
+        if (!priced) return json({ ok: true, available: false, availability });
+
+        // Built key by key, and cost is simply not among the keys. There
+        // is no destructure to get wrong, because nothing is spread.
+        return json({
+          ok: true,
+          available: true,
+          availability,
+          unitPrice: priced.unitPrice,
+          heldFrom: priced.heldFrom,
+          qty,
+          unit: priced.unit,
+          packUnit: priced.packUnit,
+          packQty: priced.packQty,
+          tiers: customerPriceLadder(product, row, defaultMarkup, held[key] || null),
+        });
+      }
+
+      // action === "catalogue"
+      const [{ data: products }, { data: rows }, { data: stockRows }] = await Promise.all([
+        admin.from("products").select(PRODUCT_COLS).eq("shop_id", shopId),
+        admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId),
+        admin.from("stock").select("key, qty").eq("shop_id", shopId),
+      ]);
+
+      const byKey = new Map<string, any[]>();
+      (rows || []).forEach((r: any) => {
+        const k = `${r.product_id}::${r.variant_idx == null ? "" : r.variant_idx}`;
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k)!.push(r);
+      });
+      const onShelf: Record<string, number> = {};
+      (stockRows || []).forEach((r: any) => { onShelf[r.key] = Number(r.qty) || 0; });
+
+      const items = (products || []).flatMap((p: any) => {
+        const variants = Array.isArray(p.variants) ? p.variants : [];
+        const idxs: (number | null)[] = variants.length ? variants.map((_: any, i: number) => i) : [null];
+        return idxs.map((variantIdx) => {
+          const key = `${p.id}::${variantIdx == null ? "" : variantIdx}`;
+          const mineRows = byKey.get(key) || [];
+          const row = quotableRow(mineRows);
+          const shelf = onShelf[p.id + (variantIdx == null ? "" : "::" + variantIdx)] || 0;
+          const priced = row ? customerUnitPrice(p, row, 1, defaultMarkup, held[key] || null) : null;
+          // The one cheaper breakpoint worth teasing, so a list of
+          // hundreds does not carry a whole ladder per row. The item's
+          // own screen asks for the full one.
+          let nextMinQty: number | null = null, nextPrice: number | null = null;
+          if (row) {
+            const ladder = customerPriceLadder(p, row, defaultMarkup, held[key] || null);
+            const cheapest = ladder.length > 1
+              ? ladder.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a))
+              : null;
+            if (cheapest && priced && cheapest.unitPrice < priced.unitPrice) {
+              nextMinQty = cheapest.minQty;
+              nextPrice = cheapest.unitPrice;
+            }
+          }
+          const v = variantIdx != null ? variants[variantIdx] : null;
+          return {
+            productId: p.id,
+            variantIdx,
+            name: p.name,
+            variantLabel: v ? Object.values(v.combo || {}).join(" / ") : "",
+            note: p.short_description || "",
+            category: p.category || "",
+            subcategory: p.subcategory || "",
+            image: (v && v.image) || p.image || null,
+            available: !!priced,
+            availability: availabilityOf(mineRows, shelf),
+            unitPrice: priced ? priced.unitPrice : null,
+            heldFrom: priced ? priced.heldFrom : null,
+            unit: priced ? priced.unit : "",
+            packUnit: priced ? priced.packUnit : "",
+            packQty: priced ? priced.packQty : 0,
+            nextMinQty,
+            nextPrice,
+          };
+        });
+      });
+
+      return json({ ok: true, items });
     }
 
     if (action === "signout") {
