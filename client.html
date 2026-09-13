@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F4F1EA">
+<title>Your account &middot; Omni-ware</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+  /* COUNTER — the client-facing design language.
+     .design/client-portal holds the canvas this is built from, and the
+     rules behind every value here. It shares NO token with index.html:
+     the staff app is a dense work console and this is the shop's counter,
+     and a customer must never be unable to tell which one they are
+     looking at. */
+  :root{
+    --paper:#FFFFFF;      /* the sheet */
+    --ground:#F4F1EA;     /* warm linen, the page behind it */
+    --pale:#FAF8F4;       /* an opening row */
+    --warm:#F7F5F0;       /* a stated fact, or a failure */
+    --ink:#1A1714;        /* warm near-black */
+    --ink-2:#6B635A;
+    --meta:#9A9187;
+    --rule:#E3DDD3;
+    --hair:#EFEAE2;       /* between rows inside one sheet */
+    --rule-firm:#C7BFB2;  /* under a total */
+    /* Two accents, one meaning each, matched in lightness and chroma.
+       Verdigris has exactly two jobs: THE one filled action, and links.
+       Oxide means money owed and nothing else — not a button, not an
+       error, not out of stock. */
+    --go:#14594A;
+    --go-deep:#0E3F35;
+    --owe:#9B3A22;
+    /* The rest of the nineteen — the mat and mark behind a photograph,
+       the three advice tones — arrive with the screens that use them.
+       A token nothing renders is a colour nobody has had to get right. */
+    --sans:'Public Sans','Helvetica Neue',Arial,sans-serif;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ground);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+  /* Money is a component, not a span. Tabular so a column of figures
+     lines up; right-aligned everywhere; and it never truncates — a
+     clipped figure is not a shortened figure, it is a wrong one. */
+  .fig{
+    font-family:var(--serif);font-variant-numeric:tabular-nums lining;
+    font-feature-settings:'tnum' 1;letter-spacing:-.01em;font-weight:400;
+    white-space:nowrap;
+  }
+  .ser{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;}
+  .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--meta);}
+  .meta{font-size:11.5px;color:var(--meta);line-height:1.4;}
+  .trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+
+  /* Paper has square corners. Sheets carry no radius and no shadow;
+     depth in this language is a hairline. */
+  .sheet{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  .row{display:flex;align-items:baseline;gap:12px;padding:13px 20px;min-height:56px;}
+  .row+.row{border-top:1px solid var(--hair);}
+  .grow{flex-grow:1;min-width:0;}
+  .bar{background:var(--paper);border-top:1px solid var(--rule);padding:12px 20px calc(16px + env(safe-area-inset-bottom));}
+  .spacer{flex-grow:1;}
+
+  .btn{
+    all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    width:100%;min-height:52px;border-radius:4px;font-size:15.5px;font-weight:600;
+    cursor:pointer;text-align:center;
+  }
+  .btn-go{background:var(--go);color:#FFFFFF;}
+  .btn-go:active{background:var(--go-deep);}
+  .btn-line{background:var(--paper);border:1px solid var(--rule-firm);color:var(--ink);min-height:48px;font-size:14.5px;font-weight:500;}
+  .btn[disabled]{opacity:.5;cursor:default;}
+  .btn:focus-visible,.field:focus-visible,.pinbox:focus-visible{outline:2px solid var(--go);outline-offset:2px;}
+
+  .field{
+    all:unset;box-sizing:border-box;display:block;width:100%;min-height:54px;
+    padding:0 15px;background:var(--paper);border:1px solid var(--rule-firm);border-radius:4px;
+    font-family:var(--serif);font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  }
+  .pinrow{display:flex;gap:12px;}
+  .pinbox{
+    all:unset;box-sizing:border-box;flex:1 1 0;min-width:0;height:76px;
+    background:var(--paper);border:1px solid var(--rule-firm);border-radius:4px;
+    font-family:var(--serif);font-size:30px;text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .pinbox.on{border-color:var(--ink);border-width:1.5px;}
+
+  /* A failure names itself — in ink, in words, on the warm ground, under
+     a firm rule. NEVER in oxide: that colour means money owed, and an
+     error wearing it would make "you owe" and "you mistyped" the same
+     thing at a glance. */
+  .say{background:var(--warm);border:1px solid var(--rule-firm);border-radius:4px;padding:14px 15px;font-size:13.5px;line-height:1.6;}
+
+  .tap{display:flex;align-items:center;justify-content:center;min-height:44px;}
+  a{color:var(--go);text-decoration:none;}
+  a:hover{color:var(--go-deep);}
+  [hidden]{display:none !important;}
+
+  .chev{flex-shrink:0;}
+  .brand{font-size:11.5px;font-weight:600;letter-spacing:.16em;}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+
+  <!-- Boot. Says what it is doing, and says if it cannot. -->
+  <section id="scBoot" style="padding:80px 28px;text-align:center;">
+    <div class="meta">Opening your account&hellip;</div>
+  </section>
+
+  <section id="scError" hidden style="padding:72px 28px;display:flex;flex-direction:column;gap:14px;">
+    <div class="ser" style="font-size:26px;line-height:1.2;">This is not working</div>
+    <div class="say" id="errorSay"></div>
+    <button class="btn btn-line" type="button" id="errorRetry">Try again</button>
+  </section>
+
+  <!-- 1 · Sign in. No price anywhere on this screen. -->
+  <section id="scSignIn" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div style="padding:64px 28px 0;display:flex;flex-direction:column;gap:4px;">
+      <div class="brand">OMNI&#8209;WARE</div>
+      <div class="meta" style="letter-spacing:.02em;">Hardware &amp; building materials</div>
+    </div>
+    <div style="padding:44px 28px 0;display:flex;flex-direction:column;gap:10px;">
+      <h1 class="ser" style="font-size:32px;line-height:1.15;margin:0;font-weight:400;">Your account</h1>
+      <p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5;max-width:30ch;">
+        Sign in to see your prices, your balance and everything you have bought from us.
+      </p>
+    </div>
+    <form id="signInForm" style="padding:36px 28px 0;display:flex;flex-direction:column;gap:9px;">
+      <label class="lbl" for="phone">Your phone number</label>
+      <input class="field" id="phone" name="phone" type="tel" inputmode="tel"
+             autocomplete="tel" placeholder="0772 418 903">
+      <div class="meta" id="signInNote">The shop gives you four figures to sign in with. They last ten minutes.</div>
+    </form>
+    <div class="spacer"></div>
+    <div style="padding:0 28px 12px;">
+      <button class="btn btn-go" type="submit" form="signInForm" id="signInBtn">Continue</button>
+    </div>
+    <div style="padding:6px 28px calc(22px + env(safe-area-inset-bottom));">
+      <!-- The mockups carried a sample telephone number. It is in no
+           settings table this page can read, and a number printed here
+           that nobody at the shop answers sends a customer to a stranger.
+           An account is opened by the shop anyway — there is no self
+           sign-up to point anyone at. -->
+      <div class="tap"><span class="meta">No account yet? Ask for one at the shop.</span></div>
+      <div class="meta" style="text-align:center;line-height:1.5;margin-top:4px;">
+        We never ask for your PIN on the phone. If somebody rings asking for it, it is not us.
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · The PIN -->
+  <section id="scPin" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div style="display:flex;align-items:center;min-height:56px;padding:0 16px 0 6px;">
+      <button class="btn" type="button" id="pinBack" aria-label="Back"
+              style="width:44px;min-height:44px;flex:0 0 44px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+    </div>
+    <div style="padding:18px 28px 0;display:flex;flex-direction:column;gap:10px;">
+      <h1 class="ser" style="font-size:30px;line-height:1.15;margin:0;font-weight:400;">Enter your PIN</h1>
+      <p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5;" id="pinWho"></p>
+    </div>
+    <div id="pinSay" hidden style="padding:22px 28px 0;"></div>
+    <form id="pinForm" style="padding:26px 28px 0;">
+      <div class="pinrow">
+        <input class="pinbox" id="pin1" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="First figure">
+        <input class="pinbox" id="pin2" inputmode="numeric" maxlength="1" aria-label="Second figure">
+        <input class="pinbox" id="pin3" inputmode="numeric" maxlength="1" aria-label="Third figure">
+        <input class="pinbox" id="pin4" inputmode="numeric" maxlength="1" aria-label="Fourth figure">
+      </div>
+      <div style="margin-top:16px;font-size:12.5px;color:var(--ink-2);" id="pinClock"></div>
+    </form>
+    <div class="spacer"></div>
+    <div style="padding:0 28px 12px;display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-go" type="submit" form="pinForm" id="pinBtn">Sign in</button>
+      <button class="btn btn-line" type="button" id="pinAgain">Ask for another</button>
+    </div>
+    <div style="padding:6px 28px calc(22px + env(safe-area-inset-bottom));">
+      <div class="meta" style="text-align:center;line-height:1.5;">
+        Not your number? Go back and change it.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Your account -->
+  <section id="scAccount" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="sheet" style="border-top:0;display:flex;align-items:center;gap:12px;padding:0 20px;min-height:56px;">
+      <div class="brand grow">OMNI&#8209;WARE</div>
+      <button class="btn" type="button" id="whoBtn" aria-expanded="false" aria-controls="whoSheet"
+              style="width:auto;min-height:44px;max-width:190px;gap:6px;font-size:13px;font-weight:400;color:var(--ink-2);">
+        <span class="trunc" id="whoName"></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" id="whoChev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Getting back in needs a PIN only the shop can give out, so signing
+         out is never one stray tap on your own name. The chevron in the
+         bar above now points at something. -->
+    <div class="sheet" id="whoSheet" hidden style="border-top:0;background:var(--pale);padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13.5px;color:var(--ink-2);line-height:1.5;" id="whoLine"></div>
+      <button class="btn btn-line" type="button" id="signOut">Sign out</button>
+    </div>
+
+    <!-- The figure that matters. Oxide only where money is owed. -->
+    <div class="sheet" style="border-top:0;padding:24px 20px 20px;display:flex;flex-direction:column;gap:6px;">
+      <div class="lbl" id="owedLbl">You owe</div>
+      <div style="display:flex;align-items:baseline;gap:8px;" id="owedWrap">
+        <span style="font-size:15px;font-weight:600;letter-spacing:.04em;" id="owedCur">UGX</span>
+        <span class="fig" style="font-size:44px;line-height:1.05;" id="owedFig">&mdash;</span>
+      </div>
+      <div class="meta" style="font-size:12.5px;color:var(--ink-2);" id="owedBasis"></div>
+    </div>
+
+    <div class="sheet" style="border-top:0;" id="termsSheet"></div>
+
+    <div class="lbl" style="padding:24px 20px 9px;">Your last orders</div>
+    <div class="sheet" id="ordersSheet"></div>
+
+    <div class="spacer"></div>
+
+    <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="orderAgain">Order again</button>
+      <div class="meta" style="text-align:center;">Prices you see are yours. Nothing is charged here.</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+'use strict';
+/* ---------------------------------------------------------------------
+ * The client portal.
+ *
+ * Talks to ONE endpoint — the client-portal Edge Function — which is the
+ * only thing that knows anything about this shop and hands back fields it
+ * has picked one at a time. Nothing here computes a price, and nothing
+ * here has ever seen a supplier: there is no code path to add one to,
+ * which is the point.
+ *
+ * Standalone, like catalogue.html: it shares no script with index.html
+ * and is not meant to. A copied helper here is a copied helper; the admin
+ * app's version of it must never start reaching a customer.
+ * ------------------------------------------------------------------- */
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const FN_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-portal';
+
+const K_TOKEN = 'ow_client_token';
+const K_SHOP  = 'ow_client_shop';
+const K_DEV   = 'ow_client_device';
+
+/* The shop this portal belongs to. Carried in the link the first time —
+   ?s=<shopId> — and remembered afterwards, so a customer types it never
+   and a second shop on the same build cannot be reached by accident. */
+function shopId(){
+  const fromUrl = new URLSearchParams(location.search).get('s');
+  if(fromUrl){ store(K_SHOP, fromUrl); return fromUrl; }
+  return store(K_SHOP);
+}
+/* localStorage throws in a private window and in some in-app browsers.
+   Every read and write goes through here so the portal degrades to a
+   sign-in-every-time experience instead of a blank screen. */
+function store(k, v){
+  try{
+    if(v === undefined) return localStorage.getItem(k);
+    if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+    return v;
+  }catch(_){ return null; }
+}
+/* Identifies a browser profile and nothing about a person. Clearing
+   storage makes a new one, which shows at the shop as a new device
+   rather than pretending to recognise the old — 0062's rule. */
+function deviceId(){
+  let d = store(K_DEV);
+  if(!d){
+    const b = new Uint8Array(8); (crypto||{}).getRandomValues && crypto.getRandomValues(b);
+    d = Array.from(b, x => x.toString(16).padStart(2,'0')).join('') || String(Date.now());
+    store(K_DEV, d);
+  }
+  return d;
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* Grouped in threes and never rounded. A figure a customer cannot match
+   against their own book is worse than no figure. */
+function money(n){
+  const v = Math.round(Number(n) || 0);
+  return v.toLocaleString('en-US');
+}
+function plural(n, one, many){ return Number(n) === 1 ? one : many; }
+
+async function api(action, extra){
+  const shop = shopId();
+  if(!shop) throw new Error('This link is missing which shop it is for. Ask the shop for it again.');
+  let res, data;
+  try{
+    res = await fetch(FN_URL, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ shopId: shop, action }, extra || {})),
+    });
+    data = await res.json().catch(()=>({}));
+  }catch(_){
+    throw new Error('We could not reach the shop. Check your line and try again.');
+  }
+  if(!res.ok || data.error){
+    const e = new Error(data.error || ('Something went wrong (' + res.status + ')'));
+    e.status = res.status; e.triesLeft = data.triesLeft;
+    throw e;
+  }
+  return data;
+}
+
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount'];
+function show(id){
+  SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
+  window.scrollTo(0, 0);
+}
+function fail(message, retry){
+  document.getElementById('errorSay').textContent = message;
+  document.getElementById('errorRetry').onclick = retry || (()=>location.reload());
+  show('scError');
+}
+
+/* ---------- sign in ------------------------------------------------- */
+let pendingPhone = '';
+let pinDeadline = 0;
+let clockTimer = null;
+
+document.getElementById('signInForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('signInBtn');
+  const phone = document.getElementById('phone').value.trim();
+  const note = document.getElementById('signInNote');
+  if(phone.replace(/\D/g,'').length < 9){
+    note.textContent = 'That does not look like a whole number. Type it as the shop has it.';
+    note.style.color = 'var(--ink)';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Just a moment…';
+  try{
+    const r = await api('start', { phone });
+    pendingPhone = phone;
+    pinDeadline = Date.now() + (Number(r.expiresInSeconds) || 600) * 1000;
+    openPin();
+  }catch(err){
+    note.textContent = err.message;
+    note.style.color = 'var(--ink)';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Continue';
+  }
+});
+
+function openPin(){
+  /* The copy says what is TRUE. Delivery over WhatsApp is not wired —
+     the function says so and so does this. When it is, this line
+     changes and not before: a portal that claims to have sent a message
+     it never sent has spent the only thing it was built to earn. */
+  document.getElementById('pinWho').innerHTML =
+    'The shop has four figures for the number ending <strong style="font-weight:600;color:var(--ink);">'
+    + esc(pendingPhone.replace(/\D/g,'').slice(-3)) + '</strong>. Ask for them at the counter or on WhatsApp.';
+  ['pin1','pin2','pin3','pin4'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('pinSay').hidden = true;
+  show('scPin');
+  tickClock();
+  clearInterval(clockTimer); clockTimer = setInterval(tickClock, 1000);
+  document.getElementById('pin1').focus();
+}
+
+function tickClock(){
+  const left = Math.max(0, pinDeadline - Date.now());
+  const el = document.getElementById('pinClock');
+  if(left <= 0){
+    el.innerHTML = 'That PIN has run out. Ask for another.';
+    clearInterval(clockTimer);
+    return;
+  }
+  const m = Math.floor(left/60000), s = Math.floor(left%60000/1000);
+  el.innerHTML = 'It lasts ten minutes. <span class="fig">' + m + ':' + String(s).padStart(2,'0') + '</span> left.';
+}
+
+/* Four boxes that behave like one field: typing moves on, backspace
+   moves back, and a PIN pasted or auto-filled from a message fills all
+   four. Nothing here draws a keyboard — the real one renders on top. */
+const boxes = ['pin1','pin2','pin3','pin4'].map(id => document.getElementById(id));
+boxes.forEach((box, i) => {
+  box.addEventListener('input', () => {
+    const digits = box.value.replace(/\D/g,'');
+    if(digits.length > 1){
+      digits.split('').slice(0,4-i).forEach((d,j)=>{ boxes[i+j].value = d; });
+      boxes[Math.min(3, i + digits.length - 1)].focus();
+    }else{
+      box.value = digits;
+      if(digits && i < 3) boxes[i+1].focus();
+    }
+    boxes.forEach(b => b.classList.toggle('on', b === document.activeElement));
+    if(boxes.every(b => b.value)) document.getElementById('pinForm').requestSubmit();
+  });
+  box.addEventListener('keydown', (e) => {
+    if(e.key === 'Backspace' && !box.value && i > 0){ boxes[i-1].focus(); boxes[i-1].value=''; e.preventDefault(); }
+  });
+  box.addEventListener('focus', () => boxes.forEach(b => b.classList.toggle('on', b === box)));
+});
+
+document.getElementById('pinForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const pin = boxes.map(b => b.value).join('');
+  if(!/^\d{4}$/.test(pin)) return;
+  const btn = document.getElementById('pinBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    const r = await api('verify', { phone: pendingPhone, pin, deviceId: deviceId() });
+    store(K_TOKEN, r.token);
+    clearInterval(clockTimer);
+    await openAccount();
+  }catch(err){
+    const say = document.getElementById('pinSay');
+    const left = err.triesLeft;
+    say.innerHTML = '<div class="say"><strong style="font-weight:600;">' + esc(err.message) + '.</strong> '
+      + (left > 0
+          /* What the function ACTUALLY does after three: it stops
+             accepting that PIN and you ask the shop for another. There is
+             no timed lock-out, so this does not claim one. */
+          ? esc(left + ' ' + plural(left,'try','tries') + ' left, then this PIN stops working and you ask for another.')
+          : 'That PIN is finished. Ask for another.')
+      + '</div>';
+    say.hidden = false;
+    boxes.forEach(b => { b.value = ''; });
+    boxes[0].focus();
+  }finally{
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+});
+
+document.getElementById('pinBack').onclick = () => { clearInterval(clockTimer); show('scSignIn'); };
+document.getElementById('pinAgain').onclick = async () => {
+  const btn = document.getElementById('pinAgain');
+  btn.disabled = true;
+  try{
+    const r = await api('start', { phone: pendingPhone });
+    pinDeadline = Date.now() + (Number(r.expiresInSeconds) || 600) * 1000;
+    document.getElementById('pinSay').hidden = true;
+    boxes.forEach(b => { b.value = ''; });
+    boxes[0].focus();
+    tickClock();
+  }catch(err){
+    const say = document.getElementById('pinSay');
+    say.innerHTML = '<div class="say">' + esc(err.message) + '</div>';
+    say.hidden = false;
+  }finally{ btn.disabled = false; }
+};
+
+/* ---------- the account --------------------------------------------- */
+async function openAccount(){
+  let data;
+  try{
+    data = await api('account', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    fail(err.message, () => openAccount());
+    return;
+  }
+  renderAccount(data);
+  show('scAccount');
+}
+
+function renderAccount(data){
+  const a = data.account || {};
+  document.getElementById('whoName').textContent = a.name || '';
+  document.getElementById('whoLine').textContent = a.name
+    ? 'Signed in as ' + a.name + '.'
+    : 'Signed in.';
+
+  /* Nothing outstanding is a sentence, not a zero. A balance screen
+     reading 0 makes a working account look like a broken app. */
+  const owed = Number(a.owed) || 0;
+  const owing = owed > 0;
+  document.getElementById('owedCur').hidden = !owing;
+  document.getElementById('owedCur').style.color = 'var(--owe)';
+  const figEl = document.getElementById('owedFig');
+  if(owing){
+    figEl.className = 'fig';
+    figEl.style.cssText = 'font-size:44px;line-height:1.05;color:var(--owe);';
+    figEl.textContent = money(owed);
+  }else{
+    figEl.className = 'ser';
+    figEl.style.cssText = 'font-size:30px;line-height:1.15;';
+    figEl.textContent = 'Nothing outstanding';
+  }
+  /* "You owe / Nothing outstanding" reads as a contradiction. The label
+     follows the figure. */
+  document.getElementById('owedLbl').textContent = owing ? 'You owe' : 'Your balance';
+
+  const basis = [];
+  if(owing){
+    if(a.oldestDays != null) basis.push('Oldest ' + a.oldestDays + ' ' + plural(a.oldestDays,'day','days'));
+    if(a.termsDays != null) basis.push('on ' + a.termsDays + '-day terms');
+  }else if(!Number(a.orderCount)){
+    /* Only sayable when there is genuinely no history. A customer who has
+       bought for years and cleared their balance has had plenty charged
+       to this account, and telling them otherwise is the portal getting
+       their own past wrong in front of them. */
+    basis.push('Nothing has been charged to this account yet.');
+  }
+  document.getElementById('owedBasis').textContent = basis.join(' · ');
+
+  /* Terms and a limit are shown ONLY where somebody has said. Null means
+     nobody agreed one, and a portal that prints "30 days" by default has
+     put a promise on the screen the shop never made. */
+  const rows = [];
+  if(a.termsDays != null){
+    rows.push('<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Your terms</div>'
+      + '<div style="font-size:14.5px;">' + esc(a.termsDays) + ' days</div></div>');
+  }
+  if(a.creditLimit != null){
+    rows.push('<div class="row"><div class="grow"><div style="font-size:14.5px;color:var(--ink-2);">Your limit</div>'
+      + (a.available != null ? '<div class="meta" style="margin-top:2px;">' + money(a.available) + ' still available</div>' : '')
+      + '</div><div class="fig" style="font-size:16px;">' + money(a.creditLimit) + '</div></div>');
+  }
+  const terms = document.getElementById('termsSheet');
+  terms.innerHTML = rows.join('');
+  terms.hidden = rows.length === 0;
+
+  /* Named rather than dropped: an empty list says what will appear here
+     and how many there are in total when there are more than shown. */
+  const orders = Array.isArray(data.orders) ? data.orders : [];
+  const sheet = document.getElementById('ordersSheet');
+  if(!orders.length){
+    sheet.innerHTML = '<div style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What you buy will be listed here &mdash; every item, what you paid for it, and where it went.</div>'
+      + '</div>';
+  }else{
+    sheet.innerHTML = orders.map(o =>
+      '<div class="row" style="min-height:62px;">'
+      + '<div class="grow">'
+      +   '<div class="trunc" style="font-size:15px;">' + esc(longDate(o.date)) + ' · ' + esc(o.items) + ' ' + plural(o.items,'item','items') + '</div>'
+      +   '<div class="meta trunc" style="margin-top:2px;">' + (o.invoiced ? 'Invoiced' : 'Not yet invoiced') + '</div>'
+      + '</div>'
+      + '<div class="fig" style="font-size:16px;">' + money(o.total) + '</div>'
+      + '</div>').join('')
+      /* The canvas has this as a verdigris row with a chevron, leading to
+         a full orders screen. That screen is not built and the function
+         returns five, so here it states the count as a fact instead.
+         Verdigris is THE one action; spending it on a row that does
+         nothing when tapped is how the accent stops meaning anything. */
+      + (Number(a.orderCount) > orders.length
+        ? '<div class="row" style="min-height:48px;"><div class="grow meta">Showing the '
+          + esc(orders.length) + ' most recent of ' + esc(a.orderCount) + '.</div></div>'
+        : '');
+  }
+}
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function longDate(iso){
+  const s = String(iso || '');
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if(!m) return s || 'No date';
+  return Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1];
+}
+
+document.getElementById('whoBtn').onclick = () => {
+  const sheet = document.getElementById('whoSheet');
+  const open = sheet.hidden;
+  sheet.hidden = !open;
+  document.getElementById('whoBtn').setAttribute('aria-expanded', String(open));
+  document.getElementById('whoChev').style.transform = open ? 'rotate(90deg)' : '';
+};
+
+document.getElementById('signOut').onclick = async () => {
+  const token = store(K_TOKEN);
+  store(K_TOKEN, null);
+  document.getElementById('whoSheet').hidden = true;
+  document.getElementById('whoBtn').setAttribute('aria-expanded', 'false');
+  document.getElementById('whoChev').style.transform = '';
+  show('scSignIn');
+  document.getElementById('phone').value = '';
+  if(token){ try{ await api('signout', { token }); }catch(_){ /* the token is gone locally either way */ } };
+};
+
+/* Nothing sends itself, and nothing pretends to work. Ordering is not
+   built yet, so the button says so rather than doing nothing. */
+document.getElementById('orderAgain').onclick = () => {
+  const bar = document.getElementById('orderAgain').parentElement;
+  bar.querySelector('.meta').textContent = 'Ordering is not open on the portal yet. Ring the shop or call in as you do now.';
+};
+
+/* ---------- boot ----------------------------------------------------- */
+(async function boot(){
+  if(!shopId()){
+    fail('This link is missing which shop it is for. Ask the shop to send it again.', null);
+    return;
+  }
+  if(store(K_TOKEN)){ await openAccount(); return; }
+  show('scSignIn');
+})();
+</script>
+</body>
+</html>
