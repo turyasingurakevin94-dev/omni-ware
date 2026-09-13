@@ -108,40 +108,77 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 }
 
 /* ---------- 2. the quick actions ------------------------------------ */
+/*
+ * WHAT THIS USED TO SAY. Home carried a three-button quick-action row --
+ * New quote, Customers, Order history -- and the check held it to three
+ * labels, all wrapped in .ag-qa-label, because bare text inside the button
+ * meant the style never applied and they rendered at 16px/400 while the
+ * identical component on Earnings rendered at 11.5px/700.
+ *
+ * WHY IT STOPPED BEING TRUE. Home no longer has that row. It opens on the
+ * month's earnings and a target, and the work under it is reachable
+ * directly: a lead row starts that customer's order, the earnings figure
+ * opens the earnings screen, the avatar opens the account. Three buttons
+ * that only named other tabs were a menu on top of a menu.
+ *
+ * WHAT IT SAYS NOW. The component still exists and Earnings still wears
+ * it, so the fault it was written for -- bare text where a label class
+ * belongs -- is still worth pinning. It is pinned on the row that is
+ * actually left.
+ */
 {
-  const home = (/<div class="ag-quick-actions">[\s\S]*?<\/div>\s*<\/div>/.exec(
-    src.slice(src.indexOf('id="ag_homeView"'))) || [''])[0];
-  t.check(home.length > 0, 'the Home quick-action row is found');
+  const earnings = (/<div class="ag-quick-actions">[\s\S]*?<\/div>\s*<\/div>/.exec(
+    src.slice(src.indexOf('id="ag_earningsView"'))) || [''])[0];
+  t.check(earnings.length > 0, 'the Earnings quick-action row is found');
 
-  const labels = [...home.matchAll(/<span class="ag-qa-label">([^<]+)<\/span>/g)].map(m => m[1]);
-  t.check(labels.length === 3,
-    `all three labels are wrapped in .ag-qa-label (${labels.length} of 3) -- bare text meant the style never applied`);
-  t.check(labels.join(',') === 'New quote,Customers,Order history',
+  const labels = [...earnings.matchAll(/<span class="ag-qa-label">([^<]+)<\/span>/g)].map(m => m[1]);
+  t.check(labels.length === 2,
+    `both labels are wrapped in .ag-qa-label (${labels.length} of 2) -- bare text meant the style never applied`);
+  t.check(labels.join(',') === 'My clients,Order history',
     `and they name where they go (${labels.join(', ')})`);
   t.check(labels.includes('Order history'),
-    '"Orders" became "Order history" -- the screen\'s own heading, and what the same button on Earnings says');
+    '"Orders" became "Order history" -- the screen\'s own heading');
 
   // The component this was supposed to match.
   t.check(/\.ag-qa-label\{font-size:11\.5px;font-weight:700/.test(src),
     'the label style exists, which is why the mismatch was invisible in the CSS');
+
+  // And Home really is rid of it, rather than the check having drifted
+  // onto the wrong row while both still existed.
+  const homeMarkup = src.slice(src.indexOf('id="ag_homeView"'), src.indexOf('id="ag_browseView"'));
+  t.check(!/ag-quick-actions/.test(homeMarkup),
+    'Home carries no quick-action row -- its work is reachable from the thing it belongs to');
 }
 
 /* ---------- 3. the account button ----------------------------------- */
 /*
- * position:fixed, so it is over Sell, Customers, Earnings and Quote as
- * well as Home -- the single most-present control in the app.
+ * WHAT THIS USED TO SAY. The button was position:fixed and floated over
+ * every screen, so it was the single most-present control in the app. It
+ * was a 34px disc, and the check pinned the ::after ring at inset:-5px
+ * that padded it out to a 44px tap target -- 34 + 5 + 5 -- because a
+ * visibly bigger disc would have covered content on a 390px screen.
+ *
+ * WHY IT STOPPED BEING TRUE. It does not float any more. Home has a
+ * header of its own now and the button sits in it, which means it no
+ * longer has to be small to stay out of the way, and no longer has to
+ * fake its target with an invisible ring: it is 44px of actual button.
+ *
+ * WHAT IT SAYS NOW. The same rule -- 44px -- proved directly instead of
+ * through two numbers that had to be added up. Everything below this,
+ * about the initials being computed once and shared with the Account
+ * card, is untouched: that is the bug where every agent saw the letter
+ * "A" forever, and it is unrelated to where the button lives.
  */
 {
   t.check(/aria-label="Your account"/.test(src),
     'it says what it opens -- its only content is an initial, which a screen reader reads as a letter');
 
-  t.check(/\.ag-avatar-fab::after\{content:'';position:absolute;inset:-5px;border-radius:50%;\}/.test(src),
-    'the tap target is extended to 44px by an invisible ring');
-  t.check(/\.ag-avatar-fab\{[\s\S]{0,200}?width:34px;height:34px/.test(src),
-    'while the disc itself stays 34px, since a bigger overlay covers content');
-  // 34 + 5 + 5 = 44. Stated so a change to either number has to face it.
-  const disc = 34, ring = 5;
-  t.check(disc + ring * 2 === 44, `the two numbers add up to the minimum (${disc} + ${ring}x2)`);
+  const av = (/\.fx-av\{([^}]*)\}/.exec(src) || ['',''])[1];
+  const w = /width:(\d+)px/.exec(av), h = /height:(\d+)px/.exec(av);
+  t.check(w && Number(w[1]) >= 44 && h && Number(h[1]) >= 44,
+    `the account button is a 44px target in its own right (${w ? w[1] : '?'}x${h ? h[1] : '?'})`);
+  t.check(!/\.ag-avatar-fab/.test(src),
+    'and the floating disc it replaced is gone, along with the ring that padded it');
 
   t.check(/function agentInitials\(\)/.test(code), 'the initials are computed once');
   t.check(/document\.getElementById\('ag_home_avatar_btn'\)\.textContent = agentInitials\(\);/.test(code),
