@@ -1156,6 +1156,65 @@
   .fx-btn.ghost{background:var(--fx-card);color:var(--fx-ink);
     border:1px solid var(--fx-line-2);box-shadow:none;}
 
+  /* ---- the add sheet: where he decides what he makes ---- */
+  .fx-shot{position:relative;height:150px;border-radius:14px;overflow:hidden;margin-bottom:14px;
+    background:var(--fx-page);display:flex;align-items:center;justify-content:center;}
+  .fx-shot img{width:100%;height:100%;object-fit:cover;display:block;}
+  .fx-m-lbl{font-size:13px;font-weight:600;color:var(--fx-ink-2);margin:16px 0 8px;}
+  .fx-step{display:flex;align-items:center;gap:12px;background:var(--fx-page);
+    border-radius:14px;padding:6px;}
+  .fx-step button{all:unset;box-sizing:border-box;cursor:pointer;width:52px;min-height:52px;
+    flex:none;border-radius:11px;background:var(--fx-card);box-shadow:var(--fx-sh);
+    display:flex;align-items:center;justify-content:center;}
+  .fx-step button:disabled{opacity:.35;cursor:default;}
+  .fx-step button .icon{width:22px;height:22px;stroke-width:2.4;stroke:var(--fx-ink);}
+  .fx-step .q{flex:1;min-width:0;text-align:center;}
+  .fx-step .q input{all:unset;box-sizing:border-box;width:100%;text-align:center;min-height:44px;
+    font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:24px;font-weight:600;letter-spacing:-.03em;color:var(--fx-ink);}
+  .fx-step .q select{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:100%;
+    text-align:center;text-align-last:center;font-size:13px;font-weight:500;
+    color:var(--fx-ink-3);min-height:22px;}
+  .fx-pricebox{display:flex;align-items:center;gap:10px;background:var(--fx-page);
+    border:1.5px solid var(--fx-oxide);border-radius:14px;padding:8px 14px;}
+  .fx-pricebox .c{flex:none;font-size:14px;font-weight:600;color:var(--fx-ink-3);}
+  .fx-pricebox input{all:unset;box-sizing:border-box;flex:1;min-width:0;min-height:44px;
+    font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:26px;font-weight:600;letter-spacing:-.03em;color:var(--fx-ink);}
+  .fx-pricebox .per{flex:none;font-size:13px;color:var(--fx-ink-3);}
+
+  /* Where his price sits between what the shop charges HIM and the top of
+     what the shop itself would ask. agent-catalog has returned ourPrice
+     for exactly this all along and the app only ever printed a sentence
+     about it. Same three bands, drawn. */
+  .fx-gauge{margin-top:10px;}
+  .fx-gauge-t{position:relative;height:6px;border-radius:3px;
+    background:linear-gradient(90deg,#CFE6DC 0%,#CFE6DC 33%,#F6DFC2 33%,#F6DFC2 75%,#F3D2CB 75%,#F3D2CB 100%);}
+  .fx-gauge-t i{position:absolute;top:-4px;width:14px;height:14px;margin-left:-7px;
+    border-radius:50%;background:var(--fx-green);border:3px solid var(--fx-card);
+    box-shadow:0 1px 4px rgba(0,0,0,.22);}
+  .fx-gauge-t i.premium{background:var(--fx-amber);}
+  .fx-gauge-t i.risky{background:var(--fx-red);}
+  .fx-gauge-l{display:flex;gap:10px;font-size:11px;color:var(--fx-ink-3);margin-top:7px;}
+  .fx-gauge-l span:last-child{margin-left:auto;text-align:right;}
+  .fx-gauge-say{font-size:13px;font-weight:600;margin-top:8px;color:var(--fx-green);}
+  .fx-gauge-say.premium{color:var(--fx-amber);}
+  .fx-gauge-say.risky{color:var(--fx-red);}
+
+  /* The payoff, in the same dark as the earnings hero. */
+  .fx-tally{background:var(--fx-nero);border-radius:var(--fx-r-card);padding:14px 16px;
+    color:#fff;margin-top:16px;}
+  .fx-tally-r{display:flex;align-items:baseline;gap:10px;font-size:15px;color:var(--fx-on-2);}
+  .fx-tally-r b{margin-left:auto;font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:18px;font-weight:600;color:#fff;letter-spacing:-.02em;}
+  .fx-tally-r.big{margin-top:10px;padding-top:10px;border-top:1px solid var(--fx-hair);
+    font-size:16px;color:#fff;font-weight:600;}
+  .fx-tally-r.big b{font-size:24px;color:var(--fx-mint);}
+  /* Selling at or under the shop's own price is not good news and must
+     not wear the good colour. */
+  .fx-tally-r.big.none b{color:var(--fx-on-2);}
+  .fx-tally-r.big.loss b{color:#FF9B8E;}
+
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
     max-width:520px;margin:0 auto;background:var(--fx-card);border-top:1px solid var(--fx-line);
@@ -4870,6 +4929,7 @@ const ICON_ARROW_DOWN = `<svg class="icon" viewBox="0 0 24 24" fill="none" strok
 const ICON_PENCIL = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 5.5l4 4"/></svg>`;
 const ICON_FLAG = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21V3.5"/><path d="M5.5 4.5h11l-2 3.5 2 3.5h-11"/></svg>`;
 const ICON_LOCK = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`;
+const ICON_MINUS = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const ICON_PLUS = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 // Retail = single tag; wholesale = a stack of boxes -- reinforces the
 // retail/wholesale badge's meaning by shape, not color alone.
@@ -5738,21 +5798,39 @@ async function openAddItemPanel(item){
     (hasPack ? `<option value="pack" selected>${esc(packUnit)} (${esc(packQty)} ${esc(unit||'')})</option>` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
-      ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
-      <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
-      ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
+      ${item.image ? `<div class="fx-shot"><img src="${esc(item.image)}" alt=""></div>` : ''}
+      <div class="fx-m-n">${esc(item.name)}</div>
+      ${item.variantLabel ? `<div class="fx-m-u">${esc(item.variantLabel)}</div>` : ''}
       ${clusterWaitHTML}
-      <div class="field">
-        <label>Quantity</label>
-        <div class="ag-qty-unit-row">
-          <input id="ag_ai_qty" type="number" min="0.01" step="any" value="1">
-          <select id="ag_ai_qty_unit">${qtyUnitOptionsHTML}</select>
-        </div>
+      <div class="fx-m-lbl">How many</div>
+      <div class="fx-step">
+        <button type="button" id="ag_ai_minus" aria-label="One fewer">${ICON_MINUS}</button>
+        <span class="q">
+          <input id="ag_ai_qty" type="number" min="0.01" step="any" value="1" inputmode="decimal">
+          <select id="ag_ai_qty_unit" aria-label="Unit">${qtyUnitOptionsHTML}</select>
+        </span>
+        <button type="button" id="ag_ai_plus" aria-label="One more">${ICON_PLUS}</button>
       </div>
       <div id="ag_ai_ladder_wrap"></div>
-      <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any"></div>
-      <div class="ag-price-guidance" id="ag_ai_guidance" style="display:none;"><span class="dot"></span><span id="ag_ai_guidance_text"></span></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
+      <div class="fx-m-lbl" id="ag_ai_price_label">Your price to the client</div>
+      <div class="fx-pricebox">
+        <span class="c">UGX</span>
+        <input id="ag_ai_price" type="number" min="0" step="any" inputmode="numeric">
+        <span class="per" id="ag_ai_price_per"></span>
+      </div>
+      <div class="fx-gauge" id="ag_ai_guidance" style="display:none;">
+        <div class="fx-gauge-t"><i id="ag_ai_gauge_pin"></i></div>
+        <div class="fx-gauge-l">
+          <span id="ag_ai_gauge_lo"></span>
+          <span id="ag_ai_gauge_hi"></span>
+        </div>
+        <div class="fx-gauge-say" id="ag_ai_guidance_text"></div>
+      </div>
+      <div class="fx-tally" id="ag_ai_tally" style="display:none;">
+        <div class="fx-tally-r"><span>This line</span><b id="ag_ai_line">0</b></div>
+        <div class="fx-tally-r big" id="ag_ai_earn_row"><span id="ag_ai_earn_lbl">You earn</span><b id="ag_ai_earn">0</b></div>
+      </div>
+      <button type="button" class="fx-btn" id="ag_ai_add_btn">Add to quote</button>
     </div>`;
 
   const qtyEl = document.getElementById('ag_ai_qty');
@@ -5776,12 +5854,65 @@ async function openAddItemPanel(item){
     if(!(ourPrice > 0) || !(sellPerBase > 0)){ guidanceEl.style.display = 'none'; return; }
     const ratio = sellPerBase / ourPrice;
     let band, text;
-    if(ratio <= 1.1){ band = 'competitive'; text = 'Competitive -- likely to win this sale'; }
+    /* Margin first. The three bands below answer "will this win the sale",
+       and against ourPrice a price under the agent's OWN cost answers yes
+       -- so it used to paint a green "Competitive" directly above a red
+       "You lose 1,000". Both statements were true and together they read
+       as the app contradicting itself. What he needs told first is that
+       the sale costs him money. */
+    const floor = earnedRow ? earnedRow.unitPrice : 0;
+    if(floor > 0 && sellPerBase < floor){
+      band = 'risky'; text = 'Below what the shop charges you -- this sale costs you money';
+    } else if(floor > 0 && sellPerBase === floor){
+      band = 'premium'; text = "The shop's own price -- you make nothing on it";
+    }
+    else if(ratio <= 1.1){ band = 'competitive'; text = 'Competitive -- likely to win this sale'; }
     else if(ratio <= 1.35){ band = 'premium'; text = 'Premium -- above typical, still reasonable'; }
     else { band = 'risky'; text = 'Likely to lose this sale -- well above the usual price'; }
-    guidanceEl.className = `ag-price-guidance ${band}`;
-    guidanceEl.style.display = 'flex';
+    guidanceEl.style.display = 'block';
     guidanceTextEl.textContent = text;
+    guidanceTextEl.className = `fx-gauge-say ${band}`;
+    /* The track runs 0.9x to 1.5x of the shop's own price, so its colour
+       stops land exactly on the two band edges: 1.1 at 33% and 1.35 at
+       75%. The pin is clamped rather than allowed off the end -- a marker
+       outside the bar reads as a rendering fault, not as "very high". */
+    const pos = Math.max(0, Math.min(100, (ratio - 0.9) / 0.6 * 100));
+    const pin = document.getElementById('ag_ai_gauge_pin');
+    pin.style.left = pos + '%';
+    pin.className = band === 'competitive' ? '' : band;
+    const usingPackNow = unitEl.value==='pack' && packQty>0;
+    const per = usingPackNow ? packUnit : unit;
+    document.getElementById('ag_ai_gauge_lo').textContent =
+      `${fmtNum(earnedRow ? (usingPackNow ? earnedRow.unitPrice*packQty : earnedRow.unitPrice) : 0)} the shop's price to you`;
+    document.getElementById('ag_ai_gauge_hi').textContent =
+      `${fmtNum(ourPrice * 1.35 * (usingPackNow ? packQty : 1))} top of usual`;
+    if(per){ /* the unit is already on the price row */ }
+    updateTally();
+  }
+
+  /* What the line is worth and what it leaves him, moving as he types.
+     Computed exactly the way the Add handler stores it -- per BASE unit
+     against the tier this quantity earned -- so the figure he agrees to
+     here is the figure that lands in the cart. */
+  function updateTally(){
+    const tallyEl = document.getElementById('ag_ai_tally');
+    const usingPack = unitEl.value==='pack' && packQty>0;
+    const entered = Number(priceEl.value);
+    const baseQty = currentBaseQty();
+    if(!(entered >= 0) || !(baseQty > 0) || !earnedRow){ tallyEl.style.display = 'none'; return; }
+    const perBase = usingPack ? entered/packQty : entered;
+    const line = perBase * baseQty;
+    const earn = (perBase - earnedRow.unitPrice) * baseQty;
+    tallyEl.style.display = 'block';
+    document.getElementById('ag_ai_line').textContent = fmtNum(line);
+    document.getElementById('ag_ai_earn').textContent = fmtNum(Math.abs(earn));
+    const row = document.getElementById('ag_ai_earn_row');
+    const lbl = document.getElementById('ag_ai_earn_lbl');
+    // Selling at or under the shop's own price is not good news, and the
+    // mint is reserved for money he is actually making.
+    if(earn > 0){ row.className = 'fx-tally-r big'; lbl.textContent = 'You earn'; }
+    else if(earn === 0){ row.className = 'fx-tally-r big none'; lbl.textContent = 'You earn nothing on this'; }
+    else { row.className = 'fx-tally-r big loss'; lbl.textContent = 'You lose'; }
   }
   priceEl.addEventListener('input', updateGuidance);
 
@@ -5808,7 +5939,8 @@ async function openAddItemPanel(item){
     }
     const priceUnit = unitEl.value==='pack' && packQty>0 ? packUnit : unit;
     const priceValue = unitEl.value==='pack' && packQty>0 ? earnedRow.unitPrice*packQty : earnedRow.unitPrice;
-    priceLabelEl.textContent = `Your price to the client (per ${priceUnit})`;
+    priceLabelEl.textContent = 'Your price to the client';
+    document.getElementById('ag_ai_price_per').textContent = priceUnit ? `/${priceUnit}` : '';
     priceEl.value = Math.round(priceValue);
     updateGuidance();
   }
@@ -5816,7 +5948,17 @@ async function openAddItemPanel(item){
   rerender();
 
   qtyEl.addEventListener('change', rerender);
+  qtyEl.addEventListener('input', updateTally);
   unitEl.addEventListener('change', rerender);
+  // Whole steps, and never below one -- a stepper that can reach zero
+  // just deletes the line the long way round.
+  const stepQty = (d)=>{
+    const cur = Number(qtyEl.value) || 0;
+    qtyEl.value = String(Math.max(1, Math.round(cur) + d));
+    rerender();
+  };
+  document.getElementById('ag_ai_minus').addEventListener('click', ()=> stepQty(-1));
+  document.getElementById('ag_ai_plus').addEventListener('click', ()=> stepQty(1));
 
   addBtn.addEventListener('click', ()=>{
     const raw = Number(qtyEl.value)||0;
