@@ -56,6 +56,7 @@ ICONS = {
     'phone': '<path d="M6.4 3.2h3.1l1.6 4-2.1 1.5a12.4 12.4 0 0 0 5.8 5.8l1.5-2.1 4 1.6v3.1'
              'a2 2 0 0 1-2.2 2A17.3 17.3 0 0 1 2.6 5.4a2 2 0 0 1 2-2.2z"/>',
     'plus': '<path d="M12 5v14M5 12h14"/>',
+    'minus': '<path d="M5 12h14"/>',
     'warn': '<path d="M12 3.5l9 15.5H3z"/><path d="M12 9.5v4M12 16.4v.1"/>',
     'wifi-off': '<path d="M3 3l18 18"/><path d="M9.2 15.4a4 4 0 0 1 5.6 0"/>'
                 '<path d="M6.1 12.1a8.5 8.5 0 0 1 3.2-2"/><path d="M17.9 12.1a8.5 8.5 0 0 0-3.4-2.1"/>'
@@ -125,6 +126,14 @@ def build(out, body, w, h, extra=()):
 
 if __name__ == '__main__':
     PH = (390, 844)
-    build('Main.dc.html',  'body_home.html',  *PH)
-    build('Sell.dc.html',  'body_sell.html',  *PH)
-    build('Order.dc.html', 'body_order.html', *PH)
+    build('Main.dc.html',    'body_home.html',    *PH)
+    build('Sell.dc.html',    'body_sell.html',    *PH)
+    build('AddItem.dc.html', 'body_add.html',     *PH)
+    build('Order.dc.html',   'body_order.html',   *PH)
+    build('Clients.dc.html', 'body_clients.html', *PH)
+    build('Client.dc.html',  'body_client.html',  *PH)
+    build('Money.dc.html',   'body_money.html',   *PH)
+    build('Orders.dc.html',  'body_orders.html',  *PH)
+    build('Account.dc.html', 'body_account.html', *PH)
+    build('DayOne.dc.html',  'body_day1.html',    *PH)
+    build('Stale.dc.html',   'body_stale.html',   *PH)
