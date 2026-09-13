@@ -8283,6 +8283,32 @@
   .inv-f-search{flex:0 1 220px;min-width:150px;}
   .inv-f-search .ow-f-in{width:100%;}
   .ow-tb.inv-tb{gap:var(--ow-sp-12);}
+  /* WHICH REGISTER. It sits on the name's row, over the filter bar the
+     two lenses share -- the same place and the same furniture the Price
+     registry and Inventory give theirs. */
+  .ow-seg.inv-side{margin-left:var(--ow-sp-12);}
+  /* And the bar itself, as one row. See the note in the markup. */
+  .inv-find{display:flex;align-items:flex-end;gap:var(--ow-sp-12);
+    flex-wrap:wrap;flex:1 1 100%;}
+  /* The crumb that follows a "Raised" link. It names the order whose
+     bills are being shown and carries the way back, because the way back
+     is the half of the link that used to cost four undos. */
+  .inv-crumb{display:flex;align-items:center;gap:var(--ow-sp-8);
+    margin-bottom:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);
+    background:var(--ow-paper);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .inv-crumb[hidden]{display:none;}
+  .inv-crumb svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .inv-crumb b{color:var(--ow-ink-900);font-family:'IBM Plex Mono',monospace;
+    font-weight:var(--ow-fw-600);}
+  /* The sentence shares the chevron's line and wraps within itself.
+     Left to itself it is one long flex item, so it went over WHOLE and
+     stranded the chevron alone on the row above it. */
+  .inv-crumb > span{flex:1 1 0;min-width:0;}
+  .inv-crumb .inv-crumb-back{margin-left:auto;background:none;border:0;padding:0;
+    cursor:pointer;font:inherit;color:var(--ow-oxide);font-weight:var(--ow-fw-600);
+    border-bottom:1px solid currentColor;}
 
   /* THE PHONE, beside the console it belongs to and NOT in the .ow-
      layer: every selector in the layer starts .ow- and stays there, and
@@ -8337,6 +8363,26 @@
   .inv-ck input{width:20px;height:20px;}
   .inv-f-search{flex:1 1 100%;}
   .ow-tb.inv-tb{flex-wrap:wrap;}
+  /* THE PHONE IS ITS OWN DESIGN. The lens is full width under the name
+     and each half is a tap target -- the same move the Price registry
+     and Inventory lenses make, for the same reason: a segment sharing a
+     row with a page name is a console control, not a thumb's. */
+  .ow-seg.inv-side{margin-left:0;flex:1 1 100%;}
+  .ow-seg.inv-side .ow-seg-b{flex:1;min-height:var(--ow-tap);}
+  /* And the print goes back to last. On the console it sits up beside
+     the lens because there is room on that row; stacked, that puts a
+     full-width oxide button between the lens and the search box, which
+     is the loudest thing on the screen standing in front of the control
+     that is actually used first. */
+  #tab-invoices .inv-find{order:1;}
+  #tab-invoices #inv_doc_print_list_btn{order:2;}
+  .inv-crumb{flex-wrap:wrap;}
+  /* Full width and thumb-sized, and WITHOUT the underline: stretched
+     across the card that rule stops reading as a link and starts reading
+     as a horizontal rule under the crumb. The colour and the tap target
+     carry it here. */
+  .inv-crumb .inv-crumb-back{margin-left:0;flex:1 1 100%;text-align:left;
+    min-height:var(--ow-tap);border-bottom:0;}
   }
 
   /* Mobile card layout for the Purchase Invoices ledger (phone breakpoint
@@ -15415,7 +15461,11 @@
           <span class="nav-label">Order tracking</span>
           <b class="nav-badge" id="navBadgeOrders" hidden></b>
         </button>
-        <button data-tab="invoices" title="Invoices" data-keywords="bills receipts">
+        <!-- ONE ROW FOR BOTH REGISTERS. Purchase invoices was a row of its
+             own under Buy until the two became one screen with a lens, so
+             its words are here: a merge is only honest if what people
+             search by still reaches the screen that took the work. -->
+        <button data-tab="invoices" title="Invoices" data-keywords="bills receipts supplier payables goods received purchase invoice">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg>
           <span class="nav-label">Invoices</span>
         </button>
@@ -15478,10 +15528,11 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
           <span class="nav-label">Suppliers</span>
         </button>
-        <button data-tab="purchase-invoices" title="Purchase invoices" data-keywords="supplier bills payables goods received">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-          <span class="nav-label">Purchase invoices</span>
-        </button>
+        <!-- And the supplier's bill, which used to be a row here. An
+             order, the invoice it becomes and the bills it raises are one
+             thing moving through the business; they are one screen now,
+             under Sell, with the two registers as lenses. Buy keeps the
+             four screens about CHOOSING what to buy and from whom. -->
       </div>
       <div class="nav-group" data-group="Catalogue">
         <button type="button" class="nav-section-label" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -16007,50 +16058,100 @@
         <h1 class="ow-ph-t">Invoices</h1>
         <p class="ow-ph-sub">Every invoice the shop has raised, open money first.</p>
         <p class="ow-ph-help">Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it &mdash; it stays visible on the Order tracking board for 24 hours, then moves here only. This is the register of documents: find one, print it, take a payment against it, and read what the range was billed. What each customer owes in total, and how old it is, is a different question and has its own screen &mdash; Debtors; asking them for it is Follow-ups, under <b>Money</b>, where the words are already written. A voided invoice is kept, never deleted, because a cancelled document that vanishes cannot be explained to anybody later. Two different things can be done to a document that is wrong, and they are not interchangeable: <b>void</b> cancels the paper &mdash; the goods went, money already received stays in the Cash Book, and the customer stops owing for it; <b>undo invoice</b> says it should never have been raised &mdash; the stock goes back on the shelf, the payments and their Cash Book entries are reversed, the purchase invoices it raised are removed, and the order returns to Order tracking where a wrong quantity can be corrected and the invoice raised again. Both ask first and name what they are about to remove.</p>
+        <!-- WHAT A SUPPLIER BILLED YOU, the other half of the same
+             transaction. It was its own screen; the words are unchanged
+             because the argument is. -->
+        <p class="ow-ph-help inv-help-buys" hidden>A bill is raised when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order. Nothing here is typed in from scratch. Every bill in the range is checked as the screen draws: the same delivery billed twice, a line priced above anything you have ever paid that supplier, a bill with no delivery behind it on the stock record, and money paid out beyond what was billed. What is not checked is said too, because a checking screen whose silence you cannot read is worse than none: nothing here knows whether the goods that came were the ones ordered, or whether a price you have never paid before is a fair one. Opening a bill shows its lines against what the same goods last cost you from that same supplier, so a price can be argued before it is paid rather than after. Who to pay first is Creditors, not this screen. A voided bill is kept and struck through, never deleted, and voiding one raised from your own purchase order takes the goods back off the shelf &mdash; the button says so before it acts.</p>
+        <!-- TWO REGISTERS, ONE TRANSACTION, ONE AT A TIME.
+
+             Invoicing a customer's order RAISES a supplier bill for every
+             supplier used on it: purchaseInvoicesForOrder() has always
+             known it, and the sales row has always carried its "Raised"
+             links. What it could not do was land anywhere useful --
+             revealPurchaseInvoice had to change tab, type the number into
+             the OTHER screen's search box, widen its date range and drop
+             its voided filter, and getting back meant undoing all four by
+             hand because the list you left was gone.
+
+             A LENS, NOT A SPLIT. Side by side was drawn: at 1440, with
+             the rail off, each register gets 578px, which costs the sales
+             side four of its eight columns including the select-all the
+             bulk-void depends on, and the buying side its 304px rail and
+             the whole checks band. This app has a law against it already
+             -- Movements was pulled OUT of Inventory for being a whole
+             second console stacked under the first. -->
         <span class="ow-ph-sp"></span>
-        <!-- SEARCH IS THE FIRST CONTROL, not the last. At this volume the
-             list is never read whole: it is narrowed to a question and
-             then read. Doc number, customer, or anything on the lines. -->
-        <div class="ow-f ow-ph-f inv-f inv-f-search">
-          <label class="ow-f-l" for="inv_doc_search">Search</label>
-          <input id="inv_doc_search" class="ow-f-in an-sel" placeholder="Doc No. / customer / item...">
+        <div class="ow-seg inv-side" id="iv_side" role="tablist" aria-label="Which register">
+          <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-side="sales">Sales<span class="ow-seg-n" id="ivSideSales"></span></button>
+          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-side="buys">Purchases<span class="ow-seg-n" id="ivSideBuys"></span></button>
         </div>
-        <div class="ow-f ow-ph-f inv-f">
-          <label class="ow-f-l" for="inv_doc_range_preset">Date range</label>
-          <select id="inv_doc_range_preset" class="ow-f-in an-sel">
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="7">Last 7 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="month">This month</option>
-            <option value="all">All time</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div class="ow-f ow-ph-f inv-f" id="inv_doc_from_field" style="display:none;">
-          <label class="ow-f-l" for="inv_doc_from">From</label>
-          <input type="date" id="inv_doc_from" class="ow-f-in an-sel">
-        </div>
-        <div class="ow-f ow-ph-f inv-f" id="inv_doc_to_field" style="display:none;">
-          <label class="ow-f-l" for="inv_doc_to">To</label>
-          <input type="date" id="inv_doc_to" class="ow-f-in an-sel">
-        </div>
-        <label class="inv-ck inv-f" for="inv_doc_hide_voided">
-          <input type="checkbox" id="inv_doc_hide_voided" checked>
-          <span>Hide voided</span>
-        </label>
-        <!-- THE ACCENT, and the only one on this screen. On a register
-             that exists to be searched and read, carrying it away on
-             paper is the one thing there is to do next -- the sheet a
-             person walks the yard with. Every row action is a quiet
-             ghost so that this reads as the one. -->
+        <!-- THE ACCENT, and the only one on this screen -- ON SALES. On a
+             register that exists to be searched and read, carrying it away
+             on paper is the one thing there is to do next: the sheet a
+             person walks the yard with. Every row action is a quiet ghost
+             so that this reads as the one.
+
+             On PURCHASES the same button goes ghost, because the accent
+             there belongs to whatever the bill you have opened needs --
+             which is the reasoning that screen already carried when the
+             two were separate. The oxide is spent once either way; the
+             lens decides where. -->
         <button type="button" class="btn btn-accent ow-sm" id="inv_doc_print_list_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
           Print list
         </button>
+        <!-- SEARCH IS THE FIRST CONTROL, not the last. At this volume the
+             list is never read whole: it is narrowed to a question and
+             then read. Doc number, customer, or anything on the lines.
+
+             ONE BAR FOR BOTH LENSES, because it already was one: the two
+             screens carried the same search-first placement, the same
+             seven date presets and the same Hide voided, and the second
+             one's own comment said "as on Invoices". Two copies of one
+             bar is precisely what made the cross-screen link expensive.
+
+             AND ONE GROUP, so it wraps as one. The lens added a control
+             to a header row that was already full, and left to itself the
+             bar broke apart -- Search stranded on the right of row one
+             with Date range and Hide voided on the left of row two, one
+             bar at two alignments. Given the whole width it is the row
+             under the name it always read as, and it stays INSIDE the
+             sticky header, so it is still there when the register is
+             scrolled. -->
+        <div class="inv-find">
+          <div class="ow-f ow-ph-f inv-f inv-f-search">
+            <label class="ow-f-l" for="inv_doc_search">Search</label>
+            <input id="inv_doc_search" class="ow-f-in an-sel" placeholder="Doc No. / customer / item...">
+          </div>
+          <div class="ow-f ow-ph-f inv-f">
+            <label class="ow-f-l" for="inv_doc_range_preset">Date range</label>
+            <select id="inv_doc_range_preset" class="ow-f-in an-sel">
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="month">This month</option>
+              <option value="all">All time</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="ow-f ow-ph-f inv-f" id="inv_doc_from_field" style="display:none;">
+            <label class="ow-f-l" for="inv_doc_from">From</label>
+            <input type="date" id="inv_doc_from" class="ow-f-in an-sel">
+          </div>
+          <div class="ow-f ow-ph-f inv-f" id="inv_doc_to_field" style="display:none;">
+            <label class="ow-f-l" for="inv_doc_to">To</label>
+            <input type="date" id="inv_doc_to" class="ow-f-in an-sel">
+          </div>
+          <label class="inv-ck inv-f" for="inv_doc_hide_voided">
+            <input type="checkbox" id="inv_doc_hide_voided" checked>
+            <span>Hide voided</span>
+          </label>
+        </div>
       </div>
 
+      <div id="inv_sales_pane">
       <!-- WHAT THE RANGE WAS BILLED, before anybody searches. Four
            figures over every invoice the filters matched, never over the
            page being shown. The fourth is the one this screen can say
@@ -16091,6 +16192,41 @@
         </div>
 
         <div id="invoicesWrap"></div>
+      </div>
+      </div>
+
+      <!-- THE OTHER REGISTER. The unit here is ONE BILL: what a supplier
+           billed you on one day, and whether it is right. Creditors' unit
+           is one supplier -- what you owe them altogether, and who to pay
+           first -- and this lens deliberately does not rank anything by
+           age, so the two can never disagree about the same money.
+
+           Four things happen on it, and the order is the layout: read the
+           position, work what needs your eye, find a bill, open it and
+           check its lines against what the same goods last cost you. -->
+      <div id="inv_buys_pane" hidden>
+        <!-- WHOSE BILLS THESE ARE, when you arrived by following a
+             "Raised" link rather than by pressing the lens. The order is
+             named, and Back is one press to a sales list that never
+             moved -- which is the whole of what the merge buys. -->
+        <div class="inv-crumb" id="inv_crumb" hidden></div>
+
+        <!-- WHAT THE RANGE BOUGHT. Always the whole range: the search box
+             and the segment act on the list below, never on this. A
+             position that shrinks because somebody left a filter on is a
+             position nobody can trust. -->
+        <div class="ow-strip" id="pi_strip"></div>
+
+        <!-- The checks. A panel with a header like every other region, not
+             a red slab — and it says so when everything is sound, because
+             a band that only ever appears when something is wrong leaves
+             you unable to tell "nothing wrong" from "not looked at". -->
+        <div id="piCheckWrap"></div>
+
+        <div class="ow-grid">
+          <div id="purchaseInvoicesWrap"></div>
+          <div class="ow-side" id="piRailWrap"></div>
+        </div>
       </div>
     </section>
 
@@ -16491,84 +16627,6 @@
       <!-- One supplier's account. Drawn in place of everything above
            it, never over it. -->
       <div id="supAccountWrap" style="display:none;"></div>
-    </section>
-
-    <!-- PURCHASE INVOICES, on the console.
-
-         The unit here is ONE BILL: what a supplier billed you on one
-         day, and whether it is right. Creditors' unit is one supplier —
-         what you owe them altogether, and who to pay first — and this
-         screen deliberately does not rank anything by age, so the two
-         can never disagree about the same money.
-
-         Four things happen here, and the layout is in that order: read
-         the position, work what needs your eye, find a bill, open it and
-         check its lines against what the same goods last cost you. The
-         old screen could do only the third, and to read a bill at all
-         you had to press Print and open a print dialog. -->
-    <section id="tab-purchase-invoices" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Purchase invoices</h1>
-        <p class="ow-ph-sub">Every bill a supplier has given you &mdash; what it was for, whether it is right, and what is still owed on it</p>
-        <p class="ow-ph-help">A bill is raised when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order. Nothing here is typed in from scratch. Every bill in the range is checked as the screen draws: the same delivery billed twice, a line priced above anything you have ever paid that supplier, a bill with no delivery behind it on the stock record, and money paid out beyond what was billed. What is not checked is said too, because a checking screen whose silence you cannot read is worse than none: nothing here knows whether the goods that came were the ones ordered, or whether a price you have never paid before is a fair one. Opening a bill shows its lines against what the same goods last cost you from that same supplier, so a price can be argued before it is paid rather than after. Who to pay first is Creditors, not this screen. A voided bill is kept and struck through, never deleted, and voiding one raised from your own purchase order takes the goods back off the shelf &mdash; the button says so before it acts.</p>
-        <span class="ow-ph-sp"></span>
-        <!-- SEARCH IS THE FIRST CONTROL, as on Invoices: at this volume
-             the list is never read whole, it is narrowed to a question. -->
-        <div class="ow-f ow-ph-f inv-f inv-f-search">
-          <label class="ow-f-l" for="pi_doc_search">Search</label>
-          <input id="pi_doc_search" class="ow-f-in an-sel" placeholder="Doc No. / supplier / item...">
-        </div>
-        <div class="ow-f ow-ph-f inv-f">
-          <label class="ow-f-l" for="pi_doc_range_preset">Date range</label>
-          <select id="pi_doc_range_preset" class="ow-f-in an-sel">
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="7">Last 7 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="month">This month</option>
-            <option value="all">All time</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div class="ow-f ow-ph-f inv-f" id="pi_doc_from_field" style="display:none;">
-          <label class="ow-f-l" for="pi_doc_from">From</label>
-          <input type="date" id="pi_doc_from" class="ow-f-in an-sel">
-        </div>
-        <div class="ow-f ow-ph-f inv-f" id="pi_doc_to_field" style="display:none;">
-          <label class="ow-f-l" for="pi_doc_to">To</label>
-          <input type="date" id="pi_doc_to" class="ow-f-in an-sel">
-        </div>
-        <label class="inv-ck inv-f" for="pi_doc_hide_voided">
-          <input type="checkbox" id="pi_doc_hide_voided" checked>
-          <span>Hide voided</span>
-        </label>
-        <!-- THE ACCENT LIVES IN THE OPEN BILL, not here. On Invoices the
-             printed sheet is the one thing to do next; here it is
-             whatever the bill you have opened needs, so the list's own
-             print is a ghost and the oxide is spent once, below. -->
-        <button type="button" class="btn btn-ghost ow-sm" id="pi_doc_print_list_btn">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-          Print list
-        </button>
-      </div>
-
-      <!-- WHAT THE RANGE BOUGHT. Always the whole range: the search box
-           and the segment act on the list below, never on this. A
-           position that shrinks because somebody left a filter on is a
-           position nobody can trust. -->
-      <div class="ow-strip" id="pi_strip"></div>
-
-      <!-- The checks. A panel with a header like every other region, not
-           a red slab — and it says so when everything is sound, because
-           a band that only ever appears when something is wrong leaves
-           you unable to tell "nothing wrong" from "not looked at". -->
-      <div id="piCheckWrap"></div>
-
-      <div class="ow-grid">
-        <div id="purchaseInvoicesWrap"></div>
-        <div class="ow-side" id="piRailWrap"></div>
-      </div>
     </section>
 
     <!-- FOLLOW-UPS — who is waiting to hear from us.
@@ -22765,7 +22823,7 @@ const LIST_PAGE_RERENDER = {
   ahead: ()=> renderAhead(),
   pricing: ()=> renderPricing(),
   invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
-  purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
+  purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('inv_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
   // re-query the server.
   sessions: ()=> renderLoginSessions(),
@@ -28377,6 +28435,13 @@ let currentActiveTab = 'quote';
 /* Which side of the Price registry is open. Supplier prices was its own
    screen; it is the registry's Paid side now. */
 let prLens = 'quotes';
+/* Which register of the one transaction is open. Purchase invoices was
+   its own screen; it is the Invoices screen's Purchases side now. */
+let invSide = 'sales';
+/* Set when the Purchases lens was reached by following an order's
+   "Raised" link rather than by pressing the lens: the bills of that one
+   order, and the way back. Cleared by pressing either lens by hand. */
+let invFocusOrderId = null;
 /* A screen that became a side of another keeps its key. The Manager's
    door, a saved last tab and the assistant's prompt all still say
    prices-watch, and all still open it -- the registry, on its Paid
@@ -28437,6 +28502,19 @@ function resolveTab(tab){
      into getElementById('tab-stock-movements').style and throws before
      anything renders. */
   if(tab === 'stock-movements'){ invLens = 'moves'; return 'inventory'; }
+  /* AND PURCHASE INVOICES. An order, the invoice it becomes and the
+     bills it raises against its suppliers are one thing moving through
+     the business -- purchaseInvoicesForOrder() has always known it, and
+     the sales row has always carried its "Raised" links. What those
+     links could not do was land anywhere: revealPurchaseInvoice had to
+     change tab, type the number into the OTHER screen's search box,
+     widen its date range and drop its voided filter, and getting back
+     meant undoing all four by hand. Two registers of one transaction,
+     with one filter bar between them, is one screen; so the door that
+     said purchase-invoices presses the Purchases lens, and a shop whose
+     last screen was Purchase invoices boots into it rather than into
+     getElementById('tab-purchase-invoices').style. */
+  if(tab === 'purchase-invoices'){ invSide = 'buys'; return 'invoices'; }
   /* AND THE THREE HORIZONS. What's coming, What to buy and The day were
      one question -- what is coming -- asked over the next thirty days,
      the next fortnight and the next few hours, from three different
@@ -28536,8 +28614,9 @@ function goToTab(tab){
   document.body.classList.toggle('on-quote-tab', tab==='quote');
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
-  if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
-  if(tab==='purchase-invoices') renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  // One screen, two registers: the lens decides which is drawn, and it
+  // is the thing that draws either of them.
+  if(tab==='invoices') invApplySide();
   if(tab==='inventory') renderInventory();
   /* Arriving from the rail is a request for the book, not for whoever
      was open last time. */
@@ -37067,7 +37146,7 @@ function deleteSavedQuote(id){
   if(data.quote.savedId===id) data.quote.savedId = null;
   saveData();
   renderSavedQuotes();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
@@ -38781,7 +38860,7 @@ async function toggleQuoteInvoiced(id){
      search the moment you use it now that the act lives on the register
      itself. */
   renderInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
-  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
@@ -40297,10 +40376,18 @@ function renderInvoices(filter=''){
   </div>
   ${listMoreButtonHTML('invoices', invoices.length, 'invoices')}`;
 
-  // Follow this order forward to the purchase invoice it raised.
+  /* Follow this order forward to the bills it raised. The order is what
+     is asked for, not the one number pressed: an order that raised three
+     bills is one question with three answers, so all three are shown --
+     with the one pressed open on arrival, and a crumb saying whose they
+     are. */
   wrap.querySelectorAll('[data-pi]').forEach(btn=>btn.addEventListener('click', (ev)=>{
     ev.stopPropagation();
-    revealPurchaseInvoice(Number(btn.dataset.pi));
+    const pi = (data.purchaseInvoices||[]).find(x=>x.id===Number(btn.dataset.pi));
+    const order = orderForPurchaseInvoice(pi);
+    if(!order){ revealPurchaseInvoice(Number(btn.dataset.pi)); return; }
+    piOpenId = pi.id;
+    revealBillsForOrder(order.id);
   }));
   wrap.querySelectorAll('.inv-doc-print').forEach(btn=>btn.addEventListener('click', ()=>{
     const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
@@ -40771,16 +40858,82 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   if(data.presetAutoPrintReceipt) printReceipt(q, payment, q.payments.length-1);
 });
 
-document.getElementById('inv_doc_search').addEventListener('input', e=>renderInvoices(e.target.value));
-document.getElementById('inv_doc_hide_voided').addEventListener('change', ()=>renderInvoices(document.getElementById('inv_doc_search').value));
+/* ---- The two registers, and the one bar over them ------------------
+ *
+ * Both lenses are filtered by the SAME search box, the same date range
+ * and the same Hide voided, because both screens already carried an
+ * identical bar and the second one's markup said so. What follows is
+ * the only place that has to know which of them a keystroke belongs to.
+ */
+function invSearchValue(){
+  const box = document.getElementById('inv_doc_search');
+  return box ? box.value : '';
+}
+function invRenderSide(){
+  if(invSide === 'buys') renderPurchaseInvoices(invSearchValue());
+  else renderInvoices(invSearchValue());
+}
+/* WHICH REGISTER IS OPEN -- the panes, the words around them and the one
+   accent. Called on entry and on every press of the lens, never by a
+   render: a render draws a list, and which list there is to draw is this
+   question rather than that one. */
+function invApplySide(){
+  const sales = invSide !== 'buys';
+  if(sales) invFocusOrderId = null;
+  const salesPane = document.getElementById('inv_sales_pane');
+  const buysPane = document.getElementById('inv_buys_pane');
+  if(salesPane) salesPane.hidden = !sales;
+  if(buysPane) buysPane.hidden = sales;
+  document.querySelectorAll('#iv_side .ow-seg-b').forEach(b=>{
+    const on = (b.dataset.side === 'buys') !== sales;
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  /* Reached through the section rather than by id. Both paragraphs are
+     MOVED into the header's "i" bubble by foldPageInstructions, and the
+     bubble stays inside the header, so these selectors hold either
+     side of the fold -- and neither prose element has to carry an id
+     that another screen could one day repeat. */
+  const sub = document.querySelector('#tab-invoices .ow-ph-sub');
+  if(sub) sub.textContent = sales
+    ? 'Every invoice the shop has raised, open money first.'
+    : 'Every bill a supplier has given you \u2014 what it was for, whether it is right, and what is still owed on it.';
+  const helpSales = document.querySelector('#tab-invoices .ow-ph-help:not(.inv-help-buys)');
+  const helpBuys = document.querySelector('#tab-invoices .inv-help-buys');
+  if(helpSales) helpSales.hidden = !sales;
+  if(helpBuys) helpBuys.hidden = sales;
+  const box = document.getElementById('inv_doc_search');
+  if(box) box.placeholder = sales ? 'Doc No. / customer / item...' : 'Doc No. / supplier / item...';
+  /* THE ONE ACCENT, and which lens owns it. On Sales the printed sheet
+     is the thing to do next; on Purchases it is whatever the bill you
+     have opened needs, so the list's own print goes quiet and the oxide
+     is spent below instead. */
+  const print = document.getElementById('inv_doc_print_list_btn');
+  if(print){
+    print.classList.toggle('btn-accent', sales);
+    print.classList.toggle('btn-ghost', !sales);
+  }
+  invRenderSide();
+}
+document.getElementById('inv_doc_search').addEventListener('input', ()=>invRenderSide());
+document.getElementById('inv_doc_hide_voided').addEventListener('change', ()=>invRenderSide());
 document.getElementById('inv_doc_range_preset').addEventListener('change', ()=>{
   const isCustom = document.getElementById('inv_doc_range_preset').value==='custom';
   document.getElementById('inv_doc_from_field').style.display = isCustom ? 'flex' : 'none';
   document.getElementById('inv_doc_to_field').style.display = isCustom ? 'flex' : 'none';
-  renderInvoices(document.getElementById('inv_doc_search').value);
+  invRenderSide();
 });
-document.getElementById('inv_doc_from').addEventListener('change', ()=>renderInvoices(document.getElementById('inv_doc_search').value));
-document.getElementById('inv_doc_to').addEventListener('change', ()=>renderInvoices(document.getElementById('inv_doc_search').value));
+document.getElementById('inv_doc_from').addEventListener('change', ()=>invRenderSide());
+document.getElementById('inv_doc_to').addEventListener('change', ()=>invRenderSide());
+/* Pressing the lens by hand is a request for the whole register, so it
+   drops any order the reader arrived following. */
+document.querySelectorAll('#iv_side .ow-seg-b').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    invSide = btn.dataset.side;
+    invFocusOrderId = null;
+    invApplySide();
+  });
+});
 
 /* THE ORDER OF THE REGISTER. One mechanism, bound once, working the
    same on both designs -- the clickable column headings it replaces
@@ -40790,7 +40943,11 @@ document.getElementById('inv_doc_to').addEventListener('change', ()=>renderInvoi
 document.querySelectorAll('#inv_lens .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     INV_LENS_STATE.key = btn.dataset.lens;
-    document.querySelectorAll('#iv_lens .ow-seg-b').forEach(b=>{
+    /* #inv_lens, not #iv_lens. The two were one id until Inventory's
+       lens was renamed off this one, and this line kept the old spelling
+       -- so pressing Newest reordered the register but lit nothing, and
+       the segment sat there claiming Open first was still on. */
+    document.querySelectorAll('#inv_lens .ow-seg-b').forEach(b=>{
       const on = b === btn;
       b.classList.toggle('ow-on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -40838,6 +40995,9 @@ document.getElementById('inv_bulk_dd_btn').addEventListener('click', (e)=>{
 document.addEventListener('click', ()=> document.getElementById('inv_bulk_dd_menu').classList.remove('show'));
 
 document.getElementById('inv_doc_print_list_btn').addEventListener('click', ()=>{
+  // Whichever register is open. The button is one control on one header;
+  // the sheet it produces is the lens's.
+  if(invSide === 'buys'){ piPrintList(); return; }
   if(invLastRows.length===0){ toast('No invoices to print'); return; }
   const rowsHtml = invLastRows.map((q,i)=>{
     const total = savedQuoteTotal(q);
@@ -41067,19 +41227,60 @@ function orderForPurchaseInvoice(pi){
   if(!pi || pi.quoteId==null) return null;
   return data.savedQuotes.find(x=>x.id===pi.quoteId) || null;
 }
-// Both reveals work by filling the destination tab's own search box before
-// switching -- goToTab() re-renders each list from that box, so this uses
-// the machinery already there rather than inventing row anchors.
+// Both reveals work by filling the shared search box before switching
+// lens -- invApplySide() re-renders whichever register is open from that
+// box, so this uses the machinery already there rather than inventing
+// row anchors.
 function revealOrderFor(piId){
   const pi = data.purchaseInvoices.find(x=>x.id===piId);
   const q = orderForPurchaseInvoice(pi);
   if(!q){ toast('That purchase invoice is not linked to an order'); return; }
   const box = document.getElementById('inv_doc_search');
   if(box) box.value = invoiceNumberLabel(q);
+  invSide = 'sales';
   goToTab('invoices');
   toast(`Showing ${invoiceNumberLabel(q)}`);
 }
-/* SHOWING ONE DOCUMENT, FROM ANOTHER SCREEN.
+/* FOLLOWING AN ORDER'S "RAISED" LINK, which is what the merge is for.
+
+   This is not a search: it is a QUESTION about one order -- which bills
+   did invoicing it raise -- so it sets a focus rather than typing a
+   number into the bar. Two things follow from that. The bills are shown
+   whatever the range and whatever the voided filter say, because a bill
+   from last month is still one of this order's bills. And the sales list
+   is not touched at all, so Back is one press to exactly the list that
+   was left, rather than the four undos the cross-screen version cost. */
+function revealBillsForOrder(qId){
+  const q = (data.savedQuotes||[]).find(x=>x.id===qId);
+  if(!q){ toast('That order is no longer on file'); return; }
+  if(!purchaseInvoicesForOrder(q).length){ toast('That order raised no supplier bills'); return; }
+  invFocusOrderId = q.id;
+  invSide = 'buys';
+  goToTab('invoices');
+}
+/* THE CRUMB. Whose bills these are, and the way back. Drawn only under
+   a focus: the whole register needs no explaining. */
+function invRenderCrumb(){
+  const el = document.getElementById('inv_crumb');
+  if(!el) return;
+  const q = invFocusOrderId == null ? null
+    : (data.savedQuotes||[]).find(x=>x.id===invFocusOrderId);
+  if(!q){ el.innerHTML = ''; el.hidden = true; return; }
+  const n = purchaseInvoicesForOrder(q).length;
+  el.hidden = false;
+  el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    <span>${n===1 ? 'The bill' : `The ${n} bills`} raised by <b>${esc(invoiceNumberLabel(q))}</b>
+    &middot; ${esc(q.client && q.client.name || 'customer')}${q.invoicedAt||q.date
+      ? ' &middot; ' + esc(fmtShortDate(q.invoicedAt||q.date)) : ''}</span>
+    <button type="button" class="inv-crumb-back">Back to Sales</button>`;
+  el.querySelector('.inv-crumb-back').addEventListener('click', ()=>{
+    invFocusOrderId = null;
+    invSide = 'sales';
+    invApplySide();
+  });
+}
+/* SHOWING ONE DOCUMENT, FROM SOMEWHERE ELSE ENTIRELY -- the Cash Book's
+   line, a search result, a supplier's account.
 
    Both registers filter by a date range and hide voided documents, and
    neither of those is reset when somebody arrives from elsewhere. So
@@ -41087,20 +41288,25 @@ function revealOrderFor(piId){
    only half the job: a bill from last month, or one that was voided,
    landed the reader on an empty list with its own number typed above
    it. The range is widened and the voided filter dropped, so the thing
-   being pointed at is actually there on arrival. */
+   being pointed at is actually there on arrival.
+
+   It is a LENS switch now rather than a tab switch, and it drops any
+   order focus: this asks for one named bill, not for an order's set. */
 function revealPurchaseInvoice(piId){
   const pi = (data.purchaseInvoices||[]).find(x=>x.id===piId);
   if(!pi){ toast('That purchase invoice no longer exists'); return; }
   const label = purchaseInvoiceNumberLabel(pi);
-  const box = document.getElementById('pi_doc_search');
+  const box = document.getElementById('inv_doc_search');
   if(box) box.value = label;
-  const hide = document.getElementById('pi_doc_hide_voided');
+  const hide = document.getElementById('inv_doc_hide_voided');
   if(hide && pi.voided) hide.checked = false;
-  const preset = document.getElementById('pi_doc_range_preset');
+  const preset = document.getElementById('inv_doc_range_preset');
   // Dispatched rather than set, so the custom from/to fields follow the
   // preset instead of being left on screen contradicting it.
   if(preset && preset.value !== 'all'){ preset.value = 'all'; preset.dispatchEvent(new Event('change')); }
-  goToTab('purchase-invoices');
+  invFocusOrderId = null;
+  invSide = 'buys';
+  goToTab('invoices');
   toast(`Showing ${label}`);
 }
 function revealInvoice(qId){
@@ -41113,6 +41319,7 @@ function revealInvoice(qId){
   if(hide && q.voided) hide.checked = false;
   const preset = document.getElementById('inv_doc_range_preset');
   if(preset && preset.value !== 'all'){ preset.value = 'all'; preset.dispatchEvent(new Event('change')); }
+  invSide = 'sales';
   goToTab('invoices');
   toast(`Showing ${label}`);
 }
@@ -41580,18 +41787,10 @@ function returnConsignedStock(productId, variantIdx, supplierId, qty){
 }
 
 let piLastRows = [];
-function piDocGetDateRange(){
-  const preset = document.getElementById('pi_doc_range_preset').value;
-  const today = todayISO();
-  if(preset==='today') return {from: today, to: today};
-  if(preset==='yesterday'){ const y = anShiftDate(today,-1); return {from: y, to: y}; }
-  if(preset==='7') return {from: anShiftDate(today,-6), to: today};
-  if(preset==='30') return {from: anShiftDate(today,-29), to: today};
-  if(preset==='90') return {from: anShiftDate(today,-89), to: today};
-  if(preset==='month') return {from: today.slice(0,8)+'01', to: today};
-  if(preset==='all') return {from: null, to: null};
-  return {from: document.getElementById('pi_doc_from').value || null, to: document.getElementById('pi_doc_to').value || today};
-}
+/* The same range, from the same bar. This was a second copy of
+   invDocGetDateRange() reading a second copy of the filter bar; there is
+   one bar now, so there is one reading of it. */
+function piDocGetDateRange(){ return invDocGetDateRange(); }
 
 /* ---- Bills raised twice for one delivery -----------------------------
 
@@ -42105,7 +42304,7 @@ function voidDuplicatePurchaseInvoices(idsRaw){
   if(!confirm(msg)) return;
   drop.forEach(pi=>{ pi.voided = true; });
   saveData();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   if(typeof renderCreditorsList === 'function') renderCreditorsList();
   refreshNavBadges();
   toast(`${drop.length} duplicate bill${drop.length===1?'':'s'} voided — check that product's stock count next`, 7000);
@@ -42122,7 +42321,7 @@ function voidDuplicatePurchaseInvoices(idsRaw){
 let piOpenId = null;
 let piKind = 'all';
 function piSearchValue(){
-  const box = document.getElementById('pi_doc_search');
+  const box = document.getElementById('inv_doc_search');
   return box ? box.value : '';
 }
 function piIsForOrder(pi){ return pi.quoteId != null; }
@@ -42132,7 +42331,7 @@ function renderPurchaseInvoices(filter=''){
   if(!wrap) return;
   const tokens = searchTokens(filter);
   const {from, to} = piDocGetDateRange();
-  const hideVoided = document.getElementById('pi_doc_hide_voided').checked;
+  const hideVoided = document.getElementById('inv_doc_hide_voided').checked;
   /* A figure, tabular, with the currency said once per screen in the
      strip rather than stamped on every cell. fmtUGX() is for prose
      and toasts, where a lone number would be ambiguous. */
@@ -42163,9 +42362,21 @@ function renderPurchaseInvoices(filter=''){
   renderPurchaseInvoiceChecks(bare ? null : found);
   renderPurchaseInvoiceRail(bare ? null : ranged, found);
 
+  invRenderCrumb();
   let invoices = ranged;
-  if(piKind !== 'all') invoices = invoices.filter(pi=> piIsForOrder(pi) === (piKind === 'order'));
-  if(tokens.length){
+  /* ARRIVED BY FOLLOWING A LINK. The order's own bills, whatever the
+     range and the voided filter say: a bill raised last month is still
+     one of this order's bills, and a reader pointed at it must find it
+     there rather than an empty list. The crumb above says so and carries
+     the way out. */
+  const focusOrder = invFocusOrderId == null ? null
+    : (data.savedQuotes||[]).find(x=>x.id===invFocusOrderId);
+  if(focusOrder){
+    invoices = purchaseInvoicesForOrder(focusOrder).slice();
+  } else if(piKind !== 'all'){
+    invoices = invoices.filter(pi=> piIsForOrder(pi) === (piKind === 'order'));
+  }
+  if(tokens.length && !focusOrder){
     invoices = invoices.filter(pi=>{
       const haystack = [pi.supplierName||'', purchaseInvoiceNumberLabel(pi), pi.customerName||'', (pi.quoteId?'':'stock restock'), ...(pi.items||[]).map(it=>it.productName||'')].join(' ').toLowerCase();
       return matchesAllTokens(haystack, tokens);
@@ -42208,7 +42419,13 @@ function renderPurchaseInvoices(filter=''){
     {k:'order', label:'For an order',   n:ranged.filter(piIsForOrder).length},
     {k:'shelf', label:'For the shelf',  n:ranged.filter(pi=> !piIsForOrder(pi)).length},
   ];
-  const seg = `<div class="ow-seg" id="pi_kind" role="tablist" aria-label="Which bills are shown">${
+  /* NOT UNDER A FOCUS. Following an order's "Raised" link asks about
+     one order, and every bill an order raised is for an order by
+     definition -- so the three kinds would count the range while the
+     list showed the order, and two of them would empty it. A control
+     that can only do nothing, or undo the question just asked, does not
+     belong on the screen while that question is open. */
+  const seg = focusOrder ? '' : `<div class="ow-seg" id="pi_kind" role="tablist" aria-label="Which bills are shown">${
     kinds.map(x=> { const on = piKind === x.k;
       return `<button type="button" class="${on ? 'ow-seg-b ow-on' : 'ow-seg-b'}" role="tab" aria-selected="${on}" data-pikind="${x.k}">${x.label}<span class="ow-seg-n">${x.n}</span></button>`;
     }).join('')}</div>`;
@@ -42731,7 +42948,7 @@ function togglePurchaseInvoiceVoided(id){
   if(!pi) return;
   const after = ()=>{
     saveData();
-    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
     renderInventory();
     if(document.getElementById('buy_plan')) renderPurchasePlanPanel();
     refreshNavBadges();
@@ -42904,7 +43121,7 @@ document.getElementById('pbe_save').addEventListener('click', ()=>{
   if(!res.ok){ err.textContent = res.error; err.style.display = ''; return; }
   saveData();
   closeModal('piBillEditModal');
-  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   if(typeof renderCreditorsList === 'function'){
     renderCreditorsList();
   }
@@ -42982,7 +43199,7 @@ function removePiPayment(id, idx){
     <div class="ip-cell"><div class="ip-label">Balance due</div><div class="ip-value">${fmtUGX(Math.round(total-paid))}</div></div>
   `;
   document.getElementById('pip_amount').value = (total-paid)>0 ? (total-paid) : '';
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  renderPurchaseInvoices(document.getElementById('inv_doc_search').value);
   renderConsignment();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
@@ -43055,7 +43272,7 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
     saveData();
     closeModal('piPaymentModal');
     resetPiPaymentForm();
-    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+    renderPurchaseInvoices(document.getElementById('inv_doc_search').value);
     if(typeof renderCreditorsList === 'function') renderCreditorsList();
     // A consignment settlement is one of these bills, and the card
     // reports what is still to pay on it -- so it is stale the moment a
@@ -43073,7 +43290,7 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
   saveData();
   closeModal('piPaymentModal');
   resetPiPaymentForm();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  renderPurchaseInvoices(document.getElementById('inv_doc_search').value);
   renderConsignment();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
@@ -43082,16 +43299,11 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
     + paymentDatedSuffix(paidOn));
 });
 
-document.getElementById('pi_doc_search').addEventListener('input', e=>renderPurchaseInvoices(e.target.value));
-document.getElementById('pi_doc_hide_voided').addEventListener('change', ()=>renderPurchaseInvoices(document.getElementById('pi_doc_search').value));
-document.getElementById('pi_doc_range_preset').addEventListener('change', ()=>{
-  const isCustom = document.getElementById('pi_doc_range_preset').value==='custom';
-  document.getElementById('pi_doc_from_field').style.display = isCustom ? 'flex' : 'none';
-  document.getElementById('pi_doc_to_field').style.display = isCustom ? 'flex' : 'none';
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
-});
-document.getElementById('pi_doc_from').addEventListener('change', ()=>renderPurchaseInvoices(document.getElementById('pi_doc_search').value));
-document.getElementById('pi_doc_to').addEventListener('change', ()=>renderPurchaseInvoices(document.getElementById('pi_doc_search').value));
+/* THIS SCREEN'S FILTER BAR IS THE OTHER LENS'S. It was a second copy of
+   the same five controls -- same placement, same seven presets, same
+   Hide voided -- and its own markup said "as on Invoices". One bar now
+   drives whichever register is open; the listeners are beside it,
+   with invRenderSide(). */
 
 /* THE BULK OPERATIONS ARE GONE, and that is a decision rather than a
    tidy-up. Print selected / void selected / unvoid selected lived
@@ -43105,7 +43317,11 @@ document.getElementById('pi_doc_to').addEventListener('change', ()=>renderPurcha
    actually walks the yard with. If a real bulk void is wanted it comes
    back per row, naming the delivery consequence on each. */
 
-document.getElementById('pi_doc_print_list_btn').addEventListener('click', ()=>{
+/* ONE PRINT BUTTON, TWO SHEETS. The header carries a single Print list
+   -- accent on Sales, ghost on Purchases -- so what it prints is
+   whichever register is open, and the two builders below and above it
+   are unchanged. */
+function piPrintList(){
   if(piLastRows.length===0){ toast('No purchase invoices to print'); return; }
   const rowsHtml = piLastRows.map((pi,i)=>{
     const total = purchaseInvoiceTotal(pi);
@@ -43129,7 +43345,7 @@ document.getElementById('pi_doc_print_list_btn').addEventListener('click', ()=>{
   win.document.close();
   win.focus();
   win.print();
-});
+}
 
 // Builds one A5 page of markup for a purchase invoice.
 function buildPurchaseInvoiceA5HTML(pi){
@@ -45070,7 +45286,7 @@ function supplierBillsHTML(r){
         </div>`;
       }).join('')}
     </div>
-    <p class="ow-mini">A bill opens, is checked and is paid on <b>Purchase invoices</b>; which supplier to pay first is <b>Creditors</b>. Nothing on this screen posts money.</p>
+    <p class="ow-mini">A bill opens, is checked and is paid on <b>Invoices</b>, under <b>Purchases</b>; which supplier to pay first is <b>Creditors</b>. Nothing on this screen posts money.</p>
   </div>`;
 }
 
@@ -45133,7 +45349,7 @@ function renderSupplierAccount(id){
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All suppliers</button>
       <div class="ow-ph"><h1 class="ow-ph-t">Supplier</h1><span class="ow-ph-sp"></span></div>
       <div class="ow-pan su-empty-pan"><div class="ow-empty"><b>That supplier is no longer on file.</b>
-        <span>They were deleted here or on another device while this was open. Nothing has been lost from the books &mdash; their bills and the payments against them keep their own record on Purchase invoices &mdash; but there is no account left to draw.</span></div></div>`;
+        <span>They were deleted here or on another device while this was open. Nothing has been lost from the books &mdash; their bills and the payments against them keep their own record on Invoices, under Purchases &mdash; but there is no account left to draw.</span></div></div>`;
     return;
   }
   const r = supplierBookRow(s);
@@ -45192,7 +45408,7 @@ function renderSupplierAccount(id){
           <button type="button" class="btn btn-ghost ow-sm" data-sact="edit" data-sid="${esc(r.id)}">Edit the record</button>
           <span class="su-sp"></span>
           <button type="button" class="btn btn-ghost ow-sm su-del" data-sact="delete" data-sid="${esc(r.id)}">Delete</button>
-          <p class="su-note">Asking for a price opens WhatsApp with the list written out and stops there &mdash; nothing is sent until you send it. Paying a bill is done on the bill, in Purchase invoices; who to pay first is Creditors.</p>
+          <p class="su-note">Asking for a price opens WhatsApp with the list written out and stops there &mdash; nothing is sent until you send it. Paying a bill is done on the bill, on Invoices under Purchases; who to pay first is Creditors.</p>
         </div>
       </div>
       ${supplierAccountRailHTML(r)}
@@ -46065,7 +46281,7 @@ Add them anyway?`)) return;
   populatePriceSupplierFilter(document.getElementById('pr_supplier_filter').value);
   // Every screen that counts what the shop owes has just changed.
   if(opened){
-    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
     if(typeof renderCreditorsList === 'function') renderCreditorsList();
     refreshNavBadges();
   }
@@ -56354,7 +56570,7 @@ function renderConsignment(){
     const why = r.owed > 0.5
       ? `${Math.round(r.soldQty)} of their units have sold. ${f(r.owed)} of that has no bill behind it yet — settling raises an ordinary supplier bill for it, which you then pay the usual way.`
       : (r.settlementDue > 0.5
-        ? `Everything that has sold is on a bill. ${f(r.settlementDue)} of it is still to pay, on their bill under Purchase invoices — nothing more is owed from here.`
+        ? `Everything that has sold is on a bill. ${f(r.settlementDue)} of it is still to pay, on their bill on Invoices, under Purchases — nothing more is owed from here.`
         : (r.soldQty > 0
           ? `${Math.round(r.soldQty)} of their units have sold and every shilling of it has been billed and paid. They are listed because their goods are still standing on your shelf.`
           : 'Nothing of theirs has sold yet, so nothing is owed. Their goods are on your shelf and are not counted in what your stock is worth.'));
@@ -56368,7 +56584,7 @@ function renderConsignment(){
     const note = r.owed > 0.5
       ? 'Nothing is sent yet. Settling raises the bill, then asks how much you are paying now. Unsold goods can go back at any time, owing nothing.'
       : (r.settlementDue > 0.5
-        ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill under Purchase invoices.`
+        ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill on Invoices, under Purchases.`
         : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now'));
 
     return `<div class="ow-q" data-id="${esc(r.supplierId)}">
@@ -56442,7 +56658,7 @@ function renderConsignment(){
       dueTotal > 0.5 && short > 0.5 ? 'ow-warn' : '')}
     ${tile('Of it, already billed', fig(billedUnpaid),
       billedUnpaid > 0.5
-        ? 'Part of the figure at left — on bills under Purchase invoices'
+        ? 'Part of the figure at left — on bills on Invoices, under Purchases'
         : 'nothing raised as a bill and still unpaid')}
     ${tile('Their goods here', fig(heldValue),
       `${Math.round(heldQty)} unit${Math.round(heldQty)===1?'':'s'} — not counted in what your stock is worth`)}
@@ -56526,11 +56742,11 @@ function renderConsignment(){
     if(!confirm(`Settle with ${r.name}?\n\n`
       + `This raises a supplier bill for ${f(r.owed)} — what their goods have sold for so far`
       + `${r.settled > 0.5 ? ', less what you have already settled' : ''}.\n\n`
-      + `You will then be asked how much you are paying now. Pay all of it, part of it, or close that box and pay later from Purchase invoices.`)) return;
+      + `You will then be asked how much you are paying now. Pay all of it, part of it, or close that box and pay later from Invoices, under Purchases.`)) return;
     const id = await settleConsignment(sup);
     if(id == null){ toast('Nothing to settle'); return; }
     renderConsignment();
-    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
     refreshNavBadges();
     /* Straight into the ordinary supplier-payment door rather than
        sending the owner to find the bill on another screen. It arrives
@@ -60682,8 +60898,11 @@ document.getElementById('crp_save').addEventListener('click', ()=>{
   closeModal('creditorPaymentModal');
   resetCreditorPaymentForm();
   renderCreditorsList();
-  if(document.getElementById('tab-purchase-invoices') && document.getElementById('tab-purchase-invoices').style.display !== 'none'){
-    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  /* Only when that register is the one on screen. It is a lens on
+     Invoices now, so being on the tab is no longer enough -- the Sales
+     side must not be redrawn as the Purchases side. */
+  if(currentActiveTab === 'invoices' && invSide === 'buys'){
+    renderPurchaseInvoices(invSearchValue());
   }
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
@@ -64326,7 +64545,7 @@ function stockPurchaseMinQty(e){
 
    THE BILL IS NOT TOUCHED. Goods coming off the shelf is a different
    act from money being un-owed: a bill raised for a delivery that never
-   came is voided on the Purchase invoices screen, where voiding a bill
+   came is voided on the Purchases side of Invoices, where voiding a bill
    is what that screen is for, and doing both from here would move
    somebody's money out of a screen they were not looking at. Named in
    the result so the caller can point at it. */
@@ -69743,7 +69962,9 @@ function cbRowIdentity(t){
        that is plainly just text. */
     out.docKind = pi ? 'pinv' : null;
     out.docId = pi ? pi.id : null;
-    out.posted = pi ? 'Purchase invoices' : null;
+    // Where the money landed, as the rail now spells it: the supplier's
+    // bill is the Purchases side of Invoices, not a screen of its own.
+    out.posted = pi ? 'Invoices, under Purchases' : null;
     const sup = pi && String(pi.supplierName || '').trim();
     if(sup) out.who = sup;
   }
@@ -70743,7 +70964,7 @@ function cashTxnDependents(ids){
   (data.purchaseInvoices||[]).forEach(pi=> (pi.payments||[]).forEach(p=>{
     if(set.has(p.cashTxnId)) found.push({
       what: `${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName || 'a supplier'}`,
-      where: 'Purchase invoices', amount: Number(p.amount)||0 });
+      where: 'Invoices, under Purchases', amount: Number(p.amount)||0 });
   }));
   (data.savedQuotes||[]).forEach(q=> (q.payments||[]).forEach(p=>{
     if(set.has(p.cashTxnId)) found.push({
@@ -74027,7 +74248,7 @@ function prPaneHTML(e, unit, packCtx){
       </div>
       ${plan.bill ? `<div class="pir-note bad">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#7F1D1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-        <span><b>${esc(purchaseInvoiceNumberLabel(plan.bill))} is still owed for these goods.</b> Money is not touched here — void that bill on Purchase invoices if nothing was ever bought.</span>
+        <span><b>${esc(purchaseInvoiceNumberLabel(plan.bill))} is still owed for these goods.</b> Money is not touched here — void that bill on Invoices, under Purchases, if nothing was ever bought.</span>
       </div>` : ''}
       <div class="field" style="margin-top:12px;"><label for="pir_why">Why — kept on the reversal</label>
         <input type="text" id="pir_why" placeholder="e.g. entered in error — nothing was ever bought from them"></div>
@@ -74159,7 +74380,7 @@ function prSave(){
      so asking for both would draw it twice on the only screen it is on. */
   renderInventory();
   if(typeof renderPurchaseInvoices === 'function'){
-    const el = document.getElementById('pi_doc_search');
+    const el = document.getElementById('inv_doc_search');
     renderPurchaseInvoices(el ? el.value : '');
   }
 }
@@ -74336,8 +74557,8 @@ document.getElementById('ipe_save').addEventListener('click', ()=>{
   saveData();
   closeModal('invPurchaseEditModal');
   renderInventory();
-  if(document.getElementById('pi_doc_search')){
-    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  if(document.getElementById('inv_doc_search')){
+    renderPurchaseInvoices(document.getElementById('inv_doc_search').value);
   }
   if(typeof renderCreditorsList === 'function'){
     renderCreditorsList();
@@ -75317,7 +75538,7 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
     saveData();
     closeModal('invModal');
     renderInventory();
-    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
     toast(onConsignment
       ? `On the shelf as ${supplierName(invPurchaseSupplierId)}'s — no bill raised, you owe as they sell`
       : 'Stock updated');
@@ -84417,7 +84638,7 @@ __btn_buy_receive_save.addEventListener('click', saveOnceAtATime(__btn_buy_recei
   closeModal('buyReceiveModal');
   buyReceiveFor = null;
   renderInventory();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderPurchasePlanPanel();
   toast(`On the shelf. Bill ${res.billId} to ${o.supplier}, ${fmtUGX(Math.round(res.total))} — no day named yet.`, 8000);
   /* THE DAY, ASKED WHERE THE BILL IS RAISED. It is the one moment the
