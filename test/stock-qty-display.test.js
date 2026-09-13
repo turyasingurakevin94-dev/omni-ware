@@ -102,8 +102,15 @@ const src = read('index.html');
     'and Stock after formats too — the column beside it cannot be the honest one alone');
   t.check(!/\$\{e\.delta\}/.test(log) && !/\$\{e\.qtyAfter\}/.test(log),
     'no raw quantity is left anywhere on the screen — desktop table or phone card');
-  t.check(/fmtStockQty\(t\.inQty\)/.test(log) && /fmtStockQty\(t\.outQty\)/.test(log) && /fmtStockQty\(t\.net\)/.test(log),
-    'the in / out / net line is formatted as well, where the tails would otherwise add up');
+  /* The three totals were formatted one call each while they were a run
+     of inline text beside the page name. They are the Movements lens's
+     strip now and all three go through ONE sign(), which is where
+     fmtStockQty is called -- so the claim is stronger than it was: not
+     "each of these three is formatted" but "there is one road, and it
+     formats". A fourth figure added to that strip cannot arrive raw. */
+  t.check(/const sign = \(n, s\)=> \(n \? s : ''\) \+ fmtStockQty\(n\);/.test(log)
+    && /sign\(t\.inQty/.test(log) && /sign\(t\.outQty/.test(log) && /sign\(t\.net/.test(log),
+    'the in / out / net figures are formatted as well, where the tails would otherwise add up');
 
   const inv = extractFunction(src, 'invOpenHTML', 'index.html');
   t.check(/fmtStockQty\(Math\.abs\(d\)\)/.test(inv),

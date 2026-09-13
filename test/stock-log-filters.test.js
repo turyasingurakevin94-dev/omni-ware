@@ -183,7 +183,10 @@ const reset = () => {
   eq(nothingOut.outQty, 0, 'nothing out is zero');
   // "-0" reads as a figure somebody worked out rather than the absence of
   // one. The statements stopped printing "-0 UGX" for the same reason.
-  t.check(/\$\{t\.outQty \? '-' : ''\}/.test(code),
+  // The guard moved into a helper when these four figures became the
+  // lens's strip -- one sign() for all three, rather than the sign
+  // written out per tile -- so the claim is pinned on the helper.
+  t.check(/const sign = \(n, s\)=> \(n \? s : ''\) \+ fmtStockQty\(n\);/.test(code),
     'and prints as a plain 0, never "-0"');
 
   eq(scope.stockLogTotals([]).net, 0, 'an empty selection nets to nothing');
@@ -224,8 +227,15 @@ const reset = () => {
 
   t.check(/Nothing has moved that matches those filters/.test(code),
     'and an empty result says the item has not moved, not that the log is empty');
-  t.check(/Showing the \$\{entries\.length\} most recent of \$\{total\}/.test(code),
+  /* Said twice now, and in both places it is the same two figures: the
+     strip's own basis line under the count, and the panel's eyebrow over
+     the rows. The sentence was one run of inline text beside the page
+     name while Movements was a screen; it is the layer's strip on
+     Inventory's Movements lens now. */
+  t.check(/showing the \$\{entries\.length\} most recent/.test(code),
     'the cap is stated, so it is never mistaken for the whole answer');
+  t.check(/entries\.length < total \? `\$\{entries\.length\} of \$\{total\}`/.test(code),
+    'and again on the panel holding the rows, so the list says its own share');
 }
 
 /* ---------- 8. a day's trading does not bury the page ---------------- */
@@ -290,6 +300,66 @@ const reset = () => {
     'the expanded state is module-level, so a re-render does not fold it back up');
   t.check(!/stockLogShowAll = false;[\s\S]{0,200}renderStockLog\(\)/.test(render),
     'and nothing resets it on the way into a render');
+}
+
+/* ---------- the lens ---------------------------------------------------
+ *
+ * Where this log lives, and the third answer this app has given to one
+ * question. It began STACKED under Inventory -- the shelf as it stands
+ * and the record of how it got that way, two consoles on one screen,
+ * each with its own search and filters. It was split out to a DOOR of
+ * its own. It is a LENS now: still two questions, still two filter bars,
+ * but one view at a time, which is neither of the first two.
+ *
+ * The engine did not move. stockLogRowsFor, stockLogTotals and the
+ * put-right route are the same reading; what changed is which screen
+ * draws it and when.
+ */
+{
+  const sec = (/<section id="tab-inventory"[\s\S]*?<\/section>/.exec(code) || [''])[0];
+
+  t.check(!/id="tab-stock-movements"/.test(code),
+    'Movements is not a screen of its own any more');
+  const alias = extractFunction(code, 'resolveTab', 'index.html');
+  t.check(/if\(tab === 'stock-movements'\)\{ invLens = 'moves'; return 'inventory'; \}/.test(alias),
+    'but the old door still opens it, on the lens it meant');
+
+  t.check(/id="inv_onhand_pane"/.test(sec) && /id="inv_moves_pane"/.test(sec)
+    && /id="invLogWrap"/.test(sec) && /id="inv_log_search"/.test(sec),
+    'both views live on the shelf screen, and the log kept the ids its handlers bind to');
+
+  /* ONE VIEW AT A TIME is the whole reason this is allowed to come back
+     here at all. If the panes could ever both be on screen the screen
+     would be the stack it was pulled apart for. */
+  const lens = extractFunction(code, 'invApplyLens', 'index.html');
+  t.check(/oh\.style\.display = on \? '' : 'none'/.test(lens)
+    && /mv\.style\.display = on \? 'none' : ''/.test(lens),
+    'and exactly one of them is ever on screen — the stack this screen was split up for cannot come back');
+  t.check(/\.iv-act'\)\.forEach\(b=> b\.style\.display = on \? '' : 'none'\)/.test(lens),
+    'the two acts belong to the shelf: nothing on the record acts, so it carries no accent');
+  t.check(/Every change to the shelf, and what caused it\./.test(lens),
+    'and the sub says which of the two questions is being answered, since it is the one line never folded away');
+
+  /* THE ID IS THIS SCREEN'S OWN. "inv" is Invoices AND Inventory in this
+     file, and the first spelling of this bar was #inv_lens -- which the
+     Invoices register had already used for its own order segment eleven
+     hundred lines up. getElementById handed this screen's wiring that
+     element, so the listener bound to a bar on another screen and the
+     tabs did nothing, silently, with no error anywhere. */
+  t.check((code.match(/\sid="iv_lens"/g) || []).length === 1,
+    'the lens has an id of its own, not one another screen had already taken');
+  t.check(/const invLensBar = document\.getElementById\('iv_lens'\);/.test(code)
+    && /#iv_lens \.ow-seg-b/.test(code),
+    'and the wiring and the paint both reach that one');
+
+  /* Drawn only when it is the open view: renderInventory runs from every
+     stock write and every renderAll, and walking the whole log on each
+     of them would be work nobody can see. */
+  const inv = extractFunction(code, 'renderInventory', 'index.html');
+  t.check(/if\(invLens === 'moves'\) renderStockLog\(\);/.test(inv),
+    'the log is drawn when its lens is open, not on every pass of the shelf');
+  t.check(/mvN\.textContent = \(data\.stockLog \|\| \[\]\)\.length \|\| ''/.test(inv),
+    'while the count on the closed tab costs no walk at all, so it is right before it is pressed');
 }
 
 process.exit(t.done() ? 1 : 0);

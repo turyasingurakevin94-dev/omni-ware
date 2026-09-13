@@ -549,9 +549,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        bad and still wear the third. Only this screen may not emit them
        again.
 
-       The movements log that used to sit under this screen as a second
-       console with its own three filters is its own door now, so the
-       classes it took with it are not this screen's to answer for. */
+       AND THE MOVEMENTS LOG IS THIS SCREEN'S AGAIN. It sat under here as
+       a second console with its own three filters, was split out to a
+       door of its own, and is a LENS now -- one view at a time. Its own
+       entry stood below this one and named the families its console
+       replaced: the .pi-* card deck it emitted for the phone from a
+       second template (the last pair in the app that could say
+       different things about one movement) and the borrowed .sc-*,
+       .an-* and .cmp-* bits. The ratchet follows the markup, and the
+       markup is here, so this screen may never wear them again either.
+       Its renderers come with it for the same reason. */
     inventory: {
       retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search',
                 'p-toolbar-filter', 'p-toolbar-checkbox', 'search-bar', 'field',
@@ -559,13 +566,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'inv-card-sub', 'inv-card-meta', 'inv-card-foot', 'inv-card-stats',
                 'inv-qty-wrap', 'inv-qty-label', 'inv-qty', 'inv-cost', 'pack-pill',
                 'pc-actions', 'pc-icon-btn', 'inv-action-btn', 'inv-reorder-btn', 'inv-price-rule-btn',
-                'sum-strip', 'sum-cell', 'sum-value', 'sum-label', 'cb-chain-break', 'empty'],
+                'sum-strip', 'sum-cell', 'sum-value', 'sum-label', 'cb-chain-break', 'empty',
+                'pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
+                'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
+                'an-rank', 'cmp-card-supplier'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-seg', 'ow-seg-b', 'ow-seg-n',
              'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
       renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
-                'renderInvRail', 'renderInventoryFloors'],
+                'renderInvRail', 'renderInventoryFloors',
+                'renderStockLog', 'stockLogPutRightButtonHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
-                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty'],
+                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty',
+                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
+                    'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
     },
     /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
        named the word the shop already uses. Two stacked .panel blocks
@@ -961,23 +975,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid', 'ow-stack',
                     'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
                     'ow-sr-k', 'ow-sr-v'],
-    },
-    /* Movements. The page head was on the layer already; the log under
-       it was not. It emitted a <table> for the console and a second
-       deck of .pi-cards for the phone from two separate templates --
-       the last pair in the app that could come to say different things
-       about the same movement -- and the row's one act was a full-size
-       .btn in a 13px cell, 56px tall against the figures beside it.
-       Both are one .ow-tbl now, dense above 820px and a labelled card
-       below it. */
-    'stock-movements': {
-      retired: ['pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
-                'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
-                'an-rank', 'cmp-card-supplier', 'empty'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-tb', 'ow-f', 'ow-pan'],
-      renders: ['renderStockLog', 'stockLogPutRightButtonHTML'],
-      rendersUses: ['ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
-                    'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-empty', 'ow-sm'],
     },
     /* What goes with what. New as well, and the one screen in the app
        whose register is a SENTENCE -- product, verb, product, in one

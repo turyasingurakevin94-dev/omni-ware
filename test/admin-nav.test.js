@@ -89,13 +89,16 @@ const INDEX = railIndex();
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
     'compare', 'sourcing', 'suppliers', 'purchase-invoices',
     'products', 'prices', 'inventory',
-    /* Stock movements. Split out of Inventory, which used to stack two
-       consoles on one screen: the shelf as it stands, and the log of
-       how it got that way, each with its own search and its own
-       filters. They are different questions, so they are two doors --
-       and the split only counts as done if the new one is on the rail,
-       which is what this line holds. */
-    'stock-movements', 'media', 'fasteners',
+    /* Stock movements is NOT in this list, and that is the third answer
+       this app has given to one question. It began stacked under
+       Inventory -- the shelf as it stands and the log of how it got
+       that way, two consoles on one screen. It was split out to a door
+       of its own, and this line used to hold that split done. It is a
+       LENS on Inventory now: still two questions with two filter bars,
+       but one view at a time, which is neither the stack nor the door.
+       The ratchet that replaces this line is below, where the words are
+       checked to still reach the shelf. */
+    'media', 'fasteners',
     /* 'assets' is Assets & loans: ONE destination since the two
        registers were merged. Loans is not missing from this list, it no
        longer exists as a screen -- a van and the loan that bought it were
@@ -510,16 +513,31 @@ const INDEX = railIndex();
   t.check(labels('who you owe').includes('Creditors'),
     `and the name IT used to carry still finds it (${labels('who you owe').join(', ')})`);
   t.check(first('stock') === 'Inventory', `a word the screen is not called finds it (${first('stock')})`);
-  /* And it still does now that a SECOND shelf screen exists. Movements
-     was split out of Inventory, and calling it "Stock movements" would
-     have given it a rank-0 label match on the app's most obvious search
-     -- taking "stock" off the shelf itself. The word lives in its
-     keywords instead, so both of these hold at once: the bare word goes
-     to the shelf, and the phrase goes to the log. */
-  t.check(first('stock movements') === 'Movements',
-    `and the phrase reaches the log it names (${first('stock movements')})`);
-  t.check(first('movements') === 'Movements',
-    `which is also findable by its own name (${first('movements')})`);
+  /* And the phrase reaches it too, now that the log is one of its two
+     lenses rather than a screen beside it. This pair used to hold the
+     opposite: that "stock" went to the shelf and "stock movements" went
+     to a different destination, because a second screen called Stock
+     movements would otherwise have taken a rank-0 label match on the
+     app's most obvious search. There is no second screen to protect
+     from now -- both land on the shelf, which is where the log lives --
+     and what still has to hold is that the words did not fall out of
+     the app with the door. */
+  t.check(first('stock movements') === 'Inventory',
+    `and the phrase reaches the screen that now holds the log (${first('stock movements')})`);
+  t.check(first('movements') === 'Inventory',
+    `as does its own name (${first('movements')})`);
+  {
+    const inv = INDEX.find((x) => x.tab === 'inventory') || { keywords: '' };
+    const carried = ['movements', 'log', 'history', 'trail', 'correction', 'write off', 'received'];
+    const lost = carried.filter((w) => !inv.keywords.includes(w));
+    t.check(lost.length === 0,
+      `Inventory carries the search words of the lens it absorbed${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
+    t.check(!INDEX.some((x) => x.tab === 'stock-movements') && !/id="tab-stock-movements"/.test(src),
+      'Movements is not a destination any more, and has no section left behind');
+    const alias = extractFunction(src, 'resolveTab', 'index.html');
+    t.check(/if\(tab === 'stock-movements'\)\{ invLens = 'moves'; return 'inventory'; \}/.test(alias),
+      'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
+  }
   t.check(first('photos') === 'Media', `and so does what is actually in it (${first('photos')})`);
 
   // Every term, in any order -- typing what you remember in the order

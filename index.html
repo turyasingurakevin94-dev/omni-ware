@@ -4000,6 +4000,13 @@
        specificity, so this has to out-specify it rather than out-order it. */
     .ow-ph .btn.iv-act{display:none;}
     .ow-bk.iv-dock{display:flex;}
+    /* THE LENS TAKES THE ROW. The layer already gives a segment 44px
+       buttons on a phone, but the segment itself is content-sized, so
+       two tabs sat in the corner where the desk puts them. Full width
+       under the name, which is what the Price registry's own lens does
+       three thousand lines up -- and it is the first thing under the
+       title, so the shelf and its history are one thumb apart. */
+    #iv_lens{flex:1 1 100%;}
     .iv-find{flex-direction:column;gap:var(--ow-sp-8);}
     .iv-fb{height:52px;}
     .iv-fb input{font-size:16px;}
@@ -4256,14 +4263,12 @@
     .pg-dock .btn-ghost{flex:0 1 auto;border-color:var(--ow-steel-400);color:var(--ow-paper);}
   }
 
-  /* Movements: the count and the net effect of whatever is filtered, so
-     the fifty-row cap is never mistaken for the whole answer. */
-  .log-count{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
-    font-size:11.5px;color:var(--ink-soft);}
-  .log-net{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .log-net b{font-weight:700;}
-  .log-net .up{color:var(--good);}
-  .log-net .down{color:var(--danger);}
+  /* .log-count and .log-net stood here: the movements count and its net
+     effect, as a run of inline text beside the page name. They are the
+     layer's strip on Inventory's Movements lens now -- four figures in
+     the component this app has for figures -- so the rules go rather
+     than sit in the drawer for a sixth screen to find. */
+  .iv-lg-strip{margin-bottom:var(--ow-sp-16);}
   /* The expand control. Centred and quiet: it is the end of a list, not a
      call to action, and it sits directly under the last row so it reads as
      the continuation of one rather than the start of something else. */
@@ -15415,26 +15420,25 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
           <span class="nav-label">Price registry</span>
         </button>
-        <button data-tab="inventory" title="Inventory" data-keywords="stock shelf count lots">
+        <button data-tab="inventory" title="Inventory" data-keywords="movements log history trail in and out correction damaged lost write off received stock shelf count lots">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
           <span class="nav-label">Inventory</span>
         </button>
-        <!-- Its own door, under the shelf it explains. The old screen
-             stacked this console under Stock on hand with its own three
-             filters; "what is on the shelf" and "how did it get that
-             way" are different questions. -->
-        <!-- Called "Movements", not "Stock movements", and the reason is
-             the ranker twenty lines into navSearchMatches: a label match
-             outranks a keyword match, so a label BEGINNING with "stock"
-             would take the most obvious search in the app off Inventory,
-             whose own name it is not. Follow-ups and What to buy were
-             both denied the word for the same reason. It stays in the
-             keywords, where "stock movements" still finds this screen
-             and a bare "stock" still lands on the shelf. -->
-        <button data-tab="stock-movements" title="Stock movements" data-keywords="stock movements log history correction damaged lost write off received trail in and out">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7h13l-3-3"/><path d="M21 17H8l3 3"/></svg>
-          <span class="nav-label">Movements</span>
-        </button>
+        <!-- Movements had a row of its own here, under the shelf it
+             explains. Three answers to one question: stacked under Stock
+             on hand with its own three filters, then a door of its own,
+             now a lens of the row above -- "what is on the shelf" and
+             "how did it get that way" are still different questions with
+             different filters, which is why they are two views and not
+             one screen.
+
+             Its words came up to Inventory's keywords, where they were
+             half living already: this row was denied a label beginning
+             with "stock" because a label match outranks a keyword one in
+             navSearchMatches, and it would have taken the app's most
+             obvious search off the shelf. Nothing has to be denied now.
+             "stock movements", "movements" and a bare "stock" all land
+             on the shelf, which is where the log is. -->
         <button data-tab="media" title="Media" data-keywords="photos images library files">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
           <span class="nav-label">Media</span>
@@ -17101,9 +17105,26 @@
     <section id="tab-inventory" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Inventory</h1>
-        <p class="ow-ph-sub">What is on the shelf right now, what it cost, and what it is worth.</p>
+        <p class="ow-ph-sub" id="invSub">What is on the shelf right now, what it cost, and what it is worth.</p>
         <p class="ow-ph-help">Stock you already have on the shelf. When it&rsquo;s here, a quote can be filled straight from it instead of ordering from a supplier &mdash; restock, count, or write off items as they move. Search takes the letters you would actually type &mdash; &ldquo;sndppr&rdquo; finds Sandpaper and &ldquo;rdr&rdquo; finds RIDER. Every figure is read from your own purchase invoices and stock movements; nothing is estimated. Lines with no cost on file are listed and counted but never valued at zero, so your shelf is understated by whatever those goods really cost rather than being quietly guessed at.</p>
+        <p class="ow-ph-help"><b>Movements</b> is the same shelf read the other way: every restock, sale, correction and write-off, newest first, with what caused it. It is a record rather than a place to work &mdash; nothing on it acts except putting a purchase entered here right, and a sale, a stock count and a receipt against an order are each corrected where they were made, so the two records can never come to hold different truths about one delivery.</p>
         <span class="ow-ph-sp"></span>
+        <!-- THE LENS. "What is on the shelf now" and "how did it get that
+             way" are two questions with two filter bars, and Movements was
+             pulled out of this screen once before for being a whole second
+             console STACKED under the first. This is neither that nor a
+             door: one view at a time, which is the thing that was never
+             tried. -->
+        <!-- iv_, not inv_. "inv" is Invoices AND Inventory in this file,
+             and #inv_lens was already the Invoices register's own order
+             segment 1,100 lines up -- so getElementById handed this
+             screen's wiring that element, the listener bound to a bar on
+             another screen, and the tabs did nothing at all while
+             throwing no error. The .iv- prefix is this screen's own. -->
+        <div class="ow-seg" id="iv_lens">
+          <button type="button" class="ow-seg-b ow-on" data-invlens="onhand" aria-pressed="true">On hand<span class="ow-seg-n" id="invLensOnN"></span></button>
+          <button type="button" class="ow-seg-b" data-invlens="moves" aria-pressed="false">Movements<span class="ow-seg-n" id="invLensMvN"></span></button>
+        </div>
         <button type="button" class="btn btn-ghost ow-sm iv-act" id="inv_count_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M4 20V8M10 20V4M16 20v-7M22 20H2"/></svg>Count the shelf
         </button>
@@ -17112,6 +17133,7 @@
         </button>
       </div>
 
+      <div id="inv_onhand_pane">
       <div class="iv-find">
         <div class="iv-fb">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
@@ -17157,32 +17179,43 @@
         <aside class="ow-side" id="invRail"></aside>
       </div>
       <div id="invDock"></div>
+      </div>
+
+      <!-- THE MOVEMENTS LENS. Its own filter bar, because it narrows by a
+           kind of movement rather than by what is left on the shelf, and
+           its own strip. NO RAIL: "Last movements" would be this list in
+           miniature beside itself and "Where the money is" values the
+           shelf, which is the other lens's subject -- and squeezed into
+           1fr beside a 304px rail it is the note that gets cut, which is
+           where a correction says why. -->
+      <div id="inv_moves_pane" style="display:none;">
+        <div class="iv-find">
+          <div class="iv-fb">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+            <input id="inv_log_search" placeholder="Product, variant or note" autocomplete="off">
+          </div>
+          <div class="ow-f"><span class="ow-f-l">Category</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_log_category"><option value="">All categories</option></select></span></div>
+          <div class="ow-f"><span class="ow-f-l">Movement</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_log_type"><option value="">All movements</option></select></span></div>
+        </div>
+        <p class="iv-fr">Newest first. A purchase entered on this screen can be put right from its own row.</p>
+        <div id="invLogStrip"></div>
+        <div class="ow-pan">
+          <div class="ow-pan-h"><span class="ow-pan-t">Every change to the shelf</span><span class="ow-pan-n" id="invLogN"></span></div>
+          <div id="invLogWrap"></div>
+        </div>
+      </div>
     </section>
 
-    <!-- STOCK MOVEMENTS -->
-    <!-- Its own door. "What is on the shelf now" and "how did it get
-         that way" are different questions with different filters, and
-         the second was a whole second console stacked under the first.
-         Inventory keeps the last few movements in its rail with a door
-         to all of them; this is that door. -->
-    <section id="tab-stock-movements" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Movements</h1>
-        <p class="ow-ph-sub">Every change to the shelf, and what caused it.</p>
-        <p class="ow-ph-help">Restocks, sales, corrections and write-offs, newest first. Track one item by searching its name, its variant or the note written against it. A purchase entered on the Inventory screen can be corrected from here; a sale, a stock count and a receipt against an order are each corrected where they were made, so that the two records can never come to hold different truths about the same delivery.</p>
-        <span class="ow-ph-sp"></span>
-        <span class="log-count" id="invLogCount"></span>
-      </div>
-      <div class="ow-tb">
-        <label class="ow-f ow-f-grow"><span class="ow-f-l">Search</span><span class="ow-f-in"><input type="text" class="ow-f-v ow-f-t" id="inv_log_search" placeholder="Product, variant or note" autocomplete="off"></span></label>
-        <div class="ow-f"><span class="ow-f-l">Category</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_log_category"><option value="">All categories</option></select></span></div>
-        <div class="ow-f"><span class="ow-f-l">Movement</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_log_type"><option value="">All movements</option></select></span></div>
-      </div>
-      <div class="ow-pan">
-        <div class="ow-pan-h"><span class="ow-pan-t">Movements</span><span class="ow-pan-n" id="invLogN"></span></div>
-        <div id="invLogWrap"></div>
-      </div>
-    </section>
+    <!-- Stock movements had a screen of its own here. It is Inventory's
+         second lens now: the filter bar and the log moved into that
+         screen whole, ids and all, and the four figures its header
+         carried as a run of inline text became a strip.
+
+         NO MARKUP IN THIS PROSE, deliberately. section-structure walks
+         the file with a regex, so the word for a screen written between
+         angle brackets in a comment counts as one opening -- which is
+         the same prose-matching-as-code trap admin-nav records for a
+         rail written inside a CSS comment. -->
 
     <!-- PRICE LIST -->
     <section id="tab-prices" style="display:none;">
@@ -28267,6 +28300,16 @@ function resolveTab(tab){
      the Register's rail, so a saved last-tab or an old link lands on the
      material rather than on a pane that is gone. */
   if(tab === 'score'){ fupTab = 'all'; return 'followups'; }
+  /* AND STOCK MOVEMENTS. Every id on that screen was already this one's
+     -- inv_log_search, inv_log_category, invLogWrap -- its help text
+     pointed back at Inventory for corrections, and the Inventory rail
+     kept a preview of it with a door. It was pulled OUT of this screen
+     once for being a second console stacked under the first; it is a
+     lens now, which is neither that nor a door, and the old key presses
+     it. Without this line a shop whose last screen was Movements boots
+     into getElementById('tab-stock-movements').style and throws before
+     anything renders. */
+  if(tab === 'stock-movements'){ invLens = 'moves'; return 'inventory'; }
   return tab;
 }
 function goToTab(tab){
@@ -28352,7 +28395,6 @@ function goToTab(tab){
   if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
   if(tab==='purchase-invoices') renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
   if(tab==='inventory') renderInventory();
-  if(tab==='stock-movements') renderStockLog();
   /* Arriving from the rail is a request for the book, not for whoever
      was open last time. */
   if(tab==='pairings') renderPairings();
@@ -40602,7 +40644,7 @@ document.getElementById('inv_doc_to').addEventListener('change', ()=>renderInvoi
 document.querySelectorAll('#inv_lens .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     INV_LENS_STATE.key = btn.dataset.lens;
-    document.querySelectorAll('#inv_lens .ow-seg-b').forEach(b=>{
+    document.querySelectorAll('#iv_lens .ow-seg-b').forEach(b=>{
       const on = b === btn;
       b.classList.toggle('ow-on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -73106,6 +73148,17 @@ function invRowThumbHTML(p, variantIdx, name){
 }
 
 function renderInventory(){
+  invApplyLens();
+  /* THE LOG IS DRAWN ONLY WHEN ITS LENS IS OPEN. renderInventory runs
+     from twenty-nine places -- every stock write, every put-right, every
+     renderAll -- and stockLogRowsFor walks and sorts the whole log each
+     time. Drawing a hidden pane on all of them would be work nobody can
+     see, on the screen most likely to be open while a shop is receiving.
+
+     The COUNT on the closed tab still has to be right before it is
+     pressed, and it is: it reads data.stockLog.length below, which costs
+     nothing and needs no walk. */
+  if(invLens === 'moves') renderStockLog();
   renderStockLotDrift();
   renderUncostedStock();
   const wrap = document.getElementById('invTableWrap');
@@ -73146,6 +73199,16 @@ function renderInventory(){
   const allLines = allProductVariantEntries([]).map(({p, variantIdx})=> inventoryLineFor(p, variantIdx));
   const all = inventoryLineStats(allLines);
   renderInvRail(allLines);
+  /* THE COUNTS ON THE LENS. The shelf's is what is ON it, not what is on
+     file -- the same figure the strip's own "Lines on the shelf" tile
+     reads, so pressing a tab can never open a list of a different size.
+     Neither is ever written as 0: a tab reading "On hand 0" beside one
+     reading "Movements 0" is two noughts where a new shop needs a door,
+     and the panes below each say what to do instead. */
+  const onN = document.getElementById('invLensOnN');
+  const mvN = document.getElementById('invLensMvN');
+  if(onN) onN.textContent = (all.lines - all.zero) || '';
+  if(mvN) mvN.textContent = (data.stockLog || []).length || '';
   const floors = invFloorRows().length;
   const withFloor = invFloorsSet();
   const uncostedUnits = Math.round(uncostedStockRows().filter(r=> r.qty > 0).reduce((n,r)=> n + r.qty, 0));
@@ -73452,8 +73515,11 @@ function renderInvRail(allLines){
         <span class="ow-sr-v ow-warn">${esc(fmtUGX(Math.round(consigned)))}</span></div>` : ''}
       ${restVal > 0 ? `<p class="ow-mini">${cats.length - top.length} more categor${cats.length - top.length===1?'y':'ies'} come to <b>${esc(fmtUGX(Math.round(restVal)))}</b> between them.</p>` : ''}
     </div>`;
+  /* The preview's door. It presses the lens rather than leaving the
+     screen -- a glance that saves the trip is not a second home, and
+     goToTab('stock-movements') would arrive back here anyway. */
   const door = document.getElementById('inv_all_moves');
-  if(door) door.addEventListener('click', ()=> goToTab('stock-movements'));
+  if(door) door.addEventListener('click', ()=>{ invLens = 'moves'; renderInventory(); });
 }
 
 /* The screen's own two acts. The accent appears ONCE, on receiving --
@@ -73468,6 +73534,53 @@ const invTableSearchEl = document.getElementById('inv_table_search');
 if(invTableSearchEl) invTableSearchEl.addEventListener('input', invRefilter);
 document.getElementById('inv_category_filter').addEventListener('change', invRefilter);
 document.getElementById('inv_hide_zero').addEventListener('change', invRefilter);
+
+/* ---------------- The two lenses ----------------
+
+   WHICH QUESTION IS BEING ASKED OF THE SHELF. "What is on it now" and
+   "how did it get that way" are different questions with different
+   filters, and this screen has learned that twice: the second was once
+   a whole console stacked under the first, and was pulled out to a door
+   of its own for it. A door was not the answer either -- every id on
+   that screen was already this one's (inv_log_search, invLogWrap), its
+   help text pointed back here for corrections, and the rail kept a
+   preview of it. One view at a time is what was never tried.
+
+   The state is not remembered across a reload: the shelf is what this
+   screen is for, and a shop that left it on Movements yesterday should
+   not open on a history this morning. */
+let invLens = 'onhand';
+function invApplyLens(){
+  const on = invLens === 'onhand';
+  const oh = document.getElementById('inv_onhand_pane');
+  const mv = document.getElementById('inv_moves_pane');
+  if(oh) oh.style.display = on ? '' : 'none';
+  if(mv) mv.style.display = on ? 'none' : '';
+  /* The two acts belong to the shelf, not to its history. Nothing on
+     Movements acts -- putting one row right is its own ghost button --
+     so the lens carries no accent at all, and the screen's one accent
+     goes with the lens that has something to do. */
+  document.querySelectorAll('#tab-inventory .iv-act').forEach(b=> b.style.display = on ? '' : 'none');
+  /* The sub says which question is being answered. It is the one line
+     that is never folded behind the "i", so it cannot be the only one
+     that lies about what is on screen. */
+  const sub = document.getElementById('invSub');
+  if(sub) sub.textContent = on
+    ? 'What is on the shelf right now, what it cost, and what it is worth.'
+    : 'Every change to the shelf, and what caused it.';
+  document.querySelectorAll('#iv_lens .ow-seg-b').forEach(b=>{
+    const isOn = b.dataset.invlens === invLens;
+    b.classList.toggle('ow-on', isOn);
+    b.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  });
+}
+const invLensBar = document.getElementById('iv_lens');
+if(invLensBar) invLensBar.addEventListener('click', (e)=>{
+  const b = e.target.closest('[data-invlens]');
+  if(!b || b.dataset.invlens === invLens) return;
+  invLens = b.dataset.invlens;
+  renderInventory();
+});
 
 const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'Damaged / lost', other:'Other', sale:'Sold (quote)', reversal:'Reversed'};
 /* ONE DOOR, on every row. Edit reached only the purchases this screen
@@ -73889,7 +74002,8 @@ function prSave(){
   }
   saveData();
   closeModal('putRightModal');
-  renderStockLog();
+  /* renderInventory draws the log itself when its lens is the open one,
+     so asking for both would draw it twice on the only screen it is on. */
   renderInventory();
   if(typeof renderPurchaseInvoices === 'function'){
     const el = document.getElementById('pi_doc_search');
@@ -74217,26 +74331,52 @@ function renderStockLog(){
   // about.
   const entries = stockLogShowAll ? capped : capped.slice(0, STOCK_LOG_PAGE);
 
-  const countEl = document.getElementById('invLogCount');
-  if(countEl){
-    // Over everything that matched, not over the page.
+  /* WHAT THE LOG COMES TO, in the component this app has for figures.
+     These four lived in a bare inline span (.log-count) beside the page
+     name -- a strip's worth of arithmetic as a run of text -- for as
+     long as Movements was a screen of its own. Over everything that
+     MATCHED, not over the page, which is what makes "showing the 10 most
+     recent of 47" true rather than a second cap nobody was told about.
+
+     AND NO STRIP AT ALL WHEN NOTHING HAS MOVED. Four tiles reading 0,
+     +0, -0 and 0 is four figures that mean nothing, and it makes a new
+     shop look like a broken app rather than an empty one -- the rule the
+     shelf's own strip already obeys on a shop's first day. The empty
+     state below says what to do instead. */
+  const stripEl = document.getElementById('invLogStrip');
+  if(stripEl){
     const t = stockLogTotals(all);
-    countEl.innerHTML = total === 0 ? '' :
-      `<span>${entries.length < total
-        ? `Showing the ${entries.length} most recent of ${total}`
-        : `${total} movement${total===1?'':'s'}`}</span>` +
-      // "-0" reads as a figure somebody worked out rather than the
-      // absence of one, so a zero is written plain. Same reason the
-      // statements stopped printing "-0 UGX".
-      `<span class="log-net"><b class="up">${t.inQty ? '+' : ''}${fmtStockQty(t.inQty)}</b> in · ` +
-      `<b class="down">${t.outQty ? '-' : ''}${fmtStockQty(t.outQty)}</b> out · ` +
-      `net ${t.net>0?'+':''}${fmtStockQty(t.net)}</span>`;
+    // "-0" reads as a figure somebody worked out rather than the absence
+    // of one, so a zero is written plain. Same reason the statements
+    // stopped printing "-0 UGX".
+    const sign = (n, s)=> (n ? s : '') + fmtStockQty(n);
+    const mt = (label, value, sub, cls)=> `<div class="ow-mt${cls ? ' ' + cls : ''}">
+      <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span>
+      <p class="ow-mt-s">${sub}</p></div>`;
+    stripEl.innerHTML = total === 0 ? '' : `<div class="ow-strip iv-lg-strip">
+      ${mt('Movements', String(total), entries.length < total
+          ? `showing the ${entries.length} most recent`
+          : `all of them on screen`)}
+      ${mt('In', sign(t.inQty, '+') + '<span class="ow-u">units</span>', 'deliveries, returns and corrections up', t.inQty ? 'ow-good' : '')}
+      ${mt('Out', sign(t.outQty, '&minus;') + '<span class="ow-u">units</span>', 'sales, write-offs and corrections down', t.outQty ? 'ow-bad' : '')}
+      ${mt('Net', sign(t.net, t.net > 0 ? '+' : '') + '<span class="ow-u">units</span>',
+          `what the shelf gained over ${total === 1 ? 'it' : 'these ' + total}`)}
+    </div>`;
   }
+  const nEl = document.getElementById('invLogN');
+  if(nEl) nEl.textContent = total === 0 ? ''
+    : (entries.length < total ? `${entries.length} of ${total}` : `${total}`);
 
   if(entries.length===0){
     const filtered = (searchEl && searchEl.value.trim()) || (catEl && catEl.value) || (typeEl && typeEl.value);
     wrap.innerHTML = (data.stockLog||[]).length === 0
-      ? '<div class="ow-empty">No stock movements recorded yet.</div>'
+      /* AN EMPTY STATE NAMES THE NEXT ACTION. "No stock movements
+         recorded yet" is a true sentence that leaves a new shop with
+         nowhere to go -- and now that this is a lens, the thing to do
+         is one press away and can be named. */
+      ? `<div class="ow-empty"><b>Nothing has moved yet.</b><br>
+          Every delivery received, sale, count and write-off lands here on its own, with what
+          caused it. Receive a delivery on <b>On hand</b> and the first one appears.</div>`
       : filtered
         // Named, so an empty result reads as "this item has not moved"
         // rather than as an empty log.
