@@ -116,12 +116,14 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'which is a real rule, not just a class name');
   t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
     'and every row honours it');
-  /* Five in the template, three on screen at a time: Items and Charges
-     are drawn only when there is a charge to tell them apart, and then
-     they replace nothing -- they sit above the same three. Every foot row
-     carries the divider either way, which is what this pins. */
+  /* Back to three. The foot briefly carried "Items" and "Charges" above
+     the client's figure, from when the charges lived in a block BELOW the
+     foot and the jump between the two had to be explained; each charge is
+     now a row directly above these, so those two restated the screen. What
+     is pinned is not the number but that EVERY foot row carries the
+     divider, so the rule runs the length of the document. */
   const footRows = (items.match(/<div class="ow-tbl-f q-foot/g) || []).length;
-  t.check(footRows === 5 && (items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === footRows,
+  t.check(footRows === 3 && (items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === footRows,
     `every row of the foot carries the divider, so the rule runs the length of the document (${footRows})`);
 
   // The supplier copy is the shop's own document and must keep the cost.

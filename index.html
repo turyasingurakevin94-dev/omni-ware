@@ -6192,61 +6192,99 @@
   .q-doc .q-foot-cost .q-foot-v{color:var(--ink-soft);font-weight:500;}
   .q-doc .q-foot-x{grid-column:6/-1;}
 
-  /* CHARGES. Its own block under the table rather than rows inside it,
-     because a charge is not a line of goods and the table's columns --
-     supplier, buy at, margin -- have nothing to say about one. Dense
-     rows on the console; at 820 the same charge becomes a card, like
-     every other queue on this app's phone side. */
-  .q-chg{margin-top:var(--ow-sp-16);padding-top:var(--ow-sp-12);
-    border-top:1px solid var(--ow-rule);}
-  .q-chg-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-8);}
-  .q-chg-t{font-size:12px;font-weight:600;color:var(--ink);}
-  .q-chg-s{flex:1;min-width:0;font-size:11px;color:var(--ink-soft);line-height:1.45;
-    max-width:var(--ow-measure);}
-  .q-chg-r{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-6) 0;
-    border-bottom:1px solid var(--ow-rule-soft);}
-  .q-chg-r:last-child{border-bottom:0;}
-  .q-chg-n{flex:1;min-width:0;font-size:13px;color:var(--ink);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .q-chg-ni{flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:6px;
-    font-size:13px;font-family:inherit;background:var(--panel);color:var(--ink);}
-  .q-chg-v{flex:none;width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;
-    font-size:12px;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    letter-spacing:-0.02em;text-align:right;background:var(--panel);color:var(--ink);}
-  .q-chg-u{flex:none;width:18px;font-size:11px;color:var(--ink-soft);}
-  /* The figure the client is charged. Sized to its content and never
-     truncated: a clipped amount is a wrong amount, not a short one. */
-  .q-chg-a{flex:none;min-width:104px;text-align:right;font-size:13px;
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    letter-spacing:-0.02em;color:var(--ink);white-space:nowrap;}
-  .q-chg-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;display:inline-flex;
-    align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
-    color:var(--ow-ink-400);}
-  .q-chg-x:hover{background:var(--ow-paper-2);color:var(--ow-crimson);}
-  .q-chg-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .q-chg-add{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);margin-top:var(--ow-sp-10);}
-  .q-chg-chip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
-    gap:var(--ow-sp-6);padding:5px 10px;border:1px solid var(--line);border-radius:var(--ow-r-pill);
-    font-size:12px;color:var(--ink);background:var(--panel);}
-  .q-chg-chip:hover{background:var(--ow-paper-2);}
-  .q-chg-chip b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+  /* CHARGES ARE ROWS OF THE DOCUMENT, not a panel beneath it.
+
+     They were a block under the table, and three things followed. Its
+     figure sat outside the table's grid, so a 5,000 delivery landed
+     about 280px right of the 155,000 it was added to -- while the foot
+     directly above it keeps the opposite law, the figure in the
+     line-total column so it sits under the figures it totals. Its
+     input was a boxed control with a border of its own, so a fee
+     out-weighed a line ten times its size. And the shop-side rule that
+     runs the length of the document stopped dead above it.
+
+     A charge now rides the same eight tracks as every other row: the
+     name in the item column, the figure typed under Price each, what it
+     comes to under Line total, and the divider carried through. What
+     marks it as NOT A GOOD is what it has not got -- no number in the
+     gutter, no quantity, no supplier, no margin. Three empty cells and
+     a name at 500 rather than 600, with no tint band, no badge and no
+     second state colour, because a device that marks everything marks
+     nothing. */
+  .q-doc .q-charge .ow-tbl-p{font-weight:var(--ow-fw-500);}
+  /* The percent's unit, in the slot the quantity's unit uses. */
+  .q-chg-pct{flex:0 0 auto;font-size:11px;color:var(--ow-ink-600);}
+  /* The one-off charge's name is typed. An input cannot ellipsis, so it
+     fills the item column rather than sitting in a box sized for less
+     than the names it will hold. */
+  .q-chg-name{width:100%;min-width:0;box-sizing:border-box;margin:0;
+    border:1px solid transparent;border-radius:var(--ow-r-sm);background:transparent;
+    padding:var(--ow-sp-4) var(--ow-sp-6);outline:0;
+    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+  .ow-tbl-r:hover .q-chg-name{border-color:var(--ow-steel-100);background:var(--ow-paper);}
+  .q-chg-name:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);}
+  /* The add row is the twin of "Add the next item" directly above it,
+     and carries the shop's own services as the taps. Their usual
+     amounts ride with them: "Delivery" and "Delivery 60,000" are
+     different amounts of help at a counter. */
+  .q-chg-sug{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
+    gap:5px;margin-left:var(--ow-sp-6);padding:2px 8px;border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-pill);font-size:var(--ow-t-12);color:var(--ink);background:var(--ow-paper);
+    vertical-align:middle;}
+  .q-chg-sug:hover{border-color:var(--ink);}
+  .q-chg-sug b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     letter-spacing:-0.02em;font-weight:600;color:var(--ink-soft);}
-  .q-chg-none{font-size:11px;color:var(--ink-soft);line-height:1.45;max-width:var(--ow-measure);}
+  .q-chg-sug-more{color:var(--ink-soft);border-style:dashed;}
+  .q-chg-none{font-size:var(--ow-t-12);color:var(--ink-soft);line-height:1.45;
+    max-width:var(--ow-measure);}
+  /* The item add row's whole line opens the picker, so it carries a
+     pointer. This line does not -- the taps on it are the chips and the
+     mark in the gutter -- so it must not claim otherwise. */
+  .q-chg-add-line{cursor:default;}
   @media (max-width:820px){
-    /* The phone gets a card per charge: the name on its own line at a
-       size that can be read at arm's length, the money under it, and the
-       remove control at a thumb's size rather than a pointer's. */
-    .q-chg-r{flex-wrap:wrap;gap:var(--ow-sp-8);padding:var(--ow-sp-10) 0;}
-    .q-chg-n,.q-chg-ni{flex:1 0 100%;font-size:15px;}
-    /* The money row must stay ONE row. The input takes what is left after
-       the figure and the remove control have had theirs -- a basis rather
-       than auto, or the input's own default width pushes the × onto a
-       line of its own where it reads as belonging to nothing. */
-    .q-chg-v{flex:1 1 80px;width:auto;min-width:0;font-size:14px;}
-    .q-chg-a{flex:0 0 auto;min-width:0;font-size:15px;}
-    .q-chg-x{width:var(--ow-tap);height:var(--ow-tap);}
-    .q-chg-chip{padding:9px 14px;font-size:13px;}
+    /* 820 is a switch. The charge keeps the card shape .q-line already
+       wears -- name and × on the first line, figures under it -- and
+       the cells it has not got GO, because an empty labelled line is a
+       line spent saying nothing. */
+    .q-charge .ow-tbl-n:empty,.q-charge > .q-shop-first{display:none;}
+    /* A fixed charge is ONE figure. On the console it reads under Price
+       each with what it comes to beside it, exactly as a quantity-of-one
+       item does; on a phone there is no shared header to make that
+       pairing mean anything, and two lines reading 5000 and 5,000 UGX
+       spend a line of a 390px screen saying one thing twice. A percent
+       keeps both, because its two figures are genuinely two.
+
+       Through .q-doc and the attribute, deliberately: the layer's own
+       .ow-tbl-n[data-l] rule turns every labelled cell into a flex line
+       and is declared AFTER this one, so a plainer selector loses to it
+       on order and the line stays on the screen. */
+    .q-doc .q-charge .q-chg-same[data-l]{display:none;}
+    .q-chg-name{font-size:16px;}
+    /* THE ADD ROW IS TWO LINES ON A PHONE, not one that wraps. The
+       layer lays this row out as a flex line with the mark and the text
+       centred; four chips at a thumb's size do not fit beside "Add a
+       charge", and wrapping them inside a centred flex child left the
+       mark floating against the middle of a stack. So the row stacks:
+       the mark and the words on the first line, the taps under them. */
+    /* Through .q-doc, deliberately, and for the same reason as the
+       line above: the layer centres this row's contents and is declared
+       after this block, so a selector of equal weight loses on order and
+       the mark floats against the middle of a stack of taps. */
+    .q-doc .ow-tbl-r.q-chg-add-row{align-items:flex-start;height:auto;
+      padding-top:var(--ow-sp-10);padding-bottom:var(--ow-sp-12);}
+    .q-chg-add-row .q-add-icon{margin-top:var(--ow-sp-4);}
+    .q-chg-add-line{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;
+      align-items:center;gap:var(--ow-sp-8);}
+    /* The words take the whole first line, so the mark in the gutter has
+       something to sit beside and the taps start a line of their own. */
+    .q-chg-add-t{flex:1 1 100%;}
+    /* Kept to a thumb's height and trimmed everywhere else: at the
+       console's padding each tap ran 165px, so four of them stacked four
+       deep and the add row alone was 223px of a 844px screen. Two to a
+       line is one line of taps for a shop with the usual three or four. */
+    .q-chg-sug{margin-left:0;min-height:38px;padding:0 10px;gap:4px;
+      font-size:var(--ow-t-12);}
   }
   /* Two rules other screens rely on -- the cash book's ledger amounts
      and nine empty hints -- kept exactly as they were. */
@@ -36386,6 +36424,7 @@ function renderQuoteItems(){
      what the client pays for the items, never of another charge. */
   const chargesTotal = orderChargesTotal(data.quote);
   const paysTotal = grandSell + chargesTotal;
+  const takesCharges = orderTakesCharges(data.quote);
 
   /* The client's side of the quote first, then the shop's, with a rule
      between them. "Price each" is the wording the printed quotation
@@ -36400,21 +36439,14 @@ function renderQuoteItems(){
 
      "You keep" is ink unless the quote loses money: what is kept is a
      size, and only a loss is a warning. */
-  /* The goods line only appears once there is something beside it to
-     tell it apart from. On a quote with no charges "Items" and "The
-     client pays" would be the same figure printed twice. */
+  /* THE FOOT IS THREE ROWS AGAIN. It briefly carried "Items" and
+     "Charges" above the client's figure, from when the charges lived in
+     a block below the foot and the jump from one to the other had to be
+     explained. Every charge is now a row directly above these, so those
+     two restated what was already on the screen -- and the split still
+     rides the sticky bar, which is the one place it cannot scroll away.
+     The number the rep says down the phone leads, as it always did. */
   const footHtml = `
-    ${chargesTotal > 0 ? `
-    <div class="ow-tbl-f q-foot q-foot-cost">
-      <div class="q-foot-l">Items</div>
-      <div class="ow-tbl-n q-foot-v">${fmtUGX(grandSell)}</div>
-      <div class="q-foot-x q-shop-first"></div>
-    </div>
-    <div class="ow-tbl-f q-foot q-foot-cost">
-      <div class="q-foot-l">Charges</div>
-      <div class="ow-tbl-n q-foot-v">${fmtUGX(chargesTotal)}</div>
-      <div class="q-foot-x q-shop-first"></div>
-    </div>` : ''}
     <div class="ow-tbl-f q-foot q-foot-pays">
       <div class="q-foot-l">The client pays</div>
       <div class="ow-tbl-n q-foot-v">${fmtUGX(paysTotal)}</div>
@@ -36459,10 +36491,10 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-shop-first">Supplier</div>
       <div class="ow-tbl-n">Buy @</div>
       <div class="ow-tbl-n">Margin</div>
-    </div>${rowsHtml}${addRowHtml}${footHtml}
-  </div>${orderTakesCharges(data.quote) ? quoteChargesHTML(data.quote, grandSell) : ''}`;
+    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${footHtml}
+  </div>`;
 
-  if(orderTakesCharges(data.quote)) wireQuoteCharges(wrap);
+  if(takesCharges) wireQuoteCharges(wrap);
 
   renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal);
 
@@ -36811,58 +36843,72 @@ function renderQuoteRail(){
    So the client's figure leads, in the words somebody actually speaks,
    and the shop's economics sit under it in one line where they can be
    checked but never mistaken for the price. */
-/* THE CHARGES BLOCK on the Sell screen.
+/* THE CHARGE ROWS on the Sell screen.
 
-   Offered, never applied. Every service the shop has named is a chip;
-   nothing lands on a quote until somebody taps one, and the amount stays
-   editable afterwards -- the list says what this usually costs, not what
-   it must. That is the same contract every other send and write in this
-   app keeps.
+   Offered, never applied. Every service the shop has named is a tap on
+   the add row; nothing lands on a quote until somebody presses one, and
+   the figure stays editable afterwards -- the list says what this
+   usually costs, not what it must. That is the contract every other
+   write in this app keeps.
+
+   ON THE TABLE'S OWN TRACKS, and that is the whole point. The typed
+   figure goes under Price each and what it comes to under Line total,
+   which is exactly how a quantity-of-one item already reads, so the
+   money lands in the column the rest of the money is in. For a FIXED
+   charge those two are the same number -- said twice on the console
+   because the columns give each of them a meaning, and once on the
+   phone, where there is no header to carry that meaning. For a PERCENT
+   they are genuinely two: the rate, and what the rate came to.
 
    A shop with no services yet is told where they are set rather than
-   shown an empty box, and an agent's order is refused outright: the
+   shown an empty row, and an agent's order is refused outright: the
    agent app works out what it owes from its own line prices, so a
    charge added here would make the two disagree about one order. */
-function quoteChargesHTML(q, goodsTotal){
-  const charges = orderCharges(q);
-  const services = data.presetServices || [];
-  const rows = charges.map((ch, i)=>{
+function chargeRowsHTML(q, goodsTotal){
+  return orderCharges(q).map((ch, i)=>{
     const isPercent = ch.type === 'percent';
     const amount = chargeAmount(ch, goodsTotal);
     const named = String(ch.label || '').trim();
-    return `<div class="q-chg-r" data-chg="${i}">
-      ${ch.service
-        ? `<span class="q-chg-n" title="${esc(named)}">${esc(named)}</span>`
-        : `<input type="text" class="q-chg-ni" data-chg-name="${i}" value="${esc(named)}" placeholder="What is this charge for?" aria-label="What this charge is for">`}
-      <input type="number" class="q-chg-v" data-chg-val="${i}" min="0" step="any"
-        value="${Number(ch.value) > 0 ? Number(ch.value) : ''}"
-        placeholder="${isPercent ? 'e.g. 5' : 'e.g. 20000'}"
-        aria-label="${esc(named || 'This charge')}, ${isPercent ? 'percent of the goods' : 'amount in shillings'}">
-      <span class="q-chg-u">${isPercent ? '%' : ''}</span>
-      <span class="q-chg-a" title="What this charge adds to the client's bill">${amount > 0 ? esc(fmtUGX(amount)) : '—'}</span>
-      <button type="button" class="q-chg-x" data-chg-del="${i}" title="Take off ${esc(named || 'this charge')}" aria-label="Take off ${esc(named || 'this charge')}">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+    const asked = named || 'This charge';
+    return `<div class="ow-tbl-r q-line q-charge" data-chg="${i}">
+      <div class="ow-tbl-c q-gutter">
+        <span class="q-row-num"></span>
+        <button type="button" class="q-remove-icon" data-chg-del="${i}" title="Take off ${esc(asked)}" aria-label="Take off ${esc(asked)}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="ow-tbl-c q-name-cell">
+        ${ch.service
+          ? `<span class="ow-tbl-p" title="${esc(named)}">${esc(named)}</span>`
+          : `<input type="text" class="q-chg-name" data-chg-name="${i}" value="${esc(named)}" placeholder="What is this charge for?" aria-label="What this charge is for">`}
+        <span class="q-item-sub"><span class="ow-tbl-s q-item-unit">Charge${isPercent ? ' &middot; % of items' : ''}</span></span>
+      </div>
+      <div class="ow-tbl-n"></div>
+      <div class="ow-tbl-n" data-l="${isPercent ? 'Rate' : 'Amount'}"><div class="q-sell-cell">
+        <input type="number" class="ow-gi" data-chg-val="${i}" min="0" step="any"
+          value="${Number(ch.value) > 0 ? Number(ch.value) : ''}"
+          placeholder="${isPercent ? 'e.g. 5' : 'e.g. 20000'}"
+          aria-label="${esc(asked)}, ${isPercent ? 'percent of the items' : 'amount in shillings'}">${
+        isPercent ? '<span class="q-chg-pct">%</span>' : ''}</div></div>
+      <div class="ow-tbl-n${isPercent ? '' : ' q-chg-same'}" data-l="${isPercent ? 'Comes to' : 'Line total'}" title="What this charge adds to the client's bill">${
+        amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
+      <div class="ow-tbl-c q-shop-first"></div>
+      <div class="ow-tbl-n"></div>
+      <div class="ow-tbl-n"></div>
     </div>`;
   }).join('');
+}
 
-  const chips = services.length
-    ? services.map((s, i)=> `<button type="button" class="q-chg-chip" data-chg-add="${i}">
-        ${esc(s.name)}${Number(s.value) > 0 ? `<b>${s.type === 'percent' ? Number(s.value) + '%' : esc(fmtUGX(s.value))}</b>` : ''}
-      </button>`).join('')
-    : '';
-
-  return `<div class="q-chg">
-    <div class="q-chg-h">
-      <span class="q-chg-t">Charges</span>
-      <span class="q-chg-s">What you are charging besides the goods. A percent is worked out from the items above.</span>
+/* The add row, on the pattern of "Add the next item" directly above it.
+   The services are the taps; "Something else" is the one-off. */
+function chargeAddRowHTML(){
+  const services = data.presetServices || [];
+  const chips = services.map((s, i)=> `<button type="button" class="q-chg-sug" data-chg-add="${i}">${esc(s.name)}${
+    Number(s.value) > 0 ? `<b>${s.type === 'percent' ? Number(s.value) + '%' : esc(fmtUGX(s.value))}</b>` : ''}</button>`).join('');
+  return `<div class="ow-tbl-r q-add-row-trailing q-chg-add-row">
+    <div class="ow-tbl-c q-gutter">
+      <button class="q-add-icon" data-chg-one="1" title="Add a charge" aria-label="Add a charge"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    ${rows}
-    <div class="q-chg-add">
-      ${chips}
-      <button type="button" class="q-chg-chip" data-chg-one="1">+ Something else</button>
-    </div>
-    ${services.length ? '' : '<p class="q-chg-none">No services set up yet. Name the ones this shop charges for on <b>The shop</b>, under &ldquo;What you charge for&rdquo;, and they appear here as a tap.</p>'}
+    <div class="q-add-row-placeholder q-chg-add-line"><span class="q-chg-add-t">Add a charge</span>${chips}<button type="button" class="q-chg-sug q-chg-sug-more" data-chg-one="1">Something else</button>${
+      services.length ? '' : '<span class="q-chg-none">&mdash; name what this shop charges for on <b>The shop</b>, under &ldquo;What you charge for&rdquo;, and they appear here as a tap.</span>'}</div>
   </div>`;
 }
 

@@ -183,8 +183,10 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
   t.check(s.orderTakesCharges(order()) === true, 'an ordinary order takes charges');
   t.check(s.orderTakesCharges(order({ originAgentId: 'A3' })) === false,
     'an agent’s order does not, because the agent app would never see it');
-  t.check(/orderTakesCharges\(data\.quote\) \? quoteChargesHTML/.test(src),
-    'and the screen offers the block only where it is allowed');
+  t.check(/const takesCharges = orderTakesCharges\(data\.quote\);/.test(src)
+    && /\${takesCharges \? chargeRowsHTML\(data\.quote, grandSell\) : ''}/.test(src)
+    && /\${takesCharges \? chargeAddRowHTML\(\) : ''}/.test(src),
+    'and the screen draws the rows, and offers the row that adds one, only where charges are allowed');
 }
 
 /* ---------- 8. numbered inside the order it belongs to ------------------ */
