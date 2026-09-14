@@ -48,14 +48,26 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /* ---------- 2. the chart carries figures ---------------------------- */
 {
   t.check(!/agSparkFill/.test(src), 'the sparkline is gone');
-  t.check(/class="ag-trend-val">\$\{esc\(fmtCompactUGX\(t\)\)\}/.test(code),
+  t.check(/<span class="v">\$\{empty \? '&mdash;' : esc\(fmtCompactUGX\(t\)\)\}<\/span>/.test(code),
     'every column states what that month earned');
-  t.check(/aria-label="\$\{esc\(monthLabel\(m\)\)\}, \$\{esc\(fmtUGX\(t\)\)\}"/.test(code),
+  t.check(/aria-label="\$\{esc\(monthLabel\(m\)\)\}, \$\{empty \? 'no orders' : esc\(fmtUGX\(t\)\)\}"/.test(code),
     'and the exact, uncompacted figure is on the label, so the rounding is not the only access to it');
 
-  // A zero month must still occupy a column.
-  t.check(/const pct = max > 0 \? Math\.max\(\(t\/max\)\*100, 3\) : 3;/.test(code),
+  // A ZERO month still occupies a column. This used to be the whole rule:
+  //
+  //     const pct = max > 0 ? Math.max((t/max)*100, 3) : 3;
+  //
+  // which gave every month a stub, including months with no orders in
+  // them at all -- and printed "0" over them. That is a zero that looks
+  // measured, and a measured zero cannot be told from a real one: on this
+  // screen the difference is between a bad month and a month the app
+  // failed to read. So the rule splits in two, and both halves are pinned.
+  t.check(/const px = \(t\)=> max > 0 \? Math\.max\(Math\.round\(\(t\/max\)\*TREND_BAR_PX\), 3\) : 3;/.test(code),
     'a month that earned nothing gets a stub -- no bar at all reads as missing data, not as a bad month');
+  t.check(/const empty = !stats\[i\]\.orders\.length;/.test(code),
+    'but a month with no ORDERS is a different thing, and is told apart by its orders, not by its total');
+  t.check(/<span class="none"><\/span>/.test(code) && /\.fx-col \.none\{[^}]*height:2px/.test(src),
+    'and draws a hairline and a dash instead of a stub and a zero');
 }
 
 /* ---------- 3. the compacted figures -------------------------------- */
@@ -98,15 +110,15 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and the comment that forbade it is gone');
 
   // Paging past the six-month window must not silently lose you.
-  t.check(/months\.includes\(earningsViewMonth\) \? '' :/.test(code),
+  t.check(/!months\.includes\(earningsViewMonth\)/.test(code),
     'a month outside the window is detected');
   t.check(/before this window/.test(code),
     'and named, rather than leaving no column marked and no explanation');
 
-  t.check(/\.ag-trend-col\{[^}]*min-height:44px/.test(src), 'a column is a 44px tap target');
-  t.check(/\.ag-trend-col\{[^}]*box-sizing:border-box/.test(src),
+  t.check(/\.fx-col\{[^}]*min-height:44px/.test(src), 'a column is a 44px tap target');
+  t.check(/\.fx-col\{[^}]*box-sizing:border-box/.test(src),
     'and it restores border-box after all:unset, so 44 means 44');
-  t.check(/\.ag-trend-col:focus-visible\{outline:/.test(src), 'with a visible focus ring');
+  t.check(/\.fx-col:focus-visible\{outline:/.test(src), 'with a visible focus ring');
 }
 
 /* ---------- 5. the rows add up to the total above them -------------- */
