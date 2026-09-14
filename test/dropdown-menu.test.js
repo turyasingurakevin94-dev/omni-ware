@@ -147,4 +147,6 @@ const el = (tag, attrs) => Object.assign({ tagName: tag, disabled: false, multip
     'and a modal or a pending question opened during the wait holds the redraw off too');
 }
 
-t.done();
+/* Non-zero on a failure, or run-all.js reads the exit status of a
+   file that failed as a file that passed. */
+process.exit(t.done() ? 1 : 0);

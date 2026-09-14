@@ -106,6 +106,11 @@ const CHAIN = [
      scope compiles and purchasePlan throws on the first line it costs. */
   'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',
   'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
+  /* The plan names the next rung down the supplier's own ladder
+     beside every line it costs, so the reading that finds one
+     and the rule that decides whether to say it travel with the
+     chain. */
+  'cmpNextBreak', 'buyNextTier', 'buyTierWorthIt',
   'buyLineReason', 'buyLineAlsoReason',
   'buyLineFacts', 'buyLineWhy', 'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'purchasePlan',
@@ -113,7 +118,8 @@ const CHAIN = [
      travels with the chain that judges against it. */
   'targetMarginPct',
 ];
-const CONSTS = ['REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
+const CONSTS = ['BUY_TIER_MIN_PCT', 'buyTierTaken',
+  'REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
   'THIN_MARGIN_PCT', 'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS',
   'BUY_ORDER_STALE_DAYS', 'BUY_ORDER_KEEP_DAYS'];
 

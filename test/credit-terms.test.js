@@ -280,4 +280,4 @@ const onTerms = { pct: 3, days: 30, agreedAt: '2026-09-13' };
     'and the credit block answers to its own name, not over the top of it');
 }
 
-t.done();
+process.exit(t.done() ? 1 : 0);

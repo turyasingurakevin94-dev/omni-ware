@@ -335,4 +335,6 @@ const H = compileScope([
     'and so does its HTML twin');
 }
 
-t.done();
+/* Non-zero on a failure, or run-all.js reads the exit status of a
+   file that failed as a file that passed. */
+process.exit(t.done() ? 1 : 0);

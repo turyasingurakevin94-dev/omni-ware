@@ -933,6 +933,22 @@
   .pp-hold .bp-hold-l{flex:1 1 200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pp-hold .bp-hold-w{font-size:11px;white-space:nowrap;}
   .pp-hold.pp-hold-done{background:var(--ow-verdigris-soft);border-top-color:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  /* THE RUNG RIDES THE SAME BAND AND WEARS NONE OF ITS COLOUR. Amber on
+     this screen means stop and think -- a hold, a price nobody can read.
+     A supplier's own volume break is neither a fault nor a warning, and
+     tinting it would put a caution under half the plan. Ink on the
+     quiet ground, with the figures in the money face doing the work. */
+  /* Written against BOTH classes on purpose. .ow-tbl-note is declared
+     further down the file, so a single-class rule here loses to it on
+     order alone and the band comes out amber -- which is the one thing
+     this rule exists to stop. */
+  .ow-tbl-note.bp-tier{background:var(--ow-paper-2);border-top-color:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .bp-tier .bp-tier-t{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11px;color:var(--ink);white-space:nowrap;}
+  .bp-tier .bp-tier-l{flex:1 1 240px;min-width:0;line-height:1.45;}
+  .bp-tier .bp-tier-l b{font-weight:600;color:var(--ink);}
+  /* A quantity the owner chose, marked so the plan's own number beside
+     it is never read as theirs. */
+  .ow-tbl-note.bp-tier.bp-tier-on{background:var(--ow-paper);border-top-color:var(--ow-rule);}
   /* What is on the way: who, when, what; the money; the four answers. */
   .bp-ord{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center;
     padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
@@ -9298,6 +9314,10 @@
        buttons: the tick as a labelled button, and Buy it. */
     .bp-when{order:-1;}
     .pp-hold .bp-hold-l{white-space:normal;flex:1 1 100%;}
+    /* The sentence takes the width, the act closes the card at a size a
+       thumb can find -- the same shape every other band on a phone. */
+    .bp-tier .bp-tier-l{flex:1 1 100%;}
+    .bp-tier .btn.ow-sm{flex:1 1 100%;min-height:var(--ow-tap);}
     .bp-it .ow-tbl-p{font-size:16px;white-space:normal;}
     .bp-w{white-space:normal;}
     .bp-do{font-size:14px;}
@@ -84752,13 +84772,101 @@ function stockingCandidates(dateISO){
    re-ranking could oscillate between two suppliers' pack sizes
    forever. Returns null when nobody has a price on file, which is a
    different answer from an expensive one and is reported as such. */
+/* THE NEXT RUNG DOWN THE SUPPLIER'S OWN LADDER.
+
+   A price ladder is a step function, and the plan has always walked up
+   to a step and stopped one short of it without saying so. A shop
+   buying 88 cartons of something that drops in price at 100 pays the
+   88-price on all 88, and nothing on any screen mentioned that twelve
+   more would have changed the price of the other eighty-eight.
+
+   cmpNextBreak already answers "is there a better rung ahead" for the
+   comparison screen, and it is asked here rather than copied, so one
+   place in this app decides what a rung is.
+
+   WHAT IT IS PRICED AT IS WHAT CAN ACTUALLY BE ORDERED. A rung at 100
+   on a line that ships in cartons of 12 is reached by ordering 108, not
+   100, so the figures are worked out at 108 -- and re-read through
+   purchasePriceAtQty rather than taken from the tier, because rounding
+   up to a whole pack can land on a better rung still.
+
+   THE RETAIL-TO-WHOLESALE STEP IS NOT HERE, and does not need to be:
+   buyLineFor already rounds every ask up to a whole pack, so the plan
+   is on the wholesale side of that step before this is ever asked. */
+function buyNextTier(row, buyQty){
+  if(!row || !(buyQty > 0)) return null;
+  const brk = cmpNextBreak(row, buyQty);
+  if(!brk) return null;
+  const packQty = Number(row.packQty) || 0;
+  const atQty = packQty > 0 ? Math.ceil(brk.atQty / packQty) * packQty : brk.atQty;
+  const now = purchasePriceAtQty(row, buyQty);
+  const then = purchasePriceAtQty(row, atQty);
+  if(now == null || then == null || !(then < now)) return null;
+  const costNow = Math.round(buyQty * now);
+  const costThen = Math.round(atQty * then);
+  return {
+    atQty, more: atQty - buyQty,
+    unitNow: Math.round(now), unitThen: Math.round(then), perUnit: Math.round(now - then),
+    costNow, costThen,
+    /* Negative when the bigger buy costs LESS than the smaller one --
+       the case that needs no judgement at all, and the reason this is
+       a signed figure rather than two fields. */
+    extra: costThen - costNow,
+    /* What the units the plan was buying anyway stop costing. */
+    saved: Math.round(buyQty * (now - then)),
+  };
+}
+
+/* WHEN A RUNG IS WORTH INTERRUPTING THE SCREEN FOR.
+
+   Every ladder has rungs above every quantity, and a band on every row
+   is a band nobody reads. Three rules, and the first one overrules the
+   others:
+
+     1. If the bigger buy costs no more in total, always say so. More
+        goods for less money is never noise, whatever the quantities.
+     2. Otherwise the saving has to be worth the trip: at least
+        BUY_TIER_MIN_PCT of what the plan was about to pay per unit.
+     3. And the extra must be sellable. The line's own rate decides, not
+        a rule of thumb -- the extra may be at most one more cover-cycle
+        of selling on top of what is already being bought. A line whose
+        rate is unknown is offered nothing but case 1: this shop has a
+        whole screen for stock that stopped moving, and the buying plan
+        must not be the thing that fills it. */
+const BUY_TIER_MIN_PCT = 1;
+function buyTierWorthIt(tier, line, coverDays){
+  if(!tier) return false;
+  if(tier.extra <= 0) return true;
+  if(!(tier.unitNow > 0)) return false;
+  if((tier.perUnit / tier.unitNow) * 100 < BUY_TIER_MIN_PCT) return false;
+  const rate = Number(line && line.dailyRate) > 0 ? Number(line.dailyRate)
+    : (Number(line && line.units30) > 0 ? Number(line.units30) / 30 : 0);
+  if(!(rate > 0)) return false;
+  const window = Math.max(1, Number(coverDays) || 0) + Math.max(0, Number(line && line.leadDays) || 0);
+  return tier.more <= rate * window;
+}
+
+/* A rung the owner has taken, by row. Ephemeral like the order basket
+   beside it and for the same reason: the plan is a thing you read,
+   decide on and send from in one sitting, and a quantity chosen against
+   this morning's shelf should not be waiting to surprise somebody on
+   Thursday. */
+let buyTierTaken = new Map();
+
 function buyLineFor(r, needUnits, kind){
   const want = Math.max(1, Math.ceil(needUnits));
   const row = rankedPurchaseRowsAtQty(r.productId, r.variantIdx, want)
     .find(x=> x.purchasePrice != null);
   if(!row) return null;
   const packQty = Number(row.packQty) || 0;
-  const buyQty = packQty > 0 ? Math.ceil(want / packQty) * packQty : want;
+  const tag = r.key + '|' + kind;
+  const need = packQty > 0 ? Math.ceil(want / packQty) * packQty : want;
+  /* A RUNG THE OWNER HAS TAKEN IS THE ASK. Only upwards, and only while
+     the need is still under it: the shelf moves between renders, and a
+     quantity taken on Monday must never hold a line DOWN once the plan
+     wants more than it. */
+  const taken = Math.round(Number(buyTierTaken.get(tag)) || 0);
+  const buyQty = taken > need ? taken : need;
   const unitCost = purchasePriceAtQty(row, buyQty) ?? row.purchasePrice;
   /* THE ROW'S OWN IDENTITY, which is not the shelf's.
 
@@ -84777,14 +84885,24 @@ function buyLineFor(r, needUnits, kind){
      together, and the basket, the review and the tool all work on
      THAT. Unique by construction: each of the two readings yields at
      most one row per key. */
-  return { kind, key: r.key, tag: r.key + '|' + kind,
+  return { kind, key: r.key, tag,
     productId: r.productId, variantIdx: r.variantIdx,
     name: r.name, held: r.qty, units30: r.units30, soldTotal30: r.soldTotal30,
     orders30: r.orders30, profit30: r.profit30, paid30: r.paid30 == null ? null : r.paid30,
     keptPct: buyKeptPct(r),
     hold: buyHoldFor(r.key),
     allPriced: r.allPriced !== false, daysLeft: r.daysLeft == null ? null : r.daysLeft,
-    buyQty, unit: row.unit || '', packQty, packUnit: row.packUnit || '',
+    /* Carried because the rung test asks how fast this line sells, and
+       a stocking candidate has a month's units where a refill has a
+       rate. Both answer the same question. */
+    dailyRate: r.dailyRate == null ? null : r.dailyRate,
+    buyQty, needQty: need, takenQty: taken > need ? taken : null,
+    /* Offered, never applied: the plan asks for what the shelf needs
+       and NAMES the rung beside it. Read against the quantity actually
+       being bought, so taking one rung offers the next rather than
+       going quiet. */
+    tier: buyNextTier(row, buyQty),
+    unit: row.unit || '', packQty, packUnit: row.packUnit || '',
     supplierId: row.supplierId, supplier: row.sname || supplierName(row.supplierId),
     unitCost: Math.round(unitCost), cost: Math.round(buyQty * unitCost) };
 }
@@ -85180,6 +85298,14 @@ function purchasePlan(budget, coverDays, dateISO){
     line.bulkCost = Math.round(r.units30 * line.unitCost);
     candidates.push(line);
   });
+  /* THE RUNGS, JUDGED ONCE, before anything is merged or ranked. Every
+     line came back carrying whatever rung sits above it; this is where
+     the ones not worth interrupting the screen for go quiet. A refill
+     is judged against its own cover, a stocking line against the
+     shop's. */
+  candidates.forEach(l=>{
+    if(l.tier && !buyTierWorthIt(l.tier, l, l.coverDays || cover)) l.tier = null;
+  });
   /* ONE PRODUCT, ONE DECISION — before the ranking, so a merged line is
      ranked once on the figures it will actually be bought at.
 
@@ -85467,6 +85593,44 @@ function renderPurchasePlanPanel(){
      it" is goods in hand: the purchase form, stock on the shelf, a bill
      raised now. Reading them as one thing is how a shop ends up owing
      for goods that never arrived. */
+  /* THE RUNG, SAID UNDER THE LINE IT WOULD CHANGE.
+
+     Not amber. The bands on this screen that wear amber are the ones
+     that mean stop and think -- a hold, a price nobody can read -- and
+     a supplier's own volume break is neither a fault nor a warning. It
+     is quiet, and the figures do the arguing.
+
+     TWO SENTENCES, BECAUSE THERE ARE TWO CASES and only one of them is
+     a judgement. When the bigger buy costs no more, there is nothing to
+     weigh: it is more goods for less money and it says so. When it
+     costs more, the owner is told exactly three things -- what the
+     extra units cost, what the units they were buying anyway stop
+     costing, and how long the extra takes to sell -- and decides. */
+  const tierBand = (l)=>{
+    const g = l.tier;
+    if(!g) return '';
+    const u = esc(l.unit || 'pc');
+    const rate = Number(l.dailyRate) > 0 ? Number(l.dailyRate)
+      : (Number(l.units30) > 0 ? Number(l.units30) / 30 : 0);
+    const sells = rate > 0 ? Math.round(g.more / rate) : null;
+    const free = g.extra <= 0;
+    const said = free
+      ? `<b>${g.more} more</b> and the whole ${g.atQty} ${u} costs <span class="ow-fig">${num(g.costThen)}</span> — <b>${num(Math.abs(g.extra))} less</b> than the ${l.buyQty} on this line. ${esc(l.supplier)} drops to ${num(g.unitThen)} each at ${g.atQty}.`
+      : `<b>${g.more} more</b> takes the price to ${num(g.unitThen)} each — <span class="ow-fig">${num(g.saved)}</span> off the ${l.buyQty} you are buying anyway, ${num(g.extra)} more spent in all${sells != null ? `, and the extra is about ${sells === 1 ? 'a day' : sells + ' days'} of selling` : ''}.`;
+    return `<div class="ow-tbl-note bp-tier" data-tag="${esc(String(l.tag))}">
+      <span class="bp-tier-t">${free ? 'Cheaper outright' : 'One tier down'}</span>
+      <span class="bp-tier-l">${said}</span>
+      <button type="button" class="btn btn-ghost ow-sm bp-tier-take" data-tag="${esc(String(l.tag))}" data-qty="${g.atQty}">Take ${g.atQty}</button>
+    </div>`;
+  };
+  /* What was taken, and the way back. A quantity the owner chose is
+     never silently replaced by the plan's own, so the row says whose
+     number it is and offers to hand it back. */
+  const takenBand = (l)=> !l.takenQty ? '' : `<div class="ow-tbl-note bp-tier bp-tier-on" data-tag="${esc(String(l.tag))}">
+      <span class="bp-tier-t">You took ${l.takenQty}</span>
+      <span class="bp-tier-l">The shelf needs ${l.needQty} ${esc(l.unit || 'pc')}; the rest is the volume price.</span>
+      <button type="button" class="btn btn-ghost ow-sm bp-tier-drop" data-tag="${esc(String(l.tag))}">Back to ${l.needQty}</button>
+    </div>`;
   const row = (l, list, i)=> {
     const picked = buyOrderBasket.has(String(l.tag));
     const transit = l.inTransit
@@ -85484,7 +85648,7 @@ function renderPurchasePlanPanel(){
       </div>
       <div class="ow-tbl-n bp-cost" data-l="Line cost"><span class="ow-fig">${num(l.cost)}</span><span class="ow-fig-b">${l.buyQty} × ${num(l.unitCost)}</span></div>
       <div class="ow-tbl-a"><button type="button" class="btn btn-ghost ow-sm buy-act" data-list="${list}" data-i="${i}">Buy it</button></div>
-    </div>`;
+    </div>${takenBand(l)}${tierBand(l)}`;
   };
   const table = (rows)=> `<div class="ow-tbl bp-tbl">
       <div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">When</div><div class="ow-tbl-c">Item · supplier</div><div class="ow-tbl-n">Line cost</div><div class="ow-tbl-c"></div></div>
@@ -85698,6 +85862,20 @@ function renderPurchasePlanPanel(){
     const k = String(btn.dataset.tag || '');
     if(!k) return;
     if(buyOrderBasket.has(k)) buyOrderBasket.delete(k); else buyOrderBasket.add(k);
+    renderPurchasePlanPanel();
+  }));
+  /* TAKING A RUNG CHANGES ONE NUMBER and redraws. It does not tick the
+     line onto the order: choosing how much and choosing to order are
+     two decisions, and this screen has always kept them apart. */
+  el.querySelectorAll('.bp-tier-take').forEach(btn=> btn.addEventListener('click', ()=>{
+    const k = String(btn.dataset.tag || '');
+    const q = Math.round(Number(btn.dataset.qty) || 0);
+    if(!k || !(q > 0)) return;
+    buyTierTaken.set(k, q);
+    renderPurchasePlanPanel();
+  }));
+  el.querySelectorAll('.bp-tier-drop').forEach(btn=> btn.addEventListener('click', ()=>{
+    buyTierTaken.delete(String(btn.dataset.tag || ''));
     renderPurchasePlanPanel();
   }));
   const goBtn = document.getElementById('buy_basket_go');

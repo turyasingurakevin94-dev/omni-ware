@@ -117,6 +117,11 @@ try {
     'buyKeptPct', 'buyHoldFor',
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
+      extractDeclaration(src, 'buyTierTaken', 'index.html'),
+      extractDeclaration(src, 'BUY_TIER_MIN_PCT', 'index.html'),
+      extractFunction(src, 'buyNextTier', 'index.html'),
+      extractFunction(src, 'buyTierWorthIt', 'index.html'),
+      extractFunction(src, 'cmpNextBreak', 'index.html'),
       extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_WINDOW_DAYS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_MIN_DELIVERIES', 'index.html'),

@@ -120,6 +120,11 @@ const env = {
 };
 
 const sources = [
+  extractDeclaration(src, 'buyTierTaken', 'index.html'),
+  extractDeclaration(src, 'BUY_TIER_MIN_PCT', 'index.html'),
+  extractFunction(src, 'buyNextTier', 'index.html'),
+  extractFunction(src, 'buyTierWorthIt', 'index.html'),
+  extractFunction(src, 'cmpNextBreak', 'index.html'),
   extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
   extractDeclaration(src, 'SOURCING_STATUS_ORDER', 'index.html'),
   extractDeclaration(src, 'SOURCING_SHORT_LABELS', 'index.html'),
