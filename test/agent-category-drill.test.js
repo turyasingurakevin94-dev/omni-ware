@@ -172,14 +172,37 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     return m ? m[1] : '';
   };
 
-  // Category tile: the icon, not an art block. A full-width panel per tile
-  // pushed the shelves below the fold on a six-aisle shop.
-  const icon = rule('.ag-cat-icon');
-  t.check(/width:52px/.test(icon) && /height:52px/.test(icon),
-    'a category tile carries a 52px icon badge, not a full-width image');
-  t.check(!/aspect-ratio:1\.15/.test(icon), 'the tall art block is gone');
-  t.check(/align-items:center/.test(rule('.ag-cat-item')),
-    'so the tile lays out sideways -- icon beside the label, not above it');
+  // Aisle pill. This used to read: "a category tile carries a 52px icon
+  // badge, not a full-width image", with "the tile lays out sideways".
+  // Both were true of a tile in a two-column grid, and the grid is the
+  // thing that went: six aisles made it three rows deep, around 250px of
+  // navigation between the search field and the shelves that sell.
+  //
+  // The same two facts the tile was pinned for still hold, and are what
+  // is pinned here -- the mark is a small badge rather than an art block,
+  // and the pill lays out sideways. What is new is the height: one 44px
+  // row for the whole strip, and the count still on every aisle so
+  // picking one is a decision rather than a guess.
+  t.check(rule('.ag-cat-grid') === '' && !/class="ag-cat-item/.test(code),
+    'the two-column tile grid is gone');
+  const aisles = rule('.fx-aisles');
+  t.check(/overflow-x:auto/.test(aisles) && /display:flex/.test(aisles),
+    'the aisles are one scrolling row');
+  const aisle = rule('.fx-aisle');
+  t.check(/min-height:44px/.test(aisle) && /box-sizing:border-box/.test(aisle),
+    'each pill is a 44px target, and border-box so 44 means 44');
+  t.check(/align-items:center/.test(aisle),
+    'and lays out sideways -- mark beside the label, not above it');
+  const mark = rule('.fx-aisle .ic');
+  t.check(/width:28px/.test(mark) && /height:28px/.test(mark),
+    'the mark is a badge, not a full-width art block');
+  t.check(/<span class="n">\$\{n\}<\/span>/.test(code),
+    'and the pill still states how much is in the aisle');
+
+  // The head above the grid said "Browse -- All 14 ->", which looked like
+  // the way into the whole catalogue. It was plain text with no handler,
+  // and section 5 above is why: there is no All-products list to go to.
+  t.check(!/ag-cat-head/.test(src), 'the inert "All N ->" head is gone with it');
 
   // Shelf row. This used to read: "an Order-again / Sponsored card is 210
   // wide" with "a 16:9 image rather than a square crop" -- a card on a
