@@ -25,13 +25,32 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 1. the list has a heading, a count and an action -------- */
 {
-  t.check(/<span>Your clients <span class="ag-seg-count" id="ag_clientsCount"><\/span><\/span>/.test(src),
-    'the list is named and counted -- and the count is spaced off the label, not run into it');
-  t.check(/id="ag_addClientBtn"/.test(src), 'with an Add control beside it');
-  t.check(/\.ag-section-action\{[^}]*min-height:44px/.test(src), 'sized 44px for a thumb');
-  t.check(/\.ag-section-action\{[^}]*box-sizing:border-box/.test(src),
+  // This used to pin the exact markup
+  //
+  //   <span>Your clients <span class="ag-seg-count" id="ag_clientsCount"></span></span>
+  //
+  // with the literal space called out, because without it the count runs
+  // into the label and reads "Your clients12". The heading is a .fx-sec
+  // now: the label and the count are separate flex children with a gap
+  // between them, so the hazard the space guarded against cannot occur --
+  // there is no text node for them to share. What is still pinned is that
+  // the count is its own element beside the label rather than inside it.
+  //
+  // The count also had to leave .ag-seg-count. That class moved onto the
+  // Orders segment control, which now sits on a dark header, so its text
+  // went white -- and white on this screen's page ground is invisible.
+  const head = (/<div class="fx-sec">\s*<h2>Your clients<\/h2>([\s\S]{0,600}?)<\/div>/.exec(src) || [])[1] || '';
+  t.check(/id="ag_clientsCount"/.test(head),
+    'the list is named and counted -- and the count is its own element beside the label, not run into it');
+  t.check(!/ag-seg-count/.test(head),
+    'and not on the class that turned white when the segment control moved to a dark ground');
+  t.check(/\.fx-sec \.cnt\{[^}]*color:var\(--fx-ink-3\)/.test(src),
+    'it is a readable ink on the page ground');
+  t.check(/id="ag_addClientBtn"/.test(head), 'with an Add control beside it');
+  t.check(/\.fx-sec-add\{[^}]*min-height:44px/.test(src), 'sized 44px for a thumb');
+  t.check(/\.fx-sec-add\{[^}]*box-sizing:border-box/.test(src),
     'restoring border-box after all:unset, so 44 means 44');
-  t.check(/\.ag-section-action:focus-visible\{outline:/.test(src), 'with a visible focus ring');
+  t.check(/\.fx-sec-add:focus-visible\{outline:/.test(src), 'with a visible focus ring');
   t.check(/agentClients\.length \|\| ''/.test(code),
     'and an empty account shows no count rather than a zero');
 }

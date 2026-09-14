@@ -201,12 +201,9 @@
   /* An action that belongs to a section rather than to the page. Quiet
      enough not to compete with the primary button on whatever screen it
      lands on, still a 44px target. */
-  .ag-section-action{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
-    min-height:44px;padding:0 12px;margin:-10px -10px -10px 0;border-radius:11px;
-    font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent);}
-  .ag-section-action:hover{background:var(--accent-soft);}
-  .ag-section-action:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .ag-section-action .icon{width:15px;height:15px;}
+  /* .ag-section-action was the Add control beside the Clients heading and
+     nothing else; it is .fx-sec-add now, in the Field layer beside the
+     heading it belongs to. */
   /* Calling a client is the action this list exists to support -- an agent
      standing in front of a customer reaches for it far more often than
      anything else here. Icon-only so it never squeezes the name, and 44px
@@ -674,7 +671,11 @@
      order"). Completed orders: whether this order is settled with the shop
      or still owes a balance. Same slot, different meaning per status, each
      with its own color so the state reads before the text is even read. */
-  .ag-seg-count{margin-left:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;}
+  /* Scoped to the segment control it belongs to. Moving that control onto
+     the dark header made this white, and .ag-seg-count was ALSO the class
+     on the client count over on the Customers tab -- white on the page
+     ground, which is to say gone. */
+  .ag-seg-btn .ag-seg-count{margin-left:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;}
   .ag-seg-btn.active .ag-seg-count{color:var(--fx-ink-3);}
 
   /* The plain-ground twin of .ag-search-bar, which is styled for the dark
@@ -770,37 +771,51 @@
      where the promise "every request comes straight to you" is made, and
      deliberately plainer than it -- the card is an invitation to share, these
      are work waiting to be done. */
-  .ag-inquiry-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:12px 13px;margin-bottom:10px;}
+  .ag-inquiry-card{background:var(--fx-card);border-left:3px solid var(--fx-oxide);
+    border-radius:var(--fx-r-card);box-shadow:var(--fx-sh);padding:14px 15px;margin-bottom:10px;}
   .ag-inquiry-top{display:flex;align-items:flex-start;gap:10px;}
   .ag-inquiry-who{flex:1;min-width:0;}
-  .ag-inquiry-name{font-weight:700;font-size:14.5px;}
-  .ag-inquiry-meta{font-size:12px;color:var(--ink-soft);margin-top:1px;}
+  .ag-inquiry-name{font-weight:600;font-size:15px;letter-spacing:-.005em;}
+  .ag-inquiry-meta{font-size:13px;color:var(--fx-ink-3);margin-top:2px;}
   /* The one action worth taking from here. Sized for a thumb, since this is
      read on a phone with a customer waiting. */
-  .ag-inquiry-call{all:unset;flex-shrink:0;cursor:pointer;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;
-    display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:60px;padding:0 16px;border-radius:9px;}
-  .ag-inquiry-msg{margin-top:8px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
-  .ag-inquiry-msg.muted{color:var(--ink-soft);font-style:italic;}
-  .ag-inquiry-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;}
-  .ag-inquiry-phone{font-size:12.5px;color:var(--ink-soft);font-family:var(--font-money);}
+  .ag-inquiry-call{all:unset;box-sizing:border-box;flex-shrink:0;cursor:pointer;background:var(--fx-oxide);color:#fff;font-size:14px;font-weight:600;
+    display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:64px;padding:0 16px;border-radius:var(--fx-r-pill);}
+  .ag-inquiry-call:focus-visible{outline:2px solid var(--fx-ink);outline-offset:2px;}
+  .ag-inquiry-msg{margin-top:9px;font-size:14px;line-height:1.5;color:var(--fx-ink);white-space:pre-wrap;overflow-wrap:anywhere;}
+  .ag-inquiry-msg.muted{color:var(--fx-ink-3);font-style:italic;}
+  .ag-inquiry-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;}
+  .ag-inquiry-phone{font-size:13px;color:var(--fx-ink-3);font-family:var(--font-money);}
   /* How many still need a call. On the heading rather than the tab bar:
      the agent is already on this screen when it matters, and a nav badge
      would nag from everywhere else. */
-  .ag-inquiry-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;
-    margin-left:6px;border-radius:11px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;vertical-align:middle;}
+  .ag-inquiry-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;
+    border-radius:12px;background:var(--fx-oxide);color:#fff;font-size:13px;font-weight:700;}
   /* Handled requests stay put rather than vanishing -- a mis-tap on Done
      would otherwise lose a lead outright -- but recede so the outstanding
      ones above them read as the work. */
-  .ag-inquiry-card.handled{border-left-color:var(--line);opacity:.6;}
+  .ag-inquiry-card.handled{border-left-color:var(--fx-line);opacity:.6;}
   .ag-inquiry-done{all:unset;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
     min-height:44px;min-width:64px;padding:0 14px;border-radius:9px;border:1px solid var(--line);
     color:var(--ink-soft);font-size:12.5px;font-weight:700;}
   .ag-inquiry-done:hover{border-color:var(--ink-soft);color:var(--ink);}
-  .ag-catalogue-card{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:16px;}
-  .ag-catalogue-card .title{font-weight:800;font-size:15px;margin-bottom:3px;}
-  .ag-catalogue-card .sub{font-size:12.5px;opacity:.88;margin-bottom:12px;line-height:1.4;}
-  .ag-catalogue-card .btn{all:unset;display:inline-block;background:rgba(255,255,255,0.2);padding:9px 15px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;}
-  .ag-catalogue-link{background:rgba(255,255,255,0.16);border-radius:10px;padding:9px 12px;font-size:12px;font-family:var(--font-money);word-break:break-all;margin-bottom:10px;}
+  /* It was a red gradient panel -- the accent spent on a block of prose,
+     on a screen whose actual accent moment is the Call button beside a
+     client's name. The link is the thing to see here, so the link is what
+     gets the contrast. */
+  .ag-catalogue-card{background:var(--fx-card);border-radius:var(--fx-r-card);box-shadow:var(--fx-sh);padding:16px;}
+  .ag-catalogue-card .title{font-weight:700;font-size:16px;letter-spacing:-.01em;margin-bottom:4px;}
+  .ag-catalogue-card .sub{font-size:13.5px;color:var(--fx-ink-2);margin-bottom:13px;line-height:1.5;}
+  /* Tinted, not filled. Setting up a catalogue is done once; the filled
+     accent on this screen belongs to Call, which is the thing an agent
+     reaches for with somebody waiting. */
+  .ag-catalogue-card .btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;
+    min-height:44px;padding:0 18px;border-radius:var(--fx-r-pill);
+    background:var(--fx-oxide-tint);color:var(--fx-oxide-2);
+    font-size:14px;font-weight:600;cursor:pointer;}
+  .ag-catalogue-card .btn:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
+  .ag-catalogue-link{background:var(--fx-page);border-radius:12px;padding:11px 13px;font-size:13px;
+    font-family:var(--font-money);color:var(--fx-ink-2);word-break:break-all;margin-bottom:13px;}
   .ag-catalogue-setup .field{margin-bottom:10px;}
   .ag-catalogue-setup .field label{font-size:11.5px;font-weight:700;opacity:.85;display:block;margin-bottom:5px;}
   .ag-catalogue-setup .field input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:none;font-size:13.5px;font-family:inherit;}
@@ -1105,6 +1120,20 @@
   .fx-ord-v b{display:block;font-family:var(--font-money);font-variant-numeric:tabular-nums;
     font-size:16px;font-weight:600;letter-spacing:-.03em;}
   .fx-ord-v i{display:block;font-style:normal;font-size:12px;color:var(--fx-ink-3);margin-top:1px;}
+
+  /* ---- a tab's own header ---- */
+  .fx-page-hd{display:flex;align-items:center;gap:12px;padding:18px 16px 2px;}
+  .fx-page-hd h1{flex:1;min-width:0;font-size:26px;font-weight:700;letter-spacing:-.025em;margin:0;}
+  .fx-av-sm{all:unset;box-sizing:border-box;cursor:pointer;width:42px;height:42px;flex:none;
+    border-radius:var(--fx-r-pill);background:var(--fx-nero);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+  .fx-av-sm:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
+  .fx-sec .cnt{font-size:15px;font-weight:500;color:var(--fx-ink-3);font-variant-numeric:tabular-nums;}
+  .fx-sec-add{all:unset;box-sizing:border-box;cursor:pointer;margin-left:auto;display:flex;
+    align-items:center;gap:5px;min-height:44px;padding:0 12px;margin-right:-12px;border-radius:12px;
+    font-size:14px;font-weight:600;color:var(--fx-oxide-2);}
+  .fx-sec-add .icon{width:16px;height:16px;}
+  .fx-sec-add:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:-2px;}
 
   /* ---- who he is, and what the shop owes him ---- */
   .fx-who{display:flex;align-items:center;gap:13px;}
@@ -1749,28 +1778,41 @@
   </div>
 
   <!-- CUSTOMERS (main tab) -->
-  <div id="ag_clientsListView" class="ag-pad-top" style="display:none;">
-    <div class="ag-tab-head"><h1>Clients</h1></div>
-    <div id="ag_catalogueWrap"></div>
-    <div id="ag_inquiriesWrap"></div>
+  <div id="ag_clientsListView" class="fx" style="display:none;">
+    <!-- The avatar is here as well as on Home. It was a button floating
+         over every screen; when that went, Account became reachable from
+         exactly one place, and this is the other screen an agent sits on
+         between calls. -->
+    <div class="fx-page-hd">
+      <h1>Clients</h1>
+      <button type="button" class="fx-av-sm" id="ag_clients_avatar_btn" aria-label="Your account"></button>
+    </div>
 
-    <!-- The list had no heading of its own: it just began, under whatever
-         the catalogue banner and the requests above it had left. -->
-    <div class="ag-section-title">
-      <span>Your clients <span class="ag-seg-count" id="ag_clientsCount"></span></span>
-      <button type="button" class="ag-section-action" id="ag_addClientBtn">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add
-      </button>
+    <div class="fx-sheet" style="padding-bottom:26px;">
+      <div id="ag_catalogueWrap"></div>
+      <div id="ag_inquiriesWrap"></div>
+
+      <!-- The list had no heading of its own: it just began, under whatever
+           the catalogue banner and the requests above it had left. -->
+      <div>
+        <div class="fx-sec">
+          <h2>Your clients</h2>
+          <span class="cnt" id="ag_clientsCount"></span>
+          <button type="button" class="fx-sec-add" id="ag_addClientBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </button>
+        </div>
+        <!-- Hidden until the list is long enough to need it -- a search box
+             above three names is furniture. -->
+        <div class="ag-filter-bar" id="ag_clientSearchWrap" style="display:none;">
+          <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+          <input type="text" id="ag_clientListSearch" placeholder="Search by name or phone" autocomplete="off">
+          <button type="button" class="ag-search-clear" id="ag_clientListSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div id="ag_clientsListWrap"></div>
+      </div>
     </div>
-    <!-- Hidden until the list is long enough to need it -- a search box
-         above three names is furniture. -->
-    <div class="ag-filter-bar" id="ag_clientSearchWrap" style="display:none;">
-      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-      <input type="text" id="ag_clientListSearch" placeholder="Search by name or phone" autocomplete="off">
-      <button type="button" class="ag-search-clear" id="ag_clientListSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div id="ag_clientsListWrap"></div>
   </div>
 
   <!-- STANDING. Where he is against the other agents, and the next
@@ -3106,9 +3148,10 @@ function showOnlyView(id){
 
 function switchTab(tab){
   showOnlyView(TAB_VIEW[tab] || ('ag_'+tab+'View'));
-  // The button floats over every screen, so this is the one choke point
-  // that is guaranteed to run whichever screen an agent lands on first.
+  // One choke point that is guaranteed to run whichever screen an agent
+  // lands on first, for both of the places Account is reached from.
   document.getElementById('ag_home_avatar_btn').textContent = agentInitials();
+  document.getElementById('ag_clients_avatar_btn').textContent = agentInitials();
   document.querySelectorAll('.fx-tab').forEach(b=>{
     const on = b.dataset.tab === tab;
     b.classList.toggle('active', on);
@@ -3137,6 +3180,7 @@ document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
   if(btn) switchTab(btn.dataset.tab);
 });
 document.getElementById('ag_home_avatar_btn').addEventListener('click', ()=> switchTab('account'));
+document.getElementById('ag_clients_avatar_btn').addEventListener('click', ()=> switchTab('account'));
 document.getElementById('ag_account_back_btn').addEventListener('click', ()=> switchTab(TABS.includes(lastMainTab) ? lastMainTab : 'home'));
 
 function updateCartBadge(){
@@ -4771,7 +4815,7 @@ function renderInquiries(){
   const { open, list } = inquiriesForDisplay();
   if(!list.length){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = `
-    <div class="ag-section-title">Requests from your catalogue${open.length? ` <span class="ag-inquiry-count">${open.length}</span>` : ''}</div>
+    <div class="fx-sec"><h2>Requests from your catalogue</h2>${open.length? `<span class="ag-inquiry-count">${open.length}</span>` : ''}</div>
     ${list.map(inq=>{
       const product = inquiryProductLabel(inq);
       const phone = String(inq.customer_phone||'').replace(/[^\d+]/g,'');
