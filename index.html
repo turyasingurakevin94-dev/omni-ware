@@ -5196,6 +5196,15 @@
   .cf-portal-state b{font-weight:700;}
   .cf-portal-meta{font-size:12px;line-height:1.5;color:var(--ink-soft);}
   .cf-portal-acts{display:flex;flex-wrap:wrap;gap:8px;}
+  /* The address, beside the figures. A PIN with nowhere to type it is
+     not a login, and the shop should never have to ask anybody what the
+     portal is called. It truncates properly -- all three declarations,
+     min-width:0 so it gives way inside the flex row instead of shoving
+     the button out of the card, and the whole address on the title so a
+     pointer can still read it. */
+  .cf-portal-link{display:flex;align-items:center;gap:8px;width:100%;}
+  .cf-portal-url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
   /* The PIN itself. Monospaced and spaced out because it is going to be
      read aloud down a telephone, and 7111 read off a proportional font
      at 13px is how a customer ends up typing 7ttt. */
@@ -56130,6 +56139,28 @@ function cfShowPortal(c){
   const a = clientAccountsByCustomer && clientAccountsByCustomer[c.id];
   const pin = cfPinShown;
 
+  /* Built from where this app is being served, not from a domain typed
+     in here. The portal sits beside index.html on the same host, so a
+     shop on a different domain -- or somebody running this off a laptop
+     -- gets the address that actually works rather than one that is
+     right for somebody else. The shop id is not optional: without it the
+     portal does not know which shop it is for, and a WRONG one is worse
+     than a missing one, because `start` deliberately answers the same
+     way whether or not a number has an account. The customer would be
+     told a PIN was on its way and then find that no PIN ever works. */
+  const portalUrl = location.origin
+    + location.pathname.replace(/[^/]*$/, '')
+    + 'client.html?s=' + encodeURIComponent(currentShopId || '');
+  const linkRow = `
+    <div class="cf-portal">
+      <div class="cf-portal-meta">Where they sign in. Send this with the figures &mdash; the
+        figures alone are no use without it.</div>
+      <div class="cf-portal-link">
+        <span class="cf-portal-url" title="${esc(portalUrl)}">${esc(portalUrl)}</span>
+        <button type="button" class="cf-act" id="c_portal_copylink">Copy the link</button>
+      </div>
+    </div>`;
+
   const pinCard = pin ? `
     <div class="cf-pin">
       <div class="cf-pin-figs">${esc(pin.pin)}</div>
@@ -56143,7 +56174,7 @@ function cfShowPortal(c){
     </div>` : '';
 
   if(!a){
-    el.innerHTML = pinCard || `
+    el.innerHTML = pinCard ? (pinCard + linkRow) : `
       <div class="cf-portal">
         <div class="cf-portal-state">No portal account.</div>
         <div class="cf-portal-meta">Opening one lets ${esc(c.name||'them')} sign in and see their own
@@ -56197,7 +56228,7 @@ function cfShowPortal(c){
           ${a.devices ? '<button type="button" class="cf-act" id="c_portal_revoke">Sign out their devices</button>' : ''}
           <button type="button" class="cf-act" id="c_portal_${suspended?'restore':'suspend'}">${suspended?'Let them back in':'Suspend'}</button>
         </div>
-      </div>`;
+      </div>` + linkRow;
   }
 
   const copy = document.getElementById('c_pin_copy');
@@ -56210,6 +56241,17 @@ function cfShowPortal(c){
          are on screen at 34px to be read out, which is how they were
          always going to reach the customer anyway. */
       toast('Could not copy — read the figures out instead', 4000);
+    }
+  });
+  const copyLink = document.getElementById('c_portal_copylink');
+  if(copyLink) copyLink.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(portalUrl);
+      toast('Link copied — send it with the figures');
+    }catch(e){
+      /* Same tolerance as the PIN copy above: the address is on screen
+         and can be read off it. Saying nothing would be the failure. */
+      toast('Could not copy — the address is on screen to read off', 4000);
     }
   });
   const wire = (id, act, confirmMsg) => {

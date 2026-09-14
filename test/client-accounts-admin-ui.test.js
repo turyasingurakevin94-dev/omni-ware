@@ -189,6 +189,11 @@ const src = read('index.html');
         clientAccountsByCustomer: account ? { C001: account } : {},
         cfPinShown: pin || null,
         cfPortalAct: () => {}, toast: () => {}, navigator: {},
+        /* The block builds the portal address out of where the admin app
+           is being served from, so the scope has to supply a location to
+           be served from. A shop on its own domain gets its own link. */
+        location: { origin: 'https://omni-ware.vercel.app', pathname: '/index.html' },
+        currentShopId: 'SHOP-7',
       },
       ['cfShowPortal'],
     );
@@ -251,6 +256,44 @@ const src = read('index.html');
   t.check(/cf-pin-figs">4821</.test(withPin),
     'the figures render as the four digits, selectable as one number');
   t.check(/only time they will be shown/.test(withPin), 'under the warning that says so');
+
+  /* ---------- the address, which the figures are useless without ------ */
+  /*
+   * Four figures and no link is not a login. The shop had no way to
+   * reach the portal from inside the app at all -- the address existed
+   * only in a chat message -- and a shop that has to ask what its own
+   * portal is called will send the wrong thing or nothing.
+   *
+   * The shop id matters more than it looks. `start` answers identically
+   * whether or not a number has an account, on purpose: a portal that
+   * says "no account on that number" tells a stranger who your customers
+   * are. The cost of that is that a link carrying the WRONG shop id
+   * behaves exactly like a working one -- the customer is told a PIN is
+   * coming and then finds that no PIN ever works, with nothing anywhere
+   * naming the cause. So the link is never hand-typed.
+   */
+  const withAccount = render({ ...base });
+  t.check(/client\.html\?s=SHOP-7/.test(withAccount),
+    'an open account shows the address to sign in at, carrying the shop id');
+  t.check(/https:\/\/omni-ware\.vercel\.app\/client\.html/.test(withAccount),
+    'built from where this app is served, not from a domain typed into the source');
+  t.check(/client\.html\?s=SHOP-7/.test(withPin),
+    'and it is there at the moment the figures are, which is when it is needed');
+  t.check(!/client\.html/.test(none),
+    'but not on a customer with no account, who has nothing to sign in with');
+
+  // Long addresses are the normal case on a preview deployment. The URL
+  // gives way; the button does not get pushed out of the card.
+  const urlSpan = withAccount.slice(withAccount.indexOf('cf-portal-url'));
+  t.check(/title="[^"]*client\.html\?s=SHOP-7[^"]*"/.test(withAccount),
+    'the whole address is on the title, so truncating it never hides it');
+  t.check(/id="c_portal_copylink"/.test(withAccount) && urlSpan.length > 0,
+    'and there is a button to copy it rather than a link to read out down a phone');
+
+  const css = src.slice(src.indexOf('.cf-portal-url{'), src.indexOf('.cf-portal-url{') + 260);
+  ['overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap', 'min-width:0'].forEach((d) => {
+    t.check(css.includes(d), `the address truncates properly — ${d}`);
+  });
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -701,7 +701,15 @@ Deno.serve(async (req) => {
 
       const { data: account } = await admin
         .from("client_accounts")
-        .select("customer_id, status, pin_expires_at")
+        // pin_hash and pin_attempts are read below, so they are asked for
+        // here. PostgREST returns the columns you named and nothing else:
+        // a column left out of this list is not an error anywhere, it is
+        // `undefined` at the point of use. Leaving these two out made
+        // `live` undefined and `locked` false on every call, so the guard
+        // below inverted -- a PIN the shop had just read out to a customer
+        // was replaced the instant that customer tapped Continue, and the
+        // figures they were holding were dead before they typed them.
+        .select("customer_id, status, pin_hash, pin_expires_at, pin_attempts")
         .eq("shop_id", shopId).eq("phone", phone).maybeSingle();
 
       // Nothing below changes the shape of the reply. Not found, suspended

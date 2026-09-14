@@ -61,10 +61,10 @@ function makeClient(db, opts) {
   };
 }
 function builder(db, table) {
-  const st = { filters: [], head: false, single: false, limit: null, op: 'select', payload: null };
+  const st = { filters: [], head: false, single: false, limit: null, op: 'select', payload: null, cols: null };
   const rows = () => (db[table] || []).filter((r) => st.filters.every((f) => f(r)));
   const b = {
-    select(_cols, o) { if (o && o.head) st.head = true; return b; },
+    select(cols, o) { if (o && o.head) st.head = true; else st.cols = cols; return b; },
     eq(c, v) { st.filters.push((r) => String(r[c]) === String(v)); return b; },
     is(c, v) { st.filters.push((r) => (r[c] === undefined ? null : r[c]) === v); return b; },
     gte(c, v) { st.filters.push((r) => String(r[c] ?? '') >= String(v)); return b; },
@@ -77,18 +77,32 @@ function builder(db, table) {
     insert(p) { st.op = 'insert'; st.payload = p; return b; },
     then(res, rej) { return Promise.resolve(run()).then(res, rej); },
   };
+  /* PostgREST hands back the columns you ASKED FOR and nothing else, and
+     a stub that hands back the whole row hides the one mistake this
+     shape invites: selecting three columns and then reading a fourth.
+     In the stub that reads fine; in production it is undefined, silently,
+     with no error anywhere. That is exactly how `start` came to re-mint a
+     live PIN -- it selected customer_id, status and pin_expires_at, then
+     tested account.pin_hash. So the stub projects. */
+  function project(row) {
+    if (!row || !st.cols || /\*/.test(st.cols)) return row;
+    const keep = st.cols.split(',').map((c) => c.trim()).filter(Boolean);
+    const out = {};
+    for (const k of keep) if (k in row) out[k] = row[k];
+    return out;
+  }
   function run() {
-    if (st.op === 'update') { rows().forEach((r) => Object.assign(r, st.payload)); return { data: rows(), error: null }; }
+    if (st.op === 'update') { rows().forEach((r) => Object.assign(r, st.payload)); return { data: rows().map(project), error: null }; }
     if (st.op === 'insert') {
       const row = Object.assign({ id: (db[table] || []).length + 9000 }, st.payload);
       (db[table] = db[table] || []).push(row);
-      return { data: st.single ? row : [row], error: null };
+      return { data: st.single ? project(row) : [project(row)], error: null };
     }
     let out = rows();
     if (st.limit != null) out = out.slice(0, st.limit);
     if (st.head) return { data: null, count: out.length, error: null };
-    if (st.single) return { data: out[0] || null, error: null };
-    return { data: out, count: out.length, error: null };
+    if (st.single) return { data: out[0] ? project(out[0]) : null, error: null };
+    return { data: out.map(project), count: out.length, error: null };
   }
   return b;
 }
@@ -269,14 +283,35 @@ async function gather() {
   await say('submit', await post(submit, { ...T, items: [{ productId: 'P1', variantIdx: null, qty: 140 }], deliverTo: 'Kyanja' }));
   await say('accounts.list', await post(accounts, { shopId: SHOP, action: 'list' }, true));
   await say('portal.signout', await post(portal, { ...T, action: 'signout' }));
-  return { out, db, pin, pin2 };
+
+  /* THE ORDER A REAL SIGN-IN HAPPENS IN, on a shop of its own.
+     Above, the shop reissues AFTER the customer has already tapped
+     Continue, and that is the one ordering which cannot catch what this
+     scenario exists for. In a shop it goes the other way round: an admin
+     opens the account, reads the PIN out over the counter or the phone,
+     and the customer types their number afterwards. If `start` mints a
+     second PIN at that moment, the figures the customer is holding are
+     already dead and no customer can ever sign in. That is not a corner:
+     it is every sign-in there will ever be. */
+  const db2 = freshDb();
+  const portal2 = loadHandler('supabase/functions/client-portal/index.ts', db2);
+  const accounts2 = loadHandler('supabase/functions/client-accounts/index.ts', db2, { isAdmin: true });
+  const rowOf = () => db2.client_accounts.find((a) => a.customer_id === 'C1');
+  const issued = await (await post(accounts2, { shopId: SHOP, action: 'reissue', customerId: 'C1' }, true)).json();
+  const hashAtCounter = rowOf().pin_hash;
+  await post(portal2, { shopId: SHOP, action: 'start', phone: MY_PHONE });
+  const hashAfterTap = rowOf().pin_hash;
+  const signedIn = await (await post(portal2,
+    { shopId: SHOP, action: 'verify', phone: MY_PHONE, pin: issued.pin, deviceId: 'd9' })).json();
+
+  return { out, db, pin, pin2, counter: { issued, hashAtCounter, hashAfterTap, signedIn } };
 }
 
 (async () => {
   let gathered;
   try { gathered = await gather(); }
   catch (e) { t.fail(`the fixture shop could not be driven: ${e.message}`); process.exit(t.done() ? 1 : 0); }
-  const { out, db, pin2 } = gathered;
+  const { out, db, pin2, counter } = gathered;
 
   /* ---------- 0. the walk is walking something -------------------------- */
   t.check(out.length >= 16, `every customer-facing reply was gathered (${out.length})`);
@@ -348,6 +383,14 @@ async function gather() {
   const acct = db.client_accounts.find(a => a.customer_id === 'C1');
   t.check(acct && acct.pin_hash === null,
     'and a spent PIN is cleared from the row, not left usable');
+
+  /* ---------- 4b. the PIN the shop read out is the one that works ------- */
+  t.check(!!counter.issued.pin, `the shop issued a PIN at the counter (${counter.issued.pin ? 'yes' : 'no'})`);
+  t.check(!!counter.hashAtCounter, 'and the row is holding it');
+  t.check(counter.hashAfterTap === counter.hashAtCounter,
+    'the customer tapping Continue does not replace it');
+  t.check(!!counter.signedIn.token,
+    `so the PIN the customer was given signs them in (${counter.signedIn.token ? 'signed in' : counter.signedIn.error})`);
 
   /* The point of all of it: the cost really is in the fixture, and the
      price really is computed from it. A walk over a shop with no cost in
