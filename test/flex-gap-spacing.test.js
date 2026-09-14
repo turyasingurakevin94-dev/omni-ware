@@ -336,10 +336,20 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
  * verified in the browser.
  */
 {
+  // Two things moved under this check, and neither changes what it is
+  // for. The two quote TABLES are lists of rows now -- four columns did
+  // not fit across a 390px phone -- so the CSS that supplies the margin
+  // is selected through .fx-qlist rather than .ag-receipt-table. And the
+  // agent's own row, which clips its name to one line, carries a title
+  // attribute with the full name, so the opening tag is no longer bare.
+  //
+  // The hazard is unchanged: two sibling spans in one text flow, with a
+  // 6px margin doing the separating and nothing in the text to match it.
+  // Both call sites are still found, and both still carry the real space.
   const agent = read('agent.html');
-  const hits = [...agent.matchAll(/<span class="ag-receipt-name">\$\{esc\(it\.name\)\}<\/span>\$\{it\.variantLabel \? (.)/g)]
+  const hits = [...agent.matchAll(/<span class="ag-receipt-name"[^>]*>\$\{esc\(it\.name\)\}<\/span>\$\{it\.variantLabel \? (.)/g)]
     .map(m => m[1]);
-  t.check(hits.length === 2, `both receipt tables are found (${hits.length})`);
+  t.check(hits.length === 2, `both quote views are found (${hits.length})`);
   t.check(hits.every(c => c === '`'), 'each opens its conditional with a template literal, as expected');
 
   const spaced = [...agent.matchAll(/<\/span>\$\{it\.variantLabel \? ` <span class="ag-grid-variant">/g)].length;
@@ -348,8 +358,10 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
 
   // And the margin that hid it is still there, which is why the space has
   // to be: remove the margin and this would be a different conversation.
-  t.check(/\.ag-receipt-table \.ag-grid-variant\{[^}]*margin:0 0 0 6px/.test(agent),
+  t.check(/\.fx-qlist \.ag-grid-variant\{[^}]*margin:0 0 0 6px/.test(agent),
     'the variant is still separated visually by a margin, with nothing in the text to match it');
+  t.check(!/\.ag-receipt-table/.test(agent),
+    'and the table it used to be selected through is gone, not merely bypassed');
 }
 
 process.exit(t.done() ? 1 : 0);

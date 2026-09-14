@@ -225,41 +225,75 @@
   .ag-cart-row-name{font-size:13.5px;font-weight:700;letter-spacing:-0.005em;}
   .ag-cart-row-meta{font-size:12px;color:var(--ink-soft);}
   .ag-cart-row-price{font-family:var(--font-money);font-weight:800;font-size:13.5px;letter-spacing:-0.01em;white-space:nowrap;}
-  .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
-  /* Quote items -- a ledger/receipt table (Qty / Particulars / Rate)
-     rather than cards, so the on-screen quote already reads like the
-     paper invoice books it's replacing. Every row stays on one line --
-     no column is ever allowed to wrap -- and the table sizes to its own
-     content instead of a fixed percentage split; a name+variant too long
-     for the card just pushes the table wider than .ag-receipt-scroll,
-     which scrolls horizontally instead of the row wrapping. */
-  .ag-receipt-scroll{overflow-x:auto;}
-  .ag-receipt-table{border-collapse:collapse;}
-  .ag-receipt-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);text-align:left;padding:0 14px 8px 0;border-bottom:2px solid var(--line);white-space:nowrap;}
-  .ag-receipt-table td{padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap;}
-  .ag-receipt-table tbody tr:last-child td{border-bottom:1px solid var(--line);}
-  .ag-receipt-table th.ag-receipt-remove, .ag-receipt-table td.ag-receipt-remove{padding-right:0;}
-  .ag-receipt-qty{font-size:11.5px;color:var(--ink-soft);}
-  .ag-receipt-name{font-size:13px;font-weight:700;letter-spacing:-0.005em;}
+  /* Quote items. This was a ledger table -- Qty / Particulars / Rate --
+     chosen so the on-screen quote read like the paper invoice books it
+     replaces, with every row kept on one line and the table sizing to its
+     own content: a name too long for the card pushed the table wider than
+     .ag-receipt-scroll, which scrolled sideways rather than wrapping.
+     On a 390px phone it always was wider, so the box always scrolled, and
+     what sat past the right edge was the RATE column -- the one field on
+     this screen an agent actually edits, with its heading clipped
+     mid-word above it.
+
+     Both views are lists of rows now. A row is as wide as the phone and
+     wraps where it chooses to, so nothing goes past the edge; each line
+     also carries its own amount, which the table left the reader to work
+     out from a rate and a quantity. */
+  .fx-qlist{display:flex;flex-direction:column;}
+  .fx-qr{padding:12px 0;border-top:1px solid var(--fx-line);}
+  .fx-qr:first-child{border-top:0;padding-top:2px;}
+  .fx-qr-top{display:flex;align-items:flex-start;gap:8px;}
+  .fx-qr-bot{display:flex;align-items:center;gap:10px;margin-top:5px;}
+  .fx-qr-m{flex:1;min-width:0;font-size:13px;color:var(--fx-ink-3);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The rate keeps its own slot at the end of the line rather than a
+     column, so a long product name above it cannot squeeze it. */
+  .fx-qr-rate{display:flex;align-items:baseline;gap:5px;flex:none;}
+  .fx-qr-rate .u{font-size:12px;color:var(--fx-ink-3);}
+  .fx-qr-top > .ag-receipt-name{flex:0 1 auto;min-width:0;}
+  .fx-qr-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;margin-left:auto;
+    width:36px;height:36px;margin-top:-6px;margin-right:-8px;margin-bottom:-6px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;color:var(--fx-ink-3);}
+  .fx-qr-x .icon{width:17px;height:17px;}
+  .fx-qr-x:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:-2px;}
+  /* The customer's copy: a photograph where there is one, the product's
+     own CATEGORY mark where there is not. This is the screen somebody is
+     being asked to agree to something on, which is where a picture earns
+     its place most -- and where a name WRAPS instead of clipping, because
+     the name is the thing being bought. */
+  .fx-qr.doc{display:flex;align-items:flex-start;gap:12px;}
+  .fx-qr-db{flex:1;min-width:0;}
+  /* On the document the quantity gets its own line under the name and the
+     variant, which sit together. In the agent's editing view .fx-qr-m is a
+     flex child sharing a line with the rate field, so this is the one
+     place it has to be told to be a block. */
+  .fx-qr.doc .fx-qr-m{display:block;margin-top:3px;white-space:normal;}
+  .fx-qr.doc .ag-receipt-name{white-space:normal;}
+  .fx-qr-amt{flex:none;font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:600;letter-spacing:-.03em;}
+  .fx-qtot{display:flex;align-items:baseline;gap:10px;margin-top:4px;padding-top:13px;
+    border-top:2px solid var(--fx-ink);font-size:15px;font-weight:600;}
+  .fx-qtot b{margin-left:auto;font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:19px;font-weight:700;letter-spacing:-.03em;}
+  .ag-receipt-name{font-size:15px;font-weight:600;letter-spacing:-.005em;line-height:1.3;
+    display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* Inline next to the name rather than the block-level pill it is
      everywhere else, specifically so Particulars stays one line. */
-  .ag-receipt-table .ag-grid-variant{display:inline-block;margin:0 0 0 6px;vertical-align:middle;}
-  .ag-receipt-table th.ag-receipt-rate,
-  .ag-receipt-table th.ag-receipt-amount,
-  .ag-receipt-table td.ag-receipt-rate,
-  .ag-receipt-table td.ag-receipt-amount{text-align:right;}
-  .ag-receipt-rate,.ag-receipt-amount{font-family:var(--font-money);font-weight:700;font-size:12px;white-space:nowrap;}
-  .ag-receipt-remove{padding:10px 0 10px 6px;}
+  /* The name is its own block, so the variant follows on the line below
+     rather than beside it -- but the margin, and the real space in the
+     markup that has to match it, both stay: the two are siblings in one
+     text flow and "Roofing sheetGauge 30" is what happens without them. */
+  .fx-qlist .ag-grid-variant{display:inline-block;margin:0 0 0 6px;vertical-align:middle;}
   /* The rate is the one number on a quote line the agent actually chose --
      everything else here is read-only. Styled to look like plain text
      until it's touched, so it doesn't read as a form buried in a receipt. */
-  .ag-rate-input{all:unset;box-sizing:border-box;width:84px;text-align:right;font-family:var(--font-money);font-weight:700;font-size:12px;color:var(--ink);padding:3px 5px;border-radius:6px;}
-  .ag-rate-input:hover{background:var(--accent-soft);}
-  .ag-rate-input:focus{background:var(--accent-soft);box-shadow:0 0 0 1.5px var(--accent);}
+  .ag-rate-input{all:unset;box-sizing:border-box;width:94px;text-align:right;font-family:var(--font-money);font-variant-numeric:tabular-nums;font-weight:600;font-size:16px;letter-spacing:-.03em;color:var(--fx-ink);padding:5px 8px;border-radius:9px;background:var(--fx-page);}
+  .ag-rate-input:hover{background:var(--fx-oxide-tint);}
+  .ag-rate-input:focus{background:var(--fx-oxide-tint);box-shadow:0 0 0 1.5px var(--fx-oxide);}
   .ag-rate-input.zero-margin{color:var(--danger);}
-  .ag-margin-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-bg);padding:2.5px 7px 2.5px 6px;border-radius:20px;margin-left:6px;}
-  .ag-margin-flag .icon{width:10px;height:10px;}
+  .ag-margin-flag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--danger);background:var(--danger-bg);padding:3px 9px;border-radius:var(--fx-r-pill);margin-top:7px;}
+  .ag-margin-flag .icon{width:12px;height:12px;}
   /* Zero margin is a choice; below the floor is money out of the agent's
      own pocket. Same family of colour so it still reads as one kind of
      warning, filled rather than tinted so the heavier one is the one seen
@@ -268,15 +302,15 @@
   .ag-rate-input.below-floor{color:#fff;background:var(--danger);}
   .ag-rate-input.below-floor:hover,
   .ag-rate-input.below-floor:focus{background:var(--danger);box-shadow:0 0 0 1.5px var(--danger);}
-  .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
-  .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;}
-  .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:14px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
+  /* The total is .fx-qtot now -- it was a <tfoot> row whose label was
+     11px uppercase on 0.04em tracking, on the document a customer reads. */
 
   /* "Your view" (editable, has margin) vs "Client view" (what actually
      gets downloaded -- an Amount column back, no profit anywhere). */
-  .ag-view-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:14px;}
-  .ag-view-toggle button{all:unset;box-sizing:border-box;flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer;color:var(--ink-soft);min-height:44px;display:flex;align-items:center;justify-content:center;}
-  .ag-view-toggle button.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .ag-view-toggle{display:flex;background:var(--fx-page);border-radius:14px;padding:4px;gap:4px;margin-bottom:14px;}
+  .ag-view-toggle button{all:unset;box-sizing:border-box;flex:1;text-align:center;font-size:14px;font-weight:600;padding:8px;border-radius:10px;cursor:pointer;color:var(--fx-ink-2);min-height:44px;display:flex;align-items:center;justify-content:center;}
+  .ag-view-toggle button.active{background:var(--fx-card);color:var(--fx-ink);box-shadow:0 1px 3px rgba(18,22,28,.1);}
+  .ag-view-toggle button:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:-2px;}
   .ag-quote-summary{display:flex;gap:22px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
   .ag-quote-stat .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:3px;}
   .ag-quote-stat .val{font-family:var(--font-money);font-size:15px;font-weight:800;color:var(--accent-dark);}
@@ -1934,20 +1968,14 @@
           <button type="button" id="ag_quoteview_client_btn" data-view="client">Client view</button>
         </div>
 
+        <!-- It was a four-column table inside an overflow-x:auto box, on a
+             390px phone. The columns did not fit, so the box scrolled
+             sideways and the RATE heading was clipped mid-word -- above
+             the one field on this screen an agent actually edits. Rows
+             do not have that problem: a row is as wide as the phone and
+             wraps where it chooses to. -->
         <div id="ag_quoteview_yours">
-          <div class="ag-receipt-scroll">
-            <table class="ag-receipt-table">
-              <thead>
-                <tr>
-                  <th class="ag-receipt-qty">Qty</th>
-                  <th>Particulars</th>
-                  <th class="ag-receipt-rate">Rate</th>
-                  <th class="ag-receipt-remove"></th>
-                </tr>
-              </thead>
-              <tbody id="ag_cartWrap"></tbody>
-            </table>
-          </div>
+          <div class="fx-qlist" id="ag_cartWrap"></div>
           <!-- The payoff, in the same dark as the earnings hero and the add
                sheet: what the customer pays, and under it, larger and in
                the good colour, what the order leaves him. -->
@@ -1958,25 +1986,8 @@
         </div>
 
         <div id="ag_quoteview_client" style="display:none;">
-          <div class="ag-receipt-scroll">
-            <table class="ag-receipt-table">
-              <thead>
-                <tr>
-                  <th class="ag-receipt-qty">Qty</th>
-                  <th>Particulars</th>
-                  <th class="ag-receipt-rate">Rate</th>
-                  <th class="ag-receipt-amount">Amount</th>
-                </tr>
-              </thead>
-              <tbody id="ag_cartClientWrap"></tbody>
-              <tfoot>
-                <tr class="ag-receipt-total-row">
-                  <td colspan="3" class="ag-receipt-total-label">Total</td>
-                  <td class="ag-receipt-total-value" id="ag_cartClientTotalValue">UGX 0</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <div class="fx-qlist" id="ag_cartClientWrap"></div>
+          <div class="fx-qtot"><span>Total</span><b id="ag_cartClientTotalValue">UGX 0</b></div>
           <button type="button" class="btn btn-accent btn-block" id="ag_download_receipt_btn" style="margin-top:14px;">Download receipt</button>
         </div>
       </div>
@@ -6655,16 +6666,24 @@ function renderCart(){
     // agent can still add an item without ever changing it. This is the
     // one place that gets caught, since every line ends up here before
     // it can be submitted.
+    // The line's own amount is on the row. The table carried a rate and a
+    // quantity and left the reader to multiply them, and the only total
+    // anywhere was the one at the foot of the whole order.
     return `
-    <tr>
-      <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
-      <td>
-        <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
-        ${cartMarginFlagHTML(f.margin)}
-      </td>
-      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}${f.margin.level==='loss'?' below-floor':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any"></td>
-      <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
-    </tr>`;
+    <div class="fx-qr">
+      <div class="fx-qr-top">
+        <span class="ag-receipt-name" title="${esc(it.name)}">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+        <button type="button" class="fx-qr-x" data-idx="${i}" title="Remove" aria-label="Remove ${esc(it.name)}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="fx-qr-bot">
+        <span class="fx-qr-m">${esc(f.displayQty)} ${esc(f.displayUnit)} &middot; ${fmtNum(f.amount)}</span>
+        <span class="fx-qr-rate">
+          <input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}${f.margin.level==='loss'?' below-floor':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any">
+          <span class="u">/${esc(f.displayUnit || 'each')}</span>
+        </span>
+      </div>
+      ${cartMarginFlagHTML(f.margin)}
+    </div>`;
   }).join('');
   document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
   // The pinned bar shows the same figure, set from the same line, so the
@@ -6672,7 +6691,7 @@ function renderCart(){
   const bar = document.getElementById('ag_submitBarTotal');
   if(bar) bar.textContent = fmtUGX(total);
   document.getElementById('ag_cartProfitValue').textContent = fmtUGX(profit);
-  wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
+  wrap.querySelectorAll('.fx-qr-x').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
       updateCartBadge();
@@ -6746,13 +6765,23 @@ function renderClientReceiptTable(){
   wrap.innerHTML = cart.map(it=>{
     const f = cartLineFigures(it);
     total += f.amount;
+    // A photograph where the catalogue has one, the product's own CATEGORY
+    // mark at the same size where it does not -- a list where some rows
+    // carry a picture and the rest carry an empty grey box reads as broken
+    // software, and this is the one screen a customer is asked to agree to
+    // something on.
+    const ce = catalogEntry(it.productId, it.variantIdx);
     return `
-    <tr>
-      <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
-      <td><span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}</td>
-      <td class="ag-receipt-rate">${fmtAmount(f.rate)}</td>
-      <td class="ag-receipt-amount">${fmtAmount(f.amount)}</td>
-    </tr>`;
+    <div class="fx-qr doc">
+      <span class="fx-th">${ce && ce.image
+        ? `<img src="${esc(ce.image)}" alt="" loading="lazy">`
+        : (ce ? categoryIconSVG(itemCategory(ce)) : ICON_PLACEHOLDER)}</span>
+      <span class="fx-qr-db">
+        <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+        <span class="fx-qr-m">${esc(f.displayQty)} ${esc(f.displayUnit)} at ${fmtAmount(f.rate)}</span>
+      </span>
+      <span class="fx-qr-amt">${fmtAmount(f.amount)}</span>
+    </div>`;
   }).join('');
   document.getElementById('ag_cartClientTotalValue').textContent = fmtUGX(total);
 }
