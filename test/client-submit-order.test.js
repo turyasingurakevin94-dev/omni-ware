@@ -202,4 +202,43 @@ const handler = noComments.slice(noComments.indexOf('Deno.serve('));
   t.check(/if \(!items\.length\)/.test(noComments), 'and an empty basket is not an order');
 }
 
+/* ---------- 9. the shop can tell, and goes on being able to ----------- */
+/*
+ * originPortal was written by this function and read by nobody. The
+ * commit that added it said it "marks it for the shop's eyes"; it did
+ * not, because nothing in index.html rendered it -- and worse, the
+ * client sync mapping rebuilds a quote's payload from NAMED keys, so the
+ * flag was being stripped the first time an admin touched the order.
+ * That is order 151's lesson, which this codebase has now learned three
+ * times: once for the agent fields, once for the WhatsApp ones, and once
+ * here.
+ */
+{
+  const app = read('index.html');
+  t.check(/originPortal: true,/.test(noComments), 'a portal order is marked when it is written');
+
+  /* The preservation contract. The agent group, the WhatsApp group and
+     this one all sit in the same object for the same reason. */
+  const mapping = /savedQuotes: d\.savedQuotes[\s\S]*?originWa:q\.originWa, originWamid:q\.originWamid\}/.exec(app)
+    || /originAgentId:q\.originAgentId[\s\S]{0,900}?originWa:q\.originWa, originWamid:q\.originWamid\}/.exec(app);
+  t.check(!!mapping, 'the quote payload mapping is found');
+  t.check(!!mapping && /originPortal:q\.originPortal/.test(mapping[0]),
+    'and names originPortal, so an admin re-save cannot strip it');
+  t.check(!!mapping && /originAgentId:q\.originAgentId/.test(mapping[0]) && /originWa:q\.originWa/.test(mapping[0]),
+    'alongside the two groups that learned this the hard way before it');
+
+  /* And it reaches a screen. A flag nothing renders is a flag that does
+     not do the job its own comment claims for it. */
+  const shown = (app.match(/q\.originPortal \?/g) || []).length;
+  t.check(shown >= 2, `the shop's own screens read it (${shown} places)`);
+  t.check(/Placed by the customer on the portal/.test(app),
+    'saying what it means: they have already seen every price on the order');
+  /* Plain .op-fact, not the oxide .op-fact.agent. An agent order carries
+     that warning because the name on it is NOT the end client's, which is
+     a trap. A portal order's name is the customer's own, so there is
+     nothing to warn about -- and the accent is spent once per screen. */
+  t.check(!/op-fact agent">Placed by the customer/.test(app),
+    'in plain ink, because it is a fact rather than a warning');
+}
+
 process.exit(t.done() ? 1 : 0);

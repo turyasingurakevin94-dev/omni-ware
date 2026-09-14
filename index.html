@@ -22360,6 +22360,15 @@ function buildSyncRows(d, shopId){
         // this quote (advancing its status, editing an item, etc.) never
         // silently strips what agent-submit-order originally set.
         originAgentId:q.originAgentId, agentClientId:q.agentClientId, deliveryMode:q.deliveryMode, deliveryAddress:q.deliveryAddress, agentPaymentStatus:q.agentPaymentStatus,
+        /* Portal-originated orders only, and here for the same reason
+           the two groups either side of it are: this mapping rebuilds
+           the payload from NAMED keys, so a key not named is stripped
+           the first time an admin touches the order. client-submit-order
+           writes originPortal, the customer's own screen reads it back
+           to say "sent from here", and without this line both would
+           vanish on the first edit -- order 151's lesson, a third
+           time. */
+        originPortal:q.originPortal,
         // WhatsApp-originated orders only -- same preservation contract
         // as the agent fields above: absent for a normal order, and an
         // admin re-save must never strip what wa-webhook set. Learned
@@ -32541,6 +32550,7 @@ function orderPreviewHTML(q){
       ${location ? `<span class="op-fact">${esc(location)}</span>` : ''}
       ${q.client && q.client.phone ? `<span class="op-fact">${esc(q.client.phone)}</span>` : ''}
       ${q.originAgentId ? `<span class="op-fact agent">Agent order — the name is the agent's, not the end client's</span>` : ''}
+      ${q.originPortal ? `<span class="op-fact">Placed by the customer on the portal — they have already seen every price on it</span>` : ''}
       ${who.length ? `<span class="op-fact">${who.join(' · ')}</span>` : ''}
     </div>
 
@@ -32928,7 +32938,7 @@ function openDeliveryRuns(){
     return `<li class="dr-order">
       <div class="dr-order-main">
         <div class="dr-order-name">${esc(quoteClientName(q))}</div>
-        <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}</div>
+        <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}${q.originPortal ? ' · from the portal' : ''}</div>
       </div>
       <div class="dr-order-side">
         <span class="dr-order-value">${fmtUGX(savedQuoteTotal(q))}</span>
