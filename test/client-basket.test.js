@@ -43,6 +43,10 @@ function scope(state) {
       } };
   });
   const shown = [];
+  /* Both arguments. `shown` stays the list of screen names the older
+     checks read; `landed` is where each one was told to land, which is
+     the whole of the scroll-position question. */
+  const landed = [];
   const env = {
     document: { getElementById: (id) => nodes[id] || null },
     basket: state.basket || [],
@@ -50,7 +54,11 @@ function scope(state) {
     basketWhere: state.where || '',
     item: state.item || null,
     itemQty: state.itemQty || 1,
-    show: (s) => shown.push(s),
+    show: (s, at) => { shown.push(s); landed.push({ screen: s, at }); },
+    /* The shop's last scroll position. A real number so a check can tell
+       "it passed the remembered place" apart from "it passed nothing and
+       the customer went to the top". */
+    browseAt: 4200,
     lineKey: (p, v) => p + '::' + (v == null ? '' : String(v)),
     /* A stub rather than nothing. Section 9 below checks by reading the
        source, so it does not need this -- but without it, a page that
@@ -69,7 +77,7 @@ function scope(state) {
       'August', 'September', 'October', 'November', 'December'],
   };
   const fns = compileScope(NAMES.map(n => extractFunction(src, n, 'client.html')), env, NAMES);
-  return { fns, nodes, shown, env };
+  return { fns, nodes, shown, landed, env };
 }
 
 const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, variantIdx: null,
@@ -156,7 +164,7 @@ const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, vari
  * and it failed against correct code.
  */
 {
-  const { fns, nodes, shown } = scope({ basket: [L('A', 1, 100, ''), L('B', 2, 200, '')] });
+  const { fns, nodes, shown, landed } = scope({ basket: [L('A', 1, 100, ''), L('B', 2, 200, '')] });
   fns.renderBasket();
   t.check(/A/.test(words(nodes.basketBody.innerHTML)) && /B/.test(words(nodes.basketBody.innerHTML)),
     'both lines are there to begin with');
@@ -167,6 +175,8 @@ const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, vari
   fns.setBasketQty('B', 0);
   t.check(shown.includes('scBrowse'),
     'and emptying the basket puts the customer back where things are, not on an empty screen');
+  t.check((landed[landed.length - 1] || {}).at === 4200,
+    `back at the place they were reading, not the top (${JSON.stringify((landed[landed.length - 1] || {}).at)})`);
   fns.renderBasketBar();
   t.check(nodes.browseBar.innerHTML === '', 'with nothing left floating over it');
 }
@@ -189,6 +199,48 @@ const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, vari
   again.fns.addToBasket();
   t.check(basket.length === 1, 'the second does not add a second line');
   t.check(basket[0].qty === 140, `it replaces the quantity rather than adding to it (${basket[0].qty})`);
+  t.check(first.landed.some(l => l.screen === 'scBrowse' && l.at === 4200),
+    'and Add puts them back where they were reading, not at item one of 485');
+}
+
+/* ---------- 5b. the way back is the way you left --------------------- */
+/*
+ * `show()` scrolled to the top on every screen change, which is right for
+ * arriving anywhere and wrong for coming BACK. A customer four hundred
+ * items into the shop who opens one, or checks their order, was returned
+ * to the beginning -- and on a phone in a yard nobody scrolls four
+ * thousand pixels twice. They take the three things still on screen and
+ * stop.
+ *
+ * Four ways back and they all restore. Arriving from the account is
+ * deliberately not one of them: "Order again" starts an order, it does
+ * not resume reading.
+ */
+{
+  const show = extractFunction(src, 'show', 'client.html');
+  t.check(/function show\(id, at\)/.test(show), 'show is told where to land');
+  t.check(/if\(browse && !browse\.hidden\) browseAt = window\.scrollY;/.test(show),
+    'and reads the shop\'s place while the shop is still the screen showing — once hidden there is nothing to read');
+  t.check(/window\.scrollTo\(0, Number\(at\) \|\| 0\);/.test(show),
+    'landing at the top unless told otherwise, so every other screen is unchanged');
+
+  const ways = [
+    ["document.getElementById('itemBack').onclick = () => show('scBrowse', browseAt);", 'the back arrow on an item'],
+    ["document.getElementById('basketBack').onclick = () => show('scBrowse', browseAt);", 'the back arrow on the order'],
+    ["show('scBrowse', browseAt);\n  renderBasketBar();", 'adding an item'],
+    ["if(!basket.length){ show('scBrowse', browseAt); renderBasketBar(); return; }", 'emptying the order'],
+  ];
+  ways.forEach(([needle, what]) => t.check(src.includes(needle), `${what} goes back to the place they left`));
+
+  const enter = src.slice(src.indexOf('async function openBrowse()'), src.indexOf('async function openBrowse()') + 400);
+  t.check(/show\('scBrowse'\);/.test(enter) && !/show\('scBrowse', browseAt\)/.test(enter),
+    'while arriving from the account is still the top of the shop, on purpose');
+  t.check(/does not resume reading/.test(enter),
+    'and says why, so it does not get "fixed" into matching the other four');
+
+  t.check(!/show\('scBrowse'\)(?![\s\S]{0,200}does not resume)/.test(
+    src.replace(/async function openBrowse\(\)[\s\S]{0,400}?show\('scBrowse'\);/, '')),
+    'no other route to the shop was left sending the customer to the top');
 }
 
 /* ---------- 6. what the order does to their standing ------------------ */

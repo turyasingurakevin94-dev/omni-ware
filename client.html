@@ -569,9 +569,22 @@ async function api(action, extra){
 
 const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent','scStatement','scOrders','scOrder'];
 const SUBMIT_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-submit-order';
-function show(id){
+/* Where the shop was left, in pixels. Every screen shares one scrolling
+   document, so this has to be read while the shop is still the screen
+   that is showing -- once it is hidden there is nothing to read. */
+let browseAt = 0;
+
+/* `at` is where to land. Nought for every screen a customer arrives at,
+   because the top is the start of it. The exception is coming BACK to
+   the shop: 485 items deep, a customer who opens one item, or checks
+   their order, and is then returned to the top has been told to find
+   their place again, and in a yard on a phone they will not -- they will
+   take the three things they can still see and go. */
+function show(id, at){
+  const browse = document.getElementById('scBrowse');
+  if(browse && !browse.hidden) browseAt = window.scrollY;
   SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
-  window.scrollTo(0, 0);
+  window.scrollTo(0, Number(at) || 0);
 }
 function fail(message, retry){
   document.getElementById('errorSay').textContent = message;
@@ -1247,9 +1260,13 @@ const AVAIL = {
 
 document.getElementById('orderAgain').onclick = () => openBrowse();
 document.getElementById('browseBack').onclick = () => show('scAccount');
-document.getElementById('itemBack').onclick = () => show('scBrowse');
+document.getElementById('itemBack').onclick = () => show('scBrowse', browseAt);
 
 async function openBrowse(){
+  /* The top, deliberately, and not browseAt. This is the way IN to the
+     shop from the account screen -- "Order again" starts an order, it
+     does not resume reading. The four ways BACK to the shop restore the
+     place; arriving is not one of them. */
   show('scBrowse');
   if(!stock){
     document.getElementById('browseBody').innerHTML =
@@ -1642,7 +1659,7 @@ function addToBasket(){
     name: it.name, variantLabel: it.variantLabel, unit: p.unit || it.unit || '',
     packUnit: p.packUnit || '', packQty: Number(p.packQty) || 0, qty: itemQty,
     unitPrice: rung.unitPrice, tiers: p.tiers || [] });
-  show('scBrowse');
+  show('scBrowse', browseAt);
   renderBasketBar();
 }
 
@@ -1661,7 +1678,7 @@ function setBasketQty(key, next){
     const rung = rungFor(line.tiers, n);
     if(rung) line.unitPrice = rung.unitPrice;
   }
-  if(!basket.length){ show('scBrowse'); renderBasketBar(); return; }
+  if(!basket.length){ show('scBrowse', browseAt); renderBasketBar(); return; }
   renderBasket();
   renderBasketBar();
 }
@@ -1685,7 +1702,7 @@ function renderBasketBar(){
   document.getElementById('toBasket').onclick = () => { renderBasket(); show('scBasket'); };
 }
 
-document.getElementById('basketBack').onclick = () => show('scBrowse');
+document.getElementById('basketBack').onclick = () => show('scBrowse', browseAt);
 document.getElementById('itemAdd').onclick = addToBasket;
 
 function renderBasket(){
