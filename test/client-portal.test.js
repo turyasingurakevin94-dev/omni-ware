@@ -220,4 +220,42 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
     'and what is available is derived from the limit rather than stored');
 }
 
+/* ---------- 9. the order filter agrees with the shop's own ------------ */
+/*
+ * This read carried .eq("status", "order") for three commits. There is no
+ * such status in this app -- the ladder is draft / awaiting_goods /
+ * preparing / pending_delivery / completed -- so it matched zero rows, and
+ * every customer saw "Nothing here yet" however much they had bought. The
+ * same filter sat on the pricing read, so no remembered price was ever
+ * found either. Two features dead on arrival, both of which read
+ * perfectly well in review and passed every test in this file.
+ *
+ * Nothing pinning client-portal against itself could have caught it, so
+ * this reads the status ladder out of index.html and insists the two
+ * files agree about what a status is.
+ */
+{
+  const app = read('index.html');
+  const block = /const SQ_STATUSES = \{([\s\S]*?)\n\};/.exec(app);
+  t.check(!!block, 'the order status ladder is found in index.html');
+  const known = block ? (block[1].match(/^\s*(\w+):/gm) || []).map(x => x.replace(/[\s:]/g, '')) : [];
+  t.check(known.length >= 5, `and carries its statuses (${known.join(', ')})`);
+
+  const reads = [...noComments.matchAll(/from\("saved_quotes"\)[\s\S]{0,400}?;/g)].map(m => m[0]);
+  t.check(reads.length >= 2, `every read of saved_quotes is found (${reads.length})`);
+  const filtered = reads.flatMap(r => [...r.matchAll(/\.eq\("status", "([^"]+)"\)/g)].map(x => x[1]));
+  const unknown = filtered.filter(f => !known.includes(f));
+  t.check(unknown.length === 0,
+    `and every status it filters on is one the app actually writes (${unknown.join(', ') || 'it filters on none'})`);
+
+  /* `voided` IS the real rule: the admin app's own customerPurchaseHistory
+     and lastPriceToClient filter on that and nothing else, and a portal
+     showing a different history from the shop's own screen is worse than
+     one showing none. */
+  t.check(reads.every(r => /\.eq\("voided", false\)/.test(r)),
+    'the voided ones are dropped, which is the filter the shop itself uses');
+  t.check(/function customerPurchaseHistory/.test(app) && /!q\.voided/.test(app),
+    'and that is verifiably what it uses');
+}
+
 t.done();

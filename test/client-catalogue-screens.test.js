@@ -153,7 +153,8 @@ const row = (o) => list.rowHTML({ ...ITEM, ...o }, 0);
 /* ---------- 8. the item screen --------------------------------------- */
 const renderItem = (it, priced, qty) => {
   const nodes = {};
-  ['itemBody', 'itemFoot', 'itemTitle', 'qtyDown', 'qtyUp', 'qtyBox'].forEach((id) => {
+  ['itemBody', 'itemFoot', 'itemTitle', 'qtyDown', 'qtyUp', 'qtyBox',
+   'itemAddWrap', 'itemAdd'].forEach((id) => {
     nodes[id] = { id, innerHTML: '', textContent: '', value: '', disabled: false,
       addEventListener() {}, onclick: null };
   });
@@ -163,7 +164,8 @@ const renderItem = (it, priced, qty) => {
     document: { getElementById: (id) => nodes[id] || null },
     AVAIL, MONTHS, item: { it, priced }, itemQty: qty, setQty() {},
   }, ['renderItem']).renderItem();
-  return { html: nodes.itemBody.innerHTML, foot: nodes.itemFoot.textContent };
+  return { html: nodes.itemBody.innerHTML, foot: nodes.itemFoot.textContent,
+    add: nodes.itemAdd.textContent, addShown: !nodes.itemAddWrap.hidden };
 };
 
 {
@@ -200,11 +202,22 @@ const renderItem = (it, priced, qty) => {
     'and is NOT also called out of stock, which is a different fact and not this one');
   t.check(!/How many/.test(words(unpriced.html)),
     'and is not offered a quantity stepper that could not price anything');
+  /* Nor an Add button. A line the shop cannot price is a line it cannot
+     fill, and a basket carrying one is a conversation at the counter. */
+  t.check(!unpriced.addShown, 'nor an Add button that would send an unfillable line');
+  t.check(unpriced.foot === '', 'and no promise under a button that is not there');
 
-  // The button that is not there, said once on the screen where a
-  // customer would look for it.
-  t.check(/Ordering is not open/.test(one.foot), 'the missing action names itself');
-  t.check(count(one.html + ' ' + one.foot, /Ordering is not open/g) === 1, 'once');
+  /* The one action on the screen. It says the quantity it is going to
+     add, because a button that says only "Add" leaves the customer
+     checking the stepper again to find out what they just did. */
+  t.check(one.addShown, 'a priced item offers the Add button');
+  t.check(one.add === 'Add 1 sheet to the order', `naming what it will add (${one.add})`);
+  t.check(renderItem(it, priced, 140).add === 'Add 140 sheets to the order',
+    `in the plural where there is more than one (${renderItem(it, priced, 140).add})`);
+  t.check(/Nothing is charged and nothing is booked/.test(one.foot),
+    'under a line saying that tapping it commits nothing');
+  t.check(!/Ordering is not open/.test(one.html + one.foot),
+    'and the old apology for a missing button is gone');
 
   const noPack = renderItem({ ...it, unit: 'kg', packUnit: '', packQty: 0 },
     { ...priced, unit: 'kg', packUnit: '', packQty: 0, tiers: [{ minQty: 1, unitPrice: 9200 }] }, 30);

@@ -21,6 +21,7 @@
     --pale:#FAF8F4;       /* an opening row */
     --warm:#F7F5F0;       /* a stated fact, or a failure */
     --mat:#EDE8DF;        /* behind a photograph */
+    --mark:#B6AC9E;       /* a step not yet reached */
     --ink:#1A1714;        /* warm near-black */
     --ink-2:#6B635A;
     --meta:#9A9187;
@@ -169,6 +170,21 @@
     background:var(--paper);border-bottom:1px solid var(--rule);}
   .back{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
     width:44px;height:44px;flex-shrink:0;cursor:pointer;}
+
+  /* THE ONE FLOATING THING IN THE SYSTEM. Everything else in Counter sits
+     on the page; the basket follows you, so it gets the single shadow the
+     language allows and a firm rule above it. */
+  .bbar{position:sticky;bottom:0;background:var(--paper);border-top:1px solid var(--rule-firm);
+    box-shadow:0 -4px 16px rgba(26,23,20,.07);
+    padding:12px 20px calc(16px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:14px;}
+
+  /* Four steps, named. The only place the flow is drawn. */
+  .steps{display:flex;align-items:center;gap:8px;padding:0 20px 13px;
+    background:var(--paper);border-bottom:1px solid var(--rule);}
+  .steps span.s{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--mark);white-space:nowrap;}
+  .steps span.s-on{color:var(--ink);font-weight:600;}
+  .steps i{flex-grow:1;height:1px;background:var(--rule);}
 
   .chev{flex-shrink:0;}
   .brand{font-size:11.5px;font-weight:600;letter-spacing:.16em;}
@@ -332,9 +348,11 @@
     <div class="lbl" id="browseCount" style="padding:18px 20px 8px;"></div>
     <div id="browseBody"></div>
 
-    <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
+    <div style="padding:14px 20px 22px;">
       <div class="meta">Not listed? Ask us &mdash; we source what we do not keep on the shelf.</div>
     </div>
+    <div class="spacer"></div>
+    <div id="browseBar"></div>
   </section>
 
   <!-- 5 · One item -->
@@ -347,8 +365,40 @@
     </div>
     <div id="itemBody"></div>
     <div class="spacer"></div>
+    <div id="itemAddWrap" class="bar" hidden style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="itemAdd"></button>
+    </div>
     <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
       <div class="meta" id="itemFoot"></div>
+    </div>
+  </section>
+
+  <!-- 6 &middot; Check your order -->
+  <section id="scBasket" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="basketBack" aria-label="Back to what we stock">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">Check your order</div>
+    </div>
+    <div class="steps">
+      <span class="s">Browse</span><i></i><span class="s">How many</span><i></i>
+      <span class="s s-on">Check</span><i></i><span class="s">Send</span>
+    </div>
+    <div id="basketBody"></div>
+    <div class="spacer"></div>
+    <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="basketSend">Send this order</button>
+      <div class="meta" style="text-align:center;">Nothing is charged and nothing is booked until we confirm it with you.</div>
+    </div>
+  </section>
+
+  <!-- 7 &middot; Sent -->
+  <section id="scSent" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div id="sentBody" style="padding:64px 28px 0;"></div>
+    <div class="spacer"></div>
+    <div class="bar">
+      <button class="btn btn-line" type="button" id="sentDone">Back to your account</button>
     </div>
   </section>
 
@@ -439,7 +489,8 @@ async function api(action, extra){
   return data;
 }
 
-const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem'];
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent'];
+const SUBMIT_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-submit-order';
 function show(id){
   SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
   window.scrollTo(0, 0);
@@ -621,6 +672,10 @@ async function openAccount(){
 
 function renderAccount(data){
   const a = data.account || {};
+  /* Kept so the basket can say what this order does to their balance
+     without asking the shop again. Terms and a limit are facts about the
+     relationship, not about the basket. */
+  accountData = a;
   document.getElementById('whoName').textContent = a.name || '';
   document.getElementById('whoLine').textContent = a.name
     ? 'Signed in as ' + a.name + '.'
@@ -729,6 +784,8 @@ document.getElementById('signOut').onclick = async () => {
      take them with it, or the next person to pick up the handset and tap
      Back is reading them. */
   stock = null; item = null; aisle = ''; itemQty = 1;
+  accountData = {}; basket = []; basketWhere = '';
+  renderBasketBar();
   document.getElementById('browseSearch').value = '';
   document.getElementById('whoSheet').hidden = true;
   document.getElementById('whoBtn').setAttribute('aria-expanded', 'false');
@@ -745,6 +802,12 @@ document.getElementById('signOut').onclick = async () => {
 let stock = null;
 let aisle = '';
 let view = 'list';
+let accountData = {};
+/* Quantities only, in memory only. No price is kept here — the shop
+   prices every line again when the order is sent, and a basket that
+   outlived the tab on a site handset would be the next person's reading
+   of what this customer is building. */
+let basket = [];
 
 const AVAIL = {
   'in-stock': 'In stock',
@@ -774,6 +837,7 @@ async function openBrowse(){
   }
   renderAisles();
   renderBrowse();
+  renderBasketBar();
 }
 
 function matching(){
@@ -1094,10 +1158,21 @@ function renderItem(){
     box.addEventListener('change', () => setQty(parseInt(box.value, 10)));
     box.addEventListener('blur', () => setQty(parseInt(box.value, 10)));
   }
-  /* Said once, on the screen where a customer would look for the button
-     that is not there. */
-  document.getElementById('itemFoot').textContent =
-    'Ordering is not open on the portal yet — this is what it would cost you.';
+  /* The one action on this screen, and only where there is something to
+     add. An item with no price on file gets no button rather than a
+     button that would send the shop a line it cannot fill. */
+  const wrap = document.getElementById('itemAddWrap');
+  const add = document.getElementById('itemAdd');
+  const addable = !!(p.available && rung);
+  wrap.hidden = !addable;
+  if(addable){
+    add.textContent = 'Add ' + itemQty + ' '
+      + (unit ? (itemQty === 1 ? unit : many(unit)) : plural(itemQty, 'item', 'items'))
+      + ' to the order';
+  }
+  document.getElementById('itemFoot').textContent = addable
+    ? 'Nothing is charged and nothing is booked until we confirm it with you.'
+    : '';
 }
 
 /* "11 bundles and 8 loose". A trade customer orders in bundles and thinks
@@ -1114,6 +1189,220 @@ function setQty(next){
   itemQty = n;
   renderItem();
 }
+
+/* ---------- the basket --------------------------------------------- */
+const lineKey = (productId, variantIdx) =>
+  productId + '::' + (variantIdx == null ? '' : String(variantIdx));
+
+function basketTotal(){ return basket.reduce((n, l) => n + l.qty * (Number(l.unitPrice) || 0), 0); }
+
+function addToBasket(){
+  const it = item.it, p = item.priced || {};
+  const rung = rungFor(p.tiers, itemQty);
+  if(!rung) return;
+  const key = lineKey(it.productId, it.variantIdx);
+  const existing = basket.find(l => l.key === key);
+  /* Adding the same item twice REPLACES the quantity rather than adding
+     to it. The screen it was added from shows a quantity, not an
+     increment — a customer who goes back, sets 140 and taps Add again
+     means 140, and a basket that quietly held 280 would be found at the
+     counter. */
+  if(existing) existing.qty = itemQty;
+  else basket.push({ key, productId: it.productId, variantIdx: it.variantIdx,
+    name: it.name, variantLabel: it.variantLabel, unit: p.unit || it.unit || '',
+    packUnit: p.packUnit || '', packQty: Number(p.packQty) || 0, qty: itemQty,
+    unitPrice: rung.unitPrice, tiers: p.tiers || [] });
+  show('scBrowse');
+  renderBasketBar();
+}
+
+/* A price shown in the basket is re-resolved against that line's own
+   ladder whenever its quantity changes, so a customer who raises 10 to
+   140 in the basket sees the bundle rate there and not the loose one they
+   first tapped Add at. The shop prices it again at send either way; this
+   is about the two figures agreeing before they do. */
+function setBasketQty(key, next){
+  const line = basket.find(l => l.key === key);
+  if(!line) return;
+  const n = Math.max(0, Math.min(99999, Math.floor(Number(next) || 0)));
+  if(n === 0){ basket = basket.filter(l => l.key !== key); }
+  else {
+    line.qty = n;
+    const rung = rungFor(line.tiers, n);
+    if(rung) line.unitPrice = rung.unitPrice;
+  }
+  if(!basket.length){ show('scBrowse'); renderBasketBar(); return; }
+  renderBasket();
+  renderBasketBar();
+}
+
+function renderBasketBar(){
+  const bar = document.getElementById('browseBar');
+  if(!basket.length){ bar.innerHTML = ''; return; }
+  const n = basket.length;
+  bar.innerHTML = '<div class="bbar">'
+    + '<div class="grow">'
+    +   '<div style="font-size:14px;font-weight:500;">' + esc(n) + ' ' + plural(n, 'item', 'items') + '</div>'
+    +   '<div class="fig" style="font-size:17px;margin-top:1px;">' + money(basketTotal()) + '</div>'
+    + '</div>'
+    + '<button class="btn btn-go" type="button" id="toBasket" style="width:auto;padding:0 26px;">Check</button>'
+    + '</div>';
+  document.getElementById('toBasket').onclick = () => { renderBasket(); show('scBasket'); };
+}
+
+document.getElementById('basketBack').onclick = () => show('scBrowse');
+document.getElementById('itemAdd').onclick = addToBasket;
+
+function renderBasket(){
+  const body = document.getElementById('basketBody');
+  const total = basketTotal();
+  const lines = basket.map(l =>
+    '<div class="row" style="align-items:flex-start;min-height:66px;gap:14px;">'
+    + '<div class="grow">'
+    +   '<div class="trunc" style="font-size:14.5px;">' + esc(l.name)
+    +     (l.variantLabel ? ' — ' + esc(l.variantLabel) : '') + '</div>'
+    +   '<div class="meta" style="margin-top:2px;">' + money(l.unitPrice) + ' '
+    +     (l.unit ? 'a ' + esc(l.unit) : 'each') + '</div>'
+    +   '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;">'
+    +     '<button class="step" type="button" style="width:40px;height:40px;" data-less="' + esc(l.key) + '" aria-label="One fewer">'
+    +       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>'
+    +     '<span class="fig" style="min-width:44px;text-align:center;font-size:17px;">' + esc(l.qty) + '</span>'
+    +     '<button class="step" type="button" style="width:40px;height:40px;" data-more="' + esc(l.key) + '" aria-label="One more">'
+    +       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+    +     '<button class="btn" type="button" data-drop="' + esc(l.key) + '"'
+    +       ' style="width:auto;min-height:40px;padding:0 10px;font-size:12.5px;font-weight:500;color:var(--ink-2);">Take out</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="fig" style="font-size:16px;flex-shrink:0;">' + money(l.qty * l.unitPrice) + '</div>'
+    + '</div>').join('');
+
+  body.innerHTML = '<div class="sheet" style="margin-top:16px;">' + lines + '</div>'
+    + '<div class="sheet" style="margin-top:18px;">'
+    +   '<div class="row" style="border-top:1.5px solid var(--rule-firm);padding:16px 20px;">'
+    +     '<div class="grow" style="font-size:15px;font-weight:600;">Order total</div>'
+    +     '<div class="fig" style="font-size:26px;">' + money(total) + '</div>'
+    +   '</div>'
+    +   (standingHTML(total) ? '<div style="padding:0 20px 15px;"><div class="meta">' + standingHTML(total) + '</div></div>' : '')
+    + '</div>'
+    + '<div style="padding:20px 20px 0;display:flex;flex-direction:column;gap:9px;">'
+    +   '<label class="lbl" for="basketWhere">Where it should go</label>'
+    +   '<input class="field" id="basketWhere" style="font-family:var(--sans);font-size:15px;"'
+    +     ' autocomplete="off" placeholder="Site or shop — optional" value="' + esc(basketWhere) + '">'
+    + '</div>'
+    + '<div id="basketSay" style="padding:18px 20px 0;"></div>';
+
+  body.querySelectorAll('[data-less]').forEach(b => b.onclick = () => {
+    const l = basket.find(x => x.key === b.dataset.less); if(l) setBasketQty(l.key, l.qty - 1);
+  });
+  body.querySelectorAll('[data-more]').forEach(b => b.onclick = () => {
+    const l = basket.find(x => x.key === b.dataset.more); if(l) setBasketQty(l.key, l.qty + 1);
+  });
+  body.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => setBasketQty(b.dataset.drop, 0));
+  const where = document.getElementById('basketWhere');
+  if(where) where.addEventListener('input', () => { basketWhere = where.value; });
+}
+
+/* What this order does to their standing, from facts the shop has already
+   agreed. Nothing here refuses anything — the app itself does not enforce
+   a limit and the admin screen says so — but a customer finding out at the
+   counter that an order puts them past it is a customer who was not
+   told. */
+function standingHTML(total){
+  const bits = [];
+  if(accountData.termsDays != null){
+    bits.push(accountData.termsDays === 0 ? 'Cash on the day.' : 'On your ' + esc(accountData.termsDays) + '-day terms.');
+  }
+  const owed = Number(accountData.owed) || 0;
+  const limit = accountData.creditLimit;
+  if(limit != null){
+    const over = owed + total - Number(limit);
+    if(over > 0){
+      bits.push((owed > 0 ? 'With the ' + money(owed) + ' already on your account this' : 'This')
+        + ' order stands <strong style="font-weight:600;">' + money(over)
+        + '</strong> over your limit — we will call you about it.');
+    }else{
+      bits.push('Within your limit, with ' + money(Number(limit) - owed - total) + ' still to spare.');
+    }
+  }
+  return bits.join(' ');
+}
+
+let basketWhere = '';
+let sending = false;
+
+document.getElementById('basketSend').onclick = async () => {
+  if(sending || !basket.length) return;
+  sending = true;
+  const btn = document.getElementById('basketSend');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const say = document.getElementById('basketSay');
+  say.innerHTML = '';
+  try{
+    /* QUANTITIES ONLY. Not a price, not a total, not even the figure the
+       screen is showing — the shop prices every line again. */
+    const res = await fetch(SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        shopId: shopId(), token: store(K_TOKEN),
+        items: basket.map(l => ({ productId: l.productId, variantIdx: l.variantIdx, qty: l.qty })),
+        deliverTo: basketWhere,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if(res.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    if(!res.ok || data.error) throw new Error(data.error || ('Something went wrong (' + res.status + ')'));
+
+    /* The shop's figures are the figures. Where one differs from what this
+       screen was showing, the customer is told which and by how much
+       BEFORE they see the total — finding it on the invoice instead is how
+       a portal loses the trust it was built to earn. */
+    const moved = (data.lines || []).filter(l => {
+      const mineLine = basket.find(x => x.key === lineKey(l.productId, l.variantIdx));
+      return mineLine && Math.round(mineLine.unitPrice) !== Math.round(l.unitPrice);
+    });
+    showSent(data, moved);
+    basket = [];
+    basketWhere = '';
+    renderBasketBar();
+  }catch(err){
+    say.innerHTML = '<div class="say">' + esc(err.message) + '</div>';
+  }finally{
+    sending = false;
+    btn.disabled = false; btn.textContent = 'Send this order';
+  }
+};
+
+function showSent(data, moved){
+  const n = (data.lines || []).length;
+  document.getElementById('sentBody').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<h1 class="ser" style="font-size:30px;line-height:1.15;margin:0;font-weight:400;">'
+    +   (data.duplicate ? 'You had already sent that' : 'Sent to the shop') + '</h1>'
+    + '<p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.55;">'
+    +   (data.duplicate
+        ? 'That same order reached us a moment ago, so we have not written it twice. It is order '
+          + esc(data.orderId) + '.'
+        : 'Order <strong style="font-weight:600;color:var(--ink);">' + esc(data.orderId) + '</strong>, '
+          + esc(n) + ' ' + plural(n, 'line', 'lines')
+          + '. Somebody at the shop checks it and rings you. Nothing is charged and nothing is booked until then.')
+    + '</p></div>'
+    + (data.duplicate ? '' :
+      '<div class="sheet" style="margin:22px -28px 0;">'
+      + '<div class="row" style="border-top:0;">'
+      +   '<div class="grow" style="font-size:14.5px;color:var(--ink-2);">What we have priced it at</div>'
+      +   '<div class="fig" style="font-size:20px;">' + money(data.total) + '</div>'
+      + '</div></div>')
+    + (moved && moved.length
+      ? '<div class="say" style="margin-top:18px;"><strong style="font-weight:600;">'
+        + esc(moved.length) + ' ' + plural(moved.length, 'price has', 'prices have') + ' moved since you filled the basket.</strong> '
+        + esc(moved.map(l => l.name + ' is now ' + money(l.unitPrice) + (l.unit ? ' a ' + l.unit : '')).join('; '))
+        + '. The shop will go through it with you.</div>'
+      : '');
+  show('scSent');
+}
+
+document.getElementById('sentDone').onclick = () => { openAccount(); };
 
 /* ---------- boot ----------------------------------------------------- */
 (async function boot(){

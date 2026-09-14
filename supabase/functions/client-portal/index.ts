@@ -558,6 +558,21 @@ Deno.serve(async (req) => {
       if (!session) return json({ error: "Sign in again" }, 401);
       const customerId = session.customer_id;
 
+      /* NO STATUS FILTER, and that is deliberate rather than an omission.
+         A saved_quotes row IS an order in this app — status is how far
+         along it is (draft → awaiting_goods → preparing →
+         pending_delivery → completed), not whether it counts. The admin
+         app's own customerPurchaseHistory and lastPriceToClient filter on
+         nothing but `voided`, and this has to agree with them or a
+         customer's portal shows a different history from the one the shop
+         is looking at.
+
+         This read used to carry .eq("status", "order"). There is no such
+         status anywhere in this app — it was invented here — so it matched
+         zero rows, and every customer saw "Nothing here yet" however much
+         they had bought. The same filter was on the pricing read, so no
+         remembered price was ever found either. Both features were dead
+         from the day they shipped and looked perfectly well in review. */
       const [{ data: customer }, { data: debtRows }, { data: quotes }] = await Promise.all([
         admin.from("customers")
           .select("name, phone, debt, terms_days, credit_limit")
@@ -566,7 +581,7 @@ Deno.serve(async (req) => {
           .select("date, type, amount").eq("shop_id", shopId).eq("customer_id", customerId),
         admin.from("saved_quotes")
           .select("id, client_name, client_phone, date, status, invoiced, voided, amount_paid, payload")
-          .eq("shop_id", shopId).eq("status", "order").eq("voided", false)
+          .eq("shop_id", shopId).eq("voided", false)
           .order("id", { ascending: false }).limit(60),
       ]);
       if (!customer) return json({ error: "Sign in again" }, 401);
@@ -651,7 +666,7 @@ Deno.serve(async (req) => {
       // normalised-phone match the account action uses.
       const { data: quotes } = await admin.from("saved_quotes")
         .select("client_phone, date, voided, payload")
-        .eq("shop_id", shopId).eq("status", "order").eq("voided", false)
+        .eq("shop_id", shopId).eq("voided", false)
         .order("id", { ascending: false }).limit(200);
       const held = rememberedPrices(quotes || [], mine);
 

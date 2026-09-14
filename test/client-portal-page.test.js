@@ -262,9 +262,22 @@ function load() {
   });
   t.check(!/service_role|SERVICE_ROLE|anon[_-]?key/i.test(src),
     'and carries no key -- every request is an unauthenticated POST the function authorises by token');
-  const bodies = src.match(/fetch\([^)]*\)/g) || [];
-  t.check(bodies.length === 1 && /FN_URL/.test(bodies[0]),
-    `it talks to exactly one endpoint (${bodies.length} fetch call(s))`);
+  /* Was "exactly one endpoint", which stopped being true the moment
+     ordering landed: the page now also posts to client-submit-order. The
+     count was never the point — where the customer's data goes is. Both
+     URLs are built off SUPABASE_URL, so the claim is that every request
+     leaves for this shop's own functions and nowhere else, which is the
+     thing that would actually matter if it broke. */
+  const targets = [...src.matchAll(/fetch\(\s*([A-Za-z_$][\w$]*|['"`][^'"`]*['"`])/g)].map(m => m[1]);
+  t.check(targets.length >= 1, `every fetch target is found (${targets.join(', ') || 'none'})`);
+  t.check(targets.every(x => x === 'FN_URL' || x === 'SUBMIT_URL'),
+    `and each is one of this shop's own functions (${targets.join(', ')})`);
+  const urls = (src.match(/^const (?:FN_URL|SUBMIT_URL) = .*$/gm) || []);
+  t.check(urls.length === 2 && urls.every(u => /SUPABASE_URL\.replace/.test(u)),
+    `both of which are built from the one project URL (${urls.length})`);
+  t.check(!/https?:\/\/(?!fonts\.(googleapis|gstatic)\.com)[^"'\s)]+/.test(
+    src.replace(/const SUPABASE_URL = '[^']*';/, '')),
+    'and no other host appears in the page at all, bar the font CDN');
 }
 
 /* ---------- 10. verdigris is THE one action -------------------------- */
