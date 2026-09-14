@@ -936,7 +936,15 @@ Deno.serve(async (req) => {
             variantIdx,
             name: p.name,
             variantLabel: v ? Object.values(v.combo || {}).join(" / ") : "",
-            note: p.short_description || "",
+            /* `description`, not `note`. The content is safe — it is the
+               product's own short description, the same line the printed
+               catalogue carries — but the NAME collided with the two
+               fields in this schema that must never cross:
+               product_links.note and customer_debt_log.note. A field
+               called note in a customer's reply is one careless edit from
+               being filled with one of them, and the rule that no reply
+               may carry a key called note is worth more than the word. */
+            description: p.short_description || "",
             category: p.category || "",
             subcategory: p.subcategory || "",
             image: (v && v.image) || p.image || null,
