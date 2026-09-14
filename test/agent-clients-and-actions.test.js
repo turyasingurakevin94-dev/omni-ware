@@ -149,14 +149,19 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/href="tel:\$\{esc\(c\.phone\)\}"/.test(code), 'the row carries a real tel: link');
   t.check(/aria-label="Call \$\{esc\(c\.name\)\}"/.test(code),
     'named, since the button itself is only an icon');
-  t.check(/c\.phone\s*\n?\s*\?\s*`<a class="ag-call-btn"/.test(code) || /\$\{c\.phone[\s\S]{0,40}ag-call-btn/.test(code),
+  /* The control is .fx-call now rather than .ag-call-btn -- the client
+     row was rebuilt and the old class is in no markup at all. Everything
+     this block asserts is unchanged and still worth asserting: it appears
+     only for a client who has a number, it is 44px of actual control
+     rather than 44 plus padding, and it keeps a visible focus ring. */
+  t.check(/c\.phone\s*\n?\s*\?\s*`<a class="fx-call"/.test(code) || /\$\{c\.phone[\s\S]{0,40}fx-call/.test(code),
     'and it appears only for a client who has a number');
 
-  t.check(/\.ag-call-btn\{[^}]*width:44px/.test(src) && /\.ag-call-btn\{[^}]*height:44px/.test(src),
+  t.check(/\.fx-call\{[^}]*width:44px/.test(src) && /\.fx-call\{[^}]*height:44px/.test(src),
     'sized 44px for a thumb');
-  t.check(/\.ag-call-btn\{[^}]*box-sizing:border-box/.test(src),
+  t.check(/\.fx-call\{[^}]*box-sizing:border-box/.test(src),
     'restoring border-box after all:unset, so 44 means 44');
-  t.check(/\.ag-call-btn:focus-visible\{outline:/.test(src), 'with a visible focus ring');
+  t.check(/\.fx-call:focus-visible\{outline:/.test(src), 'with a visible focus ring');
 
   // The number stays readable as well: a tel: link hands it to the dialer,
   // which is no use to an agent saving a contact or sending a WhatsApp.

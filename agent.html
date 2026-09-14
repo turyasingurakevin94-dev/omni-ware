@@ -242,11 +242,6 @@
      standing in front of a customer reaches for it far more often than
      anything else here. Icon-only so it never squeezes the name, and 44px
      because it is aimed at with a thumb. */
-  .ag-call-btn{all:unset;box-sizing:border-box;flex-shrink:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
-    width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);}
-  .ag-call-btn:hover{background:var(--accent);color:#fff;}
-  .ag-call-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .ag-call-btn .icon{width:19px;height:19px;}
 
   .ag-item-result{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px;cursor:pointer;}
   .ag-item-result:hover{background:var(--accent-soft);}
@@ -1226,6 +1221,35 @@
     line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .fx-quote-n.unnamed{color:var(--fx-ink-3);font-weight:600;}
 
+  /* ---- the client list ---- */
+  .fx-list{background:var(--fx-card);border-radius:var(--fx-r-card);box-shadow:var(--fx-sh);
+    overflow:hidden;margin-top:10px;}
+  .fx-cl{display:flex;align-items:center;gap:12px;padding:12px 13px;
+    border-top:1px solid var(--fx-line);}
+  .fx-cl:first-child{border-top:0;}
+  .fx-cl-b{flex:1;min-width:0;}
+  .fx-cl-h{display:flex;align-items:center;gap:7px;min-width:0;}
+  .fx-cl-n{font-size:15px;font-weight:600;letter-spacing:-.005em;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-cl-m{font-size:13px;color:var(--fx-ink-3);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-cl-e{font-size:12px;color:var(--fx-ink-3);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-cl-e b{color:var(--fx-ink-2);font-family:var(--font-money);
+    font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;}
+  .fx-call{all:unset;box-sizing:border-box;cursor:pointer;flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;border-radius:14px;background:var(--fx-page);color:var(--fx-ink-2);}
+  .fx-call:hover{background:var(--fx-oxide);color:#fff;}
+  .fx-call:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
+  .fx-call .icon{width:20px;height:20px;stroke:currentColor;}
+  /* Due and Quiet are the client's OWN rhythm, the same clientCadence()
+     Home reads -- so a name marked Due here is a name on that list. */
+  .fx-chip{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;flex:none;
+    border-radius:var(--fx-r-pill);font-size:12px;font-weight:700;letter-spacing:-.01em;}
+  .fx-chip.due{background:var(--fx-amber-bg);color:var(--fx-amber);}
+  .fx-chip.quiet{background:var(--fx-red-bg);color:var(--fx-red);}
+
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
     max-width:520px;margin:0 auto;background:var(--fx-card);border-top:1px solid var(--fx-line);
@@ -1495,7 +1519,7 @@
 
   <!-- CUSTOMERS (main tab) -->
   <div id="ag_clientsListView" class="ag-pad-top" style="display:none;">
-    <div class="ag-tab-head"><h1>Customers</h1></div>
+    <div class="ag-tab-head"><h1>Clients</h1></div>
     <div id="ag_catalogueWrap"></div>
     <div id="ag_inquiriesWrap"></div>
 
@@ -3981,27 +4005,41 @@ function clientStats(orders){
     lastAt: dates.length ? dates[dates.length-1] : null,
   };
 }
-function clientRowHTML(c, orders){
+function clientRowHTML(c, orders, cad){
   const initials = clientInitials(c.name);
   const s = clientStats(orders);
   // Compacted, because three figures plus a date will not fit across a
   // phone at full length. Exact amounts live on the orders themselves.
   const stats = s.count
-    ? [`${s.count} order${s.count===1?'':'s'}`, `${fmtCompactUGX(s.spent)} bought`, esc(daysAgoLabel(s.lastAt))].filter(Boolean).join(' · ')
+    ? [`${s.count} order${s.count===1?'':'s'}`, `${fmtCompactUGX(s.spent)} bought`, esc(daysAgoLabel(s.lastAt))].filter(Boolean).join(' &middot; ')
     : 'No orders yet';
   // The number stays on screen as well as behind the Call button -- an
   // agent saving a contact or sending a WhatsApp needs to read it, and a
   // tel: link only hands it to the dialer.
-  const sub = [s.earned ? `${fmtUGX(s.earned)} earned` : '', c.phone ? esc(c.phone) : ''].filter(Boolean).join(' · ');
-  return `<div class="ag-list-item">
-    <div class="ag-list-item-avatar">${esc(initials)}</div>
-    <div class="ag-list-item-body">
-      <div class="ag-list-item-name">${esc(c.name)}</div>
-      <div class="ag-list-item-meta">${stats}</div>
-      ${sub ? `<div class="ag-list-item-earned">${sub}</div>` : ''}
+  const sub = [s.earned ? `<b>${fmtNum(s.earned)}</b> earned` : '', c.phone ? esc(c.phone) : ''].filter(Boolean).join(' &middot; ');
+  /* Their own rhythm, read from the same helper Home's leads read, so a
+     name marked Due here is a name on that list. It marks the row rather
+     than reordering it: the list is sorted by who you dealt with last,
+     which answers a different question and is the one worth defaulting to
+     -- Home already answers "who should I go and see". */
+  let chip = '';
+  if(cad && cad.daysSince >= cad.avgGapDays){
+    chip = cad.daysSince >= 60
+      ? '<span class="fx-chip quiet">Quiet</span>'
+      : '<span class="fx-chip due">Due</span>';
+  }
+  return `<div class="fx-cl">
+    <span class="fx-lead-av">${esc(initials)}</span>
+    <div class="fx-cl-b">
+      <div class="fx-cl-h">
+        <span class="fx-cl-n" title="${esc(c.name)}">${esc(c.name)}</span>
+        ${chip}
+      </div>
+      <div class="fx-cl-m">${stats}</div>
+      ${sub ? `<div class="fx-cl-e">${sub}</div>` : ''}
     </div>
     ${c.phone
-      ? `<a class="ag-call-btn" href="tel:${esc(c.phone)}" aria-label="Call ${esc(c.name)}">${ICON_PHONE}</a>`
+      ? `<a class="fx-call" href="tel:${esc(c.phone)}" aria-label="Call ${esc(c.name)}">${ICON_PHONE}</a>`
       : ''}
   </div>`;
 }
@@ -4442,7 +4480,10 @@ function renderClientsListScreen(){
     wrap.innerHTML = `<div class="empty">No client matches &ldquo;${esc(q)}&rdquo;.</div>`;
     return;
   }
-  wrap.innerHTML = rows.map(r=>clientRowHTML(r.c, r.orders)).join('');
+  const today = new Date();
+  wrap.innerHTML = `<div class="fx-list">`
+    + rows.map(r=>clientRowHTML(r.c, r.orders, clientCadence(r.c, counts, today))).join('')
+    + `</div>`;
 }
 document.getElementById('ag_clientListSearch').addEventListener('input', renderClientsListScreen);
 document.getElementById('ag_clientListSearch_clear').addEventListener('click', ()=>{
