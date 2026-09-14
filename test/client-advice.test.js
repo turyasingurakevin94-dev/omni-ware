@@ -88,9 +88,19 @@ const untyped = fn.replace(/\b(const|let|var)\s+(\w+)\s*:\s*Record<[^>]*>\s*=/g,
 const ADVICE = (() => {
   const start = noComments.indexOf('action === "advice"');
   const rest = noComments.slice(start);
-  const next = rest.indexOf('if (action === ', 10);
+  /* The next TOP-LEVEL action, found by its indentation. Searching for
+     any "if (action === " cut this block off after 900 characters,
+     because the orders block contains a nested one of its own -- and a
+     slice that ends early makes every check over it pass for the worst
+     possible reason: there was nothing left to look at. */
+  const next = rest.indexOf('\n    if (action === ', 10);
   return next > 0 ? rest.slice(0, next) : rest;
 })();
+
+/* Measured once, loudly: a slice that ends early makes every check over
+   it pass because there was nothing left to look at. */
+t.check(ADVICE.length > 2000 && /advice\.slice\(0, ADVICE_MAX\)/.test(ADVICE),
+  `the advice block is read whole (${ADVICE.length} chars, ending at its reply)`);
 
 const { pairingsFor, sizeIdx } = compileScope(
   ['sizeIdx', 'pairingsFor'].map(n => detype(extractFunction(fn, n, 'client-portal')))

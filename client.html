@@ -71,6 +71,9 @@
   .sheet{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
   .row{display:flex;align-items:baseline;gap:12px;padding:13px 20px;min-height:56px;}
   .row+.row{border-top:1px solid var(--hair);}
+  /* A row whose whole height is a target centres its contents; the
+     baseline the others share is for figures sitting beside words. */
+  .row-act{align-items:center;}
   .grow{flex-grow:1;min-width:0;}
   .bar{background:var(--paper);border-top:1px solid var(--rule);padding:12px 20px calc(16px + env(safe-area-inset-bottom));}
   .spacer{flex-grow:1;}
@@ -392,6 +395,30 @@
     </div>
   </section>
 
+  <!-- 9 &middot; Every order -->
+  <section id="scOrders" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="ordersBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;" id="ordersTitle">Your orders</div>
+    </div>
+    <div id="ordersBody"></div>
+    <div class="spacer"></div>
+  </section>
+
+  <!-- 10 &middot; One order -->
+  <section id="scOrder" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="orderBack" aria-label="Back to your orders">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;" id="orderTitle"></div>
+    </div>
+    <div id="orderBody"></div>
+    <div class="spacer"></div>
+  </section>
+
   <!-- 8 &middot; Statement of account -->
   <section id="scStatement" hidden style="display:flex;flex-direction:column;flex-grow:1;">
     <div class="topbar" style="border-bottom:0;">
@@ -524,7 +551,7 @@ async function api(action, extra){
   return data;
 }
 
-const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent','scStatement'];
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent','scStatement','scOrders','scOrder'];
 const SUBMIT_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-submit-order';
 function show(id){
   SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
@@ -771,7 +798,7 @@ function renderAccount(data){
      and how many there are in total when there are more than shown. */
   const orders = Array.isArray(data.orders) ? data.orders : [];
   const sheet = document.getElementById('ordersSheet');
-  if(!orders.length){
+  if(!orders.length && !Number(a.orderCount)){
     sheet.innerHTML = '<div style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
       + '<div style="font-size:15px;font-weight:600;">Nothing here yet</div>'
       + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What you buy will be listed here &mdash; every item, what you paid for it, and where it went.</div>'
@@ -785,16 +812,23 @@ function renderAccount(data){
       + '</div>'
       + '<div class="fig" style="font-size:16px;">' + money(o.total) + '</div>'
       + '</div>').join('')
-      /* The canvas has this as a verdigris row with a chevron, leading to
-         a full orders screen. That screen is not built and the function
-         returns five, so here it states the count as a fact instead.
-         Verdigris is THE one action; spending it on a row that does
-         nothing when tapped is how the accent stops meaning anything. */
-      + (Number(a.orderCount) > orders.length
-        ? '<div class="row" style="min-height:48px;"><div class="grow meta">Showing the '
-          + esc(orders.length) + ' most recent of ' + esc(a.orderCount) + '.</div></div>'
-        : '');
+      /* This stated the count as a fact for four commits, because the
+         screen it would have led to did not exist and a verdigris row
+         that does nothing when tapped is how the accent stops meaning
+         anything. The screen exists now, so it is a row again — and the
+         count stays in it, because "all 34" tells a customer whether it
+         is worth the tap. */
+      + '<button type="button" class="btn row row-act" id="allOrders"'
+      +   ' style="width:100%;min-height:52px;font-weight:400;font-size:14.5px;">'
+      +   '<span class="grow" style="text-align:left;color:var(--go);">'
+      +     (Number(a.orderCount) > orders.length
+        ? 'All ' + esc(a.orderCount) + ' orders'
+        : (orders.length ? 'Every order, in full' : 'Your orders')) + '</span>'
+      +   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14594A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'
+      + '</button>';
   }
+  const all = document.getElementById('allOrders');
+  if(all) all.onclick = () => openOrders();
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -830,6 +864,220 @@ document.getElementById('signOut').onclick = async () => {
   document.getElementById('phone').value = '';
   if(token){ try{ await api('signout', { token }); }catch(_){ /* the token is gone locally either way */ } };
 };
+
+/* ---------- every order --------------------------------------------- */
+/* The shop's board has five stages and this names them in a customer's
+   words. The KEYS and their order come from the server, which takes them
+   from the same ladder index.html draws — so a sixth stage, or a
+   different order, cannot appear on one side and not the other. Only the
+   words live here, with the rest of the copy. */
+const STAGE_WORDS = {
+  draft:            'With the shop',
+  awaiting_goods:   'Getting your goods',
+  preparing:        'Being prepared',
+  pending_delivery: 'On the way',
+  completed:        'Delivered',
+};
+/* Said under the stage it belongs to, and only where it is TRUE of every
+   order at that stage. Anything about a particular order — which line is
+   short, which lorry it is on — the books do not hold. */
+const STAGE_SAYS = {
+  awaiting_goods: 'What is not on our shelf, we fetch.',
+  pending_delivery: 'It has left the shop.',
+};
+
+document.getElementById('ordersBack').onclick = () => show('scAccount');
+document.getElementById('orderBack').onclick = () => show('scOrders');
+
+async function openOrders(){
+  show('scOrders');
+  document.getElementById('ordersBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching your orders&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('orders', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('ordersBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderOrders(d);
+}
+
+function stageWord(stage, cancelled){
+  if(cancelled) return 'Cancelled';
+  return STAGE_WORDS[stage] || 'With the shop';
+}
+
+function renderOrders(d){
+  const rows = Array.isArray(d.orders) ? d.orders : [];
+  document.getElementById('ordersTitle').textContent =
+    rows.length ? 'Your ' + rows.length + ' ' + plural(rows.length, 'order', 'orders') : 'Your orders';
+  const body = document.getElementById('ordersBody');
+  if(!rows.length){
+    body.innerHTML = '<div class="sheet" style="margin-top:16px;padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What you buy will be listed here &mdash; every item, what you paid for it, and where it got to.</div>'
+      + '</div>';
+    return;
+  }
+  /* Grouped by month, because thirty-four orders in one column is a wall.
+     The heading is the only thing between them. */
+  let lastMonth = '';
+  const out = [];
+  rows.forEach((o, i) => {
+    const m = monthLabel(o.date);
+    if(m !== lastMonth){
+      if(lastMonth) out.push('</div>');
+      out.push('<div class="lbl" style="padding:22px 20px 8px;">' + esc(m) + '</div><div class="sheet">');
+      lastMonth = m;
+    }
+    out.push(orderRowHTML(o, i));
+  });
+  if(lastMonth) out.push('</div>');
+  body.innerHTML = out.join('');
+  body.querySelectorAll('[data-o]').forEach(el => {
+    el.onclick = () => openOrder(rows[Number(el.dataset.o)].id);
+  });
+}
+
+function monthLabel(iso){
+  const m = /^(\d{4})-(\d{2})/.exec(String(iso || ''));
+  return m ? MONTHS[Number(m[2]) - 1] + ' ' + m[1] : 'No date';
+}
+
+function orderRowHTML(o, i){
+  const word = stageWord(o.stage, o.cancelled);
+  return '<button type="button" class="listrow" data-o="' + i + '" style="align-items:center;min-height:66px;">'
+    + '<span class="grow" style="display:block;">'
+    +   '<span class="trunc" style="display:block;font-size:15px;">' + esc(longDate(o.date)) + ' · '
+    +     esc(o.items) + ' ' + plural(o.items, 'item', 'items') + '</span>'
+    +   '<span class="meta" style="display:block;margin-top:2px;'
+    +     (o.cancelled ? 'text-decoration:none;' : '') + '">' + esc(word)
+    +     (o.fromPortal ? ' · sent from here' : '') + '</span>'
+    + '</span>'
+    + '<span class="fig" style="flex-shrink:0;font-size:16px;'
+    +   (o.cancelled ? 'color:var(--meta);' : '') + '">' + money(o.total) + '</span>'
+    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true" style="margin-left:10px;"><path d="M9 6l6 6-6 6"/></svg>'
+    + '</button>';
+}
+
+async function openOrder(id){
+  show('scOrder');
+  document.getElementById('orderTitle').textContent = 'Order ' + id;
+  document.getElementById('orderBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching it&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('order', { token: store(K_TOKEN), orderId: id });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('orderBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderOrder(d.order || {});
+}
+
+/* The ladder. A stage that has not happened carries NO date, because
+   nothing in the shop's books records when a status changed — only when
+   an order was sent and when it was invoiced. A day this screen cannot
+   derive is the one thing it must not invent. */
+function ladderHTML(o){
+  const stages = Array.isArray(o.stages) ? o.stages : [];
+  const at = stages.indexOf(o.stage);
+  return stages.map((s, i) => {
+    const done = i < at, here = i === at, future = i > at;
+    const dot = here
+      ? '<span style="width:15px;height:15px;border-radius:8px;border:4px solid var(--ink);background:var(--paper);flex-shrink:0;"></span>'
+      : done
+        ? '<span style="width:11px;height:11px;border-radius:6px;background:var(--ink);flex-shrink:0;"></span>'
+        : '<span style="width:11px;height:11px;border-radius:6px;border:1px solid var(--rule-firm);background:var(--ground);flex-shrink:0;"></span>';
+    /* ONLY the first step, and only from the moment that is actually
+       written down. invoiced_at was going against "Delivered" here, and
+       an invoice date is not a delivery date — they are different events
+       and nothing in the books says when the second one happened. The
+       invoice date is a real fact and gets its own line, beside the
+       money, rather than standing in for one it is not. */
+    const when = i === 0 && o.sentAt ? longDate(String(o.sentAt).slice(0, 10)) : '';
+    const says = (done || here) ? (STAGE_SAYS[s] || '') : '';
+    return '<div style="display:flex;gap:14px;padding:0 20px;">'
+      + '<div style="width:16px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">' + dot
+      +   (i < stages.length - 1 ? '<span style="width:1px;flex-grow:1;background:var(--rule-soft);"></span>' : '')
+      + '</div>'
+      + '<div class="grow" style="padding-bottom:' + (i < stages.length - 1 ? 20 : 4) + 'px;margin-top:-3px;">'
+      +   '<div style="font-size:14.5px;' + (future ? 'color:var(--meta);' : 'font-weight:600;') + '">'
+      +     esc(STAGE_WORDS[s] || s) + '</div>'
+      +   (when ? '<div class="meta" style="margin-top:2px;">' + esc(when) + '</div>' : '')
+      +   (says ? '<div style="font-size:13px;color:var(--ink-2);margin-top:4px;line-height:1.5;">' + esc(says) + '</div>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+function renderOrder(o){
+  const lines = Array.isArray(o.lines) ? o.lines : [];
+  document.getElementById('orderTitle').textContent = 'Order ' + (o.id == null ? '' : o.id);
+
+  document.getElementById('orderBody').innerHTML =
+    '<div class="sheet" style="border-top:0;padding:4px 20px 20px;display:flex;flex-direction:column;gap:6px;">'
+    + '<div class="meta" style="font-size:12.5px;">' + esc(longDate(o.date)) + ' · '
+    +   esc(lines.length) + ' ' + plural(lines.length, 'item', 'items')
+    +   (o.deliverTo ? ' · to ' + esc(o.deliverTo) : '') + '</div>'
+    + '<div class="ser" style="font-size:26px;line-height:1.2;'
+    +   (o.cancelled ? 'color:var(--ink-2);' : '') + '">'
+    +   esc(stageWord(o.stage, o.cancelled)) + '</div>'
+    + (o.cancelled
+      /* Voiding an order drives its desired debt charge to nought
+         (invoiceDebtDesired) and the sync reverses what was charged — so
+         this is true. It is still put as something the customer can
+         CHECK rather than something they must take on trust, because the
+         statement screen already admits the two can drift. */
+      ? '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.5;">This order was cancelled. It should not appear on your statement — tell us if it does.</div>'
+      : '')
+    + '</div>'
+
+    + '<div class="lbl" style="padding:22px 20px 9px;">What was on it</div>'
+    + '<div class="sheet">'
+    + (lines.length
+      ? lines.map(l =>
+        '<div class="row" style="align-items:flex-start;min-height:60px;">'
+        + '<div class="grow">'
+        +   '<div class="trunc" style="font-size:14.5px;">' + esc(l.name)
+        +     (l.variantLabel ? ' — ' + esc(l.variantLabel) : '') + '</div>'
+        +   '<div class="meta" style="margin-top:2px;">' + esc(l.qty) + ' '
+        +     esc(l.unit ? (l.qty === 1 ? l.unit : many(l.unit)) : plural(l.qty, 'one', 'of them'))
+        +     ' at ' + money(l.unitPrice) + '</div>'
+        + '</div>'
+        + '<div class="fig" style="font-size:16px;flex-shrink:0;">' + money(l.lineTotal) + '</div>'
+        + '</div>').join('')
+      : '<div style="padding:20px;"><div class="meta">Nothing was written on this order.</div></div>')
+    + '<div class="row" style="border-top:1.5px solid var(--rule-firm);padding:16px 20px;">'
+    +   '<div class="grow" style="font-size:15px;font-weight:600;">Order total</div>'
+    +   '<div class="fig" style="font-size:22px;' + (o.cancelled ? 'color:var(--meta);' : '') + '">' + money(o.total) + '</div>'
+    + '</div>'
+    + (!o.cancelled && o.invoicedAt
+      ? '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Invoiced</div>'
+        + '<div style="font-size:14.5px;">' + esc(longDate(o.invoicedAt)) + '</div></div>'
+      : '')
+    + (!o.cancelled && o.paid > 0
+      ? '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Paid</div>'
+        + '<div class="fig" style="font-size:16px;">' + money(o.paid) + '</div></div>'
+        + '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Still to pay</div>'
+        + '<div class="fig" style="font-size:16px;' + (o.due > 0 ? 'color:var(--owe);' : '') + '">'
+        + (o.due > 0 ? money(o.due) : 'Nothing') + '</div></div>'
+      : '')
+    + '</div>'
+
+    + (o.cancelled ? '' :
+      '<div class="lbl" style="padding:22px 20px 10px;">Where it has reached</div>'
+      + '<div class="sheet" style="padding:18px 0 4px;">' + ladderHTML(o) + '</div>')
+
+    + (o.cancelled ? '' :
+      '<div style="padding:16px 20px calc(22px + env(safe-area-inset-bottom));">'
+      + '<div class="meta" style="line-height:1.55;">We only put a day against a step the books can date.</div>'
+      + '</div>');
+}
 
 /* ---------- the statement ------------------------------------------- */
 /* The same document the shop's own screen builds, from the same table and

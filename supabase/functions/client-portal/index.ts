@@ -531,6 +531,45 @@ export function buildStatement(log: any[], fromISO: string, toISO: string, recor
 }
 
 // ---------------------------------------------------------------------
+// Where an order has reached
+//
+// The shop's own board (SQ_STATUS_ORDER in index.html) is the authority,
+// and this list has to be the same list in the same order — a portal that
+// invented a sixth stage, or ordered these differently, would show a
+// customer a journey their order is not on. test/client-orders.test.js
+// reads the ladder out of index.html and compares.
+//
+// The customer's WORDS are not here. They are on the page, with the rest
+// of the copy; what crosses is the key and the order.
+// ---------------------------------------------------------------------
+const ORDER_STAGES = ["draft", "awaiting_goods", "preparing", "pending_delivery", "completed"];
+
+function stageOf(status: unknown): string {
+  const s = String(status || "draft");
+  return ORDER_STAGES.indexOf(s) >= 0 ? s : "draft";
+}
+
+// What a customer was actually charged for one saved order. Reads
+// sellPrice and nothing else: `price` on the same line is what the shop
+// paid its supplier, and it has no business on this side of the wire.
+function orderLines(payload: any) {
+  const items = payload && payload.items;
+  if (!Array.isArray(items)) return [];
+  return items.map(function (it: any) {
+    const qty = Number(it && it.qty) || 0;
+    const sell = Number(it && it.sellPrice) || 0;
+    return {
+      name: (it && it.productName) || "",
+      variantLabel: (it && it.variantLabel) || "",
+      qty,
+      unit: (it && it.unit) || "",
+      unitPrice: sell,
+      lineTotal: qty * sell,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------
 
 async function sessionAccount(shopId: string, token: string) {
   if (!token) return null;
@@ -1134,6 +1173,91 @@ Deno.serve(async (req) => {
         // this screen, and the same one the account screen shows.
         owed: Number(customer.debt) || 0,
         agrees: built.agrees,
+      });
+    }
+
+    // -----------------------------------------------------------------
+    // orders / order — the whole record, and one of them
+    //
+    // The account screen shows five and says how many there are. This is
+    // the rest. A CANCELLED order is in it: a customer wondering where an
+    // order went is owed the answer "we cancelled it", and leaving it out
+    // of the record so the list looks tidier is how they end up ringing
+    // to ask. It is marked, and it counts towards nothing.
+    // -----------------------------------------------------------------
+    if (action === "orders" || action === "order") {
+      const session = await sessionAccount(shopId, String(body.token ?? ""));
+      if (!session) return json({ error: "Sign in again" }, 401);
+
+      const { data: customer } = await admin.from("customers")
+        .select("phone").eq("shop_id", shopId).eq("id", session.customer_id).maybeSingle();
+      if (!customer) return json({ error: "Sign in again" }, 401);
+      const mine = normalisePhone(customer.phone);
+      if (!mine) return json({ ok: true, orders: [], count: 0 });
+
+      // voided is NOT filtered out here, unlike everywhere else in this
+      // file: this is the record rather than the reckoning. Every other
+      // read — the balance, the remembered price, the recent five — drops
+      // them, and must.
+      const { data: rows } = await admin.from("saved_quotes")
+        .select("id, client_phone, date, status, invoiced, invoiced_at, voided, amount_paid, payload")
+        .eq("shop_id", shopId)
+        .order("id", { ascending: false }).limit(400);
+      const ours = (rows || []).filter((q: any) => normalisePhone(q.client_phone) === mine);
+
+      if (action === "order") {
+        const wanted = String(body.orderId ?? "");
+        const q = ours.find((r: any) => String(r.id) === wanted);
+        // Said the same way whether the order belongs to somebody else or
+        // does not exist: a portal that distinguishes them is a portal
+        // that will confirm another customer's order number.
+        if (!q) return json({ error: "We cannot find that order" }, 404);
+        const lines = orderLines(q.payload);
+        const total = lines.reduce((s, l) => s + l.lineTotal, 0);
+        const paid = Number(q.amount_paid) || 0;
+        return json({
+          ok: true,
+          order: {
+            id: q.id,
+            date: q.date,
+            stage: stageOf(q.status),
+            stages: ORDER_STAGES,
+            cancelled: !!q.voided,
+            invoiced: !!q.invoiced,
+            invoicedAt: q.invoiced_at || null,
+            // Only where the shop's own books can derive it. There is no
+            // record anywhere of when a status changed, so the ladder gets
+            // dates for the two moments that ARE written down and none at
+            // all for the rest. A promised day the books cannot derive is
+            // the one thing this screen must not invent.
+            sentAt: (q.payload && q.payload.savedAt) || null,
+            deliverTo: (q.payload && q.payload.deliverTo) || null,
+            fromPortal: !!(q.payload && q.payload.originPortal),
+            lines,
+            total,
+            paid,
+            due: Math.max(0, total - paid),
+          },
+        });
+      }
+
+      return json({
+        ok: true,
+        stages: ORDER_STAGES,
+        count: ours.length,
+        orders: ours.map((q: any) => {
+          const lines = orderLines(q.payload);
+          return {
+            id: q.id,
+            date: q.date,
+            items: lines.length,
+            total: lines.reduce((s, l) => s + l.lineTotal, 0),
+            stage: stageOf(q.status),
+            cancelled: !!q.voided,
+            invoiced: !!q.invoiced,
+            fromPortal: !!(q.payload && q.payload.originPortal),
+          };
+        }),
       });
     }
 

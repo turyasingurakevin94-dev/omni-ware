@@ -137,10 +137,19 @@ function load() {
     orders: [1,2,3,4,5].map(i => ({ id: i, date: '2026-09-0' + i, items: i, total: 1000 * i, invoiced: i % 2 === 0 })),
   });
   const html = document._nodes.ordersSheet.innerHTML;
-  t.check(/Showing the 5 most recent of 34\./.test(html),
-    'more orders than shown is stated as a fact, not offered as a link');
-  t.check(!/#14594A|var\(--go\)/.test(html),
-    'the count line spends no verdigris -- there is no orders screen to tap through to');
+  /* These two pinned the opposite until the orders screen was built: the
+     count was STATED as a fact, and spent no verdigris, because a row
+     that does nothing when tapped is how the accent stops meaning
+     anything. Both were true when written. The screen exists now, so the
+     row is an action again -- and the count stays in it, because "all 34"
+     is what tells a customer whether the tap is worth making. */
+  t.check(/All 34 orders/.test(html),
+    `the count is offered as a way in (${(html.match(/All \d+ orders|Showing the[^<]*/) || [])[0]})`);
+  t.check(/id="allOrders"/.test(html), 'as a control with a handler');
+  t.check(/var\(--go\)/.test(html) && /#14594A/.test(html),
+    'in verdigris, which it has now earned by leading somewhere');
+  t.check(!/Showing the \d+ most recent/.test(html),
+    'and no longer states it as a fact with nowhere to go');
   t.check(/1 item</.test(html) && /2 items</.test(html), 'one item is not "1 items"');
 }
 
