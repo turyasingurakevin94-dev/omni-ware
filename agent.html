@@ -1206,14 +1206,25 @@
     color:#fff;margin-top:16px;}
   .fx-tally-r{display:flex;align-items:baseline;gap:10px;font-size:15px;color:var(--fx-on-2);}
   .fx-tally-r b{margin-left:auto;font-family:var(--font-money);font-variant-numeric:tabular-nums;
-    font-size:18px;font-weight:600;color:#fff;letter-spacing:-.02em;}
+    font-size:17px;font-weight:600;color:#fff;letter-spacing:-.03em;white-space:nowrap;}
   .fx-tally-r.big{margin-top:10px;padding-top:10px;border-top:1px solid var(--fx-hair);
     font-size:16px;color:#fff;font-weight:600;}
-  .fx-tally-r.big b{font-size:24px;color:var(--fx-mint);}
+  .fx-tally-r.big b{font-size:22px;color:var(--fx-mint);}
   /* Selling at or under the shop's own price is not good news and must
      not wear the good colour. */
   .fx-tally-r.big.none b{color:var(--fx-on-2);}
   .fx-tally-r.big.loss b{color:#FF9B8E;}
+
+  /* ---- the quote ---- */
+  .fx-quote-hd{display:flex;align-items:center;gap:8px;padding:6px 0 14px;}
+  .fx-back{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;width:44px;min-height:44px;flex:none;margin-left:-10px;}
+  .fx-back .icon{width:22px;height:22px;stroke:var(--fx-ink);}
+  .fx-quote-b{min-width:0;}
+  .fx-quote-l{display:block;font-size:13px;color:var(--fx-ink-3);}
+  .fx-quote-n{display:block;font-size:21px;font-weight:700;letter-spacing:-.015em;
+    line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-quote-n.unnamed{color:var(--fx-ink-3);font-weight:600;}
 
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
@@ -1529,9 +1540,18 @@
 
   <!-- QUOTE (sub-screen of Sell) -->
   <div id="ag_quoteView" class="ag-pad-top" style="display:none;">
-    <div class="ag-back-row">
-      <button type="button" class="ag-back-btn" id="ag_quote_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <h1 style="font-size:20px;font-weight:800;margin:0;">Your quote</h1>
+    <!-- A quote is for somebody before it is a list of things, and one
+         basket per client is already how this app models it. The screen
+         never said whose it was until you scrolled past the items to a
+         fold called "Client". -->
+    <div class="fx-quote-hd">
+      <button type="button" class="fx-back" id="ag_quote_back_btn" aria-label="Back">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></svg>
+      </button>
+      <span class="fx-quote-b">
+        <span class="fx-quote-l">Order for</span>
+        <span class="fx-quote-n" id="ag_quoteWho">Not yet named</span>
+      </span>
     </div>
 
     <div class="empty-state" id="ag_cartEmptyState" style="display:none;">
@@ -1577,9 +1597,12 @@
               <tbody id="ag_cartWrap"></tbody>
             </table>
           </div>
-          <div class="ag-quote-summary">
-            <div class="ag-quote-stat"><div class="lbl">Total</div><div class="val" id="ag_cartTotalValue">UGX 0</div></div>
-            <div class="ag-quote-stat profit"><div class="lbl">Your profit</div><div class="val" id="ag_cartProfitValue">UGX 0</div></div>
+          <!-- The payoff, in the same dark as the earnings hero and the add
+               sheet: what the customer pays, and under it, larger and in
+               the good colour, what the order leaves him. -->
+          <div class="fx-tally">
+            <div class="fx-tally-r"><span>Customer pays</span><b id="ag_cartTotalValue">UGX 0</b></div>
+            <div class="fx-tally-r big"><span>You earn</span><b id="ag_cartProfitValue">UGX 0</b></div>
           </div>
         </div>
 
@@ -6205,6 +6228,13 @@ function quoteFoldSummaries(client, deliveryMode, deliveryAddress){
 function renderQuoteFolds(){
   const mode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
   const sums = quoteFoldSummaries(chosenClient, mode, document.getElementById('ag_delivery_address').value);
+  // Read from the same summary the Client fold uses, so the name in the
+  // header and the name in the fold cannot drift apart.
+  const who = document.getElementById('ag_quoteWho');
+  if(who){
+    who.textContent = sums.client || 'Not yet named';
+    who.classList.toggle('unnamed', !sums.client);
+  }
   [['ag_clientCard','ag_clientFoldAnswer', sums.client, 'Choose a client'],
    ['ag_deliveryCard','ag_deliveryFoldAnswer', sums.delivery, 'How does it get there?']].forEach(([cardId, ansId, answer, prompt])=>{
     const card = document.getElementById(cardId), ans = document.getElementById(ansId);
