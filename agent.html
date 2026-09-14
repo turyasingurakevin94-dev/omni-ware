@@ -171,9 +171,14 @@
   /* The six-month chart is .fx-chart / .fx-col now, with the month names
      on their own row under the bars and the target drawn across them. */
 
-  .ag-seg-tabs{display:flex;background:var(--bg);border-radius:13px;padding:4px;margin-bottom:14px;}
-  .ag-seg-btn{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;}
-  .ag-seg-btn.active{background:var(--ink);color:#fff;}
+  /* It sits on the header's dark ground now, so the inactive tab is white
+     at reduced opacity and the active one is the paper the list below is
+     printed on -- the same "you are here" move the lit aisle makes. */
+  .ag-seg-tabs{display:flex;background:rgba(255,255,255,.09);border:1px solid var(--fx-hair);
+    border-radius:14px;padding:4px;gap:4px;}
+  .ag-seg-btn{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:9px;border-radius:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.72);cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;}
+  .ag-seg-btn.active{background:#fff;color:var(--fx-ink);}
+  .ag-seg-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 
   /* It rides the hero's top row now, between the back control and the
      spacer that balances it, so the month is centred. */
@@ -616,33 +621,28 @@
   .ag-variant-chips + .ag-variant-chips{margin-top:6px;}
 
   /* ---- Profile card + menu (Account) ---- */
-  .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
-  .ag-profile-avatar{width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;flex-shrink:0;}
-  .ag-profile-name{font-weight:800;font-size:16.5px;letter-spacing:-0.01em;}
-  .ag-profile-phone{font-size:13px;color:var(--ink-soft);margin-top:2px;}
-  .ag-profile-contact{font-size:13px;color:var(--ink-soft);margin-top:3px;display:flex;flex-direction:column;gap:1px;}
+  /* The profile card is .fx-who inside the account hero now. */
 
   /* How this agent settles with the shop. It governs every order they
      place and the app never stated it -- you found out by hitting a draft
      that would not move. Given its own card rather than a menu row,
      because it is a fact to read, not a place to go. */
-  .ag-term-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:6px;display:flex;gap:13px;align-items:flex-start;}
-  .ag-term-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent);}
-  .ag-term-icon .icon{width:19px;height:19px;}
-  .ag-term-title{font-weight:800;font-size:14.5px;letter-spacing:-0.005em;}
-  .ag-term-detail{font-size:13px;color:var(--ink-soft);margin-top:4px;line-height:1.45;}
+  .fx-term{display:flex;gap:13px;align-items:flex-start;padding:16px;}
+  .ag-term-icon{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--fx-oxide-tint);color:var(--fx-oxide-2);}
+  .ag-term-icon .icon{width:20px;height:20px;}
+  .ag-term-title{font-weight:700;font-size:15.5px;letter-spacing:-.01em;color:var(--fx-ink);}
+  .ag-term-detail{font-size:13.5px;color:var(--fx-ink-2);margin-top:5px;line-height:1.5;}
   /* payment_term is a trust setting only an admin can change
      (0012_sales_agents.sql), so this card offers no way to edit it and
      says as much rather than looking like a broken control. */
-  .ag-term-note{font-size:12px;color:var(--ink-faint);margin-top:7px;}
+  .ag-term-note{font-size:12.5px;color:var(--fx-ink-3);margin-top:8px;}
 
-  .ag-stat-row{display:flex;gap:10px;margin-bottom:6px;}
-  .ag-stat-cell{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;}
-  .ag-stat-val{font-size:19px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
-  .ag-stat-lbl{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:3px;}
+  /* Three figures on one card, divided by hairlines, rather than three
+     bordered boxes with gaps between them. They are one fact about him,
+     not three separate ones. */
 
-  .ag-sync-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:6px;font-size:13px;color:var(--ink-soft);line-height:1.45;}
-  .ag-sync-card b{color:var(--ink);font-weight:700;}
+  .ag-sync-card{background:var(--fx-card);border:1px solid var(--fx-line);border-radius:var(--fx-r-card);padding:14px 16px;font-size:13.5px;color:var(--fx-ink-2);line-height:1.5;}
+  .ag-sync-card b{color:var(--fx-ink);font-weight:600;}
   /* Amber, matching the offline banner at the top of the app -- that is
      already this surface's established "working from a saved copy" colour,
      and a second one would just mean the same thing twice.
@@ -655,57 +655,67 @@
   .ag-confirm-actions{display:flex;gap:10px;}
   .ag-confirm-actions .btn{flex:1;text-align:center;}
 
-  .ag-menu-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px;cursor:pointer;}
-  .ag-menu-row:hover{border-color:var(--accent);}
-  .ag-menu-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .ag-menu-icon .icon{width:19px;height:19px;}
-  .ag-menu-label{font-weight:700;font-size:14.5px;flex:1;}
-  .ag-menu-count{font-size:13px;color:var(--ink-soft);font-weight:600;}
-  .ag-menu-chevron{color:var(--ink-soft);width:18px;height:18px;flex-shrink:0;}
+  /* .ag-menu-row was a bordered tile with a coloured disc, and Sign out
+     wore the same one in red -- a destructive action dressed identically
+     to a link to a list. They are .fx-menu and .fx-signout now. */
 
-  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
-  .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-  .ag-order-row-client{font-weight:600;font-size:14px;}
-  .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
-  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ag-order-row{background:var(--fx-card);border-radius:var(--fx-r-card);box-shadow:var(--fx-sh);
+    padding:13px 15px;margin-bottom:10px;cursor:pointer;}
+  .ag-order-row-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px;}
+  .ag-order-row-client{font-weight:600;font-size:15px;letter-spacing:-.005em;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ag-order-row-date{font-size:13px;color:var(--fx-ink-3);}
+  .ag-order-row-split{font-size:13px;color:var(--fx-ink-3);display:flex;align-items:center;justify-content:space-between;gap:8px;}
   /* .ag-earn-amt / -split / -pending went with the earnings order rows.
      What an order earned is the figure at the end of a .fx-ord row now,
      with the margin-plus-bonus breakdown on its meta line. */
-  .ag-order-row-items-link{color:var(--accent);font-weight:700;white-space:nowrap;}
+  .ag-order-row-items-link{color:var(--fx-ink-2);font-weight:600;white-space:nowrap;}
   /* Ongoing orders: what's happening right now ("Andrew is preparing your
      order"). Completed orders: whether this order is settled with the shop
      or still owes a balance. Same slot, different meaning per status, each
      with its own color so the state reads before the text is even read. */
-  .ag-seg-count{margin-left:6px;font-size:11.5px;font-weight:700;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
-  .ag-seg-btn.active .ag-seg-count{color:rgba(255,255,255,0.72);}
+  .ag-seg-count{margin-left:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;}
+  .ag-seg-btn.active .ag-seg-count{color:var(--fx-ink-3);}
 
   /* The plain-ground twin of .ag-search-bar, which is styled for the dark
      hero on Sell (white fill, white focus ring) and would disappear here. */
-  .ag-filter-bar{position:relative;margin-bottom:14px;}
-  .ag-filter-bar input{width:100%;box-sizing:border-box;padding:12px 40px 12px 40px;border:1px solid var(--line);border-radius:13px;font-size:14px;background:var(--panel);font-family:inherit;color:var(--ink);}
-  .ag-filter-bar input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-  .ag-filter-bar .ag-search-icon{left:13px;}
+  .ag-filter-bar{position:relative;margin-bottom:16px;}
+  .ag-filter-bar input{width:100%;box-sizing:border-box;min-height:52px;padding:0 44px;border:1px solid var(--fx-line);border-radius:var(--fx-r-card);font-size:15px;background:var(--fx-card);font-family:inherit;color:var(--fx-ink);box-shadow:var(--fx-sh);}
+  .ag-filter-bar input:focus{outline:none;border-color:var(--fx-oxide);box-shadow:0 0 0 3px var(--fx-oxide-tint);}
+  .ag-filter-bar .ag-search-icon{left:15px;}
 
   /* Ongoing groups by who is being waited on; completed groups by when.
      A flat list repeated the full date on every row and buried the two
      orders actually waiting on the agent among the ones that are not. */
-  .ag-hist-group{display:flex;align-items:baseline;gap:7px;font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--ink-soft);margin:18px 0 8px;}
+  /* Sentence case at reading size. It was 12px uppercase on 0.04em
+     tracking -- the admin-console label again, over a list an agent reads
+     standing up. */
+  .ag-hist-group{display:flex;align-items:baseline;gap:8px;font-size:17px;font-weight:700;
+    letter-spacing:-.01em;color:var(--fx-ink);margin:22px 4px 10px;}
   .ag-hist-group:first-child{margin-top:2px;}
-  .ag-hist-group.needs{color:var(--accent);}
-  .ag-hist-group-n{font-size:11.5px;font-weight:700;color:var(--ink-faint);letter-spacing:0;}
+  .ag-hist-group.needs{color:var(--fx-oxide-2);}
+  .ag-hist-group-n{margin-left:auto;font-size:14px;font-weight:500;color:var(--fx-ink-3);}
 
-  .ag-order-row-total{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .ag-order-earned{font-size:12px;color:var(--ink-faint);margin-top:3px;font-variant-numeric:tabular-nums;}
+  .ag-order-row-total{font-family:var(--font-money);font-size:16px;font-weight:600;
+    letter-spacing:-.03em;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none;}
+  /* What he made on it, in the same green chip the product rows use --
+     it was 12px faint grey, the quietest thing on a row about money. */
+  .ag-order-earned{display:inline-flex;align-items:center;min-height:22px;padding:0 7px;margin-top:7px;
+    border-radius:var(--fx-r-pill);background:var(--fx-green-bg);color:var(--fx-green);
+    font-size:11.5px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
 
-  .ag-order-status{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;}
+  .ag-order-status{display:flex;align-items:center;gap:7px;margin-top:11px;padding-top:10px;
+    border-top:1px solid var(--fx-line);font-size:13px;font-weight:600;}
   .ag-order-status .icon{width:15px;height:15px;flex-shrink:0;}
-  .ag-order-status.waiting{color:var(--ink-soft);}
-  .ag-order-status.preparing{color:var(--accent-dark);}
+  .ag-order-status.waiting{color:var(--fx-ink-3);}
+  .ag-order-status.preparing{color:var(--fx-oxide-2);}
   .ag-order-status.delivering{color:var(--blue);}
   .ag-order-status.pickup{color:var(--rust);}
-  .ag-order-status.settled{color:var(--good);}
+  .ag-order-status.settled{color:var(--fx-green);}
   .ag-order-status.due{color:var(--danger);}
-  .ag-order-status .momo-pay-now-btn{all:unset;cursor:pointer;margin-left:auto;background:var(--accent);color:#fff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:20px;}
+  .ag-order-status .momo-pay-now-btn{all:unset;box-sizing:border-box;cursor:pointer;margin-left:auto;
+    display:flex;align-items:center;min-height:36px;background:var(--fx-oxide);color:#fff;
+    font-size:13px;font-weight:600;padding:0 14px;border-radius:var(--fx-r-pill);}
 
   /* Mobile money payment flow (payment-choice + pay modals). */
   .momo-choice-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:var(--panel);}
@@ -1095,6 +1105,48 @@
   .fx-ord-v b{display:block;font-family:var(--font-money);font-variant-numeric:tabular-nums;
     font-size:16px;font-weight:600;letter-spacing:-.03em;}
   .fx-ord-v i{display:block;font-style:normal;font-size:12px;color:var(--fx-ink-3);margin-top:1px;}
+
+  /* ---- who he is, and what the shop owes him ---- */
+  .fx-who{display:flex;align-items:center;gap:13px;}
+  .fx-who-av{width:52px;height:52px;flex:none;border-radius:17px;
+    background:rgba(255,255,255,.12);border:1px solid var(--fx-hair);
+    display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;}
+  .fx-who-b{min-width:0;}
+  .fx-who-n{display:block;font-size:20px;font-weight:700;letter-spacing:-.015em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Each contact on its own line. The renderer emits one <span> per value
+     and inline spans concatenate -- a phone number and an email printed
+     as one string is the third time this file has made that mistake. */
+  .fx-who-m{display:block;font-size:14px;color:var(--fx-on-3);margin-top:3px;}
+  .fx-who-m span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .fx-stats{display:flex;}
+  .fx-stats > div{flex:1;min-width:0;text-align:center;padding:14px 8px;}
+  .fx-stats > div + div{border-left:1px solid var(--fx-line);}
+  .fx-stats .v{font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:20px;font-weight:600;letter-spacing:-.03em;}
+  .fx-stats .l{font-size:12.5px;color:var(--fx-ink-3);margin-top:3px;}
+
+  .fx-menu{all:unset;box-sizing:border-box;cursor:pointer;display:flex;width:100%;
+    align-items:center;gap:12px;padding:13px 14px;}
+  .fx-menu-ic{width:40px;height:40px;flex:none;border-radius:13px;background:var(--fx-page);
+    display:flex;align-items:center;justify-content:center;}
+  .fx-menu-ic .icon{width:19px;height:19px;stroke:var(--fx-ink-2);}
+  .fx-menu-b{flex:1;min-width:0;text-align:left;}
+  .fx-menu-n{display:block;font-size:15px;font-weight:600;letter-spacing:-.005em;}
+  .fx-menu-m{display:block;font-size:13px;color:var(--fx-ink-3);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-menu:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:-2px;border-radius:var(--fx-r-card);}
+
+  /* Signing out deletes the only copy of this data on the phone, so it is
+     the one control on the screen that says what it is by standing apart
+     from the rest rather than by wearing the same tile in red. */
+  .fx-signout{all:unset;box-sizing:border-box;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;gap:9px;min-height:52px;
+    border-radius:16px;background:var(--fx-card);box-shadow:var(--fx-sh);
+    font-size:15px;font-weight:600;color:#A6321F;}
+  .fx-signout .icon{width:19px;height:19px;}
+  .fx-signout:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
 
   /* ---- setting the target ---- */
   .fx-modal{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;
@@ -1637,47 +1689,62 @@
   </div>
 
   <!-- ACCOUNT -->
-  <div id="ag_accountView" class="ag-pad-top" style="display:none;">
-    <div class="ag-back-row">
-      <button type="button" class="ag-back-btn" id="ag_account_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <h1 style="font-size:20px;font-weight:800;margin:0;">Account</h1>
-    </div>
-
-    <div class="ag-profile-card">
-      <div class="ag-profile-avatar" id="ag_profile_avatar">A</div>
-      <div style="min-width:0;">
-        <div class="ag-profile-name" id="ag_profile_name">Agent</div>
-        <div class="ag-profile-contact" id="ag_profile_contact"></div>
+  <div id="ag_accountView" class="fx" style="display:none;">
+    <div class="fx-mini">
+      <div class="fx-mini-top">
+        <button type="button" class="fx-iconbtn" id="ag_account_back_btn" aria-label="Back">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></svg>
+        </button>
+        <span class="fx-mini-t">Your account</span>
+        <span style="width:44px;flex:none;"></span>
+      </div>
+      <div class="fx-who">
+        <span class="fx-who-av" id="ag_profile_avatar">A</span>
+        <span class="fx-who-b">
+          <span class="fx-who-n" id="ag_profile_name">Agent</span>
+          <span class="fx-who-m" id="ag_profile_contact"></span>
+        </span>
       </div>
     </div>
 
-    <!-- The term that governs every order this agent places. It decides
-         whether a draft moves once submitted, and the app never said which
-         one they were on -- you discovered it by hitting a draft that
-         would not budge. -->
-    <div class="ag-section-title">How you settle with the shop</div>
-    <div class="ag-term-card" id="ag_termCard"></div>
+    <div class="fx-sheet" style="padding-bottom:26px;">
+      <!-- The term that governs every order this agent places. It decides
+           whether a draft moves once submitted, and the app never said
+           which one they were on -- you discovered it by hitting a draft
+           that would not budge. -->
+      <div>
+        <div class="fx-sec"><h2>How you settle</h2></div>
+        <div class="fx-card fx-term" id="ag_termCard"></div>
+      </div>
 
-    <div class="ag-section-title">Since you started</div>
-    <div class="ag-stat-row" id="ag_lifetimeStats"></div>
+      <div>
+        <div class="fx-sec"><h2>Since you started</h2></div>
+        <div class="fx-card fx-stats" id="ag_lifetimeStats"></div>
+      </div>
 
-    <div class="ag-section-title">Shortcuts</div>
-    <div class="ag-menu-row" id="ag_menu_orders">
-      <span class="ag-menu-icon" style="background:var(--blue-soft);color:var(--blue);"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
-      <span class="ag-menu-label">Order history</span>
-      <span class="ag-menu-count" id="ag_menu_orders_count">0</span>
-      <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
+      <div class="fx-card">
+        <button type="button" class="fx-menu" id="ag_menu_orders">
+          <span class="fx-menu-ic"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
+          <span class="fx-menu-b">
+            <span class="fx-menu-n">Order history</span>
+            <span class="fx-menu-m"><span id="ag_menu_orders_count">0</span> orders, and what each one paid you</span>
+          </span>
+          <svg class="fx-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg>
+        </button>
+      </div>
 
-    <!-- Signing out wipes the local snapshot, so "when was this last
-         saved" stops being trivia the moment you are standing in a shop
-         with no signal. -->
-    <div class="ag-section-title">Your data on this phone</div>
-    <div class="ag-sync-card" id="ag_syncCard"></div>
+      <!-- Signing out wipes the local snapshot, so "when was this last
+           saved" stops being trivia the moment you are standing in a shop
+           with no signal. -->
+      <div>
+        <div class="fx-sec"><h2>Your data on this phone</h2></div>
+        <div class="ag-sync-card" id="ag_syncCard"></div>
+      </div>
 
-    <div class="ag-menu-row" id="ag_signout_btn" style="margin-top:20px;">
-      <span class="ag-menu-icon" style="background:var(--danger-bg);color:var(--danger);"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></span>
-      <span class="ag-menu-label" style="color:var(--danger);">Sign out</span>
+      <button type="button" class="fx-signout" id="ag_signout_btn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </button>
     </div>
   </div>
 
@@ -1753,24 +1820,31 @@
   </div>
 
   <!-- ORDER HISTORY (sub-screen, reachable from Home and Account) -->
-  <div id="ag_orderHistoryListView" class="ag-pad-top" style="display:none;">
-    <div class="ag-back-row">
-      <button type="button" class="ag-back-btn" id="ag_orders_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <h1 style="font-size:20px;font-weight:800;margin:0;">Order history</h1>
+  <div id="ag_orderHistoryListView" class="fx" style="display:none;">
+    <div class="fx-mini">
+      <div class="fx-mini-top">
+        <button type="button" class="fx-iconbtn" id="ag_orders_back_btn" aria-label="Back">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></svg>
+        </button>
+        <span class="fx-mini-t">Your orders</span>
+        <span style="width:44px;flex:none;"></span>
+      </div>
+      <div class="ag-seg-tabs" id="ag_orderHistorySeg">
+        <button type="button" class="ag-seg-btn active" data-seg="ongoing">Ongoing <span class="ag-seg-count" id="ag_seg_ongoing_count"></span></button>
+        <button type="button" class="ag-seg-btn" data-seg="completed">Completed <span class="ag-seg-count" id="ag_seg_completed_count"></span></button>
+      </div>
     </div>
-    <div class="ag-seg-tabs" id="ag_orderHistorySeg">
-      <button type="button" class="ag-seg-btn active" data-seg="ongoing">Ongoing <span class="ag-seg-count" id="ag_seg_ongoing_count"></span></button>
-      <button type="button" class="ag-seg-btn" data-seg="completed">Completed <span class="ag-seg-count" id="ag_seg_completed_count"></span></button>
-    </div>
-    <!-- Completed is unbounded -- it only grows. Scrolling was the only way
-         to find last month's order for a particular client. -->
-    <div class="ag-filter-bar">
-      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-      <input type="text" id="ag_orderSearch" placeholder="Search by client or product" autocomplete="off">
-      <button type="button" class="ag-search-clear" id="ag_orderSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div id="ag_orderHistoryListWrap"></div>
 
+    <div class="ag-pad" style="padding-top:16px;">
+      <!-- Completed is unbounded -- it only grows. Scrolling was the only
+           way to find last month's order for a particular client. -->
+      <div class="ag-filter-bar">
+        <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <input type="text" id="ag_orderSearch" placeholder="Search by client or product" autocomplete="off">
+        <button type="button" class="ag-search-clear" id="ag_orderSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div id="ag_orderHistoryListWrap"></div>
+    </div>
   </div>
 
   <!-- QUOTE (sub-screen of Sell) -->
@@ -4448,7 +4522,7 @@ function orderRowHTML(o){
       <span>${esc(date)}</span>
       <span class="ag-order-row-items-link">${itemCount} item${itemCount===1?'':'s'} &rsaquo;</span>
     </div>
-    ${earned ? `<div class="ag-order-earned">${fmtUGX(earned)} yours</div>` : ''}
+    ${earned ? `<div class="ag-order-earned">${fmtNum(earned)} yours</div>` : ''}
     <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span>${extra.payNow ? `<button type="button" class="momo-pay-now-btn" data-order-id="${esc(o.id)}">Pay now</button>` : ''}</div>
   </div>`;
 }
@@ -4562,7 +4636,7 @@ function renderAccount(){
     [s.completedOrders, s.completedOrders===1?'order done':'orders done'],
     [agentClients.length, agentClients.length===1?'client':'clients'],
     [fmtCompactUGX(s.lifetimeEarnings), 'earned'],
-  ].map(([v,l])=>`<div class="ag-stat-cell"><div class="ag-stat-val">${esc(v)}</div><div class="ag-stat-lbl">${esc(l)}</div></div>`).join('');
+  ].map(([v,l])=>`<div><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
   renderSyncCard();
 }
 /* ---- My Catalogue: setup + share banner on the Customers tab ----

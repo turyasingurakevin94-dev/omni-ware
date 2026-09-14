@@ -56,8 +56,20 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // The one that was missing, pinned by name.
   t.check(/--ink-faint: var\(--ow-ink-400\);/.test(src), '--ink-faint is defined');
   t.check(/--ow-ink-400:#6B7480;/.test(src), 'as a real third ink step');
-  t.check((styleBlock.match(/var\(--ink-faint\)/g) || []).length >= 4,
-    'and the rules that were silently inheriting now resolve');
+  // This used to read: at least FOUR rules reference var(--ink-faint), the
+  // four that were silently inheriting when nothing defined it.
+  //
+  // Three of those four were Account and Orders furniture, and they have
+  // been rebuilt on the Field layer's own inks. The count was only ever a
+  // proxy: the invariant is the sweep two checks above -- every var() the
+  // file uses, the file defines -- and that still covers every rule that
+  // reads this token, however many there are. What is worth pinning
+  // alongside it is that the definition is not dead weight.
+  const faintUses = (styleBlock.match(/var\(--ink-faint\)/g) || []).length;
+  t.check(faintUses >= 1,
+    `--ink-faint still has a live reader, so defining it is not dead weight (${faintUses})`);
+  t.check(!missing.includes('--ink-faint'),
+    'and it resolves, which is the thing that was broken');
 }
 
 /* ---------- 2. contrast on the two amber grounds --------------------- */
