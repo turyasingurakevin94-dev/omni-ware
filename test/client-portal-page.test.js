@@ -41,7 +41,7 @@ function makeDoc(ids) {
 }
 
 const IDS = ['whoName', 'whoLine', 'owedLbl', 'owedCur', 'owedFig', 'owedBasis',
-  'termsSheet', 'ordersSheet'];
+  'termsSheet', 'ordersSheet', 'statementSince'];
 
 function load() {
   const document = makeDoc(IDS);

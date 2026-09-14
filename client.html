@@ -319,6 +319,17 @@
     <div class="lbl" style="padding:24px 20px 9px;">Your last orders</div>
     <div class="sheet" id="ordersSheet"></div>
 
+    <div class="sheet" style="margin-top:14px;">
+      <button class="btn" type="button" id="toStatement"
+              style="width:100%;justify-content:flex-start;gap:12px;padding:13px 20px;min-height:56px;font-weight:400;font-size:15px;">
+        <span class="grow" style="text-align:left;">
+          <span style="display:block;">Statement of account</span>
+          <span class="meta" style="display:block;margin-top:2px;" id="statementSince"></span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
     <div class="spacer"></div>
 
     <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
@@ -379,6 +390,22 @@
     <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
       <div class="meta" id="itemFoot"></div>
     </div>
+  </section>
+
+  <!-- 8 &middot; Statement of account -->
+  <section id="scStatement" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="stmtBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">Statement of account</div>
+    </div>
+    <div style="padding:0 20px 14px;background:var(--paper);border-bottom:1px solid var(--rule);">
+      <div class="meta trunc" style="font-size:12.5px;" id="stmtWho"></div>
+    </div>
+    <div id="stmtBody"></div>
+    <div class="spacer"></div>
+    <!-- No accent on this screen. A statement is read, not acted on. -->
   </section>
 
   <!-- 6 &middot; Check your order -->
@@ -497,7 +524,7 @@ async function api(action, extra){
   return data;
 }
 
-const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent'];
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent','scStatement'];
 const SUBMIT_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-submit-order';
 function show(id){
   SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
@@ -726,6 +753,7 @@ function renderAccount(data){
      nobody agreed one, and a portal that prints "30 days" by default has
      put a promise on the screen the shop never made. */
   const rows = [];
+  document.getElementById('statementSince').textContent = 'Every charge and payment we have recorded';
   if(a.termsDays != null){
     rows.push('<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Your terms</div>'
       + '<div style="font-size:14.5px;">' + esc(a.termsDays) + ' days</div></div>');
@@ -802,6 +830,111 @@ document.getElementById('signOut').onclick = async () => {
   document.getElementById('phone').value = '';
   if(token){ try{ await api('signout', { token }); }catch(_){ /* the token is gone locally either way */ } };
 };
+
+/* ---------- the statement ------------------------------------------- */
+/* The same document the shop's own screen builds, from the same table and
+   by the same arithmetic. Read, never acted on — which is why there is no
+   verdigris anywhere on it. */
+document.getElementById('toStatement').onclick = () => openStatement();
+document.getElementById('stmtBack').onclick = () => show('scAccount');
+
+async function openStatement(){
+  show('scStatement');
+  document.getElementById('stmtWho').textContent = accountData.name || '';
+  document.getElementById('stmtBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching your statement&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('statement', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('stmtBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderStatement(d);
+}
+
+/* "1 June to 14 September 2026". The year once, at the end, because a
+   statement is read as one period and not as two dates. */
+function periodLabel(from, to){
+  const a = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(from || ''));
+  const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(to || ''));
+  if(!a || !b) return '';
+  const day = (m) => Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1];
+  return day(a) + (a[1] === b[1] ? '' : ' ' + a[1]) + ' to ' + day(b) + ' ' + b[1];
+}
+
+function stmtRowHTML(r){
+  /* A payment is shown as a negative charge in the one money column, the
+     way a ledger reads — two columns for charges and payments would put
+     an empty cell on every line and make the eye do the subtraction. */
+  const money2 = r.type === 'charge' ? money(r.charge) : '−' + money(r.payment);
+  return '<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 20px;border-bottom:1px solid var(--hair);">'
+    + '<div class="grow">'
+    +   '<div class="trunc" style="font-size:14px;">' + esc(shortDate(r.date)) + ' · '
+    +     (r.type === 'charge' ? 'Charge' : 'Payment') + '</div>'
+    +   (r.ref ? '<div class="meta" style="margin-top:2px;">' + esc(r.ref) + '</div>' : '')
+    + '</div>'
+    + '<div class="fig" style="width:86px;flex-shrink:0;text-align:right;font-size:14.5px;">' + money2 + '</div>'
+    /* The balance column is as wide as the charge column it accumulates.
+       Narrower, it clips the larger of the two figures. */
+    + '<div class="fig" style="width:86px;flex-shrink:0;text-align:right;font-size:14.5px;">' + money(r.balance) + '</div>'
+    + '</div>';
+}
+
+function shortDate(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1].slice(0, 3) : (iso || '');
+}
+
+function renderStatement(d){
+  document.getElementById('stmtWho').textContent =
+    (d.name || '') + (periodLabel(d.from, d.to) ? ' · ' + periodLabel(d.from, d.to) : '');
+  const rows = Array.isArray(d.rows) ? d.rows : [];
+
+  if(!rows.length && !d.opening && !d.owed){
+    document.getElementById('stmtBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing on your account</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">Nothing has been charged to this account, and nothing paid. What you buy on credit will be listed here.</div>'
+      + '</div>';
+    return;
+  }
+
+  document.getElementById('stmtBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;">'
+    + '<div style="display:flex;align-items:baseline;gap:12px;padding:14px 20px;background:var(--pale);">'
+    +   '<div class="grow" style="font-size:13.5px;color:var(--ink-2);">Balance brought forward</div>'
+    +   '<div class="fig" style="font-size:15px;color:var(--ink-2);">' + money(d.opening) + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;padding:9px 20px 7px;border-top:1px solid var(--hair);border-bottom:1px solid var(--rule);">'
+    +   '<div class="lbl grow">Date and item</div>'
+    +   '<div class="lbl" style="width:86px;flex-shrink:0;text-align:right;">Charge</div>'
+    +   '<div class="lbl" style="width:86px;flex-shrink:0;text-align:right;">Balance</div>'
+    + '</div>'
+    + (rows.length
+      ? rows.map(stmtRowHTML).join('')
+      : '<div style="padding:20px;"><div class="meta">Nothing charged or paid in this period.</div></div>')
+    + '<div style="display:flex;align-items:baseline;gap:12px;padding:16px 20px;border-top:1.5px solid var(--rule-firm);">'
+    +   '<div class="grow" style="font-size:15px;font-weight:600;">Balance now due</div>'
+    +   '<div class="fig" style="font-size:24px;' + (d.owed > 0 ? 'color:var(--owe);' : '') + '">'
+    +     (d.owed > 0 ? money(d.owed) : 'Nothing') + '</div>'
+    + '</div>'
+    + '</div>'
+    /* The self-check, said out loud. The ledger and the balance are kept
+       alongside each other and nothing forces them to agree; a statement
+       that quietly disagreed with the figure the shop will chase for
+       would be worse than one that admits it. */
+    + (d.agrees ? '' :
+      '<div style="padding:16px 20px 0;"><div class="say">These entries come to <strong style="font-weight:600;">'
+      + money(d.closing) + '</strong>, and the balance we are carrying is <strong style="font-weight:600;">'
+      + money(d.owed) + '</strong>. We are checking the difference — tell us what your own book says.</div></div>')
+    + '<div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">'
+    +   '<div class="meta" style="line-height:1.55;">Every line here is a charge or a payment we recorded. '
+    +   'If a figure does not match your own book, say so and we will look at it together — before it becomes a dispute.</div>'
+    + '</div>';
+}
 
 /* ---------- what we stock ------------------------------------------- */
 /* Fetched once per sign-in and held here, not in localStorage: it carries

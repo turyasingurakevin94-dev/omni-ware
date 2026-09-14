@@ -80,6 +80,18 @@ const detype = (s) => s
    on it behaving exactly as it does. */
 const untyped = fn.replace(/\b(const|let|var)\s+(\w+)\s*:\s*Record<[^>]*>\s*=/g, '$1 $2 =');
 
+/* THE ADVICE ACTION, AND ONLY IT. Slicing from its opening `if` to the
+   end of the file was fine until another action was appended after it --
+   the statement reads customer_debt_log.note, entirely legitimately, and
+   a "this action never touches note" check that ran to end-of-file
+   started failing on somebody else's code. Bounded to its own block. */
+const ADVICE = (() => {
+  const start = noComments.indexOf('action === "advice"');
+  const rest = noComments.slice(start);
+  const next = rest.indexOf('if (action === ', 10);
+  return next > 0 ? rest.slice(0, next) : rest;
+})();
+
 const { pairingsFor, sizeIdx } = compileScope(
   ['sizeIdx', 'pairingsFor'].map(n => detype(extractFunction(fn, n, 'client-portal')))
     .concat(['REVERSE', 'ADVICE_VERBS'].map(n => extractDeclaration(untyped, n, 'client-portal'))),
@@ -192,10 +204,10 @@ const { pairingsFor, sizeIdx } = compileScope(
   t.check(!!cols, 'the link columns are named in one place');
   t.check(cols && !cols[1].includes('note'),
     `note is not among them -- it is the shop's own note to itself and can say anything (${cols && cols[1]})`);
-  t.check(!/\bnote\b/.test(noComments.slice(noComments.indexOf('action === "advice"'))),
-    'and the action never touches it');
+  t.check(ADVICE.length > 500 && !/\bnote\b/.test(ADVICE),
+    `and the action never touches it (${ADVICE.length} chars read)`);
 
-  const block = noComments.slice(noComments.indexOf('action === "advice"'));
+  const block = ADVICE;
   const pushed = /advice\.push\(\{[\s\S]*?\n        \}\);/.exec(block);
   t.check(!!pushed, 'the advice row is built in one place');
   if (pushed) {
@@ -212,7 +224,7 @@ const { pairingsFor, sizeIdx } = compileScope(
  * knew yesterday -- so the basket screen it sits on must not fail.
  */
 {
-  const block = noComments.slice(noComments.indexOf('action === "advice"'));
+  const block = ADVICE;
   t.check(/if \(!withSizes\.error\)/.test(block) && /const plain = await admin\.from\("product_links"\)/.test(block),
     'the size columns are probed by retrying without them, so 0090-without-0093 still works');
   t.check(/if \(!linkRows \|\| !linkRows\.length\) return json\(\{ ok: true, advice: \[\] \}\)/.test(block),

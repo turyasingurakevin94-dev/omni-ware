@@ -470,6 +470,67 @@ function pairingsFor(links: any[], productId: string, variantIdx: number | null)
 const REVERSE: Record<string, string> = { needs: "with", with: "with", part: "part" };
 
 // ---------------------------------------------------------------------
+// The statement
+//
+// Mirrors index.html's customerStatementRows: same sort, same opening
+// collapse, same running balance, same self-check. A customer's statement
+// that disagreed with the shop's own screen would be worse than none.
+// ---------------------------------------------------------------------
+
+const STATEMENT_MONTHS = 6;
+
+// The invoice this row belongs to, and ONLY where the app wrote the note
+// itself. index.html's debtLogIsInvoiceOwned recognises its own
+// auto-generated note by this exact prefix; anything else in that field
+// was typed by the shop into a box nobody told them a customer would
+// read, and it stays where it was typed.
+function statementRef(note: unknown): string {
+  const m = /^Auto-sync — (INV-\d+)/.exec(String(note ?? ""));
+  return m ? m[1] : "";
+}
+
+export function buildStatement(log: any[], fromISO: string, toISO: string, recorded: number) {
+  // Sorted by date, then by the order they were written. Two entries on
+  // one day have no other way to be ordered, and a running balance that
+  // reorders them shows a customer a sequence that never happened.
+  const rows0 = (log || []).slice().sort((a, b) =>
+    String(a.date || "").localeCompare(String(b.date || "")) || ((a.id || 0) - (b.id || 0)));
+
+  const delta = (e: any) => e.type === "charge" ? (Number(e.amount) || 0) : -(Number(e.amount) || 0);
+
+  // Everything before the period collapses into one opening figure,
+  // rather than reprinting months the customer has already been sent.
+  let opening = 0;
+  rows0.forEach((e) => { if (String(e.date || "") < fromISO) opening += delta(e); });
+
+  let running = opening;
+  const rows = rows0
+    .filter((e) => { const d = String(e.date || ""); return d >= fromISO && d <= toISO; })
+    .map((e) => {
+      running += delta(e);
+      return {
+        date: e.date || "",
+        type: e.type === "charge" ? "charge" : "payment",
+        charge: e.type === "charge" ? (Number(e.amount) || 0) : 0,
+        payment: e.type === "charge" ? 0 : (Number(e.amount) || 0),
+        balance: running,
+        ref: statementRef(e.note),
+      };
+    });
+
+  return {
+    opening, rows, closing: running,
+    charged: rows.reduce((s, r) => s + r.charge, 0),
+    paid: rows.reduce((s, r) => s + r.payment, 0),
+    /* The one check this document can make on itself. The log is a
+       history and the balance is kept alongside it; nothing forces them
+       to agree, and a statement that quietly disagrees with what the shop
+       will chase for is worse than one that admits it. */
+    agrees: Math.abs(running - recorded) < 1,
+  };
+}
+
+// ---------------------------------------------------------------------
 
 async function sessionAccount(shopId: string, token: string) {
   if (!token) return null;
@@ -1017,6 +1078,63 @@ Deno.serve(async (req) => {
         || ((a.qty == null ? 1 : 0) - (b.qty == null ? 1 : 0))
         || String(a.name).localeCompare(String(b.name)));
       return json({ ok: true, advice: advice.slice(0, ADVICE_MAX) });
+    }
+
+    // -----------------------------------------------------------------
+    // statement — every charge and payment, and what they come to
+    //
+    // The same document customerStatementRows builds for the shop's own
+    // screen, computed the same way and from the same table, because a
+    // customer's statement disagreeing with the shop's is worse than no
+    // statement at all. Nothing here is derived that is not derived
+    // there: an opening figure, a running balance, and the one check the
+    // document makes on itself.
+    //
+    // THE NOTE DOES NOT CROSS, except where the app wrote it. Free text
+    // on a debt-log row is the shop's own, typed into a field nobody ever
+    // told them a customer would read — so publishing what is in there
+    // today would publish remarks made in private. What does cross is the
+    // invoice reference out of the app's OWN generated note, recognised
+    // by the same test index.html uses for it (debtLogIsInvoiceOwned).
+    // That is the line a customer needs to reconcile against their book,
+    // and the shop did not write it.
+    // -----------------------------------------------------------------
+    if (action === "statement") {
+      const session = await sessionAccount(shopId, String(body.token ?? ""));
+      if (!session) return json({ error: "Sign in again" }, 401);
+      const customerId = session.customer_id;
+
+      const to = new Date().toISOString().slice(0, 10);
+      // Built from the year and month, never by subtracting months from
+      // the date: standing on the 31st, month - 6 asks for the 31st of a
+      // 30-day month and rolls into the next one. The same note
+      // customerStatementRange carries, for the same reason.
+      const d = new Date(to + "T00:00:00Z");
+      const from = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - STATEMENT_MONTHS, 1))
+        .toISOString().slice(0, 10);
+
+      const [{ data: customer }, { data: log }] = await Promise.all([
+        admin.from("customers").select("name, debt").eq("shop_id", shopId).eq("id", customerId).maybeSingle(),
+        admin.from("customer_debt_log").select("id, date, type, amount, note")
+          .eq("shop_id", shopId).eq("customer_id", customerId),
+      ]);
+      if (!customer) return json({ error: "Sign in again" }, 401);
+
+      const built = buildStatement(log || [], from, to, Number(customer.debt) || 0);
+      return json({
+        ok: true,
+        name: customer.name || "",
+        from, to,
+        opening: built.opening,
+        rows: built.rows,
+        closing: built.closing,
+        charged: built.charged,
+        paid: built.paid,
+        // What the shop will actually chase for. The headline figure on
+        // this screen, and the same one the account screen shows.
+        owed: Number(customer.debt) || 0,
+        agrees: built.agrees,
+      });
     }
 
     if (action === "signout") {
