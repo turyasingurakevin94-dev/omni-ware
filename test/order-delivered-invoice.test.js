@@ -70,6 +70,19 @@ const sharedJs = read('shared-worker.js');
 {
   const data = { customers: [{ id: 'C1', name: 'Musa Hardware', debt: 400000 }] };
   const scope = compileScope([
+    extractFunction(src, 'shopCreditPct', 'index.html'),
+    extractFunction(src, 'orderTakesCredit', 'index.html'),
+    extractFunction(src, 'orderCreditOffer', 'index.html'),
+    extractFunction(src, 'savedQuoteCashTotal', 'index.html'),
+    extractFunction(src, 'orderCreditCheckHTML', 'index.html'),
+    extractFunction(src, 'orderCreditCharge', 'index.html'),
+    extractFunction(src, 'orderCreditTerms', 'index.html'),
+    extractFunction(src, 'orderBillLines', 'index.html'),
+    extractFunction(src, 'orderCharges', 'index.html'),
+    extractFunction(src, 'chargeAmount', 'index.html'),
+    extractFunction(src, 'savedQuoteGoodsTotal', 'index.html'),
+    extractFunction(src, 'orderChargesTotal', 'index.html'),
+    extractFunction(src, 'orderChargeLines', 'index.html'),
     extractFunction(src, 'orderInvoiceCheckHTML', 'index.html'),
     /* The check says each count in the unit the line was chosen in --
        the same reader every document uses -- so it is compiled in. A
@@ -84,6 +97,12 @@ const sharedJs = read('shared-worker.js');
     itemDisplayName: (it) => it.productName,
     itemPickedQty: (it) => (it.pickedQty == null ? null : Number(it.pickedQty)),
     savedQuoteTotal: () => 851000,
+    /* Stubbed, like savedQuoteTotal above: what a LINE sells for is not
+       this file's subject -- the wording of the check is -- and it is
+       only reached here because a percent charge would be a percent of
+       the goods. These fixtures carry no charges, so it is never asked
+       for a real figure. */
+    quoteItemSellPrice: () => 0,
   }, ['orderInvoiceCheckHTML']);
 
   const q = (over) => Object.assign({

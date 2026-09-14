@@ -71,6 +71,9 @@ const scope = compileScope([
   extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
   extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html'),
   extractFunction(src, 'standingPoliciesData', 'index.html'),
+  /* The chase grace and the price of credit are one rule seen from
+     two ends, so the manager is told both. */
+  extractFunction(src, 'shopCreditPct', 'index.html'),
   extractFunction(src, 'reorderRuleFor', 'index.html'),
   extractFunction(src, 'setReorderRule', 'index.html'),
   extractFunction(src, 'stockKey', 'index.html'),

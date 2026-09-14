@@ -44,6 +44,12 @@ const data = { cashTxns: [], cashDays: {}, products: [], customers: [] };
 
 const scope = compileScope([
   extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+  extractFunction(src, 'orderCreditTerms', 'index.html'),
+  extractFunction(src, 'orderCreditCharge', 'index.html'),
+  extractFunction(src, 'orderCharges', 'index.html'),
+  extractFunction(src, 'chargeAmount', 'index.html'),
+  extractFunction(src, 'savedQuoteGoodsTotal', 'index.html'),
+  extractFunction(src, 'orderChargesTotal', 'index.html'),
   extractFunction(src, 'cbAccountTotals', 'index.html'),
   extractFunction(src, 'cbClosingFor', 'index.html'),
   extractFunction(src, 'previousCashDate', 'index.html'),

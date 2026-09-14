@@ -36,7 +36,8 @@ const products = [];
 let admin = null, agent = null, adminErr = null, agentErr = null;
 try {
   admin = compileScope(
-    ['quoteItemSellPrice', 'savedQuoteTotal', 'invoiceBalanceDue']
+    ['quoteItemSellPrice', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
+  'savedQuoteTotal', 'invoiceBalanceDue']
       .map(n => extractFunction(adminSrc, n, 'index.html')),
     { data: { products }, quoteSuggestedPrice: () => null, quoteSuggestedStockPrice: () => null },
     ['savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue'],

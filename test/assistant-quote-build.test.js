@@ -24,7 +24,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('assistant quote build');
 const src = read('index.html');
 
-const NAMES = ['buildQuoteRecord'];
+const NAMES = ['orderCharges', 'buildQuoteRecord'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
 const build = fn.buildQuoteRecord;
 

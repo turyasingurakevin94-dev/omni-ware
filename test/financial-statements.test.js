@@ -39,6 +39,16 @@ const scope = compileScope([
      settled -- money owed with no bill yet. The chain comes along so
      the figure is the real one; a fixture holding nothing on
      consignment simply reads zero. */
+  extractFunction(src, 'orderCreditTerms', 'index.html'),
+  extractFunction(src, 'orderCreditCharge', 'index.html'),
+  extractFunction(src, 'chargeCostedCashIds', 'index.html'),
+  extractFunction(src, 'orderCharges', 'index.html'),
+  extractFunction(src, 'chargeAmount', 'index.html'),
+  extractFunction(src, 'savedQuoteGoodsTotal', 'index.html'),
+  extractFunction(src, 'orderChargesTotal', 'index.html'),
+  extractFunction(src, 'chargeCostTxn', 'index.html'),
+  extractFunction(src, 'chargeCostOf', 'index.html'),
+  extractFunction(src, 'orderChargesCost', 'index.html'),
   extractFunction(src, 'consignmentHeld', 'index.html'),
   extractFunction(src, 'consignmentAccrued', 'index.html'),
   extractFunction(src, 'consignmentSettlements', 'index.html'),

@@ -37,6 +37,7 @@ const scope = compileScope([
   extractDeclaration(src, 'CASH_VARIANCE_LINE', 'index.html'),
   extractDeclaration(src, 'DUE_KINDS', 'index.html'),
   extractDeclaration(src, 'cashHas', 'index.html'),
+  extractFunction(src, 'chargeCostedCashIds', 'index.html'),
   extractFunction(src, 'cashIsMoneyOut', 'index.html'),
   extractFunction(src, 'cashIsMoneyIn', 'index.html'),
   extractFunction(src, 'cashIsOperatingExpense', 'index.html'),
