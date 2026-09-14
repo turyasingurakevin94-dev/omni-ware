@@ -1283,6 +1283,47 @@
   .fx-m.next .p{background:rgba(255,255,255,.28);}
   .fx-m.next .p i{background:#fff;}
 
+  /* ---- Sell ---- */
+  .fx-sellhd{padding:14px 16px 12px;background:var(--fx-page);}
+  .fx-find{position:relative;display:flex;align-items:center;gap:11px;min-height:52px;
+    padding:0 6px 0 15px;background:var(--fx-card);border:1px solid var(--fx-line-2);
+    border-radius:var(--fx-r-card);}
+  .fx-find > .icon{width:20px;height:20px;flex:none;stroke:var(--fx-ink-3);fill:none;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .fx-find input{all:unset;box-sizing:border-box;flex:1;min-width:0;min-height:50px;
+    font-size:16px;color:var(--fx-ink);}
+  .fx-find input::placeholder{color:var(--fx-ink-3);}
+  .fx-find-x{all:unset;box-sizing:border-box;cursor:pointer;display:none;flex:none;
+    align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--fx-r-pill);}
+  .fx-find-x.show{display:flex;}
+  .fx-find-x .icon{width:19px;height:19px;stroke:var(--fx-ink-3);fill:none;stroke-width:1.8;stroke-linecap:round;}
+  .fx-trust{display:flex;align-items:flex-start;gap:10px;margin-top:10px;padding:12px 14px;
+    border-radius:var(--fx-r-card);background:var(--fx-green-bg);color:var(--fx-green);
+    font-size:12px;line-height:1.5;}
+  .fx-trust .icon{width:18px;height:18px;flex:none;margin-top:1px;stroke:currentColor;fill:none;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+  .fx-orderbar{all:unset;box-sizing:border-box;cursor:pointer;position:fixed;z-index:45;
+    left:0;right:0;bottom:72px;max-width:504px;margin:0 auto;width:calc(100% - 32px);
+    display:none;align-items:center;gap:12px;padding:10px 10px 10px 16px;
+    background:var(--fx-nero);color:#fff;border-radius:16px;box-shadow:var(--fx-sh-lift);}
+  .fx-ob-b{flex:1;min-width:0;text-align:left;}
+  .fx-ob-n{display:block;font-size:14px;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-ob-m{display:block;font-size:13px;color:var(--fx-on-3);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-ob-m .v{font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-weight:600;color:#fff;letter-spacing:-.02em;}
+  .fx-ob-m em{font-style:normal;color:var(--fx-mint);font-weight:600;}
+  .fx-ob-m em::before{content:' \00b7 ';color:var(--fx-on-3);font-weight:400;}
+  .fx-ob-go{display:flex;align-items:center;justify-content:center;gap:2px;flex:none;
+    min-height:44px;padding:0 12px 0 16px;border-radius:12px;
+    background:var(--fx-oxide);color:#fff;font-size:14px;font-weight:700;}
+  .fx-ob-go .icon{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;}
+  /* room for the bar, so the last row of the grid is not sitting under it */
+  #ag_browseView{padding-bottom:64px;}
+
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
     max-width:520px;margin:0 auto;background:var(--fx-card);border-top:1px solid var(--fx-line);
@@ -1388,27 +1429,29 @@
   </div>
   <!-- BROWSE (Sell tab's product-search half) -->
   <div id="ag_browseView" style="display:none;">
-    <div class="ag-hero" id="ag_browseHero">
-      <div class="ag-hero-greeting" id="ag_hero_greeting">Hi</div>
-      <div class="ag-hero-sub">What does your client need today?</div>
-      <div class="ag-search-bar" id="ag_searchBarWrap">
-        <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-        <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
-        <button type="button" class="ag-search-clear" id="ag_browse_search_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <!-- Search IS the header. What stood here was a full-bleed oxide slab
+         carrying "Hi, Brian Okello / What does your client need today?" --
+         168px of greeting above the only control on the screen, read by a
+         man who knows his own name and is standing in front of somebody
+         waiting for a price. -->
+    <div class="fx-sellhd" id="ag_browseHero">
+      <div class="fx-find" id="ag_searchBarWrap">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <input type="text" id="ag_browse_search" placeholder="Search products" autocomplete="off">
+        <button type="button" class="fx-find-x" id="ag_browse_search_clear" aria-label="Clear search">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
         <div class="ag-search-suggestions" id="ag_searchSuggestions"></div>
       </div>
-      <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.</span>
+      <div class="fx-trust" id="ag_trustBanner" style="display:none;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 21.5s7.5-3.8 7.5-9.5V5.2L12 2.5 4.5 5.2V12c0 5.7 7.5 9.5 7.5 9.5z"/></svg>
+        <span>Your clients' names and numbers are yours alone &mdash; we never see them, unless you
+          choose our delivery, and even then only the address needed to get there.</span>
       </div>
     </div>
 
     <div class="ag-pad">
       <div id="ag_sell_clientWrap" style="margin-bottom:12px;"></div>
-      <div class="ag-quote-banner" id="ag_browse_quoteBanner">
-        <span><b id="ag_browse_quoteBannerCount">0</b> item(s) in this order</span>
-        <span>View quote &rarr;</span>
-      </div>
       <div id="ag_catStripWrap"></div>
       <!-- Shown only inside a category. Carries the way back, which the
            filter-on-the-hub version never had. -->
@@ -1455,6 +1498,21 @@
       <div class="ag-section-title" id="ag_gridTitle"></div>
       <div class="ag-browse-grid" id="ag_browseGrid"></div>
     </div>
+    <!-- Pinned above the tab bar rather than sitting at the top of the
+         list, where it scrolled away the moment he started browsing. It
+         carries the total AND his cut, because those are the two figures
+         he is watching build. -->
+    <button type="button" class="fx-orderbar" id="ag_browse_quoteBanner">
+      <span class="fx-ob-b">
+        <span class="fx-ob-n" id="ag_browse_quoteBannerWho">Not yet named</span>
+        <span class="fx-ob-m">
+          <span id="ag_browse_quoteBannerCount">0</span> items &middot;
+          <span class="v" id="ag_browse_quoteBannerTotal">0</span>
+          <em id="ag_browse_quoteBannerEarn"></em>
+        </span>
+      </span>
+      <span class="fx-ob-go">View<svg class="icon" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg></span>
+    </button>
   </div>
 
   <!-- EARNINGS -->
@@ -1639,6 +1697,7 @@
       <button type="button" class="ag-search-clear" id="ag_orderSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div id="ag_orderHistoryListWrap"></div>
+
   </div>
 
   <!-- QUOTE (sub-screen of Sell) -->
@@ -2939,6 +2998,16 @@ function updateCartBadge(){
   if(cart.length > 0){
     badge.textContent = String(cart.length); badge.style.display = 'flex';
     document.getElementById('ag_browse_quoteBannerCount').textContent = String(cart.length);
+    // The same two figures the quote screen shows, from the same helper,
+    // so the bar he watches while adding cannot disagree with the screen
+    // he lands on.
+    let total = 0, profit = 0;
+    cart.forEach(it=>{ const f = cartLineFigures(it); total += f.amount; profit += f.profit; });
+    document.getElementById('ag_browse_quoteBannerTotal').textContent = fmtNum(total);
+    document.getElementById('ag_browse_quoteBannerEarn').textContent =
+      profit > 0 ? `${fmtNum(profit)} yours` : '';
+    document.getElementById('ag_browse_quoteBannerWho').textContent =
+      chosenClient ? chosenClient.name : 'Not yet named';
     banner.style.display = 'flex';
   } else {
     badge.style.display = 'none';
@@ -7110,7 +7179,6 @@ async function boot(){
     // connectivity -- the app still boots with empty arrays, and every
     // screen below already handles an empty state.
   }
-  document.getElementById('ag_hero_greeting').textContent = `Hi, ${myAgent.name}`;
   if(!localStorage.getItem('agentTrustBannerSeen')){
     document.getElementById('ag_trustBanner').style.display = 'flex';
     localStorage.setItem('agentTrustBannerSeen', '1');
