@@ -853,65 +853,14 @@
   .ag-solution-card .count{font-size:11px;color:var(--accent-dark);opacity:.8;}
   .ag-save-solution-link{display:block;text-align:center;font-size:12.5px;font-weight:700;color:var(--accent-dark);padding:12px 4px 2px;cursor:pointer;}
   /* ---- Home: selling streak + achievement badges ---- */
-  /* Achievements. The old card was an emoji over a padlock over "3/10":
-     a sticker sheet in a business tool, and a locked one said only that
-     you had not got there. Now the ring IS the information -- how far
-     along you are -- and the mark inside it is the app-s own icon rather
-     than a novelty glyph. */
-  .ag-badge-card{
-    width:120px;flex-shrink:0;border-radius:14px;padding:14px 10px 13px;text-align:center;
-    background:var(--panel);border:1px solid var(--line);
-    display:flex;flex-direction:column;align-items:center;gap:2px;
-  }
-  .ag-badge-ring{position:relative;width:48px;height:48px;margin-bottom:8px;}
-  /* `>` and not a descendant selector, both here and on the circle below.
-     The icon is its own <svg> sitting INSIDE this ring, so `.ag-badge-ring
-     svg` matched it too: every achievement mark was drawn a quarter turn
-     over, and the circles inside four of them (the medal, the two heads,
-     the coin) took the ring's 3px stroke while the paths beside them in
-     the same icon kept 1.9. The ring's own svg is the direct child; the
-     icon's is not. */
-  .ag-badge-ring > svg{width:48px;height:48px;transform:rotate(-90deg);}
-  .ag-badge-ring > svg circle{fill:none;stroke-width:3;}
-  .ag-badge-ring .track{stroke:var(--slate-soft);}
-  .ag-badge-ring .fill{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .5s ease;}
-  .ag-badge-icon{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    color:var(--ink-soft);
-  }
-  .ag-badge-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
-  /* Unlocked reads as complete rather than as decorated: a full ring and
-     the mark in the accent. No confetti, no trophy. */
-  .ag-badge-card.unlocked{border-color:var(--accent);}
-  .ag-badge-card.unlocked .ag-badge-icon{color:var(--accent);}
-  .ag-badge-card.locked .fill{stroke:var(--ink-faint);}
-  .ag-badge-card .title{font-size:12px;font-weight:750;line-height:1.25;color:var(--ink);}
-  .ag-badge-card.locked .title{color:var(--ink-soft);}
-  .ag-badge-card .progress{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
   /* The leaderboard shows ORDER only -- rank, name, and whether it is you.
      agent-leaderboard deliberately omits every other agent-s amount, so no
      bar, no figure, nothing that would turn a ranking into a payslip
      anyone else can read. Your own numbers are yours and are shown. */
-  .ag-lb-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
-  .ag-lb-rank-big{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;}
-  .ag-lb-of{font-size:12.5px;color:var(--ink-soft);font-weight:650;}
-  .ag-lb-mine{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;font-variant-numeric:tabular-nums;}
-  .ag-lb-mine b{color:var(--ink);font-weight:750;}
-  .ag-lb-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;}
-  .ag-lb-list li{display:flex;align-items:center;gap:11px;padding:9px 10px;font-size:13px;border-radius:9px;}
-  .ag-lb-list li.you{font-weight:800;color:var(--accent-dark);background:var(--accent-soft);}
-  .ag-lb-list .rank{
-    width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:11.5px;font-weight:800;color:var(--ink-soft);background:var(--slate-soft);font-variant-numeric:tabular-nums;
-  }
   /* The top three carry weight without medals. A podium of emoji is the
      thing that made the achievements row look like a game. */
-  .ag-lb-list li.podium .rank{background:var(--ink);color:var(--panel);}
-  .ag-lb-list li.you .rank{background:var(--accent);color:#fff;}
-  .ag-lb-list .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* Shown when you are outside the top five: the run of ranks between is
      not drawn, but it is not pretended away either. */
-  .ag-lb-gap{display:flex;align-items:center;gap:11px;padding:3px 10px;color:var(--ink-faint);font-size:13px;letter-spacing:.14em;}
   /* ---- Offline banner: shown app-wide, independent of the active tab ---- */
   /* Ink on the amber ground, not amber on it. Amber text here measured
      3.57:1, and 12.5px bold is nowhere near the 18.66px that would let it
@@ -1250,6 +1199,90 @@
   .fx-chip.due{background:var(--fx-amber-bg);color:var(--fx-amber);}
   .fx-chip.quiet{background:var(--fx-red-bg);color:var(--fx-red);}
 
+  /* ---- standing: the board, and the milestones ---- */
+  .fx-mini{position:relative;padding:14px 20px 20px;color:#fff;overflow:hidden;
+    background:linear-gradient(157deg,var(--fx-nero-2) 0%,var(--fx-nero) 58%);
+    border-radius:0 0 26px 26px;}
+  .fx-mini::after{content:'';position:absolute;right:-80px;top:-110px;width:250px;height:250px;
+    border-radius:50%;background:radial-gradient(circle,rgba(217,96,63,.26),rgba(217,96,63,0) 68%);}
+  .fx-mini > *{position:relative;z-index:1;}
+  .fx-mini-top{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .fx-mini-t{flex:1;text-align:center;font-size:16px;font-weight:600;}
+  .fx-iconbtn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;width:44px;height:44px;flex:none;border-radius:var(--fx-r-pill);
+    background:rgba(255,255,255,.11);border:1px solid var(--fx-hair);}
+  .fx-iconbtn .icon{width:20px;height:20px;stroke:#fff;}
+  .fx-bigrank{display:flex;align-items:baseline;gap:10px;margin-top:4px;}
+  .fx-bigrank .n{font-family:var(--fx-display);font-size:44px;line-height:1;letter-spacing:-.025em;}
+  .fx-bigrank .of{font-size:16px;color:var(--fx-on-3);font-weight:600;}
+  .fx-split{display:flex;gap:10px;margin-top:16px;}
+  .fx-split > div{flex:1;min-width:0;padding:11px 13px;border-radius:14px;
+    background:rgba(255,255,255,.07);border:1px solid var(--fx-hair);}
+  .fx-split .l{font-size:12px;color:var(--fx-on-3);}
+  .fx-split .v{font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:17px;font-weight:600;letter-spacing:-.03em;margin-top:3px;white-space:nowrap;}
+
+  .fx-board li{display:flex;align-items:center;gap:12px;padding:12px 14px;
+    border-top:1px solid var(--fx-line);list-style:none;}
+  .fx-board li:first-child{border-top:0;}
+  .fx-board{list-style:none;margin:0;padding:0;}
+  .fx-board .pos{width:26px;flex:none;text-align:center;font-family:var(--font-money);
+    font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;
+    color:var(--fx-ink-3);letter-spacing:-.02em;}
+  .fx-board .nm{flex:1;min-width:0;font-size:15px;font-weight:500;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-board .amt{flex:none;font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:600;letter-spacing:-.02em;}
+  .fx-board li.you{background:#FBF3F1;}
+  .fx-board li.you .nm{font-weight:700;}
+  .fx-mine{font-size:13px;color:var(--fx-on-2);margin-top:7px;}
+  .fx-mine b{color:#fff;font-weight:600;font-family:var(--font-money);
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  /* A rank is a mark, never a medal glyph. The top three carry weight;
+     your own outranks that, so a row is never double-marked. */
+  .fx-board li.podium .pos{background:var(--fx-ink);color:var(--fx-card);
+    border-radius:8px;padding:3px 0;}
+  .fx-board li.you .pos{background:var(--fx-oxide);color:#fff;
+    border-radius:8px;padding:3px 0;}
+  .fx-board-gap{display:flex;justify-content:center;list-style:none;
+    color:var(--fx-ink-3);letter-spacing:.3em;padding:6px 14px;font-size:13px;}
+  .fx-fine{font-size:12px;color:var(--fx-ink-3);line-height:1.5;margin:10px 4px 0;}
+
+  .fx-mile{padding:16px;}
+  .fx-mile-h{display:flex;align-items:baseline;gap:10px;}
+  .fx-mile-t{font-size:17px;font-weight:700;letter-spacing:-.01em;}
+  .fx-mile-g{margin-left:auto;font-family:var(--font-money);font-variant-numeric:tabular-nums;
+    font-size:13px;font-weight:600;color:var(--fx-oxide);white-space:nowrap;}
+  .fx-mile-d{font-size:13px;color:var(--fx-ink-3);margin-top:3px;}
+  .fx-mile-bar{height:8px;border-radius:4px;background:var(--fx-page);margin-top:12px;overflow:hidden;}
+  .fx-mile-bar i{display:block;height:100%;border-radius:4px;background:var(--fx-oxide);}
+
+  /* Nine tiles: the mark this milestone already has, over the number it
+     is measured in. The marks were made distinct on purpose (four of them
+     once served all nine); the numeral is what tells them apart at a
+     glance on a grid three across. */
+  .fx-miles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .fx-m{border-radius:15px;padding:11px 8px 10px;text-align:center;background:var(--fx-card);
+    box-shadow:var(--fx-sh);display:flex;flex-direction:column;align-items:center;min-height:104px;}
+  .fx-m svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--fx-ink-3);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .fx-m .n{font-family:var(--fx-display);font-size:20px;line-height:1;
+    letter-spacing:-.03em;color:var(--fx-ink-3);margin-top:7px;}
+  .fx-m .l{font-size:11px;font-weight:600;color:var(--fx-ink-3);margin:5px 0 8px;line-height:1.3;}
+  .fx-m .p{width:100%;height:4px;border-radius:2px;background:var(--fx-page);
+    margin-top:auto;overflow:hidden;}
+  .fx-m .p i{display:block;height:100%;border-radius:2px;background:#9F938D;}
+  .fx-m.got{background:var(--fx-nero);box-shadow:var(--fx-sh-lift);}
+  .fx-m.got svg{stroke:var(--fx-mint);}
+  .fx-m.got .n{color:#fff;}
+  .fx-m.got .l{color:var(--fx-on-2);}
+  .fx-m.got .p{background:transparent;}
+  .fx-m.next{background:var(--fx-oxide);box-shadow:var(--fx-sh-oxide);}
+  .fx-m.next svg{stroke:#fff;}
+  .fx-m.next .n,.fx-m.next .l{color:#fff;}
+  .fx-m.next .p{background:rgba(255,255,255,.28);}
+  .fx-m.next .p i{background:#fff;}
+
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
     max-width:520px;margin:0 auto;background:var(--fx-card);border-top:1px solid var(--fx-line);
@@ -1540,6 +1573,52 @@
       <button type="button" class="ag-search-clear" id="ag_clientListSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div id="ag_clientsListWrap"></div>
+  </div>
+
+  <!-- STANDING. Where he is against the other agents, and the next
+       milestone he can actually reach. Reached from the rank row on Home;
+       not a tab, because it is a thing you check rather than a place you
+       work. -->
+  <div id="ag_standingView" class="fx" style="display:none;">
+    <div class="fx-mini">
+      <div class="fx-mini-top">
+        <button type="button" class="fx-iconbtn" id="ag_standingBack" aria-label="Back">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></svg>
+        </button>
+        <span class="fx-mini-t">This month</span>
+        <span style="width:44px;flex:none;"></span>
+      </div>
+      <div class="fx-lbl" id="ag_stLbl">You are</div>
+      <div class="fx-bigrank">
+        <span class="n" id="ag_stRank">&mdash;</span>
+        <span class="of" id="ag_stOf"></span>
+      </div>
+      <div class="fx-mine" id="ag_stMine"></div>
+      <div class="fx-split">
+        <div><div class="l">Earned</div><div class="v" id="ag_stEarned">0</div></div>
+        <div><div class="l">Orders landed</div><div class="v" id="ag_stOrders">0</div></div>
+      </div>
+    </div>
+
+    <div class="fx-sheet">
+      <div id="ag_stBoardSec">
+        <div class="fx-sec"><h2>The board</h2><span class="n" id="ag_stMonth"></span></div>
+        <div class="fx-card" style="margin-top:10px;overflow:hidden;">
+          <ul class="fx-board" id="ag_stBoard"></ul>
+        </div>
+        <p class="fx-fine">You see where everyone stands, never what they earn &mdash; and nobody
+          sees your figure either. What an agent makes is their own income.</p>
+      </div>
+
+      <div id="ag_stNextSec" style="display:none;">
+        <div class="fx-sec"><h2>Next milestone</h2></div>
+        <div class="fx-card fx-mile" id="ag_stNext" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="fx-sec"><h2>Milestones</h2><span class="n" id="ag_stMileN"></span></div>
+      <div class="fx-miles" id="ag_stMiles"></div>
+      <div style="height:20px;"></div>
+    </div>
   </div>
 
   <!-- ORDER HISTORY (sub-screen, reachable from Home and Account) -->
@@ -2809,9 +2888,10 @@ async function loadAgentHomeData(){
 const TABS = ['home','sell','customers'];
 const TAB_VIEW = {
   home: 'ag_homeView', sell: 'ag_browseView', customers: 'ag_clientsListView',
-  earnings: 'ag_earningsView', quote: 'ag_quoteView', account: 'ag_accountView'
+  earnings: 'ag_earningsView', quote: 'ag_quoteView', account: 'ag_accountView',
+  standing: 'ag_standingView'
 };
-const ALL_VIEWS = ['ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_orderHistoryListView'];
+const ALL_VIEWS = ['ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_orderHistoryListView','ag_standingView'];
 let lastMainTab = 'home';
 
 function showOnlyView(id){
@@ -2844,6 +2924,7 @@ function switchTab(tab){
   if(tab==='quote') renderCartTab();
   if(tab==='account') renderAccount();
   if(tab==='earnings') openEarningsView();
+  if(tab==='standing'){ renderStanding(); ensureLeaderboardLoaded(); }
 }
 document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
   const btn = e.target.closest('.fx-tab');
@@ -3091,60 +3172,7 @@ function markAchievementsSeen(ids){
 // padlock told you only that you had failed so far. The ring carries the
 // progress, so a locked card is the useful one -- it shows the distance
 // left rather than a shut door.
-const ACH_RING_R = 21;
-const ACH_RING_C = 2 * Math.PI * ACH_RING_R;
-function achievementCardHTML(a){
-  const pct = Math.max(0, Math.min(1, a.target > 0 ? a.current / a.target : 0));
-  const state = a.unlocked ? 'unlocked' : 'locked';
-  // Big figures read better rounded and grouped; small counts do not need it.
-  const fmtN = (n)=> a.target >= 1000 ? Math.round(n).toLocaleString('en-US') : String(n);
-  const caption = a.unlocked ? a.desc : `${fmtN(Math.min(a.current, a.target))} of ${fmtN(a.target)}`;
-  // Falls back to the first-sale carton rather than throwing, so adding an
-  // achievement without an icon shows a card instead of an empty ring.
-  const icon = ACHIEVEMENT_ICONS[a.id] || ACHIEVEMENT_ICONS.first_sale;
-  return `<div class="ag-badge-card ${state}">
-    <div class="ag-badge-ring">
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <circle class="track" cx="24" cy="24" r="${ACH_RING_R}"></circle>
-        <circle class="fill" cx="24" cy="24" r="${ACH_RING_R}"
-          stroke-dasharray="${ACH_RING_C.toFixed(1)}"
-          stroke-dashoffset="${(ACH_RING_C * (1 - pct)).toFixed(1)}"></circle>
-      </svg>
-      <span class="ag-badge-icon">${icon}</span>
-    </div>
-    <div class="title">${esc(a.title)}</div>
-    <div class="progress">${esc(caption)}</div>
-  </div>`;
-}
 
-function renderAchievements(){
-  const achievements = computeAchievements();
-  document.getElementById('ag_achievementsRow').innerHTML = achievements.map(achievementCardHTML).join('');
-
-  const seen = seenAchievementIds();
-  const newlyUnlocked = achievements.filter(a=>a.unlocked && !seen.has(a.id));
-  if(newlyUnlocked.length){
-    // No trophy. The achievement is the news; an emoji in front of it is
-    // the app congratulating itself, and this one fires while an agent is
-    // mid-order.
-    toast(newlyUnlocked.length > 1
-      ? `${newlyUnlocked[0].title} unlocked, and ${newlyUnlocked.length-1} more`
-      : `${newlyUnlocked[0].title} unlocked`);
-    markAchievementsSeen(achievements.filter(a=>a.unlocked).map(a=>a.id));
-  }
-
-  const streak = computeSellingStreak();
-  const streakChip = document.getElementById('ag_home_streakChip');
-  if(streak > 0){
-    streakChip.style.display = 'inline-flex';
-    // The same streak mark the achievement ring uses, rather than a flame
-    // emoji -- one icon language across the app, and it renders the same
-    // on every handset instead of following each vendor's emoji font.
-    streakChip.innerHTML = `${ACHIEVEMENT_ICONS.streak_12}<span>${esc(streak)}-week streak</span>`;
-  } else {
-    streakChip.style.display = 'none';
-  }
-}
 
 // This month's leaderboard: the one Home stat that isn't derivable from
 // data the agent already has (it needs other agents' order totals), so
@@ -3156,36 +3184,142 @@ let leaderboard = null;
 async function ensureLeaderboardLoaded(){
   try{
     leaderboard = await callAgentFn('agent-leaderboard', {});
-    renderLeaderboard();
-  }catch(_err){ /* card just stays hidden */ }
+    // Repaint whatever is showing. The rank row on Home and the board on
+    // Standing both read `leaderboard`, and this arrives after the first
+    // paint of either.
+    if(lastMainTab === 'home') renderHomeRank();
+    if(document.getElementById('ag_standingView').style.display !== 'none') renderStanding();
+  }catch(_err){ /* the board just stays hidden */ }
 }
-function renderLeaderboard(){
-  const card = document.getElementById('ag_home_leaderboardCard');
-  if(!leaderboard || !leaderboard.you || leaderboard.totalAgents < 2){ card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  // Your standing, with the figures behind it. amount and completedOrders
-  // were already in the response and were being thrown away, so a rank
-  // arrived with nothing to explain it.
-  const you = leaderboard.you;
-  document.getElementById('ag_lb_youLine').innerHTML = `
-    <div class="ag-lb-head">
-      <span class="ag-lb-rank-big">#${esc(you.rank)}</span>
-      <span class="ag-lb-of">of ${esc(leaderboard.totalAgents)} this month</span>
-    </div>
-    <div class="ag-lb-mine"><b>${esc(fmtUGX(you.amount||0))}</b> from ${esc(you.completedOrders||0)} completed order${(you.completedOrders||0)===1?'':'s'}</div>`;
+/* The board, and how far off the next milestone is.
 
-  const row = (a)=> `<li class="${a.isYou?'you':''}${a.rank<=3 && !a.isYou?' podium':''}">
-      <span class="rank">${esc(a.rank)}</span>
-      <span class="nm">${esc(a.isYou ? 'You' : a.displayName)}</span>
-    </li>`;
-  // If you are outside the top five your own row is appended, because a
-  // board that does not contain you is a board about other people. The
-  // ranks in between are marked as skipped rather than quietly closed up.
-  const inTop = leaderboard.top.some(a=>a.isYou);
-  const tail = inTop ? '' :
-    `<li class="ag-lb-gap" aria-hidden="true">&middot; &middot; &middot;</li>` +
-    row({ rank: you.rank, isYou: true, displayName: 'You' });
-  document.getElementById('ag_lb_list').innerHTML = leaderboard.top.map(row).join('') + tail;
+   WHAT THE BOARD MAY SAY. agent-leaderboard returns another agent's rank
+   and NAME and never their amount -- an agent's margin is their personal
+   income, the same boundary that keeps supplier cost away from agents
+   everywhere else in this app. So only the caller's own row carries a
+   figure, and the screen says so out loud rather than looking like data
+   that failed to arrive. If you are outside the top five your own row is
+   appended after a marker, because a board that does not contain you is
+   a board about other people. */
+function renderStanding(){
+  const sec = document.getElementById('ag_stBoardSec');
+  const stats = computeAgentStats();
+
+  if(!leaderboard || !leaderboard.you || leaderboard.totalAgents < 2){ sec.style.display = 'none'; }
+  else {
+    sec.style.display = '';
+    // Your standing, with the figures behind it. amount and completedOrders
+    // are in the response and were once thrown away, so a rank arrived with
+    // nothing to explain it.
+    const you = leaderboard.you;
+    document.getElementById('ag_stLbl').textContent = 'You are';
+    document.getElementById('ag_stRank').textContent = ordinal(you.rank);
+    document.getElementById('ag_stOf').textContent = `of ${leaderboard.totalAgents} agents`;
+    document.getElementById('ag_stMine').innerHTML =
+      `<b>${esc(fmtUGX(you.amount||0))}</b> from ${esc(you.completedOrders||0)} completed order${(you.completedOrders||0)===1?'':'s'}`;
+    document.getElementById('ag_stMonth').textContent = monthLabel(currentMonthKey()).split(' ')[0];
+
+    /* The row builder renders NO MONEY, and that is a structural promise
+       rather than a careful condition: agent-leaderboard withholds every
+       other agent's amount because a margin is personal income, and a
+       builder that cannot print a figure at all cannot be edited into
+       leaking one. Your own total is stated once, above, where it belongs
+       to you rather than to a row in a list. */
+    const row = (a)=> `<li class="${a.isYou?'you':''}${a.rank<=3 && !a.isYou?' podium':''}">
+        <span class="pos">${esc(a.rank)}</span>
+        <span class="nm">${esc(a.isYou ? 'You' : a.displayName)}</span>
+      </li>`;
+    // If you are outside the top five your own row is appended, because a
+    // board that does not contain you is a board about other people. The
+    // ranks in between are marked as skipped rather than quietly closed up.
+    const inTop = leaderboard.top.some(a=>a.isYou);
+    const tail = inTop ? '' :
+      `<li class="fx-board-gap" aria-hidden="true">&middot; &middot; &middot;</li>` +
+      row({ rank: you.rank, isYou: true, displayName: 'You' });
+    document.getElementById('ag_stBoard').innerHTML = leaderboard.top.map(row).join('') + tail;
+  }
+
+  if(!leaderboard || !leaderboard.you){
+    // No board to stand on, so the header falls back to his own month --
+    // the milestones below still stand on their own.
+    document.getElementById('ag_stLbl').textContent = 'So far this month';
+    document.getElementById('ag_stRank').textContent = fmtNum(monthEarnings(currentMonthKey()).total);
+    document.getElementById('ag_stOf').textContent = 'earned';
+    document.getElementById('ag_stMine').textContent = '';
+  }
+
+  const you2 = leaderboard && leaderboard.you;
+  document.getElementById('ag_stEarned').textContent =
+    fmtNum(you2 ? (you2.amount||0) : monthEarnings(currentMonthKey()).total);
+  document.getElementById('ag_stOrders').textContent =
+    fmtNum(you2 ? (you2.completedOrders||0) : stats.completedOrders);
+
+  renderMilestones();
+}
+
+/* One next thing, with the gap named in the units it is measured in.
+   "3 more orders" is something to go and do this week; a locked badge is
+   not. The nine come from ACHIEVEMENTS unchanged -- what is different is
+   that the nearest unearned one is lifted out and given the space. */
+function renderMilestones(){
+  const all = computeAchievements();
+  const got = all.filter(a=>a.unlocked);
+  const left = all.filter(a=>!a.unlocked)
+    .map(a=>({ ...a, frac: a.target ? a.current / a.target : 0 }))
+    .sort((a,b)=> b.frac - a.frac);
+  const next = left[0] || null;
+
+  const nextSec = document.getElementById('ag_stNextSec');
+  if(next){
+    nextSec.style.display = '';
+    const togo = Math.max(0, next.target - next.current);
+    document.getElementById('ag_stNext').innerHTML = `
+      <div class="fx-mile-h">
+        <span class="fx-mile-t">${esc(next.title)}</span>
+        <span class="fx-mile-g">${esc(milestoneGap(next, togo))}</span>
+      </div>
+      <div class="fx-mile-d">${esc(next.desc)} &middot; you are on ${esc(milestoneAt(next))}</div>
+      <div class="fx-mile-bar"><i style="width:${Math.round(Math.min(1, next.frac) * 100)}%;"></i></div>`;
+  } else {
+    nextSec.style.display = 'none';
+  }
+
+  document.getElementById('ag_stMileN').textContent = `${got.length} of ${all.length}`;
+  document.getElementById('ag_stMiles').innerHTML = all.map(a=>{
+    const icon = ACHIEVEMENT_ICONS[a.id] || ACHIEVEMENT_ICONS.first_sale;
+    const cls = a.unlocked ? 'got' : (next && next.id === a.id ? 'next' : '');
+    const pct = a.target ? Math.round(Math.min(1, a.current / a.target) * 100) : 0;
+    return `<div class="fx-m ${cls}">
+      ${icon}
+      <span class="n">${esc(milestoneTargetLabel(a))}</span>
+      <span class="l">${esc(milestoneUnit(a))}</span>
+      <span class="p"><i style="width:${a.unlocked ? 100 : pct}%;"></i></span>
+    </div>`;
+  }).join('');
+}
+
+// The three ways these nine are counted, said once each rather than
+// re-derived from the description string at every call site.
+function milestoneKind(a){
+  if(a.id.startsWith('earn')) return 'money';
+  if(a.id.startsWith('streak')) return 'weeks';
+  if(a.id.startsWith('repeat')) return 'clients';
+  return 'orders';
+}
+function milestoneTargetLabel(a){
+  if(milestoneKind(a) === 'money') return a.target >= 1000000 ? `${a.target/1000000}m` : `${a.target/1000}k`;
+  return a.id === 'first_sale' ? '1st' : String(a.target);
+}
+function milestoneUnit(a){
+  return { money:'Earned', weeks:'Week streak', clients:'Repeat clients',
+    orders: a.id === 'first_sale' ? 'Sale' : 'Orders' }[milestoneKind(a)];
+}
+function milestoneAt(a){
+  return milestoneKind(a) === 'money' ? fmtUGX(a.current) : String(a.current);
+}
+function milestoneGap(a, togo){
+  if(milestoneKind(a) === 'money') return `${fmtNum(togo)} to go`;
+  return `${fmtNum(togo)} to go`;
 }
 
 /* ================= THE TARGET =================
@@ -3596,7 +3730,8 @@ function renderHomePays(){
   });
 }
 document.getElementById('ag_fxEarnBtn').addEventListener('click', ()=> switchTab('earnings'));
-document.getElementById('ag_fxRank').addEventListener('click', ()=> switchTab('earnings'));
+document.getElementById('ag_standingBack').addEventListener('click', ()=> switchTab('home'));
+document.getElementById('ag_fxRank').addEventListener('click', ()=> switchTab('standing'));
 
 /* ---- New Quote: client comes first -----------------------------------
    Every quote is fundamentally "for someone" before it's a list of

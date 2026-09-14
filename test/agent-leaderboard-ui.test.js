@@ -14,6 +14,15 @@
  * agent's name, and there must never be. Your own amount and completed
  * orders ARE returned, and were being discarded.
  *
+ * THE BOARD MOVED. It was a card on Home; it is the Standing screen now,
+ * built by renderStanding() in the .fx- layer. Every decision below is
+ * unchanged and every one is still worth pinning -- the selectors and the
+ * function name are what moved. Two things got STRICTER on the way, both
+ * because this file asked for them: the row builder renders no money at
+ * all now rather than conditionally printing your own (a builder that
+ * cannot print a figure cannot be edited into leaking one), and your own
+ * total is stated once above the list where it belongs to you.
+ *
  * Run: node test/agent-leaderboard-ui.test.js   (or: npm test)
  */
 const { read, createReporter } = require('./_extract');
@@ -73,7 +82,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'whether you are already listed is worked out');
   t.check(/const tail = inTop \? '' :/.test(code),
     'and your row is appended only when you are not');
-  t.check(/ag-lb-gap/.test(code) && /&middot; &middot; &middot;/.test(code),
+  t.check(/fx-board-gap/.test(code) && /&middot; &middot; &middot;/.test(code),
     'with the run of ranks between marked as skipped');
   t.check(/row\(\{ rank: you\.rank, isYou: true, displayName: 'You' \}\)/.test(code),
     'the appended row carries your real rank, not a sixth place');
@@ -83,21 +92,21 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 {
   t.check(/a\.rank<=3 && !a\.isYou\?' podium':''/.test(code),
     'the top three carry weight, and your own row is not double-marked');
-  t.check(/\.ag-lb-list li\.podium \.rank\{background:var\(--ink\)/.test(src),
+  t.check(/\.fx-board li\.podium \.pos\{background:var\(--fx-ink\)/.test(src),
     'the podium is a filled mark, not a medal emoji');
-  t.check(/\.ag-lb-list li\.you \.rank\{background:var\(--accent\)/.test(src),
+  t.check(/\.fx-board li\.you \.pos\{background:var\(--fx-oxide\)/.test(src),
     'and your own rank is the accent, which outranks the podium treatment');
-  t.check(!/[\u{1F300}-\u{1FAFF}]/u.test(/ag-lb-list[\s\S]{0,900}/.exec(src)?.[0] || ''),
+  t.check(!/[\u{1F300}-\u{1FAFF}]/u.test(/fx-board[\s\S]{0,900}/.exec(src)?.[0] || ''),
     'no emoji anywhere in the board');
 
   // The duplicate that was sitting in the stylesheet.
-  t.check((src.match(/\.ag-lb-list li\.you \.rank\{/g) || []).length === 1,
+  t.check((src.match(/\.fx-board li\.you \.pos\{/g) || []).length === 1,
     'the duplicated .you .rank rule is gone');
 }
 
 /* ---------- 5. it hides when there is nothing to rank --------------- */
 {
-  t.check(/leaderboard\.totalAgents < 2\)\{ card\.style\.display = 'none'; return; \}/.test(code),
+  t.check(/leaderboard\.totalAgents < 2\)\{ sec\.style\.display = 'none'; \}/.test(code),
     'a shop with one agent shows no board rather than a board of one');
 }
 

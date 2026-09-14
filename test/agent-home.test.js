@@ -70,14 +70,28 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
    *
    * The ring's own svg is a direct child; the icon's is not. Nothing in a
    * unit test renders, so this is pinned on the selector itself. */
-  t.check(/\.ag-badge-ring > svg\{[^}]*transform:rotate\(-90deg\)/.test(src),
-    'the quarter turn is scoped to the ring itself, not to every svg inside it');
-  t.check(!/\.ag-badge-ring svg\{/.test(src),
-    'so the icon is never turned on its side with it');
-  t.check(/\.ag-badge-ring > svg circle\{/.test(src),
-    'and the ring stroke reaches only the ring, not circles drawn inside an icon');
-  t.check(!/\.ag-badge-ring circle\{/.test(src),
-    'which four of the nine icons have');
+  /* WHAT THESE USED TO SAY. Each achievement was a card with a progress
+     RING drawn around its mark, and the four assertions here pinned the
+     scoping of two rules -- `.ag-badge-ring > svg` for the quarter turn
+     and `> svg circle` for the ring stroke -- because dropping the child
+     combinator reached the icon's own svg too, turning every mark on its
+     side and fattening the circles inside the medal, the two heads and
+     the two coins to the ring's stroke width.
+
+     WHY THEY STOPPED BEING TRUE. There is no ring. The milestones moved
+     off Home onto Standing and are a grid of tiles now: the mark, the
+     number the milestone is counted in, and a straight progress bar. No
+     rotation and no stroke override, so there is nothing to mis-scope.
+
+     WHAT IS PINNED INSTEAD. That the rules really are gone -- if a ring
+     ever comes back it must come back with its scoping argued again,
+     rather than inheriting a pass from a test that stopped looking. The
+     round-icon guard below stays exactly as it was: it protects the
+     nine-distinct-marks claim, which is unaffected. */
+  t.check(!/ag-badge-ring/.test(src),
+    'the ring is gone -- a tile with a straight bar has nothing to turn on its side');
+  t.check(!/transform:rotate\(-90deg\)/.test(src),
+    'and with it the quarter turn that had to be kept off the icons');
   /* Guards the two assertions above: if the icons stopped drawing circles
      the scoping would be pinned for no reason, and nobody could tell
      whether it still mattered. Named rather than counted, so redrawing an
@@ -101,8 +115,14 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const dangling = [...new Set(dotted)].filter(k => !keyed.includes(k));
   t.check(dangling.length === 0,
     `every ACHIEVEMENT_ICONS.<key> reference resolves${dangling.length ? ` (dangling: ${dangling.join(', ')})` : ` (${new Set(dotted).size} checked)`}`);
-  t.check(dotted.length >= 2,
-    'and the sweep sees the call sites outside the card itself, which is where the break was');
+  /* Was >= 2, when achievementCardHTML and the shelf renderer each held a
+     fallback. The card is gone with the ring and the milestone tile is
+     the only place left that names a key directly, so the threshold is
+     the number of call sites there actually are. The check still does its
+     job: it proves the dangling sweep above looked at real code and not
+     just at the table. */
+  t.check(dotted.length >= 1,
+    'and the sweep sees the call site outside the table, which is where the break was');
   t.check(!/family:/.test(code) || !/ACHIEVEMENT_ICONS\[a\.family\]/.test(code),
     'and the family field it replaced is gone rather than left dangling');
 }
