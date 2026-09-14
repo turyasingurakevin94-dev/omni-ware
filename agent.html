@@ -245,8 +245,9 @@
 
   .ag-item-result{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px;cursor:pointer;}
   .ag-item-result:hover{background:var(--accent-soft);}
-  .ag-item-thumb{width:38px;height:38px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
-  .ag-item-thumb-placeholder{width:38px;height:38px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  /* .ag-item-thumb and its dashed placeholder went with the product rows
+     in the search dropdown. The client suggestions that share
+     .ag-item-result carry initials, not photographs. */
   .ag-item-result-body{min-width:0;flex:1;}
   .ag-item-result-name{font-size:13.5px;font-weight:700;letter-spacing:-0.005em;}
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
@@ -577,83 +578,78 @@
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
   .ag-scroll-row::-webkit-scrollbar{display:none;}
 
-  .ag-grid-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,32,0.05),0 6px 16px rgba(16,24,32,0.08);transition:border-color .12s,box-shadow .12s;}
-  .ag-grid-card:hover{border-color:var(--accent);box-shadow:0 1px 2px rgba(16,24,32,0.03),0 10px 22px rgba(178,58,38,0.13);}
-  .ag-grid-thumb-wrap{position:relative;aspect-ratio:16/9;background:#F1F3F5;}
+  .ag-grid-card{background:var(--fx-card);border-radius:var(--fx-r-card);cursor:pointer;
+    box-shadow:var(--fx-sh);}
+  .ag-grid-thumb-wrap{position:relative;background:var(--fx-page);}
   .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
-  .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#C7CDD5;}
-  .ag-grid-body{padding:12px 13px 13px;}
-  /* Main grid only (Order Again/Sponsored keep the vertical card above) --
-     one wide row per product: a small square thumb on the left, details
-     in the middle, quick-add as its own tap target on the right, all
-     vertically centered so a short one-variant card and a tall two-axis
-     card still line up the same way. */
-  #ag_browseGrid.ag-browse-grid{grid-template-columns:1fr;}
-  /* Only the "+" opens the panel now (see the click handler) -- default
-     cursor here so the rest of the row doesn't look clickable on desktop
-     when it isn't; the chips, star, and "+" all set their own pointer. */
-  /* Inside a category: one wide row per product, image left. The row runs
-     the full column (434 at the app's widest) and stands about 140 tall,
-     which gives the photo 116 square instead of 88 -- enough to tell two
-     variants of the same fitting apart, which an 88px thumb could not. */
-  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:14px;padding:12px;cursor:pointer;min-height:140px;}
-  #ag_browseGrid .ag-grid-thumb-wrap{width:116px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
+  .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--fx-ink-3);}
+  .ag-grid-thumb-placeholder .icon{width:28px;height:28px;}
+  #ag_browseGrid.ag-browse-grid{grid-template-columns:1fr;gap:12px;}
+  /* Inside a category, or in a search result: one wide row per product,
+     image left, about 140 tall. The photo gives up 116px for 96 -- the
+     card has to carry the add control and the line's earnings now, and
+     the argument for 116 (telling two variants of one fitting apart) is
+     answered better by the variant chips, which NAME them, and by
+     tapping the photo for the full-size view. */
+  #ag_browseGrid .ag-grid-card{display:flex;align-items:flex-start;gap:12px;padding:13px;cursor:pointer;min-height:122px;}
+  #ag_browseGrid .ag-grid-thumb-wrap{width:96px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
   /* Tapping the photo opens a full-size lightbox (see the click handler)
      -- only a real photo, never the generic placeholder icon, is
      actually worth zooming into. */
   #ag_browseGrid .ag-grid-thumb{cursor:zoom-in;}
-  #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;}
-  /* The bonus is a corner badge on the photo now: "+3%" or "+900".
-     The pill said "3% BONUS  29 DAYS LEFT" in the card body, which is
-     three facts and two lines for something an agent only needs to spot.
-     A promotion that is genuinely about to end still says so, on the
-     shelf note where it is actionable. */
-  .ag-bonus-badge{
-    position:absolute;top:8px;left:8px;z-index:2;
-    background:var(--bonus);color:#fff;font-size:11px;font-weight:800;
-    padding:3px 7px;border-radius:5px;letter-spacing:.02em;
-  }
+  #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;align-self:stretch;
+    display:flex;flex-direction:column;}
+  /* The name takes the line; the star and the "+" take its right-hand
+     end, which is where the star already sat when it lived on the photo
+     corner. Below them the variants, the unit, and last -- pushed to the
+     foot of the card by margin-top:auto, so every card in the aisle
+     states its price on the same line -- the money. */
+  .fx-prow-h{display:flex;align-items:center;gap:6px;}
+  .fx-prow-n{flex:1;min-width:0;font-size:14.5px;font-weight:600;letter-spacing:-.005em;
+    line-height:1.3;color:var(--fx-ink);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .fx-prow-u{font-size:12px;color:var(--fx-ink-3);margin-top:5px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fx-prow-p{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:9px;flex-wrap:wrap;}
+  /* Which pair of axis values is actually selected, spelled out under the
+     two chip rows -- two rows of chips do not by themselves say that both
+     combine into one choice. */
+  .fx-vsel{display:inline-block;max-width:100%;margin-top:6px;
+    font-size:11.5px;font-weight:600;color:var(--fx-ink-2);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* .ag-bonus-badge was a corner badge on the photo reading "+3%" or
+     "+900". The row says what the line pays in words now, on the price
+     line, where it is read rather than spotted. */
   /* Tells an agent, right where the bonus is promised, exactly why a
      cluster item they already starred isn't earning it yet -- distinct
      color from the amber bonus pill/countdown so it doesn't read as
      "extra bonus info" but as its own separate, informational status. */
   .ag-cluster-wait{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--blue);margin:0 0 6px;}
   .ag-cluster-wait .icon{width:10px;height:10px;}
-  .ag-grid-name{font-size:13.5px;font-weight:700;letter-spacing:-0.006em;color:var(--ink);line-height:1.3;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ag-grid-variant{display:inline-block;max-width:100%;font-weight:700;font-size:11px;letter-spacing:.01em;color:var(--accent-dark);background:var(--accent-soft);padding:2.5px 7px;border-radius:6px;margin:5px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ag-grid-pack{font-size:11px;font-weight:500;color:var(--ink-soft);letter-spacing:.005em;margin-bottom:7px;}
-  .ag-grid-price{font-family:var(--font-money);font-size:17px;font-weight:800;letter-spacing:-0.015em;color:var(--accent-dark);line-height:1.2;}
   .ag-price-unit{font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
-  /* "Buy more, pay less" teaser on a grid card -- always one line, always
-     per the same base unit as the price right above it. Muted rather than
-     colored like the real price (ag-grid-price/ag-item-result-price) --
-     this is supplementary context about a DIFFERENT quantity, not a
-     second price for the one being shown, and styling it just as boldly
-     invited reading it as one. */
-  .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--ink-soft);margin-top:5px;}
-  .ag-grid-reminder{font-size:11px;color:var(--danger);font-weight:700;margin-top:5px;}
-
-  .ag-star-btn{
-    all:unset;cursor:pointer;position:absolute;top:8px;right:8px;width:29px;height:29px;border-radius:50%;
-    background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;
-    color:#C4C9D1;box-shadow:0 1px 4px rgba(0,0,0,0.18);
-  }
-  .ag-star-btn .icon{width:15px;height:15px;}
-  .ag-star-btn.active{color:var(--bonus);}
-  .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
-  .ag-sponsor-tag .icon{width:10px;height:10px;}
+  /* Gone with the card body they belonged to: the .ag-grid-reminder line,
+     the 29px .ag-star-btn on the photo corner (44px on the row itself
+     now), and .ag-sponsor-tag, which nothing had rendered for some time.
+     and .ag-bulk-hint, whose fact the row's own meta line now carries as
+     "20+ at 13,090" -- the price the quantity reaches, rather than a
+     saving measured against a price two lines above it. */
   /* Variants merged into one card (see browseGroupCardHTML) -- these chips
      replace what used to be a second, near-duplicate grid tile per
      variant. Selection is per-product and survives re-renders via
      browseSelectedVariant, but resets naturally whenever the catalog
      itself reloads. */
-  .ag-variant-chips{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;margin:5px 0 6px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
+  .ag-variant-chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin:7px 0 0;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
   .ag-variant-chips::-webkit-scrollbar{display:none;}
-  .ag-vchip{all:unset;cursor:pointer;font-size:11px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);flex-shrink:0;white-space:nowrap;}
-  .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ag-vchip{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    min-height:30px;padding:0 11px;font-size:12px;font-weight:600;border-radius:var(--fx-r-pill);
+    border:1px solid var(--fx-line);color:var(--fx-ink-2);flex-shrink:0;white-space:nowrap;}
+  .ag-vchip.active{background:var(--fx-ink);border-color:var(--fx-ink);color:#fff;}
+  .ag-vchip:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
   /* Separates one attribute's row (e.g. Color) from the next (Size) so two
      stacked scroll strips don't read as a single ambiguous group. */
-  .ag-variant-chips + .ag-variant-chips{border-top:1px dotted var(--line);padding-top:6px;margin-top:-1px;}
+  .ag-variant-chips + .ag-variant-chips{margin-top:6px;}
 
   /* ---- Profile card + menu (Account) ---- */
   .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
@@ -1316,6 +1312,14 @@
      hidden ones back on the page. */
   .fx-shelf{margin-top:18px;}
   .fx-shelf > .fx-sec{margin-bottom:10px;}
+
+  /* The one .ag-section-title left on Sell, and only while a search is
+     running. Addressed by id so the heading reads like the shelf headings
+     beside it without disturbing the screens that still use the class. */
+  #ag_gridTitle{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:2px 4px 10px;
+    color:var(--fx-ink);}
+  #ag_gridTitle small{font-size:14px;font-weight:500;color:var(--fx-ink-3);
+    text-transform:none;letter-spacing:0;}
 
   .fx-sellhd{padding:14px 16px 12px;background:var(--fx-page);}
   .fx-find{position:relative;display:flex;align-items:center;gap:11px;min-height:52px;
@@ -5355,21 +5359,12 @@ function promoDaysLeftInfo(endsAt){
   return { label, urgent: diff<=1 };
 }
 
-// "Buy more, pay less" is only ever one line: the single cheapest
-// breakpoint this item has (bestTierMinQty/bestTierPrice, already
-// resolved server-side), always stated per the SAME base unit as the
-// headline price shown alongside it -- never a pack unit, so there's
-// never a question of whether a number here is per piece, dozen, or
-// carton. The full ladder (and the option to view it in pack terms)
-// only ever shows up once the item itself is tapped. Shared by the
-// browse grid card and the search-suggestions dropdown so both surfaces
-// tease volume pricing the same way.
-function bulkHintHTML(it){
-  if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
-  const savings = (Number(it.floorPrice)||0) - (Number(it.bestTierPrice)||0);
-  if(!(savings>0)) return '';
-  return `<div class="ag-bulk-hint">🔥 Save ${fmtAmount(savings)} · ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))}</div>`;
-}
+// bulkHintHTML drew "🔥 Save 2,310 · 20+ pcs" under a price, on the browse
+// card and in the search-suggestions dropdown. Both draw the same product
+// row now, and the row's meta line carries the same fact as "20+ at
+// 13,090" -- the price the quantity actually reaches, rather than the
+// saving against a price stated two lines up. One fewer line, one fewer
+// emoji, and no arithmetic left to the reader.
 
 /* ---- Main grid: variants merged into one card per product ------------
    catalog is flat -- one entry per (productId, variantIdx) -- so two
@@ -5438,7 +5433,7 @@ function axisChipsHTML(group, selected, axes){
   // one choice" -- spelling out the resolved pair here (same pill style
   // single-variant cards already use for their one variant label) makes
   // the combined selection legible without having to scan both rows.
-  return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div><div class="ag-grid-variant">${esc(selected.variantLabel||'—')}</div>`;
+  return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div><div class="fx-vsel">${esc(selected.variantLabel||'—')}</div>`;
 }
 // Each attribute is its own horizontally-scrolling strip rather than a
 // row that wraps or gets capped with a "+N more" -- no popup needed,
@@ -5459,30 +5454,37 @@ function browseGroupCardHTML(group, promoted){
   const selected = selectedVariantFor(group);
   const key = `${selected.productId}::${selected.variantIdx==null?'':selected.variantIdx}`;
   const promo = promoted.get(key);
-  const inCluster = promo && isInCluster(selected.productId, selected.variantIdx);
-  const showReminder = promo && inCluster && !hasSoldItem(selected.productId, selected.variantIdx);
-  const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
-  const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
+  const inCluster = !!(promo && isInCluster(selected.productId, selected.variantIdx));
   const clusterWait = inCluster ? clusterEligibility(selected.productId, selected.variantIdx) : null;
-  const packLabel = selected.packQty ? `1 ${esc(selected.packUnit||'pack')} has ${esc(selected.packQty)} ${esc(pluralizeUnit(selected.unit))}` : (selected.unit ? `Per ${esc(selected.unit)}` : '');
   const hasVariants = group.variants.length > 1;
   const axes = hasVariants ? parseVariantAxes(group) : null;
+  const starTitle = inCluster ? 'Remove from your cluster' : 'Add to your cluster to earn its bonus';
+  // Three facts that used to be three separate lines in the card body --
+  // a cluster-wait strip, a flame-emoji bulk hint, and a red "Not sold
+  // yet" -- resolved to the one that is worth the line, in the same words
+  // the shelves use. A card carrying all three at once was four lines of
+  // status above a price.
+  const note = clusterWait && !clusterWait.eligible && clusterWait.daysLeft!=null
+    ? `Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}`
+    : (inCluster && !hasSoldItem(selected.productId, selected.variantIdx) ? 'In your cluster, not sold yet' : '');
   return `<div class="ag-grid-card" data-pid="${esc(group.productId)}" data-selected-vidx="${selected.variantIdx==null?'':selected.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${selected.image ? `<img class="ag-grid-thumb" src="${esc(selected.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
-      ${promo ? `<span class="ag-bonus-badge">${esc(bonusFlagLabel(promo))}</span>` : ''}
-      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
-      <div class="ag-grid-name">${esc(group.name)}</div>
+      <div class="fx-prow-h">
+        <div class="fx-prow-n" title="${esc(group.name)}">${esc(group.name)}</div>
+        ${promo ? `<button type="button" class="fx-star ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${starTitle}" aria-label="${starTitle}">${ICON_STAR}</button>` : ''}
+        <button type="button" class="fx-add" aria-label="Add ${esc(group.name)}">${ICON_PLUS}</button>
+      </div>
       ${hasVariants
         ? (axes ? axisChipsHTML(group, selected, axes) : `<div class="ag-variant-chips">${variantChipsHTML(group, selected)}</div>`)
-        : (selected.variantLabel ? `<div class="ag-grid-variant">${esc(selected.variantLabel)}</div>` : '')}
-      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      <div class="ag-grid-price">${fmtAmountPerUnit(selected.floorPrice, selected.unit)}</div>
-      ${bulkHintHTML(selected)}
-      ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
+        : (selected.variantLabel ? `<div class="fx-vsel">${esc(selected.variantLabel)}</div>` : '')}
+      <div class="fx-prow-u" title="${prodMetaHTML(selected, note)}">${prodMetaHTML(selected, note)}</div>
+      <div class="fx-prow-p">
+        <span class="fx-prod-amt">${fmtNum(selected.floorPrice)}</span>
+        ${prodEarnChipHTML(selected, promo)}
+      </div>
     </div>
   </div>`;
 }
@@ -5562,7 +5564,7 @@ function fieldProdRowHTML(it, promo, opts){
   // A div, not a button: the star and the "+" are buttons of their own and
   // a button cannot hold a button. The whole row is still tappable through
   // the view's delegated listener, and the "+" is what a keyboard reaches.
-  return `<div class="fx-prod" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
+  return `<div class="fx-prod" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}"${opts.idx==null?'':` data-idx="${opts.idx}"`}>
     <span class="fx-th">${it.image ? `<img src="${esc(it.image)}" alt="" loading="lazy">` : ICON_PLACEHOLDER}</span>
     <span class="fx-prod-b">
       <span class="fx-prod-n" title="${esc(fullName)}">${esc(it.name)}${it.variantLabel ? ` <em>${esc(it.variantLabel)}</em>` : ''}</span>
@@ -5895,20 +5897,18 @@ function renderSearchSuggestions(){
     box.classList.add('show');
     return;
   }
-  box.innerHTML = searchSuggestionMatches.map((it,i)=>`
-    <div class="ag-item-result" data-idx="${i}">
-      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
-      <div class="ag-item-result-body">
-        <div class="ag-item-result-name">${esc(it.name)}</div>
-        ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        <div class="ag-item-result-price money">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
-        ${bulkHintHTML(it)}
-      </div>
-    </div>`).join('');
+  // The same row the shelves and the results draw. It is the first thing
+  // a search shows and it sat one field below them reading differently:
+  // an oxide price, a flame emoji, a dashed placeholder box, and no word
+  // anywhere about what the line pays him.
+  const promoted = promotedMap();
+  box.innerHTML = searchSuggestionMatches.map((it,i)=>
+    fieldProdRowHTML(it, promoted.get(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`), { idx: i })
+  ).join('');
   box.classList.add('show');
 }
 document.getElementById('ag_searchSuggestions').addEventListener('mousedown', (e)=>{
-  const row = e.target.closest('.ag-item-result[data-idx]');
+  const row = e.target.closest('.fx-prod[data-idx]');
   if(!row) return;
   const item = searchSuggestionMatches[Number(row.dataset.idx)];
   document.getElementById('ag_searchSuggestions').classList.remove('show');

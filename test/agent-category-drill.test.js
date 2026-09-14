@@ -243,11 +243,34 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
   // In-category row: one wide row, image left, big enough to tell two
   // variants of the same fitting apart.
+  // "about 140 tall" was the 116px photo plus its padding. The floor
+  // follows the photo rather than a number typed beside it, so with a
+  // 96px photo it is 96 + 13 top + 13 bottom. Pinned as that arithmetic,
+  // not as a constant, because the two drifted apart once already.
   const row = rule('#ag_browseGrid .ag-grid-card');
-  t.check(/display:flex/.test(row) && /min-height:140px/.test(row),
-    'a category row is a wide row about 140 tall');
-  t.check(/width:116px/.test(rule('#ag_browseGrid .ag-grid-thumb-wrap')),
-    'with a 116px image on the left');
+  const rowMin = Number((/min-height:(\d+)px/.exec(row) || [])[1]);
+  const rowPad = Number((/padding:(\d+)px/.exec(row) || [])[1]);
+  const thumbW = Number((/width:(\d+)px/.exec(rule('#ag_browseGrid .ag-grid-thumb-wrap')) || [])[1]);
+  t.check(/display:flex/.test(row), 'a category row is a wide row');
+  t.check(rowMin === thumbW + rowPad * 2,
+    `and stands exactly its photo plus its padding (${rowMin} = ${thumbW} + ${rowPad}x2)`);
+  // This used to read: "with a 116px image on the left", argued as enough
+  // to tell two variants of the same fitting apart, which 88 could not.
+  //
+  // The photo gives up 20px of that. The card has to carry two things it
+  // did not before -- an add control, and what the line pays the agent --
+  // and the argument for 116 is answered better elsewhere on the same
+  // card: the variant chips NAME the variants rather than asking anyone
+  // to tell them apart by eye, and tapping the photo still opens it full
+  // size. What is pinned is that it stays a large square, well clear of
+  // the 46px the shelves use for reading at speed.
+  const gridThumb = rule('#ag_browseGrid .ag-grid-thumb-wrap');
+  t.check(/width:96px/.test(gridThumb) && /aspect-ratio:1\/1/.test(gridThumb),
+    'with a 96px square image on the left -- twice the shelf row\'s 46');
+  t.check(/cursor:zoom-in/.test(rule('#ag_browseGrid .ag-grid-thumb')),
+    'and it still opens full size, which is the real way two variants are compared');
+  t.check(/class="ag-variant-chips"/.test(code),
+    'while the chips name the variants outright');
   t.check(/grid-template-columns:1fr/.test(rule('#ag_browseGrid.ag-browse-grid')),
     'one per row, not a two-up grid');
 }
