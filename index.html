@@ -22095,6 +22095,15 @@ async function loadData(shopId){
      yesterday -- the customer form hides the block rather than offering a
      button that cannot work, and nothing else in the app changes. */
   clientAccountsTable = !(clientAccountsR && clientAccountsR.error);
+  /* And WHY, when it failed. The block used to hide itself and say
+     nothing, which reads correctly to a shop that has not turned the
+     portal on and lies to a shop that has: a pasted migration, a
+     redeployed function, and no button anywhere to press. Postgres and
+     PostgREST both name the cause precisely -- a missing table, a schema
+     cache that has not reloaded, a permission -- and the shop should be
+     reading that sentence instead of guessing at it. */
+  clientAccountsWhy = (clientAccountsR && clientAccountsR.error
+    && (clientAccountsR.error.message || String(clientAccountsR.error))) || '';
   customerTermsColumns = !(termsColR && termsColR.error);
 
   const debtByCustomer = {};
@@ -22533,6 +22542,7 @@ let siteStageColumn = false;
 // Set by loadData, both from 0096. See the probes there for why a write
 // cannot assume either.
 let clientAccountsTable = false;
+let clientAccountsWhy = '';          // why the probe failed, in the database's own words
 let customerTermsColumns = false;
 let linkSizeColumn = false;
 let cashTransferColumn = false;
@@ -56128,12 +56138,28 @@ function cfPinGoodUntil(expiresAt){
 function cfShowPortal(c){
   const block = document.getElementById('c_portal_block');
   if(!block) return;
-  /* Hidden outright where 0096 has not landed. A shop without the table
-     is not a shop with a broken button -- it is a shop that has not
-     turned the portal on, and showing a control that cannot work would
-     make the missing migration look like a bug in the app. */
-  block.style.display = (c && clientAccountsTable) ? '' : 'none';
-  if(!c || !clientAccountsTable) return;
+  /* No button where 0096 has not landed. A shop without the table is not
+     a shop with a broken button -- it is a shop that has not turned the
+     portal on, and offering a control that cannot work would make a
+     missing migration look like a bug in the app. That part stands.
+     What does not is the silence that went with it: this said NOTHING,
+     and a shop that has pasted the migration and redeployed the function
+     then looks for a button that is never going to appear and has no way
+     at all to find out why. So the control stays absent and one line
+     takes its place, carrying the reason the database actually gave. */
+  block.style.display = c ? '' : 'none';
+  if(!c) return;
+  if(!clientAccountsTable){
+    document.getElementById('c_portal').innerHTML = `
+      <div class="cf-portal">
+        <div class="cf-portal-state"><b>The portal is not turned on.</b></div>
+        <div class="cf-portal-meta">${esc(clientAccountsWhy || 'client_accounts could not be read.')}</div>
+        <div class="cf-portal-note">Paste <b>0096_client_accounts.sql</b> and reload this page. If you
+          already have, the database may not have picked the new table up yet &mdash; run
+          <b>notify pgrst, 'reload schema';</b> and reload again.</div>
+      </div>`;
+    return;
+  }
 
   const el = document.getElementById('c_portal');
   const a = clientAccountsByCustomer && clientAccountsByCustomer[c.id];

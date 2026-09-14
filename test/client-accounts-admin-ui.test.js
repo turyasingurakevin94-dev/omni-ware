@@ -97,10 +97,32 @@ const src = read('index.html');
   t.check(!/terms_days:/.test(upTo.replace(/\.\.\.\(customerTermsColumns \?[\s\S]*/, '')),
     'and are not sent unconditionally, which would stop every customer syncing');
 
-  // The block is hidden rather than shown broken.
+  /* The block offers no control it cannot honour -- and says why.
+   *
+   * This used to assert that the whole block was hidden: `display = (c &&
+   * clientAccountsTable) ? '' : 'none'`. What that assertion MEANT was
+   * that a shop which has not turned the portal on must not be shown a
+   * button that cannot work, and that is still true and still checked
+   * below. What it also bought, unintentionally, was total silence -- and
+   * silence is only the right answer for a shop that has not applied
+   * 0096. For a shop that HAS applied it and hit a stale schema cache,
+   * the app showed nothing, explained nothing, and left the owner hunting
+   * for a button that was never going to appear. That is the "a failure
+   * must name itself" rule, broken by an omission rather than a mistake.
+   *
+   * So the assertion is narrowed rather than dropped: still no control,
+   * now with the database's own sentence in place of it. */
   const show = src.slice(src.indexOf('function cfShowPortal'), src.indexOf('async function cfPortalAct'));
-  t.check(/block\.style\.display = \(c && clientAccountsTable\) \? '' : 'none';/.test(show),
-    'a shop without the table sees no portal block at all, not a button that cannot work');
+  t.check(!/id="c_portal_open"/.test(show.slice(0, show.indexOf('if(!a){'))),
+    'a shop without the table is still offered no button that cannot work');
+  t.check(/if\(!clientAccountsTable\)\{/.test(show) && /The portal is not turned on/.test(show),
+    'but it is told the portal is off rather than shown an empty space');
+  t.check(/esc\(clientAccountsWhy/.test(show),
+    'and told why, in the words the database used — a missing table and a stale schema cache read alike otherwise');
+  t.check(/clientAccountsWhy = \(clientAccountsR && clientAccountsR\.error/.test(src),
+    'which means the probe keeps the reason instead of reducing it to a boolean');
+  t.check(/notify pgrst/.test(show),
+    'and names the one thing that fixes the commonest cause');
 }
 
 /* ---------- 4. nought is an agreement, not a silence ------------------ */
@@ -173,7 +195,8 @@ const src = read('index.html');
  * browser's locale happened to be.
  */
 {
-  const render = (account, pin) => {
+  let lastBlockDisplay = null;
+  const render = (account, pin, env) => {
     const nodes = {};
     ['c_portal_block', 'c_portal'].forEach((id) => {
       nodes[id] = { id, innerHTML: '', style: { display: '' }, addEventListener() {} };
@@ -186,6 +209,8 @@ const src = read('index.html');
         data: { customers: [{ id: 'C001', name: 'Nakato Grace', phone: '0772418903' }] },
         editingCustomerId: 'C001',
         clientAccountsTable: true,
+        clientAccountsWhy: '',
+        ...(env || {}),
         clientAccountsByCustomer: account ? { C001: account } : {},
         cfPinShown: pin || null,
         cfPortalAct: () => {}, toast: () => {}, navigator: {},
@@ -198,6 +223,7 @@ const src = read('index.html');
       ['cfShowPortal'],
     );
     scope.cfShowPortal({ id: 'C001', name: 'Nakato Grace', phone: '0772418903' });
+    lastBlockDisplay = nodes.c_portal_block.style.display;
     return nodes.c_portal.innerHTML;
   };
   const base = {
@@ -294,6 +320,29 @@ const src = read('index.html');
   ['overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap', 'min-width:0'].forEach((d) => {
     t.check(css.includes(d), `the address truncates properly — ${d}`);
   });
+
+  /* ---------- the shop that HAS pasted 0096 and still sees nothing ----- */
+  /*
+   * The failure this app actually produced. The migration was applied and
+   * the function redeployed, and the customer form showed no portal block
+   * of any kind -- no button, no message, nothing to search for. The
+   * probe had failed and the app reduced that to a boolean, so the one
+   * sentence that would have ended it in ten seconds was thrown away at
+   * the point it was read.
+   */
+  const off = render(null, null, {
+    clientAccountsTable: false,
+    clientAccountsWhy: "Could not find the table 'public.client_accounts' in the schema cache",
+  });
+  t.check(/not turned on/.test(off), 'with the probe failed, the block says the portal is off');
+  t.check(/schema cache/.test(off),
+    'and repeats the reason the database gave, which is the whole diagnosis');
+  t.check(/0096_client_accounts\.sql/.test(off) && /notify pgrst/.test(off),
+    'and names both ways out — the migration, and the reload a pasted migration still needs');
+  t.check(!/id="c_portal_open"/.test(off) && !/id="c_portal_reissue"/.test(off),
+    'while still offering no button, which was the point of hiding it in the first place');
+  t.check(lastBlockDisplay === '',
+    `and the block is on screen to be read rather than display:none (${JSON.stringify(lastBlockDisplay)})`);
 }
 
 process.exit(t.done() ? 1 : 0);
