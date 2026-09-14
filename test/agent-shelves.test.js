@@ -126,8 +126,26 @@ if (f) {
   t.check(/Your cluster/.test(src) && /Buy more, pay less/.test(src), 'and the other two say what they are');
 
   // The unit is deliberately absent from the volume note.
-  t.check(/shelfNote: `from \$\{it\.bestTierMinQty\}`/.test(code),
-    'the volume note carries the quantity only -- "from 20 sheet" cannot be pluralised safely across pc, ctn and bag');
+  //
+  // This used to read: shelfNote: `from ${it.bestTierMinQty}` -- the
+  // quantity and nothing else, on a card whose price line sat directly
+  // below carrying the unit. The shelf is a list of rows now and the row
+  // states its unit once, at the head of its own meta line, so the note
+  // can afford to say what the quantity actually buys. It says more and
+  // still never pluralises: "20+ at 38,200, 19% less" names a quantity, a
+  // price and a drop, and no unit anywhere in it.
+  const volumeBlock = code.slice(code.indexOf("ag_volumeRow'"));
+  const volumeNote = /shelfNote: `([^`]*)`/.exec(volumeBlock);
+  t.check(!!volumeNote, 'the volume shelf sets a note');
+  if (volumeNote) {
+    t.check(/\$\{it\.bestTierMinQty\}\+ at \$\{fmtNum\(it\.bestTierPrice\)\}/.test(volumeNote[1]),
+      'which names the quantity AND the price it reaches -- "from 20" never said what 20 was worth');
+    t.check(/\\u2212\$\{volumeDropPct\(it\)\}%/.test(volumeNote[1]),
+      'and the drop, which is the whole reason the item is on this shelf -- signed, because'
+      + ' a bare "15%" beside a price could be read as a share of it');
+    t.check(!/pluralizeUnit|it\.unit|it\.packUnit/.test(volumeNote[1]),
+      'and still no unit -- "from 20 sheet" cannot be pluralised safely across pc, ctn and bag');
+  }
 }
 
 process.exit(t.done() ? 1 : 0);

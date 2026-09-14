@@ -556,36 +556,19 @@
   .ag-subcat-chip{all:unset;cursor:pointer;padding:7px 14px;border-radius:20px;background:var(--accent-soft);border:1px solid transparent;font-size:12px;font-weight:700;color:var(--accent-dark);white-space:nowrap;flex-shrink:0;}
   .ag-subcat-chip.active{background:var(--accent);color:#fff;}
 
-  /* ---- Product cards: grid + horizontal scroll variants ---- */
+  /* ---- Product cards: the search grid ---- */
   .ag-browse-grid{display:grid;grid-template-columns:1fr;gap:14px;}
-  /* Shelf flag and note: why this item is on this shelf. The flag rides
-     the photo because the number is the reason to look; the note under
-     the name says what to do about it. */
-  .ag-shelf-flag{position:absolute;top:6px;left:6px;z-index:2;font-size:11px;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:.02em;color:#fff;}
-  .ag-shelf-flag.bonus{background:var(--bonus);}
-  .ag-shelf-flag.deal{background:var(--accent);}
-  .ag-shelf-flag.ready{background:var(--good);}
-  .ag-shelf-note{font-size:11px;font-weight:700;color:var(--accent-dark);margin-top:1px;}
-  .ag-shelf-more{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums;}
+  /* The five product shelves used to be horizontally-scrolling rows of
+     210px cards, and .ag-shelf-flag (a corner flag on the photo),
+     .ag-shelf-note and .ag-shelf-more went with them. A shelf is a list
+     of .fx-prod rows now, so the flag's number is the earn chip on the
+     price line and the note is the row's own meta line -- and a shelf no
+     longer hides most of what is on it behind an edge nobody swipes.
+     .ag-scroll-row itself stays: the open-orders switcher is a genuine
+     sideways strip of a handful of short tabs, which is the one thing on
+     this screen the shape was ever right for. */
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
   .ag-scroll-row::-webkit-scrollbar{display:none;}
-  /* Shelf cards on Order again and Sponsored: 210 wide with a 16:9 image,
-     landing around 270 tall. Wider than a phone-third on purpose -- the
-     next card peeks past the edge, which is what says a shelf scrolls.
-     A square crop wasted height on products that are mostly wide. */
-  .ag-scroll-row .ag-grid-card{
-    width:210px;flex-shrink:0;border:none;box-shadow:none;background:transparent;border-radius:0;
-  }
-  .ag-scroll-row .ag-grid-card:hover{border:none;box-shadow:none;}
-  .ag-scroll-row .ag-grid-thumb-wrap{aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:var(--slate-soft);}
-  .ag-scroll-row .ag-grid-body{padding:8px 1px 0;}
-  .ag-shelf-flag{
-    position:absolute;top:6px;left:6px;z-index:2;
-    font-size:11px;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:.02em;color:#fff;
-  }
-  .ag-shelf-flag.bonus{background:var(--bonus);}
-  .ag-shelf-flag.deal{background:var(--accent);}
-  .ag-shelf-flag.ready{background:var(--good);}
 
   .ag-grid-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,32,0.05),0 6px 16px rgba(16,24,32,0.08);transition:border-color .12s,box-shadow .12s;}
   .ag-grid-card:hover{border-color:var(--accent);box-shadow:0 1px 2px rgba(16,24,32,0.03),0 10px 22px rgba(178,58,38,0.13);}
@@ -848,9 +831,8 @@
   .ag-catalogue-setup .field label{font-size:11.5px;font-weight:700;opacity:.85;display:block;margin-bottom:5px;}
   .ag-catalogue-setup .field input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:none;font-size:13.5px;font-family:inherit;}
   /* ---- My Solutions: saved bundles on Sell, save-link on Quote ---- */
-  .ag-solution-card{width:150px;flex-shrink:0;background:var(--accent-soft);border:1px solid var(--accent);border-radius:18px;padding:14px 13px;cursor:pointer;}
-  .ag-solution-card .name{font-size:13px;font-weight:800;color:var(--accent-dark);line-height:1.3;margin-bottom:4px;}
-  .ag-solution-card .count{font-size:11px;color:var(--accent-dark);opacity:.8;}
+  /* .ag-solution-card was a 150px tile on the sideways shelf. A saved
+     basket is a row on the same list as everything else on Sell now. */
   .ag-save-solution-link{display:block;text-align:center;font-size:12.5px;font-weight:700;color:var(--accent-dark);padding:12px 4px 2px;cursor:pointer;}
   /* ---- Home: selling streak + achievement badges ---- */
   /* The leaderboard shows ORDER only -- rank, name, and whether it is you.
@@ -1022,6 +1004,10 @@
   .fx-lead-av{width:40px;height:40px;flex:none;border-radius:13px;background:var(--fx-page);
     color:var(--fx-ink-2);font-size:14px;font-weight:700;
     display:flex;align-items:center;justify-content:center;}
+  /* It holds a mark as well as a pair of initials -- a saved basket has
+     no initials. Without this the svg expands to its container and paints
+     a shape the width of the row. */
+  .fx-lead-av .icon{width:20px;height:20px;stroke:var(--fx-ink-2);}
   .fx-lead-b{flex:1;min-width:0;text-align:left;}
   .fx-lead-n{display:block;font-size:15px;font-weight:600;letter-spacing:-.005em;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1035,25 +1021,58 @@
 
   /* ---- a product, and what it pays HIM ---- */
   .fx-prod{all:unset;box-sizing:border-box;cursor:pointer;display:flex;width:100%;
-    align-items:center;gap:13px;padding:12px 14px;border-top:1px solid var(--fx-line);}
+    align-items:center;gap:12px;padding:12px 13px;border-top:1px solid var(--fx-line);}
   .fx-prod:first-child{border-top:0;}
   .fx-prod-b{flex:1;min-width:0;text-align:left;}
   .fx-prod-n{display:block;font-size:15px;font-weight:600;line-height:1.3;letter-spacing:-.005em;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The variant rides the name rather than taking a line of its own:
+     "Mulper hinges" and "Mulper hinges" one above the other is the
+     duplication the merged grid card was built to stop, and a shelf can
+     carry both variants of the same product too. */
+  .fx-prod-n em{font-style:normal;font-weight:500;color:var(--fx-ink-3);}
   .fx-prod-u{display:block;font-size:12px;color:var(--fx-ink-3);margin-top:2px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .fx-prod-p{display:flex;align-items:baseline;gap:9px;margin-top:7px;flex-wrap:wrap;}
+  .fx-prod-p{display:flex;align-items:baseline;gap:8px;margin-top:7px;flex-wrap:wrap;}
+  /* The two controls travel together and take one gap between them rather
+     than two off the body. On a 390 phone a row carrying both a star and
+     a "+" leaves 168px for the name and the price line, which is what the
+     price and its chip need to stay on ONE line -- wrap them and a shelf
+     of four rows comes out three different heights. */
+  .fx-prod-a{display:flex;align-items:center;gap:6px;flex:none;}
   .fx-prod-amt{font-family:var(--font-money);font-variant-numeric:tabular-nums;
     font-size:17px;font-weight:600;letter-spacing:-.03em;}
   /* The whole argument of this screen: what he takes home on the line, on
      the line, before he has to work it out. */
-  .fx-earn{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;
+  .fx-earn{display:inline-flex;align-items:center;min-height:22px;padding:0 7px;
     border-radius:var(--fx-r-pill);background:var(--fx-green-bg);color:var(--fx-green);
-    font-size:12px;font-weight:700;letter-spacing:-.01em;}
+    font-size:11.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;}
   .fx-earn.bonus{background:var(--fx-oxide-tint);color:var(--fx-oxide-2);}
-  .fx-add{width:44px;height:44px;flex:none;border-radius:14px;background:var(--fx-oxide);
-    color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--fx-sh-oxide);}
+  /* A real button, not a drawn one: on a row the whole line is tappable
+     for a thumb, and this is the only thing on it a keyboard can reach.
+     Tinted rather than solid oxide. A list of twelve rows carries twelve
+     of these, and twelve filled accent blocks with a shadow each down one
+     screen is the accent used twelve times -- nothing on the screen is
+     emphasised because everything is. The chip saying what the line pays
+     him is what should catch the eye on a row, not the button. */
+  .fx-add{all:unset;box-sizing:border-box;cursor:pointer;
+    width:44px;height:44px;flex:none;border-radius:14px;background:var(--fx-oxide-tint);
+    color:var(--fx-oxide-2);display:flex;align-items:center;justify-content:center;}
   .fx-add .icon{width:22px;height:22px;stroke-width:2.4;}
+  .fx-add:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
+  /* Cluster membership, where it is decided. It used to be a 26px star
+     sitting on the corner of the photograph -- under the 44px floor this
+     app holds itself to, and on a row there is no photograph corner to
+     sit on. Only ever rendered on a line that carries a bonus, because
+     that is the only line where starring it means anything. Carries no
+     block of its own, so the filled square beside it stays the row's
+     obvious action and this stays the row's second thought. */
+  .fx-star{all:unset;box-sizing:border-box;cursor:pointer;
+    width:44px;height:44px;flex:none;border-radius:14px;
+    color:#B9C0C8;display:flex;align-items:center;justify-content:center;}
+  .fx-star.active{color:var(--fx-oxide);}
+  .fx-star .icon{width:20px;height:20px;}
+  .fx-star:focus-visible{outline:2px solid var(--fx-oxide);outline-offset:2px;}
 
   /* A photograph where there is one; the product's own CATEGORY mark where
      there is not. Same size, same radius -- a half-photographed catalogue
@@ -1284,6 +1303,13 @@
   .fx-m.next .p i{background:#fff;}
 
   /* ---- Sell ---- */
+  /* A shelf on Sell. The sections are toggled block/none from the
+     renderer, so the rhythm between them is margin rather than the gap a
+     flex column would give -- setting display:flex here would put the
+     hidden ones back on the page. */
+  .fx-shelf{margin-top:18px;}
+  .fx-shelf > .fx-sec{margin-bottom:10px;}
+
   .fx-sellhd{padding:14px 16px 12px;background:var(--fx-page);}
   .fx-find{position:relative;display:flex;align-items:center;gap:11px;min-height:52px;
     padding:0 6px 0 15px;background:var(--fx-card);border:1px solid var(--fx-line-2);
@@ -1465,31 +1491,36 @@
         <button type="button" class="ag-chip-btn" data-filter="new">New</button>
       </div>
 
-      <div id="ag_solutionsSection" style="display:none;">
-        <div class="ag-section-title">My Solutions</div>
-        <div class="ag-scroll-row" id="ag_solutionsRow"></div>
+      <!-- Every shelf is a list of rows, not a strip of cards that
+           scrolls sideways. A 210px card showed a photograph and a price;
+           a row shows the same photograph, the price, AND what the line
+           pays him -- which is the argument of this whole screen -- and
+           it shows four of them at once instead of one and a half. -->
+      <div class="fx-shelf" id="ag_solutionsSection" style="display:none;">
+        <div class="fx-sec"><h2>My solutions</h2><span class="n" id="ag_solutionsMore"></span></div>
+        <div class="fx-card" id="ag_solutionsRow"></div>
       </div>
 
-      <div id="ag_orderAgainSection" style="display:none;">
-        <div class="ag-section-title">Order again</div>
-        <div class="ag-scroll-row" id="ag_orderAgainRow"></div>
+      <div class="fx-shelf" id="ag_orderAgainSection" style="display:none;">
+        <div class="fx-sec"><h2>Order again</h2><span class="n" id="ag_orderAgainMore"></span></div>
+        <div class="fx-card" id="ag_orderAgainRow"></div>
       </div>
 
       <!-- "Sponsored for you" named who paid for the placement. An agent
            cares what it pays THEM, which is the same list from their side. -->
-      <div id="ag_sponsoredSection" style="display:none;">
-        <div class="ag-section-title">Earns you a bonus <span class="ag-shelf-more" id="ag_bonusMore"></span></div>
-        <div class="ag-scroll-row" id="ag_sponsoredRow"></div>
+      <div class="fx-shelf" id="ag_sponsoredSection" style="display:none;">
+        <div class="fx-sec"><h2>Earns you a bonus</h2><span class="n" id="ag_bonusMore"></span></div>
+        <div class="fx-card" id="ag_sponsoredRow"></div>
       </div>
 
-      <div id="ag_clusterSection" style="display:none;">
-        <div class="ag-section-title">Your cluster <span class="ag-shelf-more" id="ag_clusterMore"></span></div>
-        <div class="ag-scroll-row" id="ag_clusterRow"></div>
+      <div class="fx-shelf" id="ag_clusterSection" style="display:none;">
+        <div class="fx-sec"><h2>Your cluster</h2><span class="n" id="ag_clusterMore"></span></div>
+        <div class="fx-card" id="ag_clusterRow"></div>
       </div>
 
-      <div id="ag_volumeSection" style="display:none;">
-        <div class="ag-section-title">Buy more, pay less <span class="ag-shelf-more" id="ag_volumeMore"></span></div>
-        <div class="ag-scroll-row" id="ag_volumeRow"></div>
+      <div class="fx-shelf" id="ag_volumeSection" style="display:none;">
+        <div class="fx-sec"><h2>Buy more, pay less</h2><span class="n" id="ag_volumeMore"></span></div>
+        <div class="fx-card" id="ag_volumeRow"></div>
       </div>
 
       <!-- Filled by renderBrowseGrid, and only while a search is running.
@@ -3769,25 +3800,14 @@ function renderHomePays(){
   sec.style.display = ''; wrap.style.display = '';
   document.getElementById('ag_fxPaysN').textContent = `${items.length} item${items.length===1?'':'s'}`;
   const promoted = promotedMap();
+  // The same row Sell draws, minus the cluster star -- Home is a summary,
+  // and membership is decided on the shelf that explains it.
   wrap.innerHTML = items.map(it=>{
     const promo = promoted.get(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`);
     const ends = promo ? promoEndsSoonDays(promo) : null;
-    const note = ends == null ? (it.unit ? `Per ${esc(it.unit)}` : '')
-      : (ends === 0 ? 'Bonus ends today' : `Bonus ends in ${ends} day${ends===1?'':'s'}`);
-    return `<button type="button" class="fx-prod" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
-      <span class="fx-th">${it.image
-        ? `<img src="${esc(it.image)}" alt="" loading="lazy">`
-        : ICON_PLACEHOLDER}</span>
-      <span class="fx-prod-b">
-        <span class="fx-prod-n" title="${esc(it.name)}">${esc(it.name)}</span>
-        <span class="fx-prod-u">${note}</span>
-        <span class="fx-prod-p">
-          <span class="fx-prod-amt">${fmtNum(it.floorPrice)}</span>
-          ${promo ? `<span class="fx-earn bonus">${esc(bonusFlagLabel(promo))} to you</span>` : ''}
-        </span>
-      </span>
-      <span class="fx-add">${ICON_PLUS}</span>
-    </button>`;
+    return fieldProdRowHTML(it, promo, {
+      note: ends == null ? '' : (ends === 0 ? 'Bonus ends today' : `Bonus ends in ${ends} day${ends===1?'':'s'}`),
+    });
   }).join('');
   wrap.querySelectorAll('[data-pid]').forEach(b=>{
     b.addEventListener('click', ()=>{
@@ -5477,35 +5497,91 @@ function refreshOneBrowseCard(productId){
   if(newCard) markVariantChipOverflow(newCard);
 }
 
+/* ---- One product row, and one definition of what it says -------------
+ * Home's "Pays you more" and every shelf on Sell draw the same row. An
+ * agent should not have to learn two ways of reading a product line.
+ *
+ * The row leads with what he takes home on it, and is careful about the
+ * difference between the two things that can mean:
+ *
+ *   - a BONUS is a fixed amount the shop pays on top, decided before he
+ *     opens his mouth, so it can be stated flat: "+2,500 bonus".
+ *   - everything else is MARGIN, and his margin is not decided yet -- he
+ *     sets his own price on the next screen. What IS knowable is the
+ *     headroom between what the shop charges him and what the shop itself
+ *     asks for the item, so the row says "up to 3,800 yours".
+ *
+ * Saying "3,800 to you" flat on a list would be the app telling him what
+ * he made on a sale he has not priced. Where the shop has never set a
+ * markup on an item, agent-catalog returns ourPrice equal to his own
+ * cost, the headroom is zero, and the row says nothing at all rather than
+ * inventing a figure.
+ */
+function prodEarnChipHTML(it, promo){
+  if(promo) return `<span class="fx-earn bonus">${esc(bonusFlagLabel(promo))} bonus</span>`;
+  const headroom = (Number(it.ourPrice)||0) - (Number(it.floorPrice)||0);
+  if(!(headroom > 0)) return '';
+  return `<span class="fx-earn">up to ${fmtNum(headroom)} yours</span>`;
+}
+// The unit first, because it is what the price is per, and a price
+// without it is a wrong price. Then the one thing worth adding: why this
+// row is on this shelf, or -- with no shelf saying so -- where its own
+// ladder drops.
+// Carried in a title as well as printed, because it is one nowrap line in
+// a 168px column and "Bonus unlocks in 11 days" does not fit in it. The
+// same bargain the product name already makes: clip on screen, whole on a
+// long press. A figure is never what gets clipped -- the numbers come
+// first in every one of these.
+function prodMetaHTML(it, note){
+  const bits = [];
+  if(it.packQty) bits.push(`1 ${esc(it.packUnit||'pack')} has ${esc(it.packQty)} ${esc(pluralizeUnit(it.unit))}`);
+  else if(it.unit) bits.push(`Per ${esc(it.unit)}`);
+  if(note) bits.push(esc(note));
+  else if(it.bestTierMinQty!=null && Number(it.bestTierPrice) > 0 && Number(it.bestTierPrice) < Number(it.floorPrice))
+    bits.push(`${esc(it.bestTierMinQty)}+ at ${fmtNum(it.bestTierPrice)}`);
+  return bits.join(' &middot; ');
+}
+function fieldProdRowHTML(it, promo, opts){
+  opts = opts || {};
+  const inCluster = !!(promo && isInCluster(it.productId, it.variantIdx));
+  const wait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
+  // A starred item that is not earning yet has to say so where the bonus
+  // is promised, or the star reads as a switch that did nothing.
+  const note = opts.note || (wait && !wait.eligible && wait.daysLeft!=null
+    ? `Bonus unlocks in ${wait.daysLeft} day${wait.daysLeft===1?'':'s'}` : '');
+  const starTitle = inCluster ? 'Remove from your cluster' : 'Add to your cluster to earn its bonus';
+  const fullName = `${it.name}${it.variantLabel ? ' ' + it.variantLabel : ''}`;
+  // A div, not a button: the star and the "+" are buttons of their own and
+  // a button cannot hold a button. The whole row is still tappable through
+  // the view's delegated listener, and the "+" is what a keyboard reaches.
+  return `<div class="fx-prod" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
+    <span class="fx-th">${it.image ? `<img src="${esc(it.image)}" alt="" loading="lazy">` : ICON_PLACEHOLDER}</span>
+    <span class="fx-prod-b">
+      <span class="fx-prod-n" title="${esc(fullName)}">${esc(it.name)}${it.variantLabel ? ` <em>${esc(it.variantLabel)}</em>` : ''}</span>
+      <span class="fx-prod-u" title="${prodMetaHTML(it, note)}">${prodMetaHTML(it, note)}</span>
+      <span class="fx-prod-p">
+        <span class="fx-prod-amt">${fmtNum(it.floorPrice)}</span>
+        ${prodEarnChipHTML(it, promo)}
+      </span>
+    </span>
+    <span class="fx-prod-a">
+      ${opts.star && promo ? `<button type="button" class="fx-star ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${starTitle}" aria-label="${starTitle}">${ICON_STAR}</button>` : ''}
+      <button type="button" class="fx-add" aria-label="Add ${esc(fullName)}">${ICON_PLUS}</button>
+    </span>
+  </div>`;
+}
+
+// Past four rows a shelf is a catalogue. The header says so out loud --
+// "4 of 12" rather than quietly showing four of twelve.
+const SHELF_ROWS = 4;
+function shelfCountLabel(shown, total){
+  return total > shown ? `${shown} of ${total}` : `${total} item${total===1?'':'s'}`;
+}
+
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
-  const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
-  const promo = promoted.get(key);
-  const inCluster = promo && isInCluster(it.productId, it.variantIdx);
-  const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
-  const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
-  const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
-  const clusterWait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
-  const packLabel = it.packQty ? `1 ${esc(it.packUnit||'pack')} has ${esc(it.packQty)} ${esc(pluralizeUnit(it.unit))}` : (it.unit ? `Per ${esc(it.unit)}` : '');
-  return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
-    <div class="ag-grid-thumb-wrap">
-      ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
-      ${opts.shelfFlag && opts.shelfFlag.text ? `<span class="ag-shelf-flag ${esc(opts.shelfFlag.cls)}">${esc(opts.shelfFlag.text)}</span>` : ''}
-      ${promo && !opts.shelfFlag ? `<span class="ag-bonus-badge">${esc(bonusFlagLabel(promo))}</span>` : ''}
-      ${opts.sponsorTag && !opts.shelfFlag ? `<span class="ag-sponsor-tag">${ICON_STAR}Sponsored</span>` : ''}
-      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
-    </div>
-    <div class="ag-grid-body">
-      ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
-      <div class="ag-grid-name">${esc(it.name)}</div>
-      ${opts.shelfNote ? `<div class="ag-shelf-note">${esc(opts.shelfNote)}</div>` : ''}
-      ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      <div class="ag-grid-price">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
-      ${bulkHintHTML(it)}
-      ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
-    </div>
-  </div>`;
+  return fieldProdRowHTML(it, promoted.get(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`),
+    { note: opts.shelfNote, star: true });
 }
 
 function renderBrowseGrid(){
@@ -5519,24 +5595,39 @@ function renderBrowseGrid(){
 
   document.getElementById('ag_solutionsSection').style.display = solutions.length ? 'block' : 'none';
   if(solutions.length){
-    document.getElementById('ag_solutionsRow').innerHTML = solutions.map(s=>{
+    const shown = solutions.slice(0, SHELF_ROWS);
+    document.getElementById('ag_solutionsMore').textContent = shelfCountLabel(shown.length, solutions.length);
+    document.getElementById('ag_solutionsRow').innerHTML = shown.map(s=>{
       const count = Array.isArray(s.line_items) ? s.line_items.length : 0;
-      return `<div class="ag-solution-card" data-solution-id="${esc(s.id)}"><div class="name">${esc(s.name)}</div><div class="count">${count} item${count===1?'':'s'}</div></div>`;
+      return `<div class="fx-lead" data-solution-id="${esc(s.id)}">
+        <span class="fx-lead-av">${ICON_BOXES}</span>
+        <span class="fx-lead-b">
+          <span class="fx-lead-n">${esc(s.name)}</span>
+          <span class="fx-lead-m">${count} item${count===1?'':'s'}, already priced</span>
+        </span>
+        <span class="fx-go">Add</span>
+      </div>`;
     }).join('');
   }
 
   document.getElementById('ag_orderAgainSection').style.display = orderAgain.length ? 'block' : 'none';
-  if(orderAgain.length) document.getElementById('ag_orderAgainRow').innerHTML = orderAgain.map(it=>browseCardHTML(it, promoted)).join('');
+  if(orderAgain.length){
+    const shown = orderAgain.slice(0, SHELF_ROWS);
+    document.getElementById('ag_orderAgainMore').textContent = shelfCountLabel(shown.length, orderAgain.length);
+    document.getElementById('ag_orderAgainRow').innerHTML = shown.map(it=>browseCardHTML(it, promoted)).join('');
+  }
 
   document.getElementById('ag_sponsoredSection').style.display = sponsored.length ? 'block' : 'none';
   if(sponsored.length){
-    document.getElementById('ag_bonusMore').textContent = `${sponsored.length} item${sponsored.length===1?'':'s'}`;
-    document.getElementById('ag_sponsoredRow').innerHTML = sponsored.map(it=>{
+    const shown = sponsored.slice(0, SHELF_ROWS);
+    document.getElementById('ag_bonusMore').textContent = shelfCountLabel(shown.length, sponsored.length);
+    document.getElementById('ag_sponsoredRow').innerHTML = shown.map(it=>{
       const promo = promoted.get(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`);
       const ends = promoEndsSoonDays(promo);
+      // The bonus itself is the row's earn chip, so the note is only ever
+      // the part the chip cannot carry: how long it lasts.
       return browseCardHTML(it, promoted, {
-        shelfFlag: { cls:'bonus', text: bonusFlagLabel(promo) },
-        shelfNote: ends!=null ? (ends===0 ? 'ends today' : `ends in ${ends} day${ends===1?'':'s'}`) : '',
+        shelfNote: ends!=null ? (ends===0 ? 'Bonus ends today' : `Bonus ends in ${ends} day${ends===1?'':'s'}`) : '',
       });
     }).join('');
   }
@@ -5545,11 +5636,18 @@ function renderBrowseGrid(){
   const clusterCards = discovery ? clusterShelfItems() : [];
   document.getElementById('ag_clusterSection').style.display = clusterCards.length ? 'block' : 'none';
   if(clusterCards.length){
-    document.getElementById('ag_clusterMore').textContent = `${clusterCards.length} item${clusterCards.length===1?'':'s'}`;
-    document.getElementById('ag_clusterRow').innerHTML = clusterCards.map(({it, eligible, daysLeft})=>
+    const shown = clusterCards.slice(0, SHELF_ROWS);
+    document.getElementById('ag_clusterMore').textContent = shelfCountLabel(shown.length, clusterCards.length);
+    document.getElementById('ag_clusterRow').innerHTML = shown.map(({it, eligible, daysLeft})=>
       browseCardHTML(it, promoted, {
-        shelfFlag: eligible ? { cls:'ready', text:'Earning' } : null,
-        shelfNote: eligible ? 'bonus live now' : (daysLeft!=null ? `earns in ${daysLeft} day${daysLeft===1?'':'s'}` : ''),
+        // "Live, not sold yet" is the one thing worth nagging about on this
+        // shelf: the bonus is earning and he has not used it. An item that
+        // is NOT earning yet gets no note here on purpose -- the row says
+        // that for itself, in the same words, wherever it appears. Said
+        // twice it came out twice differently, on one screen.
+        shelfNote: eligible
+          ? (hasSoldItem(it.productId, it.variantIdx) ? 'Bonus live now' : 'Bonus live now, not sold yet')
+          : '',
       })).join('');
   }
 
@@ -5559,15 +5657,16 @@ function renderBrowseGrid(){
   const volumeCards = discovery ? volumeShelfItems() : [];
   document.getElementById('ag_volumeSection').style.display = volumeCards.length ? 'block' : 'none';
   if(volumeCards.length){
-    document.getElementById('ag_volumeMore').textContent = `${volumeCards.length} item${volumeCards.length===1?'':'s'}`;
-    document.getElementById('ag_volumeRow').innerHTML = volumeCards.map(it=>
+    const shown = volumeCards.slice(0, SHELF_ROWS);
+    document.getElementById('ag_volumeMore').textContent = shelfCountLabel(shown.length, volumeCards.length);
+    document.getElementById('ag_volumeRow').innerHTML = shown.map(it=>
       browseCardHTML(it, promoted, {
-        shelfFlag: { cls:'deal', text:`−${volumeDropPct(it)}%` },
-        // Quantity only. Units here are a mix of abbreviations that never
-        // pluralise (pc, ctn, kg) and words that must (sheet, bag), and
-        // "from 20 sheet" reads worse than no unit at all. The unit is on
-        // the price line directly below either way.
-        shelfNote: `from ${it.bestTierMinQty}`,
+        // Quantity, the price it reaches, and the drop -- and still no
+        // unit. Units here are a mix of abbreviations that never pluralise
+        // (pc, ctn, kg) and words that must (sheet, bag), and "from 20
+        // sheet" reads worse than no unit at all. The row's own meta line
+        // names the unit once, ahead of this.
+        shelfNote: `${it.bestTierMinQty}+ at ${fmtNum(it.bestTierPrice)} (\u2212${volumeDropPct(it)}%)`,
       })).join('');
   }
 
@@ -5701,6 +5800,16 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
   if(starBtn){
     const vidx = starBtn.dataset.starVidx === '' ? null : Number(starBtn.dataset.starVidx);
     toggleClusterMembership(starBtn.dataset.starPid, vidx);
+    return;
+  }
+  // The shelves. Deliberately after the star, which is the one control on
+  // a row that must not open the panel; deliberately before the card
+  // branch, which belongs to the search grid and its merged variants.
+  const prodRow = e.target.closest('.fx-prod');
+  if(prodRow){
+    const item = catalogEntry(prodRow.dataset.pid,
+      prodRow.dataset.vidx === '' ? null : Number(prodRow.dataset.vidx));
+    if(item) openAddItemPanel(item);
     return;
   }
   const chipBtn = e.target.closest('[data-chip-pid]');

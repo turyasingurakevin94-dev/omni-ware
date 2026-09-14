@@ -181,12 +181,42 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/align-items:center/.test(rule('.ag-cat-item')),
     'so the tile lays out sideways -- icon beside the label, not above it');
 
-  // Shelf card: wide and 16:9. Wider than a phone-third on purpose, so the
-  // next card peeks past the edge and the shelf reads as scrollable.
-  const shelfCard = rule('.ag-scroll-row .ag-grid-card');
-  t.check(/width:210px/.test(shelfCard), 'an Order-again / Sponsored card is 210 wide');
-  t.check(/aspect-ratio:16\/9/.test(rule('.ag-scroll-row .ag-grid-thumb-wrap')),
-    'with a 16:9 image rather than a square crop');
+  // Shelf row. This used to read: "an Order-again / Sponsored card is 210
+  // wide" with "a 16:9 image rather than a square crop" -- a card on a
+  // sideways-scrolling shelf, sized so the next one peeked past the edge.
+  //
+  // It stopped being true when the shelves became lists. The card was 210
+  // of a 390px screen and carried a photograph and a price; what it could
+  // not carry was the thing this screen exists to say -- what the line
+  // pays the agent -- and a shelf of them showed one and a half items at
+  // a time behind an edge nobody swipes.
+  //
+  // So a shelf is .fx-prod rows now, and what is pinned is that the row
+  // is a row: full width, a small leading square rather than a 16:9 block,
+  // and the 44px controls this app holds itself to.
+  //
+  // .ag-scroll-row itself survives, and deliberately: the open-orders
+  // switcher above the shelves is a genuine sideways strip of a handful
+  // of short tabs. What must not come back is a PRODUCT on one.
+  t.check(rule('.ag-scroll-row .ag-grid-card') === '',
+    'no product card is sized for a sideways shelf any more');
+  ['ag_solutionsRow', 'ag_orderAgainRow', 'ag_sponsoredRow', 'ag_clusterRow', 'ag_volumeRow'].forEach((id) => {
+    t.check(new RegExp(`<div class="fx-card" id="${id}">`).test(src),
+      `${id} is a list, not a strip`);
+  });
+  const shelfRow = rule('.fx-prod');
+  t.check(/display:flex/.test(shelfRow) && /width:100%/.test(shelfRow),
+    'a shelf row runs the full width of the column');
+  const shelfThumb = rule('.fx-th');
+  t.check(/width:46px/.test(shelfThumb) && /height:46px/.test(shelfThumb),
+    'with a 46px leading square -- the agent knows the catalogue and is reading for speed');
+  ['.fx-add', '.fx-star'].forEach((sel) => {
+    const body = rule(sel);
+    t.check(/width:44px/.test(body) && /height:44px/.test(body),
+      `${sel} is a 44px target (the cluster star was 26 on the photo corner)`);
+    t.check(/box-sizing:border-box/.test(body),
+      `${sel} restores border-box after all:unset, or 44 is not 44`);
+  });
 
   // In-category row: one wide row, image left, big enough to tell two
   // variants of the same fitting apart.
