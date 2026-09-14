@@ -148,11 +148,14 @@ const START_SHOP_MAX = 40;
 // Money
 // ---------------------------------------------------------------------
 
-// What a saved order came to, from the lines the customer was shown.
-// sellPrice is OUR price to THEM. `price` on the same line is what the
-// shop paid the supplier, and it is never read here — not to total, not
-// to check, not at all.
-export function orderTotal(payload: any): number {
+// The goods, and only the goods. sellPrice is OUR price to THEM;
+// `price` on the same line is what the shop paid the supplier, and it is
+// never read here — not to total, not to check, not at all.
+//
+// Split out from the order total the same way index.html splits it, and
+// for the same reason: a percent charge has to have something to be a
+// percent OF that can never include another charge.
+export function goodsTotal(payload: any): number {
   const items = payload && payload.items;
   if (!Array.isArray(items)) return 0;
   return items.reduce(function (sum, it) {
@@ -160,6 +163,86 @@ export function orderTotal(payload: any): number {
     const sell = Number(it && it.sellPrice) || 0;
     return sum + qty * sell;
   }, 0);
+}
+
+// A line the shop never priced. index.html's quoteItemSellPrice falls
+// back to deriving one from the line's cost and the product's markup —
+// and re-deriving anything from cost is the code path that must not
+// exist inside this boundary. So such a line counts as nothing here, and
+// the order says so rather than quietly totalling low.
+export function unpricedLines(payload: any): number {
+  const items = payload && payload.items;
+  if (!Array.isArray(items)) return 0;
+  return items.filter(function (it) {
+    const qty = Number(it && it.qty) || 0;
+    const missing = !it || it.sellPrice == null || it.sellPrice === "";
+    return qty > 0 && missing;
+  }).length;
+}
+
+// ---------------------------------------------------------------------
+// What the shop is actually owed
+//
+// An order stopped being just its goods: it carries CHARGES the shop
+// adds (a delivery, a service) and, where the customer took terms, what
+// the credit itself costs. index.html computes
+//
+//     savedQuoteTotal = goods + charges + creditCharge
+//
+// and the invoice, the receipt and the debt log all follow it. The
+// portal was still showing goods alone — so a customer read a figure
+// SMALLER than the invoice they were sent, and smaller than their own
+// statement, which is built from the debt log. A portal that disagrees
+// with itself is the one failure this whole boundary exists to prevent.
+//
+// The three functions below mirror index.html's, and a test compares
+// them line for line over the same orders.
+// ---------------------------------------------------------------------
+
+function chargeAmount(ch: any, goods: number): number {
+  if (!ch) return 0;
+  const v = Number(ch.value) || 0;
+  if (!(v > 0)) return 0;
+  return ch.type === "percent"
+    ? Math.round((Number(goods) || 0) * v / 100)
+    : Math.round(v);
+}
+
+// Every charge, named and priced, for the customer to read. A figure on
+// an invoice a customer cannot account for is a figure they ring about.
+export function chargeLines(payload: any) {
+  const charges = (payload && Array.isArray(payload.charges)) ? payload.charges : [];
+  const goods = goodsTotal(payload);
+  return charges
+    .map((ch: any) => ({
+      label: String((ch && ch.label) || "").trim() || "Charge",
+      amount: chargeAmount(ch, goods),
+    }))
+    .filter((l: any) => l.amount > 0);
+}
+
+// What waiting for the money is worth, as the shop agreed it — a percent
+// of the cash total, never of itself. Frozen at the rate on the order, so
+// a statement read next year still says the term actually taken.
+export function creditLine(payload: any) {
+  const c = payload && payload.credit;
+  const pct = Number(c && c.pct) || 0;
+  if (!(pct > 0)) return null;
+  const days = Math.max(0, Number(c && c.days) || 0);
+  const cash = goodsTotal(payload) + chargeLines(payload).reduce((s: number, l: any) => s + l.amount, 0);
+  return {
+    label: days > 0 ? `Credit — ${days} days` : "Credit",
+    days,
+    amount: Math.round(cash * pct / 100),
+  };
+}
+
+// THE FIGURE EVERY DOCUMENT THE CUSTOMER HOLDS IS DRAWN FROM.
+export function orderTotal(payload: any): number {
+  const credit = creditLine(payload);
+  return goodsTotal(payload)
+    + chargeLines(payload).reduce((s: number, l: any) => s + l.amount, 0)
+    + (credit ? credit.amount : 0);
 }
 
 // Oldest unpaid day, from the debt log rather than from a stored age.
@@ -1221,7 +1304,12 @@ Deno.serve(async (req) => {
         // that will confirm another customer's order number.
         if (!q) return json({ error: "We cannot find that order" }, 404);
         const lines = orderLines(q.payload);
-        const total = lines.reduce((s, l) => s + l.lineTotal, 0);
+        // NOT the sum of the lines. An order carries charges and, where
+        // terms were taken, what the credit costs — and the invoice, the
+        // receipt and the debt log are all drawn from the figure that
+        // includes them. A customer reading a smaller one here would be
+        // reading a number nothing else in the shop agrees with.
+        const total = orderTotal(q.payload);
         const paid = Number(q.amount_paid) || 0;
         return json({
           ok: true,
@@ -1242,6 +1330,13 @@ Deno.serve(async (req) => {
             deliverTo: (q.payload && q.payload.deliverTo) || null,
             fromPortal: !!(q.payload && q.payload.originPortal),
             lines,
+            goods: goodsTotal(q.payload),
+            charges: chargeLines(q.payload),
+            credit: creditLine(q.payload),
+            // Named rather than dropped: a line the shop never priced
+            // counts as nothing above, and the screen says so instead of
+            // showing a total that is quietly short.
+            unpriced: unpricedLines(q.payload),
             total,
             paid,
             due: Math.max(0, total - paid),
@@ -1259,7 +1354,7 @@ Deno.serve(async (req) => {
             id: q.id,
             date: q.date,
             items: lines.length,
-            total: lines.reduce((s, l) => s + l.lineTotal, 0),
+            total: orderTotal(q.payload),
             stage: stageOf(q.status),
             cancelled: !!q.voided,
             invoiced: !!q.invoiced,

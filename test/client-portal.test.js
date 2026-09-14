@@ -22,8 +22,14 @@
  */
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
+const { stripTypeScriptTypes } = require('module');
 const t = createReporter('client portal');
 const src = read('supabase/functions/client-portal/index.ts');
+/* Node strips the file's types in one pass. _extract's stripTypes is
+   confined to a function's signature by design, and these helpers carry
+   inline arrow annotations in their bodies. */
+const tsFree = stripTypeScriptTypes(
+  src.replace(/^import[^\n]*\n/m, '').replace(/^export function /gm, 'function '), { mode: 'strip' });
 // Comments name every forbidden column on purpose; the code must not.
 const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -117,10 +123,18 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
 /*
  * On a saved_quotes line, `sellPrice` is what we charged THEM and `price`
  * is what we paid the supplier. They differ by one word and by the whole
- * business. orderTotal is the only thing that reads a line.
+ * business. goodsTotal is the only thing that reads a line.
+ *
+ * orderTotal grew collaborators when index.html grew charges and a price
+ * for the credit — it is goods + charges + credit now, and the three
+ * functions under it come along. The claim being made here did not
+ * change: whatever else an order carries, a LINE gives up sellPrice and
+ * never price.
  */
 {
-  const { orderTotal } = compileScope([extractFunction(src, 'orderTotal', 'client-portal')], {}, ['orderTotal'], { typescript: true });
+  const NEEDS = ['goodsTotal', 'chargeAmount', 'chargeLines', 'creditLine', 'orderTotal'];
+  const { orderTotal, goodsTotal } = compileScope(
+    NEEDS.map((n) => extractFunction(tsFree, n, 'client-portal')), {}, NEEDS);
   const line = { qty: 10, sellPrice: 7000, price: 6250, supplierId: 'S1' };
   t.check(orderTotal({ items: [line] }) === 70000,
     'a line totals at the price the customer was charged (70,000)');
@@ -130,8 +144,10 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
     'several lines add up');
   t.check(orderTotal(null) === 0 && orderTotal({}) === 0 && orderTotal({ items: 'x' }) === 0,
     'a payload with no items is 0 rather than a crash');
-  t.check(!/\bit\.price\b|\['price'\]|\.price\b/.test(extractFunction(src, 'orderTotal', 'client-portal')),
-    'orderTotal does not mention a line price at all');
+  t.check(!/\bit\.price\b|\['price'\]|\.price\b/.test(extractFunction(src, 'goodsTotal', 'client-portal')),
+    'goodsTotal does not mention a line price at all');
+  t.check(goodsTotal({ items: [line] }) === 70000,
+    'and the goods alone still total at what the customer was charged');
 }
 
 /* ---------- 4. one person is one account, however they type it -------- */
@@ -252,8 +268,25 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
      and lastPriceToClient filter on that and nothing else, and a portal
      showing a different history from the shop's own screen is worse than
      one showing none. */
-  t.check(reads.every(r => /\.eq\("voided", false\)/.test(r)),
-    'the voided ones are dropped, which is the filter the shop itself uses');
+  /* Every read of a customer's orders drops the voided ones, with ONE
+     deliberate exception: the full orders list is the record rather than
+     the reckoning, and a customer wondering where an order went is owed
+     the answer "we cancelled it". That read marks them instead, and
+     client-orders.test.js pins both halves — that it keeps them, and
+     that no other read does.
+
+     This assertion was a blanket "every one of them", and it went stale
+     the moment that list was built. It did not fail, because a crash
+     earlier in this file was stopping the run before it. A test that
+     throws reports nothing, and what it hid here was a real assertion
+     that had stopped being true. */
+  const keepsVoided = reads.filter(r => !/\.eq\("voided", false\)/.test(r));
+  t.check(keepsVoided.length === 1,
+    `exactly one read keeps the voided ones (${keepsVoided.length})`);
+  t.check(keepsVoided.length === 1 && /invoiced_at/.test(keepsVoided[0]),
+    'and it is the orders list, which shows them as cancelled');
+  t.check(reads.length - keepsVoided.length >= 2,
+    `while the balance, the price memory and the recent five all drop them (${reads.length - keepsVoided.length})`);
   t.check(/function customerPurchaseHistory/.test(app) && /!q\.voided/.test(app),
     'and that is verifiably what it uses');
 }
