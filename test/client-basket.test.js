@@ -26,13 +26,21 @@ const words = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const NAMES = ['esc', 'money', 'plural', 'many', 'rungFor', 'basketTotal',
   'standingHTML', 'renderBasket', 'renderBasketBar', 'showSent', 'addToBasket', 'setBasketQty'];
-const STUB_IDS = ['basketBody', 'browseBar', 'sentBody', 'basketSay', 'toBasket', 'basketWhere'];
+const STUB_IDS = ['basketBody', 'browseBar', 'sentBody', 'basketSay', 'toBasket', 'basketWhere', 'scBrowse'];
 
 function scope(state) {
   const nodes = {};
   STUB_IDS.forEach((id) => {
+    const classes = new Set();
     nodes[id] = { id, innerHTML: '', textContent: '', value: '', hidden: false,
-      onclick: null, addEventListener() {}, querySelectorAll: () => [] };
+      onclick: null, addEventListener() {}, querySelectorAll: () => [],
+      classes,
+      classList: {
+        toggle: (c, on) => { if (on) classes.add(c); else classes.delete(c); },
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        contains: (c) => classes.has(c),
+      } };
   });
   const shown = [];
   const env = {
@@ -83,6 +91,33 @@ const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, vari
   fns.renderBasketBar();
   t.check(/3 items 7,718,000 Check/.test(words(nodes.browseBar.innerHTML)),
     `the bar carries the same figure (${words(nodes.browseBar.innerHTML)})`);
+
+  /* ---------- and it is reachable without scrolling the whole shop ----- */
+  /*
+   * The bar was `position:sticky; bottom:0` and it never stuck. A
+   * bottom-stuck element floats above where it would NATURALLY sit, and
+   * this one is the last thing in its section -- so its natural place is
+   * already the foot of the page and there is nothing to float above.
+   * With 485 items in the shop, the only way to reach the basket was to
+   * scroll past every one of them, which is precisely the moment it is no
+   * longer needed. Fixed to the viewport instead, the way the admin app's
+   * own quote bar has always done it.
+   */
+  const css = read('client.html');
+  const rule = (/\.bbar\{[^}]*\}/.exec(css) || [''])[0];
+  t.check(/position:fixed/.test(rule), `the bar is fixed to the viewport (${rule.slice(0, 40)})`);
+  t.check(!/position:sticky/.test(rule),
+    'and not sticky, which put it at the foot of 485 items');
+  t.check(/bottom:0/.test(rule), 'at the bottom of the screen, in the thumb');
+  t.check(/max-width:430px/.test(rule) && /left:50%/.test(rule),
+    'held to the phone column, so a wide screen does not strand it across the window');
+  t.check(/z-index:\s*\d+/.test(rule), 'and above the shop rather than under it');
+
+  t.check(nodes.scBrowse.classList.contains('bar-room'),
+    'the shop makes room for it, so the last item is not sitting underneath it');
+  const room = (/\.bar-room\{[^}]*\}/.exec(css) || [''])[0];
+  t.check(/padding-bottom:calc\(88px \+ env\(safe-area-inset-bottom\)\)/.test(room),
+    `the room clears the bar and the handset's own chin (${room})`);
 }
 
 /* ---------- 2. an empty basket has no bar ----------------------------- */
@@ -90,6 +125,8 @@ const L = (name, qty, price, unit, tiers) => ({ key: name, productId: name, vari
   const { fns, nodes } = scope({ basket: [] });
   fns.renderBasketBar();
   t.check(nodes.browseBar.innerHTML === '', 'nothing floats over a browse with nothing in the basket');
+  t.check(!nodes.scBrowse.classList.contains('bar-room'),
+    'and the room made for it is given back, rather than leaving a hole under the shop');
 }
 
 /* ---------- 3. a quantity change re-prices against the ladder --------- */

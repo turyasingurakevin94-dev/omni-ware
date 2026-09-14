@@ -180,10 +180,26 @@
   /* THE ONE FLOATING THING IN THE SYSTEM. Everything else in Counter sits
      on the page; the basket follows you, so it gets the single shadow the
      language allows and a firm rule above it. */
-  .bbar{position:sticky;bottom:0;background:var(--paper);border-top:1px solid var(--rule-firm);
+  /* FIXED, not sticky. It was sticky and it did not stick: a bottom-stuck
+     element can only float above where it naturally sits, and this one is
+     the last thing in the section, so its natural place is already the
+     foot of the page. With 485 items above it that made the basket
+     reachable only by scrolling past the whole shop -- which is the one
+     moment you do not need it. The quote screen in the admin app fixes
+     its own bar to the viewport for exactly this reason.
+     Centred rather than left:0/right:0 because the portal is a 430px
+     column on a wide screen, and a bar spanning the window would leave
+     the shop floating in the middle of its own footer. */
+  .bbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:430px;z-index:20;
+    background:var(--paper);border-top:1px solid var(--rule-firm);
     box-shadow:0 -4px 16px rgba(26,23,20,.07);
     padding:12px 20px calc(16px + env(safe-area-inset-bottom));
     display:flex;align-items:center;gap:14px;}
+  /* Room for it. A fixed bar is out of the flow, so without this the last
+     row of the shop sits underneath it and cannot be read or tapped. Only
+     while there is a bar: an empty basket should not leave a hole. */
+  .bar-room{padding-bottom:calc(88px + env(safe-area-inset-bottom));}
 
   /* Four steps, named. The only place the flow is drawn. */
   .steps{display:flex;align-items:center;gap:8px;padding:0 20px 13px;
@@ -1652,6 +1668,11 @@ function setBasketQty(key, next){
 
 function renderBasketBar(){
   const bar = document.getElementById('browseBar');
+  /* The screen makes room for the bar only while there is one. Guarded
+     because the browse section is not in the test's stub list and a null
+     here would take the whole basket file down with a stack trace. */
+  const screen = document.getElementById('scBrowse');
+  if(screen) screen.classList.toggle('bar-room', basket.length > 0);
   if(!basket.length){ bar.innerHTML = ''; return; }
   const n = basket.length;
   bar.innerHTML = '<div class="bbar">'
