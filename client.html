@@ -35,6 +35,9 @@
     --go:#14594A;
     --go-deep:#0E3F35;
     --owe:#9B3A22;
+    /* The one tinted ground in the system, and it earns it: this is the
+       shop saying something a customer could not have worked out. */
+    --advice:#EDF3F0; --advice-rule:#C9D7D1; --advice-ink:#14392F;
     /* The three advice tones arrive with the screen that uses them —
        quantity advice, which needs product_links. A token nothing renders
        is a colour nobody has had to get right. */
@@ -185,6 +188,11 @@
   .steps span.s{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--mark);white-space:nowrap;}
   .steps span.s-on{color:var(--ink);font-weight:600;}
   .steps i{flex-grow:1;height:1px;background:var(--rule);}
+
+  .advice{border:1px solid var(--advice-rule);background:var(--advice);border-radius:4px;
+    padding:14px 15px;display:flex;flex-direction:column;gap:10px;}
+  .advice-say{font-size:13.5px;color:var(--advice-ink);line-height:1.5;}
+  .advice-say b{font-weight:600;}
 
   .chev{flex-shrink:0;}
   .brand{font-size:11.5px;font-weight:600;letter-spacing:.16em;}
@@ -784,7 +792,7 @@ document.getElementById('signOut').onclick = async () => {
      take them with it, or the next person to pick up the handset and tap
      Back is reading them. */
   stock = null; item = null; aisle = ''; itemQty = 1;
-  accountData = {}; basket = []; basketWhere = '';
+  accountData = {}; basket = []; basketWhere = ''; adviceFor = '';
   renderBasketBar();
   document.getElementById('browseSearch').value = '';
   document.getElementById('whoSheet').hidden = true;
@@ -1289,6 +1297,7 @@ function renderBasket(){
     +   '<input class="field" id="basketWhere" style="font-family:var(--sans);font-size:15px;"'
     +     ' autocomplete="off" placeholder="Site or shop — optional" value="' + esc(basketWhere) + '">'
     + '</div>'
+    + '<div id="basketAdvice" style="padding:18px 20px 0;"></div>'
     + '<div id="basketSay" style="padding:18px 20px 0;"></div>';
 
   body.querySelectorAll('[data-less]').forEach(b => b.onclick = () => {
@@ -1300,6 +1309,112 @@ function renderBasket(){
   body.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => setBasketQty(b.dataset.drop, 0));
   const where = document.getElementById('basketWhere');
   if(where) where.addEventListener('input', () => { basketWhere = where.value; });
+  loadAdvice();
+}
+
+/* ---------- what this order still needs ------------------------------
+   0090 is the shop's own sentence — "iron sheets needs roofing nails, 8
+   per sheet" — and this is the one place a customer ever reads it. It is
+   also the whole commercial argument: a customer who is told 140 sheets
+   takes about 1,120 nails is buying a LIST, and a list is the thing a
+   single supplier cannot fill.
+
+   Fetched after the basket renders, never before it. A customer looking
+   at their own order must not wait on the shop's opinion of it. */
+let adviceFor = '';   // the basket this advice was asked about
+
+function basketShape(){
+  return basket.map(l => l.key + ':' + l.qty).sort().join('|');
+}
+
+async function loadAdvice(){
+  const shape = basketShape();
+  if(!basket.length || shape === adviceFor) return;
+  adviceFor = shape;
+  let rows = [];
+  try{
+    const r = await api('advice', {
+      token: store(K_TOKEN),
+      items: basket.map(l => ({ productId: l.productId, variantIdx: l.variantIdx, qty: l.qty })),
+    });
+    rows = Array.isArray(r.advice) ? r.advice : [];
+  }catch(err){
+    /* A shop that has written none of this down, or a request that did
+       not land, leaves the basket exactly as useful as it was. Nothing is
+       said, because there is nothing to say. */
+    rows = [];
+  }
+  if(shape !== basketShape()) return;   // they changed it while we asked
+  renderAdvice(rows);
+}
+
+/* The sentence. Built here rather than server-side because it is copy,
+   and the copy lives with the rest of the customer's words. */
+function adviceLine(a){
+  const b = (a.because || [])[0];
+  const item = esc(a.name) + (a.variantLabel ? ' — ' + esc(a.variantLabel) : '');
+  if(!b || a.qty == null){
+    /* No ratio means no figure. An invented quantity is worse than none —
+       the shop has said these two go together and nothing more, so that
+       is all this says. */
+    /* No verb between the two names. "Your Iron sheets goes with" breaks
+       on a plural product name and "Ridge caps goes with" breaks on a
+       singular one, and the shop's own product names are whichever they
+       are — so the sentence is built so that neither has to agree with
+       anything. */
+    return b
+      ? '<b>' + item + '</b> — worth taking with your ' + esc(b.name) + '. We have not written down how much.'
+      : '<b>' + item + '</b> — worth taking with what you have on this order.';
+  }
+  /* "140 Iron sheets takes about..." is what the first version said, and
+     a plural subject does not take a singular verb. Written as the
+     customer's own line — "Your 140 Iron sheets take about" — which also
+     puts the thing they already chose first, where it belongs. */
+  const more = (a.because || []).length - 1;
+  return 'Your ' + money(b.qty) + ' ' + esc(b.name) + ' '
+    + plural(b.qty, 'takes', 'take') + ' about <b>' + money(a.qty) + ' ' + item + '</b>'
+    + (b.ratioQty ? ', at ' + esc(b.ratioQty) + ' ' + (b.ratioPer ? 'a ' + esc(b.ratioPer) : 'each') : '')
+    + '.'
+    + (more > 0
+      ? ' Your other ' + (more === 1 ? 'line needs' : esc(more) + ' lines need') + ' some too.'
+      : '')
+    + ' You have none on this order.';
+}
+
+function renderAdvice(rows){
+  const el = document.getElementById('basketAdvice');
+  if(!el) return;
+  if(!rows.length){ el.innerHTML = ''; return; }
+  el.innerHTML = rows.map((a, i) =>
+    '<div class="advice"' + (i ? ' style="margin-top:10px;"' : '') + '>'
+    + '<div style="display:flex;align-items:flex-start;gap:10px;">'
+    +   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#14594A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+    +   '<div class="advice-say">' + adviceLine(a)
+    +     (a.availability === 'out' ? ' We are out of them just now.' : '') + '</div>'
+    + '</div>'
+    + (a.availability === 'out' ? '' :
+      /* With a figure, the button says the figure and what it comes to.
+         Without one it says only the thing — "Add caps — 22,000" priced a
+         quantity the shop never wrote down, and "Add ones" was what came
+         out of pluralising a unit that did not exist. */
+      '<button class="btn btn-line" type="button" data-add="' + i + '">'
+      + (a.qty == null
+        ? 'Add ' + esc(a.name)
+        : 'Add ' + money(a.qty) + ' '
+          + esc(a.unit ? (a.qty === 1 ? a.unit : many(a.unit)) : plural(a.qty, 'one', 'of them'))
+          + ' — ' + money(a.qty * a.unitPrice))
+      + '</button>')
+    + '</div>').join('');
+  el.querySelectorAll('[data-add]').forEach(btn => btn.onclick = () => {
+    const a = rows[Number(btn.dataset.add)];
+    basket.push({ key: lineKey(a.productId, a.variantIdx), productId: a.productId,
+      variantIdx: a.variantIdx, name: a.name, variantLabel: a.variantLabel,
+      unit: a.unit, packUnit: '', packQty: 0, qty: a.qty || 1,
+      unitPrice: a.unitPrice, tiers: [] });
+    renderBasket();
+    renderBasketBar();
+    loadAdvice();
+  });
 }
 
 /* What this order does to their standing, from facts the shop has already

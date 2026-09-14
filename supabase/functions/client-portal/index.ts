@@ -390,6 +390,86 @@ function customerPriceLadder(product: any, row: any, dflt: any, held: { price: n
 }
 
 // ---------------------------------------------------------------------
+// What goes with what
+//
+// 0090 is the shop's own sentence: "Iron sheets NEEDS roofing nails, 8
+// per sheet." The ratio is the whole value — without it a suggestion can
+// only name a thing, and with it the portal can say 140 sheets means
+// about 1,120 nails, which is what a hardware man says and what an advert
+// never does. It is also the one thing a single supplier cannot do: it
+// turns a line into a list.
+//
+// The rules below are index.html's, followed rather than copied — its
+// versions return admin-shaped rows and read from `data`. Three of them
+// are load-bearing and each is pinned by test:
+//
+//   · A SENTENCE IS TRUE FROM BOTH ENDS, so a pairing written on the
+//     other product about this one counts too.
+//   · THE FIGURE DOES NOT SURVIVE THE TURN. "8 nails per sheet" says
+//     nothing about how many sheets go with a nail, so a reversed pairing
+//     carries no ratio at all.
+//   · NO RATIO, NO FIGURE. An invented quantity is worse than none.
+//
+// Never crossing: product_links.note, which is the shop's own note to
+// itself and can say anything at all.
+// ---------------------------------------------------------------------
+
+const ADVICE_VERBS: Record<string, number> = { needs: 0, part: 1, with: 2 };
+// 'instead' is a substitute — a different feature, for when something
+// cannot be had. 'after' is about when a thing runs out, which is the
+// shop's reordering business and not a companion at all.
+const ADVICE_MAX = 3;
+
+function sizeIdx(v: unknown): number | null {
+  return (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+}
+
+// Every pairing that applies to one basket line, read from both ends and
+// said once. Mirrors index.html's pairingsFor.
+function pairingsFor(links: any[], productId: string, variantIdx: number | null) {
+  const vi = sizeIdx(variantIdx);
+  const live = (links || []).filter((l) => l.active !== false && ADVICE_VERBS[l.verb] != null);
+  const fits = (l: any) => sizeIdx(l.fromVariantIdx) == null || sizeIdx(l.fromVariantIdx) === vi;
+
+  const mine = live.filter((l) => l.fromId === productId).filter(fits);
+  const said = new Set(mine.map((l) => l.verb + " " + l.toId));
+  live.filter((l) => l.toId === productId && l.fromId !== productId)
+    .map((l) => {
+      const rev = REVERSE[l.verb];
+      if (!rev) return null;
+      return {
+        fromId: l.toId, fromVariantIdx: sizeIdx(l.toVariantIdx),
+        toId: l.fromId, toVariantIdx: sizeIdx(l.fromVariantIdx),
+        verb: rev,
+        // The figure does not survive the turn.
+        qty: null, per: "", active: l.active,
+      };
+    })
+    .filter((l) => l && fits(l) && !said.has(l!.verb + " " + l!.toId))
+    .forEach((l) => mine.push(l));
+
+  // The most specific rule for each pairing wins: one written at this
+  // size, else one naming a size on the other side, else the general one.
+  const byRule = new Map<string, any[]>();
+  mine.forEach((l) => {
+    const k = l.verb + " " + l.toId;
+    if (!byRule.has(k)) byRule.set(k, []);
+    byRule.get(k)!.push(l);
+  });
+  const out: any[] = [];
+  byRule.forEach((rows) => {
+    const atSize = vi != null ? rows.filter((l) => sizeIdx(l.fromVariantIdx) === vi) : [];
+    if (atSize.length) { out.push(...atSize); return; }
+    const named = rows.filter((l) => sizeIdx(l.fromVariantIdx) == null && sizeIdx(l.toVariantIdx) != null);
+    if (named.length) { out.push(...named); return; }
+    out.push(...rows.filter((l) => sizeIdx(l.fromVariantIdx) == null && sizeIdx(l.toVariantIdx) == null));
+  });
+  return out;
+}
+
+const REVERSE: Record<string, string> = { needs: "with", with: "with", part: "part" };
+
+// ---------------------------------------------------------------------
 
 async function sessionAccount(shopId: string, token: string) {
   if (!token) return null;
@@ -774,6 +854,169 @@ Deno.serve(async (req) => {
       });
 
       return json({ ok: true, items });
+    }
+
+    // -----------------------------------------------------------------
+    // advice — what this order still needs
+    //
+    // The highest-value thing in the whole project, and the reason is
+    // commercial rather than technical: a customer who can be told "140
+    // sheets takes about 1,120 nails" is buying a LIST, and a list is the
+    // one thing a single supplier cannot fill. Every other defence in the
+    // portal buys time; this is what the time is for.
+    //
+    // Takes the basket, not one item, because the useful sentence is
+    // about the ORDER — "you have none on this order" can only be said by
+    // something that can see all of it.
+    // -----------------------------------------------------------------
+    if (action === "advice") {
+      const session = await sessionAccount(shopId, String(body.token ?? ""));
+      if (!session) return json({ error: "Sign in again" }, 401);
+      const lines = Array.isArray(body.items) ? body.items : [];
+      if (!lines.length) return json({ ok: true, advice: [] });
+
+      // 0090 and 0093 are hand-applied like everything else here. A shop
+      // without them has written nothing down about what goes with what,
+      // which is exactly what it knew yesterday — so this comes back
+      // empty rather than failing the basket screen it sits on. The
+      // variant columns are probed by retrying without them, so a shop
+      // with 0090 and not 0093 still gets its general pairings.
+      const LINK_COLS = "from_id, verb, to_id, qty, per, active";
+      let linkRows: any[] | null = null;
+      {
+        const withSizes = await admin.from("product_links")
+          .select(LINK_COLS + ", from_variant_idx, to_variant_idx").eq("shop_id", shopId);
+        if (!withSizes.error) linkRows = withSizes.data;
+        else {
+          const plain = await admin.from("product_links").select(LINK_COLS).eq("shop_id", shopId);
+          linkRows = plain.error ? null : plain.data;
+        }
+      }
+      if (!linkRows || !linkRows.length) return json({ ok: true, advice: [] });
+      // note is deliberately not in either column list: it is the shop's
+      // own note to itself and can say anything at all.
+      const links = linkRows.map((r: any) => ({
+        fromId: r.from_id, toId: r.to_id, verb: r.verb,
+        qty: r.qty == null ? null : Number(r.qty), per: r.per || "",
+        active: r.active, fromVariantIdx: r.from_variant_idx, toVariantIdx: r.to_variant_idx,
+      }));
+
+      const inBasket = new Set(lines.map((l: any) =>
+        String(l.productId) + "::" + (l.variantIdx == null || l.variantIdx === "" ? "" : String(Number(l.variantIdx)))));
+      const basketProducts = new Set(lines.map((l: any) => String(l.productId)));
+
+      // Every companion the basket calls for, merged: two lines that both
+      // need nails need one quantity of nails between them, not two
+      // suggestions of the same thing.
+      const wanted = new Map<string, any>();
+      for (const line of lines as any[]) {
+        const fromId = String(line.productId);
+        const fromVi = line.variantIdx == null || line.variantIdx === "" ? null : Number(line.variantIdx);
+        const fromQty = Number(line.qty) || 0;
+        if (!fromQty) continue;
+        for (const l of pairingsFor(links, fromId, fromVi)) {
+          if (l.toId === fromId) continue;
+          if (basketProducts.has(l.toId)) continue;
+          const toVi = sizeIdx(l.toVariantIdx);
+          const key = l.toId + "::" + (toVi == null ? "" : String(toVi));
+          if (inBasket.has(key)) continue;
+          // The rule's ratio times the line — eight nails a sheet against
+          // a hundred and forty sheets. No ratio, no figure.
+          const want = l.qty ? Math.max(1, Math.round(Number(l.qty) * fromQty)) : null;
+          const seen = wanted.get(key);
+          const because = { name: "", qty: fromQty, ratioQty: l.qty ?? null, ratioPer: l.per || "" };
+          if (!seen) {
+            wanted.set(key, { toId: l.toId, toVariantIdx: toVi, verb: l.verb, qty: want, because: [because], fromIds: [fromId] });
+          } else {
+            // Strongest verb wins the ordering; the quantities add up.
+            if (ADVICE_VERBS[l.verb] < ADVICE_VERBS[seen.verb]) seen.verb = l.verb;
+            seen.qty = want == null ? seen.qty : (seen.qty == null ? want : seen.qty + want);
+            seen.because.push(because);
+            seen.fromIds.push(fromId);
+          }
+        }
+      }
+      if (!wanted.size) return json({ ok: true, advice: [] });
+
+      const ids = [...new Set([...wanted.values()].map((w) => w.toId).concat([...basketProducts]))];
+      const PRICE_COLS = "product_id, variant_idx, wholesale, retail, pack_qty, unit, pack_unit, tiers, out_of_stock";
+      const PRODUCT_COLS = "id, name, image, variants, "
+        + "wholesale_markup_type, wholesale_markup_value, retail_markup_type, retail_markup_value";
+      const [{ data: settingsRow }, { data: customer }, { data: products }, { data: priceRows }, { data: stockRows }] =
+        await Promise.all([
+          admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
+          admin.from("customers").select("phone").eq("shop_id", shopId).eq("id", session.customer_id).maybeSingle(),
+          admin.from("products").select(PRODUCT_COLS).eq("shop_id", shopId).in("id", ids),
+          admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId).in("product_id", ids),
+          admin.from("stock").select("key, qty").eq("shop_id", shopId),
+        ]);
+      if (!customer) return json({ error: "Sign in again" }, 401);
+      const defaultMarkup = (settingsRow?.presets || {}).defaultMarkup || null;
+      const mine = normalisePhone(customer.phone);
+      const { data: quotes } = await admin.from("saved_quotes")
+        .select("client_phone, date, voided, payload")
+        .eq("shop_id", shopId).eq("voided", false)
+        .order("id", { ascending: false }).limit(200);
+      const held = rememberedPrices(quotes || [], mine);
+
+      const productsById = new Map<string, any>((products || []).map((p: any) => [p.id, p]));
+      const rowsByKey = new Map<string, any[]>();
+      (priceRows || []).forEach((r: any) => {
+        const k = `${r.product_id}::${r.variant_idx == null ? "" : r.variant_idx}`;
+        if (!rowsByKey.has(k)) rowsByKey.set(k, []);
+        rowsByKey.get(k)!.push(r);
+      });
+      const onShelf: Record<string, number> = {};
+      (stockRows || []).forEach((r: any) => { onShelf[r.key] = Number(r.qty) || 0; });
+      const nameOf = (id: string) => (productsById.get(id) || {}).name || "";
+
+      const advice: any[] = [];
+      for (const w of wanted.values()) {
+        const product = productsById.get(w.toId);
+        // A pairing names two products by id and neither has to still
+        // exist — 0090 keeps to_id out of the foreign keys on purpose, so
+        // a shop can pair cement with sand it does not sell. A row that
+        // no longer resolves simply never reaches a customer.
+        if (!product) continue;
+        const variants = Array.isArray(product.variants) ? product.variants : [];
+        // A product with sizes and no size named is a suggestion nobody
+        // can act on: offering "iron sheets" where there are five colours
+        // and the shop has not said which is offering nothing.
+        if (variants.length && w.toVariantIdx == null) continue;
+        const key = w.toId + "::" + (w.toVariantIdx == null ? "" : String(w.toVariantIdx));
+        const rows = rowsByKey.get(key) || [];
+        const row = quotableRow(rows);
+        if (!row) continue;
+        const priced = customerUnitPrice(product, row, w.qty || 1, defaultMarkup, held[key] || null);
+        if (!priced) continue;
+        const v = w.toVariantIdx != null ? variants[w.toVariantIdx] : null;
+        advice.push({
+          productId: w.toId,
+          variantIdx: w.toVariantIdx,
+          name: product.name,
+          variantLabel: v ? Object.values(v.combo || {}).join(" / ") : "",
+          image: (v && v.image) || product.image || null,
+          verb: w.verb,
+          qty: w.qty,
+          unit: priced.unit,
+          unitPrice: priced.unitPrice,
+          availability: availabilityOf(rows, onShelf[w.toId + (w.toVariantIdx == null ? "" : "::" + w.toVariantIdx)] || 0),
+          // The reason, in parts, so the sentence is written where the
+          // rest of the customer's words are. Names only the two products
+          // and the shop's own ratio.
+          because: w.because.map((b: any, i: number) => ({
+            name: nameOf(w.fromIds[i]), qty: b.qty, ratioQty: b.ratioQty, ratioPer: b.ratioPer,
+          })).filter((b: any) => b.name),
+        });
+      }
+
+      // Needs before part before with; a suggestion carrying a real
+      // quantity before one that can only name a thing.
+      advice.sort((a, b) =>
+        (ADVICE_VERBS[a.verb] - ADVICE_VERBS[b.verb])
+        || ((a.qty == null ? 1 : 0) - (b.qty == null ? 1 : 0))
+        || String(a.name).localeCompare(String(b.name)));
+      return json({ ok: true, advice: advice.slice(0, ADVICE_MAX) });
     }
 
     if (action === "signout") {

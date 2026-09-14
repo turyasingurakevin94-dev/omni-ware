@@ -52,6 +52,11 @@ function scope(state) {
        where it should fail reports zero failures to anything counting
        them. */
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    /* renderBasket kicks the advice request off at the end. Stubbed
+       because this file is about the basket's own arithmetic; the advice
+       has its own file, and letting a fetch fire from here would make
+       these checks depend on a network that is not there. */
+    loadAdvice() {},
     MONTHS: ['January', 'February', 'March', 'April', 'May', 'June', 'July',
       'August', 'September', 'October', 'November', 'December'],
   };
