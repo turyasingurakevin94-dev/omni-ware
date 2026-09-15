@@ -17,13 +17,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Node 20 rather than whatever is newest: matches the APK workflow, and
-      # pinning an LTS is what catches syntax that happens to run on a very
-      # recent local Node but would not run for everyone else.
+      # An LTS rather than whatever is newest, still: pinning one is what
+      # catches syntax that happens to run on a very recent local Node but
+      # would not run for everyone else. It has to MATCH the other
+      # workflows, which is checked by ci-node-version.test.js.
+      #
+      # The floor moved 20 -> 22 because it was doing the opposite of its
+      # job. Three tests read the edge functions' TypeScript through
+      # `require('module').stripTypeScriptTypes`, which does not exist
+      # before Node 22 -- so they threw on every CI run and had never once
+      # passed here, while passing for anyone whose local Node was newer.
+      # The suite was red for months and the red meant nothing, which is
+      # worse than a suite that fails loudly: nobody reads the log of a
+      # run that is always red. Node 20 is also now deprecated on the
+      # runners.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # No `npm ci` on purpose. The suite requires nothing but `fs` and
       # `path`; the dependencies in package.json are Capacitor's, for the
