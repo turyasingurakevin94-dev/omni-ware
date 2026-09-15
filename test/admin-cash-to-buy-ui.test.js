@@ -551,11 +551,17 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(!/\.bl-lines table\{min-width/.test(src),
     'and so is the phone minimum-width that existed only to make those columns scrollable');
 
-  /* And the card's own width is what keeps it on a phone, rather than a
-     scroller inside a scroller. */
-  const cardCss = (/\.bl-card\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(/flex-basis:clamp\(/.test(cardCss),
-    `the card is sized by clamp so it fits a phone and a monitor alike (${cardCss})`);
+  /* And what keeps it on a phone is no longer a card width at all. The
+     card went with the track it slid in; the round is rows on a grid
+     now, and 820px re-shapes that grid into three columns -- the box,
+     the item, the figure -- rather than trying to fit six into 390px.
+     Same rule as everywhere else in this app: the switch is a switch,
+     not a scroller inside a scroller. */
+  const phoneRow = (/\.ow-dlg-r,\.ow-bl-r,\.ow-rn-r,\.ow-iv-r\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/grid-template-columns:auto minmax\(0,1fr\) auto/.test(phoneRow),
+    `a dense row becomes three columns on a phone (${phoneRow.replace(/\s+/g, ' ')})`);
+  t.check(/\.ow-dlg-ck\{grid-column:1;grid-row:1\/span 3;[^}]*width:24px;height:24px;\}/.test(src),
+    'with the box a thumb-sized target beside them');
 }
 
 /* ---------- 11. the answer is the headline, and it is not grey -------- */

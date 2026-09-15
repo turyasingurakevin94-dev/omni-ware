@@ -116,7 +116,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        floats. */
     /* 56, not 57: the quote's sticky bar floated on a shadow of its own.
        It is a bar, not a menu -- a hairline above it is the depth. */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
+    /* 54, not 56, and both went with the same removal. The three
+       sideways run tracks are gone -- the buying round, the delivery
+       runs and the pickup clusters are hairline rows in the board's one
+       dialog now -- and with them went .dr-nav's floating arrow and
+       .bl-send's filled button, each of which carried an elevation of
+       its own. Depth on this app is hairlines; two fewer shadows is the
+       gain, and this is where it is locked in. */
+    'shadows': [54, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour

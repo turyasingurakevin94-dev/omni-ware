@@ -845,7 +845,12 @@ const trip = (over) => Object.assign({
   t.check(/otDlgGhost\('bringstop', 'They are delivering', ` data-stop="\$\{esc\(String\(run\.key\)\)\}"`\)/.test(code)
        && /createCollectionTripFromRun\(run, bring \? \{ supplierDelivers:true \} : undefined\)/.test(code),
     'the run head offers "they’re delivering" beside "send someone"');
-  t.check(/createCollectionTripFromRun\(run, \{supplierDelivers:true\}\)/.test(code),
+  /* And pressing it makes a SUPPLIER trip -- an ordinary one would put
+     the run straight back on the send-somebody list. One call site
+     serves both buttons now, so the flag is read off `bring` rather
+     than being written twice; the check above is where that is pinned,
+     and this is what it means. */
+  t.check(/const bring = act === 'bringstop';/.test(code),
     'and pressing it makes a SUPPLIER trip — an ordinary one would put the run straight back on the send-somebody list');
 
   /* ---- and the journey ends when the goods are here ---- */

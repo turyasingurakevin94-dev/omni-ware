@@ -7055,130 +7055,6 @@
   @keyframes sq-moto-ride{0%,100%{transform:translateX(0) translateY(0);}50%{transform:translateX(2.5px) translateY(-1px);}}  /* The buying list. Wider than a decision modal because it is a working
      document -- read standing up, in a shop, against what is on the shelf. */
   .modal-wide{max-width:680px;width:100%;}
-  .bl-top{display:flex;align-items:baseline;gap:10px;padding:0 0 12px;border-bottom:1px solid var(--line);}
-  .bl-top-label{font-size:12.5px;color:var(--ink-soft);}
-  .bl-top-fig{
-    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
-    color:var(--ink);font-variant-numeric:tabular-nums;
-  }
-  /* The count no longer pushes to the right edge on its own -- the icon
-     sits beside it, so the pair is what gets pushed. */  /* One supplier block per stop inside a place card. */
-  .pr-supplier{margin-top:10px;padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
-  .pr-supplier:first-of-type{border-top:none;padding-top:0;}
-  .pr-supplier-head{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin-bottom:5px;}
-  .pr-supplier-head b{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .pr-supplier-head .icon{width:14px;height:14px;color:var(--ink-soft);}
-
-  /* One card per place, slid through sideways. A cluster is a trip, and
-     trips get compared with each other -- so they sit side by side and one
-     gesture moves between them, rather than stacking into a document. */
-  .dr-carousel{position:relative;margin:14px 0 6px;}
-  /* NO SCROLL-SNAP, and it is the whole fix. Measured on the real rule: a
-     card is 290px in a 704px track, so a step is 302px and half a step is
-     151. `x mandatory` puts the track on a snap point after EVERY scroll,
-     and anything short of 151px rounds back to the card it started on --
-     which is every scrollbar drag, every soft trackpad swipe and every
-     press of an arrow key. The track sprang back to the first card and
-     covered the one being scrolled to. `scroll-behavior:smooth` then made
-     that correction animate, so it fought the pointer mid-drag.
-
-     `x proximity` is NOT the fix: measured here it snaps back identically
-     (60 -> 2, 120 -> 2), because the nearest snap point to a small scroll
-     is still the one behind it.
-
-     The nav buttons still glide without the element's own
-     scroll-behavior: nav() passes behavior:'smooth' to scrollBy itself,
-     which is a seventeen-frame animation either way. */
-  .dr-track{
-    display:flex;gap:12px;
-    overflow-x:auto;overflow-y:hidden;
-    padding:2px 2px 10px;
-    scrollbar-width:thin;
-    overscroll-behavior-x:contain;
-  }
-  .dr-track:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
-  .dr-card{
-    flex:0 0 clamp(230px, 72%, 290px);scroll-snap-align:start;
-    display:flex;flex-direction:column;
-    background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:12px 13px;box-shadow:0 1px 2px rgba(20,30,40,0.05);
-  }
-  .dr-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .dr-card.collected{background:var(--ow-verdigris-soft);border-color:#BFD9D1;}
-  .dr-card.unknown{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
-  .dr-card-head{display:flex;align-items:center;gap:7px;min-width:0;}
-  .dr-card-head .icon{width:15px;height:15px;color:var(--ow-verdigris);flex-shrink:0;}
-  .dr-card.unknown .dr-card-head .icon{color:var(--ow-crimson);}
-  .dr-card-rank{
-    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
-    color:var(--ink-soft);background:var(--ow-steel-050);
-    padding:1px 6px;border-radius:99px;flex-shrink:0;
-  }
-  .dr-card-name{
-    font-size:14px;font-weight:700;color:var(--ink);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .dr-card-figs{
-    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
-    margin:7px 0 0;padding-bottom:8px;border-bottom:1px solid var(--ow-rule-soft);
-  }
-  .dr-card-count{
-    font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ow-verdigris);
-  }
-  .dr-card.unknown .dr-card-count{color:var(--ow-crimson);}
-  .dr-card-total{
-    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
-    color:var(--ink);font-variant-numeric:tabular-nums;
-  }
-  .dr-card-note{
-    display:flex;align-items:flex-start;gap:5px;margin:8px 0 0;
-    font-size:11px;line-height:1.4;color:var(--ow-amber-ink);
-  }
-  .dr-card-note.split{color:var(--ink-soft);}
-  .dr-card-note.quiet{color:var(--ink-soft);}
-  .dr-card-note .icon{width:12px;height:12px;flex-shrink:0;margin-top:1px;}
-  .dr-orders{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;}
-  .dr-order{
-    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
-    padding:7px 0;border-top:1px solid var(--ow-rule-soft);
-  }
-  .dr-order:first-child{border-top:0;}
-  .dr-order-main{min-width:0;}
-  /* Wraps rather than truncates. The line reads "<product> · <qty>
-     <unit>", so the ellipsis fell on the quantity -- "Chrome Pipe —
-     19mm - Light · 40…" tells somebody standing in a shop everything
-     except how many to ask for, which is the one thing they came with.
-     Two lines of text is cheaper than a second trip. */
-  .dr-order-name{
-    font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.35;
-    overflow-wrap:anywhere;
-  }
-  .dr-order-sub{font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
-  .dr-order-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
-  .dr-order-value{
-    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
-    color:var(--ink);font-variant-numeric:tabular-nums;
-  }
-  .dr-driver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink-soft);}
-  .dr-driver .icon{width:12px;height:12px;flex-shrink:0;}
-  .dr-driver.none{color:var(--ow-crimson);}
-  .dr-nav{
-    all:unset;cursor:pointer;position:absolute;top:calc(50% - 22px);z-index:2;
-    width:32px;height:32px;border-radius:50%;
-    background:var(--panel);border:1px solid var(--line);
-    display:flex;align-items:center;justify-content:center;color:var(--ink);
-    box-shadow:0 2px 8px rgba(20,30,40,0.16);
-  }
-  .dr-nav.prev{left:-6px;} .dr-nav.next{right:-6px;}
-  .dr-nav .icon{width:16px;height:16px;}
-  .dr-nav:hover{background:var(--ow-steel-050);}
-  .dr-nav:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .dr-nav:disabled{opacity:0.3;cursor:default;box-shadow:none;}
-  .dr-hint{margin:2px 0 0;font-size:11.5px;color:var(--ow-ink-400);}
-  @media (max-width:520px){
-    .dr-card{flex-basis:86%;}
-    .dr-nav{display:none;}
-  }
 
   /* The asset register. */
   .fa-summary{margin-bottom:16px;}
@@ -8006,77 +7882,6 @@
   .sp-levers li{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
   .sp-levers b{color:var(--ink);}
 
-  .bl-run{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
-  .bl-run:last-of-type{border-bottom:0;}
-  .bl-run-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;}
-  .bl-run-head .icon{width:16px;height:16px;color:var(--ink-soft);flex-shrink:0;align-self:center;}
-  .bl-run-name{font-size:14px;font-weight:700;color:var(--ink);}
-  .bl-run-loc{font-size:11.5px;color:var(--ow-ink-400);}
-  .bl-run-total{
-    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
-    color:var(--ink);font-variant-numeric:tabular-nums;
-  }
-  /* The lines, as a list. They were a five-column fixed table, which is
-     what made a run need the full width of the modal -- and on a phone
-     those columns collided at 331px and needed a minimum width and a
-     sideways scroll of their own before they could be read. A list has
-     no columns to collide, so the card is free to be narrow enough to
-     sit in the track with its neighbours. */
-  /* A supplier card in the shared run track. Wider than the pickup and
-     delivery cards because each line here carries a figure and a control
-     rather than just a name. */
-  .bl-card{flex-basis:clamp(268px, 80%, 340px);padding:13px 14px;}
-  .bl-card-head{display:flex;align-items:flex-start;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--line);}
-  .bl-card-who{display:flex;align-items:flex-start;gap:7px;min-width:0;flex:1;}
-  .bl-card-who .icon{width:16px;height:16px;flex-shrink:0;color:var(--ink-soft);margin-top:2px;}
-  .bl-card-name-wrap{min-width:0;}
-  .bl-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;}
-  .bl-card-loc{font-size:11.5px;color:var(--ow-ink-400);margin-top:1px;}
-  .bl-card-total{
-    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
-    color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;
-  }
-  .bl-card-foot{display:flex;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line);}
-
-  .bl-items{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;}
-  .bl-item-row{padding:8px 0;border-top:1px solid var(--ow-rule-soft);}
-  .bl-item-row:first-child{border-top:none;}
-  .bl-item-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
-  .bl-item-line.sub{margin-top:3px;}
-  .bl-item-cost{
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12.5px;font-weight:700;color:var(--ink);flex-shrink:0;
-  }
-  .bl-item-qty{font-size:11.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
-  .bl-item-each{color:var(--ow-ink-400);}
-  .bl-item-act{display:flex;gap:6px;flex-shrink:0;}
-  /* A line already collected reads as done rather than as still to do --
-     it stays on the list because the trip is the trip, but it is no
-     longer money to take or a shop to visit. */
-  /* Somebody has been sent for this. Shown under the run rather than on a
-     screen of its own, because this is where the question "has anyone
-     gone yet" is asked -- and the answer belongs beside the list they
-     would otherwise send a second person with. */
-  .bl-send{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
-    justify-content:center;gap:6px;flex:1 1 auto;
-    padding:8px 11px;border-radius:8px;font-size:11.5px;font-weight:700;
-    background:var(--accent);color:#fff;white-space:nowrap;
-  }
-  .bl-send:hover{background:var(--ow-oxide-deep);}
-  .bl-send svg{width:13px;height:13px;}
-  .bl-send:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  /* The quieter of the two: sending somebody is the shop spending an
-     errand, so it keeps the filled button. This one only records what
-     the supplier is already doing. */
-  .bl-bringing{
-    all:unset;box-sizing:border-box;cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;
-    padding:8px 11px;border-radius:8px;border:1px solid var(--line);
-    font-size:11.5px;font-weight:600;color:var(--ink-soft);
-  }
-  .bl-bringing:hover{border-color:var(--ink-soft);color:var(--ink);}
-  .bl-bringing:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   /* Not a red "somebody is out with our money" trip -- a supplier
      delivery is somebody else's errand, so it reads as steady rather
      than as something to chase. */
@@ -8100,12 +7905,6 @@
   /* The controls, on their own line and sharing it. */
   .bl-trip .bl-trip-act, .bl-trip .bl-trip-void{flex:1 1 auto;text-align:center;}
   .bl-trip-hint{flex:1 1 100%;font-size:11px;color:var(--ink-soft);line-height:1.4;}
-  /* A run with nothing left to spend on it. Quietened rather than
-     hidden: it stays on the board because the order is still being
-     prepared, but it is no longer a shop to visit or money to carry. */
-  .bl-card.done{background:var(--ow-steel-050);}
-  .bl-card-done{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.5px;
-    text-transform:uppercase;color:var(--good);}
   .bl-verdict.done{background:var(--ow-steel-050);border-color:var(--ow-rule-soft);}
   .bl-verdict.done .bl-verdict-say{margin-top:0;}
   .bl-verdict-onhand{margin-left:auto;font-family:'IBM Plex Mono',monospace;
@@ -8144,42 +7943,6 @@
   .bl-trip-act.primary:hover{background:var(--ow-oxide-deep);}
   .bl-trip-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-  .bl-received{background:var(--ow-steel-050);}
-  .bl-received .bl-item{color:var(--ink-soft);}
-  .bl-recd{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--good);font-weight:600;margin-top:2px;}
-  .bl-recd svg{width:12px;height:12px;flex-shrink:0;}
-  /* Something arrived but not all of it: still live work, so it keeps
-     the ordinary row weight rather than the greyed-out finished look,
-     and carries a warning stripe so it is findable in a long run. */
-  .bl-short{background:var(--ow-amber-soft);box-shadow:inset 3px 0 0 var(--ow-amber);}
-  .bl-owed{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--warn-ink);font-weight:600;margin-top:2px;}
-  .bl-owed svg{width:12px;height:12px;flex-shrink:0;}
-  .bl-paid{font-size:11.5px;color:var(--ink-soft);font-style:italic;}
-  .bl-receive, .bl-undo{
-    all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:700;
-    padding:5px 10px;border-radius:6px;white-space:nowrap;
-  }
-  .bl-receive{background:var(--accent);color:#fff;}
-  .bl-receive:hover{background:var(--ow-oxide-deep);}
-  .bl-undo{color:var(--ink-soft);border:1px solid var(--line);}
-  .bl-undo:hover{color:var(--ink);border-color:var(--ink-soft);}
-  .bl-receive:focus-visible, .bl-undo:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .bl-lines td.r,.bl-lines th.r{padding-left:6px;}
-  .bl-lines th{
-    text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
-    color:var(--ow-ink-400);padding:0 0 5px;
-  }
-  .bl-lines th.r,.bl-lines td.r{text-align:right;}
-  .bl-lines td{padding:6px 0;border-top:1px solid var(--ow-rule-soft);vertical-align:top;}
-  .bl-lines tbody tr:first-child td{border-top:0;}
-  .bl-item{font-weight:700;color:var(--ink);}
-  .bl-for{font-size:11.5px;color:var(--ow-ink-400);}
-  .bl-moved{
-    display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ow-amber-ink);margin-top:1px;
-  }
-  .bl-moved .icon{width:12px;height:12px;flex-shrink:0;transform:rotate(90deg);}
-  .bl-lines td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .bl-lines td.num.soft{color:var(--ink-soft);}
   /* The same rule for the schedule tables -- the loan's payment-by-payment
      agreement, and the asset depreciation beside it. .dr-lines had no
      styling at all, so seven columns of "20,000,000 UGX" wrapped: all 84
@@ -8192,13 +7955,6 @@
   .dr-lines{overflow-x:auto;}
   .dr-lines td, .dr-lines th{white-space:nowrap;}
   .dr-lines td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .bl-gap{
-    display:flex;gap:9px;margin-top:14px;padding:11px 13px;border-radius:9px;
-    background:var(--ow-crimson-soft);color:var(--ow-crimson);font-size:12.5px;
-  }
-  .bl-gap .icon{width:16px;height:16px;flex-shrink:0;}
-  .bl-gap-list{margin-top:3px;font-weight:400;}
-  .bl-gap-note{margin-top:5px;font-size:11.5px;opacity:.85;font-weight:400;}
   /* An order in Being Prepared that nobody is on -- a worker declined it, or
      it was sent back. It read as an ordinary card before, with the assignee
      row simply absent, so the one order actually waiting on a decision
@@ -34258,54 +34014,6 @@ function openShortfallPlan(){
 /* openDeliveryRuns() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
 
 
-/* The sideways cluster track, shared by the delivery runs and the pickup
-   runs. Extracted rather than copied: the two fiddly parts below are the
-   kind that get fixed once and stay broken in the duplicate.
-
-   Wired after the body is written, since it is replaced on every open. */
-function wireRunCarousel(trackId, prevId, nextId){
-  const track = document.getElementById(trackId);
-  const prev = document.getElementById(prevId);
-  const next = document.getElementById(nextId);
-  if(track && prev && next){
-    const step = ()=>{
-      const card = track.querySelector('.dr-card');
-      // The gap is part of the stride; without it every tap drifts a few
-      // pixels short and by the fourth one a card is half off the edge.
-      const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 0;
-      return card ? card.getBoundingClientRect().width + gap : track.clientWidth;
-    };
-    // Aimed at a card index rather than nudged by a card's width. A drag or
-    // a trackpad flick leaves the track a few pixels off a boundary, and a
-    // purely relative scroll carries that error forward until a card sits
-    // half off the edge. Rounding to the nearest card first means every tap
-    // lands flush however the track was last moved.
-    //
-    // scrollBy and not scrollTo: this track carried scroll-snap-type once,
-    // which overrode scrollTo and sent it nowhere. The snap is gone (it was
-    // rounding every small scroll back to the start), and scrollBy is kept
-    // because it is what the rounding above already computes a delta for.
-    const nav = (dir)=>{
-      const s = step();
-      if(!s) return;
-      const target = (Math.round(track.scrollLeft / s) + dir) * s;
-      track.scrollBy({ left: target - track.scrollLeft, behavior: 'smooth' });
-    };
-    prev.addEventListener('click', ()=>nav(-1));
-    next.addEventListener('click', ()=>nav(1));
-    // Both ends are dead ends, and a control that does nothing should look
-    // like it. Recomputed on scroll rather than counted, so it stays right
-    // however the track is moved -- button, wheel, drag or keyboard.
-    const syncEnds = ()=>{
-      const max = track.scrollWidth - track.clientWidth;
-      prev.disabled = track.scrollLeft <= 1;
-      next.disabled = track.scrollLeft >= max - 1;
-    };
-    track.addEventListener('scroll', syncEnds);
-    syncEnds();
-  }
-}
-
 // Every other place in this file that reads a client name off an order goes
 // through `q.client && q.client.name` -- the file's standing judgment that
 // the object is not guaranteed. Here the whole modal body is one template,
@@ -34840,32 +34548,11 @@ function wireBuyingListReceiving(){
         (stillOwed > 0 || movedSupplier || advanced.length) ? 6000 : undefined);
     });
   });
-  // Send someone for a whole run.
-  document.querySelectorAll('#ot_dlg_b .bl-send').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.run);
-      if(!run) return;
-      const trip = createCollectionTripFromRun(run);
-      if(!trip){ toast('Everything on this run is already on somebody\'s list'); return; }
-      saveData();
-      openBuyingList();
-      toast(`Trip made for ${supplierName(run.supplierId)} — ${trip.lines.length} line${trip.lines.length===1?'':'s'}. Assign somebody to it.`, 5000);
-    });
-  });
-  /* The supplier is bringing it. Same trip, same check-in, nobody of
-     ours sent -- so the lines stop appearing on the "send someone" list
-     without anybody having to remember they are already spoken for. */
-  document.querySelectorAll('#ot_dlg_b [data-bringing]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.bringing);
-      if(!run) return;
-      const trip = createCollectionTripFromRun(run, {supplierDelivers:true});
-      if(!trip){ toast('Everything on this run is already on somebody\'s list'); return; }
-      saveData();
-      openBuyingList();
-      toast(`${supplierName(run.supplierId)} is delivering ${trip.lines.length} line${trip.lines.length===1?'':'s'} — check them in when they arrive.`, 5000);
-    });
-  });
+  /* Sending somebody, and the supplier bringing it instead, are on the
+     STOP now rather than on each of its suppliers -- the round is walked
+     by place, so one press covers every supplier at that place. Both are
+     dispatched by the dialog's own listener (otDlgAct, 'sendstop' and
+     'bringstop') rather than bound here. */
   // Give it to a worker, through the same modal every other assignment
   // uses -- a numbered prompt() was the first version, and typing "2" to
   // mean a person is how the wrong person gets sent.

@@ -524,9 +524,12 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
      scroll -- otherwise it pushes the dialog sideways instead. */
   t.check(/\.dr-lines\{overflow-x:auto;\}/.test(src),
     'and the table scrolls inside its own box rather than widening the dialog');
-  /* The precedent it follows, so the two cannot drift apart. */
-  t.check(/\.bl-lines td\.num\{[^}]*white-space:nowrap;\}/.test(src),
-    'which is the rule the buying list already had for the same reason');
+  /* It used to follow a precedent -- the buying list's own schedule
+     table had the same rule for the same reason, and this checked the
+     two could not drift apart. That table is gone: the buying round is
+     hairline rows in the board's one dialog now, and its figures are
+     held to nowrap by the row's own cells. So this rule stands on its
+     own, and the three checks above are the whole of it. */
 }
 
 process.exit(t.done() ? 1 : 0);

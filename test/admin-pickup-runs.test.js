@@ -319,15 +319,21 @@ const reset = () => {
   t.check(/\$\{stops\.length\} stop\$\{stops\.length === 1 \? '' : 's'\} · \$\{lines\} item/.test(src),
     'and the journey header counts the journey rather than repeating it in figures');
 
-  /* The line reads "<product> · <qty> <unit>", so an ellipsis lands on
-     the quantity: "Chrome Pipe — 19mm - Light · 40…" tells somebody in a
-     shop everything except how many to ask for. */
-  const nameCss = (/\.dr-order-name\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!/text-overflow:ellipsis/.test(nameCss),
-    `the item line is not truncated (${nameCss.replace(/\s+/g, ' ')})`);
-  t.check(!/white-space:nowrap/.test(nameCss), 'it is allowed to wrap');
-  t.check(/overflow-wrap:anywhere/.test(nameCss),
-    'and a single unbroken product code still breaks rather than escaping the card');
+  /* THE QUANTITY IS ITS OWN COLUMN NOW, and that is what settles this.
+
+     On the card the line read "<product> · <qty> <unit>" as one string,
+     so an ellipsis landed on the quantity -- "Chrome Pipe — 19mm -
+     Light · 40…" tells somebody in a shop everything except how many to
+     ask for. That was why the line was allowed to wrap instead. On the
+     grid the item and the quantity are separate cells: the item may
+     truncate, with all three declarations and the min-width that lets
+     it, and the quantity is sized to its content and never cut. */
+  const itemCss = (/\.ow-dlg-c\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/min-width:0/.test(itemCss) && /overflow:hidden/.test(itemCss)
+       && /text-overflow:ellipsis/.test(itemCss) && /white-space:nowrap/.test(itemCss),
+    `the item cell truncates properly rather than escaping the row (${itemCss.replace(/\s+/g, ' ')})`);
+  t.check(/\.ow-bl-r\{grid-template-columns:34px minmax\(0,1fr\) 150px 110px 120px 92px;\}/.test(src),
+    'and the quantity has a column of its own, so nothing eats it');
 }
 
 process.exit(t.done() ? 1 : 0);
