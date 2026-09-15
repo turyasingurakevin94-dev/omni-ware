@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{background:#e8e7e2;margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#1b2233}
+a{color:#1d55a8;text-decoration:none}
+a:hover{color:#123c7d}
+.fig{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-0.02em}
+.lbl{font-size:11px;font-weight:600;letter-spacing:0.03em;color:#5f6a7d}
+.card{background:#fff;border:1px solid #ecebe6;border-radius:14px;box-shadow:0 1px 2px rgba(23,34,60,.05)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.nav{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;margin:1px 0;background:none;border:0;border-radius:9px;color:#b9c2d6;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;text-align:left;cursor:pointer}
+.nav:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav.on{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.nav > span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#a8b2c7}
+.grp{display:flex;align-items:center;gap:8px;padding:15px 10px 4px}
+.grp-i{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+.grp-t{font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d89a5}
+.grp-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#7d89a5;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-p{background:#c2311f;color:#fff}
+.btn-p:hover{background:#a5291a}
+.btn-s{background:#fff;border:1px solid #dcdad4;color:#1b2233}
+.btn-s:hover{background:#f7f6f3}
+.btn-g{background:none;color:#5f6a7d}
+.btn-g:hover{background:#f1efeb;color:#1b2233}
+.lens{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:0;border-radius:8px;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:#5f6a7d;cursor:pointer}
+.lens:hover{background:#efedE9;color:#1b2233}
+.lens.on{background:#fff;color:#1b2233;box-shadow:0 1px 2px rgba(23,34,60,.08)}
+.arow{display:grid;grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer}
+.arow:hover{background:#faf9f6}
+.arow.on{background:#f4f1ff}
+.av{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.grow{display:flex;align-items:center;gap:9px;padding:8px 14px;background:#faf9f6;border-top:1px solid #f0eeea;border-bottom:1px solid #f0eeea}
+.pill{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;white-space:nowrap;flex:none}
+.wf{display:grid;grid-template-columns:76px minmax(0,1fr) 92px;align-items:center;column-gap:9px;padding:6px 0}
+.wfb{height:9px;border-radius:2px}
+.drow{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #f0eeea}
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:22px;padding:30px">
+  <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;max-width:1440px">
+    <div style="font-size:27px;font-weight:700;letter-spacing:-0.02em">Turn 1 · Agents</div>
+    <div style="font-size:13.5px;line-height:1.55;color:#535d70;max-width:64ch;text-wrap:pretty">Screen 5 of the pass. An agent line carries four prices, so one row holds three different profits — yours, theirs, and the supplier's bonus. The screen shows all three and what the agent actually owes you. <a href="#1a">1a</a> desktop, <a href="#1b">1b</a> phone. The cut this turn: <strong>Commissions</strong>.</div>
+  </div>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1A</span>
+      <span style="font-size:12.5px;color:#535d70">Console · one agent picked · 1440 × 900</span>
+    </div>
+
+    <div style="width:1440px;height:900px;background:#f6f5f2;border-radius:18px;overflow:hidden;display:flex;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="width:236px;flex:none;background:#17223c;display:flex;flex-direction:column;overflow:hidden">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:16px 14px 10px">
+          <div style="width:30px;height:30px;border-radius:9px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14.5px;font-weight:700;color:#fff;letter-spacing:-0.01em">Omni&#8209;Ware</div>
+            <div style="font-size:11px;color:#a8b2c7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ssekitoleko Hardware</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px 14px">
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+            <span>Today</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">8</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#ffe3d6;color:#8f3009">Se</span><span class="grp-t">Sell</span></div>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+            <span>New quote</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13v9H3z"></path><path d="M16 9h4l1 3v3h-5"></path><circle cx="7" cy="18" r="1.6"></circle><circle cx="17.5" cy="18" r="1.6"></circle></svg>
+            <span>Order tracking</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">5</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v5h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+            <span>Invoices</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">4</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+            <span>Customers</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">11</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>Messages</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">13</span>
+          </button>
+          <button class="nav on">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.5 4.21"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+            <span>Sales agents</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#e6e3ff;color:#4230a8">Bu</span><span class="grp-t">Buy</span><span class="grp-n">2</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#d9f2e6;color:#0b5e42">Ca</span><span class="grp-t">Catalogue</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#d7e8ff;color:#164a96">Mo</span><span class="grp-t">Money</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#ffdfe9;color:#8a2450">In</span><span class="grp-t">Insight</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#f0eeea;color:#5f6a7d">Su</span><span class="grp-t">Setup</span><span class="grp-n">3</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+
+        <div style="flex:none;height:58px;background:#fff;border-bottom:1px solid #ecebe6;display:flex;align-items:center;gap:16px;padding:0 22px">
+          <div style="display:flex;align-items:center;gap:8px;flex:none">
+            <span style="font-size:12.5px;color:#535d70">Sell</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b6bdca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+            <span style="font-size:14px;font-weight:600">Agents</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:400px;height:36px;padding:0 12px;border-radius:10px;background:#f4f3f0;border:1px solid #ecebe6">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span style="flex:1;min-width:0;font-size:13px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Agent, order no., or "owes the shop"</span>
+            <span style="font-size:10.5px;font-weight:600;color:#535d70;background:#fff;border:1px solid #e2e0da;border-radius:6px;padding:2px 6px">Ctrl K</span>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-s" style="height:34px;padding:0 12px;font-size:13px;flex:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            Invite an agent
+          </button>
+          <div style="width:34px;height:34px;flex:none;border-radius:999px;background:#17223c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">KT</div>
+        </div>
+
+        <div style="flex:none;padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">Agents</div>
+            <div style="margin-top:3px;font-size:13px;color:#535d70">14 active · what they sold, what you kept, what they owe you</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;background:#efedE9;border-radius:10px;padding:4px;flex:none">
+            <button class="lens on">This month</button>
+            <button class="lens">Last month</button>
+            <button class="lens">Year</button>
+          </div>
+        </div>
+
+        <div style="flex:none;padding:14px 22px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+          <div style="background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+            <div class="lbl" style="font-size:10.5px">Sold through agents</div>
+            <div class="fig" style="margin-top:3px;font-size:20px">18,420,000</div>
+            <div style="margin-top:1px;font-size:11.5px;color:#535d70">63 orders · 31% of everything you sold</div>
+          </div>
+          <div style="background:#ecf8f2;border:1px solid #d3ebe0;border-radius:14px;padding:12px 14px">
+            <div class="lbl" style="font-size:10.5px;color:#39544b">You kept</div>
+            <div class="fig" style="margin-top:3px;font-size:20px;color:#0f7a56">2,310,000</div>
+            <div style="margin-top:1px;font-size:11.5px;color:#39544b">12.5% · shop counter runs 24%</div>
+          </div>
+          <div style="background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+            <div class="lbl" style="font-size:10.5px">They kept</div>
+            <div class="fig" style="margin-top:3px;font-size:20px">4,680,000</div>
+            <div style="margin-top:1px;font-size:11.5px;color:#535d70">their own margin, not your cost</div>
+          </div>
+          <div style="background:#fff8e8;border:1px solid #f4e3bd;border-radius:14px;padding:12px 14px">
+            <div class="lbl" style="font-size:10.5px;color:#6b4a0d">Owed to the shop</div>
+            <div class="fig" style="margin-top:3px;font-size:20px;color:#96600f">1,940,000</div>
+            <div style="margin-top:1px;font-size:11.5px;color:#6b4a0d">2 agents behind · at the shop price, not theirs</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow:hidden;padding:14px 22px 22px;display:flex;gap:16px;align-items:stretch">
+
+          <div class="card" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px">
+              <span style="font-size:13.5px;font-weight:700">Who sells, and on what terms</span>
+              <span style="flex:1"></span>
+              <span class="chip" style="background:#f2f0ec;color:#535d70">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4"></path><path d="M12 16h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>
+                margin is yours · commission is theirs
+              </span>
+            </div>
+
+            <div style="flex:none;display:grid;grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px;align-items:center;column-gap:10px;padding:7px 14px;background:#faf9f6;border-top:1px solid #f0eeea">
+              <span></span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Agent</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Shop billed</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">You kept</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">They kept</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Owes you</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Terms</span>
+            </div>
+
+            <div style="flex:1;min-height:0;overflow-y:auto">
+
+              <div class="grow">
+                <span class="chip" style="background:#fff3d9;color:#96600f">Behind on settlement</span>
+                <span style="font-size:12.5px;font-weight:700">2 agents</span>
+                <span style="flex:1"></span>
+                <span class="fig" style="font-size:12px;color:#535d70">1,940,000 owed</span>
+              </div>
+
+              <div class="arow on">
+                <span class="av" style="background:#fff3d9;color:#96600f">WM</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Wasswa Mugisha</div>
+                  <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ndeeba round · 21 orders</div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">5,640,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#0f7a56">712,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">1,410,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#96600f">1,420,000</div>
+                <div style="text-align:right"><span class="pill" style="background:#f2f0ec;color:#535d70">credit</span></div>
+              </div>
+
+              <div class="arow">
+                <span class="av" style="background:#fff3d9;color:#96600f">JN</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Joan Nabbosa</div>
+                  <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Kireka round · 8 orders</div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">1,860,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#0f7a56">204,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">390,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#96600f">520,000</div>
+                <div style="text-align:right"><span class="pill" style="background:#f2f0ec;color:#535d70">credit</span></div>
+              </div>
+
+              <div class="grow">
+                <span class="chip" style="background:#e2f5ec;color:#0f7a56">Settled up</span>
+                <span style="font-size:12.5px;font-weight:700">12 agents</span>
+                <span style="flex:1"></span>
+                <span class="fig" style="font-size:12px;color:#535d70">prepay or paid on delivery</span>
+              </div>
+
+              <div class="arow">
+                <span class="av" style="background:#eaf1ff;color:#1d5bb8">DK</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Derrick Kayongo</div>
+                  <div style="margin-top:2px;display:flex;gap:6px;align-items:center;overflow:hidden">
+                    <span class="pill" style="background:#eaf1ff;color:#1d5bb8">top seller</span>
+                    <span style="font-size:11px;color:#535d70;white-space:nowrap">17 orders</span>
+                  </div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">6,120,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#0f7a56">908,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">1,530,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">0</div>
+                <div style="text-align:right"><span class="pill" style="background:#e2f5ec;color:#0f7a56">prepay</span></div>
+              </div>
+
+              <div class="arow">
+                <span class="av" style="background:#f2f0ec;color:#535d70">AS</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Annet Ssenabulya</div>
+                  <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Mukono round · 9 orders</div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">2,740,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#0f7a56">301,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">740,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">0</div>
+                <div style="text-align:right"><span class="pill" style="background:#e2f5ec;color:#0f7a56">prepay</span></div>
+              </div>
+
+              <div class="arow">
+                <span class="av" style="background:#f2f0ec;color:#535d70">MK</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Moses Kirya</div>
+                  <div style="margin-top:2px;display:flex;gap:6px;align-items:center;overflow:hidden">
+                    <span class="pill" style="background:#fff3d9;color:#96600f">sells under your price</span>
+                  </div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">1,190,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#0f7a56">142,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#b2301f">−24,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">0</div>
+                <div style="text-align:right"><span class="pill" style="background:#e2f5ec;color:#0f7a56">prepay</span></div>
+              </div>
+
+              <div class="arow" style="opacity:.7">
+                <span class="av" style="background:#f2f0ec;color:#535d70">+9</span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">nine more agents</div>
+                  <div style="margin-top:2px;font-size:11px;color:#535d70">8 orders between them this month</div>
+                </div>
+                <div class="fig" style="font-size:13.5px;text-align:right">870,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">43,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">190,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">0</div>
+                <div style="text-align:right"><span style="font-size:11px;color:#535d70">mixed</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="width:390px;flex:none;display:flex;flex-direction:column;gap:12px;overflow-y:auto;align-items:stretch">
+
+            <div class="card" style="overflow:hidden;flex:none">
+              <div style="background:#17223c;padding:12px 14px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span class="av" style="background:#c2311f;color:#fff;width:32px;height:32px;font-size:12px">WM</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:15px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Wasswa Mugisha</div>
+                    <div style="font-size:11.5px;color:#a8b2c7">agent since Jan 2025 · sells on your credit</div>
+                  </div>
+                  <svg width="17" height="17" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                </div>
+              </div>
+
+              <div style="padding:12px 14px">
+                <div class="lbl" style="font-size:10.5px">Where the money went, this month</div>
+                <div style="margin-top:8px">
+                  <div class="wf">
+                    <span style="font-size:11.5px;color:#535d70">Your cost</span>
+                    <span class="wfb" style="width:70%;background:#dedbd4"></span>
+                    <span class="fig" style="font-size:12.5px;text-align:right">4,928,000</span>
+                  </div>
+                  <div class="wf">
+                    <span style="font-size:11.5px;color:#535d70">You kept</span>
+                    <span class="wfb" style="width:10.1%;background:#0f7a56;margin-left:70%"></span>
+                    <span class="fig" style="font-size:12.5px;text-align:right;color:#0f7a56">712,000</span>
+                  </div>
+                  <div class="wf" style="border-top:1px solid #f0eeea">
+                    <span style="font-size:11.5px;font-weight:600">Shop billed</span>
+                    <span class="wfb" style="width:80%;background:#17223c"></span>
+                    <span class="fig" style="font-size:12.5px;text-align:right">5,640,000</span>
+                  </div>
+                  <div class="wf">
+                    <span style="font-size:11.5px;color:#535d70">They kept</span>
+                    <span class="wfb" style="width:20%;background:#8d7bd8;margin-left:80%"></span>
+                    <span class="fig" style="font-size:12.5px;text-align:right;color:#4230a8">1,410,000</span>
+                  </div>
+                  <div class="wf" style="border-top:1px solid #f0eeea">
+                    <span style="font-size:11.5px;font-weight:600">Client paid</span>
+                    <span class="wfb" style="width:100%;background:#4230a8"></span>
+                    <span class="fig" style="font-size:12.5px;text-align:right">7,050,000</span>
+                  </div>
+                </div>
+                <div style="margin-top:10px;font-size:12px;color:#535d70;text-wrap:pretty">They mark up 25% on top of your 12.6%. The client pays 7.05m for goods that cost you 4.93m, and the larger half of that gap is theirs.</div>
+              </div>
+
+              <div style="background:#fff8e8;border-top:1px solid #f4e3bd;padding:11px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="lbl" style="font-size:10.5px;color:#6b4a0d">Owes the shop</span>
+                  <span class="fig" style="font-size:15px;color:#96600f;margin-left:auto">1,420,000</span>
+                </div>
+                <div style="margin-top:5px;font-size:12px;color:#6b4a0d;text-wrap:pretty">At your price on 6 delivered orders — not the 1,775,000 their clients paid. Their margin is not yours to collect.</div>
+                <div style="margin-top:9px;display:flex;gap:8px">
+                  <button class="btn btn-p" style="height:34px;padding:0 12px;font-size:12.5px">Record a settlement</button>
+                  <button class="btn btn-s" style="height:34px;padding:0 12px;font-size:12.5px">Hold new orders</button>
+                </div>
+              </div>
+
+              <div style="padding:11px 14px;border-top:1px solid #f0eeea">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="lbl" style="font-size:10.5px">Supplier bonus, July</span>
+                  <span class="chip" style="height:19px;padding:0 7px;background:#e2f5ec;color:#0f7a56;margin-left:auto">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                    screen agrees with payout
+                  </span>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:12px">
+                  <div style="flex:1"><div class="lbl" style="font-size:10px">Shown as earned</div><div class="fig" style="font-size:15px">148,000</div></div>
+                  <div style="flex:1"><div class="lbl" style="font-size:10px">Claimable</div><div class="fig" style="font-size:15px">148,000</div></div>
+                  <div style="flex:1"><div class="lbl" style="font-size:10px">Not yet counted</div><div class="fig" style="font-size:15px;color:#96600f">36,000</div></div>
+                </div>
+                <div style="margin-top:7px;font-size:12px;color:#535d70;text-wrap:pretty">36,000 sits on two orders still out for delivery. A bonus counts once the order is completed, and it is the supplier's money, never yours.</div>
+              </div>
+            </div>
+
+            <div class="card" style="padding:12px 14px;flex:none">
+              <div style="font-size:13.5px;font-weight:700">Which lines they sell</div>
+              <div style="margin-top:9px;display:flex;flex-direction:column;gap:7px">
+                <div class="drow" style="border-top:0;padding-top:0">
+                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 50kg</span>
+                  <span class="fig" style="font-size:12px;color:#535d70">58% of orders</span>
+                  <span class="fig" style="font-size:12px;color:#0f7a56">11%</span>
+                </div>
+                <div class="drow">
+                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Iron sheets G28</span>
+                  <span class="fig" style="font-size:12px;color:#535d70">22%</span>
+                  <span class="fig" style="font-size:12px;color:#0f7a56">26%</span>
+                </div>
+                <div class="drow">
+                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Nails, wire, fittings</span>
+                  <span class="fig" style="font-size:12px;color:#535d70">20%</span>
+                  <span class="fig" style="font-size:12px;color:#0f7a56">31%</span>
+                </div>
+              </div>
+              <div style="margin-top:9px;font-size:12px;color:#535d70;text-wrap:pretty">Their round is mostly cement, which is why your 12.6% here sits under the counter's 24%. Selling them fittings would move it more than raising cement would.</div>
+            </div>
+
+            <div class="card" style="padding:12px 14px;flex:none">
+              <div class="lbl" style="font-size:10.5px">Orders through them</div>
+              <div style="margin-top:10px;display:flex;align-items:flex-end;gap:8px;height:60px">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:22px;background:#d7e8ff;border-radius:3px"></div><span style="font-size:10px;color:#535d70">May</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:30px;background:#d7e8ff;border-radius:3px"></div><span style="font-size:10px;color:#535d70">Jun</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:44px;background:#d7e8ff;border-radius:3px"></div><span style="font-size:10px;color:#535d70">Jul</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:38px;background:#d7e8ff;border-radius:3px"></div><span style="font-size:10px;color:#535d70">Aug</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;height:46px;background:#1d5bb8;border-radius:3px"></div><span style="font-size:10px;color:#535d70">Sep</span></div>
+              </div>
+              <div style="margin-top:9px;font-size:12px;color:#535d70;text-wrap:pretty">Selling more every month while settling slower each time. The two lines are worth reading together before extending more credit.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="1b" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1B</span>
+      <span style="font-size:12.5px;color:#535d70">Phone · 390 × 844 · settlement first</span>
+    </div>
+
+    <div style="width:390px;height:844px;background:#f6f5f2;border-radius:26px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="flex:none;background:#17223c;padding:10px 12px 0">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:24px;height:24px;border-radius:7px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <span style="flex:1;min-width:0;font-size:14px;font-weight:700;color:#fff">Agents</span>
+          <svg width="18" height="18" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <svg width="18" height="18" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        </div>
+        <div style="margin-top:9px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden">
+          <div style="padding:7px 9px;border-right:1px solid rgba(255,255,255,.09)">
+            <div style="font-size:9.5px;font-weight:600;color:#a8b2c7">SOLD</div>
+            <div class="fig" style="font-size:13.5px;color:#fff">18.42<span style="font-size:9.5px;color:#a8b2c7">M</span></div>
+          </div>
+          <div style="padding:7px 9px;border-right:1px solid rgba(255,255,255,.09)">
+            <div style="font-size:9.5px;font-weight:600;color:#a8b2c7">YOU KEPT</div>
+            <div class="fig" style="font-size:13.5px;color:#fff">12.5<span style="font-size:9.5px;color:#a8b2c7">%</span></div>
+          </div>
+          <div style="padding:7px 9px;background:rgba(240,179,35,.16)">
+            <div style="font-size:9.5px;font-weight:600;color:#f6dfab">OWED YOU</div>
+            <div class="fig" style="font-size:13.5px;color:#fff">1.94<span style="font-size:9.5px;color:#f6dfab">M</span></div>
+          </div>
+        </div>
+        <div style="margin-top:9px;display:flex;gap:0">
+          <button style="flex:1;height:34px;background:none;border:0;border-bottom:2px solid #ef4b39;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer">Month</button>
+          <button style="flex:1;height:34px;background:none;border:0;border-bottom:2px solid transparent;color:#a8b2c7;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">Last</button>
+          <button style="flex:1;height:34px;background:none;border:0;border-bottom:2px solid transparent;color:#a8b2c7;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">Year</button>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow-y:auto;background:#fff">
+
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#faf9f6;border-bottom:1px solid #f0eeea">
+          <span class="chip" style="height:19px;padding:0 7px;background:#fff3d9;color:#96600f">Behind 2</span>
+          <span class="fig" style="font-size:11.5px;color:#535d70;margin-left:auto">1,940,000 owed</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:10px 12px;border-bottom:1px solid #f0eeea;min-height:44px;align-items:center">
+          <span class="av" style="background:#fff3d9;color:#96600f;grid-row:span 2">WM</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Wasswa Mugisha</div>
+          <div class="fig" style="font-size:13.5px;color:#96600f;text-align:right;white-space:nowrap">1,420,000</div>
+          <div style="min-width:0;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">21 orders · you kept 12.6%</div>
+          <div style="font-size:11px;color:#535d70;text-align:right;white-space:nowrap">owes you</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:10px 12px;border-bottom:1px solid #f0eeea;min-height:44px;align-items:center">
+          <span class="av" style="background:#fff3d9;color:#96600f;grid-row:span 2">JN</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Joan Nabbosa</div>
+          <div class="fig" style="font-size:13.5px;color:#96600f;text-align:right;white-space:nowrap">520,000</div>
+          <div style="min-width:0;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">8 orders · you kept 11.0%</div>
+          <div style="font-size:11px;color:#535d70;text-align:right;white-space:nowrap">owes you</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#faf9f6;border-bottom:1px solid #f0eeea">
+          <span class="chip" style="height:19px;padding:0 7px;background:#e2f5ec;color:#0f7a56">Settled 12</span>
+          <span style="font-size:11px;color:#535d70;margin-left:auto">prepay or on delivery</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:10px 12px;border-bottom:1px solid #f0eeea;min-height:44px;align-items:center">
+          <span class="av" style="background:#eaf1ff;color:#1d5bb8;grid-row:span 2">DK</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Derrick Kayongo</div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">6,120,000</div>
+          <div style="min-width:0;display:flex;gap:6px;align-items:center;overflow:hidden">
+            <span class="pill" style="background:#eaf1ff;color:#1d5bb8">top seller</span>
+            <span style="font-size:11px;color:#535d70;white-space:nowrap">you kept 14.8%</span>
+          </div>
+          <div style="font-size:11px;color:#535d70;text-align:right;white-space:nowrap">billed</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:10px 12px;border-bottom:1px solid #f0eeea;min-height:44px;align-items:center">
+          <span class="av" style="background:#f2f0ec;color:#535d70;grid-row:span 2">AS</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Annet Ssenabulya</div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">2,740,000</div>
+          <div style="min-width:0;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">9 orders · you kept 11.0%</div>
+          <div style="font-size:11px;color:#535d70;text-align:right;white-space:nowrap">billed</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:10px 12px;border-bottom:1px solid #f0eeea;min-height:44px;align-items:center">
+          <span class="av" style="background:#f2f0ec;color:#535d70;grid-row:span 2">MK</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Moses Kirya</div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">1,190,000</div>
+          <div style="min-width:0;display:flex;gap:6px;align-items:center;overflow:hidden">
+            <span class="pill" style="background:#fff3d9;color:#96600f">under your price</span>
+          </div>
+          <div style="font-size:11px;color:#535d70;text-align:right;white-space:nowrap">billed</div>
+        </div>
+
+        <div style="padding:12px;background:#f6f5f2;border-top:1px solid #f0eeea">
+          <div class="card" style="overflow:hidden">
+            <div style="background:#17223c;padding:10px 12px;display:flex;align-items:center;gap:9px">
+              <span class="av" style="background:#c2311f;color:#fff;width:26px;height:26px;font-size:10.5px">WM</span>
+              <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Wasswa Mugisha</span>
+              <span class="chip" style="background:rgba(255,255,255,.14);color:#fff;height:18px;padding:0 7px">credit</span>
+            </div>
+            <div style="padding:10px 12px">
+              <div class="wf" style="grid-template-columns:62px minmax(0,1fr) 84px">
+                <span style="font-size:11px;color:#535d70">Your cost</span>
+                <span class="wfb" style="width:70%;background:#dedbd4"></span>
+                <span class="fig" style="font-size:12px;text-align:right">4,928,000</span>
+              </div>
+              <div class="wf" style="grid-template-columns:62px minmax(0,1fr) 84px">
+                <span style="font-size:11px;color:#535d70">You kept</span>
+                <span class="wfb" style="width:10.1%;background:#0f7a56;margin-left:70%"></span>
+                <span class="fig" style="font-size:12px;text-align:right;color:#0f7a56">712,000</span>
+              </div>
+              <div class="wf" style="grid-template-columns:62px minmax(0,1fr) 84px">
+                <span style="font-size:11px;color:#535d70">They kept</span>
+                <span class="wfb" style="width:20%;background:#8d7bd8;margin-left:80%"></span>
+                <span class="fig" style="font-size:12px;text-align:right;color:#4230a8">1,410,000</span>
+              </div>
+              <div class="wf" style="grid-template-columns:62px minmax(0,1fr) 84px;border-top:1px solid #f0eeea">
+                <span style="font-size:11px;font-weight:600">Client paid</span>
+                <span class="wfb" style="width:100%;background:#4230a8"></span>
+                <span class="fig" style="font-size:12px;text-align:right">7,050,000</span>
+              </div>
+            </div>
+            <div style="background:#fff8e8;border-top:1px solid #f4e3bd;padding:9px 12px;display:flex;align-items:center;gap:8px">
+              <span class="lbl" style="font-size:10.5px;color:#6b4a0d">Owes the shop</span>
+              <span class="fig" style="font-size:14px;color:#96600f;margin-left:auto">1,420,000</span>
+            </div>
+            <div style="padding:10px 12px;display:flex;gap:7px">
+              <button class="btn btn-p" style="flex:1;height:44px;font-size:13.5px;justify-content:center">Record settlement</button>
+              <button class="btn btn-s" style="flex:1;height:44px;font-size:13.5px;justify-content:center">Hold orders</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:none;height:56px;background:#fff;border-top:1px solid #ecebe6;display:flex;align-items:stretch;padding:0 2px">
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <span style="position:relative;display:flex">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+            <span style="position:absolute;top:-2px;right:-3px;width:7px;height:7px;border-radius:999px;background:#c2311f"></span>
+          </span>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Today</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Sell</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Money</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Manager</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <span style="display:flex;align-items:center;justify-content:center;width:38px;height:22px;border-radius:999px;background:#ffe1dc">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4b39" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+          </span>
+          <span style="font-size:9.5px;font-weight:700;color:#c2311f">More</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:1040px;background:#f4f1ff;border:1px solid #e3ddfb;border-radius:14px;padding:16px 18px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:26px;height:26px;border-radius:8px;background:#e5dffd;color:#5b46d6;display:flex;align-items:center;justify-content:center;flex:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+      </span>
+      <span style="font-size:14px;font-weight:700">The cut: Commissions stops being a screen</span>
+    <div style="margin-top:9px;display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid #e3ddfb;border-radius:10px;padding:8px 10px">
+      <svg width="14" height="14" style="flex:none;margin-top:2px" viewBox="0 0 24 24" fill="none" stroke="#5b46d6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h10"></path><path d="M4 18h13"></path></svg>
+      <div style="font-size:12px;color:#40465a;text-wrap:pretty">The rail draws the <strong>final map</strong>: Sell 6, Buy 2, Catalogue 4, Money 4, Insight 4, Setup 3 — 23 rows and Today, from 33 and Today. Every cut is argued in <strong>Rail.dc.html</strong>, which is the authority if a frame disagrees.</div>
+    </div>
+</div>
+    <div style="margin-top:9px;font-size:13px;line-height:1.55;color:#40465a;max-width:92ch;text-wrap:pretty">A commission screen reads the same order rows this one does and sums one field off them — <span class="fig" style="font-size:12px">bonusCommission</span>, filtered to completed, not voided, bucketed by the order's own month. The agent app already shows the agent that figure. An admin screen that recomputes it is a second implementation of one rule, and the reconciliation test exists precisely because the two have drifted before: a bonus shown as earned that the payout would not pay.</div>
+    <div style="margin-top:11px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;font-size:12.5px;color:#40465a">
+      <div><div style="font-weight:700;margin-bottom:3px">What is lost</div>A month-by-month commission table. It returns as three figures on the agent panel — shown as earned, claimable, not yet counted — which is the only comparison anyone opens that table to make.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">What absorbs it</div>This screen's agent panel, plus one <strong>Pay the bonus</strong> action on the month. The payout stays where the record is, so a claim is made against the figure being looked at.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">The words still reach it</div>"commission", "bonus", "earnings" and "payout" become Agents keywords, and <span class="fig" style="font-size:12px">resolveTab('commissions')</span> opens Agents with the bonus block scrolled to.</div>
+    </div>
+    <div style="margin-top:12px;padding-top:11px;border-top:1px solid #e3ddfb;font-size:12.5px;color:#40465a;text-wrap:pretty"><strong>Three things this screen now says that the data always held:</strong> one row holds three profits — yours, theirs, and the supplier's bonus, and the waterfall shows all three against your cost. What an agent owes is the <em>shop</em> price on delivered orders, never their client price, which is why the owed figure is 1.42m and not 1.78m. And agent margin runs half the counter's, because agent rounds are mostly cement — so the lever is what they carry, not what you charge. Next screen: <strong>WhatsApp</strong>.</div>
+  </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>

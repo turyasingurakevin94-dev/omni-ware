@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Archivo+Black&display=swap">
+<link rel="stylesheet" href="_ds/industry-916f2d91-5945-481e-ab2e-26647432e629/styles.css">
+<style>
+/* Palette + declarations lifted from omni-ware: .claude/skills/ow-design/SKILL.md and .design/charges-row/_base.css. No 24th colour. */
+:root{--ow-steel-950:#14171B;--ow-steel-800:#252A31;--ow-steel-100:#DCE0E4;--ow-steel-050:#E9EBED;--ow-paper:#FFFFFF;--ow-paper-2:#F7F9FB;--ow-oxide:#B23A26;--ow-oxide-deep:#8E2C1C;--ow-oxide-soft:#F6E7E3;--ow-verdigris:#1C6B58;--ow-verdigris-soft:#E2EFEB;--ow-amber-soft:#FBEFD9;--ow-amber-ink:#7A4A02;--ow-crimson:#7F1D1A;--ow-crimson-soft:#F7E4E2;--ow-ink-900:#14171B;--ow-ink-600:#59626B;--ow-ink-400:#8A939C;--ow-rule:#CFD5DA;--ow-rule-soft:#E3E7EA;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;--ow-lift:0 4px 16px rgba(15,20,25,.14)}
+*{box-sizing:border-box}
+body{margin:0;background:#f0eee9;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.35;color:var(--ow-ink-900);-webkit-font-smoothing:antialiased}
+.art p,.ph p{margin:0}.art h1,.ph h1{font-weight:400}
+.in p{margin:0}
+a{color:var(--ow-oxide)}a:hover{color:var(--ow-oxide-deep)}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.dv-note{max-width:620px;font:12px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.6);margin:0 0 18px}
+.dv-note b{color:#1a1a1a}
+/* ---- desktop console (13px body) ---- */
+.art{position:relative;width:1400px;background:var(--ow-steel-050);font-size:13px;line-height:1.35;overflow:hidden}
+.pg{padding:24px 24px 0}
+.ow-ph{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:14px}
+.ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1}
+.ow-ph-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);color:var(--ow-ink-400);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;align-self:center;margin-left:2px}
+.ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 2px}
+.ow-ph-sp{flex:1}
+.lnk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ow-ink-900)}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ow-cb{display:flex;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:8px;overflow:hidden}
+.ow-cb-k{padding:9px 14px;border-left:1px solid var(--ow-rule-soft);min-width:0}
+.ow-cb-k:first-child{border-left:0}
+.ow-cb-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);margin:0 0 3px}
+.ow-cb-v{font-size:15px;font-weight:500;line-height:1.2;white-space:nowrap}
+.ow-cb-v.m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ow-cb-s{font-size:12px;color:var(--ow-ink-600);margin:3px 0 0;white-space:nowrap}
+.fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;white-space:nowrap}
+.u{font-size:.82em;font-weight:400;color:var(--ow-ink-400);letter-spacing:0}
+.usual{display:flex;gap:8px;margin:10px 0 14px;overflow:hidden}
+.uc{display:flex;align-items:center;gap:9px;flex:none;width:248px;height:50px;padding:0 6px 0 8px;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:8px}
+.uc-th{width:34px;height:34px;border-radius:4px;background:var(--ow-steel-050);color:var(--ow-ink-400);display:flex;align-items:center;justify-content:center;flex:none}
+.uc-t{flex:1;min-width:0}
+.uc-n{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc-s{display:block;font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc-add{width:22px;height:22px;border-radius:50%;background:var(--ow-oxide);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.uc.q .uc-add{background:transparent;color:var(--ow-ink-400);border:1px dashed var(--ow-rule)}
+.ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start}
+.ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:8px;overflow:hidden}
+.ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2)}
+.ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600)}
+.ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft)}
+.rf:first-child,.ow-pan-h + .rf{border-top:0}
+.rf-l{font-size:12px;color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rf-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+.rl{margin:0;padding:8px 12px 10px;font-size:12px;color:var(--ow-ink-600);line-height:1.5}
+.rl b{color:var(--ow-ink-900);font-weight:600}
+.q-search{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:13px}
+.q-search .ic{width:15px;height:15px}
+.q-search kbd{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);border:1px solid var(--ow-rule-soft);border-radius:4px;padding:1px 6px}
+.ow-tbl{--c:30px minmax(0,1fr) 88px 116px minmax(112px,auto) 156px 88px 76px;display:grid;grid-template-columns:var(--c)}
+.ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;grid-template-columns:var(--c);align-items:center;gap:8px;padding:6px 12px;border-top:1px solid var(--ow-rule-soft)}
+.ow-tbl-h{border-top:0;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ow-ink-600);text-transform:uppercase}
+.ow-tbl-r{min-height:42px}
+.ow-tbl-c{min-width:0}
+.ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600}
+.ow-tbl-p{display:block;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-shop-first{align-self:stretch;display:flex;align-items:center;min-width:0;border-left:1px solid var(--ow-rule);padding-left:8px}
+.q-gutter{display:flex;align-items:center;justify-content:center;min-width:0}
+.q-row-num{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);min-width:14px;text-align:center}
+.ow-gi{display:inline-block;min-width:0;margin:0;border:1px solid transparent;border-radius:4px;background:transparent;padding:4px 6px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);text-align:right}
+.ow-gi.hov{border-color:var(--ow-steel-100);background:#fff}
+.pill{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:4px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;white-space:nowrap;background:var(--ow-steel-050);color:var(--ow-ink-600)}
+.pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink)}
+.pill.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson)}
+.pill.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris)}
+.q-add-icon{width:22px;height:22px;border-radius:4px;border:1px dashed var(--ow-rule);color:var(--ow-ink-600);display:flex;align-items:center;justify-content:center;flex:none}
+.q-add-icon .ic{width:13px;height:13px}
+.q-add-ph{grid-column:2/-1;color:var(--ow-ink-600);font-size:12px;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sug{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:none;padding:2px 8px;border:1px solid var(--ow-rule-soft);border-radius:999px;font-size:12px;color:var(--ow-ink-900);background:#fff}
+.sug b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-600)}
+.sug.more{color:var(--ow-ink-600);border-style:dashed}
+.q-foot{padding-top:4px;padding-bottom:4px;border-top:0;font-weight:500}
+.q-foot-pays{border-top:1px solid var(--ow-rule);padding-top:10px}
+.q-foot-keep{padding-bottom:12px}
+.q-foot-l{grid-column:1/5;text-align:right;font-size:12px;color:var(--ow-ink-600)}
+.q-foot-pays .q-foot-l{font-size:13px;font-weight:600;color:var(--ow-ink-900)}
+.q-foot-pays .ow-tbl-n{font-size:15px}
+.q-foot-cost .ow-tbl-n{color:var(--ow-ink-600);font-weight:500}
+.q-foot-x{grid-column:6/-1}
+.bar{position:absolute;left:0;right:0;bottom:0;background:var(--ow-paper);border-top:1px solid var(--ow-rule);display:flex;align-items:center;gap:10px;padding:12px 24px}
+.bar-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap}
+.bar-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;font-size:22px;white-space:nowrap}
+.bar-s{font-size:12px;color:var(--ow-ink-600)}
+.bar-acts{margin-left:auto;display:flex;align-items:center;gap:8px}
+.qbar-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;min-width:40px;min-height:40px;padding:0 12px;border:1px solid var(--ow-rule);border-radius:7px;background:#fff;color:var(--ow-ink-900);font-size:13px;font-weight:600}
+.qbar-btn.ico{padding:0}
+.qbar-save{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:7px;background:var(--ow-oxide);color:#fff;font-size:14px;font-weight:700}
+.thumb{width:34px;height:34px;border-radius:4px;background:var(--ow-steel-050);color:var(--ow-ink-400);display:flex;align-items:center;justify-content:center;flex:none}
+/* ---- phone (390, 15px body): its own design ---- */
+.ph{position:relative;width:390px;min-height:844px;background:var(--ow-steel-050);font-size:15px;line-height:1.4;overflow:hidden;display:flex;flex-direction:column}
+.ph .ph-b{flex:1;padding-bottom:16px}
+.ph .ph-dock{position:static;order:2}
+.ph .ph-tabs{position:static;order:3}
+.ph .sheet{position:absolute}
+.ph-bar{height:44px;background:var(--ow-steel-950);display:flex;align-items:center;gap:10px;padding:0 14px;color:#fff}
+.ph-mk{width:26px;height:26px;border-radius:7px;background:var(--ow-oxide);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:10px}
+.ph-bt{font-size:14px;font-weight:600}
+.ph-sp{flex:1}
+.ph-ic{width:20px;height:20px;fill:none;stroke:#C7CFD8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph-b{padding:12px 16px 0}
+.ph-t{font-family:'Archivo Black',sans-serif;font-size:26px;line-height:1.1;margin:0 0 10px;letter-spacing:-.02em}
+.ph-cl{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 14px;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:8px;margin-bottom:10px}
+.ph-cl-n{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph-cl-m{font-size:12px;color:var(--ow-ink-600);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ph-find{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:8px;font-size:15px;color:var(--ow-ink-400);margin-bottom:10px}
+.ph-find .ic{width:18px;height:18px}
+.ph-list{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:8px;overflow:hidden}
+.ph-card{padding:14px 16px;border-top:1px solid var(--ow-rule-soft)}
+.ph-card:first-child{border-top:0}
+.ph-head{display:flex;align-items:flex-start;gap:10px}
+.ph-num{font-family:var(--mono);font-size:12px;color:var(--ow-ink-600);min-width:14px;padding-top:2px}
+.ph-nm{flex:1;min-width:0}
+.ph-name{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph-charge .ph-name{font-weight:500}
+.ph-sub{font-size:12px;color:var(--ow-ink-600);margin-top:1px}
+.ph-x{width:44px;height:44px;margin:-10px -12px -10px 0;display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);flex:none}
+.ph-rows{margin-top:10px;display:flex;flex-direction:column;gap:9px}
+.ph-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ph-l{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ow-ink-600);text-transform:uppercase}
+.ph-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+.ph-gi{border:1px solid var(--ow-steel-100);border-radius:4px;background:#fff;padding:6px 8px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:500;letter-spacing:-.02em;text-align:right;min-width:96px}
+.ph-add{display:flex;align-items:center;gap:10px;height:44px;color:var(--ow-ink-600);font-size:14px}
+.ph-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 14px}
+.ph-chip{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:1px solid var(--ow-rule-soft);border-radius:999px;font-size:13px;background:#fff;white-space:nowrap;flex:none}
+.fld-in .un{white-space:nowrap;flex:none}
+.ph-chip b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-600)}
+.ph-chip.more{color:var(--ow-ink-600);border-style:dashed}
+.ph-empty{padding:36px 20px;text-align:center;color:var(--ow-ink-600);font-size:14px;line-height:1.5}
+.ph-empty b{display:block;color:var(--ow-ink-900);font-size:16px;font-weight:600;margin-bottom:6px}
+.ph-dock{position:absolute;left:0;right:0;bottom:60px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);padding:10px 16px 12px}
+.ph-dock-r{display:flex;align-items:center;gap:10px}
+.ph-says-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600)}
+.ph-says-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;line-height:1.15}
+.ph-btn{width:44px;height:44px;border:1px solid var(--ow-rule);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;color:var(--ow-ink-900)}
+.ph-save{height:44px;padding:0 16px;border-radius:8px;background:var(--ow-oxide);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;white-space:nowrap}
+.in-save{white-space:nowrap}
+.ph-save.off{background:var(--ow-steel-100);color:var(--ow-ink-600)}
+.ph-tabs{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);display:grid;grid-template-columns:repeat(5,1fr)}
+.ph-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--ow-ink-600)}
+.ph-tab.on{color:var(--ow-steel-950)}
+.ph-tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph-tab.on svg{fill:currentColor;stroke:none}
+.ph-shop{margin-top:10px;border-top:1px solid var(--ow-rule-soft);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.ph-shop-r{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--ow-ink-600)}
+.ph-shop-r .ph-v{color:var(--ow-ink-600);font-weight:500}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--ow-paper);border-radius:14px 14px 0 0;box-shadow:var(--ow-lift);padding:8px 16px 16px}
+.sheet-h{width:36px;height:4px;border-radius:2px;background:var(--ow-steel-100);margin:0 auto 12px}
+.fld{margin-top:14px}
+.fld-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);margin:0 0 6px}
+.fld-in{display:flex;align-items:center;height:48px;border:1px solid var(--ow-rule);border-radius:8px;background:#fff;padding:0 12px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;letter-spacing:-.02em}
+.fld-in.focus{border-color:var(--ow-steel-950)}
+.fld-in .un{margin-left:auto;font-family:'Inter',sans-serif;font-size:13px;color:var(--ow-ink-600)}
+.stp{width:44px;height:44px;border:1px solid var(--ow-rule);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--ow-ink-900);flex:none}
+.sup{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--ow-rule-soft);border-radius:8px;font-size:14px}
+.sup.on{border-color:var(--ow-steel-950)}
+.sum{margin-top:14px;padding:12px 14px;background:var(--ow-steel-050);border-radius:8px;display:flex;justify-content:space-between;align-items:baseline}
+.dim{opacity:.45}
+/* ---- turn 2: Industry phone (tokens from _ds styles.css) and the hybrid ---- */
+.in{position:relative;width:390px;min-height:844px;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);font-size:15px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+.in-bar{height:44px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--color-divider);font-family:var(--font-heading);font-weight:600;font-size:16px;letter-spacing:.02em}
+.in-bar .ic{stroke-width:1.5;color:var(--color-neutral-700)}
+.in-b{flex:1;padding:14px 16px 16px}
+.in-t{font-family:var(--font-heading);font-weight:600;font-size:32px;line-height:1.05;letter-spacing:-.015em;margin:0 0 12px}
+.bp{position:relative;border:1px solid var(--color-divider)}
+.bp > .corner{position:absolute;width:11px;height:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)}
+.bp > .corner::before,.bp > .corner::after{content:"";position:absolute;background:currentColor}
+.bp > .corner::before{left:5px;top:0;width:1px;height:100%}
+.bp > .corner::after{top:5px;left:0;width:100%;height:1px}
+.bp > .corner.tl{top:-6px;left:-6px}.bp > .corner.tr{top:-6px;right:-6px}.bp > .corner.bl{bottom:-6px;left:-6px}.bp > .corner.br{bottom:-6px;right:-6px}
+.in-k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)}
+.in-cl{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 14px;margin:0 6px 16px}
+.in-cl-n{font-family:var(--font-heading);font-weight:600;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.in-cl-m{font-size:13px;color:var(--color-neutral-700);white-space:nowrap}
+.in-find{display:flex;align-items:center;gap:10px;height:48px;padding:0 12px;background:var(--color-surface);border:1px solid var(--color-divider);border-radius:var(--radius-md);color:var(--color-neutral-600);margin-bottom:16px}
+.in-find .ic{stroke-width:1.5;width:18px;height:18px}
+.in-list{margin:0 6px}
+.in-row{padding:12px 14px;border-top:1px solid var(--color-divider)}
+.in-row:first-child{border-top:0}
+.in-rh{display:flex;align-items:baseline;gap:10px}
+.in-num{font-family:var(--font-heading);font-size:13px;color:var(--color-neutral-600);min-width:14px}
+.in-name{flex:1;min-width:0;font-family:var(--font-heading);font-weight:600;font-size:18px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.in-sub{font-size:12px;color:var(--color-neutral-700);margin:1px 0 0 24px}
+.in-g{display:grid;grid-template-columns:1fr 1fr 1fr;margin:10px 0 0 24px;border:1px solid var(--color-divider)}
+.in-g > div{padding:6px 10px;border-left:1px solid var(--color-divider);min-width:0}
+.in-g > div:first-child{border-left:0}
+.in-g .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);display:block}
+.in-g .v{font-size:15px;font-weight:500;white-space:nowrap;display:block;font-variant-numeric:tabular-nums}
+.in-g .v.ed{color:var(--color-accent-700);text-decoration:underline dotted;text-underline-offset:3px}
+.in-add{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-top:1px solid var(--color-divider);color:var(--color-neutral-700);font-size:14px}
+.in-add .ic{stroke-width:1.5}
+.in-tags{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 14px}
+.in-tag{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--color-accent);color:var(--color-accent-700);font-size:13px;border-radius:var(--radius-sm);white-space:nowrap;flex:none}
+.in-tag b{font-weight:500;font-variant-numeric:tabular-nums}
+.in-tag.more{border-color:var(--color-divider);color:var(--color-neutral-700)}
+.in-dock{border-top:1px solid var(--color-divider);padding:12px 16px 14px;background:var(--color-bg)}
+.in-dock-r{display:flex;align-items:center;gap:10px}
+.in-says-v{font-family:var(--font-heading);font-weight:600;font-size:26px;line-height:1;letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.in-says-v small{font-size:13px;font-weight:400;color:var(--color-neutral-700);margin-left:4px;font-family:var(--font-body)}
+.in-btn{width:44px;height:44px;border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;flex:none;border-radius:var(--radius-md)}
+.in-btn .ic{stroke-width:1.5;width:18px;height:18px}
+.in-save{position:relative;height:44px;padding:0 18px;background:var(--color-accent);color:var(--color-bg);font-family:var(--font-heading);font-weight:600;font-size:16px;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;flex:none;border-radius:0;margin-right:6px}
+.in-tabs{height:60px;background:var(--color-bg);border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr)}
+.in-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--color-neutral-700)}
+.in-tab.on{color:var(--color-accent-700)}
+.in-tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+/* hybrid: house palette + type, Industry structure */
+.hy .ph-cl,.hy .ph-find,.hy .ph-list,.hy .ph-gi,.hy .ph-btn,.hy .ph-save,.hy .q-add-icon{border-radius:0}
+.hy .ph-chip{border-radius:0;border-color:var(--ow-rule)}
+.hy .ph-list{background:transparent}
+.hy .ph-card{background:transparent}
+.hy .ph-cl{background:transparent;border-color:var(--ow-rule)}
+.hy .ph-find{background:var(--ow-paper)}
+.hy .ph-gi{border-color:var(--ow-rule);background:transparent}
+.hy .ph-dock{background:var(--ow-steel-050)}
+.hy .ph-tabs{background:var(--ow-steel-050)}
+.hy .bp > .corner{color:var(--ow-ink-400)}
+/* ---- turn 3: condensed phone (14px body, 52px rows) ---- */
+.cd{position:relative;width:390px;height:844px;background:var(--ow-paper);font-size:14px;line-height:1.3;color:var(--ow-ink-900);display:flex;flex-direction:column;overflow:hidden}
+.cd p{margin:0}
+.cd-bar{height:48px;flex:none;background:var(--ow-steel-950);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px}
+.cd-bar .ph-ic{width:22px;height:22px}
+.cd-bt{font-size:16px;font-weight:600;flex:1;min-width:0}
+.cd-bt small{font-weight:400;color:#AEB7C0;font-size:12px;margin-left:8px}
+.cd-cl{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2)}
+.cd-cl-n{font-weight:600;font-size:14px}
+.cd-cl-m{font-family:var(--mono);font-size:12px;color:var(--ow-ink-600);font-variant-numeric:tabular-nums}
+.cd-find{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-600);font-size:14px}
+.cd-find .ic{width:16px;height:16px;color:var(--ow-ink-400)}
+.cd-find kbd{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);border:1px solid var(--ow-rule-soft);border-radius:4px;padding:1px 6px}
+.cd-body{flex:1;min-height:0;overflow:hidden}
+.cd-hd{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:0 8px;align-items:center;height:28px;padding:0 16px;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2)}
+.cd-r{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:1px 8px;align-items:center;min-height:54px;padding:8px 16px;border-bottom:1px solid var(--ow-rule-soft)}
+.cd-n{font-family:var(--mono);font-size:11px;color:var(--ow-ink-400);text-align:center;grid-row:1/3;align-self:start;padding-top:2px}
+.cd-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cd-tot{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;text-align:right}
+.cd-tot .u{font-size:11px}
+.cd-meta{grid-column:2/4;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ow-ink-600);min-width:0;white-space:nowrap;overflow:hidden}
+.cd-meta .ed{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ow-ink-900);font-weight:500;text-decoration:underline dotted var(--ow-ink-400);text-underline-offset:3px}
+.cd-meta .sp{flex:1}
+.cd-meta .src{overflow:hidden;text-overflow:ellipsis}
+.cd-r.chg .cd-name{font-weight:500}
+.cd-r.chg{min-height:44px;padding:6px 16px}
+.cd-r.chg .cd-n{grid-row:auto}
+/* 3b: inline controls */
+.cd-ctl{grid-column:2/4;display:flex;align-items:center;gap:6px;margin-top:5px}
+.cd-stp{display:inline-flex;align-items:center;height:32px;border:1px solid var(--ow-rule);border-radius:6px;overflow:hidden}
+.cd-stp span{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);font-size:16px}
+.cd-stp b{min-width:44px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:500;border-left:1px solid var(--ow-rule);border-right:1px solid var(--ow-rule);height:100%;display:flex;align-items:center;justify-content:center;gap:4px}
+.cd-stp b i{font-style:normal;font-family:'Inter',sans-serif;font-size:11px;color:var(--ow-ink-600);font-weight:400}
+.cd-pr{height:32px;flex:1;min-width:0;border:1px solid var(--ow-rule);border-radius:6px;display:flex;align-items:center;padding:0 10px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:500;background:#fff}
+.cd-pr .un{margin-left:auto;font-family:'Inter',sans-serif;font-size:11px;color:var(--ow-ink-400);white-space:nowrap;flex:none}
+.cd-add{position:relative}
+.cd-add::after{content:"";position:absolute;right:0;top:0;bottom:0;width:36px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff)}
+.cd-sup .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.cd-sup .fig{white-space:nowrap;margin-left:0;flex:none}
+.cd-ctl .eq{font-family:var(--mono);color:var(--ow-ink-400);font-size:13px}
+.cd-add{display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;color:var(--ow-ink-600);font-size:13px;border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;white-space:nowrap}
+.cd-add .q-add-icon{width:20px;height:20px}
+.cd-add .sug{padding:1px 8px;font-size:12px;height:24px}
+.cd-shop{display:flex;align-items:center;gap:6px;height:36px;padding:0 16px;background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);font-size:12px;color:var(--ow-ink-600)}
+.cd-shop .fig{font-size:12px;color:var(--ow-ink-900)}
+.cd-shop .ic{width:14px;height:14px;margin-left:auto}
+.cd-dock{flex:none;height:64px;display:flex;align-items:center;gap:8px;padding:0 16px;background:var(--ow-paper);border-top:1px solid var(--ow-rule)}
+.cd-dock .ph-says-l{font-size:10px}
+.cd-dock .ph-says-v{font-size:20px}
+.cd-dock .ph-btn{width:42px;height:42px;border-radius:7px}
+.cd-dock .ph-save{height:42px;padding:0 18px;border-radius:7px;font-size:14px}
+.cd-tabs{flex:none;height:56px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);display:grid;grid-template-columns:repeat(5,1fr)}
+.cd-tabs .ph-tab{font-size:10.5px;gap:2px}
+.cd-tabs .ph-tab svg{width:21px;height:21px}
+/* 3c: condensed item sheet */
+.cd-sheet{position:absolute;left:0;right:0;bottom:0;background:var(--ow-paper);border-radius:14px 14px 0 0;box-shadow:var(--ow-lift);padding:8px 16px 14px}
+.cd-sheet .fld{margin-top:12px}
+.cd-sheet .fld-l{font-size:10.5px;margin-bottom:5px}
+.cd-sheet .fld-in{height:44px;font-size:17px}
+.cd-sheet .stp{width:40px;height:44px;font-size:18px}
+.cd-seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ow-rule);border-radius:8px;overflow:hidden}
+.cd-seg > div{padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.cd-seg > div + div{border-left:1px solid var(--ow-rule)}
+.cd-seg .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);display:flex;align-items:center;gap:6px}
+.cd-seg .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}
+.cd-seg .v .u{font-size:11px}
+.cd-seg .on{background:var(--ow-steel-050)}
+.cd-sup{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid var(--ow-rule-soft);border-radius:8px;font-size:13px}
+.cd-sup.on{border-color:var(--ow-steel-950)}
+.cd-sup .pill{height:18px}
+.cd-sup .fig{font-size:13px;margin-left:0;white-space:nowrap;flex:none}
+/* ---- turn 4: search as its own field, Quote / Details tabs ---- */
+.cd-hdr{display:grid;grid-template-columns:repeat(3,auto) minmax(0,1fr);gap:0 18px;align-items:end;padding:8px 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2)}
+.cd-hdr .k{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-ink-600);display:block;margin-bottom:1px}
+.cd-hdr .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:500;white-space:nowrap;display:block}
+.cd-hdr .v .u{font-size:10px}
+.cd-fld{margin:10px 16px 8px;height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid var(--ow-rule);border-radius:8px;background:#fff;color:var(--ow-ink-600);font-size:14px}
+.cd-fld .ic{width:16px;height:16px;color:var(--ow-ink-400)}
+.cd-fld.focus{border-color:var(--ow-steel-950);color:var(--ow-ink-900)}
+.cd-seg2{display:grid;grid-template-columns:1fr 1fr;margin:0 16px 0;border-bottom:1px solid var(--ow-rule)}
+.cd-seg2 span{height:40px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--ow-ink-600);border-bottom:2px solid transparent;margin-bottom:-1px}
+.cd-seg2 span.on{color:var(--ow-ink-900);border-bottom-color:var(--ow-steel-950)}
+.cd-seg2 b{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ow-ink-600);background:var(--ow-steel-050);border-radius:4px;padding:1px 5px}
+.cd-seg2 .dotw{width:6px;height:6px;border-radius:50%;background:var(--ow-amber-ink)}
+.cd-sec{border-bottom:1px solid var(--ow-rule-soft)}
+.cd-sec-h{display:flex;align-items:center;height:34px;padding:0 16px;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);background:var(--ow-paper-2)}
+.cd-sec-h .n{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;font-weight:500}
+.cd-sec .rf{padding:9px 16px;border-top:1px solid var(--ow-rule-soft)}
+.cd-sec .cd-sec-h + .rf{border-top:0}
+.cd-sec .rf-l{font-size:13px;color:var(--ow-ink-900)}
+.cd-sec .rf-v{font-size:13px}
+.cd-sec .rl{padding:9px 16px 11px;font-size:13px}
+.cd-res{position:absolute;left:16px;right:16px;top:150px;background:#fff;border:1px solid var(--ow-rule);border-radius:8px;box-shadow:var(--ow-lift);overflow:hidden}
+.cd-rr{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:2px 10px;align-items:center;min-height:56px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft)}
+.cd-rr:first-child{border-top:0}
+.cd-rr .thumb{width:36px;height:36px;grid-row:1/3}
+.cd-rr .nm{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-rr mark{background:var(--ow-amber-soft);color:inherit;border-radius:2px;padding:0 1px}
+.cd-rr .sb{grid-column:2/4;font-size:12px;color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-rr .sb .fig{font-size:12px;color:var(--ow-ink-900);font-weight:500}
+.cd-rr .st{font-size:11px;white-space:nowrap}
+</style></helmet>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Search as its own field · Quote / Details tabs · search results</span></div>
+<p class="dv-note"><b>Search</b> leaves the list and becomes a field with its own margin and border, so the list starts clean at the column header. <b>The four rail panels</b> (Cheaper elsewhere, Stock to cover it, Goes with it, Last order) no longer sit under the list. A two-tab bar under the search switches between <b>Quote</b> and <b>Details</b>; Details carries a count and an amber dot when something needs a look (a cheaper supplier, short stock). <b>4c</b> fixes the search dropdown from your screenshot: one truncating name line with the match highlighted, one meta line, stock state at the right, 56px per result.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Quote tab — list only</div><div class="dv-card">
+<div class="cd">
+<div class="cd-bar"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg><svg class="ph-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></div>
+<div class="cd-cl"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span><span style="flex:1"></span><span class="cd-cl-m" style="font-family:'Inter',sans-serif">15 Sep</span><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="cd-fld"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item — name, SKU or supplier code</div>
+<div class="cd-seg2"><span class="on">Quote <b>2</b></span><span>Details <b>4</b><i class="dotw"></i></span></div>
+<div class="cd-body">
+<div class="cd-hd"><span></span><span>Item</span><span>Line total</span></div>
+<div class="cd-r"><span class="cd-n">1</span><span class="cd-name">Soft Close Mulper — Half Bend</span><span class="cd-tot">265,000 <span class="u">UGX</span></span><span class="cd-meta"><span class="ed">1 Ctn</span>×<span class="ed">265,000</span><span class="sp"></span><span class="src">Roto Industry</span></span></div>
+<div class="cd-r"><span class="cd-n">2</span><span class="cd-name">G-MAN Bow Saw</span><span class="cd-tot">10,500 <span class="u">UGX</span></span><span class="cd-meta"><span class="ed">1 Pcs</span>×<span class="ed">10,500</span><span class="sp"></span><span class="src">Max Hardware</span></span></div>
+<div class="cd-r chg"><span class="cd-n"></span><span class="cd-name">Transport <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px;margin-left:4px">charge</span></span><span class="cd-tot"><span class="ed" style="font-family:var(--mono);font-weight:500;text-decoration:underline dotted var(--ow-ink-400);text-underline-offset:3px">5,000</span> <span class="u">UGX</span></span></div>
+<div class="cd-add"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span><span class="sug">Delivery <b>60,000</b></span><span class="sug">Urgent <b>5%</b></span><span class="sug">On credit <b>+3%</b></span><span class="sug more">Other</span></div>
+</div>
+<div class="cd-shop">Shop side · costs you <span class="fig" style="color:var(--ow-ink-600);font-weight:500">259,500</span> · you keep <span class="fig">16,000</span><span class="pill">6%</span><svg class="ic" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></div>
+<div class="cd-dock"><div><div class="ph-says-l">Client pays · 3 lines</div><div class="ph-says-v">280,500 UGX</div></div><span style="flex:1"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div>
+<div class="cd-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Details tab — the four panels, client facts on top</div><div class="dv-card">
+<div class="cd">
+<div class="cd-bar"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg><svg class="ph-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></div>
+<div class="cd-cl"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span><span style="flex:1"></span><span class="cd-cl-m" style="font-family:'Inter',sans-serif">15 Sep</span><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="cd-fld"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item — name, SKU or supplier code</div>
+<div class="cd-seg2"><span>Quote <b>2</b></span><span class="on">Details <b>4</b><i class="dotw"></i></span></div>
+<div class="cd-body">
+<div class="cd-hdr"><span><span class="k">Orders</span><span class="v">1</span></span><span><span class="k">Owed now</span><span class="v">0 <span class="u">UGX</span></span></span><span><span class="k">Last order</span><span class="v">125,000 <span class="u">UGX</span></span></span><span style="font-size:12px;color:var(--ow-ink-600);white-space:nowrap;text-align:right">26 days ago</span></div>
+<div class="cd-sec"><div class="cd-sec-h">Cheaper elsewhere<span class="n">1 of 2</span></div><div class="rf"><span class="rf-l">G-MAN Bow Saw <span style="color:var(--ow-ink-600)">· Shafik Katwe</span></span><span class="rf-v" style="color:var(--ow-amber-ink)">−500 <span class="u">/ Bundle</span></span></div></div>
+<div class="cd-sec"><div class="cd-sec-h">Stock to cover it<span class="n">2 lines</span></div><div class="rf"><span class="rf-l">Soft Close Mulper — Half Bend</span><span class="rf-v">1 / 4</span></div><div class="rf"><span class="rf-l">G-MAN Bow Saw</span><span class="rf-v" style="color:var(--ow-crimson)">0 / 1 <span class="u" style="color:inherit">order in</span></span></div></div>
+<div class="cd-sec"><div class="cd-sec-h">Goes with it</div><p class="rl">Nothing written down for these lines yet.</p></div>
+<div class="cd-sec"><div class="cd-sec-h">Last order<span class="n">20 Aug</span></div><div class="rf"><span class="rf-l">Soft Close Mulper · 1 Ctn</span><span class="rf-v">125,000</span></div></div>
+</div>
+<div class="cd-shop">Shop side · costs you <span class="fig" style="color:var(--ow-ink-600);font-weight:500">259,500</span> · you keep <span class="fig">16,000</span><span class="pill">6%</span><svg class="ic" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></div>
+<div class="cd-dock"><div><div class="ph-says-l">Client pays · 3 lines</div><div class="ph-says-v">280,500 UGX</div></div><span style="flex:1"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div>
+<div class="cd-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Search results — one name line, one meta line, stock at right</div><div class="dv-card">
+<div class="cd">
+<div class="cd-bar"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span></div>
+<div class="cd-cl dim"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span></div>
+<div class="cd-fld focus"><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-900)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><b style="font-weight:500">maho</b><span style="margin-left:auto;font-size:12px;color:var(--ow-ink-400)">7 results</span></div>
+<div class="cd-seg2 dim"><span class="on">Quote <b>2</b></span><span>Details <b>4</b></span></div>
+<div class="cd-body dim"><div class="cd-hd"><span></span><span>Item</span><span>Line total</span></div></div>
+<div class="cd-res">
+<div class="cd-rr"><span class="thumb"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="nm"><mark>Maho</mark>gany Meggo Handles</span><span class="st pill">not counted</span><span class="sb"><span class="fig">29,000</span> / Pcs · no markup rule · <mark>Maho</mark>gany · A06B177</span></div>
+<div class="cd-rr"><span class="thumb"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="nm"><mark>Maho</mark>gany Lak Handles — Big</span><span class="st pill bad">out of stock</span><span class="sb"><span class="fig">35,000</span> / Pcs · no markup rule · <mark>Maho</mark>gany · L21</span></div>
+<div class="cd-rr"><span class="thumb"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="nm"><mark>Maho</mark>gany Oxford Hinges</span><span class="st pill">not counted</span><span class="sb">sell <span class="fig">215,000</span> / Ctn · <mark>Maho</mark>gany</span></div>
+<div style="height:40px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--ow-rule-soft);font-size:12px;color:var(--ow-ink-600)">4 more · keep typing to narrow</div>
+</div>
+<div class="cd-shop dim">Shop side</div>
+<div class="cd-dock dim"><div><div class="ph-says-l">Client pays · 3 lines</div><div class="ph-says-v">280,500 UGX</div></div><span style="flex:1"></span><span class="ph-save">Save quote</span></div>
+<div class="cd-tabs dim"><span class="ph-tab">Today</span><span class="ph-tab on">Sell</span><span class="ph-tab">Money</span><span class="ph-tab">Manager</span><span class="ph-tab">More</span></div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "make Details a bottom sheet instead of a tab" · "put the Orders / Owed / Last order strip on the Quote tab too" · "add these to the handoff"</p>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Condensed phone — the quote fits one screen</span></div>
+<p class="dv-note"><b>What was making it feel dull and zoomed out:</b> the shipped screen spends 190px above the first item on a 26px title, a subtitle, an "Order tracking" link and an empty client dropdown; each line takes 200px because qty, price and total are stacked as three labelled rows; the dock is two decks. <b>Here:</b> title moves into the top bar, client and search become two 44px rows, each line is 54px (name and total on one row, editable qty × price under it), charges sit in the same list, and the dock is one row with the shop side as a 36px strip above it. Two lines plus a charge, the add row and the money all fit in 844px with room for four more lines. Same fonts, same accent used once.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Dense list — tap a dotted value to edit it in place</div><div class="dv-card">
+<div class="cd">
+<div class="cd-bar"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg><svg class="ph-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></div>
+<div class="cd-cl"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span><span style="flex:1"></span><span class="cd-cl-m" style="font-family:'Inter',sans-serif">12 orders · owes 0</span><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="cd-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item — name, SKU or supplier code</div>
+<div class="cd-body">
+<div class="cd-hd"><span></span><span>Item</span><span>Line total</span></div>
+<div class="cd-r"><span class="cd-n">1</span><span class="cd-name">Soft Close Mulper — Half Bend</span><span class="cd-tot">265,000 <span class="u">UGX</span></span><span class="cd-meta"><span class="ed">1 Ctn</span>×<span class="ed">265,000</span><span class="sp"></span><span class="src">Roto Industry</span></span></div>
+<div class="cd-r"><span class="cd-n">2</span><span class="cd-name">G-MAN Bow Saw</span><span class="cd-tot">10,500 <span class="u">UGX</span></span><span class="cd-meta"><span class="ed">1 Pcs</span>×<span class="ed">10,500</span><span class="sp"></span><span class="src">Max Hardware</span></span></div>
+<div class="cd-r"><span class="cd-n">3</span><span class="cd-name">Runners — Soft Close 450mm</span><span class="cd-tot">184,000 <span class="u">UGX</span></span><span class="cd-meta"><span class="ed">2 Ctn</span>×<span class="ed">92,000</span><span class="sp"></span><span class="src">Our stock · 24 on shelf</span></span></div>
+<div class="cd-r chg"><span class="cd-n"></span><span class="cd-name">Transport <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px;margin-left:4px">charge</span></span><span class="cd-tot"><span class="ed" style="font-family:var(--mono);font-weight:500;text-decoration:underline dotted var(--ow-ink-400);text-underline-offset:3px">5,000</span> <span class="u">UGX</span></span></div>
+<div class="cd-add"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span><span class="sug">Delivery <b>60,000</b></span><span class="sug">Urgent <b>5%</b></span><span class="sug">On credit <b>+3%</b></span><span class="sug more">Other</span></div>
+</div>
+<div class="cd-shop">Shop side · costs you <span class="fig" style="color:var(--ow-ink-600);font-weight:500">435,500</span> · you keep <span class="fig">29,000</span><span class="pill">6%</span><svg class="ic" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></div>
+<div class="cd-dock"><div><div class="ph-says-l">Client pays · 4 lines</div><div class="ph-says-v">464,500 UGX</div></div><span style="flex:1"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div>
+<div class="cd-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Controls in the row — stepper and price field always visible, 78px per line</div><div class="dv-card">
+<div class="cd">
+<div class="cd-bar"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg><svg class="ph-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></div>
+<div class="cd-cl"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span><span style="flex:1"></span><span class="cd-cl-m" style="font-family:'Inter',sans-serif">12 orders · owes 0</span><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="cd-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item — name, SKU or supplier code</div>
+<div class="cd-body">
+<div class="cd-r" style="min-height:78px"><span class="cd-n">1</span><span class="cd-name">Soft Close Mulper — Half Bend <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px">· Roto Industry</span></span><span class="cd-tot">265,000 <span class="u">UGX</span></span><span class="cd-ctl"><span class="cd-stp"><span>−</span><b>1<i>Ctn</i></b><span>+</span></span><span class="eq">×</span><span class="cd-pr">265,000<span class="un">each</span></span></span></div>
+<div class="cd-r" style="min-height:78px"><span class="cd-n">2</span><span class="cd-name">G-MAN Bow Saw <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px">· Max Hardware</span></span><span class="cd-tot">10,500 <span class="u">UGX</span></span><span class="cd-ctl"><span class="cd-stp"><span>−</span><b>1<i>Pcs</i></b><span>+</span></span><span class="eq">×</span><span class="cd-pr" style="border-color:var(--ow-steel-950)">10,500<span class="un">rec.</span></span></span></div>
+<div class="cd-r" style="min-height:78px"><span class="cd-n">3</span><span class="cd-name">Runners — Soft Close 450mm <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px">· Our stock</span></span><span class="cd-tot">184,000 <span class="u">UGX</span></span><span class="cd-ctl"><span class="cd-stp"><span>−</span><b>2<i>Ctn</i></b><span>+</span></span><span class="eq">×</span><span class="cd-pr">92,000<span class="un">each</span></span></span></div>
+<div class="cd-r chg"><span class="cd-n"></span><span class="cd-name">Transport <span style="font-weight:400;color:var(--ow-ink-600);font-size:12px;margin-left:4px">charge</span></span><span class="cd-pr" style="flex:none;width:112px;justify-self:end">5,000<span class="un">UGX</span></span></div>
+<div class="cd-add"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span><span class="sug">Delivery <b>60,000</b></span><span class="sug">Urgent <b>5%</b></span><span class="sug">On credit <b>+3%</b></span><span class="sug more">Other</span></div>
+</div>
+<div class="cd-shop">Shop side · costs you <span class="fig" style="color:var(--ow-ink-600);font-weight:500">435,500</span> · you keep <span class="fig">29,000</span><span class="pill">6%</span><svg class="ic" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></div>
+<div class="cd-dock"><div><div class="ph-says-l">Client pays · 4 lines</div><div class="ph-says-v">464,500 UGX</div></div><span style="flex:1"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div>
+<div class="cd-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Add-item sheet condensed — everything above the button, no scroll</div><div class="dv-card">
+<div class="cd" style="background:var(--ow-steel-050)">
+<div class="cd-bar dim"><div class="ph-mk">OW</div><span class="cd-bt">New quote<small>Sell</small></span></div>
+<div class="cd-cl dim"><span class="cd-cl-n">Jackson</span><span class="cd-cl-m">0756053542</span></div>
+<div class="cd-find dim" style="color:var(--ow-ink-900);background:#fff"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><b>bow saw</b></div>
+<div style="position:absolute;inset:0;background:rgba(20,23,27,.35)"></div>
+<div class="cd-sheet">
+<div class="sheet-h"></div>
+<div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:700;line-height:1.2">G-MAN Bow Saw</div><p style="font-size:12px;color:var(--ow-ink-600);margin-top:2px">Furniture › Bow Saw · 10 Pcs / Bundle · wholesale <span class="fig" style="font-size:12px;color:var(--ow-ink-900);font-weight:500">+10,000</span></p></div><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-400);margin-top:3px"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+<div class="fld" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px">
+<div><p class="fld-l">Quantity</p><div style="display:flex;gap:6px;align-items:center"><span class="stp">−</span><div class="fld-in" style="width:92px;justify-content:center;padding:0 8px">1<span class="un" style="margin-left:6px">Pcs</span><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:var(--ow-ink-400);margin-left:4px"><path d="m6 9 6 6 6-6"></path></svg></div><span class="stp">+</span></div></div>
+<div style="min-width:0"><p class="fld-l">Sell price each</p><div class="fld-in focus">10,500<span class="un">UGX</span></div></div>
+</div>
+<div class="fld"><p class="fld-l">Recommended</p><div class="cd-seg"><div class="on"><span class="k"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="m21 8-9-5-9 5v8l9 5 9-5z"></path><path d="M3 8l9 5 9-5M12 13v9"></path></svg>Wholesale · using</span><span class="v">105,000 <span class="u">/ Bundle</span></span></div><div><span class="k"><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 6h15l-1.5 9h-12z"></path><path d="M6 6 5 3H2"></path><circle cx="9" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>Retail</span><span class="v" style="color:var(--ow-ink-400);font-weight:500">No rule set</span></div></div></div>
+<div class="fld"><p class="fld-l">Buy from</p><div style="display:flex;flex-direction:column;gap:6px"><div class="cd-sup on"><span class="pill">Best</span><span class="nm">Max Hardware</span><span class="fig" style="font-weight:500;color:var(--ow-ink-600)">95,000 <span class="u">/ Bundle</span></span><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px;margin-left:6px"><path d="m5 12 4 4L19 6"></path></svg></div><div class="cd-sup"><span class="pill">2nd</span><span class="nm">Shafik Katwe</span><span class="fig" style="font-weight:500;color:var(--ow-ink-600)">95,000 <span class="u">/ Bundle</span></span></div></div></div>
+<div class="sum" style="margin-top:12px;padding:10px 14px"><span style="font-size:13px;font-weight:600">This line <span style="font-weight:400;color:var(--ow-ink-600)">· you keep 1,000 · 10%</span></span><span class="fig" style="font-size:17px">10,500 <span class="u">UGX</span></span></div>
+<span class="ph-save" style="margin-top:10px;height:46px;font-size:15px;border-radius:7px">Add to quote</span>
+</div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "<a class="dv-oid" href="#3a">3a</a> with the shop side open" · "<a class="dv-oid" href="#3b">3b</a> in Industry, like <a class="dv-oid" href="#2a">2a</a>" · "the empty state at this density"</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Two other themes for the phone, beside <a class="dv-oid" href="#1e">1e</a></span></div>
+<p class="dv-note"><b>2a</b> is the Industry system attached to this project: steel accent, Barlow Condensed names and figures, square hairline blueprint frames with registration marks, one filled button. <b>2b</b> keeps the house palette, Inter and mono money, but takes Industry's structure — square corners, hairline frames on the page ground, no filled cards. Same quote, same dock, same tab bar so the comparison is fair.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Industry — steel blueprint</div><div class="dv-card">
+<div class="in">
+<div class="in-bar"><span>OMNI-WARE</span><span style="color:var(--color-neutral-500);font-weight:400">/ Sell</span><span style="flex:1"></span><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg></div>
+<div class="in-b">
+<h1 class="in-t">New quote</h1>
+<div class="bp in-cl"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="in-cl-n">Jackson</span><span class="in-cl-m">0756053542</span><span style="flex:1"></span><span class="in-cl-m">14 Sep</span><svg class="ic" viewBox="0 0 24 24" style="stroke-width:1.5;color:var(--color-neutral-600)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="in-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item…</div>
+<div class="bp in-list"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="in-row"><div class="in-rh"><span class="in-num">01</span><span class="in-name">Gold Screws — 6*80 / 25kgs</span><svg class="ic" viewBox="0 0 24 24" style="stroke-width:1.5;color:var(--color-neutral-600);width:14px;height:14px"><path d="M6 6l12 12M18 6L6 18"></path></svg></div><p class="in-sub">Ctn · Karddia</p>
+<div class="in-g"><div><span class="k">Qty</span><span class="v ed">1 Ctn</span></div><div><span class="k">Each</span><span class="v ed">250,000</span></div><div><span class="k">Line</span><span class="v">250,000</span></div></div></div>
+<div class="in-row"><div class="in-rh"><span class="in-num">02</span><span class="in-name">Runners — Soft Close 450mm</span><svg class="ic" viewBox="0 0 24 24" style="stroke-width:1.5;color:var(--color-neutral-600);width:14px;height:14px"><path d="M6 6l12 12M18 6L6 18"></path></svg></div><p class="in-sub">Ctn · Our stock</p>
+<div class="in-g"><div><span class="k">Qty</span><span class="v ed">2 Ctn</span></div><div><span class="k">Each</span><span class="v ed">92,000</span></div><div><span class="k">Line</span><span class="v">184,000</span></div></div></div>
+<div class="in-row"><div class="in-rh"><span class="in-num"></span><span class="in-name" style="font-weight:400">Transport</span><span class="v" style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--color-accent-700);text-decoration:underline dotted;text-underline-offset:3px">5,000</span></div><p class="in-sub">Charge</p></div>
+<div class="in-add"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Add a charge or credit terms</div>
+<div class="in-tags"><span class="in-tag">Delivery <b>60,000</b></span><span class="in-tag">Urgent <b>5%</b></span><span class="in-tag">On credit <b>+3%</b></span><span class="in-tag more">Other</span></div>
+</div>
+</div>
+<div class="in-dock"><div class="in-dock-r"><div><span class="in-k">Client pays</span><div class="in-says-v">439,000<small>UGX</small></div></div><span style="flex:1"></span><span class="in-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="bp in-save" style="border-color:var(--color-accent-700)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Save quote</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;color:var(--color-neutral-700)"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;stroke-width:1.5"><path d="m9 6 6 6-6 6"></path></svg>Shop side · 3 lines</div></div>
+<div class="in-tabs"><span class="in-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="in-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg>Sell</span><span class="in-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="in-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="in-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Hybrid — house palette and mono money, Industry's square hairline structure</div><div class="dv-card">
+<div class="ph hy">
+<div class="ph-bar"><div class="ph-mk" style="border-radius:0">OW</div><span class="ph-bt">Sell</span><span class="ph-sp"></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg></div>
+<div class="ph-b" style="padding-top:14px">
+<div class="bp ph-cl" style="margin:0 6px 16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="ph-cl-n">Jackson</span><span class="ph-cl-m">0756053542</span><span class="ph-sp"></span><span class="ph-cl-m" style="font-family:'Inter',sans-serif">14 Sep</span><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="ph-find" style="margin-bottom:16px"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item…</div>
+<div class="bp ph-list" style="margin:0 6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="ph-card"><div class="ph-head"><span class="ph-num">1</span><span class="ph-nm"><div class="ph-name">Gold Screws — 6*80 / 25kgs</div><div class="ph-sub">Ctn · Karddia</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">1 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">250,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">250,000 UGX</span></div></div></div>
+<div class="ph-card"><div class="ph-head"><span class="ph-num">2</span><span class="ph-nm"><div class="ph-name">Runners — Soft Close 450mm</div><div class="ph-sub">Ctn · Our stock</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">2 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">92,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">184,000 UGX</span></div></div></div>
+<div class="ph-card ph-charge" style="padding-bottom:10px"><div class="ph-head"><span class="ph-num"></span><span class="ph-nm"><div class="ph-name">Transport</div><div class="ph-sub">Charge</div></span><span class="ph-sp"></span><span class="ph-gi" style="min-width:80px">5,000</span></div></div>
+<div style="padding:0 16px;border-top:1px solid var(--ow-rule-soft)"><div class="ph-add" style="height:40px"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span>Add a charge or credit terms</div><div class="ph-chips" style="padding-bottom:12px"><span class="ph-chip">Delivery <b>60,000</b></span><span class="ph-chip">Urgent <b>5%</b></span><span class="ph-chip">On credit <b>+3%</b></span><span class="ph-chip more">Other</span></div></div>
+</div>
+</div>
+<div class="ph-dock"><div class="ph-dock-r"><div><div class="ph-says-l">Client pays</div><div class="ph-says-v">439,000 UGX</div></div><span class="ph-sp"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="bp ph-save" style="border-color:var(--ow-oxide-deep);margin-right:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Save quote</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--ow-ink-600)"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"></path></svg>Shop side · 3 lines</div></div>
+<div class="ph-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "carry <a class="dv-oid" href="#2a">2a</a> to the desktop" · "<a class="dv-oid" href="#2b">2b</a> but keep rounded buttons" · "show the item stage in Industry"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">New quote — desktop refinements and the phone's own design</span></div>
+<p class="dv-note"><b>Context:</b> built on the omni-ware house system (oxide accent once per screen, Inter + IBM Plex Mono figures, hairlines not shadows, 820px is a switch between two designs). <b>What changed:</b> the charge and credit rows become rows of the document instead of two chrome bands; the foot and the sticky bar stop saying the same thing twice; the bar's icon buttons get their words back on desktop; the rail's four cards become one panel. <b>Margin on the phone</b> sits behind a tap, as asked.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Before — as shipped (redrawn from your screenshot)</div><div class="dv-card">
+<div class="art" style="height:820px">
+<div class="pg">
+<div class="ow-ph"><h1 class="ow-ph-t">New quote</h1><span class="ow-ph-i">i</span><p class="ow-ph-sub">Build the order live, on the call.</p><span class="ow-ph-sp"></span><span class="lnk"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg>Order tracking</span></div>
+<div class="ow-cb">
+<div class="ow-cb-k" style="width:290px"><p class="ow-cb-l">Client</p><div class="ow-cb-v">Jackson</div></div>
+<div class="ow-cb-k" style="width:168px"><p class="ow-cb-l">Phone</p><div class="ow-cb-v m">0756053542</div></div>
+<div class="ow-cb-k" style="width:170px"><p class="ow-cb-l">Date</p><div class="ow-cb-v m" style="display:flex;gap:18px;align-items:center">09/14/2026<svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></div></div>
+<div class="ow-cb-k" style="width:70px"><p class="ow-cb-l" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px">Orders</p><div class="ow-cb-v m">12</div></div>
+<div class="ow-cb-k" style="flex:1"><p class="ow-cb-l" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px">Last order</p><div class="ow-cb-v" style="font-size:14px">14 Sept 2026 · <span class="fig">230,000 <span class="u">UGX</span></span></div></div>
+</div>
+<div class="usual">
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Black Screws — 8* /…</span><span class="uc-s">Last: 7 Box · 16 hours ago</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Runners — Soft Clos…</span><span class="uc-s">Last: 2 Ctn · 6 days ago</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">ABC Black Screws —…</span><span class="uc-s">Last: 40 Box · 17 days a…</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Runners — Masasi / …</span><span class="uc-s">Last: 2 Ctn · 18 days ago</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Gold Screws — 4*4…</span><span class="uc-s">Last: 20 Kg · 15 hours a…</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Runners — Soft Clos…</span><span class="uc-s">Last: 1 Ctn · 16 hours ago</span></span><span class="uc-add"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:2.4"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+</div>
+<div style="height:10px;margin:-6px 0 12px;background:var(--ow-steel-100);border-radius:5px;position:relative"><div style="position:absolute;left:14px;top:0;bottom:0;width:78%;background:var(--ow-ink-400);border-radius:5px"></div></div>
+<div class="ow-grid">
+<div class="ow-pan">
+<div class="q-search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span>Add item — search name, SKU or supplier code…</span></div>
+<div class="ow-tbl">
+<div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">Item</div><div class="ow-tbl-n">Qty</div><div class="ow-tbl-n">Price each</div><div class="ow-tbl-n">Line total</div><div class="ow-tbl-c q-shop-first">Supplier</div><div class="ow-tbl-n">Buy @</div><div class="ow-tbl-n">Margin</div></div>
+<div class="ow-tbl-r" style="background:var(--ow-crimson-soft)"><div class="ow-tbl-c q-gutter"><span class="q-row-num">1</span></div><div class="ow-tbl-c"><span class="ow-tbl-p">Gold Screws — 6*80 / 25kgs</span><span class="ow-tbl-s">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">1</span> <span style="font-size:11px;color:var(--ow-ink-600)">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">250000</span><svg class="ic" viewBox="0 0 24 24" style="width:13px;height:13px;color:var(--ow-ink-600);vertical-align:middle;margin-left:14px"><path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 3v6h-6"></path></svg></div><div class="ow-tbl-n"><span class="fig">250,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first">Karddia</div><div class="ow-tbl-n"><span class="ow-gi">250000</span></div><div class="ow-tbl-n"><span class="pill bad">0%</span></div></div>
+<div class="ow-tbl-r" style="min-height:38px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Add the next item — or type in the search above</div></div>
+<div class="ow-tbl-r" style="min-height:38px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Add a charge <span class="sug">Transport <b>5,000 UGX</b></span> <span class="sug more">Something else</span></div></div>
+<div class="ow-tbl-r" style="min-height:38px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Or on credit <span class="sug">your terms <b>+3%</b></span> they pay 257,500 UGX instead of 250,000 UGX</div></div>
+<div class="ow-tbl-f q-foot q-foot-pays"><div class="q-foot-l">The client pays</div><div class="ow-tbl-n"><span class="fig">250,000 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first"></div></div>
+<div class="ow-tbl-f q-foot q-foot-cost"><div class="q-foot-l">Costs you</div><div class="ow-tbl-n"><span class="fig" style="color:var(--ow-ink-600);font-weight:500">250,000 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first"></div></div>
+<div class="ow-tbl-f q-foot q-foot-keep"><div class="q-foot-l">You keep</div><div class="ow-tbl-n"><span class="fig">0 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first"></div></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">This client</span><span class="ow-pan-n">12 orders</span></div><div class="rf"><span class="rf-l">Owed now</span><span class="rf-v">0 UGX</span></div></div>
+<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Cheaper elsewhere</span><span class="ow-pan-n">0 of 1</span></div><p class="rl">Every bought-in line is already at the cheapest supplier that has it, at its quantity.</p></div>
+<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Goes with it</span></div><p class="rl">Nothing is written down about these lines — What goes with what is where it is written, and it is read here.</p></div>
+<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span></div><div class="rf"><span class="rf-l">Gold Screws — 6*80 / 25kgs</span><span class="rf-v">25 / 25</span></div></div>
+</div>
+</div>
+</div>
+<div class="bar"><div><div style="display:flex;align-items:baseline;gap:12px"><span class="bar-l">Client pays</span><span class="bar-v">250,000 <span class="u">UGX</span></span></div><div class="bar-s" style="margin-top:2px">You keep <span class="fig" style="color:var(--ow-crimson);font-size:12px">0 UGX</span> <span class="pill bad" style="margin-left:6px">0%</span></div></div>
+<div class="bar-acts"><span class="qbar-btn ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg></span><span class="qbar-btn ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="qbar-btn ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></span><span class="qbar-save"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8M7 3v5h8"></path></svg>Save quote</span></div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Document owns the money — charges are rows, the bar goes slim, buttons keep their words</div><div class="dv-card">
+<div class="art" style="height:820px">
+<div class="pg">
+<div class="ow-ph"><h1 class="ow-ph-t">New quote</h1><span class="ow-ph-i">i</span><p class="ow-ph-sub">Build the order live, on the call.</p><span class="ow-ph-sp"></span><span class="lnk"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg>Order tracking</span></div>
+<div class="ow-cb">
+<div class="ow-cb-k" style="width:290px"><p class="ow-cb-l">Client</p><div class="ow-cb-v">Jackson</div><p class="ow-cb-s">12 orders · owes nothing</p></div>
+<div class="ow-cb-k" style="width:168px"><p class="ow-cb-l">Phone</p><div class="ow-cb-v m">0756053542</div></div>
+<div class="ow-cb-k" style="width:150px"><p class="ow-cb-l">Date</p><div class="ow-cb-v m">14 Sep 2026</div></div>
+<div class="ow-cb-k" style="flex:1"><p class="ow-cb-l">Last order</p><div class="ow-cb-v" style="font-size:14px;font-weight:400">14 Sept 2026 · <span class="fig">230,000 <span class="u">UGX</span></span> · Gold Screws 6*80, Runners</div></div>
+</div>
+<div class="usual" style="margin-bottom:14px">
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Black Screws — 8* / 1"</span><span class="uc-s">Last: 7 Box · 16 hours ago</span></span><span class="uc-add q"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Runners — Soft Close</span><span class="uc-s">Last: 2 Ctn · 6 days ago</span></span><span class="uc-add q"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">ABC Black Screws</span><span class="uc-s">Last: 40 Box · 17 days ago</span></span><span class="uc-add q"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Runners — Masasi</span><span class="uc-s">Last: 2 Ctn · 18 days ago</span></span><span class="uc-add q"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc"><span class="thumb"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span class="uc-t"><span class="uc-n">Gold Screws — 4*40</span><span class="uc-s">Last: 20 Kg · 15 hours ago</span></span><span class="uc-add q"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="uc" style="width:auto;padding:0 14px;color:var(--ow-ink-600);font-size:12px;white-space:nowrap">+3 more →</div>
+</div>
+<div class="ow-grid">
+<div class="ow-pan">
+<div class="q-search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span>Add item — search name, SKU or supplier code…</span><kbd>/</kbd></div>
+<div class="ow-tbl">
+<div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">Item</div><div class="ow-tbl-n">Qty</div><div class="ow-tbl-n">Price each</div><div class="ow-tbl-n">Line total</div><div class="ow-tbl-c q-shop-first">Supplier</div><div class="ow-tbl-n">Buy @</div><div class="ow-tbl-n">Margin</div></div>
+<div class="ow-tbl-r"><div class="ow-tbl-c q-gutter"><span class="q-row-num">1</span></div><div class="ow-tbl-c"><span class="ow-tbl-p">Gold Screws — 6*80 / 25kgs</span><span class="ow-tbl-s">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">1</span> <span style="font-size:11px;color:var(--ow-ink-600)">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">250000</span></div><div class="ow-tbl-n"><span class="fig">250,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first">Karddia</div><div class="ow-tbl-n"><span class="ow-gi">250000</span></div><div class="ow-tbl-n"><span class="pill warn">0%</span></div></div>
+<div class="ow-tbl-r" style="background:var(--ow-paper-2)"><div class="ow-tbl-c q-gutter"><span class="q-row-num">2</span></div><div class="ow-tbl-c"><span class="ow-tbl-p">Runners — Soft Close 450mm</span><span class="ow-tbl-s">Ctn · 24 in stock</span></div><div class="ow-tbl-n"><span class="ow-gi hov">2</span> <span style="font-size:11px;color:var(--ow-ink-600)">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi hov">92000</span></div><div class="ow-tbl-n"><span class="fig">184,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first">Our stock</div><div class="ow-tbl-n"><span class="ow-gi hov">80000</span></div><div class="ow-tbl-n"><span class="pill good">13%</span></div></div>
+<div class="ow-tbl-r"><div class="ow-tbl-c q-gutter"></div><div class="ow-tbl-c"><span class="ow-tbl-p" style="font-weight:500">Transport</span><span class="ow-tbl-s">Charge</span></div><div class="ow-tbl-n"></div><div class="ow-tbl-n"><span class="ow-gi">5000</span></div><div class="ow-tbl-n"><span class="fig">5,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first"></div><div class="ow-tbl-n"></div><div class="ow-tbl-n"></div></div>
+<div class="ow-tbl-r" style="min-height:38px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Add the next item — or type in the search above</div></div>
+<div class="ow-tbl-r" style="min-height:38px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Add a charge <span class="sug">Delivery <b>60,000</b></span><span class="sug">Urgent <b>5%</b></span><span class="sug more">Something else</span><span style="margin-left:14px;color:var(--ow-ink-400)">·</span><span style="margin-left:6px">or on credit</span><span class="sug">your terms <b>+3%</b></span></div></div>
+<div class="ow-tbl-f q-foot q-foot-pays"><div class="q-foot-l">The client pays</div><div class="ow-tbl-n"><span class="fig">439,000 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first"></div></div>
+<div class="ow-tbl-f q-foot q-foot-cost"><div class="q-foot-l">Costs you</div><div class="ow-tbl-n"><span class="fig" style="color:var(--ow-ink-600);font-weight:500">410,000 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first"></div></div>
+<div class="ow-tbl-f q-foot q-foot-keep"><div class="q-foot-l">You keep on the items</div><div class="ow-tbl-n"><span class="fig">24,000 <span class="u">UGX</span></span></div><div class="q-foot-x q-shop-first" style="gap:8px;font-size:12px;color:var(--ow-ink-600)"><span class="pill">6%</span>thin on Gold Screws</div></div>
+</div>
+</div>
+<div class="ow-pan">
+<div class="ow-pan-h"><span class="ow-pan-t">Cheaper elsewhere</span><span class="ow-pan-n">0 of 1</span></div>
+<p class="rl">Every bought-in line is already at the cheapest supplier that has it, at its quantity.</p>
+<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft)"><span class="ow-pan-t">Stock to cover it</span><span class="ow-pan-n">2 lines</span></div>
+<div class="rf"><span class="rf-l">Gold Screws — 6*80 / 25kgs</span><span class="rf-v">25 / 25</span></div>
+<div class="rf"><span class="rf-l">Runners — Soft Close 450mm</span><span class="rf-v">2 / 24</span></div>
+<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft)"><span class="ow-pan-t">Goes with it</span></div>
+<p class="rl">Nothing written down for these lines yet.</p>
+</div>
+</div>
+</div>
+<div class="bar" style="padding:10px 24px"><div style="display:flex;align-items:baseline;gap:12px"><span class="bar-l">Client pays</span><span class="bar-v">439,000 <span class="u">UGX</span></span><span class="bar-s">· 3 lines · you keep <span class="fig" style="font-size:12px">24,000</span> <span class="pill" style="margin-left:2px">6%</span></span></div>
+<div class="bar-acts"><span class="qbar-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>Client copy</span><span class="qbar-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg>WhatsApp</span><span class="qbar-btn ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></span><span class="qbar-save">Save quote</span></div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Bar owns the money — no foot in the table, the bar is the arithmetic; client facts fold into the band</div><div class="dv-card">
+<div class="art" style="height:820px">
+<div class="pg">
+<div class="ow-ph"><h1 class="ow-ph-t">New quote</h1><span class="ow-ph-i">i</span><p class="ow-ph-sub">Build the order live, on the call.</p><span class="ow-ph-sp"></span><span class="lnk"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg>Order tracking</span></div>
+<div class="ow-grid">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div class="ow-cb">
+<div class="ow-cb-k" style="flex:1.4"><p class="ow-cb-l">Client</p><div class="ow-cb-v">Jackson <span style="font-family:var(--mono);font-weight:400;font-size:13px;color:var(--ow-ink-600);margin-left:8px">0756053542</span></div></div>
+<div class="ow-cb-k" style="flex:.8"><p class="ow-cb-l">Date</p><div class="ow-cb-v m">14 Sep 2026</div></div>
+<div class="ow-cb-k" style="flex:.6"><p class="ow-cb-l">Orders</p><div class="ow-cb-v m">12</div></div>
+<div class="ow-cb-k" style="flex:.8"><p class="ow-cb-l">Owed now</p><div class="ow-cb-v m">0 <span class="u">UGX</span></div></div>
+<div class="ow-cb-k" style="flex:1.3"><p class="ow-cb-l">Last order</p><div class="ow-cb-v m">230,000 <span class="u">UGX</span> <span style="font-family:'Inter',sans-serif;font-weight:400;font-size:12px;color:var(--ow-ink-600)">· yesterday</span></div></div>
+</div>
+<div class="ow-pan">
+<div class="q-search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span>Add item — search name, SKU or supplier code…</span><kbd>/</kbd></div>
+<div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--ow-rule-soft);align-items:center;overflow:hidden"><span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);flex:none;margin-right:4px">Usually buys</span><span class="sug">Black Screws 8* <b>7 Box</b></span><span class="sug">Runners Soft Close <b>2 Ctn</b></span><span class="sug">ABC Black Screws <b>40 Box</b></span><span class="sug">Runners Masasi <b>2 Ctn</b></span><span class="sug">Gold Screws 4*40 <b>20 Kg</b></span><span class="sug more">+3</span></div>
+<div class="ow-tbl">
+<div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">Item</div><div class="ow-tbl-n">Qty</div><div class="ow-tbl-n">Price each</div><div class="ow-tbl-n">Line total</div><div class="ow-tbl-c q-shop-first">Supplier</div><div class="ow-tbl-n">Buy @</div><div class="ow-tbl-n">Margin</div></div>
+<div class="ow-tbl-r"><div class="ow-tbl-c q-gutter"><span class="q-row-num">1</span></div><div class="ow-tbl-c"><span class="ow-tbl-p">Gold Screws — 6*80 / 25kgs</span><span class="ow-tbl-s">Ctn · 25 in stock</span></div><div class="ow-tbl-n"><span class="ow-gi">1</span> <span style="font-size:11px;color:var(--ow-ink-600)">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">250000</span></div><div class="ow-tbl-n"><span class="fig">250,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first">Karddia</div><div class="ow-tbl-n"><span class="ow-gi">250000</span></div><div class="ow-tbl-n"><span class="pill warn">0%</span></div></div>
+<div class="ow-tbl-r"><div class="ow-tbl-c q-gutter"><span class="q-row-num">2</span></div><div class="ow-tbl-c"><span class="ow-tbl-p">Runners — Soft Close 450mm</span><span class="ow-tbl-s">Ctn · 24 in stock</span></div><div class="ow-tbl-n"><span class="ow-gi">2</span> <span style="font-size:11px;color:var(--ow-ink-600)">Ctn</span></div><div class="ow-tbl-n"><span class="ow-gi">92000</span></div><div class="ow-tbl-n"><span class="fig">184,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first">Our stock</div><div class="ow-tbl-n"><span class="ow-gi">80000</span></div><div class="ow-tbl-n"><span class="pill good">13%</span></div></div>
+<div class="ow-tbl-r"><div class="ow-tbl-c q-gutter"></div><div class="ow-tbl-c"><span class="ow-tbl-p" style="font-weight:500">Transport</span><span class="ow-tbl-s">Charge</span></div><div class="ow-tbl-n"></div><div class="ow-tbl-n"><span class="ow-gi">5000</span></div><div class="ow-tbl-n"><span class="fig">5,000 <span class="u">UGX</span></span></div><div class="ow-tbl-c q-shop-first"></div><div class="ow-tbl-n"></div><div class="ow-tbl-n"></div></div>
+<div class="ow-tbl-r" style="min-height:44px"><div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span></div><div class="q-add-ph">Next item, a charge, or credit terms <span class="sug">Delivery <b>60,000</b></span><span class="sug">Urgent <b>5%</b></span><span class="sug">On credit <b>+3%</b></span></div></div>
+</div>
+</div>
+</div>
+<div class="ow-pan">
+<div class="ow-pan-h"><span class="ow-pan-t">Cheaper elsewhere</span><span class="ow-pan-n">0 of 1</span></div>
+<p class="rl">Karddia is already the cheapest for Gold Screws at 1 Ctn.</p>
+<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft)"><span class="ow-pan-t">Stock to cover it</span><span class="ow-pan-n">2 lines</span></div>
+<div class="rf"><span class="rf-l">Gold Screws — 6*80 / 25kgs</span><span class="rf-v">25 / 25</span></div>
+<div class="rf"><span class="rf-l">Runners — Soft Close 450mm</span><span class="rf-v">2 / 24</span></div>
+<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft)"><span class="ow-pan-t">Goes with it</span></div>
+<p class="rl">Nothing written down for these lines yet.</p>
+<div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft)"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">14 Sept</span></div>
+<div class="rf"><span class="rf-l">Gold Screws — 6*80 · 1 Ctn</span><span class="rf-v">230,000</span></div>
+</div>
+</div>
+</div>
+<div class="bar" style="padding:0 24px;height:64px;gap:0">
+<div style="display:flex;align-items:baseline;gap:12px;padding-right:22px;border-right:1px solid var(--ow-rule-soft)"><span class="bar-l">Client pays</span><span class="bar-v">439,000 <span class="u">UGX</span></span></div>
+<div style="display:flex;align-items:baseline;gap:8px;padding:0 22px;border-right:1px solid var(--ow-rule-soft)"><span class="bar-l">Costs you</span><span class="fig" style="font-size:15px;color:var(--ow-ink-600);font-weight:500">410,000 <span class="u">UGX</span></span></div>
+<div style="display:flex;align-items:baseline;gap:8px;padding:0 22px"><span class="bar-l">You keep</span><span class="fig" style="font-size:15px">24,000 <span class="u">UGX</span></span><span class="pill">6%</span></div>
+<div class="bar-acts"><span class="qbar-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg>Send on WhatsApp</span><span class="qbar-btn ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></span><span class="qbar-save">Save quote</span></div></div>
+</div>
+</div></div>
+
+</div>
+
+<div class="dv-thd" style="margin-top:36px"><span class="dv-tname">The phone — 390px, its own design. Navy top bar + tab bar as in the app; the Save bar sits above the tabs, in the thumb zone. Shop margin is behind a tap.</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Empty — names the next act</div><div class="dv-card">
+<div class="ph">
+<div class="ph-bar"><div class="ph-mk">OW</div><span class="ph-bt">Sell</span><span class="ph-sp"></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg></div>
+<div class="ph-b">
+<h1 class="ph-t">New quote</h1>
+<div class="ph-cl"><span class="ph-cl-n">Jackson</span><span class="ph-cl-m">0756053542</span><span class="ph-sp"></span><span class="ph-cl-m" style="font-family:'Inter',sans-serif">12 orders</span><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="ph-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Search name, SKU or supplier code</div>
+<div class="ph-list">
+<div class="ph-empty"><b>Nothing on the quote yet</b>Search above to add the first item, or take one of Jackson's usuals.</div>
+<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:8px">
+<div class="ph-cl" style="margin:0;border-color:var(--ow-rule-soft)"><span class="thumb" style="width:30px;height:30px"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span style="min-width:0;flex:1"><div class="ph-cl-n">Black Screws — 8* / 1"</div><div class="ph-sub">Last: 7 Box · yesterday</div></span><span class="q-add-icon" style="width:36px;height:36px"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="ph-cl" style="margin:0;border-color:var(--ow-rule-soft)"><span class="thumb" style="width:30px;height:30px"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span style="min-width:0;flex:1"><div class="ph-cl-n">Runners — Soft Close</div><div class="ph-sub">Last: 2 Ctn · 6 days ago</div></span><span class="q-add-icon" style="width:36px;height:36px"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div class="ph-cl" style="margin:0;border-color:var(--ow-rule-soft)"><span class="thumb" style="width:30px;height:30px"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span style="min-width:0;flex:1"><div class="ph-cl-n">Gold Screws — 4*40</div><div class="ph-sub">Last: 20 Kg · yesterday</div></span><span class="q-add-icon" style="width:36px;height:36px"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M12 5v14M5 12h14"></path></svg></span></div>
+<div style="text-align:center;font-size:13px;color:var(--ow-ink-600);padding-top:4px">5 more usuals</div>
+</div>
+</div>
+</div>
+<div class="ph-dock"><div class="ph-dock-r"><div><div class="ph-says-l">Client pays</div><div class="ph-says-v" style="color:var(--ow-ink-400)">0 UGX</div></div><span class="ph-sp"></span><span class="ph-save off">Save quote</span></div></div>
+<div class="ph-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Building — item cards, a charge as a card, client folded</div><div class="dv-card">
+<div class="ph">
+<div class="ph-bar"><div class="ph-mk">OW</div><span class="ph-bt">Sell</span><span class="ph-sp"></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg></div>
+<div class="ph-b">
+<div class="ph-cl"><span class="ph-cl-n">Jackson</span><span class="ph-cl-m">0756053542</span><span class="ph-sp"></span><span class="ph-cl-m" style="font-family:'Inter',sans-serif">14 Sep</span><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="ph-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item…</div>
+<div class="ph-list">
+<div class="ph-card"><div class="ph-head"><span class="ph-num">1</span><span class="ph-nm"><div class="ph-name">Gold Screws — 6*80 / 25kgs</div><div class="ph-sub">Ctn · Karddia</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">1 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">250,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">250,000 UGX</span></div></div></div>
+<div class="ph-card"><div class="ph-head"><span class="ph-num">2</span><span class="ph-nm"><div class="ph-name">Runners — Soft Close 450mm</div><div class="ph-sub">Ctn · Our stock</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">2 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">92,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">184,000 UGX</span></div></div></div>
+<div class="ph-card ph-charge" style="padding-bottom:10px"><div class="ph-head"><span class="ph-num"></span><span class="ph-nm"><div class="ph-name">Transport</div><div class="ph-sub">Charge</div></span><span class="ph-sp"></span><span class="ph-gi" style="min-width:80px">5,000</span></div></div>
+<div style="padding:0 16px;border-top:1px solid var(--ow-rule-soft)"><div class="ph-add" style="height:40px"><span class="q-add-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span>Add a charge or credit terms</div><div class="ph-chips" style="padding-bottom:12px"><span class="ph-chip">Delivery <b>60,000</b></span><span class="ph-chip">Urgent <b>5%</b></span><span class="ph-chip">On credit <b>+3%</b></span><span class="ph-chip more">Other</span></div></div>
+</div>
+</div>
+<div class="ph-dock"><div class="ph-dock-r"><div><div class="ph-says-l">Client pays</div><div class="ph-says-v">439,000 UGX</div></div><span class="ph-sp"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--ow-ink-600)"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"></path></svg>Shop side · 3 lines</div></div>
+<div class="ph-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Shop side revealed — the tap on the bar opens buy @ and margin</div><div class="dv-card">
+<div class="ph">
+<div class="ph-bar"><div class="ph-mk">OW</div><span class="ph-bt">Sell</span><span class="ph-sp"></span><svg class="ph-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg></div>
+<div class="ph-b">
+<div class="ph-cl"><span class="ph-cl-n">Jackson</span><span class="ph-cl-m">0756053542</span><span class="ph-sp"></span><span class="ph-cl-m" style="font-family:'Inter',sans-serif">14 Sep</span><svg class="ic" viewBox="0 0 24 24" style="color:var(--ow-ink-400)"><path d="m6 9 6 6 6-6"></path></svg></div>
+<div class="ph-find"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Add item…</div>
+<div class="ph-list">
+<div class="ph-card"><div class="ph-head"><span class="ph-num">1</span><span class="ph-nm"><div class="ph-name">Gold Screws — 6*80 / 25kgs</div><div class="ph-sub">Ctn · Karddia</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">1 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">250,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">250,000 UGX</span></div></div>
+<div class="ph-shop"><div class="ph-shop-r"><span>Buy @ Karddia</span><span class="ph-v">250,000</span></div><div class="ph-shop-r"><span>Margin</span><span class="pill warn" style="height:22px;font-size:12px">0% · nothing kept</span></div></div></div>
+<div class="ph-card"><div class="ph-head"><span class="ph-num">2</span><span class="ph-nm"><div class="ph-name">Runners — Soft Close 450mm</div><div class="ph-sub">Ctn · Our stock</div></span><span class="ph-x"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+<div class="ph-rows"><div class="ph-row"><span class="ph-l">Qty</span><span class="ph-gi">2 &nbsp;Ctn</span></div><div class="ph-row"><span class="ph-l">Price each</span><span class="ph-gi">92,000</span></div><div class="ph-row"><span class="ph-l">Line total</span><span class="ph-v">184,000 UGX</span></div></div>
+<div class="ph-shop"><div class="ph-shop-r"><span>Buy @ our stock</span><span class="ph-v">80,000</span></div><div class="ph-shop-r"><span>Margin</span><span class="pill good" style="height:22px;font-size:12px">13% · 24,000 UGX</span></div></div></div>
+</div>
+</div>
+<div class="ph-dock" style="padding-top:8px"><div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ow-ink-600);margin-bottom:8px"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"></path></svg>Shop side</div>
+<div style="display:flex;gap:0;border:1px solid var(--ow-rule-soft);border-radius:8px;overflow:hidden;margin-bottom:10px"><div style="flex:1;padding:8px 12px"><div class="ph-l">Costs you</div><div class="ph-v" style="font-size:15px;color:var(--ow-ink-600);font-weight:500">410,000</div></div><div style="flex:1;padding:8px 12px;border-left:1px solid var(--ow-rule-soft)"><div class="ph-l">You keep</div><div class="ph-v" style="font-size:15px">24,000 <span class="pill" style="margin-left:4px">6%</span></div></div></div>
+<div class="ph-dock-r"><div><div class="ph-says-l">Client pays</div><div class="ph-says-v">439,000 UGX</div></div><span class="ph-sp"></span><span class="ph-btn"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L4 21l1.6-4.4A8.5 8.5 0 1 1 21 12z"></path></svg></span><span class="ph-save">Save quote</span></div></div>
+<div class="ph-tabs"><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M12 4v2.5M5.9 6.6l1.8 1.8M3 13h2.5M18.5 13H21M16.3 8.4l1.8-1.8"></path><path d="M7.5 13a4.5 4.5 0 0 1 9 0z"></path><path d="M3 17h18"></path></svg>Today</span><span class="ph-tab on"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"></path></svg>Sell</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.6"></rect><circle cx="12" cy="12" r="2.8"></circle></svg>Money</span><span class="ph-tab"><svg viewBox="0 0 24 24"><path d="M4 4h16v11H8l-4 3.5z"></path><path d="M8 8.5h3M8 11.5h6"></path></svg>Manager</span><span class="ph-tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="10" rx="1.4"></rect><path d="M7 17h14V8"></path></svg>More</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Item stage — quantity, the sell price, who to buy from; one filled commit</div><div class="dv-card">
+<div class="ph" style="height:844px;min-height:0">
+<div class="ph-bar dim"><div class="ph-mk">OW</div><span class="ph-bt">Sell</span></div>
+<div class="ph-b dim">
+<div class="ph-cl"><span class="ph-cl-n">Jackson</span><span class="ph-cl-m">0756053542</span></div>
+<div class="ph-find" style="color:var(--ow-ink-900);border-color:var(--ow-steel-950)"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><b>runners</b></div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(20,23,27,.35)"></div>
+<div class="sheet">
+<div class="sheet-h"></div>
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ow-ink-600)"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m15 6-6 6 6 6"></path></svg>Back to search</div>
+<div style="font-size:18px;font-weight:700;line-height:1.25;margin-top:10px">Runners — Soft Close 450mm</div>
+<div style="font-size:13px;color:var(--ow-ink-600);margin-top:2px">Sold by the Ctn · 24 in stock · last sold at <span class="fig" style="font-weight:500">92,000</span></div>
+<div class="fld"><p class="fld-l">Quantity</p><div style="display:flex;gap:8px;align-items:center"><span class="stp">−</span><div class="fld-in" style="flex:1;justify-content:center">2<span class="un" style="margin-left:8px">Ctn</span></div><span class="stp">+</span></div></div>
+<div class="fld"><p class="fld-l">Sell price per Ctn (UGX)</p><div class="fld-in focus">92,000<span class="un">rec. 92,000</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--ow-ink-600)">What the client pays per Ctn. The buy cost is recorded on its own.</p></div>
+<div class="fld"><p class="fld-l">Buy from</p><div style="display:flex;flex-direction:column;gap:6px"><div class="sup on"><span>Our stock <span style="color:var(--ow-ink-600)">· 24 Ctn on the shelf</span></span><svg class="ic" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></svg></div><div class="sup"><span>Karddia <span style="color:var(--ow-ink-600)">· 2 days</span></span><span style="font-size:12px;color:var(--ow-ink-600)">cheapest for 10+</span></div></div></div>
+<div class="sum"><span style="font-size:14px;font-weight:600">This line</span><span class="fig" style="font-size:18px">184,000 <span class="u">UGX</span></span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 2px;font-size:13px;color:var(--ow-ink-600)"><span>Show what you keep</span><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="m9 6 6 6-6 6"></path></svg></div>
+<span class="ph-save" style="margin-top:14px;height:48px;font-size:16px">Add to quote</span>
+</div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "take <a class="dv-oid" href="#1b">1b</a> but with the bar from <a class="dv-oid" href="#1c">1c</a>" · "on <a class="dv-oid" href="#1e">1e</a>, show the item cards collapsed to one line each" · "show the WhatsApp send sheet on the phone"</p>
+</section>
+</x-dc>
+</body>
+</html>

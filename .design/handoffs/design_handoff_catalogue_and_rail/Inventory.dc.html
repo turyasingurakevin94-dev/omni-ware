@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+body{background:#e8e7e2;margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#1b2233}
+a{color:#1d55a8;text-decoration:none}
+a:hover{color:#123c7d}
+.fig{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-0.02em}
+.lbl{font-size:11px;font-weight:600;letter-spacing:0.03em;color:#5f6a7d}
+.card{background:#fff;border:1px solid #ecebe6;border-radius:14px;box-shadow:0 1px 2px rgba(23,34,60,.05)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.nav{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;margin:1px 0;background:none;border:0;border-radius:9px;color:#b9c2d6;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;text-align:left;cursor:pointer}
+.nav:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav.on{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.nav > span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#a8b2c7}
+.grp{display:flex;align-items:center;gap:8px;padding:15px 10px 4px}
+.grp-i{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+.grp-t{font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d89a5}
+.grp-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#7d89a5;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-p{background:#c2311f;color:#fff}
+.btn-p:hover{background:#a5291a}
+.btn-d{background:#17223c;color:#fff}
+.btn-d:hover{background:#243354}
+.btn-s{background:#fff;border:1px solid #dcdad4;color:#1b2233}
+.btn-s:hover{background:#f7f6f3}
+.btn-g{background:none;color:#5f6a7d}
+.btn-g:hover{background:#f1efeb;color:#1b2233}
+.lens{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:0;border-radius:8px;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:#5f6a7d;cursor:pointer}
+.lens:hover{background:#efedE9;color:#1b2233}
+.lens.on{background:#fff;color:#1b2233;box-shadow:0 1px 2px rgba(23,34,60,.08)}
+.pill{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;white-space:nowrap;flex:none}
+.q{display:grid;grid-template-columns:34px minmax(0,1fr) 108px 104px 152px;align-items:center;column-gap:12px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer}
+.q:hover{background:#faf9f6}
+.drow{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #f0eeea}
+.pg{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;border-radius:7px;border:1px solid #e2e0da;background:#fff;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:#535d70;cursor:pointer}
+.pg.on{background:#17223c;border-color:#17223c;color:#fff}
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:22px;padding:30px">
+  <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;max-width:1440px">
+    <div style="font-size:27px;font-weight:700;letter-spacing:-0.02em">Turn 1 · Inventory</div>
+    <div style="font-size:13.5px;line-height:1.55;color:#535d70;max-width:64ch;text-wrap:pretty">Screen 11, first of Catalogue. The shelf as a list with the money on it — quantity times cost, which is the figure that decides what to count first. Two rules the code already fixes are made visible: <strong>null is not zero</strong>, and the shelf total never moves when a filter does. <a href="#1a">1a</a> desktop, <a href="#1b">1b</a> phone.</div>
+  </div>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1A</span>
+      <span style="font-size:12.5px;color:#535d70">Console · one category filtered, sorted by money tied up · 1440 × 900</span>
+    </div>
+
+    <div style="width:1440px;height:900px;background:#f6f5f2;border-radius:18px;overflow:hidden;display:flex;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="width:236px;flex:none;background:#17223c;display:flex;flex-direction:column;overflow:hidden">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:16px 14px 10px">
+          <div style="width:30px;height:30px;border-radius:9px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14.5px;font-weight:700;color:#fff;letter-spacing:-0.01em">Omni&#8209;Ware</div>
+            <div style="font-size:11px;color:#a8b2c7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ssekitoleko Hardware</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px 14px">
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+            <span>Today</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">8</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#ffe3d6;color:#8f3009">Se</span><span class="grp-t">Sell</span><span class="grp-n">6</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#e6e3ff;color:#4230a8">Bu</span><span class="grp-t">Buy</span><span class="grp-n">2</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#d9f2e6;color:#0b5e42">Ca</span><span class="grp-t">Catalogue</span></div>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.9 7.5 12 3l8.1 4.5v9L12 21l-8.1-4.5z"></path><path d="M12 12v9"></path><path d="m3.9 7.5 8.1 4.5 8.1-4.5"></path></svg>
+            <span>Products</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h.01"></path><path d="M17 17h.01"></path><path d="m6 18 12-12"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <span>Pricing</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">14</span>
+          </button>
+          <button class="nav on">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M3 12h18"></path><path d="M3 18h18"></path></svg>
+            <span>Inventory</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4"></path><path d="M16 17v4"></path><path d="M3 8h4"></path><path d="M17 16h4"></path><path d="m7 17 10-10"></path></svg>
+            <span>What goes with what</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#d7e8ff;color:#164a96">Mo</span><span class="grp-t">Money</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#ffdfe9;color:#8a2450">In</span><span class="grp-t">Insight</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#f0eeea;color:#5f6a7d">Su</span><span class="grp-t">Setup</span><span class="grp-n">3</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+
+        <div style="flex:none;height:58px;background:#fff;border-bottom:1px solid #ecebe6;display:flex;align-items:center;gap:16px;padding:0 22px">
+          <div style="display:flex;align-items:center;gap:8px;flex:none">
+            <span style="font-size:12.5px;color:#535d70">Catalogue</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b6bdca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+            <span style="font-size:14px;font-weight:600">Inventory</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:400px;height:36px;padding:0 12px;border-radius:10px;background:#f4f3f0;border:1px solid #ecebe6">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span style="flex:1;min-width:0;font-size:13px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">A product, or the letters you remember — sndppr finds sandpaper</span>
+            <span style="font-size:10.5px;font-weight:600;color:#535d70;background:#fff;border:1px solid #e2e0da;border-radius:6px;padding:2px 6px">Ctrl K</span>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-s" style="height:34px;padding:0 12px;font-size:13px;flex:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"></path></svg>
+            Start a count
+          </button>
+          <div style="width:34px;height:34px;flex:none;border-radius:999px;background:#17223c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">KT</div>
+        </div>
+
+        <div style="flex:none;padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">On the shelf</div>
+            <div style="margin-top:3px;font-size:13px;color:#535d70">Quantity times what you paid — the figure that says which lines to count first</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;background:#efedE9;border-radius:10px;padding:4px;flex:none">
+            <button class="lens on">The shelf</button>
+            <button class="lens">Movements</button>
+          </div>
+        </div>
+
+        <div style="flex:none;padding:14px 22px 0">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+            <div style="background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+              <div class="lbl" style="font-size:10.5px">The shelf, at what you paid</div>
+              <div class="fig" style="margin-top:3px;font-size:20px">48,600,000</div>
+              <div style="margin-top:1px;font-size:11.5px;color:#535d70">192 lines on file · never moves when you filter</div>
+            </div>
+            <div style="background:#fff8e8;border:1px solid #f4e3bd;border-radius:14px;padding:12px 14px">
+              <div class="lbl" style="font-size:10.5px;color:#6b4a0d">Stock with no cost on file</div>
+              <div class="fig" style="margin-top:3px;font-size:20px">14 lines</div>
+              <div style="margin-top:1px;font-size:11.5px;color:#6b4a0d">not counted above — understated, not worth nothing</div>
+            </div>
+            <div style="background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+              <div class="lbl" style="font-size:10.5px">Nothing left</div>
+              <div class="fig" style="margin-top:3px;font-size:20px">38 lines</div>
+              <div style="margin-top:1px;font-size:11.5px;color:#535d70">hidden below by default · one press to show</div>
+            </div>
+            <div style="background:#fff1ec;border:1px solid #fadbd1;border-radius:14px;padding:12px 14px">
+              <div class="lbl" style="font-size:10.5px;color:#7a4436">Under their floor</div>
+              <div class="fig" style="margin-top:3px;font-size:20px">7 lines</div>
+              <div style="margin-top:1px;font-size:11.5px;color:#7a4436">3 of them already on the buy plan</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;align-items:center;gap:9px;background:#fff8e8;border:1px solid #f4e3bd;border-radius:11px;padding:9px 12px">
+            <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#96600f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            <span style="font-size:12.5px;font-weight:600;color:#6b4a0d">Three things to tidy</span>
+            <span style="font-size:12px;color:#6b4a0d">match 2 cost records to the shelf, price the 14 lines with stock and no cost, then photograph the 61 lines with no picture</span>
+            <span style="flex:1"></span>
+            <span style="font-size:11.5px;color:#6b4a0d">matching first — it can leave new units uncosted behind it</span>
+            <button class="btn btn-s" style="height:28px;padding:0 10px;font-size:11.5px;flex:none">Open</button>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow:hidden;padding:12px 22px 22px;display:flex;gap:16px;align-items:stretch">
+
+          <div class="card" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap">
+              <span style="font-size:13.5px;font-weight:700">12 lines listed</span>
+              <span class="fig" style="font-size:13px;color:#535d70">9,240,000</span>
+              <span class="chip" style="background:#d9f2e6;color:#0b5e42">
+                Cement &amp; aggregates
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+              </span>
+              <span style="flex:1"></span>
+              <span style="font-size:11.5px;color:#535d70">Sort</span>
+              <button class="btn btn-s" style="height:28px;padding:0 10px;font-size:12px">
+                Most money tied up
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </button>
+            </div>
+
+
+
+            <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable">
+              <div style="position:sticky;top:0;z-index:2;display:grid;grid-template-columns:34px minmax(0,1fr) 108px 104px 152px;align-items:center;column-gap:12px;padding:7px 14px;background:#faf9f6;border-top:1px solid #f0eeea;box-sizing:border-box">
+              <span></span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Line</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Left</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Cost each</span>
+              <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Value here</span>
+            </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 32.5 grade · 50kg</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">floor 40 · sells 3.9 a day · 31 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">120 bags</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">26,500</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">3,180,000</div>
+              </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Aggregate 3/4" · lorry load</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span class="pill" style="background:#e6e3ff;color:#4230a8">2 of 5 Kirinya’s</span><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">no floor · 40 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">5 loads</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">380,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">1,900,000</div>
+              </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#fff3d9;display:flex;align-items:center;justify-content:center;flex:none" title="no photo on this product">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#96600f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path><path d="m3 3 18 18"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sand, plaster grade · lorry load</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">floor 2 · sells 0.17 a day · 18 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">3 loads</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">420,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">1,260,000</div>
+              </div>
+
+              <div class="q" style="background:#f4f1ff">
+                <span style="width:34px;height:34px;border-radius:7px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 50kg · Mukwano</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span class="pill" style="background:#ffe1dc;color:#b2301f">under floor 60</span><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">sells 12.4 a day · 3 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#b2301f">36 bags</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">28,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">1,008,000</div>
+              </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Hydrated lime 25kg</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">no floor · sells 0.7 a day · 62 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">44 bags</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">18,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">792,000</div>
+              </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#fff3d9;display:flex;align-items:center;justify-content:center;flex:none" title="no photo on this product">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#96600f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path><path d="m3 3 18 18"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Waterproof additive 20kg</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">floor 10 · sells 0.4 a day · 70 days left</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">28 tins</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">22,000</div>
+                <div class="fig" style="font-size:13.5px;text-align:right">616,000</div>
+              </div>
+
+              <div class="q">
+                <span style="width:34px;height:34px;border-radius:7px;background:#fff3d9;display:flex;align-items:center;justify-content:center;flex:none" title="no photo on this product">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#96600f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path><path d="m3 3 18 18"></path></svg>
+                </span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Murram, tipper load</div>
+                  <div style="margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden"><span class="pill" style="background:#fff3d9;color:#96600f">no cost on file</span><span style="font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">nothing sold in 30 days</span></div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right">12 loads</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">—</div>
+                <div style="font-size:12px;text-align:right;color:#96600f;font-weight:600">cannot be valued</div>
+              </div>
+
+              <div class="q" style="opacity:.75;border-bottom:0">
+                <span></span>
+                <div style="min-width:0">
+                  <div style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Five more in this category</div>
+                  <div style="margin-top:3px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">all under 200,000 · none under their floor · 3 have no photo</div>
+                </div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">—</div>
+                <div class="fig" style="font-size:13px;text-align:right;color:#535d70">—</div>
+                <div class="fig" style="font-size:13.5px;text-align:right;color:#535d70">484,000</div>
+              </div>
+            </div>
+            <div style="flex:none;display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid #f0eeea;background:#faf9f6">
+              <span style="font-size:11.5px;color:#535d70">20 to a page</span>
+              <span style="flex:1"></span>
+              <span class="pg on">1</span>
+              <span style="font-size:11.5px;color:#535d70;margin-left:4px">one page under this filter · the whole shelf runs to 10</span>
+            </div>
+          </div>
+
+          <div style="width:390px;flex:none;display:flex;flex-direction:column;gap:12px;overflow-y:auto;align-items:stretch">
+
+            <div class="card" style="overflow:hidden;flex:none">
+              <div style="background:#17223c;padding:12px 14px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:15px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 50kg · Mukwano</div>
+                    <div style="font-size:11.5px;color:#a8b2c7">Cement &amp; aggregates · bags</div>
+                  </div>
+                  <span class="chip" style="background:rgba(255,255,255,.14);color:#fff;height:20px;padding:0 8px;flex:none">3 days left</span>
+                </div>
+              </div>
+
+              <div style="padding:12px 14px">
+                <div style="display:flex;gap:11px;align-items:flex-start">
+                  <image-slot id="inv-detail-cement50" style="width:104px;height:78px" shape="rounded" radius="10" placeholder="Drop a photo of this line"></image-slot>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;color:#535d70;text-wrap:pretty">One photo per line, dropped once. It is what the price card and the WhatsApp post use, so a line with no photo posts as a typeset card instead.</div>
+                    <div style="margin-top:7px;display:flex;align-items:center;gap:7px">
+                      <span class="pill" style="background:#e2f5ec;color:#0f7a56">photo on file</span>
+                      <span style="font-size:11px;color:#535d70">used on 4 posts</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:12px">
+                  <div style="flex:1">
+                    <div class="lbl" style="font-size:10.5px">On the shelf</div>
+                    <div class="fig" style="font-size:17px;color:#b2301f">36</div>
+                  </div>
+                  <div style="flex:1">
+                    <div class="lbl" style="font-size:10.5px">Cost each</div>
+                    <div class="fig" style="font-size:17px">28,000</div>
+                  </div>
+                  <div style="flex:1">
+                    <div class="lbl" style="font-size:10.5px">Value here</div>
+                    <div class="fig" style="font-size:17px">1,008,000</div>
+                  </div>
+                </div>
+
+                <div style="margin-top:11px;display:flex;align-items:center;gap:9px">
+                  <span style="flex:1;height:8px;border-radius:999px;background:#f0eeea;overflow:hidden;display:flex">
+                    <span style="width:60%;background:#c2311f"></span>
+                  </span>
+                  <span class="fig" style="font-size:12px;color:#b2301f;flex:none">36 of 60</span>
+                </div>
+                <div style="margin-top:6px;font-size:12px;color:#535d70;text-wrap:pretty">Under the floor you set. At 12.4 bags a day it is three days of cover, and Mukwano takes two days to deliver.</div>
+
+                <div style="margin-top:11px;background:#f4f1ff;border:1px solid #e3ddfb;border-radius:11px;padding:9px 11px;display:flex;align-items:center;gap:9px">
+                  <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#5b46d6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+                  <div style="flex:1;min-width:0;font-size:12px;color:#40465a;text-wrap:pretty">Already <strong>first on the buy plan</strong> — 120 bags from Mukwano at 28,000.</div>
+                  <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#5b46d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                </div>
+              </div>
+
+              <div style="padding:11px 14px;border-top:1px solid #f0eeea;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-d" style="height:36px;padding:0 13px;font-size:13px">Count it</button>
+                <button class="btn btn-s" style="height:36px;padding:0 13px;font-size:13px">Change the floor</button>
+                <button class="btn btn-s" style="width:36px;height:36px;justify-content:center;padding:0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="card" style="padding:12px 14px;flex:none">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:13.5px;font-weight:700">How it got here</span>
+                <button class="btn btn-g" style="height:26px;padding:0 8px;font-size:11.5px;margin-left:auto">All movements
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                </button>
+              </div>
+              <div style="margin-top:9px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#535d70;width:46px;flex:none">9 Sep</span>
+                  <span style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Counted · corrected down by 2</span>
+                  <span class="pill" style="background:#fff3d9;color:#96600f">−2</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#535d70;width:46px;flex:none">2 Sep</span>
+                  <span style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Received from Mukwano · PINV‑0288</span>
+                  <span class="pill" style="background:#e2f5ec;color:#0f7a56">+120</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#535d70;width:46px;flex:none">30 days</span>
+                  <span style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sold across 61 invoices</span>
+                  <span class="pill" style="background:#f2f0ec;color:#535d70">−412</span>
+                </div>
+              </div>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0eeea;font-size:12px;color:#535d70;text-wrap:pretty">The log lives here now rather than on a screen of its own — the shelf and how it got that way are one question asked two ways.</div>
+            </div>
+
+            <div class="card" style="padding:12px 14px;flex:none">
+              <div class="lbl" style="font-size:10.5px">What the money is sitting in</div>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:9px">
+                <div>
+                  <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12px">Iron sheets &amp; roofing</span><span class="fig" style="font-size:12px;margin-left:auto">19,400,000</span></div>
+                  <div style="margin-top:4px;height:6px;border-radius:999px;background:#f0eeea;overflow:hidden"><span style="display:block;width:40%;height:100%;background:#17223c"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12px">Cement &amp; aggregates</span><span class="fig" style="font-size:12px;margin-left:auto">9,240,000</span></div>
+                  <div style="margin-top:4px;height:6px;border-radius:999px;background:#f0eeea;overflow:hidden"><span style="display:block;width:19%;height:100%;background:#17223c"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12px">Fixings &amp; fasteners</span><span class="fig" style="font-size:12px;margin-left:auto">7,300,000</span></div>
+                  <div style="margin-top:4px;height:6px;border-radius:999px;background:#f0eeea;overflow:hidden"><span style="display:block;width:15%;height:100%;background:#17223c"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12px">Everything else</span><span class="fig" style="font-size:12px;margin-left:auto">12,660,000</span></div>
+                  <div style="margin-top:4px;height:6px;border-radius:999px;background:#f0eeea;overflow:hidden"><span style="display:block;width:26%;height:100%;background:#b6bdca"></span></div>
+                </div>
+              </div>
+              <div style="margin-top:10px;font-size:12px;color:#535d70;text-wrap:pretty">Two fifths of the shelf is roofing, which turns over every three weeks. The slowest 40 lines hold 4,100,000 and have not moved in 90 days — that is the money worth arguing about.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="1b" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1B</span>
+      <span style="font-size:12.5px;color:#535d70">Phone · 390 × 844 · counting the shelves</span>
+    </div>
+
+    <div style="width:390px;height:844px;background:#f6f5f2;border-radius:26px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="flex:none;background:#17223c;padding:10px 12px 0">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:24px;height:24px;border-radius:7px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <span style="flex:1;min-width:0;font-size:14px;font-weight:700;color:#fff">On the shelf</span>
+          <svg width="18" height="18" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        </div>
+        <div style="margin-top:9px;background:rgba(255,255,255,.07);border-radius:10px;padding:9px 11px">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-size:9.5px;font-weight:600;color:#a8b2c7">THE SHELF, AT WHAT YOU PAID</span>
+            <span class="fig" style="font-size:16px;color:#fff;margin-left:auto">48.6<span style="font-size:10px;color:#a8b2c7">M</span></span>
+          </div>
+          <div style="margin-top:4px;font-size:10.5px;color:#a8b2c7">192 lines on file · 14 with stock and no cost</div>
+        </div>
+        <div style="margin-top:9px;display:flex;gap:0">
+          <button style="flex:1;height:34px;background:none;border:0;border-bottom:2px solid #ef4b39;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer">The shelf</button>
+          <button style="flex:1;height:34px;background:none;border:0;border-bottom:2px solid transparent;color:#a8b2c7;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">Movements</button>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow-y:auto;background:#fff">
+
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff8e8;border-bottom:1px solid #f4e3bd">
+          <span style="flex:1;min-width:0;font-size:12px;color:#6b4a0d;text-wrap:pretty">7 lines under their floor · 3 already on the buy plan</span>
+          <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#96600f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#faf9f6;border-bottom:1px solid #f0eeea">
+          <span class="chip" style="height:19px;padding:0 7px;background:#d9f2e6;color:#0b5e42">Cement &amp; aggregates 12</span>
+          <span class="fig" style="font-size:11.5px;color:#535d70;margin-left:auto">9,240,000</span>
+        </div>
+
+        <div style="padding:10px 12px;border-bottom:1px solid #f0eeea;display:flex;gap:10px">
+          <span style="width:40px;height:40px;border-radius:8px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+          <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px">
+            <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 32.5 grade</span>
+            <span class="fig" style="font-size:13px;flex:none">3,180,000</span>
+          </div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:10px">
+            <span class="fig" style="font-size:12px;color:#535d70">120 bags</span>
+            <span class="fig" style="font-size:12px;color:#535d70">@ 26,500</span>
+            <span class="fig" style="font-size:12px;color:#535d70;margin-left:auto">31 days</span>
+          </div>
+          </div>
+        </div>
+
+        <div style="padding:10px 12px;border-bottom:1px solid #f0eeea;background:#fff7f5;display:flex;gap:10px">
+          <span style="width:40px;height:40px;border-radius:8px;background:#f0eeea;display:flex;align-items:center;justify-content:center;flex:none" title="photo on file">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                </span>
+          <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px">
+            <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Cement 50kg · Mukwano</span>
+            <span class="fig" style="font-size:13px;flex:none">1,008,000</span>
+          </div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:10px">
+            <span class="fig" style="font-size:12px;color:#b2301f">36 bags</span>
+            <span class="fig" style="font-size:12px;color:#535d70">@ 28,000</span>
+            <span class="fig" style="font-size:12px;color:#b2301f;margin-left:auto">3 days</span>
+          </div>
+          <div style="margin-top:6px;display:flex;align-items:center;gap:7px">
+            <span class="pill" style="background:#ffe1dc;color:#b2301f">under floor 60</span>
+            <span class="pill" style="background:#e6e3ff;color:#4230a8">on the plan</span>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:7px">
+            <button class="btn btn-d" style="flex:1;height:44px;justify-content:center;font-size:13px">Count it</button>
+            <button class="btn btn-s" style="flex:1;height:44px;justify-content:center;font-size:13px">Open</button>
+          </div>
+          </div>
+        </div>
+
+        <div style="padding:10px 12px;border-bottom:1px solid #f0eeea">
+          <div style="display:flex;align-items:baseline;gap:9px">
+            <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Aggregate 3/4"</span>
+            <span class="fig" style="font-size:13px;flex:none">1,900,000</span>
+          </div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:10px">
+            <span class="fig" style="font-size:12px;color:#535d70">5 loads</span>
+            <span class="fig" style="font-size:12px;color:#535d70">@ 380,000</span>
+            <span class="fig" style="font-size:12px;color:#535d70;margin-left:auto">40 days</span>
+          </div>
+          <div style="margin-top:6px"><span class="pill" style="background:#e6e3ff;color:#4230a8">2 of 5 are Kirinya's</span></div>
+        </div>
+
+        <div style="padding:10px 12px;border-bottom:1px solid #f0eeea">
+          <div style="display:flex;align-items:baseline;gap:9px">
+            <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Murram, tipper load</span>
+            <span style="font-size:12px;font-weight:600;color:#96600f;flex:none">cannot be valued</span>
+          </div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:10px">
+            <span class="fig" style="font-size:12px;color:#535d70">12 loads</span>
+            <span class="pill" style="background:#fff3d9;color:#96600f">no cost on file</span>
+          </div>
+        </div>
+
+        <div style="padding:10px 12px;border-bottom:1px solid #f0eeea;opacity:.75">
+          <div style="display:flex;align-items:baseline;gap:9px">
+            <span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Eight more in this category</span>
+            <span class="fig" style="font-size:12.5px;color:#535d70;flex:none">3,152,000</span>
+          </div>
+        </div>
+
+        <div style="padding:11px 12px;background:#faf9f6;border-top:1px solid #f0eeea;display:flex;align-items:center;gap:8px">
+          <span style="flex:1;min-width:0;font-size:11.5px;color:#535d70">38 lines with nothing left are hidden</span>
+          <button class="btn btn-s" style="height:36px;padding:0 12px;font-size:12px;flex:none">Show them</button>
+        </div>
+      </div>
+
+      <div style="flex:none;height:56px;background:#fff;border-top:1px solid #ecebe6;display:flex;align-items:stretch;padding:0 2px">
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <span style="position:relative;display:flex">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+            <span style="position:absolute;top:-2px;right:-3px;width:7px;height:7px;border-radius:999px;background:#c2311f"></span>
+          </span>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Today</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Sell</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Money</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Manager</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <span style="display:flex;align-items:center;justify-content:center;width:38px;height:22px;border-radius:999px;background:#ffe1dc">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4b39" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+          </span>
+          <span style="font-size:9.5px;font-weight:700;color:#c2311f">More</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:1040px;background:#f4f1ff;border:1px solid #e3ddfb;border-radius:14px;padding:16px 18px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:26px;height:26px;border-radius:8px;background:#e5dffd;color:#5b46d6;display:flex;align-items:center;justify-content:center;flex:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+      </span>
+      <span style="font-size:14px;font-weight:700">The cut: one ranking of what is running out, not two</span>
+    </div>
+    <div style="margin-top:9px;display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid #e3ddfb;border-radius:10px;padding:8px 10px">
+      <svg width="14" height="14" style="flex:none;margin-top:2px" viewBox="0 0 24 24" fill="none" stroke="#5b46d6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h10"></path><path d="M4 18h13"></path></svg>
+      <div style="font-size:12px;color:#40465a;text-wrap:pretty">The rail draws the <strong>final map</strong>: Sell 6, Buy 2, Catalogue 4, Money 4, Insight 4, Setup 3 — 23 rows and Today, from 33 and Today. Every cut is argued in <strong>Rail.dc.html</strong>, which is the authority if a frame disagrees. No screen is cut in Catalogue this turn — <strong>Movements is already a lens here</strong>, absorbed before this pass began, and the log on the panel is that lens in miniature.</div>
+    </div>
+    <div style="margin-top:9px;font-size:13px;line-height:1.55;color:#40465a;max-width:92ch;text-wrap:pretty">What <em>is</em> duplicated here is a judgement, not a page. The below-floor queue ranks lines by how soon each runs out at the rate it has actually sold — and the buy plan ranks the same lines, off the same <span class="fig" style="font-size:12px">restockRiskRows()</span>, by what they earn. Two rankings of one set of lines, and a shop working down the wrong one buys its thinnest lines first.</div>
+    <div style="margin-top:11px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;font-size:12.5px;color:#40465a">
+      <div><div style="font-weight:700;margin-bottom:3px">What changes</div>Inventory <strong>counts</strong> what is under its floor and says how many are already on the plan — <span class="fig" style="font-size:12px">7 lines · 3 already on the buy plan</span> — and hands the ordering decision over. It never ranks a buy.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">What is lost</div>Nothing. The days-left figure stays on the row, where it explains the floor; the 7-line queue becomes a link into Forecasts · Stock with those lines shown.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Why this way round</div>The plan already reads cash, supplier lead times and what is on the way. A floor cannot see any of that, so a floor should raise the question and the plan should answer it.</div>
+    </div>
+    <div style="margin-top:12px;padding-top:11px;border-top:1px solid #e3ddfb;font-size:12.5px;color:#40465a;text-wrap:pretty"><strong>Three rules the code already keeps, now visible on the screen:</strong> <em>null is not zero</em> — Murram reads <span class="fig" style="font-size:12px">cannot be valued</span>, not 0, and sorts last rather than as worthless, because "nobody wrote down what it cost" and "worth nothing" are different facts. <em>The strip is the whole shelf</em> and says so — 48,600,000 at what you paid, 192 lines on file, never moving when you filter — while the list header counts what is listed under it, 12 lines and 9,240,000. And <em>no tile ever reads zero</em>: a count that would be nought is replaced by the reading that makes it good news, so a healthy shelf never looks like a broken app. Photographs sit on the line itself, dropped once and reused by the price card and the WhatsApp post — which is the argument the <strong>Media</strong> screen will have to answer, since a gallery of pictures divorced from the products they belong to cannot tell you that 61 lines have none. Next: <strong>Products and Prices</strong>, where I will argue the two are one record seen twice.</div>
+  </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>
