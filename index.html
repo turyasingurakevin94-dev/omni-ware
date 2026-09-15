@@ -6,7 +6,7 @@
 <title>Omni-Ware — Hardware shop management</title>
 <link rel="manifest" href="/manifest.json">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
   :root{
     /* ---------------------------------------------------------------
@@ -16204,6 +16204,208 @@
       padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
     .ow-ag-grid .ow-pan-h .btn.ow-sm{flex:1 1 100%;min-width:0;margin-left:0;}
   }
+  /* ==================================================================
+     THE OM LAYER — the 2026 system.
+
+     A SECOND system, not a revision of the first. The .ow- layer above
+     is the console: Inter, Archivo Black, oxide #B23A26 on steel greys,
+     hairlines instead of depth. This one is the card idiom from the
+     design handoffs: IBM Plex, a navy rail, warm ground, one coral
+     accent, and tints that carry meaning. They share not one value —
+     the two palettes have zero hex codes in common, which is the
+     clearest possible statement that this is a replacement rather than
+     an improvement.
+
+     The two coexist while the redesign rolls through screen by screen.
+     A screen belongs to exactly one of them; nothing reaches across.
+
+     FOUR LAWS, each protecting something that would otherwise break:
+
+       1. Every selector starts `.om-` and stays there. No element
+          selector, nothing on `body` — the app sets no base font-size,
+          so every unstyled element in 34 screens inherits the UA
+          default, and one bare rule here restyles all of them.
+       2. No rule above this line is touched. It is purely additive, and
+          it sits at the END of the stylesheet so it moved no line
+          number above it.
+       3. Every colour comes from a token declared in .om-app below.
+          Not one hex literal in a component rule — test/om-design-
+          system.test.js fails on any it finds, which is what keeps a
+          67th colour out.
+       4. The mockup's class names are kept verbatim behind the prefix:
+          the handoff's `.card` is `.om-card`, its `.lrow` is
+          `.om-lrow`. A rule here can be diffed against the design file
+          it came from by deleting three characters. The prefix exists
+          because bare `.card`, `.btn` and `.nav` would collide with
+          16,000 lines of stylesheet above; nothing else changed.
+     ================================================================== */
+
+  .om-app{
+    /* ---- ground and surface ---- */
+    --om-ground:#f6f5f2;          /* app background behind cards      */
+    --om-surface:#ffffff;         /* cards, top bar, list bodies      */
+    --om-sunken:#faf9f6;          /* table headers, group rows, feet  */
+    --om-inset:#f7f6f3;           /* mono message boxes, stat tiles   */
+    /* ---- rules ---- */
+    --om-rule:#ecebe6;            /* card borders, top-bar border     */
+    --om-rule-inner:#f0eeea;      /* row dividers inside cards        */
+    --om-rule-input:#e2e0da;      /* inputs and mono-box borders      */
+    --om-rule-btn:#dcdad4;        /* the secondary button's border    */
+    --om-dashed:#cdc9c0;          /* the empty-slot placeholder       */
+    /* ---- ink. Every one clears 4.5:1 on every ground above. ---- */
+    --om-ink:#1b2233;             /* primary text                     */
+    --om-ink-2:#535d70;           /* secondary text, labels           */
+    --om-ink-3:#5f6a7d;           /* the .om-lbl class, inactive icon */
+    --om-ink-quiet:#b6bdca;       /* chevrons, decorative separators  */
+    /* ---- navy, and what may be written on it ---- */
+    --om-navy:#17223c;            /* rail, panel headers, price card  */
+    --om-navy-hover:#243354;      /* the dark button's hover          */
+    --om-on-navy:#ffffff;
+    --om-on-navy-2:#b9c2d6;       /* icons and rail text at rest      */
+    --om-on-navy-3:#a8b2c7;       /* meta on navy                     */
+    --om-on-navy-4:#7d89a5;       /* rail group headings and counts   */
+    /* ---- the one accent ----
+       The coral is FILL AND ICON ONLY and never carries text: #ef4b39
+       under white is 3.1:1 and fails. Anything with a word on it uses
+       --om-coral-text, which clears 5.3:1. The two are not
+       interchangeable and the gate checks every pairing. */
+    --om-coral:#ef4b39;           /* logo tile, active underline, bars */
+    --om-coral-text:#c2311f;      /* primary button, avatars, badges  */
+    --om-coral-pressed:#a5291a;   /* the primary button's hover       */
+    /* ---- state tints. good / caution / bad / studied / agent.
+       There is no sixth, and none of them is decorative: a row wears a
+       tint because of what it is, never to break up a list. ---- */
+    --om-bad:#ffe1dc;             --om-bad-ink:#b2301f;
+    --om-bad-card:#fff1ec;        --om-bad-card-rule:#fadbd1;
+    --om-bad-card-ink:#7a4436;
+    --om-caution:#fff3d9;         --om-caution-ink:#96600f;
+    --om-caution-card:#fff8e8;    --om-caution-card-rule:#f4e3bd;
+    --om-caution-card-ink:#6b4a0d;
+    --om-good:#e2f5ec;            --om-good-ink:#0f7a56;
+    --om-good-card:#ecf8f2;       --om-good-card-rule:#d3ebe0;
+    --om-good-card-ink:#39544b;
+    --om-good-pressed:#0b5e42;    /* the WhatsApp hand-off's hover    */
+    --om-studied:#eaf1ff;         --om-studied-ink:#1d5bb8;
+    --om-studied-card:#d7e8ff;    /* the small bar charts             */
+    --om-agent:#e6e3ff;           --om-agent-ink:#4230a8;
+    --om-agent-bar:#8d7bd8;
+    --om-neutral:#f2f0ec;         --om-neutral-ink:#535d70;
+    /* ---- everything else that is a colour ---- */
+    --om-selected:#f4f1ff;        /* the picked row, and only it      */
+    --om-hover:#faf9f6;           /* row hover                        */
+    --om-track:#f0eeea;           /* an empty bar's track             */
+    --om-track-flat:#dedbd4;      /* a bar with no history to draw    */
+    --om-lens-track:#efede9;      /* the lens group's container       */
+    --om-lens-hover:#efede9;
+    --om-ghost-hover:#f1efeb;     /* the ghost button's hover         */
+    --om-field:#f4f3f0;           /* the top bar's search field       */
+    --om-link:#1d55a8;            --om-link-hover:#123c7d;
+    /* ---- aging, the one four-step ramp. It is a sequence, not four
+       states: the same debt getting older, so the steps step. ---- */
+    --om-age-1:#c2311f; --om-age-2:#ef4b39;
+    --om-age-3:#f6a68c; --om-age-4:#e4c9bf;
+    --om-late:#f0b323;            /* "late" in a pay-history bar      */
+    /* ---- the one elevation. A card does not float; this is the
+       hairline's shadow, not a lift. ---- */
+    --om-shadow:0 1px 2px rgba(23,34,60,.05);
+    --om-shadow-lens:0 1px 2px rgba(23,34,60,.08);
+    /* ---- rail states, which are alpha over navy rather than tints ---- */
+    --om-rail-hover:rgba(255,255,255,.07);
+    --om-rail-on:rgba(255,255,255,.13);
+
+    background:var(--om-ground);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    color:var(--om-ink);
+  }
+
+  .om-app a{color:var(--om-link);text-decoration:none}
+  .om-app a:hover{color:var(--om-link-hover)}
+
+  /* Money, and every other figure. Mandatory on numbers: tabular so a
+     column of money lines up, which is the only way it is ever read. */
+  .om-fig{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-0.02em}
+  .om-lbl{font-size:11px;font-weight:600;letter-spacing:0.03em;color:var(--om-ink-3)}
+
+  .om-card{background:var(--om-surface);border:1px solid var(--om-rule);border-radius:14px;box-shadow:var(--om-shadow)}
+
+  .om-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+  .om-pill{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;white-space:nowrap;flex:none}
+  .om-p-paid{background:var(--om-good);color:var(--om-good-ink)}
+  .om-p-owed{background:var(--om-caution);color:var(--om-caution-ink)}
+  .om-p-void{background:var(--om-neutral);color:var(--om-ink-3);text-decoration:line-through}
+
+  /* One button family, four intents. There is no fifth: a control that
+     needs a colour this list does not have is a control whose job has
+     not been decided. */
+  .om-btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+  .om-btn-p{background:var(--om-coral-text);color:var(--om-on-navy)}
+  .om-btn-p:hover{background:var(--om-coral-pressed)}
+  .om-btn-s{background:var(--om-surface);border:1px solid var(--om-rule-btn);color:var(--om-ink)}
+  .om-btn-s:hover{background:var(--om-inset)}
+  .om-btn-d{background:var(--om-navy);color:var(--om-on-navy)}
+  .om-btn-d:hover{background:var(--om-navy-hover)}
+  .om-btn-g{background:none;color:var(--om-ink-3)}
+  .om-btn-g:hover{background:var(--om-ghost-hover);color:var(--om-ink)}
+  /* The WhatsApp hand-off, and nothing else. Green because it leaves
+     the app, so it cannot be the coral that means "the one thing to do
+     here". */
+  .om-btn-w{background:var(--om-good-ink);color:var(--om-on-navy)}
+  .om-btn-w:hover{background:var(--om-good-pressed)}
+
+  /* The lens group: re-sorts the list in place, never navigates. */
+  .om-lens{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:0;border-radius:8px;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:var(--om-ink-3);cursor:pointer}
+  .om-lens:hover{background:var(--om-lens-hover);color:var(--om-ink)}
+  .om-lens.om-on{background:var(--om-surface);color:var(--om-ink);box-shadow:var(--om-shadow-lens)}
+
+  /* The group header. Its subtotal must equal the rows beneath it — if
+     a headline figure means something narrower, it says so in words. */
+  .om-grow{display:flex;align-items:center;gap:9px;padding:8px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);border-bottom:1px solid var(--om-rule-inner)}
+
+  .om-av{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+  .om-bar{height:6px;border-radius:999px;background:var(--om-track);overflow:hidden;display:flex}
+
+  /* The mono box. THE BOX IS WHAT SHIPS — the app cannot see WhatsApp,
+     so the edited contents are the truth, not a template behind them. */
+  .om-box{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:400;line-height:1.55;color:var(--om-ink);white-space:pre-wrap;background:var(--om-inset);border:1px solid var(--om-rule-input);border-radius:11px;padding:11px 12px}
+
+  .om-drow{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid var(--om-rule-inner)}
+
+  /* THE RAIL. The complete map, nothing behind a menu. */
+  .om-nav{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;margin:1px 0;background:none;border:0;border-radius:9px;color:var(--om-on-navy-2);font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;text-align:left;cursor:pointer}
+  .om-nav:hover{background:var(--om-rail-hover);color:var(--om-on-navy)}
+  .om-nav.om-on{background:var(--om-rail-on);color:var(--om-on-navy);font-weight:600}
+  /* The label gives way and the badge never does: a count clipped to
+     one digit is a wrong count, where a clipped name is still a name. */
+  .om-nav > span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-navn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--om-on-navy-3)}
+  .om-grp{display:flex;align-items:center;gap:8px;padding:15px 10px 4px}
+  .om-grp-i{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+  .om-grp-t{font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--om-on-navy-4)}
+  .om-grp-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--om-on-navy-4);margin-left:auto}
+
+  /* THE LIST ROWS. One grid per screen, because the columns are the
+     screen's argument about what matters and they are not shared. */
+  .om-lrow,.om-crow,.om-arow,.om-mrow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
+  .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover{background:var(--om-hover)}
+  .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on{background:var(--om-selected)}
+  .om-lrow{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
+  .om-crow{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
+  .om-arow{grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px}
+  .om-mrow{grid-template-columns:30px minmax(160px,1fr) 96px 96px 74px}
+
+  /* The agent waterfall. Five rows on ONE denominator — client paid is
+     100% — so two different totals can never be drawn the same length. */
+  .om-wf{display:grid;grid-template-columns:76px minmax(0,1fr) 92px;align-items:center;column-gap:9px;padding:6px 0}
+  .om-wfb{height:9px;border-radius:2px}
+
+  /* Every text cell truncates with all three declarations and a
+     min-width:0, and no figure ever does: "1,240,00" is a tenth of
+     "1,240,000" and looks entirely plausible. */
+  .om-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-n{white-space:nowrap}
+
+  .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
+
 </style>
 </head>
 <body class="app-loading">

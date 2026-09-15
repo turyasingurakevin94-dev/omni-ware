@@ -39,11 +39,38 @@ const src = read('index.html');
 
 const styleStart = src.indexOf('<style>');
 const styleEnd = src.indexOf('\n</style>\n');
-const cssRaw = src.slice(styleStart, styleEnd);
+
+/* THE FILE IS TWO SYSTEMS NOW, and the split has to happen before a
+ * single thing is counted.
+ *
+ * The .om- layer at the end of the stylesheet is the 2026 card system
+ * from the design handoffs: IBM Plex, navy, coral, warm ground. It
+ * shares not one hex value with the console above it — that is what
+ * makes it a replacement rather than a revision — so counting its 66
+ * colours against a ceiling measured on the old palette would say
+ * "something new was introduced" about a system that was introduced
+ * deliberately, and say nothing at all about the old file rotting.
+ *
+ * So the ceilings and the .ow- checks below run on the stylesheet WITH
+ * THE OM LAYER REMOVED. They keep measuring exactly what they always
+ * measured: the legacy CSS and the console layer, both of which still
+ * dress the screens the redesign has not reached. Their numbers can
+ * now only fall, and every one that falls gets locked in here.
+ *
+ * The OM layer answers to its own gate at the foot of this file, which
+ * is stricter than this one has ever been: not a hex literal anywhere
+ * in a component rule.
+ */
+const omMarkAt = src.indexOf('THE OM LAYER');
+const omStart = omMarkAt === -1 ? styleEnd : src.lastIndexOf('/*', omMarkAt);
+const omRaw = src.slice(omStart, styleEnd);
+const om = omRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+const cssRaw = src.slice(styleStart, omStart);
 const css = cssRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 const markAt = src.indexOf('THE OW LAYER');
-const layerRaw = src.slice(src.lastIndexOf('/*', markAt), styleEnd);
+const layerRaw = src.slice(src.lastIndexOf('/*', markAt), omStart);
 const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 /* ---------- the ceilings ---------- */
@@ -1121,6 +1148,236 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const form = extractFunction(shared, 'carrierFormHTML', 'shared-worker.js');
   t.check(/const tag = inner\.indexOf\('<select'\) >= 0 \? 'div' : 'label';/.test(form),
     'and a rendered field holding a dropdown is built as a div, keeping the label for boxes that are typed into');
+}
+
+/* ==========================================================================
+   THE OM GATE — the 2026 system holds to itself.
+
+   The ceilings above exist because the old stylesheet grew for a year
+   before anyone counted it, and the best that could be done was to stop
+   it growing. This layer is being written from a specification, so it
+   gets the gate that one should have had from line one: every colour in
+   a component rule is a token, and the token block is the whole palette.
+
+   A 67th colour does not fail on a count here. It fails because it is a
+   hex literal where a var() belongs, and it is named.
+   ========================================================================== */
+{
+  /* The token block and the component rules are judged differently: the
+     first is the only place a hex value may appear, the second may only
+     refer to it. Splitting them is the whole mechanism. */
+  const tokenBlock = (/\.om-app\{([\s\S]*?)\}/.exec(om) || [])[1] || '';
+  const rules = [...om.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map((m) => ({ sel: m[1].trim(), body: m[2] }))
+    .filter((r) => r.sel !== '.om-app');
+
+  t.check(tokenBlock.length > 0, 'the OM layer declares its tokens on .om-app');
+
+  const tokens = new Map([...tokenBlock.matchAll(/(--om-[a-z0-9-]+):\s*([^;]+);/g)]
+    .map((m) => [m[1], m[2].trim()]));
+  const colours = [...tokens].filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
+
+  /* ---- law 3: not one hex literal outside the token block ---- */
+  {
+    const offenders = rules
+      .filter((r) => /#[0-9A-Fa-f]{3,8}\b/.test(r.body))
+      .map((r) => r.sel);
+    t.check(offenders.length === 0,
+      offenders.length
+        ? `a colour is written as a hex literal instead of a token: ${offenders.slice(0, 6).join(', ')}`
+        : `every colour in the ${rules.length} OM component rules comes from a token`);
+  }
+
+  /* ---- and every token a rule reaches for is one that exists.
+     A var(--om-typo) silently renders as nothing, which on a background
+     means transparent and on ink means inherited — both of which look
+     plausible enough to ship. ---- */
+  {
+    const used = new Set([...om.matchAll(/var\((--om-[a-z0-9-]+)/g)].map((m) => m[1]));
+    const missing = [...used].filter((n) => !tokens.has(n));
+    t.check(missing.length === 0,
+      missing.length ? `undeclared token(s): ${missing.join(', ')}`
+                     : `all ${used.size} tokens referenced are declared`);
+    /* The other direction is a warning about dead weight, not a fault:
+       a token declared for a screen not yet built is legitimate. */
+  }
+
+  /* ---- the palette is closed ----
+     66 values, taken from the handoff's token table. The number is a
+     CEILING, exactly like the ones above, and it may only fall. */
+  t.check(colours.length <= 66,
+    `the palette holds ${colours.length} colours (ceiling 66)`);
+
+  /* ---- THE CORAL RULE, which is the one a reviewer cannot see ----
+     #ef4b39 under white is 3.1:1 and fails at every size this app uses.
+     It is a FILL: the logo tile, the active tab's underline, an aging
+     bar. Anything carrying a word uses --om-coral-text at 5.3:1. The two
+     are one hue apart and the wrong one is invisible in review, which is
+     precisely why it is arithmetic here. */
+  {
+    const asText = rules.filter((r) => /(?:^|[;{\s])color:\s*var\(--om-coral\)/.test(r.body))
+      .map((r) => r.sel);
+    t.check(asText.length === 0,
+      asText.length ? `--om-coral is carrying text in ${asText.join(', ')} — use --om-coral-text`
+                    : '--om-coral is fill and icon only; nothing writes text in it');
+  }
+
+  /* ---- contrast, on the pairings the system actually asserts ---- */
+  {
+    const lum = (h) => {
+      const c = [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255)
+        .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const ratio = (a, b) => {
+      const la = lum(a), lb = lum(b);
+      return Math.round(((Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)) * 100) / 100;
+    };
+    const v = (n) => tokens.get(n);
+
+    /* Every ground this system paints, against every ink it puts on it.
+       The handoff's claim is "every ink clears 4.5:1 on its ground";
+       this is that claim, enumerated. */
+    const GROUNDS = ['--om-surface', '--om-ground', '--om-sunken', '--om-inset'];
+    const INKS = ['--om-ink', '--om-ink-2', '--om-ink-3'];
+    GROUNDS.forEach((g) => INKS.forEach((i) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — ${i} on ${g} (needs 4.5)`);
+    }));
+
+    /* The tinted pairs. Each is a state chip: a fill and the one ink
+       that is allowed on it. */
+    [['--om-good-ink', '--om-good'], ['--om-caution-ink', '--om-caution'],
+     ['--om-bad-ink', '--om-bad'], ['--om-studied-ink', '--om-studied'],
+     ['--om-agent-ink', '--om-agent'], ['--om-neutral-ink', '--om-neutral'],
+     ['--om-good-card-ink', '--om-good-card'],
+     ['--om-caution-card-ink', '--om-caution-card'],
+     ['--om-bad-card-ink', '--om-bad-card'],
+    ].forEach(([i, g]) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — ${i} on ${g} (needs 4.5)`);
+    });
+
+    /* White on the fills that carry white. */
+    [['--om-coral-text', 'the primary button and every avatar'],
+     ['--om-navy', 'the rail, the panel headers and the price card'],
+     ['--om-good-ink', 'the WhatsApp hand-off'],
+    ].forEach(([fill, why]) => {
+      const r = ratio(v('--om-on-navy'), v(fill));
+      t.check(r >= 4.5, `${r}:1 — white on ${fill} · ${why}`);
+    });
+
+    /* And on navy, the two quieter greys, which carry meta rather than
+       body text and are held to the same floor because a phone in a
+       yard in daylight does not care what we called the text. */
+    ['--om-on-navy-2', '--om-on-navy-3', '--om-on-navy-4'].forEach((i) => {
+      const r = ratio(v(i), v('--om-navy'));
+      t.check(r >= 4.5, `${r}:1 — ${i} on --om-navy (needs 4.5)`);
+    });
+
+    /* THE PAIRING THAT MUST NEVER SHIP, asserted as arithmetic so it
+       cannot be argued back in: the coral fill cannot carry white. */
+    t.check(ratio(v('--om-on-navy'), v('--om-coral')) < 4.5,
+      `white on --om-coral really is ${ratio(v('--om-on-navy'), v('--om-coral'))}:1 — which is why --om-coral-text exists`);
+  }
+
+  /* ---- type: two families, and only the two the @import loads ---- */
+  {
+    const fams = [...om.matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1]);
+    const bad = fams.filter((f) => !/IBM Plex (Sans|Mono)/.test(f));
+    t.check(bad.length === 0,
+      bad.length ? `the OM layer loads only IBM Plex; found ${bad.join(' | ')}`
+                 : 'every family in the OM layer is IBM Plex Sans or IBM Plex Mono');
+    t.check(!/Inter|Archivo/.test(om),
+      'and it never reaches back into the console layer’s faces');
+    const imported = /@import url\('([^']+)'\)/.exec(src)[1];
+    t.check(/IBM\+Plex\+Sans:wght@400;500;600;700/.test(imported),
+      'IBM Plex Sans is loaded at all four weights the system uses');
+    t.check(/IBM\+Plex\+Mono:wght@400;500;600/.test(imported),
+      'and Mono at 400 too — the message boxes are the one place weight 400 mono appears');
+  }
+
+  /* ---- weights: four, as everywhere else in this app ---- */
+  {
+    const w = new Set([...om.matchAll(/font-weight:\s*(\d+)/g)].map((m) => m[1]));
+    const bad = [...w].filter((x) => !['400', '500', '600', '700'].includes(x));
+    t.check(bad.length === 0, bad.length ? `unloaded weight(s) ${bad.join(', ')} — the browser fakes them` : 'four weights, all loaded');
+  }
+
+  /* ---- the ramp ----
+     It carries half-pixel steps, which the console layer's ramp forbids.
+     That is deliberate and it is the difference between a ramp and a
+     habit: these sixteen are specified in the handoff to the value, and
+     a seventeenth fails here. 9.5 is the floor and it belongs to two
+     things only — the tab-bar label and the price card's eyebrow. */
+    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 17, 19, 20, 24, 26]);
+  {
+    const sizes = [...om.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
+    const off = [...new Set(sizes)].filter((s) => !RAMP.has(s));
+    t.check(off.length === 0, off.length ? `off the ramp: ${off.join(', ')}px` : `${new Set(sizes).size} sizes, every one on the ramp`);
+    const tiny = [...new Set(sizes)].filter((s) => s < 9.5);
+    t.check(tiny.length === 0, tiny.length ? `below the 9.5px floor: ${tiny.join(', ')}px` : 'nothing is set below 9.5px');
+  }
+
+  /* ---- radii and elevation ---- */
+  {
+    const RADII = new Set(['2px', '3px', '6px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
+    const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()));
+    const bad = [...r].filter((x) => !RADII.has(x));
+    t.check(bad.length === 0, bad.length ? `radii off the system: ${bad.join(' | ')}` : `${r.size} radii, all from the system`);
+
+    /* ONE elevation, and it is the hairline's shadow rather than a lift:
+       a card in this system does not float. The lens pill's is the same
+       geometry at a higher alpha because it sits on a tinted track. */
+    const sh = new Set([...om.matchAll(/box-shadow:\s*([^;}]+)/g)].map((m) => m[1].trim()));
+    const allowed = new Set(['var(--om-shadow)', 'var(--om-shadow-lens)', 'none']);
+    const badSh = [...sh].filter((x) => !allowed.has(x));
+    t.check(badSh.length === 0, badSh.length ? `depth is one elevation: ${badSh.join(' | ')}` : 'one elevation, referenced as a token');
+  }
+
+  /* ---- money is a component ---- */
+  {
+    const fig = (/\.om-fig\{([^}]*)\}/.exec(om) || [])[1] || '';
+    t.check(/font-variant-numeric:\s*tabular-nums/.test(fig),
+      'figures are tabular — a column of money that does not line up is unreadable at the only speed it is read');
+    t.check(/letter-spacing:\s*-0\.02em/.test(fig), 'and tracked in, as specified');
+    t.check(/IBM Plex Mono/.test(fig), 'and mono');
+  }
+
+  /* ---- truncation is three declarations and a min-width, never two ----
+     `nowrap` with `hidden` and no `ellipsis` is a hard cut with no sign
+     that anything was removed, and a truncating cell in a grid without
+     min-width:0 pushes its neighbours out of the box instead of
+     shrinking. Both faults look fine until the data is real. */
+  {
+    const trunc = (/\.om-t\{([^}]*)\}/.exec(om) || [])[1] || '';
+    ['overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap', 'min-width:0']
+      .forEach((d) => t.check(trunc.includes(d), `.om-t declares ${d}`));
+    /* And the figures never truncate: "1,240,00" is a tenth of
+       "1,240,000" and entirely plausible. */
+    const n = (/\.om-n\{([^}]*)\}/.exec(om) || [])[1] || '';
+    t.check(/white-space:nowrap/.test(n) && !/text-overflow/.test(n),
+      '.om-n holds a figure on one line and never puts an ellipsis in it');
+  }
+
+  /* ---- law 1: the layer never reaches outside its own namespace ----
+     The app sets no base font-size, so every unstyled element in 34
+     screens inherits the UA default. One bare element selector here
+     restyles all of them in a commit. */
+  {
+    const escapees = rules.map((r) => r.sel)
+      .filter((sel) => sel.split(',').some((s) => !/^\s*\.om-/.test(s)));
+    t.check(escapees.length === 0,
+      escapees.length ? `a selector starts outside the namespace: ${escapees.slice(0, 5).join(' | ')}`
+                      : 'every selector in the layer starts .om- and stays there');
+  }
+
+  /* ---- and the two systems do not touch ----
+     The whole point of a replacement is that it replaces. A rule that
+     reaches for an --ow- token is a screen being improved rather than
+     redrawn, which is the one thing this pass is not. */
+  t.check(!/--ow-/.test(om), 'no OM rule borrows a token from the console layer');
+  t.check(!/\.ow-/.test(om), 'and none of them styles a console component');
 }
 
 process.exit(t.done() ? 1 : 0);
