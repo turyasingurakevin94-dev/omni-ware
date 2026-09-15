@@ -1,0 +1,104 @@
+name: Set up staging
+
+# Run by hand, from the Actions tab. There is no push trigger and there
+# must not be one: this deploys, and a deploy that happens because
+# somebody edited a file is a deploy nobody decided to make.
+#
+# It exists because standing up a second Supabase project needs the
+# Supabase CLI, and the person doing it does not have a terminal. So the
+# terminal is here instead: the secrets are typed into GitHub's settings
+# page, the button is on the Actions tab, and the log is the output.
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: What to push to the staging project
+        type: choice
+        default: both
+        options: [both, schema, functions]
+        required: true
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      STAGING_PROJECT_REF: ${{ secrets.STAGING_PROJECT_REF }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The guard, before anything else and before any credential is used.
+      # One mistyped secret is the difference between setting up staging
+      # and running 95 migrations against the shop's real books, so the
+      # live project is named here and refused by name. Everything below
+      # this step is safe in the sense that matters: it cannot be pointed
+      # at production, whatever is in the secrets.
+      - name: Refuse to touch the live project
+        run: |
+          LIVE=hgywjaifdmgrcnwxstxg
+          if [ -z "$STAGING_PROJECT_REF" ]; then
+            echo "::error::STAGING_PROJECT_REF is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          if [ "$STAGING_PROJECT_REF" = "$LIVE" ]; then
+            echo "::error::STAGING_PROJECT_REF is the LIVE project ($LIVE). Refusing. This workflow only ever writes to staging."
+            exit 1
+          fi
+          echo "Target project: $STAGING_PROJECT_REF (not the live one)"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Before deploying, not after. The suite needs no dependencies and
+      # takes about two minutes, and one of its checks is that
+      # config.toml still agrees with the functions about which of them
+      # may be reached without a JWT -- which is precisely the thing a
+      # blanket `functions deploy` gets wrong when it is stale.
+      - name: Run tests
+        run: npm test
+
+      # The fallback route, built every run so it can never be stale:
+      # if `db push` refuses these migration filenames, this artifact is
+      # the same schema as one script to paste into the SQL editor.
+      - name: Build the paste-able schema
+        run: node tools/build-bootstrap-sql.js staging-bootstrap.sql
+
+      - name: Upload it
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-bootstrap-sql
+          path: staging-bootstrap.sql
+          retention-days: 7
+
+      - name: Install the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to the staging project
+        run: supabase link --project-ref "$STAGING_PROJECT_REF" --password "$STAGING_DB_PASSWORD"
+
+      - name: Push the schema
+        if: ${{ inputs.what == 'both' || inputs.what == 'schema' }}
+        run: supabase db push --password "$STAGING_DB_PASSWORD"
+
+      # All eighteen at once, which is only safe because config.toml now
+      # says which of them are reachable without a JWT. Deploying them
+      # one at a time with a remembered flag was the old way, and the
+      # flag is what got forgotten.
+      - name: Deploy the edge functions
+        if: ${{ inputs.what == 'both' || inputs.what == 'functions' }}
+        run: supabase functions deploy
+
+      - name: What now
+        run: |
+          echo "### Staging project updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Project: \`$STAGING_PROJECT_REF\`" >> $GITHUB_STEP_SUMMARY
+          echo "Pushed: \`${{ inputs.what }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Next: set the three safe secrets, allow the staging host for auth redirects, and sign up as the owner. The live project was not touched." >> $GITHUB_STEP_SUMMARY

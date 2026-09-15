@@ -42,65 +42,115 @@ On staging a small red strip sits in the bottom-left corner reading
 *STAGING — test data, not the real books*. It is below the dropdown layer
 and cannot swallow a tap.
 
+## Everything here is done in a browser
+
+There is no terminal in this setup. Two of the steps below genuinely need
+the Supabase CLI — pushing 95 migrations and deploying 18 edge functions
+— and neither has a button in the Supabase dashboard.
+
+So the CLI runs in CI instead. `.github/workflows/staging.yml` is a
+manual workflow: the credentials are typed into GitHub's settings page,
+the button is on the Actions tab, and the log is the output. It refuses
+by name to touch the live project, whatever is in its secrets, so a
+mistyped ref fails the run instead of running 95 migrations against the
+shop's real books.
+
+It also runs the test suite *before* deploying, and one of those tests is
+that `config.toml` still agrees with the functions about which of them may
+be reached without a JWT — the thing a blanket deploy gets wrong.
+
 ## Part 1 — the staging Supabase project
 
-1. Create a project in the same organisation. Call it `Omni-ware
-   staging`. Choose the same region; a different one only adds latency
-   you would then design around.
+1. **Create the project.** supabase.com → New project, in the same
+   organisation. Call it `Omni-ware staging` and choose the same region;
+   a different one only adds latency you would then design around. Set a
+   database password and keep it — step 3 needs it.
 
-2. Push the schema. All 95 migrations, including `0005`, which creates
-   the `product-images` storage bucket and its policies — so storage
-   comes with it and needs no separate step.
+2. **Copy two values** from Project Settings → API: the project ref (it is
+   also in the dashboard URL) and the **publishable** key. Never the
+   service role key.
 
-   ```sh
-   supabase link --project-ref <staging-ref>
-   supabase db push
+3. **Add three GitHub secrets.** In the repo: Settings → Secrets and
+   variables → Actions → New repository secret, three times.
+
+   | name | value |
+   | --- | --- |
+   | `SUPABASE_ACCESS_TOKEN` | a personal access token from supabase.com/dashboard/account/tokens |
+   | `STAGING_PROJECT_REF` | the staging project ref |
+   | `STAGING_DB_PASSWORD` | the database password from step 1 |
+
+   These are write credentials for the staging project. They are not the
+   live project's, and the workflow could not use them against it anyway.
+
+4. **Run the workflow.** Actions tab → **Set up staging** → Run workflow →
+   leave "both" selected → Run.
+
+   It pushes the schema (all 95 migrations, including `0005`, which
+   creates the `product-images` bucket and its policies, so storage comes
+   with it) and deploys all 18 edge functions with the right JWT setting
+   on each.
+
+   If the schema step fails on the migration filenames — they are
+   `0001_name`, not the 14-digit timestamps the CLI now mints — the run
+   still uploads a **`staging-bootstrap-sql`** artifact at the bottom of
+   the page. That is the same 95 migrations as one script: download it,
+   open the staging project's SQL editor, paste, run. It ends by writing
+   the bookkeeping rows `db push` would have written, so the CLI will not
+   later try to apply everything a second time. Then re-run the workflow
+   with **functions** selected to finish the job.
+
+5. **Set the three safe secrets.** Edge Functions → Secrets, in the
+   staging project's dashboard:
+
+   ```
+   NOTIFY_WORKER_SECRET   any new random string
+   AGENT_APP_URL          https://<staging-host>/agent.html
+   WORKER_APP_URL         https://<staging-host>/worker.html
    ```
 
-3. Deploy the edge functions:
+   The two URLs are the staging site's own — the domain you give Vercel in
+   Part 2 — so come back for these once you have it.
 
-   ```sh
-   supabase functions deploy
-   ```
+6. **Leave the live credentials unset — deliberately.** Do not give
+   staging `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`,
+   `WHATSAPP_VERIFY_TOKEN`, `AIRTEL_CALLBACK_HMAC_KEY`,
+   `FIREBASE_SERVICE_ACCOUNT_JSON`, or the MTN credentials.
 
-4. Set secrets — and **deliberately leave some unset**:
+   A redesign that sends a real WhatsApp message to a real customer, or
+   charges a real phone, has defeated the entire point of having a second
+   database. Those functions failing loudly on staging is the correct
+   behaviour, not a bug to chase. Add a sandbox credential only when you
+   are working on that one flow, and take it out after.
 
-   ```sh
-   supabase secrets set NOTIFY_WORKER_SECRET=<any new value>
-   supabase secrets set AGENT_APP_URL=https://<staging-host>/agent.html
-   supabase secrets set WORKER_APP_URL=https://<staging-host>/worker.html
-   ```
+7. **Allow the staging host for auth redirects.** Authentication → URL
+   Configuration → Redirect URLs: add `https://<staging-host>/**`.
+   Invite and password-reset links land there, and without it every invite
+   you test bounces the person to the live site.
 
-   Do **not** give staging the live `WHATSAPP_ACCESS_TOKEN`,
-   `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
-   `AIRTEL_CALLBACK_HMAC_KEY`, `FIREBASE_SERVICE_ACCOUNT_JSON`, or the MTN
-   credentials. A redesign that sends a real WhatsApp message to a real
-   customer, or charges a real phone, has defeated the entire point of
-   having a second database. Those functions failing loudly on staging is
-   the correct behaviour. Add a sandbox credential only when you are
-   specifically working on that flow.
+8. **Make yourself an owner and a shop.** Sign up through the staging site
+   as a new owner would, and add enough products, a customer and a
+   supplier to exercise a screen.
 
-5. In Auth → URL Configuration, add the staging host to the redirect
-   allowlist. Invite and password-reset links land there, and without it
-   every invite you test bounces to production.
-
-6. Give yourself an account and a shop to work in. Sign up through the
-   staging site as you would as a new owner. Do not restore a dump of the
-   live database unless you have a reason to: real customer names, phone
-   numbers and debts in a test system is a leak waiting for somewhere to
-   happen, and the redesign does not need them to be exercised.
+   Do **not** restore a dump of the live database. Real customer names,
+   phone numbers and debts in a test system is a leak looking for
+   somewhere to happen, and the redesign does not need them. If you ever
+   do need production-shaped data, anonymise it on the way in.
 
 ## Part 2 — the second Vercel project
 
-Same repository, different branch, different domain.
+Same repository, different branch, different domain. All of this is in the
+Vercel dashboard.
 
-1. New Project → import `turyasingurakevin94-dev/omni-ware` again.
-2. Name it `omni-ware-next`.
-3. Settings → Git → **Production Branch**: the redesign branch.
-4. Settings → Domains: give it the host you will actually use, so that it
-   is stable and can be named in the switch. A generated preview hash
-   changes per deployment and cannot be.
-5. Settings → Environment Variables, for that project only:
+1. **New Project** → import `turyasingurakevin94-dev/omni-ware` again — the
+   same repo, not a fork. That is what keeps one history, so a fix on main
+   reaches the redesign with a merge rather than by hand. Name it
+   `omni-ware-next`.
+2. Settings → Git → **Production Branch**: `claude/sweet-volta-k5dwoc`.
+3. Settings → **Domains**: give it a host you will actually use, so it is
+   stable and can be named in the switch. A generated preview hash changes
+   per deployment and cannot be. (An unnamed host still falls to staging
+   by design — it just shows the strip.)
+4. Settings → **Environment Variables**, for that project only:
 
    ```
    SUPABASE_URL=https://<staging-ref>.supabase.co
@@ -109,10 +159,11 @@ Same repository, different branch, different domain.
    ```
 
    The two functions in `api/` run on the server, where there is no
-   hostname to read, so they switch on these. Unset means production —
-   the live project needs no configuration to go on working.
+   hostname to read, so they switch on these. Unset means production — the
+   live project needs no configuration to go on working.
 
-Leave the existing project exactly as it is.
+Leave the existing project exactly as it is. If you find yourself editing
+it, something has gone wrong.
 
 ## Part 3 — turning the switch on
 
@@ -139,20 +190,26 @@ Both halves, in the same commit. Either alone does nothing, by design.
 Commit this to **main** as well as the redesign branch — identical
 values on both. The host decides at run time; the checkout never does.
 
-After it, re-run `npx cap copy android` if you are building the APK, or
-`worker-packaging.test.js` will tell you the bundle is stale.
+Six byte-identical edits is a poor thing to do in GitHub's web editor, and
+`environment-switch.test.js` fails the moment two of them differ. Hand the
+three values to Claude and let it make the edit, run the suite and push.
+
+After it, the packaged Android copy has to be re-synced or
+`worker-packaging.test.js` will say the bundle is stale — which the same
+push handles.
 
 ## Part 4 — working on the redesign
 
 The branch is long-lived and takes fixes from main as they land:
 
-```sh
-git checkout <redesign-branch>
-git merge main
-```
+Without a terminal, a merge is a pull request. On GitHub: New pull
+request, **base** `<redesign-branch>`, **compare** `main` — that is main
+*into* the redesign, which is the direction that keeps the redesign
+current — then Merge.
 
-A merge, not a rebase — the branch is shared with a deployment, and
-rewriting its history invalidates every checkout of it. Because the
+A merge, not a rebase: the branch is shared with a deployment, and
+rewriting its history invalidates every checkout of it. GitHub's web UI
+only offers merges here, which is the right default. Because the
 environment block is identical on both sides, it never conflicts.
 
 CI runs all 315 test files on every push to every branch
@@ -174,11 +231,8 @@ system quietly stops meaning anything.
 
 ## Part 5 — shipping it as the main site
 
-```sh
-git checkout main
-git merge <redesign-branch>
-git push origin main
-```
+New pull request, **base** `main`, **compare** the redesign branch, then
+Merge. CI runs the full suite on it first, as it does on every push.
 
 That is the whole of it. The live Vercel project builds from main and the
 host is unchanged, so the switch hands the merged code the production

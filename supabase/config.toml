@@ -412,3 +412,56 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ---------------------------------------------------------------------
+# Which functions are reachable without a Supabase JWT.
+#
+# This was a deploy-time flag and nothing else: `--no-verify-jwt`, typed
+# by hand, remembered or not. Nothing in the repo recorded it, so a plain
+# `supabase functions deploy` -- the obvious thing to run, and the only
+# thing a CI job can run over all eighteen -- turned verification back ON
+# and silently broke every caller that cannot present a JWT. The failure
+# looks like a payment provider's callback vanishing, which is not a
+# thing anyone debugs quickly.
+#
+# So it is declared here instead, where a deploy reads it and a test pins
+# it. The seven below are exactly the functions whose callers are not
+# signed-in users of this app:
+#
+#   the two payment webhooks   a provider posts them; it has no JWT
+#   wa-webhook                 Meta posts it, likewise
+#   notify-worker              a Database Webhook posts it
+#   client-portal              the customer portal ships no key at all
+#   client-submit-order        same page, same promise
+#   catalogue-public           the public catalogue, same
+#
+# None of them trusts what it is sent -- each re-reads the row it is told
+# about, or checks its own shared secret -- which is what makes them safe
+# to expose. See supabase/functions/README.md.
+#
+# Every other function reads an Authorization header and is called by a
+# signed-in user, so it keeps the default (verify_jwt = true).
+# functions-jwt.test.js derives both halves of that from the sources and
+# fails if a function changes sides without this list changing with it.
+# ---------------------------------------------------------------------
+
+[functions.airtel-payment-webhook]
+verify_jwt = false
+
+[functions.catalogue-public]
+verify_jwt = false
+
+[functions.client-portal]
+verify_jwt = false
+
+[functions.client-submit-order]
+verify_jwt = false
+
+[functions.mtn-payment-webhook]
+verify_jwt = false
+
+[functions.notify-worker]
+verify_jwt = false
+
+[functions.wa-webhook]
+verify_jwt = false
