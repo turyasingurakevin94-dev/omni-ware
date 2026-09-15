@@ -99,6 +99,12 @@ const books = () => ({
 
 const scope = (data) => compileScope([
   extractFunction(src, 'dayRecord', 'index.html'),
+  /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
+     milliseconds, and the day used to read it as a string -- so no
+     order ever moved on any day. The reader that gets both right is
+     real code, and is compiled here so the fixtures' ISO stamps and the
+     app's numeric ones are both exercised. */
+  extractFunction(src, 'dayStampISO', 'index.html'),
   /* THE REAL ONES. Whether a day reads its own date rather than today's
      is decided inside these, so stubbing them would leave the claim
      this file exists to make untested. */
@@ -374,6 +380,12 @@ const scope = (data) => compileScope([
     extractFunction(src, 'dayClosing', 'index.html'),
     extractFunction(src, 'dayCashPosition', 'index.html'),
     extractFunction(src, 'dayRecord', 'index.html'),
+  /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
+     milliseconds, and the day used to read it as a string -- so no
+     order ever moved on any day. The reader that gets both right is
+     real code, and is compiled here so the fixtures' ISO stamps and the
+     app's numeric ones are both exercised. */
+  extractFunction(src, 'dayStampISO', 'index.html'),
     extractFunction(src, 'cbAccountTotals', 'index.html'),
     extractFunction(src, 'carriedOpening', 'index.html'),
     extractFunction(src, 'previousCashDate', 'index.html'),
@@ -492,6 +504,12 @@ const scope = (data) => compileScope([
   const line = async (data, sb, hasTable) => compileScope([
     extractFunction(src, 'dayThreadLine', 'index.html'),
     extractFunction(src, 'dayRecord', 'index.html'),
+  /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
+     milliseconds, and the day used to read it as a string -- so no
+     order ever moved on any day. The reader that gets both right is
+     real code, and is compiled here so the fixtures' ISO stamps and the
+     app's numeric ones are both exercised. */
+  extractFunction(src, 'dayStampISO', 'index.html'),
     extractFunction(src, 'anInvoicesInRange', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),

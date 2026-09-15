@@ -843,10 +843,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
              'ow-seg', 'ow-seg-b', 'ow-seg-n',
              'ow-dy-nav', 'ow-dy-b', 'ow-dy-d',
              'ow-fc-pane', 'ow-fc-acts', 'ow-fc-roof'],
+      /* THE DAY BECAME A SPINE, and two names left this list with it.
+         dayTile drew the day's own four-figure strip with a verdict
+         line (.ow-mt-d) under each figure; the Today lens now reads as
+         one timeline of the day's movements, and its only comparison
+         is the cumulative line against a typical same-weekday, drawn
+         on the runway's own .ow-ah-* classes -- so there is no tile and
+         no verdict line to hold to. .ow-tbl-g went the same way: it was
+         the till table's band ("In and out, by account"), and the till
+         is now the spine's closing node and the closing checks. What
+         the lens still emits -- .ow-pan, .ow-ck, .ow-tbl on Who paid,
+         .ow-cp, .ow-mini, .ow-empty -- stays pinned. */
       renders: ['fcRenderRoof', 'renderAhead', 'renderPurchasePlanPanel',
-                'renderDay', 'renderDayMeeting', 'dayTile'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-v', 'ow-mt-d', 'ow-grid', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
-                    'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g', 'ow-tbl-note',
+                'renderDay', 'renderDayMeeting'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-v', 'ow-grid', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+                    'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-note',
                     'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty', 'ow-bk'],
     },
     /* Invoices. A filing cabinet became a register. The .panel.qp-panel

@@ -13895,8 +13895,12 @@
   .ow-ck.ow-dy-ck .ow-ck-t{display:block;font-size:var(--ow-t-12);
     white-space:normal;overflow:visible;}
   .ow-ck.ow-dy-ck .ow-ck-s{display:block;}
-  .ow-ck-a.ow-dy-ck-a{display:block;padding:var(--ow-sp-10) var(--ow-sp-12);
-    border-top:1px solid var(--ow-rule-soft);}
+  /* The one check still open wears the caution ground, so the row to
+     act on reads before the three that are done. */
+  .ow-ck.ow-dy-ck.ow-warn{background:var(--ow-amber-faint);}
+  /* A control the day has no use for right now is gone, not greyed:
+     .btn sets its own display, which would beat the browser's [hidden]. */
+  .ow-fc-acts [hidden]{display:none;}
 
   /* The strip's floor. Gone rather than empty before the first render:
      a bordered box with nothing in it reads as a screen that failed. */
@@ -14480,16 +14484,6 @@
     font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .ow-dy-d:focus{outline:0;background:var(--ow-paper-2);}
 
-  /* THE VERDICT LINE under a strip figure: which way, by how much. The
-     figure above it stays ink -- a figure is a size, not a warning --
-     and this is the only part of the tile that says good or bad. */
-  .ow-mt-d{display:flex;align-items:center;gap:var(--ow-sp-4);
-    margin:var(--ow-sp-4) 0 0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    line-height:1.35;color:var(--ow-ink-600);}
-  .ow-mt-d.ow-good{color:var(--ow-verdigris);}
-  .ow-mt-d.ow-bad{color:var(--ow-crimson);}
-  .ow-mt-d + .ow-mt-s{margin-top:1px;}
-
   /* HOW THE DAY CLOSED. Four claims about whether the day is on the
      record at all. The mark is a SHAPE as well as a colour -- a tick, a
      ring, a cross -- because a colour alone does not survive a phone
@@ -14527,65 +14521,99 @@
     .ow-tbl-nb{flex:1 0 100%;text-align:right;}
   }
 
-  /* IN AND OUT, BY ACCOUNT. Three tracks rather than .ow-sr's two: in
-     and out are two claims, and "4,120,000 / 2,650,000" as one string is
-     one figure pretending to be two. */
-  .ow-dy-till{display:grid;grid-template-columns:minmax(0,1fr) 84px 84px;
-    align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-6) var(--ow-sp-12);
-    border-bottom:1px solid var(--ow-rule-soft);}
-  .ow-dy-till:last-of-type{border-bottom:0;}
-  .ow-dy-till-k{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-dy-till .ow-tbl-n{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
-  .ow-dy-till-h .ow-dy-till-k,.ow-dy-till-h .ow-tbl-n{font-family:inherit;
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ow-ink-600);}
-  /* The total says one thing, so it has one figure and gives its label
-     the whole rest of the row: "Net through t…1,870,000" was a label
-     clipped by a column it did not need. */
-  .ow-dy-till-t{grid-template-columns:minmax(0,1fr) auto;
-    background:var(--ow-paper-2);border-top:1px solid var(--ow-rule);}
-  .ow-dy-till-t .ow-dy-till-k{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-  .ow-dy-till-t .ow-tbl-n{font-weight:var(--ow-fw-600);}
-
-  /* THE COMPARISON, WITH ITS WORKING. The strip says how far off a
-     typical day this one was; this says what "typical" was, so the
-     claim can be checked rather than believed. */
-  .ow-dy-cmp{padding:var(--ow-sp-8) var(--ow-sp-12);
-    border-bottom:1px solid var(--ow-rule-soft);}
-  .ow-dy-cmp:last-of-type{border-bottom:0;}
-  .ow-dy-cmp-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
-  .ow-dy-cmp-k{flex:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-dy-cmp-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
-    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
-  .ow-dy-cmp-b{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:1px;}
-  .ow-dy-cmp-b .ow-mt-d{margin:0;}
-  .ow-dy-cmp-t{margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);
-    white-space:nowrap;}
-
-  /* The four lists. Tracks declared once on each container, so a column
-     of money lines up down the whole list -- which is the only way money
-     is ever read. The figure columns are sized to their content and the
-     NAME is what gives way, because a clipped figure is a wrong figure
-     and a clipped supplier is a shortened one. */
-  .ow-tbl.ow-dy-buy{--ow-tbl-cols:minmax(0,1fr) 64px 132px 132px;}
-  .ow-tbl.ow-dy-pay{--ow-tbl-cols:minmax(0,1fr) 124px 140px;}
-  .ow-tbl.ow-dy-sh{--ow-tbl-cols:minmax(0,1fr) 92px 128px;}
-  .ow-tbl.ow-dy-work{--ow-tbl-cols:minmax(0,1fr);}
+  /* WHO PAID. Two tracks: the name and what it was against give way,
+     the figure never does -- a clipped figure is a wrong figure and a
+     clipped customer is a shortened one. */
+  .ow-tbl.ow-dy-pay{--ow-tbl-cols:minmax(0,1fr) auto;}
   /* What a list cut, said inside the list. A note that is a grid item
      takes ONE track and leaves the rest of the row empty, which draws a
      hairline stopping halfway across the panel. */
   .ow-tbl > .ow-mini{grid-column:1/-1;}
-  /* The strip sits INSIDE the panel that names the day, so it gives up
-     its own border and corners rather than drawing a second box a
-     hairline inside the first. */
-  .ow-strip.ow-dy-s{border:0;border-radius:0;}
   /* What the panel head says about the day itself, hard right. */
   .ow-dy-hc{margin-left:auto;}
   .ow-dy-ea{margin-top:var(--ow-sp-12);}
   .ow-dy-mv{padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+
+  /* ==================================================================
+     THE SPINE. The day as a shape rather than a log: one vertical line
+     of what has happened, where the owner is now, and the one act that
+     closes it. At four in the afternoon the four figures did not change
+     what the owner did next; where the day got to, and what stands
+     between it and being closed, does.
+
+     Three cells a node: the clock its own record carries, a dot on a
+     hairline, and the movement in two lines. The dot is a shape as well
+     as a colour -- filled for what happened, ringed for now, dashed for
+     what has not happened yet -- because colour alone does not survive
+     a phone in Ugandan sun. Only three colours mean anything on it:
+     verdigris for money in and the book opened, crimson for a line that
+     reached nothing, ink for a delivery.                              */
+  .ow-dy-grid{display:grid;grid-template-columns:400px minmax(0,1fr);
+    gap:var(--ow-sp-16);align-items:start;}
+  .ow-dy-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-16);min-width:0;}
+  /* The walk, in the panel head: the stepper and, only when the day
+     being read is not today, the way back to it. */
+  .ow-dy-walk{display:flex;align-items:center;gap:var(--ow-sp-8);flex:none;}
+  .ow-dy-walk [hidden]{display:none;}
+  .ow-dy-walkhost{display:contents;}
+  .ow-dy-walkhost:empty{display:none;}
+  /* The head holds a title and a 190px stepper. At 400px they share a
+     row; at 340px (1024 to 1279) the stepper takes the row under the
+     title rather than the title breaking into three lines. */
+  .ow-dy-spine .ow-pan-h{height:auto;min-height:34px;flex-wrap:wrap;row-gap:var(--ow-sp-4);
+    padding-top:var(--ow-sp-4);padding-bottom:var(--ow-sp-4);}
+  .ow-dy-spine .ow-pan-t{flex:none;white-space:nowrap;}
+  .ow-dy-spine .ow-pan-h .ow-dy-walk{margin-left:auto;}
+  .ow-dy-spine .ow-pan-h .ow-dy-nav{height:26px;}
+  .ow-dy-spine .ow-pan-h .ow-dy-b{width:26px;}
+  .ow-dy-sp{display:grid;grid-template-columns:44px 12px minmax(0,1fr);column-gap:var(--ow-sp-10);
+    padding:var(--ow-sp-12);}
+  .ow-dy-sp-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);
+    padding-top:2px;white-space:nowrap;}
+  .ow-dy-sp-t.ow-now{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-dy-sp-g{display:flex;flex-direction:column;align-items:center;}
+  .ow-dy-sp-d{width:7px;height:7px;flex:none;border-radius:50%;box-sizing:border-box;
+    margin-top:5px;background:var(--ow-ink-400);}
+  .ow-dy-sp-d.ow-good{background:var(--ow-verdigris);}
+  .ow-dy-sp-d.ow-bad{background:var(--ow-crimson);}
+  .ow-dy-sp-d.ow-warn{background:var(--ow-amber);}
+  .ow-dy-sp-d.ow-now{width:11px;height:11px;margin-top:3px;background:var(--ow-paper);
+    border:3px solid var(--ow-steel-950);}
+  .ow-dy-sp-d.ow-next{width:9px;height:9px;margin-top:4px;background:var(--ow-paper);
+    border:1px dashed var(--ow-ink-400);}
+  .ow-dy-sp-l{flex:1;width:1px;background:var(--ow-steel-100);}
+  /* The body cell is a button when the node opens something, and a
+     plain block when it does not; either way it is the whole cell, so
+     the hover tint and the focus ring are the node and not a word in it.
+     all:unset, as .btn does, so the user agent's button never shows. */
+  .ow-dy-sp-b{all:unset;display:block;box-sizing:border-box;min-width:0;
+    margin:0 calc(-1 * var(--ow-sp-6));padding:0 var(--ow-sp-6) var(--ow-sp-12);
+    border-radius:var(--ow-r-sm);text-align:left;font-family:'Inter',system-ui,sans-serif;}
+  .ow-dy-sp-b.ow-last{padding-bottom:0;}
+  .ow-dy-sp-b.ow-dy-sp-k{cursor:pointer;}
+  .ow-dy-sp-b.ow-dy-sp-k:hover{background:var(--ow-paper-2);}
+  .ow-dy-sp-b:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:-2px;}
+  .ow-dy-sp-h{display:block;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);line-height:var(--ow-lh-snug);}
+  .ow-dy-sp-h.ow-now{font-weight:var(--ow-fw-700);}
+  .ow-dy-sp-h.ow-warn{color:var(--ow-amber-ink);}
+  .ow-dy-sp-h.ow-bad{color:var(--ow-crimson);}
+  .ow-dy-sp-s{display:block;margin-top:1px;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;}
+  .ow-dy-sp-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+  .ow-dy-sp .ow-empty{grid-column:1/-1;padding:var(--ow-sp-16) var(--ow-sp-12) var(--ow-sp-4);}
+  /* The line's own box, on the runway's classes; the legend under it
+     is .ow-ah-lg as the Cash lens draws it. */
+  .ow-dy-flow{padding:var(--ow-sp-10) var(--ow-sp-12) 0;}
+  .ow-dy-flow .ow-ah-svg{height:auto;}
+
+  @media (max-width:1279px){
+    /* 1024 to 1279: the spine gives up 60px and the two panels beside
+       the chart take a column each. */
+    .ow-dy-grid{grid-template-columns:340px minmax(0,1fr);}
+    .ow-dy-pair{grid-template-columns:minmax(0,1fr);}
+  }
 
   @media (max-width:820px){
     /* The day is a desk screen and stays one. What the phone gets is the
@@ -14601,9 +14629,20 @@
        figures start. They share the row under the day itself. */
     .ow-ph .ow-dy-nav ~ .btn.ow-sm{flex:1 1 0;width:auto;min-width:0;
       min-height:var(--ow-tap);box-sizing:border-box;justify-content:center;}
-    .ow-dy-till{grid-template-columns:minmax(0,1fr) 92px 92px;
-      padding:var(--ow-sp-10) var(--ow-sp-12);}
-    .ow-dy-till-t{grid-template-columns:minmax(0,1fr) auto;}
+    /* THE SPINE ON A PHONE is one column, and the spine panel's head
+       grows to hold the walk at a thumb's size under the title. A node
+       is a tap target, so its body is at least 44px tall, and its two
+       lines sit on the phone ramp. The phone's own spine has not been
+       drawn yet; this is the console's, made readable in one hand. */
+    .ow-dy-grid{grid-template-columns:minmax(0,1fr);}
+    .ow-dy-pair{grid-template-columns:minmax(0,1fr);}
+    .ow-dy-spine .ow-pan-h{padding:var(--ow-sp-8) var(--ow-sp-12);}
+    .ow-dy-spine .ow-pan-h .ow-dy-walk{flex:1 1 100%;margin-left:0;}
+    .ow-dy-spine .ow-pan-h .ow-dy-nav{height:auto;flex:1;}
+    .ow-dy-spine .ow-pan-h .ow-dy-b{width:var(--ow-tap);min-height:var(--ow-tap);}
+    .ow-dy-sp-b{min-height:var(--ow-tap);}
+    .ow-dy-sp-h{font-size:var(--ow-t-14);}
+    .ow-dy-sp-s{font-size:var(--ow-t-12);}
   }
 
 
@@ -17132,7 +17171,7 @@
              every .ow-ph-help in a header -- Follow-ups already carries
              three -- so each horizon keeps the whole of the argument its
              own screen had, rather than losing it to a merge. -->
-        <p class="ow-ph-help"><b>Today.</b> One day as it happened: who bought, who paid, what moved on the shelf, what the orders did, and the meeting held that morning with what became of each move. The four figures are set against a typical day of the SAME WEEKDAY &mdash; the middle of the last five, because a Tuesday against a Sunday says nothing, and where fewer than three are on the books there is no comparison rather than one drawn from two days. Under them, whether the day is properly on the record at all: whether the cash book was opened, whether the till was counted and agreed, and whether anything finished that day is still sitting without an invoice. Nothing on this lens reads a live balance and nothing on it posts, pays or closes anything &mdash; a row opens what is behind it, and the sheet prints. A day still trading is not compared with anything, because a part day set beside whole ones reads as a bad day every afternoon.</p>
+        <p class="ow-ph-help"><b>Today.</b> The day as a spine: one line of what has actually happened, in the order it happened &mdash; the cash book opened, every line that ran out, the largest payments that came in, every delivery onto the shelf &mdash; then where the day is now, and the one act that closes it. Every node is a movement already on the books, each wearing the clock its own record carries; the two ends read <i>open</i> and <i>close</i> because the book keeps no time for either. Beside it, money through the day: what was invoiced, cumulative by the half hour, against the middle of the last five days of the SAME WEEKDAY at the same hour &mdash; the one shape in which a part day can honestly be set against whole ones. Where fewer than three such days are on the books, or their invoices carry no time of day, the line is drawn alone and the legend says why. Under it, whether the day is properly on the record: the book opened, the till counted and agreed, nothing finished and left uninvoiced. Nothing on this lens reads a live balance and nothing on it posts, pays or closes anything &mdash; a node opens the record behind it, and the one button in the header is the act itself. The arrows walk a closed day in the same shape, and on a counted day the sheet prints.</p>
         <p class="ow-ph-help"><b>Stock.</b> What is worth buying, worked out from the shop&#39;s own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held &mdash; where the price on file for the whole month&#39;s quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget is what the Cash lens says is safe to spend; what does not fit is named rather than dropped. Nothing is ordered until you send it, and nothing here is a forecast &mdash; every figure comes from an invoice or the Price Registry.</p>
         <p class="ow-ph-help"><b>Cash.</b> The line starts at what the cash book says you hold and steps down on each day something you have already promised falls due. It is a step rather than a slope because money does not drain away between payments &mdash; it sits still and then goes. Safe to spend is the LOWEST point the line reaches, not what it ends on: ending the month with something left is no comfort if you are under water in the middle of it, and the buying plan budgets from that lowest figure. Only money with a day somebody actually named is on the line; everything else is counted below it, undated, and each becomes part of the line the day you name one. A debtor&#39;s word is drawn too, dashed, and is never counted in what is safe to spend.</p>
         <span class="ow-ph-sp"></span>
@@ -17152,6 +17191,12 @@
              naming a day happens on the bill's own row, and on a healthy
              day there is nothing here to do. -->
         <span class="ow-fc-acts" id="fc_acts_today" hidden>
+          <!-- THE WALK. Its buttons are bound by id at parse time, so
+               renderDay MOVES this span into the spine panel's head
+               rather than re-emitting it: the same element, the same
+               listeners, wherever it sits. It comes back here for the
+               instant the body is wiped and redrawn. -->
+          <span class="ow-dy-walk" id="day_walk">
           <span class="ow-dy-nav">
             <button type="button" class="ow-dy-b" id="day_prev" title="The day before" aria-label="The day before">
               <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -17163,13 +17208,19 @@
               <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
           </span>
-          <button type="button" class="btn btn-ghost ow-sm" id="day_today">Today</button>
-          <!-- Ghost or accent depending on the day: renderDay hands it the
-               accent only when the day is closed and there is nothing left
-               to do, because then printing IS the one thing to do next. -->
+          </span>
+          <!-- The way back to now, only while an earlier day is being read. -->
+          <button type="button" class="btn btn-ghost ow-sm" id="day_today" hidden>Today</button>
+          <!-- ONE SLOT, TWO CONTROLS, NEVER BOTH. While the day has a gap
+               the slot is the act that closes it -- Count the till, or
+               Open the cash book -- and it is the screen's one accent.
+               Once the day is counted there is nothing left to do but
+               take the sheet away, and the ghost print button takes the
+               slot. renderDay decides. -->
+          <button type="button" class="btn btn-accent ow-sm" id="day_act" hidden>Count the till</button>
           <button type="button" class="btn btn-ghost ow-sm" id="day_print" title="Print this day as a sheet">
             <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
-            Print the day
+            Print the day sheet
           </button>
         </span>
         <span class="ow-fc-acts" id="fc_acts_stock" hidden>
@@ -29160,6 +29211,7 @@ navApplyFolds();
   on('day_next', ()=> dayGo(anShiftDate(dayShown || todayISO(), 1)));
   on('day_today', ()=> dayGo(todayISO()));
   on('day_print', ()=> dayPrintSheet());
+  on('day_act', ()=> dayDoAct());
   const box = document.getElementById('day_date');
   if(box) box.addEventListener('change', ()=> dayGo(box.value || todayISO()));
   /* THE ROWS ARE DOORS. A day is a way back into the records that made
@@ -29172,8 +29224,14 @@ navApplyFolds();
      read-only -- they open a record, they do not change one. */
   const dayBodyEl = document.getElementById('dayBody');
   if(dayBodyEl) dayBodyEl.addEventListener('click', (e)=>{
-    const el = e.target && e.target.closest ? e.target.closest('[data-day-customer],[data-day-order],[data-day-tab]') : null;
+    const el = e.target && e.target.closest
+      ? e.target.closest('[data-day-customer],[data-day-order],[data-day-tab],[data-day-lens],[data-day-act]') : null;
     if(!el) return;
+    /* A spine node is a door to its source record: a stockout to the
+       Stock lens, a payment to the customer, a delivery to the shelf --
+       and the pending close to the act itself. */
+    if(el.dataset.dayAct) return dayDoAct();
+    if(el.dataset.dayLens){ fcLens = el.dataset.dayLens; renderForecasts(); return; }
     if(el.dataset.dayTab) return goToTab(el.dataset.dayTab);
     if(el.dataset.dayOrder) return openOrderPreview(el.dataset.dayOrder);
     if(el.dataset.dayCustomer) return openCustomerStats(el.dataset.dayCustomer);
@@ -39621,12 +39679,16 @@ function debtCollectionsOn(dateISO){
      of these sources anywhere else would be a second chance to get the
      cashTxnId law wrong, which is the whole reason this function is the
      only door to a day's collections. */
-  const add = (id, name, amount, how, against)=>{
+  const add = (id, name, amount, how, against, time)=>{
     if(!(amount > 0)) return;
     const key = id != null ? 'c' + id : 'n' + String(name||'').trim().toLowerCase();
     const r = rows.get(key) || { id: id == null ? null : id, name: name || '(unnamed)', amount: 0,
-      hows: new Set(), againsts: [] };
+      hows: new Set(), againsts: [], time: '' };
     r.amount += amount;
+    /* WHEN IT ARRIVED, for the day's spine: the cash txn's own clock,
+       and the earliest of them when one person paid twice. Carried here
+       for the same reason the account is -- read once, at the one door. */
+    if(time && (!r.time || time < r.time)) r.time = String(time);
     if(how) r.hows.add(how);
     if(against && r.againsts.indexOf(against) === -1) r.againsts.push(against);
     rows.set(key, r);
@@ -39643,7 +39705,7 @@ function debtCollectionsOn(dateISO){
         ? Math.round((Date.parse(day) - Date.parse(raised)) / 86400000) : null;
       add(c ? c.id : null, c ? c.name : ((q.client && q.client.name) || ''), Number(p.amount)||0,
         accountLabel(t.account),
-        invoiceNumberLabel(q) + (age ? ', ' + age + ' days old' : ''));
+        invoiceNumberLabel(q) + (age ? ', ' + age + ' days old' : ''), t.time);
     });
   });
   (data.customers||[]).forEach(c=>{
@@ -39651,11 +39713,11 @@ function debtCollectionsOn(dateISO){
       if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l) || l.cashTxnId == null) return;
       if(String(l.date||'').slice(0, 10) !== day) return;
       const lt = txnById.get(l.cashTxnId);
-      add(c.id, c.name, Number(l.amount)||0, lt ? accountLabel(lt.account) : '', '');
+      add(c.id, c.name, Number(l.amount)||0, lt ? accountLabel(lt.account) : '', '', lt ? lt.time : '');
     });
   });
   const list = [...rows.values()].filter(r=> r.amount > 0.5)
-    .map(r=> ({ id: r.id, name: r.name, amount: Math.round(r.amount),
+    .map(r=> ({ id: r.id, name: r.name, amount: Math.round(r.amount), time: r.time || '',
       how: [...r.hows].filter(Boolean).join(', '),
       /* Named rather than dropped: two invoices settled in one payment
          says two, not the first one it happened to see. */
@@ -80658,11 +80720,17 @@ let fcLens = 'cash';
    of none of them -- so the sub belongs to the lens, and Today's says
    which day is being read, because that is the thing that goes stale. */
 const FC_SUB = {
+  /* THE READING TIME IS SAID, because it is the one thing on the lens
+     that goes stale: the sub is never folded behind the "i", and nothing
+     refreshes it -- re-reading is a reload, as everywhere else. */
   today: ()=> {
     const d = dayShown || todayISO();
-    return d >= todayISO()
-      ? `Today so far, against what a typical ${dayWeekday(d)} ends at — never a live balance.`
-      : 'Every figure is what the books recorded on that day — never how things stand now.';
+    const today = todayISO();
+    const now = new Date();
+    const clock = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    if(d > today) return `${esc(dayLongDate(d))} has not happened yet — nothing here is a forecast.`;
+    if(d === today) return `${esc(dayLongDate(d))}, read at <b>${clock}</b> — still trading, so the day has no verdict yet.`;
+    return `${esc(dayLongDate(d))} — as the books recorded it, not as things stand now.`;
   },
   stock: ()=> 'What runs out, and what it costs to have it back in time.',
   cash: ()=> 'What you have already promised, against what you hold.',
@@ -80687,7 +80755,7 @@ function fcApplyLens(){
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
   const sub = document.getElementById('fc_sub');
-  if(sub) sub.textContent = FC_SUB[fcLens]();
+  if(sub) sub.innerHTML = FC_SUB[fcLens]();
   /* Opens on today unless the owner has already walked back to a day --
      coming back to the lens you left should show the day you left it
      on, not silently jump to now. */
@@ -89571,6 +89639,20 @@ function mgrPaintAcctAdvice(verdict){
    IN NAMES, NOT IN TOTALS. The totals already exist on four other
    screens. What was missing is who came, who paid, what moved. */
 const DAY_ROWS = 8;
+/* THE DAY A STAGE STAMP FALLS ON. The board keeps stageEnteredAt as a
+   number of milliseconds (Date.now(), and Number(...) on load), and
+   String(ms).slice(0, 10) is ten digits that equal no date -- so every
+   order read this way was an order that never moved. An ISO string is
+   still read as one: fixtures and older rows carry those. */
+function dayStampISO(v){
+  if(v == null || v === '') return '';
+  const n = Number(v);
+  if(Number.isFinite(n) && String(v).indexOf('-') === -1){
+    const d = new Date(n);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+  return String(v).slice(0, 10);
+}
 function dayRecord(dateISO){
   const day = String(dateISO || todayISO()).slice(0, 10);
 
@@ -89626,7 +89708,7 @@ function dayRecord(dateISO){
     const delta = Number(l.delta) || 0;
     const after = Number(l.qtyAfter) || 0;
     const row = { key: l.key, line: l.label || l.key, delta: Math.round(delta),
-      left: Math.round(after), note: l.note || '' };
+      left: Math.round(after), note: l.note || '', at: l.at || null };
     if(l.type === 'count') countRows.push(row);
     else if(delta > 0) inRows.push(row);
     else if(delta < 0) outRows.push(row);
@@ -89634,6 +89716,10 @@ function dayRecord(dateISO){
        makes, so the two can never disagree about what ran out. */
     if(delta < 0 && after <= 0 && (after - delta) > 0) ranOut.push(row);
   });
+  /* What a line that ran out had sold by then -- every movement out on
+     this day for that key, not only the one that crossed to nothing. */
+  ranOut.forEach(r=>{ r.sold = Math.round(outRows.filter(o=> o.key === r.key)
+    .reduce((n, o)=> n - o.delta, 0)); });
 
   /* Orders that moved on this day, by the stamp the board itself keeps.
      A stage limit is about time, so the stamp is a moment; the day is
@@ -89641,7 +89727,7 @@ function dayRecord(dateISO){
   const moved = [], completed = [];
   (data.savedQuotes || []).forEach(q=>{
     if(!q || q.voided) return;
-    const at = String(q.stageEnteredAt || '').slice(0, 10);
+    const at = dayStampISO(q.stageEnteredAt);
     if(at !== day) return;
     const row = { id: q.id, client: (q.client && q.client.name) || 'Walk-in',
       stage: (SQ_STATUSES[q.status] && SQ_STATUSES[q.status].label) || q.status };
@@ -89901,7 +89987,7 @@ function dayClosing(dateISO){
      gap that makes a closed day quietly wrong. */
   const uninvoiced = (data.savedQuotes || []).filter(q=> q && !q.voided
     && q.status === 'completed' && !q.invoiced
-    && String(q.stageEnteredAt || '').slice(0, 10) === day);
+    && dayStampISO(q.stageEnteredAt) === day);
   checks.push(uninvoiced.length
     ? { mark: 'warn',
         title: uninvoiced.length === 1 ? 'One finished order carries no invoice'
@@ -89915,10 +90001,10 @@ function dayClosing(dateISO){
   /* The one thing to do, or nothing. Order matters: a day with no cash
      book has no till to count. */
   let act = null;
-  if(!pos.openingSet) act = { label: 'Open the cash book', tab: 'cashbook',
+  if(!pos.openingSet) act = { label: 'Open the cash book', tab: 'cashbook', mode: 'open',
     why: 'The day cannot be closed until somebody says what was in the drawer when it started. '
        + 'Until then every figure below it is measured from a number nobody confirmed.' };
-  else if(pos.countedAccounts < ACCOUNTS.length) act = { label: 'Count the till', tab: 'cashbook',
+  else if(pos.countedAccounts < ACCOUNTS.length) act = { label: 'Count the till', tab: 'cashbook', mode: 'count',
     why: 'Counting is what closes a day. Until all three accounts are counted the till figure '
        + 'above is what the book says, not what is in the drawer.' };
 
@@ -89965,38 +90051,16 @@ function dayGo(iso){
   renderDay();
 }
 
-const DAY_ARROWS = {
-  up: '<path d="M12 19V6M6 12l6-6 6 6"/>',
-  down: '<path d="M12 5v13M6 12l6 6 6-6"/>',
-  flat: '<path d="M5 12h14"/>',
-};
 const DAY_MARKS = {
   good: '<path d="M4 12.5l5 5 11-11"/>',
   warn: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
   bad: '<circle cx="12" cy="12" r="8.5"/><path d="M15 9l-6 6M9 9l6 6"/>',
   idle: '<circle cx="12" cy="12" r="8.5"/>',
 };
-const dayIcon = (d)=> `<svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true">${DAY_ARROWS[d] || DAY_ARROWS.flat}</svg>`;
-
-/* A figure over what it is measured against. The FIGURE stays ink: a
-   figure is a size, not a warning, and the line under it is the only
-   part of the tile that makes a claim. */
-function dayTile(label, value, delta, basis){
-  const d = delta
-    ? `<p class="ow-mt-d${delta.tone ? ' ow-' + delta.tone : ''}">${dayIcon(delta.dir)}<span>${esc(delta.text)}</span></p>`
-    : '';
-  return `<div class="ow-mt">
-    <p class="ow-mt-l">${esc(label)}</p>
-    <span class="ow-mt-v">${esc(value)}</span>${d}
-    ${basis ? `<p class="ow-mt-s">${basis}</p>` : ''}</div>`;
-}
 
 /* "1 more movements" was on screen. One sentence, one plural, one place
    to get it wrong. */
 const dayMore = (n, noun)=> n + ' more ' + noun + (n === 1 ? '' : 's') + ', not listed.';
-
-const dayBand = (title, count)=> `<div class="ow-tbl-g"><span>${esc(title)}</span>${
-  count ? `<span class="ow-tbl-gs">${esc(count)}</span>` : ''}</div>`;
 
 /* A figure and, under it, what it rests on. .ow-tbl-n never wraps and
    never gives way -- a clipped figure is a wrong figure -- so the basis
@@ -90008,262 +90072,428 @@ const dayNum = (v, basis, tone, label)=> `<span class="ow-tbl-n${tone ? ' ow-' +
 const dayName = (name, meta)=> `<span class="ow-tbl-c"><span class="ow-tbl-p">${esc(name)}</span>${
   meta ? `<span class="ow-tbl-s">${esc(meta)}</span>` : ''}</span>`;
 
+/* A figure inside a sentence on the spine: mono, tabular, 600. */
+const dayFig = (v)=> `<span class="ow-dy-sp-f">${esc(v)}</span>`;
+const dayBare = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+const dayClock = (ms)=>{
+  const dt = new Date(ms);
+  if(isNaN(dt.getTime())) return '';
+  return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+};
+
+/* ---- MONEY THROUGH THE DAY ------------------------------------------
+
+   The one comparison this screen makes, and the only shape in which a
+   part day can be set against whole ones: cumulative, hour by hour,
+   against the middle of the last five days of the same weekday at the
+   same hour. A total at four in the afternoon beside five closing
+   totals reads as a bad day every afternoon; a curve beside the middle
+   curve reads as where the day has got to.
+
+   THE CLOCK IS THE INVOICE'S OWN. invoicedTs is stamped the moment an
+   order is invoiced or a counter sale is taken. Invoices raised before
+   that stamp existed were backfilled from their bare date, which lands
+   every one of them on midnight UTC exactly -- and a real invoice at
+   that instant is not a thing, so that stamp is read as NO clock rather
+   than as a sale at three in the morning. An invoice with no clock is
+   not placed on the line and is named in the legend, because a figure
+   put where it might have been would be the one invented thing on a
+   screen whose foot says nothing on it is. */
+const DAY_FLOW = { open: 8, close: 18.5, step: 0.5 };
+
+function dayInvoiceHour(q){
+  const ts = Number(q && q.invoicedTs);
+  if(!ts) return null;
+  const dt = new Date(ts);
+  if(dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0 && dt.getUTCSeconds() === 0
+    && dt.getUTCMilliseconds() === 0) return null;
+  return dt.getHours() + dt.getMinutes() / 60;
+}
+
+/* The day's invoiced total, cumulative by half hour from open to close.
+   Sales before the open land on the first point and after the close on
+   the last: the window is how the line is drawn, not a claim about when
+   the shop trades. */
+function dayCumulative(dateISO){
+  const n = Math.round((DAY_FLOW.close - DAY_FLOW.open) / DAY_FLOW.step) + 1;
+  const buckets = new Array(n).fill(0);
+  let untimed = 0, untimedTotal = 0, timed = 0;
+  anInvoicesInRange(dateISO, dateISO).forEach(q=>{
+    const total = savedQuoteTotal(q);
+    const h = dayInvoiceHour(q);
+    if(h == null){ untimed += 1; untimedTotal += total; return; }
+    const i = Math.max(0, Math.min(n - 1, Math.round((h - DAY_FLOW.open) / DAY_FLOW.step)));
+    buckets[i] += total; timed += total;
+  });
+  const points = []; let run = 0;
+  buckets.forEach(v=>{ run += v; points.push(Math.round(run)); });
+  return { points, total: Math.round(timed), untimed, untimedTotal: Math.round(untimedTotal) };
+}
+
+/* The middle curve, or the honest reason there is not one. The days are
+   dayTypical's own -- same weekday, finished, with something on them --
+   and a day whose invoices carry no clock cannot lend its shape, so it
+   is set aside and the count says so. */
+function dayFlowTypical(dateISO){
+  const typ = dayTypical(dateISO);
+  if(typ.count < DAY_TYPICAL_MIN) return { state: 'thin', count: typ.count };
+  const curves = typ.days.map(d=> dayCumulative(d)).filter(c=> c.untimed === 0 && c.total > 0);
+  if(curves.length < DAY_TYPICAL_MIN) return { state: 'unclocked', count: typ.count, clocked: curves.length };
+  const n = curves[0].points.length;
+  const points = [];
+  for(let i = 0; i < n; i++) points.push(dayMedian(curves.map(c=> c.points[i])));
+  return { state: 'ok', count: curves.length, points, total: points[n - 1] };
+}
+
+function dayFlowHTML(day, isToday, weekday){
+  const cum = dayCumulative(day);
+  const typ = dayFlowTypical(day);
+  const window = `<span class="ow-pan-n">08:00 &rarr; 18:30</span>`;
+  const head = (nt)=> `<div class="ow-pan-h"><span class="ow-pan-t">Money through the day</span>
+      <span class="ow-pan-nt">${nt}</span>${window}</div>`;
+
+  /* NOT ENOUGH IS AN ANSWER. Nothing on the line is not an empty chart,
+     it is a sentence. */
+  if(!cum.total){
+    return `<div class="ow-pan">${head('cumulative, invoiced')}<div class="ow-empty">${
+      cum.untimed
+        ? `<b>${cum.untimed === 1 ? 'The one invoice' : 'All ' + cum.untimed + ' invoices'} ${
+            isToday ? 'so far' : 'that day'} ${cum.untimed === 1 ? 'carries' : 'carry'} no time of day.</b>
+           <p class="ow-mini" style="border:0;margin:6px auto 0;">${dayBare(cum.untimedTotal)} UGX was invoiced, but the books do not say when,
+             so there is no line to draw and nothing here guesses one.</p>`
+        : `<b>Nothing has been invoiced ${isToday ? 'yet today' : 'on this day'}.</b>
+           <p class="ow-mini" style="border:0;margin:6px auto 0;">The line starts on the first invoice. A payment against an old debt
+             is money in, but it is not a sale, and it is listed under Who paid.</p>`}</div></div>`;
+  }
+
+  const W = 560, BASE = 106, TOP = 20, INSET = 4;
+  const n = cum.points.length;
+  const X = (i)=> INSET + (i / (n - 1)) * (W - 2 * INSET);
+  const now = new Date();
+  const nowH = now.getHours() + now.getMinutes() / 60;
+  /* Today's line stops at the reading hour; a closed day's runs to the
+     close. The last point drawn is the figure labelled. */
+  const cut = isToday
+    ? Math.max(0, Math.min(n - 1, Math.round((nowH - DAY_FLOW.open) / DAY_FLOW.step)))
+    : n - 1;
+  const ghost = typ.state === 'ok' ? typ.points : null;
+  const top = Math.max(cum.points[cut] || 0, ghost ? ghost[n - 1] : 0, 1);
+  const Y = (v)=> BASE - (v / top) * (BASE - TOP);
+  const pts = (arr)=> arr.map((v, i)=> `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const line = cum.points.slice(0, cut + 1);
+  const ex = X(cut), ey = Y(line[cut]);
+  /* The end label sits to the right of the dot until there is no room
+     there, then to the left -- never over the line it names. */
+  const right = ex < W - 96;
+  const lx = right ? ex + 8 : ex - 8, anchor = right ? 'start' : 'end';
+  const clock = dayClock(now.getTime());
+  const xl = [8, 10, 12, 14, 16, 18].map(h=>{
+    const x = X((h - DAY_FLOW.open) / DAY_FLOW.step);
+    return `<text class="ow-ah-xl" x="${x.toFixed(1)}" y="122"${h === 18 ? ' text-anchor="end"' : ''}>${String(h).padStart(2, '0')}</text>`;
+  }).join('');
+
+  const svg = `<div class="ow-dy-flow"><svg class="ow-ah-svg" viewBox="0 0 ${W} 130" role="img"
+      aria-label="Invoiced so far, cumulative through the day${ghost ? ', against the middle of the last ' + typ.count + ' ' + esc(weekday) + 's' : ''}">
+    <line class="ow-ah-axis" x1="0" y1="${BASE}" x2="${W}" y2="${BASE}"/>
+    <line class="ow-ah-grid" x1="0" y1="70" x2="${W}" y2="70" stroke-dasharray="3 4"/>
+    <line class="ow-ah-grid" x1="0" y1="34" x2="${W}" y2="34" stroke-dasharray="3 4"/>
+    ${ghost ? `<polyline class="ow-ah-ghost" points="${pts(ghost)}"/>` : ''}
+    <polyline class="ow-ah-line" points="${pts(line)}"/>
+    <line class="ow-ah-lowrule" x1="${ex.toFixed(1)}" y1="18" x2="${ex.toFixed(1)}" y2="${BASE}"/>
+    <circle class="ow-ah-dot" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4"/>
+    <text class="ow-ah-lowlab" x="${lx.toFixed(1)}" y="22" text-anchor="${anchor}">${esc(dayBare(line[cut]))}</text>
+    <text class="ow-ah-lowsub" x="${lx.toFixed(1)}" y="36" text-anchor="${anchor}">${
+      isToday ? `now, ${esc(clock)}` : 'at the close'}</text>
+    ${xl}
+  </svg></div>`;
+
+  /* WHY THERE IS NO SECOND LINE is said where the legend for it would
+     be. A screen that silently drops a claim it usually makes reads as a
+     screen that failed. */
+  const notes = [];
+  if(ghost) notes.push('Readable only because both are cumulative &mdash; a part day against a whole one is not.');
+  else if(typ.state === 'thin') notes.push(`${typ.count === 0 ? 'No earlier ' + esc(weekday) + ' is'
+      : typ.count === 1 ? 'One earlier ' + esc(weekday) + ' is' : typ.count + ' earlier ' + esc(weekday) + 's are'
+    } on the books, and a middle needs at least ${DAY_TYPICAL_MIN} &mdash; so the line is drawn alone.`);
+  else if(typ.state === 'unclocked') notes.push(`Only ${typ.clocked} of the last ${typ.count} ${esc(weekday)}s carry a time of day on their invoices,
+      and a middle needs at least ${DAY_TYPICAL_MIN} &mdash; so the line is drawn alone.`);
+  if(cum.untimed) notes.push(`${cum.untimed === 1 ? 'One invoice' : cum.untimed + ' invoices'} worth ${
+    esc(dayBare(cum.untimedTotal))} ${cum.untimed === 1 ? 'carries' : 'carry'} no time of day and ${
+    cum.untimed === 1 ? 'is' : 'are'} not on the line.`);
+  const legend = `<div class="ow-ah-lg">
+    <span class="ow-ah-lg-i"><span class="ow-ah-lg-k"></span>${isToday ? 'today' : 'that day'}, invoiced</span>
+    ${ghost ? `<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-g"></span>middle of the last ${typ.count} ${esc(weekday)}s</span>` : ''}
+    <span class="ow-ah-lg-t">${notes.join(' ')}</span></div>`;
+
+  return `<div class="ow-pan">${head(ghost ? `cumulative, against a typical ${esc(weekday)}` : 'cumulative, invoiced')}${svg}${legend}</div>`;
+}
+
+/* ---- THE SPINE ------------------------------------------------------
+
+   The day as a shape, not a log. In time order: the cash book opening,
+   every line that ran out, the largest payments received, every
+   delivery onto the shelf, where the day is now, and the one act that
+   closes it. Every node is a movement already on the books -- nothing
+   inferred, and nothing here sends itself.
+
+   THE TWO ENDS ARE NAMED, NOT CLOCKED. The cash book record carries no
+   time for its opening or its count, and the day's close is not on the
+   books at all -- so those nodes read "open" and "close" where the
+   others read a clock, rather than wearing a time nobody recorded. */
+const DAY_SPINE_MAX = 9;
+
+function daySpine(day, d, closing, isToday){
+  const pos = closing.pos;
+  const nodes = [];
+  const bookNow = Math.round(pos.accounts.reduce((n, a)=> n + a.closing, 0));
+
+  /* The first node is the opening, or the fact that there was none. */
+  if(pos.openingSet){
+    nodes.push({ kind: 'opened', t: 'open', dot: 'ow-good',
+      title: `Cash book opened ${dayFig(dayBare(pos.opening))}`,
+      sub: esc(pos.accounts.map(a=> a.label.toLowerCase() + ' ' + dayBare(a.opening)).join(' · ')),
+      link: 'data-day-tab="cashbook"' });
+  } else {
+    nodes.push({ kind: 'missing', t: 'open', dot: 'ow-warn', tone: 'ow-warn',
+      title: esc(isToday ? 'The cash book is not opened' : 'The cash book was never opened'),
+      sub: esc(isToday
+        ? 'Nobody has stood behind a starting balance yet, so every figure today is measured from a number nobody confirmed. Opening it is the thing to do.'
+        : 'Nobody stood behind a starting balance for this day, so what the book says was in the drawer is carried forward rather than counted.'),
+      link: isToday ? 'data-day-act="open"' : 'data-day-tab="cashbook"' });
+  }
+
+  /* The movements, each with the clock its own record carries. */
+  const moves = [];
+  d.stock.ranOut.forEach(r=> moves.push({ kind: 'stockout', dot: 'ow-bad', weight: Infinity,
+    t: r.at ? dayClock(Date.parse(r.at)) : '',
+    title: `${esc(r.line)} ran out`,
+    sub: `${r.sold ? r.sold + ' sold today, ' : ''}nothing left &middot; it is on the <b>Stock</b> lens`,
+    link: 'data-day-lens="stock"' }));
+  d.paid.rows.slice(0, 3).forEach(r=> moves.push({ kind: 'paid', dot: 'ow-good', weight: r.amount,
+    t: r.time || '',
+    title: `${esc(r.name)} paid ${dayFig(dayBare(r.amount))}`,
+    sub: esc([r.against, r.how].filter(Boolean).join(' · ') || 'against their balance'),
+    link: r.id != null ? `data-day-customer="${esc(r.id)}"` : '' }));
+  d.stock.in.forEach(r=> moves.push({ kind: 'received', dot: '', weight: 0,
+    t: r.at ? dayClock(Date.parse(r.at)) : '',
+    title: `${esc(r.line)} came in ${dayFig('+' + dayBare(r.delta))}`,
+    sub: esc([r.note, r.left + ' on the shelf'].filter(Boolean).join(' · ')),
+    link: 'data-day-tab="inventory"' }));
+
+  /* NAMED RATHER THAN DROPPED. The spine holds nine; what does not fit
+     is the smaller money, and the foot says how many went. */
+  const fixed = 1 + (isToday ? 1 : 0) + 1;
+  const room = Math.max(3, DAY_SPINE_MAX - fixed);
+  const byWeight = moves.slice().sort((a, b)=> b.weight - a.weight);
+  const kept = new Set(byWeight.slice(0, room));
+  const dropped = moves.length - Math.min(moves.length, room);
+  const byTime = (a, b)=> (a.t || '99:99') < (b.t || '99:99') ? -1 : (a.t || '99:99') > (b.t || '99:99') ? 1 : 0;
+  moves.filter(m=> kept.has(m)).sort(byTime).forEach(m=> nodes.push(m));
+
+  /* Where the day is now: what is still being worked and is therefore
+     in none of the figures yet. */
+  if(isToday){
+    const open = (data.savedQuotes || []).filter(q=> q && !q.voided && q.status !== 'completed'
+      && dayStampISO(q.stageEnteredAt) === day)
+      .sort((a, b)=> Number(b.stageEnteredAt) - Number(a.stageEnteredAt));
+    const first = open[0];
+    nodes.push({ kind: 'now', t: dayClock(Date.now()), dot: 'ow-now',
+      title: 'Now &mdash; still trading',
+      sub: first
+        ? `${esc((first.client && first.client.name) || 'Walk-in')} &mdash; ${esc((ORDER_STATUS_SHORT_LABELS[first.status] || first.status || '').toLowerCase())} since ${
+            esc(dayClock(Number(first.stageEnteredAt)))}, so it is not finished and not invoiced${
+            open.length > 1 ? ` &middot; ${open.length - 1} more still open` : ''}`
+        : 'Nothing from today’s orders is still being prepared or delivered',
+      link: first ? `data-day-order="${esc(first.id)}"` : '' });
+  }
+
+  /* The close: the one act left, or the count that was made. */
+  const till = closing.checks[1];
+  if(closing.act && closing.act.mode === 'count'){
+    nodes.push({ kind: 'pending', t: 'close', dot: 'ow-next', tone: 'ow-warn',
+      title: 'Count the till to close the day',
+      sub: pos.countedAccounts
+        ? `${pos.countedAccounts} of ${ACCOUNTS.length} accounts counted. The rest are still what the book says.`
+        : `The book says ${esc(dayBare(bookNow))}. Counting is what makes it true.`,
+      link: 'data-day-act="count"' });
+  } else if(closing.act){
+    nodes.push({ kind: 'pending', t: 'close', dot: 'ow-next',
+      title: 'The day cannot be closed yet',
+      sub: 'Open the cash book first; counting comes after.', link: '' });
+  } else {
+    nodes.push({ kind: 'counted', t: 'close', dot: till.mark === 'bad' ? 'ow-bad' : 'ow-good',
+      tone: till.mark === 'bad' ? 'ow-bad' : '',
+      title: esc(till.title), sub: esc(till.detail), link: 'data-day-tab="cashbook"' });
+  }
+  return { nodes, dropped };
+}
+
+function daySpineHTML(sp){
+  const n = sp.nodes.length;
+  return sp.nodes.map((x, i)=>{
+    const last = i === n - 1;
+    const tag = x.link ? 'button' : 'div';
+    return `<span class="ow-dy-sp-t${x.kind === 'now' ? ' ow-now' : ''}">${esc(x.t || '—')}</span>
+      <span class="ow-dy-sp-g"><span class="ow-dy-sp-d${x.dot ? ' ' + x.dot : ''}"></span>${
+        last ? '' : '<span class="ow-dy-sp-l"></span>'}</span>
+      <${tag}${x.link ? ' type="button" ' + x.link : ''} class="ow-dy-sp-b${x.link ? ' ow-dy-sp-k' : ''}${last ? ' ow-last' : ''}">
+        <span class="ow-dy-sp-h${x.kind === 'now' ? ' ow-now' : ''}${x.tone ? ' ' + x.tone : ''}">${x.title}</span>
+        <span class="ow-dy-sp-s">${x.sub}</span></${tag}>`;
+  }).join('');
+}
+
+/* THE ACT IN THE HEADER. Count the till (or open the book) is the
+   screen's one accent while the day has a gap; once it is counted there
+   is nothing to do but take the sheet away, and the ghost print button
+   takes the slot. Two controls, never both. */
+function dayHeaderActs(closing){
+  const act = closing ? closing.act : null;
+  const actBtn = document.getElementById('day_act');
+  const pr = document.getElementById('day_print');
+  const td = document.getElementById('day_today');
+  if(actBtn){
+    actBtn.hidden = !act;
+    if(act){ actBtn.textContent = act.label; actBtn.title = act.why; }
+  }
+  if(pr){
+    pr.hidden = !!act;
+    pr.disabled = !closing;
+    pr.classList.remove('btn-accent'); pr.classList.add('btn-ghost');
+  }
+  if(td) td.hidden = (dayShown || todayISO()) === todayISO();
+}
+
+/* The one act, run. Going to the cash book to open or count a day is
+   the owner acting on it, so cbGoToDay creating the day row is right
+   here -- it is renderDay, which only looks, that must never do so. */
+function dayDoAct(){
+  const day = dayShown || todayISO();
+  const act = dayClosing(day).act;
+  if(!act) return;
+  goToTab(act.tab);
+  if(act.tab === 'cashbook'){
+    cbGoToDay(day);
+    if(act.mode === 'count') cbSetMode('count');
+  }
+}
+
+/* THE STEPPER LIVES IN THE SPINE'S HEAD. Its buttons keep the listeners
+   bound to them at parse time, so the element is MOVED rather than
+   re-emitted: out to the header before the body is wiped, and into the
+   panel head once it is drawn. */
+function dayWalkTo(host){
+  const w = document.getElementById('day_walk');
+  if(!w || !host || w.parentNode === host) return;
+  host.appendChild(w);
+}
+
+function daySetSub(){
+  const sub = document.getElementById('fc_sub');
+  if(sub && fcLens === 'today') sub.innerHTML = FC_SUB.today();
+}
+
 function renderDay(){
   const body = document.getElementById('dayBody');
   if(!body) return;
   const day = dayShown || todayISO();
   const d = dayRecord(day);
-  const f = (n)=> fmtUGX(Math.round(n));
   const today = todayISO();
+  const isToday = day === today;
   /* TWO WAYS TO NAME ONE DAY, and they do different jobs. The heading is
-     always the date WITH its weekday, because the weekday is what the
-     comparison is keyed on and "Today" hides it; `phrase` is the form
-     that goes inside a sentence, where "on Today" is not English. The
-     word itself becomes a chip beside the date rather than replacing
-     it, which is how the screen stopped printing "25 Aug 2026 —
-     25 Aug 2026" and "Nothing was recorded on Today" in the same
-     breath. */
+     always the date WITH its weekday, because the comparison is keyed on
+     the weekday and "Today" hides it; `phrase` is the form that goes
+     inside a sentence, where "on Today" is not English. The word itself
+     becomes a chip beside the date rather than replacing it. */
   const named = day === today ? 'Today' : day === anShiftDate(today, -1) ? 'Yesterday' : null;
   const phrase = named ? named.toLowerCase() : 'on ' + fmtShortDate(day);
   const heading = dayLongDate(day);
+  const weekday = dayWeekday(day);
+  dayWalkTo(document.getElementById('fc_acts_today'));
+  daySetSub();
 
-  if(d.quiet){
+  if(d.quiet && !isToday){
     /* A day with nothing in it says so, and says which two things it
        cannot tell apart. Padding an empty Tuesday is how a screen
        teaches the eye to skip it on a busy one. */
     const future = day > today;
-    body.innerHTML = `<div class="ow-pan">
+    body.innerHTML = `<div class="ow-pan ow-dy-spine">
       <div class="ow-pan-h"><span class="ow-pan-t">${esc(heading)}</span>${
-        named ? `<span class="ow-cp ow-dy-hc">${esc(named)}</span>` : ''}</div>
+        named ? `<span class="ow-cp ow-dy-hc">${esc(named)}</span>` : ''}<span class="ow-dy-walkhost"></span></div>
       <div class="ow-empty">
         <b>Nothing was recorded ${esc(phrase)}.</b>
         <p class="ow-mini" style="border:0;margin:6px auto 0;">No sale, no payment, no stock movement
           and no cash entry carries this date. ${future
-            ? 'It has not happened yet, and nothing here is a forecast &mdash; what is already promised for that day is on What&rsquo;s coming.'
+            ? 'It has not happened yet, and nothing here is a forecast &mdash; what is already promised for that day is on the Cash lens.'
             : 'Either the shop was shut, or the day never reached the books. This screen cannot tell you which, and does not guess.'}</p>
         <div class="ow-dy-ea">${future
-          ? `<button type="button" class="btn btn-ghost ow-sm" data-day-tab="ahead">See what falls due that day</button>`
+          ? `<button type="button" class="btn btn-ghost ow-sm" data-day-lens="cash">See what falls due that day</button>`
           : `<button type="button" class="btn btn-ghost ow-sm" data-day-tab="cashbook">Open the cash book for this day</button>`}</div>
       </div></div>`;
-    const pr = document.getElementById('day_print');
-    if(pr){ pr.classList.remove('btn-accent'); pr.classList.add('btn-ghost'); pr.disabled = true; }
+    dayWalkTo(body.querySelector('.ow-dy-walkhost'));
+    dayHeaderActs(null);
     renderDayMeeting(day);
     return;
   }
 
-  const cmp = dayCompare(day);
   const closing = dayClosing(day);
-  const weekday = dayWeekday(day);
-  const typ = cmp.state === 'ok' ? cmp.typical : null;
-  const delta = (v, t)=> typ ? dayDelta(v, t) : null;
+  const sp = daySpine(day, d, closing, isToday);
 
-  /* ---- was it a good day ------------------------------------------ */
-  const strip = `<div class="ow-strip ow-dy-s">
-    ${dayTile('Sales invoiced', f(d.sold.total), delta(d.sold.total, typ && typ.sales),
-      d.sold.count === 1 ? '1 sale' : d.sold.count + ' sales')}
-    ${dayTile('Gross profit', f(d.sold.profit), delta(d.sold.profit, typ && typ.profit),
-      (d.sold.total > 0 ? Math.round(d.sold.profit / d.sold.total * 1000) / 10 + '% margin' : 'no sales')
-      + (d.sold.estimated ? ', part of it costed by estimate' : ''))}
-    ${dayTile('Debt collected', f(d.paid.total), delta(d.paid.total, typ && typ.collected),
-      d.paid.count === 1 ? '1 person paid' : d.paid.count + ' people paid')}
-    ${dayTile('Through the till', f(d.cash.in - d.cash.out), delta(d.cash.in - d.cash.out, typ && typ.till),
-      d.cash.entries === 1 ? '1 movement' : d.cash.entries + ' movements')}
-  </div>`;
+  /* ---- the spine ------------------------------------------------- */
+  const quietLine = d.quiet ? `<div class="ow-empty">
+      <b>Nothing has traded yet today.</b>
+      <p class="ow-mini" style="border:0;margin:6px auto 0;">No sale, no payment and no stock movement carries today&rsquo;s
+        date. ${closing.act && closing.act.mode === 'open'
+          ? 'The day starts when the cash book is opened.'
+          : 'The first invoice or receipt starts the line.'}</p></div>` : '';
+  const foot = 'Every node is a movement already on the books &mdash; nothing here is inferred, and nothing here sends itself. '
+    + 'The arrows walk a closed day in the same shape.'
+    + (sp.dropped ? ` ${sp.dropped} smaller movement${sp.dropped === 1 ? '' : 's'} not drawn &mdash; the cash book and the stock log carry ${sp.dropped === 1 ? 'it' : 'them'}.` : '');
+  const spine = `<div class="ow-pan ow-dy-spine">
+    <div class="ow-pan-h"><span class="ow-pan-t" title="${esc(heading)}">The day, as it went</span><span class="ow-dy-walkhost"></span></div>
+    <div class="ow-dy-sp">${daySpineHTML(sp)}${quietLine}</div>
+    <p class="ow-mini">${foot}</p></div>`;
 
-  /* WHY THERE IS NO COMPARISON is said where the comparison would have
-     been. A screen that silently drops a claim it usually makes reads
-     as a screen that failed. */
-  const noCmp = cmp.state === 'open'
-    ? `<p class="ow-mini">${esc(named === 'Today' ? 'Today is still trading' : 'This day has not finished')},
-        so it is set against nothing. A sale carries a date and no time, so there is no way to ask where
-        a typical ${esc(weekday)} stood at this hour &mdash; and a part day beside whole ones reads as a
-        bad day every afternoon of its life.</p>`
-    : cmp.state === 'thin'
-      ? `<p class="ow-mini">${cmp.count === 0 ? 'No earlier ' + esc(weekday) + ' is on the books'
-          : cmp.count === 1 ? 'One earlier ' + esc(weekday) + ' is on the books'
-          : esc(String(cmp.count)) + ' earlier ' + esc(weekday) + 's are on the books'}, and a middle
-          needs at least ${DAY_TYPICAL_MIN}. There is no comparison here rather than one drawn from
-          too few days.</p>`
-      : '';
+  /* ---- money through the day ------------------------------------- */
+  const flow = d.quiet
+    ? `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Money through the day</span>
+        <span class="ow-pan-nt">cumulative, invoiced</span><span class="ow-pan-n">08:00 &rarr; 18:30</span></div>
+        <div class="ow-empty">The day has not traded, so there is no line to draw.</div></div>`
+    : dayFlowHTML(day, isToday, weekday);
 
-  const chip = named ? `<span class="ow-cp ow-dy-hc">${esc(named)}</span>`
-    : closing.closed ? `<span class="ow-cp ow-good ow-dy-hc"><span class="ow-cp-d"></span>Closed and counted</span>`
-    : '';
-  const verdict = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">${esc(heading)}</span>${
-      cmp.state === 'ok' ? `<span class="ow-pan-nt">against the middle of the last ${
-        cmp.typical.count} ${esc(weekday)}s, ${esc(fmtShortDate(cmp.typical.first))} to ${
-        esc(fmtShortDate(cmp.typical.last))}</span>` : ''}${chip}</div>
-    ${strip}${noCmp}</div>`;
-
-  /* ---- what happened: money ---------------------------------------- */
-  let buy = dayBand('Who bought', d.sold.clientCount + (d.sold.clientCount === 1 ? ' buyer' : ' buyers')
-    + ' · ' + f(d.sold.total))
-    + `<div class="ow-tbl-h"><span class="ow-tbl-c">Customer</span>${dayNum('Orders')}${
-      dayNum('Sales')}${dayNum('Gross profit')}</div>`;
-  d.sold.clients.forEach(c=>{
-    const margin = c.total > 0 ? Math.round(c.profit / c.total * 1000) / 10 + '%' : '';
-    buy += `<div class="ow-tbl-r${c.customerId != null ? ' ow-tbl-k' : ''}"${
-      c.customerId != null ? ` data-day-customer="${esc(c.customerId)}"` : ''}>${
-      dayName(c.name, c.ref)}${dayNum(String(c.orders), '', '', 'Orders')}${
-      dayNum(f(c.total), '', '', 'Sales')}${dayNum(f(c.profit), margin, '', 'Gross profit')}</div>`;
-  });
-  if(d.sold.clientCount > d.sold.clients.length){
-    buy += `<div class="ow-tbl-f">${dayName((d.sold.clientCount - d.sold.clients.length)
-      + ' more buyers, not listed', 'sorted by what they took, largest first')}${
-      dayNum(String(d.sold.restOrders), '', '', 'Orders')}${dayNum(f(d.sold.restTotal), '', '', 'Sales')}${
-      dayNum(f(d.sold.restProfit), '', '', 'Gross profit')}</div>`;
-  }
-
-  let pay = '';
-  if(d.paid.count){
-    pay = dayBand('Who paid', d.paid.count + (d.paid.count === 1 ? ' person' : ' people')
-      + ' · ' + f(d.paid.total))
-      + `<div class="ow-tbl-h"><span class="ow-tbl-c">Customer</span><span class="ow-tbl-c">Arrived by</span>${
-        dayNum('Amount')}</div>`;
-    d.paid.rows.forEach(r=>{
-      pay += `<div class="ow-tbl-r${r.id != null ? ' ow-tbl-k' : ''}"${
-        r.id != null ? ` data-day-customer="${esc(r.id)}"` : ''}>${
-        dayName(r.name, r.against || '')}<span class="ow-tbl-c" data-l="Arrived by"><span class="ow-tbl-s">${
-        esc(r.how || 'not recorded')}</span></span>${dayNum(f(r.amount), '', '', 'Amount')}</div>`;
-    });
-    if(d.paid.count > d.paid.rows.length){
-      pay += `<div class="ow-tbl-f">${dayName((d.paid.count - d.paid.rows.length)
-        + ' more, not listed')}<span class="ow-tbl-c"></span>${dayNum(f(d.paid.restTotal), '', '', 'Amount')}</div>`;
-    }
-  }
-  const money = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Money that came in</span>
-      <span class="ow-pan-nt">what was invoiced, and separately what actually arrived</span></div>
-    <div class="ow-tbl ow-dy-buy">${buy}</div>
-    ${pay ? `<div class="ow-tbl ow-dy-pay">${pay}</div>`
-      : `<p class="ow-mini">Nobody paid off a debt ${esc(phrase)}.</p>`}</div>`;
-
-  /* ---- what happened: the shelf ------------------------------------ */
-  const shelfRow = (s, leftLabel, tone)=> `<div class="ow-tbl-r">${dayName(s.line, s.note)}${
-    dayNum((s.delta > 0 ? '+' : '') + s.delta, '', '', 'Moved')}${
-    dayNum(String(s.left), leftLabel, tone, 'On the shelf')}</div>`;
-  let shelf = `<div class="ow-tbl-h"><span class="ow-tbl-c">Line</span>${dayNum('Moved')}${
-    dayNum('On the shelf')}</div>`;
-  if(d.stock.ranOut.length){
-    /* RAN OUT IS NOT A FOOTNOTE. It was typeset at the weight of
-       "3 more not listed" -- the most consequential line of a trading
-       day, in the same grey as a truncation notice. */
-    shelf += dayBand('Ran out', d.stock.ranOut.length
-      + (d.stock.ranOut.length === 1 ? ' line' : ' lines'))
-      + d.stock.ranOut.map(s=> shelfRow(s, 'nothing left', 'bad')).join('');
-  }
-  if(d.stock.inCount) shelf += dayBand('Came in', d.stock.inCount
-    + (d.stock.inCount === 1 ? ' delivery' : ' deliveries'))
-    + d.stock.in.map(s=> shelfRow(s, 'on the shelf')).join('');
-  if(d.stock.outCount) shelf += dayBand('Went out', d.stock.outCount
-    + (d.stock.outCount === 1 ? ' line' : ' lines'))
-    + d.stock.out.map(s=> shelfRow(s, s.left <= 0 ? 'nothing left' : 'left',
-      s.left <= 0 ? 'bad' : '')).join('')
-    + (d.stock.outCount > d.stock.out.length
-      ? `<p class="ow-mini">${dayMore(d.stock.outCount - d.stock.out.length, 'movement')}</p>` : '');
-  if(d.stock.countedCount) shelf += dayBand('Counted', d.stock.countedCount
-    + (d.stock.countedCount === 1 ? ' correction' : ' corrections'))
-    + d.stock.counted.map(s=> shelfRow(s, 'counted')).join('');
-  const shelfPan = shelf ? `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">The shelf</span>
-      <span class="ow-pan-nt">a count is the shop correcting its own record &mdash; neither a delivery nor a sale</span></div>
-    <div class="ow-tbl ow-dy-sh">${shelf}</div></div>` : '';
-
-  /* ---- is it properly on the record -------------------------------- */
+  /* ---- how the day closes ---------------------------------------- */
   const checks = closing.checks.map(c=> `<div class="ow-ck ow-dy-ck ow-${c.mark}">
     <svg class="ow-dy-i" viewBox="0 0 24 24" aria-hidden="true">${DAY_MARKS[c.mark]}</svg>
     <span class="ow-ck-b"><span class="ow-ck-t">${esc(c.title)}</span>
       <span class="ow-ck-s">${esc(c.detail)}</span></span></div>`).join('');
-  /* THE UNIT IS NAMED ONCE, on the band. fmtUGX carries " UGX" on every
-     figure, which in a 304px rail split three ways is a suffix repeated
-     six times in a space that cannot hold the figures themselves -- and
-     a clipped figure is a WRONG figure, not a short one. The total keeps
-     its unit, because it is the one figure read on its own. */
-  const bare = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const till = `<div class="ow-tbl-g"><span>In and out, by account</span>
-      <span class="ow-tbl-gs">UGX</span></div>
-    <div class="ow-dy-till ow-dy-till-h"><span class="ow-dy-till-k"></span>
-      <span class="ow-tbl-n">In</span><span class="ow-tbl-n">Out</span></div>`
-    + closing.pos.accounts.map(a=> `<div class="ow-dy-till">
-        <span class="ow-dy-till-k">${esc(a.label)}</span>
-        <span class="ow-tbl-n">${a.in ? esc(bare(a.in)) : '&mdash;'}</span>
-        <span class="ow-tbl-n">${a.out ? esc(bare(a.out)) : '&mdash;'}</span></div>`).join('')
-    + `<div class="ow-dy-till ow-dy-till-t"><span class="ow-dy-till-k">Net through the till</span>
-        <span class="ow-tbl-n">${esc(f(d.cash.in - d.cash.out))}</span></div>`;
-  const act = closing.act ? `<div class="ow-ck-a ow-dy-ck-a">
-    <button type="button" class="btn btn-accent ow-sm" data-day-tab="${esc(closing.act.tab)}">${esc(closing.act.label)}</button>
-    <p class="ow-ck-s">${esc(closing.act.why)}</p></div>` : '';
   const closingPan = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">How the day closed</span>${
-      closing.act ? `<span class="ow-cp ow-warn ow-dy-hc">1 to do</span>` : ''}</div>
-    ${checks}${act}${till}</div>`;
+    <div class="ow-pan-h"><span class="ow-pan-t">${isToday && !closing.closed ? 'How the day closes' : 'How the day closed'}</span>${
+      closing.act ? `<span class="ow-cp ow-warn ow-dy-hc">1 to do</span>`
+      : closing.closed ? `<span class="ow-cp ow-good ow-dy-hc"><span class="ow-cp-d"></span>Closed and counted</span>` : ''}</div>
+    ${checks}</div>`;
 
-  /* ---- the comparison, with its working ---------------------------- */
-  let cmpPan = '';
-  if(cmp.state === 'ok'){
-    const line = (label, v, t)=>{
-      const dl = dayDelta(v, t);
-      return `<div class="ow-dy-cmp">
-        <div class="ow-dy-cmp-h"><span class="ow-dy-cmp-k">${esc(label)}</span>
-          <span class="ow-dy-cmp-f">${esc(f(v))}</span></div>
-        <div class="ow-dy-cmp-b"><span class="ow-mt-d${dl.tone ? ' ow-' + dl.tone : ''}">${
-          dayIcon(dl.dir)}<span>${esc(dl.text)}</span></span>
-          <span class="ow-dy-cmp-t">typical <span class="ow-sr-v">${esc(f(t))}</span></span></div></div>`;
-    };
-    cmpPan = `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Against a typical ${esc(weekday)}</span></div>
-      ${line('Sales invoiced', d.sold.total, typ.sales)}
-      ${line('Gross profit', d.sold.profit, typ.profit)}
-      ${line('Debt collected', d.paid.total, typ.collected)}
-      ${line('Through the till', d.cash.in - d.cash.out, typ.till)}
-      <p class="ow-mini">A typical ${esc(weekday)} is the middle of the last ${typ.count}
-        ${esc(weekday)}s that have anything on record, ${esc(fmtShortDate(typ.first))} to
-        ${esc(fmtShortDate(typ.last))}. The middle rather than the average, so one lorry-load
-        cannot rewrite what typical means; ${esc(weekday)}s only, because a ${esc(weekday)}
-        against a Sunday says nothing about either.</p></div>`;
+  /* ---- who paid -------------------------------------------------- */
+  let pay = '';
+  if(d.paid.count){
+    pay = `<div class="ow-tbl ow-dy-pay">` + d.paid.rows.map(r=> `<div class="ow-tbl-r${r.id != null ? ' ow-tbl-k' : ''}"${
+        r.id != null ? ` data-day-customer="${esc(r.id)}"` : ''}>${
+        dayName(r.name, [r.against, r.how].filter(Boolean).join(' · ') || 'how it arrived was not recorded')}${
+        dayNum(dayBare(r.amount), '', '', 'Amount')}</div>`).join('')
+      + (d.paid.count > d.paid.rows.length
+        ? `<div class="ow-tbl-f">${dayName((d.paid.count - d.paid.rows.length) + ' more, not listed')}${
+            dayNum(dayBare(d.paid.restTotal), '', '', 'Amount')}</div>` : '')
+      + `</div>`;
+  } else {
+    pay = `<p class="ow-mini">Nobody paid off a debt ${esc(phrase)}.</p>`;
   }
+  const payPan = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Who paid</span>${
+      d.paid.count ? `<span class="ow-pan-n">${d.paid.count} &middot; ${esc(dayBare(d.paid.total))}</span>` : ''}</div>
+    ${pay}</div>`;
 
-  /* ---- the work, and the days customers named ---------------------- */
-  let work = '';
-  /* NAMED RATHER THAN DROPPED, here as everywhere else. These three
-     lists were capped at eight and said nothing about the rest, so a day
-     that moved twenty orders showed eight and read as a day that moved
-     eight. */
-  const cut = (total, shown, noun)=> total > shown
-    ? `<p class="ow-mini">${dayMore(total - shown, noun)}</p>` : '';
-  if(d.orders.movedCount) work += dayBand('Orders that moved', String(d.orders.movedCount))
-    + d.orders.moved.map(o=> `<div class="ow-tbl-r ow-tbl-k" data-day-order="${esc(o.id)}">${
-      dayName(o.client, o.stage)}</div>`).join('')
-    + cut(d.orders.movedCount, d.orders.moved.length, 'order');
-  if(d.orders.completedCount) work += dayBand('Finished', String(d.orders.completedCount))
-    + d.orders.completed.map(o=> `<div class="ow-tbl-r ow-tbl-k" data-day-order="${esc(o.id)}">${
-      dayName(o.client, o.stage)}</div>`).join('')
-    + cut(d.orders.completedCount, d.orders.completed.length, 'order');
-  if(d.promiseCount) work += dayBand('Days named', String(d.promiseCount))
-    + d.promises.map(p=> `<div class="ow-tbl-r">${dayName(p.name, 'said ' + fmtShortDate(p.said)
-      + ' · ' + (p.amount == null ? 'the whole balance' : f(p.amount)))}</div>`).join('')
-    + cut(d.promiseCount, d.promises.length, 'day')
-    + `<p class="ow-mini">A day a customer named is their word, not a commitment. It keeps them
-        out of the chasing queue until it comes.</p>`;
-  const workPan = work ? `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">The work</span></div>
-    <div class="ow-tbl ow-dy-work">${work}</div></div>` : '';
-
-  body.innerHTML = verdict + `<div class="ow-grid" style="margin-top:var(--ow-sp-16);">
-    <div class="ow-stack">${money}${shelfPan}</div>
-    <div class="ow-side">${closingPan}${cmpPan}${workPan}</div></div>`;
-
-  /* THE ACCENT IS THE ONE THING TO DO NEXT, so it moves. While the day
-     still has a gap it belongs to the gap; once the day is closed and
-     counted there is nothing left to do with it but take it away, and
-     printing is then genuinely the next act. */
-  const pr = document.getElementById('day_print');
-  if(pr){
-    pr.disabled = false;
-    pr.classList.toggle('btn-accent', !closing.act);
-    pr.classList.toggle('btn-ghost', !!closing.act);
-  }
+  body.innerHTML = `<div class="ow-dy-grid">${spine}<div class="ow-stack">${flow}
+    <div class="ow-dy-pair">${closingPan}${payPan}</div></div></div>`;
+  dayWalkTo(body.querySelector('.ow-dy-walkhost'));
+  dayHeaderActs(closing);
   renderDayMeeting(day);
 }
 
