@@ -284,8 +284,13 @@ function load() {
   const urls = (src.match(/^const (?:FN_URL|SUBMIT_URL) = .*$/gm) || []);
   t.check(urls.length === 2 && urls.every(u => /SUPABASE_URL\.replace/.test(u)),
     `both of which are built from the one project URL (${urls.length})`);
+  /* The project URL used to be a bare `const SUPABASE_URL = '...'` and was
+     stripped by name. It now lives inside the OW_ENV block, which names one
+     URL per environment, so what is stripped is those lines instead. The
+     claim is the one it always was: outside the single block that chooses
+     a project, no host appears in this page at all. */
   t.check(!/https?:\/\/(?!fonts\.(googleapis|gstatic)\.com)[^"'\s)]+/.test(
-    src.replace(/const SUPABASE_URL = '[^']*';/, '')),
+    src.replace(/^\s*url: '[^']*',$/gm, '')),
     'and no other host appears in the page at all, bar the font CDN');
 }
 

@@ -542,8 +542,84 @@ var OW_APP_ROLE = 'worker';
 // new worker apart from a normal returning sign-in.
 const initialAuthLinkType = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
 
-const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
+/* ---------------- Which Supabase project this copy talks to ----------
+ *
+ * There is no build step in this project -- these are single HTML files
+ * served exactly as they sit in the repo -- so the project cannot be
+ * injected at deploy time. It is chosen at run time, from the host the
+ * page was opened on. That is what lets the redesign branch and main
+ * carry the SAME file: the host decides which database it reaches, not
+ * the checkout, so there is never a line here to resolve when the two
+ * merge.
+ *
+ * The list names the PRODUCTION hosts and everything else falls to
+ * staging, never the other way round. A list of staging hosts would mean
+ * any host nobody thought of -- a fresh preview URL, a renamed project,
+ * an old bookmark -- landing on the real books and writing to them. This
+ * way an unrecognised host reads the empty copy and the strip in the
+ * corner says so.
+ *
+ * Until BOTH halves are filled in -- a staging project to point at and at
+ * least one production host to tell apart from it -- every host gets
+ * production. A half-finished switch is the dangerous one: name the
+ * staging project without naming the real site and the real site becomes
+ * "everything else". So it stays inert until it is whole, and this block
+ * cannot change what the live site does before then.
+ */
+const OW_ENV = (function () {
+  const PRODUCTION = {
+    name: 'production',
+    url: 'https://hgywjaifdmgrcnwxstxg.supabase.co',
+    anon: 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV',
+  };
+  // Fill both in once the staging Supabase project exists, and commit the
+  // same values on every branch.
+  const STAGING = {
+    name: 'staging',
+    url: '',
+    anon: '',
+  };
+  // The hosts that ARE the real shop. Add one the day it starts serving
+  // the live site, and not before.
+  const PRODUCTION_HOSTS = [];
+
+  function chosen() {
+    if (!STAGING.url || !PRODUCTION_HOSTS.length) return PRODUCTION;
+    // The Android shell serves the bundle from localhost, so the hostname
+    // says nothing about which database it wants. A shipped APK is the
+    // real shop; a staging APK would be a separate build.
+    if (typeof window !== 'undefined' && window.Capacitor) return PRODUCTION;
+    const host = ((typeof location !== 'undefined' && location.hostname) || '').toLowerCase();
+    return PRODUCTION_HOSTS.indexOf(host) === -1 ? STAGING : PRODUCTION;
+  }
+
+  const env = chosen();
+  if (env.name === 'staging') {
+    // Small, fixed, and never in the way of a tap: the point is that
+    // nobody spends ten minutes entering real figures into the copy.
+    //
+    // 899 and not the top of the stack. The drawn dropdown at 900 has to
+    // stay the highest layer in the app -- a menu opening behind the
+    // modal that owns it is a real bug, and dropdown-menu.test.js pins
+    // it -- so the strip goes under that and above everything else.
+    const mark = function () {
+      if (!document.body || document.getElementById('ow-env-mark')) return;
+      const el = document.createElement('div');
+      el.id = 'ow-env-mark';
+      el.textContent = 'STAGING — test data, not the real books';
+      el.style.cssText = 'position:fixed;left:0;bottom:0;z-index:899;'
+        + 'pointer-events:none;background:#B23A26;color:#fff;'
+        + 'font:600 11px/1.1 system-ui,-apple-system,sans-serif;'
+        + 'padding:5px 9px;border-radius:0 6px 0 0';
+      document.body.appendChild(el);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mark);
+    else mark();
+  }
+  return env;
+})();
+const SUPABASE_URL = OW_ENV.url;
+const SUPABASE_ANON_KEY = OW_ENV.anon;
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentShopId = null;
 let currentUser = null;

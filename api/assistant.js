@@ -27,8 +27,16 @@ const Anthropic = require('@anthropic-ai/sdk');
 // Public by design — the same literals index.html ships to every visitor.
 // The key here is the publishable one; it identifies the project, not a
 // user. The USER is identified by the Authorization header we verify.
-const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
+//
+// These two run on the server, where Vercel hands each project its own
+// environment, so the switch is an env var rather than the hostname rule
+// the HTML files have to use. Unset means production: the live project
+// needs no configuration to go on working, and only the staging
+// deployment has to be told that it is staging.
+const SUPABASE_URL = process.env.SUPABASE_URL
+  || 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY
+  || 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
 
 const SYSTEM_PROMPT = [
   'You are the assistant inside Omni-ware, the management app of a hardware shop in Uganda. You are talking to the shop owner.',
