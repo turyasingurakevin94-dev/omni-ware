@@ -204,9 +204,18 @@ const UNSET = configure(SHIPPED, { staging: '', hosts: [] });
   early.fire('DOMContentLoaded');
   t.check(early.marks.length === 1, 'and the strip arrives when the document is ready');
 
-  const z = /z-index:(\d+)/.exec(early.marks[0].style.cssText);
-  t.check(!!z && Number(z[1]) < 900,
-    `the strip stays under the drawn dropdown at 900 (${z ? z[1] : 'none'})`);
+  /* It has to clear the auth overlay, which is a fixed, opaque,
+     full-viewport cover. At 899 it did not, and was invisible on the
+     sign-in screen -- the moment a password is about to be typed into
+     whichever database this is. Derived from the real file, so raising
+     that overlay later fails here instead of silently burying the mark. */
+  const z = Number((/z-index:(\d+)/.exec(early.marks[0].style.cssText) || [])[1]);
+  const overlay = Math.max(...[...read('shared-worker.js').matchAll(/z-index:\s*(\d+)/g)]
+    .map((m) => Number(m[1])));
+  t.check(z > overlay,
+    z > overlay
+      ? `the strip (${z}) clears the highest overlay in shared-worker.js (${overlay}), so it shows on the sign-in screen`
+      : `the strip (${z}) is under shared-worker.js's ${overlay} overlay — it would be hidden exactly when it is needed`);
   t.check(/pointer-events:none/.test(early.marks[0].style.cssText),
     'and cannot swallow a tap meant for the app underneath');
 }

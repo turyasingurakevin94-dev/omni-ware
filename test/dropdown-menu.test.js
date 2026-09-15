@@ -130,7 +130,20 @@ const el = (tag, attrs) => Object.assign({ tagName: tag, disabled: false, multip
   const m = /\.ow-selm\{([^}]*)\}/.exec(src);
   t.check(!!m, 'the drawn list is a component in the layer');
   const z = Number((/z-index:(\d+)/.exec(m ? m[1] : '') || [])[1]);
-  const others = [...src.matchAll(/z-index:(\d+)/g)].map((x) => Number(x[1])).filter((n) => n !== z);
+  /* The environment strip is not an app layer and is deliberately above
+     every one of them, so it is cut out before the comparison rather than
+     counted. It marks which database the page is talking to; if a modal
+     could cover it, it would be hidden on the sign-in screen, which is the
+     moment it is most needed. It carries pointer-events:none, so sitting
+     on top costs the app nothing -- it can never take a tap. The claim
+     below is unchanged: among the layers the app DRAWS, the dropdown is
+     the highest, or a menu opens behind the modal that owns it. */
+  const OPENER = '/* ---------------- Which Supabase project this copy talks to';
+  const bStart = src.indexOf(OPENER);
+  const bEnd = bStart < 0 ? -1 : src.indexOf('\n})();', bStart);
+  t.check(bStart >= 0 && bEnd > bStart, 'the environment block is found, so it can be excluded');
+  const appOnly = bStart < 0 ? src : src.slice(0, bStart) + src.slice(bEnd);
+  const others = [...appOnly.matchAll(/z-index:(\d+)/g)].map((x) => Number(x[1])).filter((n) => n !== z);
   t.check(z > Math.max(...others),
     `and it sits above every other layer in the app (${z} over ${Math.max(...others)}) — a modal's dropdown must not open behind the modal`);
   t.check(/position:fixed/.test(m ? m[1] : ''),

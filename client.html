@@ -551,16 +551,19 @@ const OW_ENV = (function () {
     // Small, fixed, and never in the way of a tap: the point is that
     // nobody spends ten minutes entering real figures into the copy.
     //
-    // 899 and not the top of the stack. The drawn dropdown at 900 has to
-    // stay the highest layer in the app -- a menu opening behind the
-    // modal that owns it is a real bug, and dropdown-menu.test.js pins
-    // it -- so the strip goes under that and above everything else.
+    // Above EVERYTHING, including the auth overlay at 99999. It sat at
+    // 899 and was invisible on the one screen that matters most: the
+    // sign-in screen is a fixed, opaque, full-viewport cover, and it is
+    // the moment you are about to type a password into whichever
+    // database this is. A marker you cannot see while signing in is not
+    // a marker. pointer-events:none is what makes the top of the stack
+    // safe to take -- it can never swallow a tap meant for the app.
     const mark = function () {
       if (!document.body || document.getElementById('ow-env-mark')) return;
       const el = document.createElement('div');
       el.id = 'ow-env-mark';
       el.textContent = 'STAGING — test data, not the real books';
-      el.style.cssText = 'position:fixed;left:0;bottom:0;z-index:899;'
+      el.style.cssText = 'position:fixed;left:0;bottom:0;z-index:2147483647;'
         + 'pointer-events:none;background:#B23A26;color:#fff;'
         + 'font:600 11px/1.1 system-ui,-apple-system,sans-serif;'
         + 'padding:5px 9px;border-radius:0 6px 0 0';
