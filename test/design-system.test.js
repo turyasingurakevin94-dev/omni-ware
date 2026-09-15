@@ -1166,12 +1166,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   /* The token block and the component rules are judged differently: the
      first is the only place a hex value may appear, the second may only
      refer to it. Splitting them is the whole mechanism. */
-  const tokenBlock = (/\.om-app\{([\s\S]*?)\}/.exec(om) || [])[1] || '';
+  const tokenBlock = (/:root\{([\s\S]*?)\}/.exec(om) || [])[1] || '';
   const rules = [...om.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map((m) => ({ sel: m[1].trim(), body: m[2] }))
-    .filter((r) => r.sel !== '.om-app');
+    .filter((r) => r.sel !== ':root');
 
-  t.check(tokenBlock.length > 0, 'the OM layer declares its tokens on .om-app');
+  t.check(tokenBlock.length > 0, 'the OM layer declares its tokens on :root');
+  /* And :root earns its exemption from the namespace rule by painting
+     nothing. The moment it carries one ordinary declaration it is a rule
+     on every element in 34 screens, which is the thing the rule forbids. */
+  t.check(tokenBlock.split(';').map((d) => d.trim()).filter(Boolean)
+    .every((d) => d.startsWith('--om-')),
+    'and that block declares custom properties and nothing else, so it paints nothing');
 
   const tokens = new Map([...tokenBlock.matchAll(/(--om-[a-z0-9-]+):\s*([^;]+);/g)]
     .map((m) => [m[1], m[2].trim()]));
@@ -1205,8 +1211,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   /* ---- the palette is closed ----
      66 values, taken from the handoff's token table. The number is a
      CEILING, exactly like the ones above, and it may only fall. */
-  t.check(colours.length <= 66,
-    `the palette holds ${colours.length} colours (ceiling 66)`);
+  /* 67, not 66, and this goes UP — so it is argued rather than nudged.
+     The rail's six group tiles are the one place in this system where
+     colour identifies rather than states: the heading beside a tile is
+     four grey letters, and the tile is what the eye actually lands on
+     when the map is twenty-three rows long. Half the twelve values it
+     needs were already here — Buy wears the agent tint, Catalogue's ink
+     is the pressed green, Money's fill the studied card, Setup the track
+     over ink-3 — so six are new, and they are a closed set: there are
+     six groups and there is no seventh. */
+  t.check(colours.length <= 67,
+    `the palette holds ${colours.length} colours (ceiling 67)`);
 
   /* ---- THE CORAL RULE, which is the one a reviewer cannot see ----
      #ef4b39 under white is 3.1:1 and fails at every size this app uses.
@@ -1256,6 +1271,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ].forEach(([i, g]) => {
       const r = ratio(v(i), v(g));
       t.check(r >= 4.5, `${r}:1 — ${i} on ${g} (needs 4.5)`);
+    });
+
+    /* The rail's six group tiles: two letters at 9.5px/700, which is the
+       smallest type in the system, on a tint. Small and bold is exactly
+       where a pairing that "looks fine" is 3:1, so all six are counted. */
+    [['--om-tile-se-ink', '--om-tile-se'], ['--om-agent-ink', '--om-agent'],
+     ['--om-good-pressed', '--om-tile-ca'], ['--om-tile-mo-ink', '--om-studied-card'],
+     ['--om-tile-in-ink', '--om-tile-in'], ['--om-ink-3', '--om-track'],
+    ].forEach(([i, g]) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — rail tile ${i} on ${g} (needs 4.5)`);
     });
 
     /* White on the fills that carry white. */
@@ -1310,7 +1336,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      habit: these sixteen are specified in the handoff to the value, and
      a seventeenth fails here. 9.5 is the floor and it belongs to two
      things only — the tab-bar label and the price card's eyebrow. */
-    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 17, 19, 20, 24, 26]);
+    /* 14.5 is the seventeenth, and it belongs to one element: the shop's
+       own name in the rail's brand block, which the rail artboards set
+       to the half-step between the 14px of a list row and the 15px of a
+       panel figure. It is a name rather than a heading — it wants to sit
+       above the rows without reading as one — and it appears once. */
+    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 17, 19, 20, 24, 26]);
   {
     const sizes = [...om.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
     const off = [...new Set(sizes)].filter((s) => !RAMP.has(s));
@@ -1370,6 +1401,19 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     t.check(escapees.length === 0,
       escapees.length ? `a selector starts outside the namespace: ${escapees.slice(0, 5).join(' | ')}`
                       : 'every selector in the layer starts .om- and stays there');
+  }
+
+  /* ---- 820px is a switch, and the rail is on one side of it ----
+     The rail is a desktop object: 236px of navy on a 390px screen covers
+     three fifths of it. The app already hides .sidebar inside the
+     breakpoint, but a media query adds NO specificity -- so the OM
+     layer's own display declaration, being later in the file, won, and
+     the rail sat on top of the day's figures at phone width. A layer
+     that sets display on the rail has to re-state the hiding. */
+  {
+    const phone = /@media\s*\(max-width:\s*820px\)\s*\{([\s\S]*?)\n  \}/.exec(om);
+    t.check(!!phone && /\.om-rail\{[^}]*display:\s*none/.test(phone[1]),
+      'the OM layer hides the rail at the 820px switch, where the phone has its own chrome');
   }
 
   /* ---- and the two systems do not touch ----

@@ -46,7 +46,7 @@ const src = read('index.html');
 // CSS comment -- the same prose-matching-as-code trap that has caught
 // other checks in this suite.
 const topbar = (/<header class="topbar"[\s\S]*?<\/header>/.exec(src) || [''])[0];
-const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+const sidebar = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
 const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(sidebar) || ['', ''])[1];
 const sheet = (/<div class="mms-body">[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
 const bottomNav = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [''])[0];
@@ -65,7 +65,7 @@ const tabsIn = (s) => [...s.matchAll(/data-tab="([a-z-]+)"/g)].map((m) => m[1]);
 function railIndex() {
   const out = [];
   let group = '';
-  const re = /<button type="button" class="nav-section-label"[^>]*><span>([^<]+)<\/span>[\s\S]*?<\/button>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
+  const re = /<button type="button" class="nav-section-label"[^>]*>(?:<span class="om-tile[^"]*"[^>]*><\/span>)?<span>([^<]+)<\/span>[\s\S]*?<\/button>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
   let m;
   while ((m = re.exec(rail))) {
     if (m[1]) { group = m[1].trim(); continue; }
@@ -219,6 +219,17 @@ const INDEX = railIndex();
 
 /* ---------- 3. grouped by job, headings always visible --------------- */
 {
+  /* THE TILE MUST CARRY NO TEXT. Each heading wears a two-letter tile,
+     and buildNavIndex() takes the group's name from the heading's
+     textContent -- so a literal "Se" in the markup renames Sell to
+     "SeSell" for the search index and the phone's More sheet at once,
+     and the only symptom is that searching "sell" stops working. The
+     letters live in CSS ::before, where the shut-door count already is. */
+  const tiles = [...rail.matchAll(/<span class="om-tile[^"]*"[^>]*>([\s\S]*?)<\/span>/g)];
+  t.check(tiles.length === 6, `six group tiles, one per heading (${tiles.length})`);
+  t.check(tiles.every((m) => m[1].trim() === ''),
+    'and not one of them puts a letter in the markup, where it would become part of the group name');
+
   const groups = [...new Set(INDEX.map((x) => x.group))];
   ['Sell', 'Buy', 'Catalogue', 'Money', 'Insight', 'Setup'].forEach((g) => {
     t.check(groups.includes(g), `"${g}" is a heading on the rail itself`);
@@ -425,16 +436,38 @@ const INDEX = railIndex();
 
 /* ---------- 5. the column that squeezed the logo --------------------- */
 {
-  t.check(/<header class="topbar"[\s\S]*?class="brand"/.test(topbar),
-    'the brand sits in the top bar');
-  t.check(!/class="brand"/.test(sidebar),
-    'and no longer in the flex column that crushed it');
+  /* THE BRAND IS BACK IN THE RAIL, and this block is rewritten rather
+     than deleted, because what it was protecting is still true.
+     
+     It used to assert the brand was in the TOP BAR and nowhere near the
+     rail. That was never the real requirement — it was the cheapest way
+     to be sure of the requirement, which is that the mark cannot be
+     squeezed. .sidebar-scroll is a column flex container, and a list
+     taller than the viewport squeezed every child carrying the default
+     flex-shrink:1: the 34px mark was crushed to 18px inside an
+     overflow:hidden and clipped in half. Banning the brand from the
+     column avoided that. Giving it `flex:none` fixes it.
+     
+     The rail artboards put the brand at the top of the rail, so the
+     avoidance had to go and the fix had to be real. What is checked now
+     is the fix itself, on whichever brand block is in the column. A
+     regression here is the same clipped logo as before; it just can no
+     longer be caused by moving an element, only by removing a
+     declaration. */
+  t.check(/class="om-rail-brand"/.test(sidebar),
+    'the brand sits at the top of the rail, where the artboards draw it');
 
-  const brandRule = (/\.topbar \.brand\{([^}]*)\}/.exec(src) || ['', ''])[1];
-  t.check(/flex-shrink:\s*0/.test(brandRule),
-    'the brand cannot be shrunk by its container -- the exact failure that clipped it before');
-  t.check(!/overflow:\s*hidden/.test(brandRule),
+  const railBrand = (/\.om-rail-brand\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/flex:\s*none/.test(railBrand),
+    'and it cannot be shrunk by the column -- the exact failure that clipped it before');
+  t.check(!/overflow:\s*hidden/.test(railBrand),
     'and nothing clips it even if something does squeeze it');
+
+  /* The other half of the same fix: the scroll box must be able to
+     shrink instead, or the two of them fight and the brand loses. */
+  const railScroll = (/\.om-rail-scroll\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/min-height:\s*0/.test(railScroll),
+    'and the scroll box takes the squeeze instead, which is what makes flex:none hold');
 
   /* Signing out is now OUTSIDE the scroll box rather than at the end of
      it. With six items that made no difference; with twenty-seven it is

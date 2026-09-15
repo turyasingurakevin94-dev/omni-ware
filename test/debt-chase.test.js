@@ -223,7 +223,7 @@ if (scope) {
      the alias below rather than something to stamp out: every goToTab
      call already written goes on working. What must not exist is a
      second home for this work in the map. */
-  const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+  const sidebar = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
   t.check(!/id="tab-chase"/.test(src) && !/data-tab="chase"/.test(sidebar),
     'Chase debts is not a destination of its own any more');
   const alias = extractFunction(src, 'resolveTab', 'index.html');

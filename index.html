@@ -75,7 +75,7 @@
     --good-bg: var(--ow-verdigris-soft);
     --danger: var(--ow-crimson);
     --navy: var(--ow-steel-950);
-    --sidebar-w: 220px;
+    --sidebar-w: 236px;
     --topbar-h: 54px;
   }
   *{box-sizing:border-box;}
@@ -16240,7 +16240,27 @@
           16,000 lines of stylesheet above; nothing else changed.
      ================================================================== */
 
-  .om-app{
+  /* THE TOKENS SIT ON :root, and that is the one selector in this layer
+     that is not a .om- class.
+     
+     They were on .om-app first, which was wrong the moment a component
+     was built that is not inside one: the rail is a sibling of the page
+     body, so every token it reads resolved to nothing and the navy
+     column rendered transparent -- an unresolvable custom property makes
+     the whole declaration invalid, and a background then takes its
+     initial value, which is transparent. A custom property has to be
+     declared on
+     an ancestor of everything that reads it, and during a redesign
+     that lands screen by screen the only reliable ancestor is the root.
+     
+     This does not breach the layer's own law about reaching outside the
+     namespace. That law exists because the app sets no base font-size,
+     so one bare rule on an element restyles 34 screens at once. A block
+     that declares nothing but custom properties paints nothing: a
+     property that is never read has no effect, and the gate below holds
+     this block to custom properties only. It is what the console layer
+     already does with its --ow-* values, for the same reason. */
+  :root{
     /* ---- ground and surface ---- */
     --om-ground:#f6f5f2;          /* app background behind cards      */
     --om-surface:#ffffff;         /* cards, top bar, list bodies      */
@@ -16310,9 +16330,22 @@
     --om-shadow:0 1px 2px rgba(23,34,60,.05);
     --om-shadow-lens:0 1px 2px rgba(23,34,60,.08);
     /* ---- rail states, which are alpha over navy rather than tints ---- */
+    /* ---- the rail's six group tiles ----
+       The one place colour identifies rather than states. Six of the
+       twelve values are new; the rest are the palette's own — Buy wears
+       the agent tint, Catalogue's ink is the pressed green, Money's fill
+       the studied card, Setup the track over ink-3. */
+    --om-tile-se:#ffe3d6;         --om-tile-se-ink:#8f3009;
+    --om-tile-ca:#d9f2e6;
+    --om-tile-mo-ink:#164a96;
+    --om-tile-in:#ffdfe9;         --om-tile-in-ink:#8a2450;
     --om-rail-hover:rgba(255,255,255,.07);
     --om-rail-on:rgba(255,255,255,.13);
 
+  }
+
+  /* The page ground, for a screen that has been converted. */
+  .om-app{
     background:var(--om-ground);
     font-family:'IBM Plex Sans',system-ui,sans-serif;
     color:var(--om-ink);
@@ -16403,6 +16436,125 @@
      "1,240,000" and looks entirely plausible. */
   .om-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .om-n{white-space:nowrap}
+
+  /* ---- THE RAIL ---------------------------------------------------
+     The complete map, in one navy column, with nothing behind a hover.
+
+     This replaces the console rail's appearance and keeps its
+     behaviour, because the behaviour was already right: a shut section
+     shows the row you are ON, so the rail never loses your place
+     (`.nav-group.folded > button[data-tab].active` below the fold of
+     this file, which the artboard draws rather than invents), and a
+     shut heading says how many rows are behind it.
+
+     The markup keeps `data-tab`, `data-keywords`, `.nav-label`,
+     `.nav-badge` and `.nav-section-label`: buildNavIndex() reads the
+     rail to build both the search index and the phone's sheet, and
+     admin-nav.test.js reads the same shapes to prove the map is
+     complete. Restyling them is this layer's business; renaming them
+     would silently empty the search.
+     ------------------------------------------------------------------ */
+  .om-rail{width:236px;background:var(--om-navy);display:flex;flex-direction:column;overflow:hidden}
+  /* The brand comes back into the rail, where the artboards draw it.
+     It left once because .sidebar-scroll is a column flex container and
+     a list taller than the viewport squeezed every child with the
+     default flex-shrink:1 — the mark was crushed to half its height
+     inside overflow:hidden. `flex:none` here and `min-height:0` on the
+     scroll box are that bug's actual fix, so it can come back. */
+  .om-rail-brand{display:flex;align-items:center;gap:10px;padding:16px 14px 10px;flex:none}
+  .om-rail-mark{width:30px;height:30px;border-radius:9px;background:var(--om-coral);display:flex;align-items:center;justify-content:center;flex:none}
+  .om-rail-name{font-size:14.5px;font-weight:700;color:var(--om-on-navy);letter-spacing:-0.01em}
+  .om-rail-shop{font-size:11px;color:var(--om-on-navy-3)}
+  .om-rail-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:6px 10px 14px}
+
+  .om-rail .om-nav{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;margin:1px 0;background:none;border:0;border-radius:9px;color:var(--om-on-navy-2);font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;text-align:left;cursor:pointer}
+  .om-rail .om-nav:hover{background:var(--om-rail-hover);color:var(--om-on-navy)}
+  .om-rail .om-nav.active{background:var(--om-rail-on);color:var(--om-on-navy);font-weight:600}
+  .om-rail .om-nav .nav-icon{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  /* The label gives way; the badge never does. A count clipped to one
+     digit is a WRONG count, where a clipped name is still a name. */
+  .om-rail .om-nav .nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* One badge treatment, and it counts obligations only — words you owe
+     a person, money that is late, someone waiting on an answer. Never a
+     suggestion: a badge that rises because the buy plan had another idea
+     teaches people to ignore badges, and then they ignore the one that
+     means a customer has been waiting 74 days. */
+  .om-rail .om-nav .nav-badge{display:inline-flex;align-items:center;justify-content:center;height:19px;min-width:19px;padding:0 6px;margin:0;border-radius:999px;background:var(--om-coral-text);color:var(--om-on-navy);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;flex:none}
+  .om-rail .om-nav.active .nav-badge{background:var(--om-coral-text);color:var(--om-on-navy)}
+  /* A badge with nothing to say is not drawn. `display:inline-flex` above
+     outweighed `.nav-badge[hidden]`, so four rows with a count of zero
+     wore a bare coral dot -- a mark that means "something is waiting"
+     saying it about nothing, which is precisely how a badge stops being
+     read. The hidden state has to win over its own component. */
+  .om-rail .om-nav .nav-badge[hidden]{display:none}
+
+  /* The group heading. Sticky because the map is taller than the rail:
+     scrolled into the middle of Money, the heading that says so has
+     already gone past. */
+  .om-rail .nav-section-label{display:flex;align-items:center;gap:8px;padding:15px 10px 4px;background:var(--om-navy);position:sticky;top:0;z-index:1;cursor:pointer}
+  .om-rail .nav-section-label > span:not(.om-tile){font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--om-on-navy-4);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-rail .nav-section-label:hover > span:not(.om-tile){color:var(--om-on-navy-2)}
+  .om-rail .nav-fold{width:12px;height:12px;flex:none;order:2;margin-left:0;opacity:.75;stroke-width:2.4}
+  /* A shut door says how much is behind it. Five screens and none is a
+     very different section, and the heading is the only thing left
+     saying which. Written as generated content because buildNavIndex
+     takes the group's NAME from this heading's textContent, and a count
+     inside it would rename "Catalogue" to "Catalogue 4" for the search
+     index and the phone's sheet alike. */
+  .om-rail .nav-section-label::after{order:1;margin-left:auto;content:""}
+  .om-rail .nav-group.folded > .nav-section-label::after{content:attr(data-n);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0;color:var(--om-on-navy-4)}
+
+  /* The two-letter tile. Six tints, one per group — the only place in
+     this system where colour is an identifier rather than a state, and
+     it earns that because the heading beside it is four grey letters
+     and the tile is what the eye actually lands on. */
+  /* THE TWO LETTERS ARE GENERATED CONTENT, and that is not decoration.
+     buildNavIndex() takes each group's NAME from its heading's
+     textContent, so a literal "Se" inside the heading renames the group
+     to "SeSell" for the search index and the phone's More sheet alike.
+     The shut-door count above is in CSS for exactly this reason; the
+     tile joins it. Generated content is not textContent. */
+  .om-tile-se::before{content:"Se"}
+  .om-tile-bu::before{content:"Bu"}
+  .om-tile-ca::before{content:"Ca"}
+  .om-tile-mo::before{content:"Mo"}
+  .om-tile-in::before{content:"In"}
+  .om-tile-su::before{content:"Su"}
+  /* text-transform is reset because the heading beside it is uppercase
+     and generated content inherits: the tiles read SE / BU / CA / MO
+     until this line, which is a different mark from the one drawn. */
+  .om-rail .om-tile{text-transform:none;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+  .om-tile-se{background:var(--om-tile-se);color:var(--om-tile-se-ink)}
+  .om-tile-bu{background:var(--om-agent);color:var(--om-agent-ink)}
+  .om-tile-ca{background:var(--om-tile-ca);color:var(--om-good-pressed)}
+  .om-tile-mo{background:var(--om-studied-card);color:var(--om-tile-mo-ink)}
+  .om-tile-in{background:var(--om-tile-in);color:var(--om-tile-in-ink)}
+  .om-tile-su{background:var(--om-track);color:var(--om-ink-3)}
+
+  /* The footer and the collapse handle keep the console's shape for now.
+     Neither is drawn on the artboards — the rail there is brand, Today
+     and six groups — but signing out has no other home until the new top
+     bar and its avatar menu land, and admin-nav.test.js holds both to
+     being present. They go when their replacement exists, not before. */
+  .om-rail .sidebar-foot{flex:none;padding:10px;border-top:1px solid var(--om-rail-hover)}
+  .om-rail .sidebar-foot button{color:var(--om-on-navy-2);font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;border-radius:9px;height:34px;gap:10px;padding:0 10px}
+  .om-rail .sidebar-foot button:hover{color:var(--om-on-navy);background:var(--om-rail-hover)}
+  .om-rail .sidebar-foot .nav-icon{width:17px;height:17px;stroke-width:2}
+
+  /* 820px IS A SWITCH BETWEEN TWO DESIGNS, NOT A REFLOW, and the rail
+     belongs to only one of them. The phone has its own chrome -- a top
+     bar, a five-slot bottom bar and the More sheet -- and a 236px navy
+     column on a 390px screen covers three fifths of it.
+     
+     This rule exists because `display:flex` on .om-rail outranked the
+     `.sidebar{display:none}` inside the breakpoint below: a media query
+     adds no specificity, so the later rule simply won and the rail sat
+     on top of the day's figures. Hiding it has to be re-stated by
+     whichever layer last set the display. */
+  @media (max-width: 820px){
+    .om-rail{display:none}
+  }
 
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
 
@@ -16635,7 +16787,7 @@
 </header>
 
 <div class="app">
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar om-rail" id="sidebar">
    <!-- The whole map, in one column, with nothing behind a hover.
 
         It used to be split: six shortcuts here, twenty-one destinations
@@ -16658,19 +16810,36 @@
         clipped in half. This list is long by design now, so the only
         things sharing the column with it are the scroll box and a footer
         pinned outside it. -->
-   <div class="sidebar-scroll">
+   <!-- The brand sits in the rail again, where the artboards draw it.
+        The note that follows this one records why it left; `flex:none`
+        on it and `min-height:0` on the scroll box are that bug's fix. -->
+   <div class="om-rail-brand">
+     <div class="om-rail-mark">
+       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.2 12 3l9 7.2"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+     </div>
+     <div style="flex:1;min-width:0">
+       <div class="om-rail-name">Omni&#8209;Ware</div>
+       <div class="om-rail-shop om-t" id="railShopName">Ssekitoleko Hardware</div>
+     </div>
+   </div>
+   <div class="sidebar-scroll om-rail-scroll">
     <nav>
-      <button data-tab="dashboard" title="Dashboard" data-keywords="home overview summary">
+      <!-- "Today", not "Dashboard". The rail artboards name it for what it
+           answers rather than for what kind of screen it is -- a dashboard
+           is a genre, a day is the thing the owner came to see. The old
+           name stays in the keywords, because a rename that cannot be
+           searched by the old word is a screen people lose. -->
+      <button class="om-nav" data-tab="dashboard" title="Today" data-keywords="dashboard home overview summary today the day">
         <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>
-        <span class="nav-label">Dashboard</span>
+        <span class="nav-label">Today</span>
       </button>
       <div class="nav-group" data-group="Sell">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-se" aria-hidden="true"></span><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="om-nav" data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
           <span class="nav-label">New quote</span>
         </button>
-        <button data-tab="quote-saved" title="Order tracking" data-keywords="saved quotes orders board stages">
+        <button class="om-nav" data-tab="quote-saved" title="Order tracking" data-keywords="saved quotes orders board stages">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span class="nav-label">Order tracking</span>
           <b class="nav-badge" id="navBadgeOrders" hidden></b>
@@ -16679,11 +16848,11 @@
              own under Buy until the two became one screen with a lens, so
              its words are here: a merge is only honest if what people
              search by still reaches the screen that took the work. -->
-        <button data-tab="invoices" title="Invoices" data-keywords="bills receipts supplier payables goods received purchase invoice">
+        <button class="om-nav" data-tab="invoices" title="Invoices" data-keywords="bills receipts supplier payables goods received purchase invoice">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg>
           <span class="nav-label">Invoices</span>
         </button>
-        <button data-tab="customers" title="Customers" data-keywords="clients buyers contacts">
+        <button class="om-nav" data-tab="customers" title="Customers" data-keywords="clients buyers contacts">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span class="nav-label">Customers</span>
         </button>
@@ -16700,22 +16869,22 @@
              reason. NOT "owing", "who owes" or "aging": those belong to
              Debtors, which owns the whole book -- this row owns the
              ASKING, so it takes the words for the act. -->
-        <button data-tab="followups" title="Follow-ups" data-keywords="keep posted update client waiting notify remind chase chasing collect collecting overdue late payment demand debt debts owed told worth telling marketing recommend recommendation brief picture gif promote tell offer suggest campaign">
+        <button class="om-nav" data-tab="followups" title="Follow-ups" data-keywords="keep posted update client waiting notify remind chase chasing collect collecting overdue late payment demand debt debts owed told worth telling marketing recommend recommendation brief picture gif promote tell offer suggest campaign">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
           <span class="nav-label">Follow-ups</span>
           <b class="nav-badge" id="navBadgeFollowUps" hidden></b>
         </button>
-        <button data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
+        <button class="om-nav" data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="nav-label">Sales agents</span>
         </button>
-        <button data-tab="whatsapp" title="WhatsApp" data-keywords="broadcast message catalogue send">
+        <button class="om-nav" data-tab="whatsapp" title="WhatsApp" data-keywords="broadcast message catalogue send">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.5-1.5 2 1-1 2c-4.5.5-9.5-4.5-9-9l2-1 1 2z"/></svg>
           <span class="nav-label">WhatsApp</span>
         </button>
       </div>
       <div class="nav-group" data-group="Buy">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-bu" aria-hidden="true"></span><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- What to buy had a row here. It is the Stock lens of
              Forecasts under Insight now: what the shelf will need is a
              question about what has not happened yet, and it is answered
@@ -16729,16 +16898,16 @@
              This group keeps the four screens about CHOOSING what to buy
              and who from, which is a different job from knowing what the
              shelf is about to need. -->
-        <button data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
+        <button class="om-nav" data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
           <span class="nav-label">Compare prices</span>
         </button>
-        <button data-tab="sourcing" title="Sourcing" data-keywords="source research find importer unknown item request wanted funnel we dont sell it yet">
+        <button class="om-nav" data-tab="sourcing" title="Sourcing" data-keywords="source research find importer unknown item request wanted funnel we dont sell it yet">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></svg>
           <span class="nav-label">Sourcing</span>
           <b class="nav-badge" id="navBadgeSourcing" hidden></b>
         </button>
-        <button data-tab="suppliers" title="Suppliers" data-keywords="vendors wholesalers">
+        <button class="om-nav" data-tab="suppliers" title="Suppliers" data-keywords="vendors wholesalers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
           <span class="nav-label">Suppliers</span>
         </button>
@@ -16749,20 +16918,20 @@
              four screens about CHOOSING what to buy and from whom. -->
       </div>
       <div class="nav-group" data-group="Catalogue">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-ca" aria-hidden="true"></span><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="om-nav" data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Products</span>
         </button>
-        <button data-tab="pairings" title="What goes with what" data-keywords="pairing pairings goes with needs companion together ratio relationship accessory">
+        <button class="om-nav" data-tab="pairings" title="What goes with what" data-keywords="pairing pairings goes with needs companion together ratio relationship accessory">
           <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="17" r="3.2"/><path d="M9.6 9.6l4.8 4.8"/></svg>
           <span class="nav-label">What goes with what</span>
         </button>
-        <button data-tab="prices" title="Price Registry (press R)" data-keywords="cost wholesale retail tiers registry paid supplier prices rise increase creeping history trend charged watch out of date rival competitor competition market street other shop charges research haidery undercut">
+        <button class="om-nav" data-tab="prices" title="Price Registry (press R)" data-keywords="cost wholesale retail tiers registry paid supplier prices rise increase creeping history trend charged watch out of date rival competitor competition market street other shop charges research haidery undercut">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
           <span class="nav-label">Price registry</span>
         </button>
-        <button data-tab="inventory" title="Inventory" data-keywords="movements log history trail in and out correction damaged lost write off received stock shelf count lots">
+        <button class="om-nav" data-tab="inventory" title="Inventory" data-keywords="movements log history trail in and out correction damaged lost write off received stock shelf count lots">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
           <span class="nav-label">Inventory</span>
         </button>
@@ -16781,40 +16950,40 @@
              obvious search off the shelf. Nothing has to be denied now.
              "stock movements", "movements" and a bare "stock" all land
              on the shelf, which is where the log is. -->
-        <button data-tab="media" title="Media" data-keywords="photos images library files">
+        <button class="om-nav" data-tab="media" title="Media" data-keywords="photos images library files">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
           <span class="nav-label">Media</span>
         </button>
-        <button data-tab="fasteners" title="Fastener guide" data-keywords="convert conversion mm inch inches spanner wrench nut bolt washer thread pitch gauge screw pilot drill plug rivet size chart">
+        <button class="om-nav" data-tab="fasteners" title="Fastener guide" data-keywords="convert conversion mm inch inches spanner wrench nut bolt washer thread pitch gauge screw pilot drill plug rivet size chart">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/><circle cx="12" cy="12" r="3.2"/></svg>
           <span class="nav-label">Fastener guide</span>
         </button>
       </div>
       <div class="nav-group" data-group="Money">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-mo" aria-hidden="true"></span><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="om-nav" data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
           <span class="nav-label">Cash book</span>
         </button>
         <!-- Named for what they answer, not for the table they draw. The
              old names are kept as search keywords so the word an
              accountant would type still finds them. -->
-        <button data-tab="consignment" title="Consignment — goods held for a supplier" data-keywords="consigned consign sale or return goods held not ours owed supplier drawer">
+        <button class="om-nav" data-tab="consignment" title="Consignment — goods held for a supplier" data-keywords="consigned consign sale or return goods held not ours owed supplier drawer">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
           <span class="nav-label">Consignment</span>
           <b class="nav-badge" id="navBadgeConsign" hidden></b>
         </button>
-        <button data-tab="pricing" title="Pricing" data-keywords="markup margin kept thin profit share pricing rule per cent percentage dead slow stock clearance discount unsold sitting shift offload sale your margin">
+        <button class="om-nav" data-tab="pricing" title="Pricing" data-keywords="markup margin kept thin profit share pricing rule per cent percentage dead slow stock clearance discount unsold sitting shift offload sale your margin">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 20V11"/><path d="M12 20V6"/><path d="M17 20v-6"/><path d="M6.2 8.4l6-4.4 5.6 4.6"/></svg>
           <span class="nav-label">Pricing</span>
           <b class="nav-badge" id="navBadgePricing" hidden></b>
         </button>
-        <button data-tab="analytics-debtors" title="Debtors" data-keywords="debtors receivables credit owing who owes you debtors list aging ageing chase">
+        <button class="om-nav" data-tab="analytics-debtors" title="Debtors" data-keywords="debtors receivables credit owing who owes you debtors list aging ageing chase">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           <span class="nav-label">Debtors</span>
           <b class="nav-badge" id="navBadgeDebtors" hidden></b>
         </button>
-        <button data-tab="analytics-creditors" title="Creditors" data-keywords="creditors payables owed suppliers who you owe creditors list pay bills aging ageing">
+        <button class="om-nav" data-tab="analytics-creditors" title="Creditors" data-keywords="creditors payables owed suppliers who you owe creditors list pay bills aging ageing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
           <span class="nav-label">Creditors</span>
         </button>
@@ -16823,21 +16992,21 @@
              now. Debtors and Creditors stay where they are: they are the
              books as they stand, which is a thing you act on, and the
              line ahead is a thing you study. Its words went with it. -->
-        <button data-tab="statements" title="Profit, position and cash flow" data-keywords="profit loss balance sheet cash flow accounts">
+        <button class="om-nav" data-tab="statements" title="Profit, position and cash flow" data-keywords="profit loss balance sheet cash flow accounts">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-4M12 18v-7M16 18v-2"/></svg>
           <span class="nav-label">Statements</span>
         </button>
-        <button data-tab="payroll" title="Wages and rent — what is due and what is owed" data-keywords="wages salary rent staff pay">
+        <button class="om-nav" data-tab="payroll" title="Wages and rent — what is due and what is owed" data-keywords="wages salary rent staff pay">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
           <span class="nav-label">Payroll &amp; rent</span>
         </button>
-        <button data-tab="assets" title="What the shop owns, and what is still owed on it" data-keywords="equipment vehicles depreciation owns assets loans borrowed debt repayment bank lender instalment arrears van shelving">
+        <button class="om-nav" data-tab="assets" title="What the shop owns, and what is still owed on it" data-keywords="equipment vehicles depreciation owns assets loans borrowed debt repayment bank lender instalment arrears van shelving">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
           <span class="nav-label">Assets &amp; loans</span>
         </button>
       </div>
       <div class="nav-group" data-group="Insight">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-in" aria-hidden="true"></span><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- ONE ROW WHERE THREE WERE. The day, What to buy and What's
              coming were one question -- what is coming -- asked over the
              next few hours, the next fortnight and the next thirty days,
@@ -16855,13 +17024,13 @@
              and a keyword that stole "stock" from Inventory would cost
              the app its most obvious search. A lens name is not searched
              -- only the label, the group and these words are. -->
-        <button data-tab="forecasts" title="Forecasts &mdash; what is coming, at three horizons" data-keywords="forecast forecasts what to buy reorder replenish refill buying budget plan copilot runs out running low purchase cash ahead whats coming what is coming falls due rent wages loan commitments tight short runway safe to spend the day today yesterday what happened diary journal log back">
+        <button class="om-nav" data-tab="forecasts" title="Forecasts &mdash; what is coming, at three horizons" data-keywords="forecast forecasts what to buy reorder replenish refill buying budget plan copilot runs out running low purchase cash ahead whats coming what is coming falls due rent wages loan commitments tight short runway safe to spend the day today yesterday what happened diary journal log back">
           <!-- A horizon with the sun not yet over it: what has not
                happened yet, drawn rather than borrowed. -->
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h18"/><path d="M6.5 17a5.5 5.5 0 0 1 11 0"/><path d="M12 7V4M5.4 9.4L3.5 7.5M18.6 9.4l1.9-1.9"/><path d="M9 21h6"/></svg>
           <span class="nav-label">Forecasts</span>
         </button>
-        <button data-tab="manager" title="Manager — the morning meeting" data-keywords="manager meeting plan advice strategy moves run the business mind">
+        <button class="om-nav" data-tab="manager" title="Manager — the morning meeting" data-keywords="manager meeting plan advice strategy moves run the business mind">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
           <span class="nav-label">Manager</span>
         </button>
@@ -16869,32 +17038,32 @@
              dashboard. They answer real questions; they are just not
              the morning, which is why they now have a door of their
              own instead of a scroll nobody reached the end of. -->
-        <button data-tab="analysis" title="Analysis — margin, cash and stale prices" data-keywords="analysis charts trends margin quadrant demand breadth cash bridge leakage quiet prices to check">
+        <button class="om-nav" data-tab="analysis" title="Analysis — margin, cash and stale prices" data-keywords="analysis charts trends margin quadrant demand breadth cash bridge leakage quiet prices to check">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
           <span class="nav-label">Analysis</span>
         </button>
-        <button data-tab="analytics-sales" title="Sales analytics" data-keywords="demand trends best sellers reports">
+        <button class="om-nav" data-tab="analytics-sales" title="Sales analytics" data-keywords="demand trends best sellers reports">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
           <span class="nav-label">Sales analytics</span>
         </button>
-        <button data-tab="analytics-purchase" title="Purchase analytics" data-keywords="spend supplier reports buying">
+        <button class="om-nav" data-tab="analytics-purchase" title="Purchase analytics" data-keywords="spend supplier reports buying">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 9l4 5 3-3 5 7"/></svg>
           <span class="nav-label">Purchase analytics</span>
         </button>
         <!-- Moved out of Money. It answers "where are they", which is a
              question you study, not a figure you act on. -->
-        <button data-tab="map" title="Where your customers and suppliers are" data-keywords="places locations geography where">
+        <button class="om-nav" data-tab="map" title="Where your customers and suppliers are" data-keywords="places locations geography where">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"/></svg>
           <span class="nav-label">Map</span>
         </button>
       </div>
       <div class="nav-group" data-group="Setup">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button data-tab="staff" title="Staff" data-keywords="employees team users workers">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span class="om-tile om-tile-su" aria-hidden="true"></span><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="om-nav" data-tab="staff" title="Staff" data-keywords="employees team users workers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
           <span class="nav-label">Staff</span>
         </button>
-        <button data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;" data-keywords="pick pack shop floor">
+        <button class="om-nav" data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;" data-keywords="pick pack shop floor">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
           <span class="nav-label">Worker view</span>
         </button>
@@ -16904,7 +17073,7 @@
              the old name answered to. The tab id stays "presets" -- it
              is the internal identity that goToTab, the assistant's door
              list and the tests all address it by. -->
-        <button data-tab="presets" title="The shop &mdash; its words, its rules, and who it is on paper" data-keywords="presets settings categories units locations attributes defaults options shop identity receipt mobile money momo devices order limits markup rule">
+        <button class="om-nav" data-tab="presets" title="The shop &mdash; its words, its rules, and who it is on paper" data-keywords="presets settings categories units locations attributes defaults options shop identity receipt mobile money momo devices order limits markup rule">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M3 21h18"/><path d="M9 21v-6h6v6"/><path d="M11 11h2"/></svg>
           <span class="nav-label">The shop</span>
         </button>
@@ -24585,7 +24754,7 @@ function hideInfoBanner(el){ el.style.display = 'none'; }
 
 /* ---------------- Sidebar collapse ---------------- */
 function setSidebarCollapsed(collapsed){
-  document.documentElement.style.setProperty('--sidebar-w', collapsed ? '72px' : '220px');
+  document.documentElement.style.setProperty('--sidebar-w', collapsed ? '72px' : '236px');
   document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
   lsSet('pbSidebarCollapsed', collapsed ? '1' : '0');
 }
