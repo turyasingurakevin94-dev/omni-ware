@@ -106,32 +106,48 @@ function evaluate(src, opts) {
   return { env, marks: made, fire: (n) => (listeners[n] || []).forEach((fn) => fn()) };
 }
 
+// The block in the repo may be unconfigured, half filled in, or whole --
+// it changes as the staging project is set up. These checks are about what
+// the CODE decides, so they rewrite it to a known state first rather than
+// depending on whatever today's values happen to be. Substituting empty
+// placeholders, as this once did, quietly stopped working the moment the
+// first real value landed.
+const STAGING_RE = /const STAGING = \{[\s\S]*?\};/;
+const HOSTS_RE = /const PRODUCTION_HOSTS = \[[^\]]*\];/;
+
+function setStaging(src, url, anon) {
+  const m = STAGING_RE.exec(src);
+  if (!m) throw new Error('no STAGING object in the block');
+  // The portal copy has no key line, and must not grow one here.
+  const lines = ['  const STAGING = {', "    name: 'staging',", `    url: '${url}',`];
+  if (/\n\s*anon:/.test(m[0])) lines.push(`    anon: '${anon}',`);
+  lines.push('  };');
+  return src.replace(STAGING_RE, lines.join('\n'));
+}
+
+function setHosts(src, hosts) {
+  if (!HOSTS_RE.test(src)) throw new Error('no PRODUCTION_HOSTS in the block');
+  return src.replace(HOSTS_RE,
+    `const PRODUCTION_HOSTS = [${hosts.map((h) => `'${h}'`).join(', ')}];`);
+}
+
 function configure(src, { staging, hosts }) {
-  let out = src;
-  const subs = [
-    ["url: '',", `url: '${staging || ''}',`],
-    ["anon: '',", `anon: '${staging ? 'sb_publishable_staging' : ''}',`],
-    ['const PRODUCTION_HOSTS = [];',
-      `const PRODUCTION_HOSTS = [${(hosts || []).map((h) => `'${h}'`).join(', ')}];`],
-  ];
-  subs.forEach(([from, to]) => {
-    if (out.split(from).length - 1 !== 1) throw new Error(`cannot configure: ${from}`);
-    out = out.split(from).join(to);
-  });
-  return out;
+  return setHosts(setStaging(src, staging || '', staging ? 'sb_publishable_staging' : ''),
+    hosts || []);
 }
 
 const SHIPPED = blockOf('index.html');
 const STAGING_URL = 'https://stagingref.supabase.co';
 const LIVE = 'omni-ware.example';
+const UNSET = configure(SHIPPED, { staging: '', hosts: [] });
 
 {
-  // As it sits in the repo today: no second database named, so nothing
-  // about the live site changes by merging this.
+  // Neither half filled in: no second database named, so nothing about
+  // the live site changes by merging the block.
   ['example.test', 'localhost', '', 'anything-at-all.vercel.app'].forEach((h) => {
-    const { env, marks } = evaluate(SHIPPED, { hostname: h });
+    const { env, marks } = evaluate(UNSET, { hostname: h });
     t.check(env.name === 'production' && env.url.includes(PROJECT_REF),
-      `unconfigured, ${h || '(no host)'} gets production — merging this cannot move the live site`);
+      `neither half set, ${h || '(no host)'} gets production — such a block cannot move the live site`);
     t.check(marks.length === 0, `and shows no staging strip on ${h || '(no host)'}`);
   });
 }
@@ -193,6 +209,41 @@ const LIVE = 'omni-ware.example';
     `the strip stays under the drawn dropdown at 900 (${z ? z[1] : 'none'})`);
   t.check(/pointer-events:none/.test(early.marks[0].style.cssText),
     'and cannot swallow a tap meant for the app underneath');
+}
+
+/* ---------- 3b. and what the repo is actually shipping ---------------- */
+// The checks above prove what the code decides. These read the values
+// really committed, which is where a typo does its damage: they are the
+// difference between a staging site and a second window onto the books.
+{
+  const staging = /const STAGING = \{[\s\S]*?url: '([^']*)'/.exec(SHIPPED);
+  const hosts = /const PRODUCTION_HOSTS = \[([^\]]*)\]/.exec(SHIPPED);
+  const url = staging ? staging[1] : '';
+  const named = hosts ? [...hosts[1].matchAll(/'([^']*)'/g)].map((m) => m[1]) : [];
+
+  // The one that would be catastrophic and silent: the live project
+  // pasted in as the staging one. Every "staging" write then lands on the
+  // real books, and the strip in the corner says it is safe to do so.
+  t.check(!url.includes(PROJECT_REF),
+    url.includes(PROJECT_REF)
+      ? `STAGING names the LIVE project (${PROJECT_REF}) — the copy and the books would be the same database`
+      : 'the staging project named is not the live one');
+
+  // A host that cannot match. location.hostname is a bare lowercase host:
+  // a scheme, a slash, a port or a capital means the comparison silently
+  // never fires, and the live site quietly falls to staging.
+  named.forEach((h) => {
+    t.check(/^[a-z0-9.-]+$/.test(h),
+      /^[a-z0-9.-]+$/.test(h)
+        ? `production host "${h}" is a bare hostname, as location.hostname gives it`
+        : `production host "${h}" can never match location.hostname — drop the scheme, port, slash or capitals`);
+  });
+
+  const state = !url && !named.length ? 'neither half set (inert — every host gets production)'
+    : url && named.length ? `whole (staging ${url.replace(/^https?:\/\//, '')}, production ${named.join(', ')})`
+    : url ? 'HALF: a staging project named, no production host yet (still inert)'
+    : 'HALF: a production host named, no staging project yet (still inert)';
+  t.pass(`the switch as committed: ${state}`);
 }
 
 /* ---------- 4. the two server functions switch the other way ---------- */
