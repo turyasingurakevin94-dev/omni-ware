@@ -13426,6 +13426,7 @@
   .ow-f-i{width:14px;height:14px;flex:none;color:var(--ow-ink-600);}
   .ow-i11{width:11px;height:11px;flex:none;}
   .ow-i12{width:12px;height:12px;flex:none;}
+  .ow-i16{width:16px;height:16px;flex:none;}
   /* the track: past filled, now ringed, ahead hollow — ink, never a lane colour */
   .ow-trk{display:inline-flex;align-items:center;gap:4px;}
   .ow-trk-d{width:8px;height:8px;box-sizing:border-box;border-radius:var(--ow-r-pill);
@@ -13604,6 +13605,484 @@
   .ow-ot-tp-p{color:var(--ow-ink-900);}
   /* a small act in a panel head */
   .ow-pan-a{flex:none;margin-left:var(--ow-sp-8);}
+
+  /* ==================================================================
+     ORDER TRACKING — THE STAGE BOARD.
+
+     Five lanes of cards, a dock that serves one decision at a time, and
+     a strip whose fifth cell is the day's trip and runs. The screen
+     itself does not scroll: it is a column the height of the viewport
+     and the lanes scroll inside it, so a busy Monday needs no paging
+     and the dock never leaves the top of the screen.
+     ================================================================== */
+  /* goToTab sets display:block inline on the section, so the column is
+     this child of it. 26px of top padding and 32px of bottom padding are
+     main's own; what is left is the screen. */
+  .ow-ot-screen{display:flex;flex-direction:column;gap:var(--ow-sp-12);
+    height:calc(100vh - var(--topbar-h) - 26px - 32px);min-height:0;overflow:hidden;}
+  /* main's own padding ramp, mirrored — the screen is exactly what is
+     left of the viewport after it, and a figure guessed at one width
+     pushes the board 12px off the bottom at another. */
+  @media (min-width:1600px){ .ow-ot-screen{height:calc(100vh - var(--topbar-h) - 30px - 40px);} }
+  @media (min-width:2000px){ .ow-ot-screen{height:calc(100vh - 68px - 48px);} }
+  /* .ow-ph is sticky against the top bar everywhere else, because
+     everywhere else the page scrolls under it. Here it does not: the
+     screen is the height of the viewport and the LANES scroll. Left
+     sticky it detached from its own box and sat 54px down it, over the
+     strip. The phone, which does scroll, gets it back below the switch. */
+  .ow-ot-screen .ow-ph{position:static;margin-bottom:0;flex:none;}
+  .ow-ot-strip{flex:none;grid-template-columns:minmax(0,1fr) 440px;}
+  /* The four figures share one cell, at their own widths with hairlines
+     between them — an equal fifth of the row each would put "54" in the
+     same box as "4,441,175 UGX". */
+  .ow-ot-tiles{display:flex;align-items:center;gap:var(--ow-sp-24);min-width:0;
+    padding:var(--ow-sp-10) var(--ow-sp-16);overflow:hidden;}
+  .ow-ot-tiles .ow-mt{padding:0;border-left:0;min-width:0;}
+  .ow-ot-tsep{width:1px;flex:none;align-self:stretch;background:var(--ow-rule-soft);}
+  /* THE DAY, in the cell the right rail used to be a column of. */
+  .ow-ot-day{padding:var(--ow-sp-10) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);
+    display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .ow-ot-day-h{display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-ot-day-h .ow-mt-l{margin:0;}
+  .ow-ot-day-sp{flex:1;}
+  .ow-ot-day-r{font-size:var(--ow-t-12);color:var(--ow-ink-900);line-height:1.45;}
+  .ow-ot-day-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.45;}
+  .ow-ot-day-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+  .ow-ot-day-u{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+
+  /* ---- THE DOCK: one decision, then the next ----------------------- */
+  .ow-ot-dock{flex:none;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);padding:11px var(--ow-sp-12) 13px;
+    display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .ow-ot-dock:empty{display:none;}
+  .ow-ot-dk-h{display:flex;align-items:baseline;gap:var(--ow-sp-10);min-width:0;}
+  .ow-ot-dk-t{flex:none;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  /* The count is the accent's ONE appearance outside the primary button
+     it belongs to: same decision, said twice on one card. */
+  .ow-ot-dk-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);color:var(--ow-oxide);}
+  .ow-ot-dk-s{flex:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-dk-st{flex:none;display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-ot-dk-st .btn.ow-sm{height:24px;padding:0 9px;}
+  .ow-ot-dk-back{padding:0 5px;}
+  .ow-ot-dk-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-ot-dk-b{display:flex;align-items:stretch;gap:var(--ow-sp-10);min-width:0;}
+  /* The one being decided, edged in the accent. */
+  .ow-ot-now{flex:1;min-width:0;border:1px solid var(--ow-oxide);border-radius:var(--ow-r-lg);
+    padding:var(--ow-sp-12) 14px;display:flex;align-items:center;gap:var(--ow-sp-16);}
+  .ow-ot-now-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-4);}
+  .ow-ot-now-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  .ow-ot-now-c{flex:none;font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-ot-now-m{flex:1;min-width:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-now-w{font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;
+    max-width:var(--ow-measure);}
+  .ow-ot-now-r{flex:none;display:flex;flex-direction:column;gap:7px;align-items:flex-end;}
+  .ow-ot-now-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-ot-now-a{display:flex;gap:var(--ow-sp-6);}
+  /* The two behind it, named — a queue whose end you cannot see is a
+     queue nobody believes. */
+  .ow-ot-peek{width:300px;flex:none;border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);padding:var(--ow-sp-8) var(--ow-sp-10);
+    display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .ow-ot-peek-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-ot-peek-r{display:flex;align-items:baseline;gap:var(--ow-sp-6);min-width:0;width:100%;
+    border:0;background:none;padding:0;font-family:inherit;color:inherit;
+    text-align:left;cursor:pointer;}
+  .ow-ot-peek-r:hover .ow-ot-peek-c{text-decoration:underline;}
+  .ow-ot-peek-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-ot-peek-c{flex:1;min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-peek-o,.ow-ot-peek-a{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-ot-peek-a.ow-warn{color:var(--ow-amber-ink);}
+  .ow-ot-peek-a.ow-bad{color:var(--ow-crimson);}
+  .ow-ot-peek-f{margin-top:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ot-peek-b{border:0;background:none;padding:0;font:inherit;color:var(--ow-ink-600);
+    font-weight:var(--ow-fw-600);cursor:pointer;text-decoration:underline;}
+
+  /* ---- THE BOARD: five lanes ---------------------------------------
+     grid-template-rows is not decoration. Without it the auto row sizes
+     to its tallest lane and the lanes clip below the panel, unreachably
+     — there is no scrollbar on something that was never told it was too
+     tall. And the bodies say `overflow:hidden auto`, never `overflow-y`
+     alone, which resolves the other axis to auto and adds a stray
+     horizontal bar under every lane. */
+  .ow-ot-board{flex:1;min-height:0;background:var(--ow-paper);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:minmax(0,1fr);}
+  /* Nothing on the board is the sentence and nothing else — not five
+     empty lanes over a sentence. */
+  .ow-ot-bare{display:block;flex:none;}
+  .ow-ot-lane{border-left:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;
+    min-width:0;min-height:0;overflow:hidden;}
+  .ow-ot-lane:first-child{border-left:0;}
+  .ow-ot-lh{flex:none;padding:var(--ow-sp-10) var(--ow-sp-12);display:flex;flex-direction:column;
+    gap:5px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  /* 22px whether the lane has an action or not, so the five lane names
+     sit on one line across the board and the first card of each starts
+     level with the others. */
+  .ow-ot-lh-r{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;min-height:22px;}
+  .ow-ot-lh-n{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;white-space:nowrap;}
+  .ow-ot-lh-c{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;}
+  .ow-ot-lh-sp{flex:1;}
+  .ow-ot-lh-r .btn.ow-sm{min-height:22px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-11);
+    background:var(--ow-paper);}
+  /* Two lines of room whether the rule needs them or not: a lane whose
+     header is a line shorter starts its cards a line higher, and five
+     lanes that do not line up read as five different things. */
+  .ow-ot-lh-w{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.4;min-height:2.8em;}
+  .ow-ot-cards{flex:1;min-height:0;padding:var(--ow-sp-10);display:flex;flex-direction:column;
+    gap:var(--ow-sp-8);overflow:hidden auto;}
+  .ow-ot-card{flex:none;width:100%;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r-lg);padding:9px var(--ow-sp-10);display:flex;flex-direction:column;
+    gap:5px;min-width:0;text-align:left;font-family:inherit;color:inherit;cursor:pointer;}
+  .ow-ot-card:hover{background:var(--ow-paper-2);}
+  .ow-ot-card:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  /* An order in the queue carries the same edge the dock's own card has,
+     so "this is one of the twenty" is one device on the screen, not two. */
+  .ow-ot-card.ow-now{border-color:var(--ow-oxide);}
+  .ow-ot-card-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  /* Money never truncates; the name gives way. A clipped figure is not a
+     shortened figure, it is a wrong one. */
+  .ow-ot-card-c{flex:1;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-card-v{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-ot-card-m{display:flex;align-items:baseline;gap:var(--ow-sp-6);min-width:0;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ot-card-o{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-weight:var(--ow-fw-500);}
+  .ow-ot-card-p{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ot-card-a{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-weight:var(--ow-fw-500);white-space:nowrap;}
+  .ow-ot-card-a.ow-warn{color:var(--ow-amber-ink);}
+  .ow-ot-card-a.ow-bad{color:var(--ow-crimson);}
+  .ow-ot-card-w{min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* DRAWN ON THE FIRST LINE, BUILT ON THE THIRD, and the width is why.
+     The board was drawn at 1680, where a lane is 282px and the client's
+     name still gets sixteen characters beside the tag and the money. It
+     has to work from 1440 (README), where a lane is 228px and the same
+     three items leave the name FIVE -- "Ssekitoleko Hardware" as "Sse…",
+     which reads as a different customer rather than as a truncation,
+     which is the exact fault this app's truncation rule exists to stop.
+     So the name and the money keep the first line to themselves and the
+     tag goes to the third, beside who has it. Nothing is lost: both
+     devices the drawing gives a needs-you card -- this tag and the oxide
+     edge -- are still on it. */
+  .ow-ot-card-t{flex:none;display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-sm);background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-ot-card-f{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;}
+  .ow-ot-tail{flex:none;padding:var(--ow-sp-4) 2px;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .ow-ot-cards .ow-empty{padding:var(--ow-sp-12) 2px;text-align:left;font-size:var(--ow-t-11);
+    line-height:1.45;}
+  /* The console's own screen; the phone's is below the switch. */
+  .ow-ot-fone{display:none;}
+
+  /* ==================================================================
+     THE BOARD'S DIALOGS — one object, six uses.
+
+     The order, the buying list, the trip, the runs, the announcement and
+     the invoicing are all the same shape: white paper on a scrim, a 44px
+     header that says what this is and how much of it there is, a body of
+     hairline-separated blocks, and a footer whose left side explains what
+     the button will do and whose right side holds the actions — of which
+     EXACTLY ONE is oxide. One anatomy means the owner learns the dialog
+     once and then only reads what is inside it.
+
+     The scrim is steel-950 at 55%, not the older .modal-overlay's own
+     slightly different navy: that one is off the palette and rewriting it
+     would rewrite every modal in the app (§6, law 1).
+     ================================================================== */
+  .ow-dlg-sc{position:fixed;inset:0;z-index:120;background:rgba(20,23,27,.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:var(--ow-sp-32) var(--ow-sp-20);overflow:auto;}
+  .ow-dlg-sc[hidden]{display:none;}
+  .ow-dlg{width:var(--ow-dlg-w,760px);max-width:100%;max-height:100%;
+    background:var(--ow-paper);border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);
+    overflow:hidden;display:flex;flex-direction:column;}
+  .ow-dlg-w620{--ow-dlg-w:620px;}
+  .ow-dlg-w760{--ow-dlg-w:760px;}
+  .ow-dlg-w800{--ow-dlg-w:800px;}
+  .ow-dlg-w900{--ow-dlg-w:900px;}
+  .ow-dlg-w980{--ow-dlg-w:980px;}
+  .ow-dlg-h{flex:none;height:44px;display:flex;align-items:center;gap:var(--ow-sp-10);
+    padding:0 14px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  .ow-dlg-t{flex:none;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-dlg-s{min-width:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-sp{flex:1;}
+  .ow-dlg-x{all:unset;flex:none;cursor:pointer;display:flex;padding:4px;border-radius:var(--ow-r-sm);
+    color:var(--ow-ink-600);}
+  .ow-dlg-x:hover{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .ow-dlg-x:focus-visible{outline:2px solid var(--ow-steel-950);}
+  .ow-dlg-b{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;}
+  /* One block of the body. Hairlines, never cards: depth in this app is
+     a rule, not a shadow. */
+  .ow-dlg-k{flex:none;padding:14px 18px;border-bottom:1px solid var(--ow-rule-soft);
+    display:flex;flex-direction:column;gap:9px;}
+  .ow-dlg-k:last-child{border-bottom:0;}
+  .ow-dlg-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-dlg-p{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.45;
+    max-width:var(--ow-measure);}
+  .ow-dlg-f{flex:none;padding:var(--ow-sp-12) 14px;border-top:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .ow-dlg-n{flex:1;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;}
+  /* The figure the footer's button is about, at the size a figure that
+     decides something is read at. */
+  .ow-dlg-fig{flex:none;display:flex;flex-direction:column;gap:1px;}
+  .ow-dlg-fig-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-20);font-weight:var(--ow-fw-500);
+    letter-spacing:-.03em;line-height:1.1;white-space:nowrap;}
+  .ow-dlg-fig-v .ow-u{font-size:.55em;color:var(--ow-ink-600);margin-left:.3em;letter-spacing:0;}
+  .ow-dlg-fs{flex:none;width:1px;height:34px;background:var(--ow-rule-soft);}
+  /* A whole block of rows, flush to the dialog's edges. */
+  .ow-dlg-rows{flex:none;display:flex;flex-direction:column;}
+  .ow-dlg-g{display:flex;align-items:center;gap:var(--ow-sp-10);padding:9px 14px;
+    background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-dlg-g-n{flex:none;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;white-space:nowrap;}
+  .ow-dlg-g-s{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-g-sp{flex:1;}
+  .ow-dlg-g-l{flex:none;font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-dlg-g-v{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  /* A group head is one line high. Its buttons keep their words on one
+     line too, or the head grows and the rows below it stop lining up
+     with the head of the next group. */
+  .ow-dlg-g .btn.ow-sm{flex:none;height:24px;font-size:var(--ow-t-11);white-space:nowrap;
+    background:var(--ow-paper);}
+  .ow-dlg-hd,.ow-dlg-r{display:grid;align-items:center;gap:var(--ow-sp-10);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-dlg-hd{padding:7px 14px;}
+  .ow-dlg-r{padding:9px 14px;width:100%;border-left:0;border-right:0;border-top:0;
+    background:none;text-align:left;font-family:inherit;color:inherit;}
+  .ow-dlg-r-b{cursor:pointer;}
+  .ow-dlg-r-b:hover{background:var(--ow-paper-2);}
+  .ow-dlg-r-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-dlg-ch{font-size:10px;font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-dlg-c{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-c2{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-m{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .ow-dlg-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-dlg-rt{text-align:right;}
+  /* A line that came back short says so on its own row, with the way to
+     take the receipt back beside it. */
+  .ow-dlg-short{display:block;margin-top:2px;font-size:var(--ow-t-11);
+    color:var(--ow-amber-ink);white-space:normal;}
+  .ow-dlg-undo{all:unset;cursor:pointer;text-decoration:underline;color:var(--ow-amber-ink);}
+  .ow-dlg-undo:focus-visible{outline:2px solid var(--ow-steel-950);}
+  /* The three row shapes, one per dialog that has rows. The text columns
+     give way and the figure columns are sized to their content, because
+     a clipped figure is a WRONG figure and a shortened item name is
+     still an item name. */
+  .ow-bl-r{grid-template-columns:34px minmax(0,1fr) 150px 110px 120px 92px;}
+  .ow-rn-r{grid-template-columns:minmax(0,1fr) 150px 120px 120px;}
+  .ow-iv-r{grid-template-columns:34px minmax(0,1fr) 120px 130px 130px;}
+  .ow-dlg-tail{padding:var(--ow-sp-8) 14px;border-bottom:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  /* The pick box. Ticked is verdigris, because a line that has come in
+     is the good case, not the accent's one thing to do next. */
+  .ow-dlg-ck{all:unset;cursor:pointer;justify-self:center;width:16px;height:16px;
+    box-sizing:border-box;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;color:transparent;}
+  .ow-dlg-ck:hover{border-color:var(--ow-steel-400);}
+  .ow-dlg-ck:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-dlg-ck.ow-on{border-color:var(--ow-verdigris);color:var(--ow-verdigris);}
+  /* Something that must be sorted before the buying happens. Amber ink on
+     an amber ground, never on the accent. */
+  .ow-dlg-warn{flex:none;padding:11px 14px;background:var(--ow-amber-soft);
+    border-bottom:1px solid var(--ow-rule-soft);display:flex;align-items:center;
+    gap:var(--ow-sp-12);}
+  .ow-dlg-warn-t{flex:1;min-width:0;font-size:var(--ow-t-12);color:var(--ow-amber-ink);
+    line-height:1.45;}
+  .ow-dlg-warn-b{font-weight:var(--ow-fw-600);}
+  .ow-dlg-warn .btn.ow-sm{flex:none;border-color:var(--ow-amber-ink);color:var(--ow-amber-ink);
+    font-weight:var(--ow-fw-700);background:none;}
+  .ow-dlg-warn .btn.ow-sm:hover{background:var(--ow-amber-faint);}
+  /* The same warning where it is a gap in a plan rather than a fault in
+     one: dashed, on the faintest amber. */
+  .ow-dlg-gap{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);
+    padding:11px var(--ow-sp-12);display:flex;align-items:center;gap:var(--ow-sp-12);
+    background:var(--ow-amber-faint);}
+
+  /* ---- 2a: the stage track --------------------------------------- */
+  .ow-dlg-trk{display:grid;grid-template-columns:repeat(5,1fr);}
+  .ow-dlg-trk-s{display:flex;flex-direction:column;gap:var(--ow-sp-6);min-width:0;}
+  .ow-dlg-trk-l{display:flex;align-items:center;}
+  /* Filled versus hollow carries "where it is"; the accent is not spent
+     on a position, it is spent on the one thing to do next. */
+  .ow-dlg-trk-d{width:14px;height:14px;box-sizing:border-box;flex:none;
+    border-radius:var(--ow-r-pill);border:1px solid var(--ow-rule);background:var(--ow-paper);}
+  .ow-dlg-trk-s.ow-on .ow-dlg-trk-d{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+  .ow-dlg-trk-s.ow-now .ow-dlg-trk-d{background:var(--ow-steel-950);border:3px solid var(--ow-steel-100);
+    box-sizing:content-box;}
+  .ow-dlg-trk-b{flex:1;height:2px;background:var(--ow-rule);}
+  .ow-dlg-trk-s.ow-on .ow-dlg-trk-b{background:var(--ow-verdigris);}
+  .ow-dlg-trk-s:last-child .ow-dlg-trk-b{display:none;}
+  .ow-dlg-trk-n{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .ow-dlg-trk-s.ow-on .ow-dlg-trk-n{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-dlg-trk-s.ow-now .ow-dlg-trk-n{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-dlg-trk-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .ow-dlg-trk-s.ow-now .ow-dlg-trk-t{color:var(--ow-ink-600);}
+  /* WHAT TO TELL THE CLIENT. The one block that is tinted, because it is
+     the one block that is an answer rather than a record. */
+  .ow-dlg-say{flex:none;padding:14px 18px;border-bottom:1px solid var(--ow-rule-soft);
+    background:var(--ow-amber-faint);display:flex;align-items:center;gap:var(--ow-sp-16);}
+  .ow-dlg-say-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ow-dlg-say-h{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-amber-ink);}
+  .ow-dlg-say-t{font-size:var(--ow-t-13);color:var(--ow-ink-900);line-height:1.45;
+    max-width:var(--ow-measure);}
+  .ow-dlg-say .btn.ow-sm{flex:none;}
+  /* The order's two columns: what is on it and how it got here, against
+     what it is worth. */
+  .ow-dlg-cols{flex:none;display:flex;align-items:stretch;min-width:0;}
+  .ow-dlg-col{flex:1;min-width:0;padding:14px 18px;display:flex;flex-direction:column;
+    gap:var(--ow-sp-16);}
+  .ow-dlg-side{width:270px;flex:none;border-left:1px solid var(--ow-rule-soft);
+    padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);
+    background:var(--ow-paper-2);}
+  .ow-dlg-sect{display:flex;flex-direction:column;gap:7px;min-width:0;}
+  .ow-dlg-ln{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  .ow-dlg-ln-n{flex:1;min-width:0;font-size:var(--ow-t-13);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-ln-q{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-dlg-ln-v{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-dlg-ln-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dlg-tick{width:14px;height:14px;box-sizing:border-box;flex:none;border-radius:var(--ow-r-sm);
+    border:1px solid var(--ow-rule);display:flex;align-items:center;justify-content:center;
+    color:transparent;}
+  .ow-dlg-tick.ow-on{border-color:var(--ow-verdigris);color:var(--ow-verdigris);}
+  /* The tick sizes itself on the svg: the layer may not name .icon. */
+  .ow-tick{width:11px;height:11px;flex:none;stroke-width:2.6;}
+  .ow-dlg-ev{display:flex;gap:var(--ow-sp-10);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dlg-ev.ow-now{color:var(--ow-ink-900);}
+  .ow-dlg-ev-t{width:76px;flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .ow-dlg-ev-s{flex:1;min-width:0;line-height:1.45;}
+  .ow-dlg-shots{display:flex;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .ow-dlg-shot{width:150px;height:104px;border:1px dashed var(--ow-rule);border-radius:var(--ow-r);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    background:var(--ow-paper-2);}
+  .ow-dlg-shot .ow-i20{color:var(--ow-ink-600);}
+  .ow-i20{width:20px;height:20px;flex:none;}
+  .ow-dlg-shot-c{font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:center;line-height:1.35;}
+  .ow-dlg-kv{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-10);}
+  .ow-dlg-kv-k{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dlg-kv-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;white-space:nowrap;}
+  .ow-dlg-kv.ow-good .ow-dlg-kv-k{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-dlg-kv.ow-good .ow-dlg-kv-v{color:var(--ow-verdigris);}
+  .ow-dlg-kv.ow-bad .ow-dlg-kv-v{color:var(--ow-crimson);}
+  .ow-dlg-hr{height:1px;background:var(--ow-rule-soft);}
+  /* The Loaded form, in the order's own dialog on the console. */
+  .ow-dlg-load .ow-ot-load{max-width:none;}
+  .ow-dlg-load .ow-ot-h{margin-top:0;}
+
+  /* ---- 2c: a stop on the round ------------------------------------ */
+  .ow-dlg-stop{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+    padding:11px var(--ow-sp-12);display:flex;align-items:center;gap:var(--ow-sp-12);min-width:0;}
+  .ow-dlg-stop-i{width:22px;height:22px;flex:none;border-radius:var(--ow-r-pill);
+    background:var(--ow-steel-950);color:var(--ow-paper);display:flex;align-items:center;
+    justify-content:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-dlg-stop-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ow-dlg-stop-n{min-width:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-stop-s{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dlg-stop-v{flex:none;text-align:right;}
+  .ow-dlg-stop-c{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  /* ---- 2e: the drafted message ------------------------------------ */
+  .ow-dlg-to{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .ow-dlg-draft{border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    background:var(--ow-paper-2);padding:11px var(--ow-sp-12);font-size:var(--ow-t-13);
+    line-height:1.5;color:var(--ow-ink-900);white-space:pre-wrap;
+    font-family:inherit;width:100%;box-sizing:border-box;resize:vertical;min-height:180px;}
+  .ow-dlg-draft:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-dlg-b .ow-empty{margin:var(--ow-sp-20) var(--ow-sp-16);}
+
+  /* THE DIALOGS ON THE PHONE. A 900px sheet in a hand is a 900px sheet:
+     the dialog takes the whole screen, its two columns become one, and
+     the footer's actions go full width where a thumb can reach them. */
+  @media (max-width:820px){
+    .ow-dlg-sc{padding:0;align-items:stretch;}
+    .ow-dlg{--ow-dlg-w:100%;max-height:none;border-radius:0;min-height:100%;}
+    .ow-dlg-h{height:auto;min-height:52px;padding:var(--ow-sp-8) var(--ow-sp-12);flex-wrap:wrap;}
+    .ow-dlg-k,.ow-dlg-say,.ow-dlg-col{padding:var(--ow-sp-12);}
+    .ow-dlg-cols{flex-direction:column;}
+    .ow-dlg-side{width:auto;border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .ow-dlg-f{flex-wrap:wrap;padding-bottom:calc(var(--ow-sp-12) + env(safe-area-inset-bottom));}
+    .ow-dlg-n{flex:1 1 100%;}
+    .ow-dlg-f .btn.ow-sm{flex:1 1 auto;justify-content:center;min-height:var(--ow-tap);box-sizing:border-box;}
+    .ow-dlg-say{flex-wrap:wrap;}
+    .ow-dlg-say .btn.ow-sm{flex:1 1 100%;justify-content:center;min-height:var(--ow-tap);box-sizing:border-box;}
+    /* The dense grids stop being grids: a five-column row at 390px is
+       five collisions, and an order's money is the one thing that must
+       never be cut. */
+    .ow-dlg-hd{display:none;}
+    .ow-dlg-r,.ow-bl-r,.ow-rn-r,.ow-iv-r{grid-template-columns:auto minmax(0,1fr) auto;
+      row-gap:var(--ow-sp-4);padding:var(--ow-sp-12);}
+    .ow-dlg-r .ow-dlg-c,.ow-dlg-r .ow-dlg-c2,.ow-dlg-r .ow-dlg-m,
+    .ow-dlg-r .ow-dlg-rt{grid-column:2;text-align:left;}
+    .ow-dlg-ck{grid-column:1;grid-row:1/span 3;align-self:start;width:24px;height:24px;}
+    .ow-dlg-r .ow-dlg-v{grid-column:3;grid-row:1;text-align:right;}
+    .ow-dlg-trk{grid-template-columns:repeat(5,1fr);gap:2px;}
+    .ow-dlg-trk-n,.ow-dlg-trk-t{font-size:var(--ow-t-11);}
+    .ow-dlg-shot{width:100%;}
+  }
+  /* The footer's actions are 34px, not the 28px a header's ghost is:
+     these are the buttons that do the thing. A height in context rather
+     than a second size modifier — there is no fourteenth button family
+     and there is no third button size either. */
+  .ow-dlg-f .btn.ow-sm,.ow-dlg-say .btn.ow-sm{height:34px;padding:0 var(--ow-sp-12);
+    font-size:var(--ow-t-13);}
+  /* An ink-bordered primary, for the one dialog whose oxide is already
+     spent: the order preview's accent is "Send the client an update", so
+     the move that closes the dialog is drawn in ink. Two oxide elements
+     in one dialog and neither of them means anything. */
+  .ow-dlg .btn.ow-ink{border:1px solid var(--ow-steel-950);color:var(--ow-steel-950);
+    font-weight:var(--ow-fw-700);background:var(--ow-paper);}
+  .ow-dlg .btn.ow-ink:hover{background:var(--ow-paper-2);}
 
 
 
@@ -15722,7 +16201,28 @@
     .ow-sec-n{font-size:13px;}
     /* ORDER TRACKING on the phone: the row reads as the drawn card, the
        queue as cards with the act under the words, three of them until
-       asked for more. */
+       asked for more.
+
+       THE BOARD DOES NOT COME HERE. Five lanes in one hand is five
+       columns of nothing: 820px is a switch between two designs, not a
+       reflow of one (SKILL.md §1). So the board, the dock and the day
+       cell are gone, the screen stops being a viewport-high column and
+       scrolls like every other phone screen, and what the phone had
+       -- the queue as cards, the stage lens, the orders as cards and
+       the day's rail underneath -- is what it keeps. Both shapes are
+       written from the same derivations, so they cannot disagree. */
+    .ow-ot-screen{display:block;height:auto;overflow:visible;}
+    .ow-ot-screen .ow-ph{position:sticky;margin-bottom:var(--ow-sp-16);}
+    .ow-ot-board,.ow-ot-dock,.ow-ot-day{display:none;}
+    .ow-ot-fone{display:block;}
+    .ow-ot-strip{grid-template-columns:1fr 1fr;}
+    /* The four figures go back to being four cells of the strip rather
+       than one row of them, because 390px has no room for a row. */
+    .ow-ot-tiles{display:contents;}
+    .ow-ot-tiles .ow-mt{padding:var(--ow-sp-10) var(--ow-sp-12);
+      border-left:1px solid var(--ow-rule-soft);border-top:1px solid var(--ow-rule-soft);}
+    .ow-ot-tiles .ow-mt:nth-child(-n+3){border-top:0;}
+    .ow-ot-tsep{display:none;}
     .ow-ph-f{flex:1 1 100%;min-width:0;margin:var(--ow-sp-8) 0 0;}
     .ow-ot .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);}
     .ow-ot-cl{gap:var(--ow-sp-8);}
@@ -16816,15 +17316,55 @@
     </section>
 
     <!-- SAVED QUOTES -->
+    <!-- ORDER TRACKING — the stage board.
+
+         The console before this said one thing about an order in three
+         places (a strip tile, a queue row, a table row grouped by stage)
+         and asked the owner to read a list to find out where anything
+         was. Five jobs actually bring them here, in this order: decide
+         what needs me now; see where every order is; push orders through
+         stages fast; plan the buying trip and the delivery runs; answer
+         a client on the telephone.
+
+         So the screen is a BOARD. Five lanes, one card per order, oldest
+         at the top of its lane — where an order is, is a position, and a
+         position is read at a glance where a stage column in a table is
+         read one row at a time. The lanes scroll independently, so a day
+         with fifty-four live orders needs no paging.
+
+         Above it, the decisions: a QUEUE that serves ONE at a time. A
+         list of twenty decisions is not twenty decisions, it is a
+         reason to make none; so the longest-waiting one gets the whole
+         card, its own sentence and its own two buttons, and the rest
+         wait their turn behind a Next. The two immediately behind it are
+         named, because a queue you cannot see the end of is a queue you
+         do not trust.
+
+         Everything else the day is organised around — the buying trip,
+         the delivery runs, the invoicing — is a DIALOG opened from the
+         lane that owns it, not a rail competing with the board for the
+         same 300 pixels.
+
+         THE PHONE IS A DIFFERENT SCREEN (SKILL.md §1). Five lanes in a
+         hand is five columns of nothing, so below 820px the board and
+         the dock are gone and the phone keeps what it had: the queue as
+         cards, the stage lens, the orders as cards, and the day's rail
+         underneath. Both are emitted from the same derivations, so they
+         can never say different things. -->
     <section id="tab-quote-saved" style="display:none;">
+      <!-- The screen is a column that fills the viewport and does not
+           scroll: the lanes do. `display:block` is set inline on the
+           section by goToTab, so the flex column is this child. -->
+      <div class="ow-ot-screen">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Order tracking</h1>
-        <p class="ow-ph-sub">What needs you first, then where every order is.</p>
-        <p class="ow-ph-help">Every order from saved quote to delivered, grouped by stage and longest waiting first. Open a row to see what is on it and how it got here; the one thing it needs from you sits on the row. The strip counts the shop, and the rail plans the buying trip and the deliveries.</p>
+        <!-- Counted at draw, never stored: how many are live, how many
+             are waiting on a decision, how many are past their limit.
+             The sub is never folded behind the "i" — it is the one line
+             that goes stale. -->
+        <p class="ow-ph-sub" id="ot_sub">What needs you first, then where every order is.</p>
+        <p class="ow-ph-help">Every order from saved quote to delivered, in five lanes with the longest waiting at the top of each. A card opens the order — where it has reached, how it got here, what to tell the client, and the money. What needs a decision is a queue above the board, served one at a time, longest waiting first. The buying trip, the delivery runs and the invoicing open from the lane that owns them.</p>
         <span class="ow-ph-sp"></span>
-        <!-- "Invoice all delivered", written by the render and empty
-             unless two or more are actually waiting. -->
-        <span id="ot_invoice_all"></span>
         <label class="ow-f ow-ph-f"><span class="ow-f-in"><svg class="icon ow-f-i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" class="ow-f-v ow-f-t" id="ot_search" placeholder="Client, order number or item" autocomplete="off" aria-label="Search orders"></span></label>
         <button type="button" class="btn ow-sm" id="ot_back_to_new_quote_btn" title="Shortcut: press Q">
           <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
@@ -16832,16 +17372,31 @@
         </button>
       </div>
 
-      <div class="ow-strip ow-strip-5" id="ot_strip"></div>
-      <div class="ow-grid">
-        <div>
-          <div class="ow-sec" id="ot_needs_h"><h3 class="ow-sec-t">Needs you <span class="ow-sec-n" id="ot_needs_n"></span></h3><span class="ow-sec-s">A decision only you can make, or a chore the app cannot do. Longest waiting first.</span></div>
-          <div class="ow-pan ow-ot-needs" id="ot_needs"></div>
-          <div class="ow-sec" id="ot_all_h"><h3 class="ow-sec-t">Every order <span class="ow-sec-n" id="ot_all_n"></span></h3><span class="ow-sec-s">Grouped by stage, longest waiting first. Open a row to see what is on it and how it got here.</span></div>
-          <div class="ow-seg" id="ot_seg" role="tablist"></div>
-          <div class="ow-pan"><div class="ow-tbl ow-ot" id="savedQuotesWrap"></div></div>
+      <!-- Four figures the shop is counted by, and the day's trip and
+           runs in the fifth cell — which is what the 304px right rail
+           used to be, given the width it actually needs and none of the
+           height it did not. -->
+      <div class="ow-strip ow-ot-strip" id="ot_strip"></div>
+
+      <!-- ONE DECISION AT A TIME. Desktop only. -->
+      <div class="ow-ot-dock" id="ot_dock"></div>
+
+      <!-- THE BOARD. Desktop only. -->
+      <div class="ow-ot-board" id="ot_board"></div>
+
+      <!-- THE PHONE'S OWN SCREEN. Hidden on the console. -->
+      <div class="ow-ot-fone">
+        <div class="ow-grid">
+          <div>
+            <div class="ow-sec" id="ot_needs_h"><h3 class="ow-sec-t">Needs you <span class="ow-sec-n" id="ot_needs_n"></span></h3><span class="ow-sec-s">A decision only you can make, or a chore the app cannot do. Longest waiting first.</span></div>
+            <div class="ow-pan ow-ot-needs" id="ot_needs"></div>
+            <div class="ow-sec" id="ot_all_h"><h3 class="ow-sec-t">Every order <span class="ow-sec-n" id="ot_all_n"></span></h3><span class="ow-sec-s">Grouped by stage, longest waiting first. Open a row to see what is on it and how it got here.</span></div>
+            <div class="ow-seg" id="ot_seg" role="tablist"></div>
+            <div class="ow-pan"><div class="ow-tbl ow-ot" id="savedQuotesWrap"></div></div>
+          </div>
+          <div class="ow-side" id="ot_rail"></div>
         </div>
-        <div class="ow-side" id="ot_rail"></div>
+      </div>
       </div>
     </section>
 
@@ -19873,17 +20428,7 @@
 </div>
 
 <!-- BUYING LIST -->
-<div class="modal-overlay" id="buyingListModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2>Buying list</h2>
-      <button class="modal-close" id="buyingListClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="buyingListBody"></div>
-  </div>
-</div>
+
 
 <!-- RECORD / EDIT A LOAN -->
 <div class="modal-overlay" id="loanModal">
@@ -20220,32 +20765,12 @@
 </div>
 
 <!-- WHAT IS GOING THE SAME WAY -->
-<div class="modal-overlay" id="deliveryRunsModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2>Going the same way</h2>
-      <button class="modal-close" id="deliveryRunsClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="deliveryRunsBody"></div>
-  </div>
-</div>
+
 
 <!-- ONE PERSON'S RECORD -->
 
 <!-- WHERE THE BUYING TRIP GOES -->
-<div class="modal-overlay" id="pickupRunsModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2>Where to buy from</h2>
-      <button class="modal-close" id="pickupRunsClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" id="pickupRunsBody"></div>
-  </div>
-</div>
+
 
 <!-- A REPAYMENT IS DUE -->
 <div class="modal-overlay" id="duesDueModal">
@@ -20278,16 +20803,29 @@
   </div>
 </div>
 
-<!-- WHAT IS ACTUALLY ON AN ORDER -->
-<div class="modal-overlay" id="orderPreviewModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="orderPreviewTitle">Order</h2>
-      <button class="modal-close" id="orderPreviewClose" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+<!-- THE BOARD'S DIALOGS — ONE SHELL, SIX USES.
+
+     The order, the buying list, the trip, the runs, the announcement and
+     the invoicing all open here. One element rather than six, because
+     they are one object: the same 44px header, the same body of
+     hairline blocks, the same footer with exactly one oxide primary in
+     it. One place decides what a dialog looks like; one place closes it;
+     one listener carries out what is pressed inside it. What each one
+     puts in the shell is OT_DIALOGS. -->
+<div class="ow-dlg-sc" id="otDlg" hidden>
+  <div class="ow-dlg ow-dlg-w760" role="dialog" aria-modal="true" aria-labelledby="ot_dlg_t">
+    <div class="ow-dlg-h">
+      <span class="ow-dlg-t" id="ot_dlg_t"></span>
+      <span class="ow-dlg-s" id="ot_dlg_s"></span>
+      <span class="ow-dlg-sp"></span>
+      <span id="ot_dlg_c"></span>
+      <span id="ot_dlg_a"></span>
+      <button type="button" class="ow-dlg-x" id="ot_dlg_x" data-dlg="close" aria-label="Close">
+        <svg class="icon ow-i16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="modal-body" id="orderPreviewBody"></div>
+    <div class="ow-dlg-b" id="ot_dlg_b"></div>
+    <div class="ow-dlg-f" id="ot_dlg_f"></div>
   </div>
 </div>
 
@@ -33479,16 +34017,8 @@ function orderPreviewHTML(q){
     </table>`;
 }
 
-function openOrderPreview(orderId){
-  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(orderId));
-  if(!q) return;
-  document.getElementById('orderPreviewTitle').textContent =
-    `${(q.client && q.client.name) || 'Unnamed client'} — ${ORDER_STATUS_SHORT_LABELS[q.status] || ''}`;
-  document.getElementById('orderPreviewBody').innerHTML = orderPreviewHTML(q);
-  const chit = document.getElementById('opChitBtn');
-  if(chit) chit.addEventListener('click', ()=> printPackingChit(chit.dataset.id));
-  openModal('orderPreviewModal');
-}
+/* openOrderPreview() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
+
 
 // This order's share of the buying, and only while it is the question
 // being asked -- in Buying, or in Preparing with a line still to fetch. An
@@ -33704,104 +34234,8 @@ function openShortfallPlan(){
 }
 
 
-function openPickupRuns(){
-  const orders = beingPreparedOrders();
-  const { runs, noLocation, unpriced, settled } = pickupRuns(orders);
+/* openPickupRuns() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
 
-  const lineRow = (l)=>`<li class="dr-order">
-    <div class="dr-order-main">
-      <div class="dr-order-name">${esc(l.it.productName || 'Item')} · ${l.qty}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</div>
-      <div class="dr-order-sub">for ${esc(quoteClientName(l.order))}${l.movedFrom
-        ? ` · cheaper here than ${esc(supplierName(l.movedFrom))}` : ''}</div>
-    </div>
-    <div class="dr-order-side">
-      <span class="dr-order-value">${fmtUGX(l.lineCost)}</span>
-    </div>
-  </li>`;
-
-  const supplierBlock = (s, lines)=>`
-    <div class="pr-supplier">
-      <div class="pr-supplier-head">${ICON_STORE}<span>${esc(s.name)}</span><b>${fmtUGX(Math.round(s.total))}</b></div>
-      <ul class="dr-orders">${lines.filter(l=> String(l.best.supplierId)===String(s.supplierId)).map(lineRow).join('')}</ul>
-    </div>`;
-
-  const placeCard = (r, i)=>`
-    <article class="dr-card" tabindex="0" aria-label="${esc(r.label)}, ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}">
-      <header class="dr-card-head">
-        <span class="dr-card-rank">${i+1}</span>
-        ${ICON_PIN}
-        <span class="dr-card-name" title="${esc(r.label)}">${esc(r.label)}</span>
-      </header>
-      <div class="dr-card-figs">
-        <span class="dr-card-count">${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'} · ${r.lines.length} line${r.lines.length===1?'':'s'}</span>
-        <span class="dr-card-total">${fmtUGX(Math.round(r.total))}</span>
-      </div>
-      ${r.suppliers.length > 1
-        ? `<p class="dr-card-note">${ICON_ROUTE}One trip here covers ${r.suppliers.length} suppliers${r.orderCount>1 ? ` and ${r.orderCount} orders` : ''}</p>`
-        : ''}
-      ${r.suppliers.map(s=> supplierBlock(s, r.lines)).join('')}
-    </article>`;
-
-  const asideCard = (kind, icon, title, note, body)=>`
-    <article class="dr-card ${kind}" tabindex="0" aria-label="${esc(title)}">
-      <header class="dr-card-head">${icon}<span class="dr-card-name">${esc(title)}</span></header>
-      ${body}
-      <p class="dr-card-note quiet">${esc(note)}</p>
-    </article>`;
-
-  const cards = runs.map(placeCard)
-    .concat(noLocation.length ? [asideCard('unknown', ICON_WARN, 'No location on file',
-      'Add a location on the supplier record and these join a cluster instead of standing alone.',
-      `<div class="dr-card-figs">
-        <span class="dr-card-count">${noLocation.length} supplier${noLocation.length===1?'':'s'}</span>
-        <span class="dr-card-total">${fmtUGX(Math.round(noLocation.reduce((s,r)=>s+r.total,0)))}</span>
-      </div>
-      ${noLocation.map(r=> r.suppliers.map(s=> supplierBlock(s, r.lines)).join('')).join('')}`)] : [])
-    .concat(unpriced.length ? [asideCard('unknown', ICON_WARN, 'No price on file',
-      'Nothing ranked a supplier for these, so there is nowhere to send anybody. Add a purchase price and they join a trip.',
-      `<ul class="dr-orders">${unpriced.map(u=>`<li class="dr-order">
-        <div class="dr-order-main">
-          <div class="dr-order-name">${esc(u.line.it.productName || 'Item')} · ${u.line.qty}${u.line.it.unit ? ` ${esc(u.line.it.unit)}` : ''}</div>
-          <div class="dr-order-sub">for ${esc(quoteClientName(u.order))}</div>
-        </div>
-      </li>`).join('')}</ul>`)] : []);
-
-  const totalCash = runs.reduce((s,r)=> s + r.total, 0) + noLocation.reduce((s,r)=> s + r.total, 0);
-  document.getElementById('pickupRunsBody').innerHTML = `
-    ${/* Only when there is a journey to describe. "0 places to reach ·
-         0 UGX to spend" over an empty list is a heading for nothing,
-         and it sat directly above the sentence explaining that there is
-         nowhere to go -- saying it twice, the second time in figures. */
-      cards.length ? `<div class="bl-top">
-      <span class="bl-top-label">${runs.length} place${runs.length===1?'':'s'} to reach</span>
-      <span class="bl-top-fig">${fmtUGX(Math.round(totalCash))} to spend</span>
-    </div>` : ''}
-    ${cards.length ? `
-    <div class="dr-carousel">
-      <!-- pu_, not pr_. Payroll owns pr_prev and pr_next: its month
-           stepper is static markup, so it is in the document at all
-           times and EARLIER than this modal -- getElementById handed
-           wireRunCarousel those two buttons and these arrows did nothing
-           at all, silently. The delivery carousel next door is dr_ and
-           the buy-lines one bl_; pickup runs is pu_. -->
-      <button type="button" class="dr-nav prev" id="pu_prev" aria-label="Previous place">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <div class="dr-track" id="pu_track" tabindex="0" role="group" aria-label="Pickup clusters, scroll sideways">
-        ${cards.join('')}
-      </div>
-      <button type="button" class="dr-nav next" id="pu_next" aria-label="Next place">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-    <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the places worth the most stops come first' : ''}.</p>`
-    : `<p class="preset-hint">${settled
-        ? `Nowhere to go — all ${settled} bought-in line${settled===1?'':'s'} on this board ${settled===1?'has':'have'} already arrived.`
-        : 'Nothing on the board has to be bought in.'}</p>`}`;
-
-  wireRunCarousel('pu_track', 'pu_prev', 'pu_next');
-  openModal('pickupRunsModal');
-}
 
 
 /* The runs in full, as a document to plan a morning from.
@@ -33821,85 +34255,8 @@ function openPickupRuns(){
    that are not places -- being collected, and no address yet -- ride at
    the end of the same track, so one sweep accounts for the whole column
    rather than leaving a tail nobody scrolls to. */
-function openDeliveryRuns(){
-  const orders = pendingDeliveryOrders();
-  const { runs, collected, unknown } = deliveryRuns(orders);
+/* openDeliveryRuns() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
 
-  const orderRow = (q)=>{
-    const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : '';
-    return `<li class="dr-order">
-      <div class="dr-order-main">
-        <div class="dr-order-name">${esc(quoteClientName(q))}</div>
-        <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}${q.originPortal ? ' · from the portal' : ''}</div>
-      </div>
-      <div class="dr-order-side">
-        <span class="dr-order-value">${fmtUGX(savedQuoteTotal(q))}</span>
-        ${driver
-          ? `<span class="dr-driver">${ICON_TRUCK}${esc(driver)}</span>`
-          : `<span class="dr-driver none" title="Nobody is delivering this order">${ICON_WARN}Nobody yet</span>`}
-      </div>
-    </li>`;
-  };
-
-  const placeCard = (r, i)=>`
-    <article class="dr-card" tabindex="0" aria-label="${esc(r.label)}, ${r.orders.length} order${r.orders.length===1?'':'s'}">
-      <header class="dr-card-head">
-        <span class="dr-card-rank">${i+1}</span>
-        ${ICON_PIN}
-        <span class="dr-card-name" title="${esc(r.label)}">${esc(r.label)}</span>
-      </header>
-      <div class="dr-card-figs">
-        <span class="dr-card-count">${r.orders.length} order${r.orders.length===1?'':'s'}</span>
-        <span class="dr-card-total">${fmtUGX(r.value)}</span>
-      </div>
-      ${r.unassigned ? `<p class="dr-card-note">${ICON_WARN}${r.unassigned} with nobody on ${r.unassigned===1?'it':'them'}${r.orders.length>1 ? ' — one driver could take the whole run' : ''}</p>` : ''}
-      ${r.drivers.length > 1 ? `<p class="dr-card-note split">${ICON_TRUCK}Split across ${r.drivers.length} drivers, for one place</p>` : ''}
-      <ul class="dr-orders">${r.orders.map(orderRow).join('')}</ul>
-    </article>`;
-
-  const asideCard = (kind, icon, title, note, rows)=>`
-    <article class="dr-card ${kind}" tabindex="0" aria-label="${esc(title)}, ${rows.length}">
-      <header class="dr-card-head">
-        ${icon}
-        <span class="dr-card-name">${esc(title)}</span>
-      </header>
-      <div class="dr-card-figs">
-        <span class="dr-card-count">${rows.length} order${rows.length===1?'':'s'}</span>
-        <span class="dr-card-total">${fmtUGX(rows.reduce((s,q)=>s+savedQuoteTotal(q),0))}</span>
-      </div>
-      <p class="dr-card-note quiet">${esc(note)}</p>
-      <ul class="dr-orders">${rows.map(orderRow).join('')}</ul>
-    </article>`;
-
-  const cards = runs.map(placeCard)
-    .concat(collected.length ? [asideCard('collected', ICON_STORE, 'Being collected',
-      'The agent is picking these up. Nothing to drive, and nothing missing.', collected)] : [])
-    .concat(unknown.length ? [asideCard('unknown', ICON_WARN, 'No address yet',
-      'A shop order takes its location from the customer record; an agent order takes the address the agent typed.', unknown)] : []);
-
-  document.getElementById('deliveryRunsBody').innerHTML = `
-    <div class="bl-top">
-      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} waiting to go out</span>
-      <span class="bl-top-fig">${runs.length} place${runs.length===1?'':'s'}</span>
-    </div>
-    ${cards.length ? `
-    <div class="dr-carousel">
-      <button type="button" class="dr-nav prev" id="dr_prev" aria-label="Previous place">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <div class="dr-track" id="dr_track" tabindex="0" role="group" aria-label="Delivery clusters, scroll sideways">
-        ${cards.join('')}
-      </div>
-      <button type="button" class="dr-nav next" id="dr_next" aria-label="Next place">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-    <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the fullest runs come first' : ''}.</p>`
-    : `<p class="preset-hint">Nothing is waiting to go out.</p>`}`;
-
-  wireRunCarousel('dr_track', 'dr_prev', 'dr_next');
-  openModal('deliveryRunsModal');
-}
 
 /* The sideways cluster track, shared by the delivery runs and the pickup
    runs. Extracted rather than copied: the two fiddly parts below are the
@@ -33965,136 +34322,8 @@ function quoteClientName(q){
    are what the order was priced against, possibly days ago; where today's
    cheapest is somebody else the line moves and says so, with what it saves.
    The order itself is untouched -- this is about the buying, not the sale. */
-function openBuyingList(){
-  const orders = beingPreparedOrders();
-  const runs = buyingListRuns(orders);
-  const total = runs.reduce((s,r)=>s+r.total, 0);
-  const unpriced = [];
-  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpriced.push({order:q, line:l})));
+/* openBuyingList() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
 
-  /* One supplier, one card, and the cards slide sideways -- the same
-     shape Pickup Runs and Delivery Runs already use for exactly this
-     thought. Stacking them was this screen's own invention: three
-     suppliers meant three full-width blocks and a scroll to see whether
-     there was a fourth, while the two neighbouring screens answered the
-     same question in one gesture.
-
-     The lines were a five-column table, which is what forced that
-     width. A table also cannot fit a phone -- its columns collided at
-     331px and needed a minimum width and a sideways scroll of their own
-     to be readable at all. A list of lines has no columns to collide,
-     so the card can be narrow enough to sit in a track. */
-  const runHTML = (r)=>{
-    const sup = data.suppliers.find(s=>s.id===r.supplierId);
-    const canSend = r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId));
-    /* Every line paid for and on the shelf. The total is genuinely zero
-       -- there is nothing left to spend here -- but "0 UGX" as the
-       headline figure of a supplier card reads as a price, and a shop
-       glancing at it sees a run worth nothing rather than a run that is
-       finished. */
-    const done = r.lines.length > 0 && r.lines.every(l=> l.settled);
-    return `<article class="dr-card bl-card${done ? ' done' : ''}">
-      <header class="bl-card-head">
-        <div class="bl-card-who">
-          ${ICON_STORE}
-          <div class="bl-card-name-wrap">
-            <div class="bl-card-name">${esc(supplierName(r.supplierId))}</div>
-            ${sup && sup.location ? `<div class="bl-card-loc">${esc(sup.location)}${sup.shopNo ? ' · Shop ' + esc(sup.shopNo) : ''}</div>` : ''}
-          </div>
-        </div>
-        <div class="bl-card-total">${done ? '<span class="bl-card-done">All in</span>' : fmtUGX(r.total)}</div>
-      </header>
-      ${blRunTripsHTML(r)}
-      <ul class="bl-items">${r.lines.map(l=>{
-        const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
-        const exp = quoteLineExpected(l.it);
-        /* A receipt that did not match what was sent for is the whole
-           reason for writing one down, so the line says which way. */
-        const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
-        const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
-        /* In the unit the line was chosen in -- "2 Ctn @ 430,000", not
-           "200 Pair @ 2,150" -- through the same reader every document
-           uses. Every figure is still kept per base unit. */
-        const cnt = (n)=> quoteLineCount(l.it, n);
-        const per = quoteLineCountPer(l.it);
-        const cu = cnt(l.qty).unit;
-        const perChosen = (x)=> (x == null ? null : x * per);
-        /* Received in full is finished business; received short is not.
-           The row used to draw both the same way -- struck through,
-           "paid", Undo only -- so the one case that still needed
-           somebody to act looked exactly like the case that needed
-           nobody. */
-        return `<li class="bl-item-row ${l.settled ? 'bl-received' : (l.shortfall ? 'bl-short' : '')}">
-          <div class="bl-item-line">
-            <div class="bl-item">${esc(l.it.productName || 'Item')}</div>
-            <div class="bl-item-cost">${l.settled ? `<span class="bl-paid">paid</span>` : fmtUGX(l.lineCost)}</div>
-          </div>
-          <div class="bl-item-line sub">
-            <div class="bl-item-qty">${esc(cnt(l.shortfall || l.qty).n)}${cu ? ` ${esc(cu)}` : ''}
-              <span class="bl-item-each">@ ${fmtUGX(perChosen(l.received ? Number(l.it.receivedPrice) : l.unitCost))}</span></div>
-            <div class="bl-item-act">${l.shortfall
-              ? `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive rest</button>
-                 <button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
-              : l.received
-                ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
-                : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</div>
-          </div>
-          ${l.movedFrom
-            ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
-            : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
-          ${l.received ? `<div class="bl-recd">${ICON_CHECK}${esc(cnt(Number(l.it.receivedQty)).n)} received${
-            shortBy > 0 ? ` · ${esc(cnt(shortBy).n)} short of the ${esc(cnt(exp.qty).n)} sent for` : ''}${
-            paidMore ? ` · ${fmtUGX(Math.abs(paidMore) * per)} ${paidMore>0?'more':'less'} per ${esc(cu||'unit')} than quoted` : ''}</div>` : ''}
-          ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${esc(cnt(l.shortfall).n)}${cu ? ' ' + esc(cu) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}
-        </li>`;
-      }).join('')}</ul>
-      ${/* One journey, one job. Offered only while something on this run
-           is not already on somebody's list -- a second trip for the
-           same carton sends two people for one thing. */
-        canSend ? `<footer class="bl-card-foot">
-          <button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>
-          <button type="button" class="bl-bringing" data-bringing="${esc(r.supplierId)}" title="This supplier is delivering — nobody of ours goes out">They’re delivering</button>
-        </footer>` : ''}
-    </article>`;
-  };
-
-  document.getElementById('buyingListBody').innerHTML = `
-    <div class="bl-top">
-      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} being prepared</span>
-      <span class="bl-top-fig">${fmtUGX(total)}</span>
-    </div>
-    ${cashPositionHTML(orders)}
-    ${runs.length ? `
-    <div class="dr-carousel">
-      <button type="button" class="dr-nav prev" id="bl_prev" aria-label="Previous supplier">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <div class="dr-track" id="bl_track" tabindex="0" role="group" aria-label="Suppliers to buy from, scroll sideways">
-        ${runs.map(runHTML).join('')}
-      </div>
-      <button type="button" class="dr-nav next" id="bl_next" aria-label="Next supplier">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-    <p class="dr-hint">Slide sideways for the next supplier${runs.length>1 ? ' — the biggest bills come first' : ''}.</p>`
-      : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
-    ${blStrandedTripsHTML(runs)}
-    ${unpriced.length ? `<div class="bl-gap">
-      ${ICON_WARN}
-      <div><b>${unpriced.length} line${unpriced.length===1?'':'s'} with no supplier price on file</b>
-        <div class="bl-gap-list">${unpriced.map(u=>`${esc(u.line.it.productName||'Item')} — ${esc(quoteClientName(u.order))}`).join('<br>')}</div>
-        <div class="bl-gap-note">Not counted in the total above. Add a price in Compare Prices and it will appear here.</div>
-      </div>
-    </div>` : ''}`;
-  // Wired here rather than delegated, because the body is replaced on every
-  // open and a listener bound to the old markup would be thrown away with it.
-  const planBtn = document.getElementById('bl_plan_btn');
-  if(planBtn) planBtn.addEventListener('click', openShortfallPlan);
-  // The same carousel the other two run modals use, wired the same way.
-  if(runs.length) wireRunCarousel('bl_track', 'bl_prev', 'bl_next');
-  wireBuyingListReceiving();
-  openModal('buyingListModal');
-}
 
 /* ---- Collection trips, from the admin's side -------------------------
 
@@ -34523,7 +34752,7 @@ function wireBuyingListReceiving(){
     const it = q && (q.items||[]).find(x=> String(x.lineId) === String(lineId));
     return { q, it };
   };
-  document.querySelectorAll('#buyingListBody .bl-receive').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b .bl-receive').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const { q, it } = findLine(btn.dataset.order, btn.dataset.line);
       if(!q || !it) return;
@@ -34612,7 +34841,7 @@ function wireBuyingListReceiving(){
     });
   });
   // Send someone for a whole run.
-  document.querySelectorAll('#buyingListBody .bl-send').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b .bl-send').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.run);
       if(!run) return;
@@ -34626,7 +34855,7 @@ function wireBuyingListReceiving(){
   /* The supplier is bringing it. Same trip, same check-in, nobody of
      ours sent -- so the lines stop appearing on the "send someone" list
      without anybody having to remember they are already spoken for. */
-  document.querySelectorAll('#buyingListBody [data-bringing]').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b [data-bringing]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.bringing);
       if(!run) return;
@@ -34640,11 +34869,11 @@ function wireBuyingListReceiving(){
   // Give it to a worker, through the same modal every other assignment
   // uses -- a numbered prompt() was the first version, and typing "2" to
   // mean a person is how the wrong person gets sent.
-  document.querySelectorAll('#buyingListBody [data-assign]').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b [data-assign]').forEach(btn=>{
     btn.addEventListener('click', ()=> openAssignTripModal(btn.dataset.assign));
   });
   // Tell the supplier what somebody is coming for, or what to bring.
-  document.querySelectorAll('#buyingListBody [data-tell]').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b [data-tell]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.tell);
       if(!trip) return;
@@ -34659,7 +34888,7 @@ function wireBuyingListReceiving(){
     });
   });
   // Call one off.
-  document.querySelectorAll('#buyingListBody [data-void]').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b [data-void]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.void);
       if(!trip) return;
@@ -34677,7 +34906,7 @@ function wireBuyingListReceiving(){
     });
   });
   // Check in what came back. The one act that puts goods on the shelf.
-  document.querySelectorAll('#buyingListBody [data-confirm]').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b [data-confirm]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.confirm);
       if(!trip) return;
@@ -34701,7 +34930,7 @@ function wireBuyingListReceiving(){
         (res.missing || advanced.length) ? 7000 : 4000);
     });
   });
-  document.querySelectorAll('#buyingListBody .bl-undo').forEach(btn=>{
+  document.querySelectorAll('#ot_dlg_b .bl-undo').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const { q, it } = findLine(btn.dataset.undo, btn.dataset.line);
       if(!q || !it) return;
@@ -34716,16 +34945,12 @@ function wireBuyingListReceiving(){
     });
   });
 }
-document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
-document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
-document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
 // Dismissing the one in front brings the next reminder up, rather than
 // leaving rent that is already late to wait until tomorrow.
 document.getElementById('loanDueClose').addEventListener('click', ()=>{ closeModal('loanDueModal'); maybeRemindDuesDue(); });
 document.getElementById('duesDueClose').addEventListener('click', ()=>closeModal('duesDueModal'));
 document.getElementById('duesDueSnooze').addEventListener('click', snoozeDues);
-document.getElementById('pickupRunsClose').addEventListener('click', ()=>closeModal('pickupRunsModal'));
 document.getElementById('loanDueSnooze').addEventListener('click', ()=>{ snoozeLoanDue(); maybeRemindDuesDue(); });
 
 /* Who had this item and hasn't got it now.
@@ -39216,8 +39441,10 @@ function setSavedQuoteStatus(id, status, opts){
    cannot carry pre-filled text -- that only works for wa.me/<number>
    chats -- so the best a webpage can do is put the message on the
    clipboard and open the group for a single paste. */
-function shareOrderToSalesGroup(q){
-  const msg = buildSalesGroupQuoteMessage(q.items, q.client, q);
+function shareOrderToSalesGroup(q, text){
+  /* What the owner READ is what goes, not what the app drafted: the
+     announce dialog hands the edited text straight through. */
+  const msg = text == null || text === '' ? buildSalesGroupQuoteMessage(q.items, q.client, q) : String(text);
   const openGroupAndToast = (copied)=>{
     window.open(SALES_GROUP_WA_LINK, '_blank');
     toast(copied
@@ -41034,6 +41261,14 @@ const OT_STAGE_SENTENCE = {
   completed: 'invoice, then ask for it',
 };
 let otStageLens = 'all';          // the segmented filter: 'all' or a status
+/* WHERE THE DOCK HAS GOT TO. The only UI state the board itself holds:
+   which of the decisions is being served. Acting on one does not step
+   the queue -- but an order that has been acted on usually stops needing
+   anything, so it leaves the queue and the one behind it takes the same
+   position. The ids are kept beside the index so "jump to that one"
+   does not have to re-derive the queue to find its place in it. */
+let otQIndex = 0;
+let otQIds = [];
 const otOpenRows = new Set();     // rows opened in place; survives the 60s re-render
 let otNeedsExpanded = false;      // the phone shows three queue rows until asked
 
@@ -41120,10 +41355,10 @@ function otOpenRow(id){ otOpenRows.add(id); renderSavedQuotes(); }
    link cannot carry text, so it is a copy and a paste, and a screen
    must never look as if it already sent. Stamped so the chip goes
    quiet and the trail says when. */
-function announceOrderToGroup(id){
+function announceOrderToGroup(id, text){
   const q = data.savedQuotes.find(x=> x.id === id);
   if(!q) return;
-  shareOrderToSalesGroup(q);
+  shareOrderToSalesGroup(q, text);
   q.announcedAt = Date.now();
   saveData();
   renderSavedQuotes();
@@ -41454,7 +41689,7 @@ function orderLoadFormHTML(q){
   const lead = out ? 'Nobody is named as carrying it. Say who has it.'
     : packed ? `Packed${picker ? ' by ' + picker : ''}${q.pickingDoneAt ? ' ' + otDuration(Date.now() - q.pickingDoneAt) + ' ago' : ''} — waiting to be loaded. When the transport is here, say who is carrying it. The picker can do this from their phone too.`
     : 'Not packed yet. Loading it from here counts it as picked and packed — for when nobody is on the worker app.';
-  return `<p class="ow-ot-h ow-ot-h2">${out ? 'Who has it' : 'Loaded'}</p><p class="ow-ot-note">${esc(lead)}</p>${carrierFormHTML(q, OT_LOAD_CLS, otLoadDrafts.get(q.id))}<div class="ow-ot-load-go"><button type="button" class="btn btn-accent ow-sm" data-act="loadgo" data-id="${q.id}">${otIco(ICON_TRUCK, 12)}${out ? 'That is who has it' : 'Loaded, it has gone'}</button></div>`;
+  return `<p class="ow-ot-h ow-ot-h2">${out ? 'Who has it' : 'Loaded'}</p><p class="ow-ot-note">${esc(lead)}</p>${carrierFormHTML(q, OT_LOAD_CLS, otLoadDrafts.get(q.id))}<div class="ow-ot-load-go"><button type="button" class="btn btn-accent ow-sm" data-act="loadgo" data-dlg="loadgo" data-id="${q.id}">${otIco(ICON_TRUCK, 12)}${out ? 'That is who has it' : 'Loaded, it has gone'}</button></div>`;
 }
 /* Typing in the form and a redraw landing mid-word.
    Keeping the TEXT was not enough. The redraw replaces the whole board,
@@ -41493,7 +41728,9 @@ function otRestoreFocus(snap){
   }
 }
 function otLoadGo(id, el){
-  const form = el && el.closest ? el.closest('.ow-tbl-x') : null;
+  /* The row on the phone, the order's dialog on the console: one form,
+     two homes, and the reader finds whichever it is in. */
+  const form = el && el.closest ? el.closest('.ow-tbl-x, .ow-dlg-load') : null;
   const car = readCarrierForm(form ? form.querySelector('[data-load]') : null);
   car.by = '';
   if(loadOrder(id, car)) otLoadDrafts.delete(id);
@@ -41647,27 +41884,8 @@ function ordersReadyToInvoice(){
   return (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
     && !quoteAgedOffBoard(q) && !orderHasPickShortfall(q));
 }
-async function invoiceAllDelivered(){
-  const ready = ordersReadyToInvoice();
-  const short = (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
-    && !quoteAgedOffBoard(q) && orderHasPickShortfall(q));
-  if(!ready.length){
-    toast(short.length ? `${short.length} delivered order${short.length === 1 ? '' : 's'} came up short — decide on ${short.length === 1 ? 'it' : 'each'} first` : 'Nothing delivered is waiting to be invoiced', 5000);
-    return;
-  }
-  const total = ready.reduce((sum, q)=> sum + savedQuoteTotal(q), 0);
-  const msg = `Invoice ${ready.length} delivered order${ready.length === 1 ? '' : 's'}, billing ${fmtUGX(total)} in total?\n\n${ready.map(q=> `• ${quoteClientName(q)} — ${fmtUGX(savedQuoteTotal(q))}`).join('\n')}\n\nThis takes the goods off the shelf, raises each supplier's bill, and books what is unpaid to each customer's account.${short.length ? `\n\n${short.length} order${short.length === 1 ? '' : 's'} came up short and ${short.length === 1 ? 'is' : 'are'} left for you to decide on.` : ''}`;
-  if(!confirm(msg)) return;
-  /* One at a time, and awaited: each invoice takes the next PINV number
-     from the server, and racing them would interleave the numbers. */
-  let done = 0;
-  for(const q of ready){
-    await toggleQuoteInvoiced(q.id);
-    if(q.invoiced) done++;
-  }
-  renderSavedQuotes();
-  toast(`${done} order${done === 1 ? '' : 's'} invoiced${done < ready.length ? ` — ${ready.length - done} did not go through` : ''}`, 5000);
-}
+/* invoiceAllDelivered() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
+
 
 /* CANCEL, ON THE BOARD. An order past Taken that is not going to happen.
    Deleting it is wrong once goods have arrived: receiving already put them
@@ -41817,13 +42035,930 @@ function otOrderMatches(q, tokens){
   return matchesAllTokens(hay, tokens);
 }
 
-/* "Invoice all delivered", on the header, only when there is more than
-   one to do -- a button for a single order beside that order's own
-   Invoice act would be the same tap twice. */
-function otInvoiceAllHTML(){
-  const n = ordersReadyToInvoice().length;
-  if(n < 2) return '';
-  return `<button type="button" class="btn btn-ghost ow-sm" data-act="invoiceall" data-id="0">${otIco(ICON_CHECK, 12)}Invoice all delivered (${n})</button>`;
+
+/* ================= THE BOARD'S DIALOGS =================
+
+   Six dialogs, one object. Each is a spec — a width, a title, a mono
+   sub-line of counts, an optional ghost in the header, a body of blocks
+   and a footer — poured into the same shell, so there is one place that
+   decides what a dialog looks like and one place that closes it.
+
+   Every one is re-rendered from the books after anything inside it acts:
+   nothing here keeps its own copy of what it is showing, so a dialog can
+   never disagree with the board behind it. */
+let otDlgNow = null;             // { kind, id } — what is open, so it can redraw
+const otInvoicePick = new Set(); // which delivered orders the invoice dialog will draw
+
+function otDlgEl(){ return document.getElementById('otDlg'); }
+function otDlgClose(){
+  const el = otDlgEl();
+  if(el) el.hidden = true;
+  otDlgNow = null;
+}
+/* Draw whatever is open. Called on open and after every act inside one,
+   so the dialog and the board underneath are written from the same read
+   of the books. */
+function otDlgDraw(){
+  const el = otDlgEl();
+  if(!el || !otDlgNow) return;
+  const spec = OT_DIALOGS[otDlgNow.kind] ? OT_DIALOGS[otDlgNow.kind](otDlgNow.id) : null;
+  if(!spec){ otDlgClose(); return; }
+  const paper = el.querySelector('.ow-dlg');
+  paper.className = `ow-dlg ow-dlg-w${spec.w || 760}`;
+  el.querySelector('#ot_dlg_t').innerHTML = spec.title;
+  el.querySelector('#ot_dlg_s').innerHTML = spec.sub || '';
+  el.querySelector('#ot_dlg_c').innerHTML = spec.chip || '';
+  el.querySelector('#ot_dlg_a').innerHTML = spec.act || '';
+  el.querySelector('#ot_dlg_b').innerHTML = spec.body;
+  el.querySelector('#ot_dlg_f').innerHTML = spec.foot || '';
+  el.hidden = false;
+  /* The check-in and the trip acts are bound rather than delegated,
+     because the body is rewritten on every draw and a listener bound to
+     the old markup goes with it. Same handlers as ever — only the
+     markup around them changed. */
+  if(otDlgNow.kind === 'buying'){
+    wireBuyingListReceiving();
+    /* "How to cover it" / "What to buy first" -- the verdict block's own
+       way through to the plan. Bound here for the same reason the
+       receiving is: the body is rewritten on every draw. */
+    const planBtn = document.getElementById('bl_plan_btn');
+    if(planBtn) planBtn.addEventListener('click', openShortfallPlan);
+  }
+}
+function otDlgOpen(kind, id){
+  otDlgNow = { kind, id: id == null ? 0 : id };
+  otDlgDraw();
+  const x = document.getElementById('ot_dlg_x');
+  if(x) x.focus();
+}
+
+/* ---- pieces every dialog builds from ------------------------------- */
+const OT_TICK = '<svg class="icon ow-tick" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg>';
+function otDlgTick(on){ return `<span class="ow-dlg-tick${on ? ' ow-on' : ''}">${on ? OT_TICK : ''}</span>`; }
+function otDlgBox(on, act, ds, label){
+  return `<button type="button" class="ow-dlg-ck${on ? ' ow-on' : ''}" data-dlg="${act}" ${ds}
+    aria-pressed="${on}" aria-label="${esc(label)}" title="${esc(label)}">${on ? OT_TICK : ''}</button>`;
+}
+function otDlgGhost(act, label, ds){ return `<button type="button" class="btn btn-ghost ow-sm" data-dlg="${act}"${ds || ''}>${esc(label)}</button>`; }
+/* THE ONE OXIDE, and the only thing in this file that writes it. An act
+   is optional because one dialog's primary is carried out by a handler
+   bound on the markup (the trip check-in) rather than by the dialog's
+   own dispatch -- but it is still the same button, written once. */
+function otDlgPrimary(act, label, ds){
+  return `<button type="button" class="btn btn-accent ow-sm"${act ? ` data-dlg="${act}"` : ''}${ds || ''}>${esc(label)}</button>`;
+}
+function otDlgFig(label, n){
+  return `<div class="ow-dlg-fig"><div class="ow-mt-l">${esc(label)}</div>
+    <span class="ow-dlg-fig-v">${otUnitFig(n)}</span></div>`;
+}
+/* When each stage was entered, off the order's own log — and honest
+   about an order older than the log, which says "not recorded" rather
+   than inventing a time. */
+function otStageTimes(q){
+  const at = {};
+  (q.stageLog || []).forEach(e=>{ if(e && e.status && at[e.status] == null) at[e.status] = e.at; });
+  if(at.draft == null && q.savedAt) at.draft = q.savedAt;
+  at[q.status] = q.stageEnteredAt || at[q.status];
+  return at;
+}
+
+/* ================= 2a · THE ORDER =================
+   Opened from any card, and the answer when a client rings: where it has
+   reached, what to tell them, and what it is worth. */
+function otSayToClient(q){
+  const place = orderCustomerLocation(q);
+  const items = (q.items || []).length;
+  const incoming = orderIncomingLines(q).length;
+  const run = q.status === 'pending_delivery' ? deliveryAssigneeLabel(q) : '';
+  const owed = invoiceBalanceDue(q);
+  const bits = [];
+  if(q.status === 'draft') bits.push(`The ${items === 1 ? 'item is' : `${items} items are`} being priced with the supplier.`);
+  else if(q.status === 'awaiting_goods') bits.push(incoming
+    ? `${items - incoming} of ${items} ${items - incoming === 1 ? 'item is' : 'items are'} in the yard; ${incoming} still to come from the supplier.`
+    : 'Everything is bought and in the yard.');
+  else if(q.status === 'preparing') bits.push(`All ${items === 1 ? '1 item is' : `${items} items are`} bought and in the yard. It is being packed now.`);
+  else if(q.status === 'pending_delivery') bits.push(`It is loaded and on its way${run ? ` with ${run}` : ''}${place ? `, arriving ${place}` : ''}.`);
+  else bits.push(`It was delivered${place ? ` to ${place}` : ''}.`);
+  if(q.status !== 'completed' && place && q.status !== 'pending_delivery') bits.push(`Going to ${place}.`);
+  bits.push(q.invoiced
+    ? (owed > 0 ? `${fmtUGX(owed)} is owed on the invoice.` : 'The invoice is settled.')
+    : q.status === 'completed' ? 'The invoice has not been raised yet.' : 'Nothing is owed before delivery.');
+  return bits.join(' ');
+}
+function otPreviewSpec(id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return null;
+  const s = orderPreviewSummary(q);
+  const at = otStageTimes(q);
+  const i = SQ_STATUS_ORDER.indexOf(q.status);
+  const place = orderCustomerLocation(q);
+  const trail = orderTrail(q);
+  /* WHAT IT COST, and only where the books can say. orderPurchaseLines
+     covers the lines bought in for this order: what was actually paid
+     where one has come in, today's cheapest supplier where it has not.
+     A line off our own shelf cost something too, but that figure lives
+     with the stock lot rather than with the order — so an order with
+     any stock line on it cannot have its margin worked out here, and
+     says so rather than reporting the whole price as profit. */
+  const buys = orderPurchaseLines(q);
+  const cost = buys.reduce((sum, l)=> sum + (l.settled || l.received
+    ? (Number(l.it.receivedQty) || 0) * (Number(l.it.receivedPrice) || 0)
+    : (l.lineCost || 0)), 0);
+  const total = savedQuoteTotal(q);
+  const margin = total - cost;
+  const wholeCost = s.fromStock === 0 && !s.unpriced;
+  const act = orderActSpec(q);
+  /* SAYING WHO IS CARRYING IT IS A FORM, NOT A BUTTON — so it cannot be
+     a footer act. On the phone it opens inside the order's own row; the
+     console has no rows any more, so it opens here, in the order's own
+     dialog, and the form's own button is the move.
+
+     And when it does, the accent moves with it. The one thing to do next
+     on an order waiting for transport is to load it out, not to tell the
+     client something they already know — so "Send the client an update"
+     steps down to a ghost and the dialog still spends its oxide once. */
+  const loading = !!act && act.act === 'loaded';
+  const track = SQ_STATUS_ORDER.map((st, j)=>{
+    const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
+    const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
+    return `<div class="ow-dlg-trk-s ${cls}">
+      <div class="ow-dlg-trk-l"><span class="ow-dlg-trk-d"></span><span class="ow-dlg-trk-b"></span></div>
+      <div class="ow-dlg-trk-n">${esc(OT_LANE_NAME[st])}</div>
+      <div class="ow-dlg-trk-t">${esc(when || 'not recorded')}</div>
+    </div>`;
+  }).join('');
+  /* Placeholders until the check-in upload path writes real ones: the
+     frame, what it would be, and whether that moment has happened yet. */
+  const shots = [
+    { cap: `Check-in photo<br>${s.toBuy ? 'none taken yet' : 'nothing was bought in'}` },
+    { cap: q.status === 'pending_delivery' || q.status === 'completed' ? 'Packed load<br>gone out' : 'Packed load<br>not taken yet' },
+  ];
+  return {
+    w: 900,
+    title: esc(quoteClientName(q)),
+    sub: esc([`#${q.id}`, place, `${s.lines.length} line${s.lines.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')),
+    chip: `<span class="ow-cp">${esc(otStageShort(q.status))} · ${esc(otStageSince(q))} in this stage</span>`,
+    /* Offered wherever there is anything to pick, not only in Preparing:
+       a phone dies when it dies, and an owner checking goods against a
+       list at any stage wants the same piece of paper. */
+    act: s.lines.length ? `<button type="button" class="btn btn-ghost ow-sm" id="opChitBtn" data-dlg="chit" data-id="${q.id}"
+      title="Print this order on 80mm roll — for picking without a phone">Print packing list</button>` : '',
+    body: `
+      <div class="ow-dlg-k">
+        <div class="ow-dlg-trk">${track}</div>
+        <div class="ow-dlg-p">${esc(orderWhoText(q) || 'Nobody is named on it yet')}.${
+          q.date ? ` Promised ${esc(otWhen(Date.parse(q.date + 'T08:00:00')) || q.date)}.` : ''}${
+          q.client && q.client.phone ? ` ${esc(q.client.phone)}.` : ''}</div>
+        ${/* WHOSE NAME THIS IS. An agent order carries the agent's name,
+             not the end client's, and a portal order was placed by
+             somebody who has already seen every price on it — both
+             change what you say when you pick up the telephone. */''}
+        ${q.originAgentId ? `<div class="ow-dlg-p">Agent order — the name is the agent's, not the end client's.</div>` : ''}
+        ${q.originPortal ? `<div class="ow-dlg-p">Placed by the customer on the portal, so they have already seen every price on it.</div>` : ''}
+        ${s.shortLines ? `<div class="ow-dlg-p">The picker found less than asked for on ${s.shortLines} line${s.shortLines === 1 ? '' : 's'}. Until that is settled the order cannot be invoiced — the total and the stock deduction are both built from the ordered quantity.</div>` : ''}
+      </div>
+      <div class="ow-dlg-say">
+        <div class="ow-dlg-say-l">
+          <div class="ow-dlg-say-h">What to tell the client</div>
+          <div class="ow-dlg-say-t">${esc(otSayToClient(q))}</div>
+        </div>
+        ${loading ? otDlgGhost('tellclient', 'Send the client an update', ` data-id="${q.id}"`)
+          : otDlgPrimary('tellclient', 'Send the client an update', ` data-id="${q.id}"`)}
+      </div>
+      <div class="ow-dlg-cols">
+        <div class="ow-dlg-col">
+          ${loading ? `<div class="ow-dlg-sect ow-dlg-load">${orderLoadFormHTML(q)}</div>` : ''}
+          <div class="ow-dlg-sect">
+            <div class="ow-dlg-l">The lines</div>
+            ${s.lines.map(l=> `<div class="ow-dlg-ln">
+              ${otDlgTick(l.fromStock || !l.unpriced && l.source && l.picked != null || !!l.receivedAt)}
+              <span class="ow-dlg-ln-n" title="${esc(l.name)}">${esc(l.name)}</span>
+              <span class="ow-dlg-ln-q">${esc(String(l.qty))}${l.unit ? ' ' + esc(l.unit) : ''}</span>
+              <span class="ow-dlg-ln-v">${esc(otFig(Math.round(l.lineTotal)))}</span>
+            </div>`).join('')}
+            <div class="ow-dlg-ln-s">${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} bought in` : ''}${
+              s.unpriced ? ` · ${s.unpriced} with no price on file` : ''}${
+              s.shortLines ? ` · ${s.shortLines} came up short` : ''}</div>
+          </div>
+          <div class="ow-dlg-sect">
+            <div class="ow-dlg-l">How it got here</div>
+            ${trail.length ? trail.map((e, j)=> `<div class="ow-dlg-ev${j === trail.length - 1 ? ' ow-now' : ''}">
+              <span class="ow-dlg-ev-t">${esc(otWhen(e.at))}</span>
+              <span class="ow-dlg-ev-s">${esc(e.what)}</span>
+            </div>`).join('') : '<div class="ow-dlg-ln-s">This order pre-dates the stage log, so how it got here was never written down.</div>'}
+          </div>
+          <div class="ow-dlg-sect">
+            <div class="ow-dlg-l">Goods, as checked in</div>
+            <div class="ow-dlg-shots">${shots.map(sh=> `<div class="ow-dlg-shot">
+              <svg class="icon ow-i20" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
+              <div class="ow-dlg-shot-c">${sh.cap}</div>
+            </div>`).join('')}</div>
+            <div class="ow-dlg-ln-s">No photograph has been taken against this order yet.</div>
+          </div>
+        </div>
+        <div class="ow-dlg-side">
+          <div class="ow-dlg-l">Money</div>
+          <div class="ow-dlg-sect">
+            <div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Client pays</span><span class="ow-dlg-kv-v">${esc(otFig(total))}</span></div>
+            <div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Cost, as bought</span><span class="ow-dlg-kv-v">${buys.length ? esc(otFig(Math.round(cost))) : '—'}</span></div>
+            <div class="ow-dlg-hr"></div>
+            ${wholeCost
+              ? `<div class="ow-dlg-kv ${margin < 0 ? 'ow-bad' : 'ow-good'}"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">${esc(otFig(Math.round(margin)))}</span></div>
+                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price.</div>`
+              : `<div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">not from here</span></div>
+                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated.</div>`}
+          </div>
+          <div class="ow-dlg-hr"></div>
+          <div class="ow-dlg-sect">
+            <div class="ow-dlg-l">${q.invoiced ? 'Invoiced' : 'Not invoiced'}</div>
+            <div class="ow-dlg-p">${q.invoiced
+              ? `${esc(invoiceNumberLabel(q))}. ${invoiceBalanceDue(q) > 0 ? esc(fmtUGX(invoiceBalanceDue(q))) + ' still owed.' : 'Settled.'}`
+              : 'Nothing is owed until it is delivered. The invoice is drawn from these lines.'}</div>
+          </div>
+        </div>
+      </div>`,
+    foot: `<div class="ow-dlg-n">Nothing here sends itself.${act ? ` ${esc(otMoveNote(q, act))}` : ''}</div>
+      ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
+      ${q.announcedAt || q.status === 'draft' || (act && act.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
+      ${act && !loading ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(act.act)}" data-id="${q.id}">${esc(act.label)}</button>` : ''}`,
+  };
+}
+/* What the footer's move will actually do, said before it is pressed. */
+function otMoveNote(q, act){
+  if(act.act === 'leave') return 'Moving it on sends it to the buying list, or to the pickers if there is nothing to buy.';
+  if(act.act === 'next' && q.status === 'pending_delivery') return 'Marking it delivered closes it on its run and puts it in Delivered, not invoiced.';
+  if(act.act === 'invoice') return 'Invoicing takes the goods off the shelf, raises each supplier bill and books what is unpaid to the client.';
+  if(act.act === 'buying') return 'The buying list is where a line is checked in; the order moves itself when the last one is.';
+  if(act.act === 'loaded') return 'Say who is carrying it in the form above; that is what puts it on the run.';
+  return 'Everything on this screen is a tap of yours.';
+}
+
+/* ================= 2b · THE BUYING LIST =================
+   Grouped by STOP, because the morning is a round of places and the list
+   was a column of suppliers. Checking a line in is what moves an order:
+   no order on this screen is moved by the dialog itself. */
+/* THE ROUND, BY PLACE, KEEPING WHAT IS ALREADY IN.
+
+   Not pickupRuns: that is the WALKING ORDER and it drops a line whose
+   goods have arrived, because a shop you have no reason to enter is not
+   a stop on a round. The buying list is the LIST, and it keeps those
+   lines on purpose -- there is still an Undo to offer if a receipt was
+   wrong, and a line that vanished the moment it was ticked would take
+   the only way back with it. So the list groups buyingListRuns (which
+   keeps them, and costs them at nothing, because nothing is left to
+   spend on them) by the place the money will actually be spent. */
+function otBuyingStops(orders){
+  const byPlace = new Map();
+  buyingListRuns(orders).forEach(r=>{
+    const place = supplierLocationFor(r.supplierId);
+    const key = place ? destinationKey(place) : String(r.supplierId);
+    if(!byPlace.has(key)) byPlace.set(key, { key, label: place || supplierName(r.supplierId), total:0, lines:[], suppliers:[] });
+    const stop = byPlace.get(key);
+    stop.total += r.total;
+    stop.lines = stop.lines.concat(r.lines);
+    stop.suppliers.push({ supplierId: r.supplierId, name: supplierName(r.supplierId), total: r.total });
+  });
+  return [...byPlace.values()].map(stop=> Object.assign(stop, {
+    orderCount: new Set(stop.lines.map(l=> l.order.id)).size,
+  })).sort((a, b)=> b.suppliers.length - a.suppliers.length || b.total - a.total);
+}
+function otBuyingSpec(){
+  const orders = beingPreparedOrders();
+  const stops = otBuyingStops(orders);
+  const cash = stops.reduce((s, r)=> s + r.total, 0);
+  const lines = stops.reduce((s, r)=> s + r.lines.length, 0);
+  const inAlready = orders.reduce((n, q)=> n + orderPurchaseLines(q).filter(l=> l.settled || l.received).length, 0);
+  const unpriced = [];
+  orders.forEach(q=> orderUnpricedLines(q).forEach(line=> unpriced.push({ order:q, line })));
+  const waiting = orders.length;
+  /* Lines nobody has been sent for. Nothing buys them until they are on
+     a stop, so they are the first thing in the dialog, not a footnote. */
+  const stranded = [];
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  const toCheck = stops.reduce((n, r)=> n + r.lines.filter(l=> !l.settled && !l.received).length, 0);
+  /* THE ONE OXIDE. When somebody is out, the thing to do next is check in
+     what they brought back — the whole trip at once, which is the act
+     that closes several orders' last lines together. When nobody is out
+     yet, the thing to do next is to get somebody out. */
+  const live = (data.collectionTrips || []).filter(tripIsLive)
+    .map(t=> ({ trip:t, n: tripLines(t).length })).sort((a, b)=> b.n - a.n);
+  const out = live[0] && live[0].n ? live[0] : null;
+  const rows = (r, n)=> `<div class="ow-dlg-g">
+      <span class="ow-dlg-g-n">Stop ${n} · ${esc(r.label)}</span>
+      <span class="ow-dlg-g-s">${esc(otStopSuppliers(r))} · ${esc(otBuyerFor(r))}</span>
+      <span class="ow-dlg-g-sp"></span>
+      ${otStopActHTML(r)}
+      <span class="ow-dlg-g-l">Cash for this stop</span>
+      <span class="ow-dlg-g-v">${esc(otFig(r.total))}</span>
+    </div>
+    ${otStopTripsHTML(r)}
+    ${r.lines.map(l=>{
+      /* RECEIVED IN FULL IS FINISHED BUSINESS; RECEIVED SHORT IS NOT.
+         A ticked box is "this line is in", so a line that came back one
+         carton short must not wear one: it still offers the check-in
+         (which tops up what is still owed) and says how much that is.
+         The row used to draw both the same way, so the one case that
+         still needed somebody looked exactly like the case that did
+         not. */
+      const short = quoteLineShortfall(l.it);
+      const on = !!(l.settled || l.received) && !(short > 0);
+      const per = quoteLineCountPer(l.it);
+      const said = quoteLineCount(l.it, l.qty);
+      const cnt = (n)=> quoteLineCount(l.it, n).n;
+      /* The box IS the check-in. wireBuyingListReceiving binds .bl-receive
+         and .bl-undo, which is where the supplier question, the quantity
+         and the price that actually came back are asked — one act, one
+         place it is written, whatever the box around it looks like. */
+      return `<div class="ow-dlg-r ow-bl-r">
+        <button type="button" class="ow-dlg-ck ${on ? 'ow-on bl-undo' : 'bl-receive'}"
+          ${on ? `data-undo="${l.order.id}"` : `data-order="${l.order.id}"`} data-line="${esc(String(l.it.lineId))}"
+          aria-pressed="${on}" title="${on ? `Undo the check-in of ${esc(l.it.productName || 'this line')}` : `Check in ${esc(l.it.productName || 'this line')}`}"
+          aria-label="${on ? `Undo the check-in of ${esc(l.it.productName || 'this line')}` : `Check in ${esc(l.it.productName || 'this line')}`}">${on ? OT_TICK : ''}</button>
+        <span class="ow-dlg-c" title="${esc(l.it.productName || 'Item')}">${esc(l.it.productName || 'Item')}${
+          short > 0 ? `<span class="ow-dlg-short">${esc(String(cnt(short)))} still owed to ${esc(quoteClientName(l.order))} · <button type="button" class="ow-dlg-undo bl-undo" data-undo="${l.order.id}" data-line="${esc(String(l.it.lineId))}">undo the receipt</button></span>` : ''}</span>
+        <span class="ow-dlg-c2" title="${esc(supplierName(l.best.supplierId))}">${esc(supplierName(l.best.supplierId))}</span>
+        <span class="ow-dlg-m">#${l.order.id}</span>
+        <span class="ow-dlg-v ow-dlg-rt">${esc(otFig(Math.round(l.lineCost)))}</span>
+        <span class="ow-dlg-m ow-dlg-rt">${esc(String(said.n))}${said.unit ? ' ' + esc(said.unit) : ''}</span>
+      </div>`;
+    }).join('')}`;
+  return {
+    w: 980,
+    title: `Buying list · ${esc(otDayName())}`,
+    sub: esc(`${stops.length} stop${stops.length === 1 ? '' : 's'} · ${lines} item${lines === 1 ? '' : 's'} · ${waiting} order${waiting === 1 ? '' : 's'} waiting`),
+    act: stops.length ? otDlgGhost('pickups', 'Plan the round') : '',
+    body: `<div class="ow-dlg-k">${cashPositionHTML(orders)}</div>
+      ${stranded.length ? `<div class="ow-dlg-warn">
+        <svg class="icon ow-i16" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/></svg>
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no trip</span> — ${esc(
+          [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 4).join(', '))}${
+          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. Nobody buys them until they are on a stop.</div>
+        ${otDlgGhost('pickups', 'Add them to a stop')}
+      </div>` : ''}
+      ${stops.length ? `<div class="ow-dlg-rows">
+        <div class="ow-dlg-hd ow-bl-r">
+          <span class="ow-dlg-ch" style="text-align:center">In</span><span class="ow-dlg-ch">Item</span>
+          <span class="ow-dlg-ch">Supplier</span><span class="ow-dlg-ch">For order</span>
+          <span class="ow-dlg-ch ow-dlg-rt">Cost</span><span class="ow-dlg-ch ow-dlg-rt">Qty</span>
+        </div>
+        ${stops.map((r, n)=> rows(r, n + 1)).join('')}
+      </div>` : `<div class="ow-empty">${orders.length
+        ? 'Nothing on the board has to be bought in.' : 'No order is waiting on goods.'}</div>`}
+      ${blStrandedTripsHTML(buyingListRuns(orders))}
+      ${unpriced.length ? `<div class="ow-dlg-k"><div class="ow-dlg-l">Not on any stop</div>
+        <div class="ow-dlg-p">${unpriced.length} line${unpriced.length === 1 ? ' has' : 's have'} no supplier price on file, so nobody was ranked to buy ${unpriced.length === 1 ? 'it' : 'them'} and ${unpriced.length === 1 ? 'it is' : 'they are'} not in the cash below: ${esc(unpriced.slice(0, 4).map(u=> `${u.line.it.productName || 'an item'} (#${u.order.id})`).join(', '))}${unpriced.length > 4 ? ` and ${unpriced.length - 4} more` : ''}. Add a price in Compare prices and they appear here.</div></div>` : ''}`,
+    foot: `${otDlgFig('Cash to carry', cash)}
+      <span class="ow-dlg-fs"></span>
+      <div class="ow-dlg-n">${inAlready} of ${inAlready + toCheck} item${inAlready + toCheck === 1 ? '' : 's'} checked in. Orders move themselves as their last line comes in — no order here is moved by this dialog.</div>
+      ${out ? otDlgPrimary('', `Check in ${out.n} item${out.n === 1 ? '' : 's'}`, ` data-confirm="${esc(String(out.trip.id))}"`)
+        : stops.length ? otDlgPrimary('sendbuyer', 'Send the round to the buyer') : ''}`,
+  };
+}
+/* ONE JOURNEY, ONE JOB. Sending somebody is the act this dialog exists
+   to make possible, so it sits on the stop rather than on each of the
+   stop's suppliers: the round is walked by place. Offered only while
+   something at this stop is not already on somebody's list — a second
+   trip for the same carton sends two people for one thing. */
+function otStopActHTML(run){
+  /* One journey, one job: offered only while something at this stop is
+     not already on somebody's list. A second trip for the same carton
+     sends two people for one thing -- and a stop with two suppliers and
+     one trip already out still has a second supplier nobody has been
+     sent to, which is why this is read off the LINES rather than off
+     whether the stop has any trip at all. */
+  const canSend = run.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId));
+  if(!canSend) return '';
+  return otDlgGhost('sendstop', 'Send someone', ` data-stop="${esc(String(run.key))}"`)
+    + otDlgGhost('bringstop', 'They are delivering', ` data-stop="${esc(String(run.key))}"`);
+}
+/* WHO IS ALREADY ON THEIR WAY. The drawing has no trips on it — it
+   draws a morning where "buying: Wasswa" is already true — but a trip
+   is how that becomes true, and a trip that cannot be assigned, told to
+   the supplier, checked in or called off is a trap: its lines stay
+   marked as somebody's and nobody can move them.
+
+   So the stop carries the strip the buying list has always carried,
+   once per supplier at that stop. Not a second copy of it: blRunTripsHTML
+   is the one place that decides which acts a trip in a given state
+   really offers — no Assign on a supplier delivery, no Check in on one
+   either, Call off on every live trip whatever its state — and those
+   rules were learned the hard way and are held by their own test file. */
+function otStopTripsHTML(run){
+  return [...new Set(run.suppliers.map(s=> String(s.supplierId)))]
+    .map(sid=> blRunTripsHTML({ supplierId: sid })).join('');
+}
+/* Who is going for a stop: whoever is out on a live trip to one of its
+   suppliers, or nobody yet. Never a guess. */
+function otStopSuppliers(run){
+  /* Shop number and all: "Haidery Building Materials, Shop 14" is how
+     somebody finds the door once they are at the place. */
+  return run.suppliers.map(su=>{
+    const s = (data.suppliers || []).find(x=> String(x.id) === String(su.supplierId));
+    return s && s.shopNo ? `${su.name}, Shop ${s.shopNo}` : su.name;
+  }).join(', ');
+}
+function otBuyerFor(run){
+  const sids = new Set(run.suppliers.map(s=> String(s.supplierId)));
+  const who = (data.collectionTrips || [])
+    .filter(t=> tripIsLive(t) && sids.has(String(t.supplierId)))
+    .map(t=> tripCarrierLabel(t));
+  return who.length ? `buying: ${[...new Set(who)].join(', ')}` : 'nobody sent yet';
+}
+function otDayName(){ return new Date().toLocaleDateString('en-GB', { weekday:'long' }); }
+
+/* ================= 2c · TODAY'S TRIP =================
+   The stops in the order they will be walked, who buys, and the cash
+   each one needs. */
+function otTripSpec(){
+  const orders = beingPreparedOrders();
+  /* The two silences are different facts and only one of them means the
+     buying is done, so the count of what was dropped for being already
+     in is read here rather than inferred from an empty list. */
+  const { runs, noLocation, unpriced, settled } = pickupRuns(orders);
+  const p = { runs, noLocation, unpriced, settled };
+  const stops = p.runs.concat(p.noLocation);
+  const cash = stops.reduce((s, r)=> s + r.total, 0);
+  const lines = stops.reduce((s, r)=> s + r.lines.length, 0);
+  const stranded = [];
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  return {
+    w: 760,
+    title: "Plan today's trip",
+    sub: esc(`${stops.length} stop${stops.length === 1 ? '' : 's'} · ${lines} item${lines === 1 ? '' : 's'}`),
+    body: `<div class="ow-dlg-k">
+      ${stops.length ? stops.map((r, n)=> `<div class="ow-dlg-stop">
+        <span class="ow-dlg-stop-i">${n + 1}</span>
+        <span class="ow-dlg-stop-m">
+          <span class="ow-dlg-stop-n" title="${esc(r.label)}">${esc(r.label)}</span>
+          <span class="ow-dlg-stop-s">${esc(otStopSuppliers(r))} · ${r.lines.length} item${r.lines.length === 1 ? '' : 's'} for ${r.orderCount} order${r.orderCount === 1 ? '' : 's'} · ${esc(otBuyerFor(r))}</span>
+        </span>
+        <span class="ow-dlg-stop-v">
+          <span class="ow-dlg-v">${esc(otFig(r.total))}</span>
+          <span class="ow-dlg-stop-c">cash</span>
+        </span>
+      </div>`).join('') : `<div class="ow-dlg-p">${p.settled
+        ? `Nowhere to go — all ${p.settled} bought-in line${p.settled === 1 ? '' : 's'} on this board ${p.settled === 1 ? 'has' : 'have'} already arrived.`
+        : orders.length ? 'Nothing on the board has to be bought in.' : 'No order is waiting on goods.'}</div>`}
+      ${stranded.length ? `<div class="ow-dlg-gap">
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no stop.</span> ${esc(
+          [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 3).join(', '))}${
+          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — they will not be bought today unless a price puts them on one.</div>
+        ${otDlgGhost('buying', 'Open the buying list')}
+      </div>` : ''}
+    </div>`,
+    foot: `${otDlgFig('Cash to carry', cash)}
+      <div class="ow-dlg-n">Planned by place from every order past Taken, in the order the round is worth walking — most suppliers first, then most money.</div>
+      ${stops.length ? otDlgPrimary('sendbuyer', 'Send the round to the buyer') : ''}`,
+  };
+}
+
+/* ================= 2d · THE DELIVERY RUNS =================
+   Who drives, what is on each run, and what closes them. */
+function otRunsSpec(){
+  const orders = pendingDeliveryOrders();
+  const d = deliveryRuns(orders);
+  const groups = d.runs.map((r, i)=> ({
+    name: `Run ${i + 1} · ${r.drivers.length ? r.drivers.map(staffName).join(', ') : 'nobody named'}`,
+    say: `${esc(r.label)} · ${r.orders.length} order${r.orders.length === 1 ? '' : 's'}${r.unassigned ? ` · ${r.unassigned} with nobody carrying ${r.unassigned === 1 ? 'it' : 'them'}` : ''}`,
+    value: r.value, orders: r.orders,
+  })).concat(d.collected.length ? [{ name: 'Collecting from the shop', say: `${d.collected.length} order${d.collected.length === 1 ? '' : 's'} the client is coming for`, value: d.collected.reduce((s, q)=> s + savedQuoteTotal(q), 0), orders: d.collected }] : [])
+    .concat(d.unknown.length ? [{ name: 'No address', say: 'Nowhere to send these until a place is on the customer', value: d.unknown.reduce((s, q)=> s + savedQuoteTotal(q), 0), orders: d.unknown }] : []);
+  const biggest = d.runs[0];
+  return {
+    w: 800,
+    title: `Delivery runs · ${esc(otDayName())}`,
+    sub: esc(`${d.runs.length} run${d.runs.length === 1 ? '' : 's'} · ${orders.length} order${orders.length === 1 ? '' : 's'} out`),
+    body: groups.length ? `<div class="ow-dlg-rows">${groups.map(g=> `
+      <div class="ow-dlg-g">
+        <span class="ow-dlg-g-n">${esc(g.name)}</span>
+        <span class="ow-dlg-g-s">${g.say}</span>
+        <span class="ow-dlg-g-sp"></span>
+        <span class="ow-dlg-g-v">${esc(otFig(g.value))}</span>
+      </div>
+      ${g.orders.map(q=> `<div class="ow-dlg-r ow-rn-r">
+        <span class="ow-dlg-c" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))} <span class="ow-dlg-m">#${q.id}</span></span>
+        <span class="ow-dlg-c2">${esc(orderCustomerLocation(q) || 'no place on file')}</span>
+        <span class="ow-dlg-v ow-dlg-rt">${esc(otFig(savedQuoteTotal(q)))}</span>
+        <span class="ow-dlg-rt">${orderNeedsDelivery(q)
+          ? otDlgGhost('whohas', 'Who has it', ` data-id="${q.id}"`)
+          : otDlgGhost('delivered', q.deliveryMode === 'agent_pickup' ? 'Collected' : 'Delivered', ` data-id="${q.id}"`)}</span>
+      </div>`).join('')}`).join('')}</div>`
+      : '<div class="ow-empty">Nothing is out for delivery. An order arrives here when you mark it out on a run.</div>',
+    foot: `<div class="ow-dlg-n">Marking an order delivered closes it on this run and puts it in Delivered, not invoiced. A run with nothing left closes itself.</div>
+      ${biggest && biggest.orders.length ? otDlgPrimary('closerun', `Close run 1 · ${biggest.orders.length} order${biggest.orders.length === 1 ? '' : 's'}`, ` data-id="0"`) : ''}`,
+  };
+}
+
+/* ================= 2e · ANNOUNCE =================
+   Drafted from the order. You read it, you edit it, you send it — the
+   app never sends anything by itself. */
+function otAnnounceSpec(id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return null;
+  const draft = otAnnounceDraft == null ? buildSalesGroupQuoteMessage(q.items, q.client, q) : otAnnounceDraft;
+  return {
+    w: 620,
+    title: `Announce · ${esc(quoteClientName(q))} #${q.id}`,
+    body: `<div class="ow-dlg-k">
+      <div class="ow-dlg-to">
+        <span class="ow-dlg-l">To</span>
+        <span class="ow-cp">Sales group</span>
+      </div>
+      <textarea class="ow-dlg-draft" id="ot_dlg_draft" aria-label="The message that will be sent">${esc(draft)}</textarea>
+      <div class="ow-dlg-p">Written from the order: the lines, where it is going and what the client owes. Edit it here; nothing is sent until you press send. A WhatsApp group link cannot carry text, so the message goes on the clipboard and the group opens for one paste.</div>
+    </div>`,
+    foot: `<div class="ow-dlg-n">${q.announcedAt ? `Already announced ${esc(otWhen(q.announcedAt))}. Sending again is a second message.` : 'Not announced yet.'}</div>
+      ${otDlgGhost('copydraft', 'Copy the text')}
+      ${otDlgPrimary('sendgroup', 'Send to the group', ` data-id="${q.id}"`)}`,
+  };
+}
+let otAnnounceDraft = null;      // what the owner has edited, kept across a redraw
+
+/* ================= 2f · INVOICE THE DELIVERED =================
+   Pick, then draw. Never "invoice everything" without saying which. */
+function otInvoiceSpec(){
+  const ready = ordersReadyToInvoice();
+  const short = (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
+    && !quoteAgedOffBoard(q) && orderHasPickShortfall(q));
+  [...otInvoicePick].forEach(id=>{ if(!ready.some(q=> q.id === id)) otInvoicePick.delete(id); });
+  const picked = ready.filter(q=> otInvoicePick.has(q.id));
+  const total = picked.reduce((s, q)=> s + savedQuoteTotal(q), 0);
+  return {
+    w: 760,
+    title: 'Invoice · delivered',
+    sub: esc(`${ready.length} order${ready.length === 1 ? '' : 's'} · ${picked.length} picked`),
+    act: ready.length ? otDlgGhost('pickall', picked.length === ready.length ? 'Clear the pick' : `Pick all ${ready.length}`) : '',
+    body: `${ready.length ? `<div class="ow-dlg-rows">
+        <div class="ow-dlg-hd ow-iv-r"><span></span><span class="ow-dlg-ch">Client · order</span>
+          <span class="ow-dlg-ch">Delivered</span><span class="ow-dlg-ch ow-dlg-rt">Invoice total</span>
+          <span class="ow-dlg-ch ow-dlg-rt">Terms</span></div>
+        ${ready.map(q=> `<div class="ow-dlg-r ow-iv-r">
+          ${otDlgBox(otInvoicePick.has(q.id), 'pick', `data-id="${q.id}"`, `Pick ${quoteClientName(q)}'s order`)}
+          <span class="ow-dlg-c" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))} <span class="ow-dlg-m">#${q.id}</span></span>
+          <span class="ow-dlg-m">${esc(otWhen(q.stageEnteredAt))}</span>
+          <span class="ow-dlg-v ow-dlg-rt">${esc(otFig(savedQuoteTotal(q)))}</span>
+          <span class="ow-dlg-c2 ow-dlg-rt">${esc(otTermsLabel(q))}</span>
+        </div>`).join('')}
+      </div>` : `<div class="ow-empty">Nothing delivered is waiting to be invoiced.</div>`}
+      ${short.length ? `<div class="ow-dlg-k"><div class="ow-dlg-l">Left out</div>
+        <div class="ow-dlg-p">${short.length} delivered order${short.length === 1 ? '' : 's'} came up short on the pick and cannot be invoiced until you decide what to bill: ${esc(short.map(q=> `${quoteClientName(q)} (#${q.id})`).join(', '))}.</div></div>` : ''}`,
+    foot: `${otDlgFig('Picked', total)}
+      <span class="ow-dlg-fs"></span>
+      <div class="ow-dlg-n">Each invoice is drawn from the order's own lines and the client's terms. It takes the goods off the shelf, raises each supplier's bill and books what is unpaid to their account.</div>
+      ${picked.length ? otDlgPrimary('draw', `Draw ${picked.length} invoice${picked.length === 1 ? '' : 's'}`) : ''}`,
+  };
+}
+function otTermsLabel(q){
+  const t = orderCreditTerms(q);
+  if(!t) return 'on delivery';
+  const d = Math.max(0, Number(t.days) || 0);
+  return d > 0 ? `${d} days` : 'credit';
+}
+
+const OT_DIALOGS = {
+  preview: otPreviewSpec,
+  buying: otBuyingSpec,
+  trip: otTripSpec,
+  runs: otRunsSpec,
+  announce: otAnnounceSpec,
+  invoice: otInvoiceSpec,
+};
+
+/* The four openers the board and the rest of the app already call, now
+   pointed at the one shell. */
+function openOrderPreview(orderId){ otDlgOpen('preview', Number(orderId)); }
+function openBuyingList(){ otDlgOpen('buying', 0); }
+function openPickupRuns(){ otDlgOpen('trip', 0); }
+function openDeliveryRuns(){ otDlgOpen('runs', 0); }
+function openInvoiceDelivered(){ otDlgOpen('invoice', 0); }
+function openAnnounceDialog(id){ otAnnounceDraft = null; otDlgOpen('announce', Number(id)); }
+
+/* Everything a dialog can do, from one listener bound once. Each act
+   redraws both the dialog and the board, because both are written from
+   the same books and neither may be left saying what was true before. */
+function otDlgAct(act, el){
+  const id = Number(el.dataset.id || 0);
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  const after = ()=>{ renderSavedQuotes(); otDlgDraw(); };
+  switch(act){
+    case 'close': otDlgClose(); break;
+    case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
+    case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
+    case 'act': otAct(el.dataset.act2, id, el); otDlgDraw(); break;
+    case 'cancel': cancelSavedQuote(id); otDlgDraw(); break;
+    case 'announce': openAnnounceDialog(id); break;
+    case 'tellclient': {
+      if(!q) break;
+      /* The client's own WhatsApp, with the sentence the dialog just
+         showed already in it. Opened, never sent: the owner presses
+         send in WhatsApp, as they do everywhere else in this app. */
+      window.open(waComposeUrl(q.client && q.client.phone, `${quoteClientName(q)} — order #${q.id}. ${otSayToClient(q)}`), '_blank');
+      break;
+    }
+    case 'copydraft': {
+      const box = document.getElementById('ot_dlg_draft');
+      const text = box ? box.value : '';
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=> toast('Message copied')).catch(()=> toast('Could not copy — select the text and copy it by hand', 5000));
+      } else toast('Could not copy — select the text and copy it by hand', 5000);
+      break;
+    }
+    case 'sendgroup': {
+      if(!q) break;
+      const box = document.getElementById('ot_dlg_draft');
+      otAnnounceDraft = box ? box.value : null;
+      announceOrderToGroup(id, otAnnounceDraft);
+      otDlgClose();
+      break;
+    }
+    case 'receive': case 'unreceive': break; // wired by wireBuyingListReceiving
+    case 'sendstop': case 'bringstop': {
+      const p = pickupRuns(beingPreparedOrders());
+      const stop = p.runs.concat(p.noLocation).find(r=> String(r.key) === el.dataset.stop);
+      if(!stop) break;
+      const bring = act === 'bringstop';
+      const made = [];
+      stop.suppliers.forEach(su=>{
+        const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === String(su.supplierId));
+        const trip = run ? createCollectionTripFromRun(run, bring ? { supplierDelivers:true } : undefined) : null;
+        if(trip) made.push(trip);
+      });
+      if(!made.length){ toast('Everything at this stop is already on somebody\'s list'); break; }
+      saveData();
+      otDlgDraw();
+      if(bring) toast(`${stop.label} is delivering ${made.reduce((n, t)=> n + t.lines.length, 0)} line${made.reduce((n, t)=> n + t.lines.length, 0) === 1 ? '' : 's'} — check them in when they arrive.`, 5000);
+      else openAssignTripModal(made[0].id);
+      break;
+    }
+    case 'assigntrip': openAssignTripModal(el.dataset.trip); break;
+    case 'pickups': openPickupRuns(); break;
+    case 'buying': openBuyingList(); break;
+    case 'sendbuyer': {
+      const p = pickupRuns(beingPreparedOrders());
+      const stops = p.runs.concat(p.noLocation);
+      if(!stops.length){ toast('Nothing to buy in — there is no round to send'); break; }
+      const msg = [`Buying round · ${otDayName()}`, ''].concat(stops.map((r, i)=>
+        `${i + 1}. ${r.label} — ${r.suppliers.map(s=> s.name).join(', ')} · ${r.lines.length} item${r.lines.length === 1 ? '' : 's'} · ${fmtUGX(r.total)}`))
+        .concat(['', `Cash to carry ${fmtUGX(stops.reduce((s, r)=> s + r.total, 0))}`]).join('\n');
+      window.open(waComposeUrl('', msg), '_blank');
+      break;
+    }
+    case 'whohas': otDlgClose(); otAct('loaded', id, el); break;
+    case 'delivered': stepSavedQuoteStatus(id, 1); after(); break;
+    case 'closerun': {
+      const d = deliveryRuns(pendingDeliveryOrders());
+      const run = d.runs[0];
+      if(!run) break;
+      if(!confirm(`Mark all ${run.orders.length} order${run.orders.length === 1 ? '' : 's'} on the ${run.label} run as delivered?\n\n${run.orders.map(o=> `• ${quoteClientName(o)} — ${fmtUGX(savedQuoteTotal(o))}`).join('\n')}\n\nThey move to Delivered, not invoiced.`)) break;
+      run.orders.slice().forEach(o=> stepSavedQuoteStatus(o.id, 1));
+      after();
+      break;
+    }
+    case 'pick': { if(otInvoicePick.has(id)) otInvoicePick.delete(id); else otInvoicePick.add(id); otDlgDraw(); break; }
+    case 'pickall': {
+      const ready = ordersReadyToInvoice();
+      if(ready.every(x=> otInvoicePick.has(x.id))) otInvoicePick.clear();
+      else ready.forEach(x=> otInvoicePick.add(x.id));
+      otDlgDraw();
+      break;
+    }
+    case 'draw': invoicePickedOrders([...otInvoicePick]); break;
+    default: break;
+  }
+}
+/* Drawing the picked invoices, one at a time and awaited: each takes the
+   next PINV number from the server and racing them interleaves the
+   numbers. */
+async function invoicePickedOrders(ids){
+  const ready = ordersReadyToInvoice().filter(q=> ids.includes(q.id));
+  if(!ready.length){ toast('Nothing picked'); return; }
+  const total = ready.reduce((s, q)=> s + savedQuoteTotal(q), 0);
+  if(!confirm(`Draw ${ready.length} invoice${ready.length === 1 ? '' : 's'}, billing ${fmtUGX(total)} in total?\n\n${ready.map(q=> `• ${quoteClientName(q)} — ${fmtUGX(savedQuoteTotal(q))}`).join('\n')}\n\nThis takes the goods off the shelf, raises each supplier's bill, and books what is unpaid to each customer's account.`)) return;
+  let done = 0;
+  for(const q of ready){
+    await toggleQuoteInvoiced(q.id);
+    if(q.invoiced){ done++; otInvoicePick.delete(q.id); }
+  }
+  renderSavedQuotes();
+  otDlgDraw();
+  toast(`${done} invoice${done === 1 ? '' : 's'} drawn${done < ready.length ? ` — ${ready.length - done} did not go through` : ''}`, 5000);
+}
+
+/* Everything inside a dialog goes through one listener, bound once at
+   parse time: an act never depends on which draw last wired it. The
+   scrim closes on a press that BEGAN on the scrim -- never on one that
+   began inside the paper and drifted out, which is how a careful drag
+   across a row used to throw a dialog away. */
+document.getElementById('otDlg').addEventListener('click', (e)=>{
+  const t = e.target;
+  if(!t || !t.closest) return;
+  const b = t.closest('[data-dlg]');
+  if(b){ otDlgAct(b.dataset.dlg, b); return; }
+});
+document.getElementById('otDlg').addEventListener('mousedown', (e)=>{
+  if(e.target && e.target.id === 'otDlg') otDlgClose();
+});
+/* The carrier kind decides which of the other fields are asked -- the
+   same one question the row asks on the phone. */
+document.getElementById('otDlg').addEventListener('change', (e)=>{
+  const sel = e.target && e.target.closest ? e.target.closest('[data-car="kind"]') : null;
+  if(sel) syncCarrierForm(sel.closest('[data-load]'));
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && otDlgNow){ e.preventDefault(); otDlgClose(); }
+});
+
+/* ================= THE STAGE BOARD =================
+   The lane rule, said on the lane rather than in a help bubble: what
+   moves an order out of here, and whose act that is. The five sentences
+   are the whole contract of the board. */
+const OT_LANE_RULE = {
+  draft: 'Suppliers answer, then it moves itself.',
+  awaiting_goods: 'Moves on when the last line is checked in.',
+  preparing: 'You pack it, then mark it out.',
+  pending_delivery: 'The run closes it on delivery.',
+  completed: 'Today only; older sit in Money.',
+};
+/* An empty lane says what would put an order in it. "Not enough is an
+   answer" — a blank column is not. */
+const OT_LANE_EMPTY = {
+  draft: 'Nothing taken. A saved quote lands here.',
+  awaiting_goods: 'Nothing being bought. An order arrives when every supplier on it has confirmed.',
+  preparing: 'Nothing preparing. Orders arrive here when the last line is checked in.',
+  pending_delivery: 'Nothing out. Mark a packed order out on a run.',
+  completed: 'Nothing delivered today. A run closes an order into this lane.',
+};
+/* The lane's own action — the dialog that lane is the reason for. */
+const OT_LANE_ACT = {
+  awaiting_goods: { act:'buying', label:'Buying list' },
+  pending_delivery: { act:'runs', label:'Runs' },
+  completed: { act:'invoicepick', label:'Invoice' },
+};
+const OT_LANE_NAME = { draft:'Taken', awaiting_goods:'Buying', preparing:'Preparing', pending_delivery:'Out', completed:'Delivered' };
+
+/* HOW LONG IS TOO LONG, and it is the shop's own answer where the shop
+   has given one: past the limit set in Presets is crimson, three
+   quarters of the way there is amber. A stage with no limit set falls
+   back to the board's own reading of a working day -- over 12 hours
+   crimson, over 6 amber -- because an age with no tone at all says the
+   oldest card on the board is as fresh as the newest. */
+function otAgeTone(q){
+  const hours = (Date.now() - (q.stageEnteredAt || Date.now())) / 3600000;
+  const limitMin = Number((data.presetOrderStageLimits || {})[q.status]) || 0;
+  if(limitMin > 0){
+    const limit = limitMin / 60;
+    if(hours >= limit) return 'ow-bad';
+    if(hours >= limit * 0.75) return 'ow-warn';
+    return '';
+  }
+  if(hours > 12) return 'ow-bad';
+  if(hours > 6) return 'ow-warn';
+  return '';
+}
+/* A figure with no unit on it, for the places the unit is said once at
+   the top of the column instead of on every row. */
+function otFig(n){ return Number(n || 0).toLocaleString('en-UG'); }
+function otUnitFig(n){ return `${esc(otFig(n))} <span class="ow-u">UGX</span>`; }
+/* The age as the board says it: "19h 04m", "2d 3h" past a day. */
+function otAge(q){
+  const m = Math.max(0, Math.floor((Date.now() - (q.stageEnteredAt || Date.now())) / 60000));
+  if(m >= 1440){ const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return `${d}d ${h}h`; }
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+}
+
+/* ONE CARD. Client and money on the first line, the order and where it
+   is going on the second, who has it on the third. The money never
+   truncates and the name gives way: "1,240,00" is a tenth of
+   "1,240,000" and looks entirely plausible. */
+function otCardHTML(q, inQueue){
+  const items = (q.items || []).length;
+  const bought = (q.items || []).filter(orderLineIsBoughtIn).length;
+  const place = orderCustomerLocation(q);
+  const lines = `${items} line${items === 1 ? '' : 's'}${bought ? `, ${bought} to buy` : ''}`;
+  const mid = [place, lines].filter(Boolean).join(' · ');
+  const who = orderWhoText(q);
+  return `<button type="button" class="ow-ot-card${inQueue ? ' ow-now' : ''}" data-act="preview" data-id="${q.id}"
+      title="${esc(quoteClientName(q))} — open the order">
+    <span class="ow-ot-card-h">
+      <span class="ow-ot-card-c">${esc(quoteClientName(q))}</span>
+      <span class="ow-ot-card-v">${esc(otFig(savedQuoteTotal(q)))}</span>
+    </span>
+    <span class="ow-ot-card-m">
+      <span class="ow-ot-card-o">#${q.id}</span>
+      <span class="ow-ot-card-p" title="${esc(mid)}">${esc(mid)}</span>
+      <span class="ow-ot-card-a ${otAgeTone(q)}" title="In ${esc(otStageShort(q.status))} for ${esc(otStageSince(q))}">${esc(otAge(q))}</span>
+    </span>
+    ${inQueue || who ? `<span class="ow-ot-card-f">
+      ${inQueue ? '<span class="ow-ot-card-t">Needs you</span>' : ''}
+      ${who ? `<span class="ow-ot-card-w" title="${esc(who)}">${esc(who)}</span>` : ''}
+    </span>` : ''}
+  </button>`;
+}
+
+/* ONE LANE. Its name, its count, the dialog it is the reason for, and
+   the sentence that says what moves an order out of it. */
+function otLaneHTML(stage, orders, opts){
+  const o = opts || {};
+  const act = OT_LANE_ACT[stage];
+  const rule = stage === 'completed'
+    ? `${o.invoiced || 0} of ${orders.length + (o.tail || 0)} invoiced. ${OT_LANE_RULE[stage]}`
+    : OT_LANE_RULE[stage];
+  const body = orders.length
+    ? orders.map(q=> otCardHTML(q, o.queued && o.queued.has(q.id))).join('')
+      + (o.tail ? `<div class="ow-ot-tail">+${o.tail} earlier · already in Invoices</div>` : '')
+    : `<div class="ow-empty">${o.searching ? 'No order in this lane matches the search.' : esc(OT_LANE_EMPTY[stage])}</div>`;
+  return `<div class="ow-ot-lane" data-stage="${esc(stage)}">
+    <div class="ow-ot-lh">
+      <div class="ow-ot-lh-r">
+        <span class="ow-ot-lh-n">${esc(OT_LANE_NAME[stage])}</span>
+        <span class="ow-ot-lh-c">${orders.length + (o.tail || 0)}</span>
+        <span class="ow-ot-lh-sp"></span>
+        ${act ? `<button type="button" class="btn btn-ghost ow-sm" data-act="${act.act}" data-id="0">${esc(act.label)}</button>` : ''}
+      </div>
+      <div class="ow-ot-lh-w">${esc(rule)}</div>
+    </div>
+    <div class="ow-ot-cards">${body}</div>
+  </div>`;
+}
+
+/* THE DECISION ON THE CARD. What the queue says needs doing becomes one
+   oxide primary whose label IS the decision, and one ghost beside it.
+   Both are acts the app can really carry out: the ghost is never a
+   button that does nothing. */
+function otDecisionActs(q, need){
+  const primary = (need.acts && need.acts[0]) || orderActSpec(q) || { act:'preview', label:'Open the order' };
+  let secondary;
+  if(q.status === 'draft' && orderSupplierGroups(q).length) secondary = { act:'preview', label:'Suppliers' };
+  else if(q.status !== 'draft' && q.status !== 'completed' && !q.announcedAt && primary.act !== 'announce') secondary = { act:'announce', label:'Announce' };
+  else secondary = { act:'preview', label:'Open the order' };
+  if(secondary.act === primary.act) secondary = { act:'preview', label:'Open the order' };
+  return { primary, secondary };
+}
+
+/* THE DOCK. One decision, the two behind it, and a way to step. A list
+   of twenty decisions is not twenty decisions; it is a reason to make
+   none. So the longest-waiting one gets the card, its own sentence and
+   its own two buttons, and the rest wait their turn.
+
+   Acting does NOT advance the queue. The owner stays on the order they
+   just moved, so they can see it move -- the position line says so, and
+   Next is the only thing that steps. */
+function otDockHTML(needs){
+  if(!needs.length){
+    return `<div class="ow-ot-dk-h"><span class="ow-ot-dk-t">Needs you</span>
+      <span class="ow-ot-dk-s">Nothing is waiting on a decision — every order is with a supplier, a trip, a picker or a driver.</span></div>`;
+  }
+  if(otQIndex >= needs.length) otQIndex = 0;
+  if(otQIndex < 0) otQIndex = needs.length - 1;
+  const cur = needs[otQIndex];
+  const q = cur.q, need = cur.need;
+  const { primary, secondary } = otDecisionActs(q, need);
+  const place = orderCustomerLocation(q);
+  const meta = [`#${q.id}`, place, otAge(q)].filter(Boolean).join(' · ');
+  const peek = [needs[(otQIndex + 1) % needs.length], needs[(otQIndex + 2) % needs.length]]
+    .filter((x, i, a)=> x && x !== cur && a.indexOf(x) === i);
+  const behind = Math.max(0, needs.length - 1 - peek.length);
+  const btn = (a, cls)=> `<button type="button" class="btn ${cls} ow-sm" data-act="${a.act}" data-id="${q.id}">${esc(a.label)}</button>`;
+  return `<div class="ow-ot-dk-h">
+      <span class="ow-ot-dk-t">Needs you</span>
+      <span class="ow-ot-dk-n">${needs.length}</span>
+      <span class="ow-ot-dk-s">A queue, longest waiting first. One at a time; the rest wait their turn.</span>
+      <span class="ow-ot-dk-st">
+        <span class="ow-ot-dk-p">${otQIndex + 1} of ${needs.length}</span>
+        <button type="button" class="btn btn-ghost ow-sm ow-ot-dk-back" data-act="qprev" data-id="0" aria-label="The one before">
+          <svg class="icon ow-i12" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg>
+        </button>
+        <button type="button" class="btn btn-ghost ow-sm" data-act="qnext" data-id="0">Next
+          <svg class="icon ow-i12" viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg>
+        </button>
+      </span>
+    </div>
+    <div class="ow-ot-dk-b">
+      <div class="ow-ot-now">
+        <div class="ow-ot-now-l">
+          <div class="ow-ot-now-h">
+            <span class="ow-ot-now-c">${esc(quoteClientName(q))}</span>
+            <span class="ow-ot-now-m" title="${esc(meta)}">${esc(meta)}</span>
+          </div>
+          <div class="ow-ot-now-w">${need.say}</div>
+        </div>
+        <div class="ow-ot-now-r">
+          <span class="ow-ot-now-v" title="What the client pays">${esc(otFig(savedQuoteTotal(q)))}</span>
+          <span class="ow-ot-now-a">${btn(secondary, 'btn-ghost')}${btn(primary, 'btn-accent')}</span>
+        </div>
+      </div>
+      <div class="ow-ot-peek">
+        <div class="ow-ot-peek-l">Behind it</div>
+        ${peek.map(x=> `<button type="button" class="ow-ot-peek-r" data-act="qjump" data-id="${x.q.id}">
+          <span class="ow-ot-peek-c">${esc(quoteClientName(x.q))}</span>
+          <span class="ow-ot-peek-o">#${x.q.id}</span>
+          <span class="ow-ot-peek-a ${otAgeTone(x.q)}">${esc(otAge(x.q))}</span>
+        </button>`).join('')}
+        <div class="ow-ot-peek-f">${behind
+          ? `+${behind} more behind · every one of them is edged on the board`
+          : 'Nothing else behind it.'}</div>
+      </div>
+    </div>`;
 }
 
 function renderSavedQuotes(){
@@ -41843,20 +42978,32 @@ function renderSavedQuotes(){
   if(backfilled) saveData();
   const quotes = allQuotes.filter(q=>!quoteAgedOffBoard(q) && !q.voided);
   const el = (id)=> document.getElementById(id);
-  const strip = el('ot_strip'), needsEl = el('ot_needs'), segEl = el('ot_seg'), railEl = el('ot_rail');
+  const strip = el('ot_strip'), dock = el('ot_dock'), board = el('ot_board');
+  const needsEl = el('ot_needs'), segEl = el('ot_seg'), railEl = el('ot_rail');
   const put = (node, html)=>{ if(node) node.innerHTML = html; };
   /* An empty board is the sentence and nothing else: no strip of
-     zeros, no empty tray, no headings over nothing. Set as a style
+     zeros, no empty lanes, no headings over nothing. Set as a style
      rather than the hidden attribute, which a display rule outranks. */
   const hide = (node, on)=>{ if(node) node.style.display = on ? 'none' : ''; };
   const bare = !allQuotes.length || !quotes.length;
-  [strip, needsEl, segEl, railEl, el('ot_needs_h'), el('ot_all_h')].forEach(n=> hide(n, bare));
+  [strip, dock, needsEl, segEl, railEl, el('ot_needs_h'), el('ot_all_h')].forEach(n=> hide(n, bare));
+  if(board) board.classList.toggle('ow-ot-bare', bare);
   if(bare){
-    put(strip, ''); put(needsEl, ''); put(segEl, ''); put(railEl, '');
-    put(el('ot_needs_n'), ''); put(el('ot_all_n'), ''); put(el('ot_invoice_all'), '');
-    wrap.innerHTML = `<div class="ow-empty">${!allQuotes.length
+    /* The sentence and nothing else: no strip of zeros, no five empty
+       lanes, no headings over nothing. It goes in the BOARD's mount,
+       because that is the one this screen still shows on the console --
+       the phone's own screen is hidden here, and an empty state nobody
+       can see is the failure this whole rule exists to prevent. */
+    const say = !allQuotes.length
       ? 'No orders yet — build a quote above and click "Save quote".'
-      : 'No active quotes right now — invoiced orders move to the Invoices tab 24 hours after invoicing. Check the Invoices tab to view them.'}</div>`;
+      : 'No active quotes right now — invoiced orders move to the Invoices tab 24 hours after invoicing. Check the Invoices tab to view them.';
+    put(strip, ''); put(dock, ''); put(needsEl, ''); put(segEl, ''); put(railEl, '');
+    put(el('ot_needs_n'), ''); put(el('ot_all_n'), '');
+    put(el('ot_sub'), !allQuotes.length
+      ? 'Nothing has been taken yet.'
+      : 'Nothing is live — every order has been invoiced.');
+    put(board, `<div class="ow-empty">${say}</div>`);
+    wrap.innerHTML = `<div class="ow-empty">${say}</div>`;
     return;
   }
   // Per-stage time limits (minutes) from Presets ▸ Order Tracking.
@@ -41873,23 +43020,78 @@ function renderSavedQuotes(){
   const cash = orderBoardCashToBuy(beingPreparedOrders());
   const cashToBuy = cash.total;
   const trip = pickupRuns(beingPreparedOrders());
-  const stops = trip.runs.length + trip.noLocation.length;
+  const stops = trip.runs.concat(trip.noLocation);
   const del = deliveryRuns(pendingDeliveryOrders());
   const toInvoice = byStage.completed.filter(q=> !q.invoiced);
-  const toInvoiceTotal = toInvoice.reduce((s, q)=> s + savedQuoteTotal(q), 0);
-  const tile = (label, value, sub, cls)=> `<div class="ow-mt${cls ? ' ' + cls : ''}"><div class="ow-mt-l">${esc(label)}</div><span class="ow-mt-v">${value}</span>${sub ? `<p class="ow-mt-s">${sub}</p>` : ''}</div>`;
-  const stageCounts = SQ_STATUS_ORDER.map(s=> `${byStage[s].length} ${s === 'pending_delivery' ? 'out' : otStageShort(s).toLowerCase()}`).join(' · ');
-  put(strip, [
-    tile('Needs you', String(needs.length), needs.length ? 'decisions waiting, longest first' : 'nothing waiting on you', needs.length ? 'ow-warn' : ''),
-    tile('Live orders', String(quotes.length), esc(stageCounts)),
-    tile('Cash to buy in', esc(fmtUGX(cashToBuy)), (stops ? `${stops} stop${stops === 1 ? '' : 's'} on today's trip` : (cashToBuy ? 'nothing on a trip yet' : 'nothing to buy in')) + (cash.unpriced ? ` · ${cash.unpriced} line${cash.unpriced === 1 ? '' : 's'} with no price on file` : '')),
-    tile('Out for delivery', String(byStage.pending_delivery.length), esc([del.runs.length ? `${del.runs.length} place${del.runs.length === 1 ? '' : 's'} to reach` : '', del.collected.length ? `${del.collected.length} collecting` : ''].filter(Boolean).join(', ') || 'nothing out')),
-    tile('To invoice', esc(fmtUGX(toInvoiceTotal)), `${toInvoice.length} of ${byStage.completed.length} delivered, not yet invoiced`, toInvoice.length ? 'ow-warn' : ''),
-  ].join(''));
+  const late = quotes.filter(q=> orderIsOverdue(q));
+  const anyLimit = SQ_STATUS_ORDER.some(s=> Number(stageLimits[s]) > 0);
 
-  put(el('ot_invoice_all'), otInvoiceAllHTML());
+  /* The sub is the whole screen in one line, and every figure in it is
+     counted here rather than stored. It is never folded behind the "i":
+     it is the one line that goes stale. */
+  put(el('ot_sub'), esc([`${quotes.length} live`,
+    needs.length ? `${needs.length} need${needs.length === 1 ? 's' : ''} you, one at a time` : 'nothing waiting on you',
+    anyLimit ? `${late.length} past their stage limit` : 'no stage limits set'].join(' · ')));
 
-  /* The queue. Longest waiting first, whatever the reason. */
+  const tile = (label, value, cls)=> `<div class="ow-mt${cls ? ' ' + cls : ''}"><div class="ow-mt-l">${esc(label)}</div><span class="ow-mt-v">${value}</span></div>`;
+  const sep = '<span class="ow-ot-tsep"></span>';
+  /* THE DAY, in the cell the 304px right rail used to be a column of:
+     where the buying goes and what it costs to carry, and what is out. */
+  const named = stops.slice(0, 2).map(r=> r.label).join(', then ');
+  const tripLine = stops.length
+    ? `${esc(named)}${stops.length > 2 ? ` and ${stops.length - 2} more` : ''} · ${stops.length} stop${stops.length === 1 ? '' : 's'} · carry <span class="ow-ot-day-f">${esc(otFig(cashToBuy))}</span> <span class="ow-ot-day-u">UGX</span>`
+    : (cashToBuy ? 'Nothing is on a trip yet, though there is buying to do.' : 'Nothing on the board has to be bought in.');
+  const outBits = [
+    `${byStage.pending_delivery.length} order${byStage.pending_delivery.length === 1 ? '' : 's'} out`,
+    del.runs.length ? `on ${del.runs.length} run${del.runs.length === 1 ? '' : 's'}` : '',
+    del.collected.length ? `${del.collected.length} collecting` : '',
+  ].filter(Boolean).join(' ');
+  const outLate = byStage.pending_delivery.filter(orderIsOverdue).length;
+  put(strip, `<div class="ow-ot-tiles">${[
+      tile('Live', String(quotes.length)),
+      tile('Cash to buy in', otUnitFig(cashToBuy)),
+      tile('Past stage limit', anyLimit ? String(late.length) : '—', late.length ? 'ow-bad' : ''),
+      tile('To invoice', String(toInvoice.length)),
+    ].join(sep)}</div>
+    <div class="ow-ot-day">
+      <div class="ow-ot-day-h">
+        <div class="ow-mt-l">Today's trip &amp; runs</div>
+        <span class="ow-ot-day-sp"></span>
+        <button type="button" class="btn btn-ghost ow-sm" data-act="pickups" data-id="0">Plan trip</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-act="runs" data-id="0">Runs</button>
+      </div>
+      <div class="ow-ot-day-r">${tripLine}</div>
+      <div class="ow-ot-day-s">${esc(outBits)} · ${outLate ? `${outLate} past the limit` : 'nothing overdue'}${
+        cash.unpriced ? ` · ${cash.unpriced} line${cash.unpriced === 1 ? '' : 's'} with no price on file` : ''}</div>
+    </div>`);
+
+  /* THE DOCK: one decision at a time, longest waiting first. */
+  otQIds = needs.map(x=> x.q.id);
+  if(otQIndex >= otQIds.length) otQIndex = 0;
+  put(dock, otDockHTML(needs));
+
+  /* THE BOARD. Every lane is drawn even when the search empties it, so
+     the five stages never move about under the pointer. */
+  const tokens = searchTokens((el('ot_search') || {}).value);
+  const queued = new Set(needs.map(x=> x.q.id));
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  put(board, SQ_STATUS_ORDER.map(s=>{
+    let rows = byStage[s], tail = 0;
+    /* Delivered is today's deliveries. Anything older is still on the
+       books and still says so -- named rather than dropped -- but it
+       belongs to Invoices, not to the day's board. */
+    if(s === 'completed'){
+      const today = rows.filter(q=> (q.stageEnteredAt || 0) >= startOfDay.getTime());
+      tail = rows.length - today.length;
+      rows = today;
+    }
+    const shown = rows.filter(q=> otOrderMatches(q, tokens));
+    return otLaneHTML(s, shown, { queued, tail,
+      invoiced: s === 'completed' ? rows.filter(q=> q.invoiced).length : 0,
+      searching: !!tokens.length && !shown.length && !!rows.length });
+  }).join(''));
+
+  /* ---- THE PHONE'S OWN SCREEN, from the same derivations ---------- */
   put(el('ot_needs_n'), String(needs.length));
   if(needsEl){
     needsEl.classList.toggle('ow-open', otNeedsExpanded);
@@ -41898,13 +43100,10 @@ function renderSavedQuotes(){
         ? `<button type="button" class="btn btn-ghost ow-sm ow-ot-qmore" data-act="needsmore">${otNeedsExpanded ? 'Show fewer' : `and ${needs.length - 3} more`}</button>` : '')
       : '<div class="ow-empty">Nothing needs you right now — every order is with a supplier, a trip, a picker or a driver.</div>';
   }
-
-  /* The lens and the table. */
   put(el('ot_all_n'), String(quotes.length));
   if(!SQ_STATUS_ORDER.includes(otStageLens)) otStageLens = 'all';
-  put(segEl, [['all', 'All', quotes.length], ...SQ_STATUS_ORDER.map(s=> [s, s === 'pending_delivery' ? 'Out' : otStageShort(s), byStage[s].length])]
+  put(segEl, [['all', 'All', quotes.length], ...SQ_STATUS_ORDER.map(s=> [s, OT_LANE_NAME[s], byStage[s].length])]
     .map(([k, label, n])=> `<button type="button" class="ow-seg-b${otStageLens === k ? ' ow-on' : ''}" role="tab" aria-selected="${otStageLens === k}" data-lens="${k}">${esc(label)} <span class="ow-seg-n">${n}</span></button>`).join(''));
-  const tokens = searchTokens((el('ot_search') || {}).value);
   const shownStages = otStageLens === 'all' ? SQ_STATUS_ORDER : [otStageLens];
   const groups = shownStages.map(s=>{
     const rows = byStage[s].filter(q=> otOrderMatches(q, tokens));
@@ -41918,7 +43117,6 @@ function renderSavedQuotes(){
   // Last, after every element this render replaces exists again.
   otRestoreFocus(otFocus);
 }
-
 /* Everything the screen can do, from one listener bound once at parse
    time -- so an act never depends on which render last wired it, and a
    row opens in place with no listener of its own. */
@@ -41987,7 +43185,7 @@ function otAct(act, id, el){
   switch(act){
     case 'open': otOpenRow(id); break;
     case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
-    case 'announce': announceOrderToGroup(id); break;
+    case 'announce': openAnnounceDialog(id); break;
     case 'ask': askOrderSupplier(id, sid); break;
     case 'confirmed': confirmOrderSupplier(id, sid); break;
     case 'undoconfirm': if(sid){ setOrderSupplierConfirm(id, sid, 'pending', ''); toast(`${supplierName(sid)} is back to unconfirmed`, 3000); } break;
@@ -42010,6 +43208,12 @@ function otAct(act, id, el){
     case 'edit': loadSavedQuote(id); break;
     case 'delete': deleteSavedQuote(id); break;
     case 'needsmore': otNeedsExpanded = !otNeedsExpanded; renderSavedQuotes(); break;
+    /* The dock's stepper. It wraps rather than stopping at the ends --
+       the queue is a round the owner works, not a page they fall off. */
+    case 'qnext': if(otQIds.length){ otQIndex = (otQIndex + 1) % otQIds.length; renderSavedQuotes(); } break;
+    case 'qprev': if(otQIds.length){ otQIndex = (otQIndex - 1 + otQIds.length) % otQIds.length; renderSavedQuotes(); } break;
+    case 'qjump': { const at = otQIds.indexOf(id); if(at > -1){ otQIndex = at; renderSavedQuotes(); } break; }
+    case 'invoicepick': openInvoiceDelivered(); break;
     default: break;
   }
 }

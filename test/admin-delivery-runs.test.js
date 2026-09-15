@@ -260,7 +260,22 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     'while the headline still covers every one of them');
 }
 
-/* ---------- 8. every place gets a card, in one sideways track --------- */
+/* ---------- 8. every place gets a group, one under the next ----------
+
+   THE CAROUSEL IS GONE. Delivery runs were cards in a sideways track,
+   and so were the pickup clusters and the buying list -- three screens
+   answering three questions in one gesture that hid two thirds of the
+   answer behind a scroll. The redesign makes all three dialogs the same
+   object: one 44px header, hairline-separated blocks, one footer with
+   exactly one oxide primary. A run is a group head and its orders are
+   rows under it, so a day with four runs is read down the page instead
+   of swiped across it.
+
+   What is pinned here is unchanged in substance: one group per place,
+   fullest first, the two non-places at the end and not in a tail
+   nobody scrolls to, how many of a run still have nobody driving, and
+   a typed place escaped into the markup. Sections 9 and the track rule
+   below it went with the carousel they were about. */
 {
   reset();
   data.customers = [
@@ -272,145 +287,68 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     order({ id: 4, deliveryMode: 'agent_pickup', client: { name: 'Collected' } }),
     order({ id: 5, client: { name: 'Wilson' } })];
 
-  const body = {};
-  const runs = compileScope([
-    extractFunction(src, 'openDeliveryRuns', 'index.html'),
-    extractFunction(src, 'wireRunCarousel', 'index.html'),
+  const spec = () => compileScope([
+    extractFunction(src, 'otRunsSpec', 'index.html'),
   ], {
     pendingDeliveryOrders: scope.pendingDeliveryOrders,
     deliveryRuns: scope.deliveryRuns,
     savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
     quoteClientName: (q) => (q && q.client && q.client.name) || 'Unnamed client',
-    invoiceNumberLabel: (q) => 'INV-' + String(q.id).padStart(4, '0'),
-    deliveryAssigneeLabel: (q) => (q.assignedDeliveryId === '__agent__' ? 'Agent pickup' : String(q.assignedDeliveryId)),
-    esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
-    fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-    ICON_PIN: '<svg data-i="pin"></svg>', ICON_WARN: '<svg data-i="warn"></svg>',
-    ICON_TRUCK: '<svg data-i="truck"></svg>', ICON_STORE: '<svg data-i="store"></svg>',
-    openModal: (id) => { body.opened = id; },
-    // The track is absent, so the wiring block is skipped -- this section is
-    // about what gets rendered. The controls are covered structurally below.
-    document: { getElementById: (id) => (id === 'deliveryRunsBody'
-      ? { set innerHTML(v) { body.html = v; } }
-      : null) },
-  }, ['openDeliveryRuns']);
+    orderCustomerLocation: (q) => {
+      const c = data.customers.find((x) => x.id === q.customerId);
+      return (c && c.location) || '';
+    },
+    orderNeedsDelivery: (q) => !q.assignedDeliveryId,
+    staffName: (id) => String(id),
+    esc: (s2) => String(s2 == null ? '' : s2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    otFig: (n) => Number(n || 0).toLocaleString('en-US'),
+    otDayName: () => 'Monday',
+    otDlgGhost: (a, label) => `<button data-dlg="${a}">${label}</button>`,
+    otDlgPrimary: (a, label) => `<button class="btn-accent" data-dlg="${a}">${label}</button>`,
+  }, ['otRunsSpec']).otRunsSpec();
 
-  runs.openDeliveryRuns();
-  const html = body.html;
-  // Bounded: dr-card-head, dr-card-name and friends all start the same way.
-  const cards = (html.match(/class="dr-card[ "]/g) || []).length;
+  let out = spec();
+  const html = out.body;
+  const groups = (html.match(/class="ow-dlg-g"/g) || []).length;
 
-  t.check(body.opened === 'deliveryRunsModal', 'it opens its own modal');
-  t.check(cards === 4,
-    `one card per place plus the two that are not places (got ${cards}: Ntinda, Nakawa, collected, no-address)`);
+  t.check(groups === 4,
+    `one group per place plus the two that are not places (got ${groups}: Ntinda, Nakawa, collected, no-address)`);
   t.check(/Nakawa/.test(html),
-    'a place with a single order gets a card of its own -- it is still somewhere somebody has to drive to');
+    'a place with a single order gets a group of its own -- it is still somewhere somebody has to drive to');
   t.check(html.indexOf('Ntinda') < html.indexOf('Nakawa'),
     'with the fullest run first, since that is the one worth planning around');
-  t.check(/dr-card collected/.test(html) && /dr-card unknown/.test(html),
-    'and the two non-places ride at the end of the same track rather than in a tail nobody scrolls to');
-  t.check(html.indexOf('dr-card collected') > html.indexOf('Nakawa'),
+  t.check(/Collecting from the shop/.test(html) && /No address/.test(html),
+    'and the two non-places are named as what they are rather than drawn as runs');
+  t.check(html.indexOf('Collecting from the shop') > html.indexOf('Nakawa'),
     'after every real destination');
+  t.check(/2 orders? out/.test(out.sub) === false && /5 orders out/.test(out.sub),
+    `the header counts what is out (${out.sub})`);
+  t.check(/2 runs/.test(out.sub), 'and how many runs it is on');
 
-  t.check(/class="dr-track"/.test(html) && /dr-nav prev/.test(html) && /dr-nav next/.test(html),
-    'in a sideways track with a control at each end');
-  t.check(/2 places<\/span>/.test(html.replace(/\s+/g, ' ')) || /2 place/.test(html),
-    'headed by how many places there are to reach');
-
-  // The per-card figures an admin plans from.
-  t.check(/2 with nobody on them/.test(html),
+  // The per-run figure an admin plans from.
+  t.check(/with nobody carrying/.test(html),
     'a run says how many of it still have nobody driving');
-  t.check(/one driver could take the whole run/.test(html),
-    'and why that matters when the run has more than one drop');
+  /* ONE OXIDE, AND IT NAMES WHAT IT WILL DO. "Close run 1" closes the
+     fullest run, and says how many orders that is before it is pressed
+     -- never a button that acts on a number the owner has to count. */
+  t.check(/class="btn-accent"/.test(out.foot) && /Close run 1 · 2 orders/.test(out.foot),
+    'and the footer offers exactly one primary, naming how many it closes');
+  t.check((out.foot.match(/btn-accent/g) || []).length === 1,
+    'exactly one -- two accents in a dialog and neither of them means anything');
+  t.check(/not invoiced/.test(out.foot),
+    'with the footer saying where a closed order actually goes');
 
   // Names come from customer records and agent-typed addresses, so they are
   // whatever somebody typed.
   reset();
   data.customers = [{ id: 'k1', name: 'X', location: '<img src=x onerror=alert(1)>' }];
   data.savedQuotes = [order({ id: 1, customerId: 'k1' })];
-  runs.openDeliveryRuns();
-  t.check(!/<img src=x/.test(body.html) && /&lt;img/.test(body.html),
-    'a location is escaped into the card, being a string somebody typed');
+  out = spec();
+  t.check(!/<img src=x/.test(out.body) && /&lt;img/.test(out.body),
+    'a location is escaped into the row, being a string somebody typed');
 }
 
-/* ---------- 9. the slider lands on a card, however it was left -------- */
-/*
- * A drag or a trackpad flick leaves the track a few pixels off a boundary
- * -- it really does; the live track rests at 2 rather than 0 because of
- * its own padding. A purely relative scroll carries that error forward
- * until a card sits half off the edge, so the nav aims at a card index
- * instead of nudging by a card's width.
- */
-{
-  reset();
-  data.customers = ['Ntinda', 'Nakawa', 'Bwaise', 'Gayaza', 'Kisenyi']
-    .map((location, i) => ({ id: 'k' + i, name: 'C' + i, location }));
-  data.savedQuotes = data.customers.map((c, i) => order({ id: i + 1, customerId: c.id }));
-
-  const CARD = 290, GAP = 12, STRIDE = CARD + GAP;
-  const handlers = {};
-  const track = {
-    scrollLeft: 0, clientWidth: 700, scrollWidth: STRIDE * 5,
-    querySelector: () => ({ getBoundingClientRect: () => ({ width: CARD }) }),
-    addEventListener: (type, fn) => { handlers.scroll = fn; },
-    scrollBy({ left }) {
-      const max = this.scrollWidth - this.clientWidth;
-      this.scrollLeft = Math.max(0, Math.min(max, this.scrollLeft + left));
-      if (handlers.scroll) handlers.scroll();
-    },
-  };
-  const buttons = { dr_prev: { disabled: false }, dr_next: { disabled: false } };
-  Object.keys(buttons).forEach((id) => { buttons[id].addEventListener = (type, fn) => { handlers[id] = fn; }; });
-
-  const runs = compileScope([extractFunction(src, 'openDeliveryRuns', 'index.html'),
-    extractFunction(src, 'wireRunCarousel', 'index.html')], {
-    pendingDeliveryOrders: scope.pendingDeliveryOrders,
-    deliveryRuns: scope.deliveryRuns,
-    savedQuoteTotal: () => 1000,
-    quoteClientName: (q) => (q.client && q.client.name) || '',
-    invoiceNumberLabel: (q) => 'INV-' + q.id,
-    deliveryAssigneeLabel: () => 'Someone',
-    esc: (s) => String(s == null ? '' : s),
-    fmtUGX: (n) => String(n),
-    ICON_PIN: '', ICON_WARN: '', ICON_TRUCK: '', ICON_STORE: '',
-    openModal: () => {},
-    getComputedStyle: () => ({ columnGap: GAP + 'px', gap: GAP + 'px' }),
-    document: {
-      getElementById: (id) => (id === 'deliveryRunsBody' ? { set innerHTML(v) {} }
-        : id === 'dr_track' ? track : buttons[id] || null),
-    },
-  }, ['openDeliveryRuns']);
-
-  runs.openDeliveryRuns();
-  t.check(typeof handlers.dr_next === 'function' && typeof handlers.dr_prev === 'function',
-    'both controls are wired when the track is there');
-  t.check(buttons.dr_prev.disabled === true,
-    'and the one that would go nowhere starts disabled, since a control that does nothing should look like it');
-
-  handlers.dr_next();
-  t.check(track.scrollLeft === STRIDE, `one tap moves exactly one card (got ${track.scrollLeft}, expected ${STRIDE})`);
-  t.check(buttons.dr_prev.disabled === false, 'which re-enables going back');
-
-  // Knocked off a boundary, as a drag leaves it.
-  track.scrollLeft = STRIDE + 7;
-  handlers.dr_next();
-  t.check(track.scrollLeft === STRIDE * 2,
-    `a tap after a drag lands flush on the next card rather than carrying the drift (got ${track.scrollLeft}, expected ${STRIDE * 2})`);
-
-  track.scrollLeft = STRIDE * 2 - 7;
-  handlers.dr_prev();
-  t.check(track.scrollLeft === STRIDE,
-    `and going back rounds the same way (got ${track.scrollLeft}, expected ${STRIDE})`);
-
-  // Both ends are dead ends.
-  for (let i = 0; i < 10; i++) handlers.dr_next();
-  t.check(track.scrollLeft === track.scrollWidth - track.clientWidth, 'it stops at the last card');
-  t.check(buttons.dr_next.disabled === true, 'and says so');
-  handlers.dr_prev();
-  t.check(buttons.dr_next.disabled === false, 'coming back off the end re-enables it');
-}
-
-/* ---------- 10. wired onto the right panel ---------------------------- */
+/* ---------- 9. wired onto the right panel ---------------------------- */
 {
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const panel = extractFunction(src, 'orderOutPanelHTML', 'index.html');
@@ -420,50 +358,15 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
      the money to go and buy belongs beside the orders waiting for it. */
   t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
     'and the cash to buy in is on the strip, over the stages still buying');
-  t.check(/case 'runs': openDeliveryRuns\(\); break;/.test(code), "tapping the panel's act opens the runs");
-  t.check(/id="deliveryRunsBody"/.test(code) && /id="deliveryRunsModal"/.test(code),
-    'into its own modal rather than over the buying list');
-}
-
-/* ---------- the track scrolls, and stays where it is put ---------- */
-{
-  /* THE SNAP WAS THE BUG. .dr-track carries three carousels — the pickup
-     clusters, the delivery clusters, and the buying list — and all three
-     had `scroll-snap-type:x mandatory`. Measured on the real rule in the
-     running app: a card is 290px in a 704px track, so a step is 302 and
-     half a step is 151. Mandatory snapping puts the track on a snap point
-     after EVERY scroll, and anything short of 151px rounds back to the
-     card it started on —
-     which is every scrollbar drag, every soft trackpad swipe and every
-     press of an arrow key. Reported as the track springing back to the
-     start and covering the card being scrolled to. Driven in a real
-     browser: 60 -> 2, 120 -> 2, and only 200 -> 306. Driven again after,
-     on the app's own rule: 40 -> 40, 120 -> 120, and one arrow key -> 40,
-     which under the snap was 0.
-
-     `x proximity` is not the fix — measured identically, 60 -> 2 — because
-     the nearest snap point to a small scroll is still the one behind it.
-
-     `scroll-behavior:smooth` went with it: it made that correction animate
-     against the pointer mid-drag, and the buttons do not need it. */
-  const rule = /\.dr-track\{([^}]*)\}/.exec(src);
-  t.check(!!rule, 'the track has its rule');
-  const body = rule ? rule[1] : '';
-  t.check(!/scroll-snap-type/.test(body),
-    'and no snap on it — mandatory rounds every small scroll back to the card it started on, which is every drag, swipe and arrow key');
-  // Anchored, because `overscroll-behavior-x` contains the same letters.
-  t.check(!/(^|;)\s*scroll-behavior:/.test(body),
-    'nor a scroll-behavior that would animate that correction against the pointer');
-  t.check(/overflow-x:auto/.test(body), 'it still scrolls sideways, which is the whole point of it');
-  t.check(/overscroll-behavior-x:contain/.test(body),
-    'and reaching its end does not carry the gesture on to the page behind it');
-
-  /* The buttons still glide, because nav() asks for that itself rather
-     than leaning on a property on the element. Driven in a browser with
-     the element's own scroll-behavior gone: seventeen scroll events to
-     cross one card, not a jump. */
-  t.check(/track\.scrollBy\(\{ left: target - track\.scrollLeft, behavior: 'smooth' \}\)/.test(src),
-    'the nav buttons carry their own smooth, so taking it off the element did not turn them into a jump');
+  t.check(/case 'runs': openDeliveryRuns\(\); break;/.test(code), "tapping the Out lane's act opens the runs");
+  /* SIX DIALOGS, ONE SHELL. The runs no longer have a modal of their
+     own: they are a spec poured into the board's one dialog, which is
+     what makes "one 44px header, one footer, one accent" a fact about
+     the code rather than a hope about six copies of it. */
+  t.check(/const OT_DIALOGS = \{/.test(code) && /runs: otRunsSpec,/.test(code),
+    'through the one dialog every other board dialog also opens in');
+  t.check(/id="otDlg"/.test(code) && /id="ot_dlg_b"/.test(code),
+    'which has exactly one mount in the markup');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -214,13 +214,22 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
     && !/lineCost: received \? 0 :/.test(fn),
     'and the money still to be spent is the outstanding quantity, not zero');
 
-  // The Send-someone gate and the row now turn on `settled`, not `received`.
-  t.check(/r\.lines\.some\(l=> !l\.settled && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\)/.test(src),
+  // The Send-someone gate and the row still turn on `settled`, not `received`.
+  t.check(/const canSend = run\.lines\.some\(l=> !l\.settled && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\);/.test(src),
     'Send someone is still offered while a line is short');
-  t.check(/l\.settled \? 'bl-received' : \(l\.shortfall \? 'bl-short' : ''\)/.test(src),
+  /* RECEIVED IN FULL IS FINISHED BUSINESS; RECEIVED SHORT IS NOT.
+
+     The buying list is a grid of rows now and the whole control is one
+     check box, so "wears the finished-business styling" is "wears a
+     tick". A line that came back one carton short must not: it still
+     offers the check-in, because the check-in tops up what is still
+     owed, and that is the same "Receive rest" the row used to spell out
+     in a button of its own. The box is .bl-receive either way, which is
+     what carries the top-up path. */
+  t.check(/const on = !!\(l\.settled \|\| l\.received\) && !\(short > 0\);/.test(src),
     'a short row does not wear the finished-business styling');
   t.check(/still owed to/.test(src), 'and says who is still owed what');
-  t.check(/>Receive rest</.test(src),
+  t.check(/short > 0 \? `<span class="ow-dlg-short">/.test(src) && /bl-receive/.test(src),
     'with a way to record the rest arriving by hand');
 }
 

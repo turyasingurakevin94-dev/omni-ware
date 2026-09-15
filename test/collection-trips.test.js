@@ -296,11 +296,17 @@ const trip = (over) => Object.assign({
   t.check(/data-confirm/.test(bl) && /data-assign/.test(bl),
     'with Assign on an open trip and Check in on a collected one');
 
-  /* Scoped to the run header's own condition rather than searched
+  /* Scoped to the stop head's own condition rather than searched
      file-wide, where createCollectionTripFromRun's dedupe filter carries
      the same words and would satisfy the check with the button's own
-     guard deleted. */
-  t.check(/r\.lines\.some\(l=> !l\.settled && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\)/.test(src),
+     guard deleted.
+
+     The buying list is grouped by STOP now rather than by supplier, so
+     the guard moved with the head it sits on — and it is still read off
+     the LINES, not off whether the stop has any trip at all: a stop with
+     two suppliers and one trip already out still has a second supplier
+     nobody has been sent to. */
+  t.check(/const canSend = run\.lines\.some\(l=> !l\.settled && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\);/.test(src),
     'Send someone is offered only while something is not already on a list');
 
   const wv = extractFunction(shared, 'renderWorkerTrips', 'shared-worker.js');
@@ -488,7 +494,9 @@ const trip = (over) => Object.assign({
      going to finish. */
   t.check(/data-void="\$\{esc\(t\.id\)\}"/.test(src) && /Call off<\/button>/.test(src),
     'the strip offers a way to call one off');
-  t.check(/#buyingListBody \[data-void\]/.test(src) && /voidCollectionTrip\(trip\.id\)/.test(src),
+  /* The buying list lives in the board's one dialog now, so the strip's
+     acts are bound inside that body rather than a modal of its own. */
+  t.check(/#ot_dlg_b \[data-void\]/.test(src) && /voidCollectionTrip\(trip\.id\)/.test(src),
     'and it is wired to the model rather than being decoration');
   /* Confirmed first, naming what happens: somebody may already be on
      their way, and the lines returning to the list is the easy part to
@@ -579,7 +587,7 @@ const trip = (over) => Object.assign({
   // A finished or called-off trip is not stranded, it is done.
   t.check(/tripIsLive\(t\)/.test(fn) && !/t\.status !== 'confirmed'/.test(fn),
     'while a confirmed or called-off one is simply finished, not stranded');
-  t.check(/\$\{blStrandedTripsHTML\(runs\)\}/.test(src),
+  t.check(/\$\{blStrandedTripsHTML\(buyingListRuns\(orders\)\)\}/.test(src),
     'and the buying list renders them');
 
   // Run it: one trip to a supplier the board no longer mentions.
@@ -831,7 +839,11 @@ const trip = (over) => Object.assign({
   /* The button that starts it, and what it starts. Source-read, because
      the run head is built inside the buying list render. */
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-  t.check(/data-bringing="\$\{esc\(r\.supplierId\)\}"/.test(code),
+  /* On the stop head now, beside Send someone, because the round is
+     walked by place: one press makes the supplier-delivery trip for
+     every supplier at that stop. */
+  t.check(/otDlgGhost\('bringstop', 'They are delivering', ` data-stop="\$\{esc\(String\(run\.key\)\)\}"`\)/.test(code)
+       && /createCollectionTripFromRun\(run, bring \? \{ supplierDelivers:true \} : undefined\)/.test(code),
     'the run head offers "they’re delivering" beside "send someone"');
   t.check(/createCollectionTripFromRun\(run, \{supplierDelivers:true\}\)/.test(code),
     'and pressing it makes a SUPPLIER trip — an ordinary one would put the run straight back on the send-somebody list');

@@ -243,8 +243,15 @@ const save = (/__btn_s_save\.addEventListener[\s\S]*?\n\}\)\);/.exec(code) || ['
   eq(lscope.pickItemSourceLabel({ supplierId: '__stock__' }), 'Shop',
     'shelf stock is still just the shop');
 
-  /* And the admin's pickup-run line shows the door beside the place. */
-  t.check(/\$\{esc\(sup\.location\)\}\$\{sup\.shopNo \? ' · Shop ' \+ esc\(sup\.shopNo\) : ''\}/.test(src),
+  /* And the admin's buying round shows the door beside the place.
+
+     It used to be a line under a supplier's name on the buying list's
+     own card ("Katwe · Shop B12"). The round is grouped by PLACE now --
+     the stop is the place, and the suppliers are named inside it -- so
+     the door rides on the supplier's name instead: "Katwe Iron Works,
+     Shop B12". Same fact, same reason for it, on the row that now
+     carries the supplier. */
+  t.check(/Shop \$\{s\.shopNo\}/.test(src) || /`\$\{su\.name\}, Shop \$\{s\.shopNo\}`/.test(src),
     'the pickup run names the shop no. beside the place');
 }
 

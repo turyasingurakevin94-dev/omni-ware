@@ -141,13 +141,14 @@ const sharedJs = read('shared-worker.js');
 {
   const asked = [];
   const invoiced = [];
+  const picked = new Set();      // what the dialog has been told to draw
   const data = { savedQuotes: [] };
   const scope = compileScope([
     extractDeclaration(sharedJs, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
     extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
     extractFunction(src, 'ordersReadyToInvoice', 'index.html'),
-    extractFunction(src, 'invoiceAllDelivered', 'index.html'),
-    extractFunction(src, 'otInvoiceAllHTML', 'index.html'),
+    extractFunction(src, 'invoicePickedOrders', 'index.html'),
+    extractFunction(src, 'otInvoiceSpec', 'index.html'),
   ], {
     data,
     orderHasPickShortfall: (q) => !!q.short,
@@ -161,23 +162,43 @@ const sharedJs = read('shared-worker.js');
     renderSavedQuotes: () => {},
     confirm: (m) => { asked.push(m); return true; },
     toggleQuoteInvoiced: async (id) => { invoiced.push(id); const q = data.savedQuotes.find((x) => x.id === id); if (q) q.invoiced = true; },
-  }, ['invoiceAllDelivered', 'ordersReadyToInvoice', 'otInvoiceAllHTML']);
+    /* The dialog's own furniture: what it draws with, stubbed, because
+       what is under test is which orders it bills and what it says
+       before it does. */
+    otInvoicePick: picked,
+    otDlgDraw: () => {},
+    otDlgFig: () => '', otDlgGhost: () => '', otDlgPrimary: (a, label) => String(label),
+    otDlgBox: () => '', otWhen: () => '09:02', otFig: (n) => String(n),
+    otTermsLabel: () => 'on delivery',
+    quoteAgedOffBoard: (q) => false,
+  }, ['invoicePickedOrders', 'ordersReadyToInvoice', 'otInvoiceSpec']);
+  /* "Invoice all delivered" was a header button that billed everything
+     ready without saying which. It is the invoice dialog now: the
+     delivered lane opens it, the orders are PICKED there, and the one
+     oxide button names how many will be drawn. So the batch path takes
+     the ids it was given -- which is still all of them when the owner
+     presses Pick all, and that is the case exercised below. */
+  const invoiceAll = () => scope.invoicePickedOrders(scope.ordersReadyToInvoice().map((q) => q.id));
 
   const done = (over) => Object.assign({ id: 1, status: 'completed', invoiced: false, voided: false, total: 100000, client: { name: 'Musa' } }, over);
 
   (async () => {
     data.savedQuotes = [done({ id: 1, total: 851000 }), done({ id: 2, total: 149000, client: { name: 'Sarah' } }),
       done({ id: 3, short: true, client: { name: 'Joan' } }), done({ id: 4, invoiced: true }), done({ id: 5, voided: true })];
-    await scope.invoiceAllDelivered();
+    await invoiceAll();
 
     t.check(asked.length === 1, `one confirm for the whole batch, not one per order (${asked.length})`);
-    t.check(/Invoice 2 delivered orders, billing 1,000,000 UGX in total/.test(asked[0]),
+    t.check(/Draw 2 invoices, billing 1,000,000 UGX in total/.test(asked[0]),
       'naming how many and how much, because that is what is being agreed to');
     t.check(/Musa — 851,000 UGX/.test(asked[0]) && /Sarah — 149,000 UGX/.test(asked[0]),
       'and listing them, so an order that should not be in it can be seen before the tap');
     t.check(/takes the goods off the shelf, raises each supplier's bill/.test(asked[0]),
       'the confirm says what invoicing actually does, not just how many');
-    t.check(/1 order came up short/.test(asked[0]),
+    /* A short pick is named where it can be acted on -- in the dialog
+       itself, beside the rows, rather than in a confirm the owner reads
+       once and dismisses. */
+    t.check(/came up short on the pick/.test(scope.otInvoiceSpec().body)
+         && /Joan \(#3\)/.test(scope.otInvoiceSpec().body),
       'a short pick is named as left out rather than silently skipped');
 
     t.check(JSON.stringify(invoiced) === '[1,2]',
@@ -188,7 +209,7 @@ const sharedJs = read('shared-worker.js');
     // Nothing to do is said, not silently ignored.
     asked.length = 0; invoiced.length = 0;
     data.savedQuotes = [done({ id: 3, short: true })];
-    await scope.invoiceAllDelivered();
+    await invoiceAll();
     t.check(asked.length === 0 && invoiced.length === 0,
       'with nothing ready, nothing is asked and nothing moves');
 
@@ -199,23 +220,29 @@ const sharedJs = read('shared-worker.js');
       extractDeclaration(sharedJs, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
       extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
       extractFunction(src, 'ordersReadyToInvoice', 'index.html'),
-      extractFunction(src, 'invoiceAllDelivered', 'index.html'),
+      extractFunction(src, 'invoicePickedOrders', 'index.html'),
     ], {
       data, orderHasPickShortfall: () => false, savedQuoteTotal: (q) => q.total || 0,
       quoteClientName: (q) => q.client.name, fmtUGX: (n) => String(n), esc: (s) => String(s),
       toast: () => {}, renderSavedQuotes: () => {}, confirm: () => false,
+      otInvoicePick: new Set(), otDlgDraw: () => {},
       toggleQuoteInvoiced: async (id) => { invoiced.push(id); },
-    }, ['invoiceAllDelivered']);
-    await noScope.invoiceAllDelivered();
+    }, ['invoicePickedOrders', 'ordersReadyToInvoice']);
+    await noScope.invoicePickedOrders(noScope.ordersReadyToInvoice().map((q) => q.id));
     t.check(invoiced.length === 0, 'and saying no to the confirm bills nobody');
 
-    /* The button. One delivered order already carries Invoice on its own
-       row, so a header button for it would be the same tap twice. */
-    data.savedQuotes = [done({ id: 1 })];
-    t.check(scope.otInvoiceAllHTML() === '', 'the header offers nothing when a single row already carries the act');
+    /* The button. Nothing picked is nothing to draw, so the footer
+       offers no primary at all rather than one that would bill nobody;
+       pick them and it names how many it is about to draw. */
     data.savedQuotes = [done({ id: 1 }), done({ id: 2 })];
-    t.check(/data-act="invoiceall"/.test(scope.otInvoiceAllHTML()) && /\(2\)/.test(scope.otInvoiceAllHTML()),
-      'and offers it, with the count, once there are two');
+    picked.clear();
+    t.check(!/Draw/.test(scope.otInvoiceSpec().foot),
+      'the footer offers nothing to draw while nothing is picked');
+    picked.add(1); picked.add(2);
+    t.check(/Draw 2 invoices/.test(scope.otInvoiceSpec().foot),
+      'and offers it, with the count, once they are');
+    t.check(/2 picked/.test(scope.otInvoiceSpec().sub),
+      'and the header counts the pick against the whole list');
 
     /* ---------- 4. cancelling bills what came in, and nothing else ---- */
     {
