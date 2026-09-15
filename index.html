@@ -9547,12 +9547,24 @@
     .q-cf-chev{width:14px;height:14px;color:var(--ow-ink-400);flex:none;transition:transform .15s ease;}
     .q-band.open .q-cf-chev{transform:rotate(180deg);}
     .q-band > .ow-cb-f,.q-band > .ow-cb-k{display:none;}
-    .q-band.open > .ow-cb-f{display:block;border-left:0;border-top:1px solid var(--ow-rule-soft);flex:1 1 100%;min-width:0;padding:var(--ow-sp-8) 16px;}
-    .q-band.open > .ow-cb-k{display:flex;padding:var(--ow-sp-8) 16px;}
-    .q-client-cell{flex-wrap:wrap;gap:var(--ow-sp-4);}
-    .q-client-cell #q_client_name,.q-client-cell .q-client-phone{flex:1 1 100%;font-size:16px;}
-    .q-band #q_date{font-size:16px;}
-    .q-band .ow-cb-kn{flex:0 1 auto;padding:0;}
+    /* OPEN: two lines on paper under the fold. The name with the number
+       beside it; the date with the last order beside it. Orders and what
+       they owe are on the fold line already and are not said twice. */
+    .q-band.open > .ow-cb-f{display:block;border-left:0;border-top:1px solid var(--ow-rule-soft);min-width:0;
+      min-height:52px;padding:6px 16px 7px;background:var(--ow-paper);}
+    .q-band.open > .ow-cb-f-name{flex:1 1 100%;}
+    .q-band.open > .ow-cb-f-dt{flex:1 1 0;}
+    .q-band.open > .ow-cb-k{display:flex;flex:1 1 0;min-width:0;justify-content:flex-end;align-items:center;
+      min-height:52px;padding:6px 16px 7px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .q-band.open > .ow-cb-k:not(:has(.q-kn-last)){display:none;}
+    .q-band .ow-cb-l{font-size:var(--ow-t-11);margin-bottom:1px;}
+    .q-client-cell{flex-wrap:nowrap;gap:var(--ow-sp-8);align-items:baseline;}
+    .q-client-cell #q_client_name{flex:1 1 0;min-width:0;font-size:16px;font-weight:var(--ow-fw-600);}
+    .q-client-cell .q-client-phone{flex:0 0 124px;font-size:16px;text-align:right;color:var(--ow-ink-600);}
+    .q-band #q_date{font-size:16px;font-weight:var(--ow-fw-500);}
+    .q-band .ow-cb-kn{display:none;padding:0;}
+    .q-band .ow-cb-kn.q-kn-last{display:block;flex:0 1 auto;min-width:0;text-align:right;}
+    .q-band .ow-cb-kv{font-size:14px;white-space:nowrap;}
     /* The search: a 44px line. 16px in the box so the phone does not
        zoom the page when it is tapped. */
     .q-doc{background:transparent;border:0;border-radius:0;}
@@ -35936,7 +35948,7 @@ function renderClientHistoryBox(){
   }
   if(last){
     const when = savedAgoLabel(last.savedAt || last.date || '');
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
+    cells.push(`<div class="ow-cb-kn q-kn-last"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
   }
   box.innerHTML = cells.join('');
   renderQuoteRail();
