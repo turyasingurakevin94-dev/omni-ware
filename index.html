@@ -728,7 +728,22 @@
   /* The phone's parts of this screen -- its bar, the shop strip, the
      row's meta and control lines, the row steppers, the add row's fade,
      the line count on the dock -- are never drawn on the console. */
-  .q-shop-toggle,.q-phbar,.q-ph-meta,.q-ph-shop,.q-ph-x,.q-ph-hint,.q-rstp,.q-add-fade,.qp-says-n,.q-more-ph{display:none;}
+  .q-shop-toggle,.q-phbar,.q-ph-meta,.q-ph-shop,.q-ph-x,.q-ph-hint,.q-rstp,.q-add-fade,.qp-says-n,.q-more-ph,
+  .q-tabbar,.q-search-n,.q-rail-facts,.q-rail-in{display:none;}
+  .q-rail-sec .q-rail-ph{display:none;}
+  /* A search result: the name on one line with the stock beside it,
+     one line of meta under it. */
+  .q-item-search-dd .suggestion-item.q-res{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:2px 10px;
+    align-items:center;min-height:56px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .q-item-search-dd .q-res:first-child{border-top:0;}
+  .q-res > .ip-thumb,.q-res > .ip-thumb-placeholder{width:36px;height:36px;grid-row:1/3;margin:0;}
+  .q-res-nm{font-size:14px;font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .q-res mark.sr-hl{background:var(--ow-amber-soft);color:inherit;border-radius:2px;padding:0 1px;}
+  .q-res-sb{grid-column:2/4;font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .q-res-sb .ow-fig{font-size:var(--ow-t-12);color:var(--ow-ink-900);font-weight:var(--ow-fw-500);}
+  .q-res-st{justify-self:end;font-size:var(--ow-t-11);white-space:nowrap;}
+  .q-res-more{height:40px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .q-ph-ctl{display:contents;}
   .q-more-wrap{position:relative;}
   .q-more-menu{
@@ -9568,12 +9583,67 @@
     /* The search: a 44px line. 16px in the box so the phone does not
        zoom the page when it is tapped. */
     .q-doc{background:transparent;border:0;border-radius:0;}
-    .q-item-search-wrap{height:var(--ow-tap);padding:0 16px;margin:0;gap:10px;border:0;border-radius:0;
-      border-bottom:1px solid var(--ow-rule-soft);}
+    /* The search is a field of its own, with its margin and its border,
+       so the list starts clean at its column header. Typed, it says how
+       many results there are at its right. 16px in the box so the phone
+       does not zoom when it is tapped. */
+    .q-item-search-wrap{height:var(--ow-tap);margin:10px 16px 8px;padding:0 12px;gap:10px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
     .q-item-search-wrap:focus-within{border-color:var(--ow-steel-950);}
     .q-item-search-wrap > .icon{width:16px;height:16px;color:var(--ow-ink-400);}
-    #q_item_search{font-size:16px;}
+    .q-item-search-wrap:focus-within > .icon{color:var(--ow-ink-900);}
+    #q_item_search{font-size:16px;font-weight:var(--ow-fw-500);}
     .q-item-search-hint{display:none;}
+    .q-search-n{display:inline;margin-left:auto;flex:none;font-size:var(--ow-t-12);color:var(--ow-ink-400);white-space:nowrap;}
+    .q-search-n:empty{display:none;}
+    .q-item-search-dd{top:calc(100% + 6px);left:0;right:0;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      box-shadow:var(--ow-lift);max-height:none;overflow:hidden;}
+    .q-item-search-dd .ip-list-note{display:none;}
+    /* Quote / Details: two equal cells under the search, the open one
+       underlined on the rule, each with its count. */
+    .q-tabbar{display:grid;grid-template-columns:1fr 1fr;margin:0 16px;border-bottom:1px solid var(--ow-rule);}
+    .q-tab{all:unset;box-sizing:border-box;cursor:pointer;height:40px;display:flex;align-items:center;justify-content:center;gap:6px;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);border-bottom:2px solid transparent;margin-bottom:-1px;}
+    .q-tab.on{color:var(--ow-ink-900);border-bottom-color:var(--ow-steel-950);}
+    .q-tab-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-600);color:var(--ow-ink-600);background:var(--ow-steel-050);border-radius:var(--ow-r-sm);padding:1px 5px;}
+    .q-tab-dot{width:6px;height:6px;border-radius:50%;background:var(--ow-amber-ink);}
+    .q-tab-dot[hidden]{display:none;}
+    body.q-tab-details #q_itemsWrap{display:none;}
+    /* The Details pane is the console's rail, drawn only on its tab. */
+    #q_rail{display:none;padding:0;}
+    body.q-tab-details #q_rail{display:flex;}
+    #q_rail .ow-pan{margin:0;border:0;border-radius:0;}
+    .q-rail-facts{display:block;}
+    .q-facts{display:grid;grid-template-columns:repeat(3,auto) minmax(0,1fr);gap:0 18px;align-items:end;
+      padding:var(--ow-sp-8) 16px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+    .q-facts-k{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:1px;}
+    .q-facts-v{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);white-space:nowrap;}
+    .q-facts-v .ow-u{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+    .q-facts-v.ow-bad{color:var(--ow-crimson);}
+    .q-facts-v.ow-warn{color:var(--ow-amber-ink);}
+    .q-facts-ago{font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;text-align:right;}
+    .q-rail-sec{border-bottom:1px solid var(--ow-rule-soft);}
+    .q-rail-sec + .q-rail-sec:not(:empty) > .ow-pan-h{border-top:0;}
+    .q-rail-sec > .ow-pan-h{height:34px;padding:0 16px;border-bottom:0;}
+    .q-rail-sec .ow-pan-t{font-size:var(--ow-t-11);}
+    .q-rail-sec .ow-pan-n{font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);}
+    .q-rail-sec .ow-sr{height:auto;min-height:0;padding:9px 16px;border-top:1px solid var(--ow-rule-soft);border-bottom:0;}
+    .q-rail-sec .ow-pan-h + .ow-sr{border-top:0;}
+    .q-rail-sec .ow-sr-k{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+    .q-rail-sec .ow-sr-v{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+    .q-rail-sec .ow-sr-v .ow-u{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
+    .q-rail-sub{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+    .q-rail-sec .ow-mini,.q-rail-sec .q-rail-note{padding:9px 16px 11px;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;border-top:0;}
+    /* Cheaper elsewhere is a row a thumb can take; the console's note is not drawn. */
+    .q-rail-sec .q-rail-ph{display:flex;width:100%;text-decoration:none;margin:0;cursor:pointer;}
+    #q_rail_cheaper .q-rail-note{display:none;}
+    .q-rail-sec .q-rail-ph .ow-sr-v.ow-warn{color:var(--ow-amber-ink);}
+    /* A line the shelf cannot cover reads in crimson, with what to do. */
+    .q-rail-in{display:inline;margin-left:3px;color:inherit;}
+    .q-sr-short .ow-sr-v,.q-sr-short .ow-sr-v .ow-fig{color:var(--ow-crimson);}
     .q-client-usual.show{display:none;}
     #q_itemsWrap{background:var(--ow-paper);border:0;border-radius:0;}
     /* The column header: 28px, the item and its total. */
@@ -9709,8 +9779,6 @@
     .q-usual-row .q-add-icon .icon{width:14px;height:14px;}
     .q-usual-rows-more{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;
       min-height:var(--ow-tap);line-height:var(--ow-tap);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
-    /* The rail keeps its panel, under the work, with the page's gutter. */
-    #q_rail{padding:12px 16px 0;}
     /* THE DOCK: the shop strip, then one 64px line -- the figure with
        its line count, WhatsApp, Save. The ⋯ is in the bar above. */
     .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
@@ -16620,6 +16688,7 @@
             <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="q_item_search" placeholder="Add item — search name, SKU or supplier code…" autocomplete="off">
             <span class="q-item-search-hint" title="Press / to jump here; Enter adds the top result">/</span>
+            <span class="q-search-n" id="q_search_n"></span>
             <!-- searchable-select: membership in the scope that styles
                  suggestion rows everywhere else (hover, sid, variant
                  notes) -- the first cut reused the MARKUP but not the
@@ -16632,6 +16701,14 @@
                dropped: the last chip says how many. renderClientUsualBuys
                keeps its id and its render. -->
           <div class="q-client-usual" id="q_client_usual"></div>
+          <!-- THE PHONE'S TWO TABS, under the search: the quote, and the
+               details the console keeps in its rail. Each carries its
+               count; Details carries a dot when a section is warning.
+               Never drawn on the console. -->
+          <div class="q-tabbar" id="q_tabbar" role="tablist">
+            <button type="button" class="q-tab on" data-qtab="quote" role="tab" aria-selected="true">Quote <b class="q-tab-n" id="q_tab_n_quote">0</b></button>
+            <button type="button" class="q-tab" data-qtab="details" role="tab" aria-selected="false">Details <b class="q-tab-n" id="q_tab_n_details">0</b><i class="q-tab-dot" id="q_tab_dot" hidden></i></button>
+          </div>
           <div id="q_itemsWrap"></div>
         </div>
 
@@ -16649,6 +16726,9 @@
                does: a warning about the standing, or what this quote
                takes the balance to. -->
           <div class="ow-pan">
+            <!-- The phone's Details pane opens with the client's facts;
+                 the console has them on the band and never draws this. -->
+            <div class="q-rail-sec q-rail-facts" id="q_rail_facts"></div>
             <div class="q-rail-sec" id="q_rail_client"></div>
             <div class="q-rail-sec" id="q_rail_cheaper"></div>
             <div class="q-rail-sec" id="q_rail_stock"></div>
@@ -23596,12 +23676,27 @@ function matchesAllTokens(haystack, tokens){ return tokens.every(t=>haystack.inc
 function escRegExp(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 // Escapes text for safe HTML display, then wraps any occurrence of a search
 // word in <mark> so matched terms are visibly highlighted in results.
+/* THE MATCH IS FOUND IN THE TEXT, AND THE TEXT IS ESCAPED AFTER.
+
+   It used to escape first and search the escaped string -- so a search
+   for "a" matched the "a" inside the "&amp;" that escaping had just
+   written, wrapped it in a mark, and broke the entity: "Nails &
+   Fasteners" rendered on screen as "Nails &amp; Fasteners". Every
+   ampersand, quote and angle bracket in the catalogue was one keystroke
+   away from that, on every search row in the app.
+
+   So the split happens on the RAW text and every piece -- matched and
+   unmatched alike -- is escaped on its way out. Nothing the escape
+   writes can be matched, because the matching is already done. */
 function highlightTokens(text, tokens){
-  const escaped = esc(text);
+  const raw = String(text == null ? '' : text);
   const clean = (tokens||[]).map(escRegExp).filter(Boolean);
-  if(!clean.length) return escaped;
+  if(!clean.length) return esc(raw);
   const re = new RegExp('('+clean.join('|')+')', 'gi');
-  return escaped.replace(re, '<mark class="sr-hl">$1</mark>');
+  return raw.split(re).map((piece, i)=>
+    // split() with one capturing group puts the matches at odd indexes.
+    i % 2 ? `<mark class="sr-hl">${esc(piece)}</mark>` : esc(piece)
+  ).join('');
 }
 
 function fmtUGX(n){ return n===null||n===undefined||n===''? '' : Number(n).toLocaleString('en-UG') + ' UGX'; }
@@ -23787,6 +23882,13 @@ function fmtStockQty(n){
   const v = Number(n);
   if(!isFinite(v)) return '0';
   return (Math.round(v * 1e6) / 1e6).toLocaleString('en-UG', { maximumFractionDigits: 6 });
+}
+/* The day and the month, as a section's count reads it: "20 Aug". */
+function fmtDayMonth(iso){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00Z');
+  if(isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString('en-UG', {day:'numeric', month:'short', timeZone:'UTC'});
 }
 function fmtShortDate(iso){
   if(!iso) return '';
@@ -35914,7 +36016,7 @@ function renderClientHistoryBox(){
   if(!box) return;
   const name = (document.getElementById('q_client_name').value||'').trim();
   const nameLower = name.toLowerCase();
-  const clear = ()=>{ box.innerHTML=''; };
+  const clear = ()=>{ box.innerHTML=''; const f = document.getElementById('q_rail_facts'); if(f) f.innerHTML=''; };
   quotePriorOrders = 0; quoteClientOwed = null;
   if(!name){ clear(); renderClientUsualBuys(''); renderClientFold(); renderQuoteRail(); return; }
   const customer = data.customers.find(c=>(c.name||'').trim().toLowerCase()===nameLower);
@@ -35951,6 +36053,17 @@ function renderClientHistoryBox(){
     cells.push(`<div class="ow-cb-kn q-kn-last"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
   }
   box.innerHTML = cells.join('');
+  /* The same facts, as the phone's Details pane opens: orders, owed,
+     the last order, and how long ago. */
+  const facts = document.getElementById('q_rail_facts');
+  if(facts){
+    const unit = (v)=> esc(fmtUGX(v)).replace(/ UGX$/, ' <span class="ow-u">UGX</span>');
+    facts.innerHTML = `<div class="q-facts">
+      <span><span class="q-facts-k">Orders</span><span class="q-facts-v">${priorOrders}</span></span>
+      ${standing || customer ? `<span><span class="q-facts-k">Owed now</span><span class="q-facts-v${standing ? (band==='severe' ? ' ow-bad' : band==='late' ? ' ow-warn' : '') : ''}">${unit(standing ? standing.owed : 0)}</span></span>` : ''}
+      ${last ? `<span><span class="q-facts-k">Last order</span><span class="q-facts-v">${unit(savedQuoteTotal(last))}</span></span><span class="q-facts-ago">${esc(savedAgoLabel(last.savedAt || last.date || ''))}</span>` : ''}
+    </div>`;
+  }
   renderQuoteRail();
 }
 /* THE PHONE'S ONE LINE FOR THE CLIENT. Name, number, and how established
@@ -35966,8 +36079,10 @@ function renderClientFold(){
   nameEl.classList.toggle('q-cf-empty', !name);
   document.getElementById('q_cf_phone').textContent = phone;
   const n = quotePriorOrders;
+  /* The DATE, because orders and what they owe are cells of the Details
+     pane now and a fact said twice is a fact nobody reads. */
   document.getElementById('q_cf_meta').textContent = name
-    ? (n ? `${n} order${n===1?'':'s'}${quoteClientOwed != null ? ` · owes ${Number(quoteClientOwed).toLocaleString('en-UG')}` : ''}` : fmtShortDate(document.getElementById('q_date').value || todayISO()))
+    ? fmtDayMonth(document.getElementById('q_date').value || todayISO())
     : '';
 }
 document.getElementById('q_client_fold').addEventListener('click', ()=>{
@@ -36411,6 +36526,22 @@ function ipComputeQty(rawQty, unitMode, packQty){
    So suggestedSellingPrice is asked directly (it returns null when no
    rule exists), and the row says "cost X · no markup rule" in caution
    colour, which is a prompt to fix the product rather than a lie. */
+/* WHAT A SUGGESTION SAYS ABOUT A PRICE, in parts, so the two doors that
+   show it can lay it out differently without deciding it differently.
+   The picker's list wants one right-aligned note; the quote's own
+   dropdown wants the figure inside a line of meta. The RULE for which
+   tier is asked, and whether there is a sell price at all, is decided
+   here once -- it is the thing that must not drift. */
+function suggestionPriceParts(p, variantIdx){
+  const best = rankedPriceRows(p.id, variantIdx)[0];
+  if(!best) return { none: true };
+  const kind = best.retail!=null ? 'retail' : 'wholesale';
+  const cost = best.retail!=null ? best.retail : best.wholesale;
+  const sell = suggestedSellingPrice(p, cost, kind, variantIdx, Number(best.packQty)||0);
+  return sell==null
+    ? { kind, unit: best.unit, figure: Math.round(cost), isSell: false }
+    : { kind, unit: best.unit, figure: Math.round(sell), isSell: true };
+}
 function ipSuggestionPriceNote(p, variantIdx){
   const best = rankedPriceRows(p.id, variantIdx)[0];
   if(!best) return '<span class="ip-price-none">No price on file</span>';
@@ -36422,14 +36553,11 @@ function ipSuggestionPriceNote(p, variantIdx){
      for the tier it is actually sold at. A supplier with a retail price
      is asked the retail rule; one who sells only whole packs is asked
      the wholesale rule against the wholesale cost. */
-  const kind = best.retail!=null ? 'retail' : 'wholesale';
-  const cost = best.retail!=null ? best.retail : best.wholesale;
-  const packQty = Number(best.packQty)||0;
-  const sell = suggestedSellingPrice(p, cost, kind, variantIdx, packQty);
-  if(sell==null){
-    return `<span class="ip-price-norule" title="No ${kind} markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(cost, best.unit)} · no markup rule</span>`;
+  const parts = suggestionPriceParts(p, variantIdx);
+  if(!parts.isSell){
+    return `<span class="ip-price-norule" title="No ${parts.kind} markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(parts.figure, parts.unit)} · no markup rule</span>`;
   }
-  return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>`;
+  return `<span class="ip-price-sell">${fmtUGXPerUnit(parts.figure, parts.unit)}<i>sell</i></span>`;
 }
 /* "14 in stock" / "out of stock", said where the choosing happens --
    whether the shelf can cover it decides what the admin promises.
@@ -36437,11 +36565,21 @@ function ipSuggestionPriceNote(p, variantIdx){
    nobody has ever counted steers a rep away from something that may be
    standing in the yard, on the strength of a fact the books do not
    have. */
-function ipSuggestionStockNote(p, variantIdx){
+/* The same three readings, in parts: never counted, counted and empty,
+   counted and holding. The words are decided here; who wears them as a
+   caption and who as a pill is the caller's business. */
+function suggestionStockParts(p, variantIdx){
   const s = stockOnHand(p.id, variantIdx==null ? null : variantIdx);
-  if(!s.counted) return '<span class="ip-stock none" title="This line has never been counted, which is not the same as having none">not counted</span>';
-  return s.qty > 0 ? `<span class="ip-stock">${s.qty} in stock</span>`
-                   : '<span class="ip-stock none">out of stock</span>';
+  if(!s.counted) return { reading: 'none', text: 'not counted',
+    title: 'This line has never been counted, which is not the same as having none' };
+  return s.qty > 0 ? { reading: 'good', text: `${s.qty} in stock`, title: '' }
+                   : { reading: 'bad', text: 'out of stock', title: '' };
+}
+function ipSuggestionStockNote(p, variantIdx){
+  const st = suggestionStockParts(p, variantIdx);
+  return st.reading === 'good'
+    ? `<span class="ip-stock">${esc(st.text)}</span>`
+    : `<span class="ip-stock none"${st.title ? ` title="${esc(st.title)}"` : ''}>${esc(st.text)}</span>`;
 }
 function ipRenderList(query){
   const tokens = searchTokens(query);
@@ -36524,27 +36662,51 @@ function renderQuoteItemSearchDd(query){
   const dd = document.getElementById('q_item_search_dd');
   if(!dd) return;
   const q = String(query||'').trim();
-  if(!q){ dd.style.display='none'; dd.innerHTML=''; return; }
-  const entries = buildProductSuggestionEntries(searchTokens(q)).slice(0, 8);
-  if(!entries.length){
+  const nEl = document.getElementById('q_search_n');
+  if(!q){ dd.style.display='none'; dd.innerHTML=''; if(nEl) nEl.textContent=''; return; }
+  const tokens = searchTokens(q);
+  const all = buildProductSuggestionEntries(tokens);
+  if(nEl) nEl.textContent = `${all.length} result${all.length===1?'':'s'}`;
+  if(!all.length){
     // The same door, on the bar this page's own comment calls the primary
     // way in on a call. Hooking only the modal would fit half a door.
     dd.innerHTML = '<div class="suggestion-empty">No matching products.</div>' + sourcingCaptureBlockHTML(q);
     dd.style.display = 'block';
     return;
   }
-  const tokens = searchTokens(q);
+  /* A RESULT IS TWO LINES: the name, whole, with the stock said in a
+     pill at its right; under it one line of what it costs or sells for,
+     the rule if there is none, the category and the code. Five wrapping
+     lines with the SKU first was the shipped shape, and it read as a
+     table that had fallen over. The phone shows five, the console eight,
+     and the rest are counted, never dropped. */
+  const max = window.matchMedia('(max-width:820px)').matches ? 5 : 8;
+  const entries = all.slice(0, max);
+  const n = (v)=> Number(v).toLocaleString('en-UG');
   dd.innerHTML = entries.map(({p, variantIdx})=>{
     const idLabel = variantIdx==null ? p.id
       : (p.variants[variantIdx].sku || `${p.id}-${variantIdx+1}`);
-    return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}"${variantIdx==null?'':` data-vidx="${variantIdx}"`}>
+    /* Both readings come from the parts the picker's own notes are built
+       from -- one truth, two doors -- and are laid out for this row. */
+    const pp = suggestionPriceParts(p, variantIdx);
+    const fig = pp.none ? 'No price on file'
+      : `${pp.isSell ? 'sell ' : ''}<b class="ow-fig">${n(pp.figure)}</b> / ${esc(pp.unit||'unit')}`;
+    const rule = pp.none || pp.isSell ? '' : 'no markup rule';
+    const st = suggestionStockParts(p, variantIdx);
+    const pill = `<span class="q-res-st q-margin-pill${st.reading==='good' ? ' good' : st.reading==='bad' ? ' danger' : ''}"${
+      st.title ? ` title="${esc(st.title)}"` : ''}>${esc(st.text)}</span>`;
+    const meta = [fig, rule, p.category ? highlightTokens(p.category, tokens) : '',
+      variantIdx==null ? '' : highlightTokens(variantLabel(p.variants[variantIdx].combo), tokens),
+      highlightTokens(idLabel, tokens)].filter(Boolean).join(' · ');
+    return `<div class="suggestion-item ip-item q-res" data-id="${esc(p.id)}"${variantIdx==null?'':` data-vidx="${variantIdx}"`}>
       ${ipThumbHTML(p, variantIdx)}
-      <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)} ${ipSuggestionStockNote(p, variantIdx)}
-      ${variantIdx==null?'':`<div class="suggestion-variant-note">${highlightTokens(variantLabel(p.variants[variantIdx].combo), tokens)}</div>`}</div>
-      <div class="ip-item-price">${ipSuggestionPriceNote(p, variantIdx)}</div>
+      <span class="q-res-nm">${highlightTokens(p.name, tokens)}</span>${pill}
+      <span class="q-res-sb">${meta}</span>
     </div>`;
   }).join('')
-  + `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`;
+  + (all.length > max
+      ? `<div class="q-res-more">${all.length - max} more · keep typing to narrow</div>`
+      : `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`);
   dd.style.display = 'block';
 }
 function quoteItemSearchPick(sel){
@@ -37173,6 +37335,22 @@ function renderIpStage(){
   });
 }
 
+/* THE PHONE'S TWO TABS. The quote is the list; Details is what the
+   console keeps in its rail. Kept for the session; adding a line brings
+   the quote back, because that is where the line went. */
+let quoteTab = 'quote', quoteLastCount = -1;
+function setQuoteTab(t){
+  quoteTab = t === 'details' ? 'details' : 'quote';
+  document.body.classList.toggle('q-tab-details', quoteTab === 'details');
+  document.querySelectorAll('#q_tabbar .q-tab').forEach(b=>{
+    const on = b.dataset.qtab === quoteTab;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  try{ sessionStorage.setItem('q_tab', quoteTab); }catch(e){}
+}
+document.querySelectorAll('#q_tabbar .q-tab').forEach(b=> b.addEventListener('click', ()=> setQuoteTab(b.dataset.qtab)));
+try{ setQuoteTab(sessionStorage.getItem('q_tab') || 'quote'); }catch(e){ setQuoteTab('quote'); }
 /* Which line's controls are open on the phone, kept across redraws. */
 let quoteOpenLine = null;
 document.addEventListener('click', (e)=>{
@@ -37185,6 +37363,10 @@ function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
   const items = data.quote.items;
+  const tabN = document.getElementById('q_tab_n_quote');
+  if(tabN) tabN.textContent = String(items.length);
+  if(quoteLastCount >= 0 && items.length > quoteLastCount) setQuoteTab('quote');
+  quoteLastCount = items.length;
   const supplierDisplayLabel = (selectedId, item)=> selectedId==='__stock__'
     ? `Our stock (${getStockQty(item.productId, item.variantIdx)})`
     : supplierName(selectedId);
@@ -37524,6 +37706,9 @@ function renderQuoteRail(){
   const stockEl = document.getElementById('q_rail_stock');
   const lastEl = document.getElementById('q_rail_last');
   if(!clientEl || !cheaperEl || !withEl || !stockEl || !lastEl) return;
+  /* Whether any section is warning -- a cheaper supplier, a line the
+     shelf cannot cover -- for the dot on the phone's Details tab. */
+  let railWarn = false;
   ensureQuote();
   const items = data.quote.items || [];
   const n = (v)=> Number(v).toLocaleString('en-UG');
@@ -37574,7 +37759,9 @@ function renderQuoteRail(){
     if(!items.length) body = `<p class="ow-mini">Add a line and the price book says who else sells it, at this quantity.</p>`;
     else if(!bought.length) body = `<p class="ow-mini">Every line is from the shelf — nothing to buy in.</p>`;
     else if(!cheaper.length) body = `<p class="ow-mini">Every bought-in line is already at the cheapest supplier that has it, at its quantity.</p>`;
-    else body = cheaper.map(c=> `<div class="q-rail-note"><b>Line ${c.idx+1} · ${esc(c.it.productName)}</b><br>${esc(supplierName(c.supplierId))} at <span class="ow-fig">${n(c.bestPrice)}</span>/${esc(c.it.unit||'unit')}, <span class="ow-fig">${n(c.less)}</span> less. On ${n(c.qty)} that is <span class="ow-fig">${n(c.kept)} UGX</span> kept.<div><button type="button" class="q-rail-act" data-line="${c.it.lineId}" data-supplier="${esc(c.supplierId)}" data-price="${c.bestPrice}">Switch line ${c.idx+1} to ${esc(supplierName(c.supplierId))}</button></div></div>`).join('');
+    else body = cheaper.map(c=> `<button type="button" class="ow-sr q-rail-act q-rail-ph" data-line="${c.it.lineId}" data-supplier="${esc(c.supplierId)}" data-price="${c.bestPrice}" title="Switch line ${c.idx+1} to ${esc(supplierName(c.supplierId))}"><span class="ow-sr-k">${esc(c.it.productName)} <span class="q-rail-sub">· ${esc(supplierName(c.supplierId))}</span></span><span class="ow-sr-v ow-warn">&minus;${n(c.less)} <span class="ow-u">/ ${esc(c.it.unit||'unit')}</span></span></button>`).join('')
+      + cheaper.map(c=> `<div class="q-rail-note"><b>Line ${c.idx+1} · ${esc(c.it.productName)}</b><br>${esc(supplierName(c.supplierId))} at <span class="ow-fig">${n(c.bestPrice)}</span>/${esc(c.it.unit||'unit')}, <span class="ow-fig">${n(c.less)}</span> less. On ${n(c.qty)} that is <span class="ow-fig">${n(c.kept)} UGX</span> kept.<div><button type="button" class="q-rail-act" data-line="${c.it.lineId}" data-supplier="${esc(c.supplierId)}" data-price="${c.bestPrice}">Switch line ${c.idx+1} to ${esc(supplierName(c.supplierId))}</button></div></div>`).join('');
+    if(cheaper.length) railWarn = true;
     cheaperEl.innerHTML = head + body;
     /* The switch is the row picker's own move -- setLineSupplier, then
        the line re-priced at that supplier's figure for this quantity,
@@ -37613,7 +37800,7 @@ function renderQuoteRail(){
       rows.length ? `<span class="ow-pan-n">${rows.length}</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and what you have written down about it sits beside it.</p>`;
-    else if(!rows.length) body = `<p class="ow-mini">Nothing is written down about these lines &mdash; What goes with what is where it is written, and it is read here.</p>`;
+    else if(!rows.length) body = `<p class="ow-mini">Nothing written down for these lines yet.</p>`;
     else body = rows.slice(0, 4).map(r=>{
       const c = r.c;
       const say = c.verbId === 'needs' ? 'cannot be used without' : c.verbId === 'part' ? 'is part of the same job as' : 'usually goes with';
@@ -37677,8 +37864,9 @@ function renderQuoteRail(){
         const short = it.supplierId==='__stock__' && shelf < qty;
         return { it, qty, shelf, short };
       });
-      body = rows.map(r=> `<div class="ow-sr"><span class="ow-sr-k" title="${esc(r.it.productName)}">${esc(r.it.productName)}</span><span class="ow-sr-v">${n(r.qty)} / ${r.short ? '<span class="ow-fig ow-warn">'+n(r.shelf)+'</span>' : n(r.shelf)}</span></div>`).join('');
+      body = rows.map(r=> `<div class="ow-sr${r.short ? ' q-sr-short' : ''}"><span class="ow-sr-k" title="${esc(r.it.productName)}">${esc(r.it.productName)}</span><span class="ow-sr-v">${n(r.qty)} / ${r.short ? '<span class="ow-fig ow-warn">'+n(r.shelf)+'</span><span class="ow-u q-rail-in">order in</span>' : n(r.shelf)}</span></div>`).join('');
       const shorts = rows.filter(r=>r.short);
+      if(shorts.length) railWarn = true;
       if(shorts.length) body += `<p class="ow-mini">${shorts.map(r=> esc(r.it.productName)+' is <span class="ow-fig ow-warn">'+n(r.qty-r.shelf)+' short</span> on the shelf').join('; ')}. Order the balance with this quote or the delivery splits.</p>`;
       /* A line the shelf cannot cover, and something the owner has
          already written down as its swap. Offered as a swap of the
@@ -37729,7 +37917,7 @@ function renderQuoteRail(){
     if(!last){ lastEl.innerHTML = ''; }
     else {
       const lines = last.items || [];
-      const head = `<div class="ow-pan-h"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">${esc(fmtShortDate(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
+      const head = `<div class="ow-pan-h"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">${esc(fmtDayMonth(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
       const body = lines.slice(0, 3).map(it=>{
         const q2 = quoteLineQtyText(it);
         return `<div class="ow-sr"><span class="ow-sr-k" title="${esc(it.productName)}">${esc(it.productName)} · ${esc(q2.text)}</span><span class="ow-sr-v">${n((Number(it.qty)||0) * quoteItemSellPrice(it))}</span></div>`;
@@ -37737,6 +37925,13 @@ function renderQuoteRail(){
       lastEl.innerHTML = head + body;
     }
   }
+
+  /* The phone's Details tab: how many sections have something to say,
+     and whether any of it is a warning. */
+  const tabN = document.getElementById('q_tab_n_details');
+  if(tabN) tabN.textContent = String([clientEl, cheaperEl, stockEl, withEl, lastEl].filter(el=> el.innerHTML.trim()).length);
+  const dot = document.getElementById('q_tab_dot');
+  if(dot) dot.hidden = !railWarn;
 }
 
 /* THE NUMBER THE REP SAYS OUT LOUD.

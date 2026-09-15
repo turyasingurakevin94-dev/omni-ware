@@ -53,6 +53,10 @@ const src = read('index.html');
     extractFunction(src, 'rankedPriceRows', 'index.html'),
     extractFunction(src, 'effectiveMarkupRule', 'index.html'),
     extractFunction(src, 'suggestedSellingPrice', 'index.html'),
+    /* The two readings both notes are built from -- the tier the price is
+       asked at, and which of the three stock answers is true. */
+    extractFunction(src, 'suggestionPriceParts', 'index.html'),
+    extractFunction(src, 'suggestionStockParts', 'index.html'),
     extractFunction(src, 'stockKey', 'index.html'),
     extractFunction(src, 'stockOnHand', 'index.html'),
   extractFunction(src, 'getStockQty', 'index.html'),
@@ -60,6 +64,7 @@ const src = read('index.html');
     extractFunction(src, 'ipSuggestionStockNote', 'index.html'),
   ], {
     data,
+    esc: (v) => String(v),
     supplierName: () => 'Shafik',
     fmtUGXPerUnit: (n, u) => `${Number(n).toLocaleString('en-US')} UGX/${u || 'unit'}`,
   }, ['ipSuggestionPriceNote', 'ipSuggestionStockNote', 'getStockQty']);
@@ -127,9 +132,18 @@ const src = read('index.html');
   t.check(/q_item_search/.test(panel),
     'above the items, inside the document');
   const wiring = extractFunction(src, 'renderQuoteItemSearchDd', 'index.html');
-  t.check(/buildProductSuggestionEntries\(searchTokens\(q\)\)/.test(wiring)
-    && /ipSuggestionPriceNote/.test(wiring),
-    'its dropdown reuses the picker’s entries and the same sell-price note — one truth, two doors');
+  /* The two doors lay the same facts out differently -- the picker's list
+     wants one right-aligned note, this row wants the figure inside a line
+     of meta -- so what they share is the DECISION, not the markup:
+     suggestionPriceParts picks the tier and says whether there is a sell
+     price at all, suggestionStockParts picks one of the three readings.
+     Both notes in the picker are built from the same two. */
+  t.check(/buildProductSuggestionEntries\(tokens\)/.test(wiring)
+    && /suggestionPriceParts\(p, variantIdx\)/.test(wiring) && /suggestionStockParts\(p, variantIdx\)/.test(wiring),
+    'its dropdown reuses the picker’s entries and the same price and stock readings — one truth, two doors');
+  t.check(/suggestionPriceParts\(p, variantIdx\)/.test(extractFunction(src, 'ipSuggestionPriceNote', 'index.html'))
+    && /suggestionStockParts\(p, variantIdx\)/.test(extractFunction(src, 'ipSuggestionStockNote', 'index.html')),
+    'and the picker’s own notes are built from those same readings, so neither door can drift');
   /* Both halves of the Enter path: WHERE the top result comes from and
      what is done with it. Pinning only the pick call let a mutant null
      the querySelector and keep every assertion green while Enter did
@@ -271,8 +285,44 @@ const src = read('index.html');
      tapping one puts a line on it, so it belongs where the lines are.
      The cut is counted on the last chip rather than scrolled off. */
   const doc = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
-  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>\s*<div id="q_itemsWrap"/.test(doc),
+  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
     'the usual-buys chips sit inside the document, between the search and the lines');
+  /* THE PHONE'S TWO TABS sit between them: the quote, and the details the
+     console keeps in its rail. The chips are still above the lines; the
+     tab bar is not drawn at all on the console. */
+  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-tabbar" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
+    'with the phone’s Quote / Details tabs between the chips and the lines');
+  const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>/.exec(src) || [''])[0];
+  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 2 && /data-qtab="quote"/.test(tabs) && /data-qtab="details"/.test(tabs),
+    'two cells, one per pane');
+  t.check(/id="q_tab_n_quote"/.test(tabs) && /id="q_tab_n_details"/.test(tabs) && /id="q_tab_dot"/.test(tabs),
+    'each carrying its count, and Details a dot for a section that is warning');
+  t.check(/\.q-tabbar\{display:none;\}/.test(src) || /,\s*\n?\s*\.q-tabbar,/.test(src),
+    'and none of it is drawn on the console');
+  /* The rail's panels are the Details pane and nothing else is left in
+     the phone's body: #q_rail is hidden until that tab is chosen. */
+  t.check(/#q_rail\{display:none;padding:0;\}/.test(src) && /body\.q-tab-details #q_rail\{display:flex;\}/.test(src),
+    'the rail is the Details pane, drawn only on its tab');
+  t.check(/body\.q-tab-details #q_itemsWrap\{display:none;\}/.test(src),
+    'and the list is not drawn behind it');
+  /* THE SEARCH IS A FIELD OF ITS OWN on the phone -- its own margin and
+     border -- so the list starts clean at its column header. */
+  t.check(/\.q-item-search-wrap\{height:var\(--ow-tap\);margin:10px 16px 8px;[^}]*border:1px solid var\(--ow-rule\);border-radius:var\(--ow-r-lg\);\}/.test(src),
+    'the search is a field with its own margin and border, not a hairline row in the list');
+  const dd = extractFunction(src, 'renderQuoteItemSearchDd', 'index.html');
+  t.check(/id="q_search_n"/.test(src) && /nEl\.textContent = `\$\{all\.length\} result\$\{all\.length===1\?'':'s'\}`/.test(dd),
+    'and says how many results there are as it is typed');
+  /* A RESULT IS TWO LINES: the name whole, with the stock in a pill; one
+     line of meta under it. It was five wrapping lines with the SKU
+     leading, which read as a table that had fallen over. */
+  t.check(/<span class="q-res-nm">\$\{highlightTokens\(p\.name, tokens\)\}<\/span>\$\{pill\}/.test(dd)
+    && /<span class="q-res-sb">\$\{meta\}<\/span>/.test(dd),
+    'a result is one name line and one meta line, never five');
+  t.check(/\.q-res-nm\{[^}]*overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/.test(src)
+    && /\.q-res-sb\{[^}]*overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/.test(src),
+    'and neither of them ever wraps');
+  t.check(/\$\{all\.length - max\} more · keep typing to narrow/.test(dd),
+    'the results it does not show are counted, never dropped');
   const fit = extractFunction(src, 'fitUsualChips', 'index.html');
   t.check(/more\.textContent = `\+\$\{cut\}`;/.test(fit),
     'and the chips that do not fit the line are counted, never silently cut');

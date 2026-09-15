@@ -277,6 +277,31 @@ const buttons = (html) => (html.match(/<button /g) || []).length;
     'and every one of them is a question the books can actually answer');
 }
 
+/* ---------- 10b. the highlight cannot break what escaping wrote ------- *
+ * Reported from the quote's own search: typing "a" turned "Nails &
+ * Fasteners" into "Nails &amp; Fasteners" on screen. highlightTokens
+ * escaped FIRST and then searched the escaped string, so the "a" inside
+ * "&amp;" was a match, got wrapped in a mark, and the entity was split
+ * down the middle. Every ampersand in the catalogue was one keystroke
+ * from that, on every search row in the app.
+ */
+{
+  const hl = extractFunction(read('index.html'), 'highlightTokens', 'index.html');
+  const scope = compileScope([hl], {
+    esc: (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    escRegExp: (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  }, ['highlightTokens']);
+  const out = scope.highlightTokens('Nails & Fasteners', ['a']);
+  t.check(out.includes('&amp;') && !/&<mark/.test(out),
+    `an ampersand survives a match on "a" (${out})`);
+  t.check((out.match(/<mark class="sr-hl">a<\/mark>/g) || []).length === 2,
+    'while both real "a"s in the words are still marked');
+  t.check(scope.highlightTokens('3" pipe', ['pipe']) === '3&quot; pipe'.replace('pipe', '<mark class="sr-hl">pipe</mark>'),
+    'and a quote in a product name is escaped once, not searched');
+  t.check(scope.highlightTokens('Nails & Fasteners', []) === 'Nails &amp; Fasteners',
+    'with no tokens it is simply the escaped text');
+}
+
 /* ---------- 11. the match highlight is legible on both grounds ---------- */
 /*
  * A DEFECT FOUND BY LOOKING AT THE PHONE, AND IT WAS ON THE COMPUTER
