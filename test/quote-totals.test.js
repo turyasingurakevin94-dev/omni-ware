@@ -140,7 +140,8 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
 
 /* ---------- 4. the client's figure leads ----------------------------- */
 {
-  t.check(/Client pays<\/div>/.test(bar), 'the summary opens with the client’s figure');
+  /* The label carries the line count on the phone, in a span the console does not draw. */
+  t.check(/Client pays<span class="qp-says-n">/.test(bar), 'the summary opens with the client’s figure');
   /* pays = grandSell + charges. The bar is read out mid-call, so it is
      the one place the figure must be the whole bill. */
   t.check(/qp-says-value\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),

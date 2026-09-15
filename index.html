@@ -725,8 +725,11 @@
      gets an answer in words. */
   .qbar-save.q-save-off{background:var(--ow-steel-100);color:var(--ow-ink-600);}
   .qbar-save.q-save-off:hover{filter:none;}
-  /* The phone's disclosure of the shop side; never drawn on the console. */
-  .q-shop-toggle{display:none;}
+  /* The phone's parts of this screen -- its bar, the shop strip, the
+     row's meta and control lines, the row steppers, the add row's fade,
+     the line count on the dock -- are never drawn on the console. */
+  .q-shop-toggle,.q-phbar,.q-ph-meta,.q-ph-shop,.q-ph-x,.q-ph-hint,.q-rstp,.q-add-fade,.qp-says-n,.q-more-ph{display:none;}
+  .q-ph-ctl{display:contents;}
   .q-more-wrap{position:relative;}
   .q-more-menu{
     position:absolute;bottom:calc(100% + 6px);right:0;min-width:180px;z-index:50;
@@ -6574,7 +6577,7 @@
   /* The phone's parts of the stage -- steppers, the price helper, the
      check, the line's figure and the keep disclosure -- are not drawn
      on the console, whose two columns already say these things. */
-  .q-stp,.q-price-help,.q-sc-check,.q-stage-sum,.q-stage-keep,.q-stage-keep-v{display:none;}
+  .q-stp,.q-price-help,.q-sc-check,.q-stage-sum,.q-stage-x{display:none;}
   .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .q-stage-thumb-placeholder{
     width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
@@ -6677,74 +6680,95 @@
     .q-stage-head .q-stage-summary{flex:1 1 100%;}
     .q-stage-name{align-self:flex-start;}
   }
-  /* THE ITEM STAGE ON A PHONE: a sheet, and the three decisions in a
-     column -- how many, at what price, from whom -- each a thumb tall,
-     then what the line comes to and the one filled commit. The shop's
-     side (buy prices, what is kept) sits behind a tap, as it does on
-     the page under the sheet. */
+  /* THE ITEM STAGE ON A PHONE, CONDENSED: a sheet with the three
+     decisions in a column -- how many, at what price, from whom --
+     the recommended prices as one strip, what the line comes to and
+     what is kept in one line, and the one filled commit, all above the
+     fold at 844px. The buy prices are on the rows: the sheet is the
+     shop's own, and the phone is turned away for it. */
   @media (max-width:820px){
-    .ip-back{font-size:var(--ow-t-13);min-height:var(--ow-tap);margin-bottom:0;}
-    .q-stage-head{border-bottom:0;margin-bottom:0;padding-bottom:0;gap:2px 12px;}
+    #itemPickerModal .modal-head{display:none;}
+    #itemPickerModal .modal-body{padding:8px 16px calc(14px + env(safe-area-inset-bottom));}
+    #ip_stage_view .ip-back{display:none;}
+    .q-stage-head{border-bottom:0;margin-bottom:0;padding-bottom:0;gap:2px 10px;flex-wrap:wrap;}
     .q-stage-head .q-stage-thumb,.q-stage-head .q-stage-thumb-placeholder{display:none;}
-    .q-stage-name{font-size:18px;font-weight:var(--ow-fw-700);line-height:1.25;padding-top:0;flex:1 1 100%;}
-    .q-stage-head .q-stage-summary{background:none;padding:0;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.4;}
-    .q-qty-row{background:none;border:0;border-radius:0;padding:0;margin:0;flex-direction:column;align-items:stretch;gap:0;}
-    .q-qty-field{margin-top:14px;flex:1 1 auto;}
+    .q-stage-name{font-size:17px;font-weight:var(--ow-fw-700);line-height:1.2;padding-top:0;flex:1 1 0;min-width:0;}
+    .q-stage-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      width:32px;height:32px;margin:-6px 0 0;flex:none;color:var(--ow-ink-400);}
+    .q-stage-x .icon{width:16px;height:16px;}
+    .q-stage-head .q-stage-summary{flex:1 1 100%;background:none;padding:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;margin-top:2px;}
+    .q-stage-summary div{display:inline;}
+    .q-stage-summary div + div{margin:0;}
+    .q-stage-summary div + div::before{content:" · ";}
+    .q-stage-summary .q-sum-k{display:none;}
+    .q-qty-row{background:none;border:0;border-radius:0;padding:0;margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end;}
+    .q-qty-field{margin-top:12px;flex:none;min-width:0;}
     .q-qty-field label{font-size:var(--ow-t-11);letter-spacing:.09em;font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
-    .q-qty-input-group{gap:var(--ow-sp-8);align-items:center;width:100%;min-width:0;}
+    .q-qty-input-group{gap:var(--ow-sp-6);align-items:center;width:auto;min-width:0;}
     .q-stp{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
-      width:var(--ow-tap);height:var(--ow-tap);flex:none;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
-      font-size:20px;color:var(--ow-ink-900);background:var(--ow-paper);}
-    .q-qty-input-group input{flex:1 1 0;min-width:0;width:0;height:48px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
-      text-align:center;font-size:18px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+      width:40px;height:var(--ow-tap);flex:none;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:18px;color:var(--ow-ink-900);background:var(--ow-paper);}
+    .q-qty-input-group input{flex:none;width:42px;min-width:0;height:var(--ow-tap);margin:0;padding:0 2px 0 6px;
+      border:1px solid var(--ow-rule);border-right:0;border-radius:var(--ow-r-lg) 0 0 var(--ow-r-lg);
+      text-align:right;font-size:17px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
     .q-qty-input-group input:focus{outline:0;border-color:var(--ow-steel-950);}
-    .q-qty-input-group select{height:48px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);font-size:var(--ow-t-13);
-      color:var(--ow-ink-600);flex:0 1 auto;min-width:0;max-width:110px;}
-    .q-qty-field:last-child > input{height:48px;padding:0 12px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
-      font-size:18px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .q-qty-input-group select{height:var(--ow-tap);width:50px;flex:none;min-width:0;padding:0 0 0 2px;
+      border:1px solid var(--ow-rule);border-left:0;border-radius:0 var(--ow-r-lg) var(--ow-r-lg) 0;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);background:var(--ow-paper);}
+    .q-qty-field:last-child > input{height:var(--ow-tap);padding:0 12px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:17px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
     .q-qty-field:last-child > input:focus{outline:0;border-color:var(--ow-steel-950);}
-    .q-price-help{display:block;margin:6px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;}
-    .q-section-label{font-size:var(--ow-t-11);letter-spacing:.09em;margin:14px 0 6px;color:var(--ow-ink-600);}
-    .q-stage-columns{display:flex;flex-direction:column;gap:0;margin-bottom:0;}
-    /* Who to buy from: rows, the chosen one ruled in steel with a check;
-       the buy prices behind the keep disclosure. */
-    .q-supplier-cards{gap:6px;max-height:none;overflow:visible;padding-right:0;}
-    #ip_stage_view .q-supplier-card{padding:11px 12px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);gap:10px;min-height:var(--ow-tap);
-      background:var(--ow-paper);box-shadow:none;}
+    .q-section-label{font-size:var(--ow-t-11);letter-spacing:.09em;margin:12px 0 5px;color:var(--ow-ink-600);}
+    /* stretch, not start: the console's grid starts its columns, and a
+       started column shrink-wraps to its widest row and runs off the phone. */
+    .q-stage-columns{display:flex;flex-direction:column;align-items:stretch;gap:0;margin-bottom:0;}
+    /* Recommended: one strip, a cell a price, the one in use filled. */
+    .q-rec-cards{flex-direction:row;gap:0;margin:0;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .q-rec-card{flex:1 1 0;min-width:0;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 12px;
+      border:0;border-radius:0;box-shadow:none;background:var(--ow-paper);}
+    .q-rec-card + .q-rec-card{border-left:1px solid var(--ow-rule);}
+    .q-rec-card.selected,.q-rec-card.q-rec-under{background:var(--ow-steel-050);box-shadow:none;border-color:var(--ow-rule);}
+    .q-rec-card.selected .q-rec-label,.q-rec-card.selected .q-rec-icon{color:var(--ow-ink-600);}
+    .q-rec-card.selected .q-rec-label::after{content:" · using";}
+    .q-rec-icon,.q-rec-use,.q-rec-who{display:none;}
+    .q-rec-info{width:100%;}
+    .q-rec-label{font-size:var(--ow-t-11);letter-spacing:.07em;color:var(--ow-ink-600);}
+    .q-rec-value{font-size:15px;font-weight:var(--ow-fw-600);}
+    .q-rec-when{font-size:var(--ow-t-11);}
+    .q-rec-card.q-rec-disabled{opacity:1;}
+    .q-rec-card.q-rec-disabled .q-rec-value{color:var(--ow-ink-400);font-weight:var(--ow-fw-500);}
+    /* Buy from: 40px rows, the chosen one ruled in steel with a check. */
+    .q-supplier-cards{gap:6px;max-height:none;overflow:visible;padding-right:0;margin:0;}
+    #ip_stage_view .q-supplier-card{min-height:40px;padding:0 12px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      gap:var(--ow-sp-8);background:var(--ow-paper);box-shadow:none;font-size:var(--ow-t-13);}
     #ip_stage_view .q-supplier-card.selected{border-color:var(--ow-steel-950);}
-    /* One accent on the sheet, and it is the commit: the rank marks go
-       to steel. */
-    #ip_stage_view .q-sc-rank{background:var(--ow-steel-050);color:var(--ow-ink-600);}
-    .q-sc-radio{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
-    .q-sc-body{gap:2px;}
-    .q-sc-top{flex-wrap:nowrap;}
-    .q-sc-name{font-size:14px;font-weight:var(--ow-fw-600);flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .q-sc-check{display:none;width:18px;height:18px;flex:none;margin-left:auto;color:var(--ow-ink-900);}
-    .q-supplier-card.selected .q-sc-check{display:block;}
-    .q-sc-prices{display:none;font-size:var(--ow-t-12);}
-    .q-stage.keep-open .q-sc-prices{display:flex;}
-    .q-rec-cards{gap:6px;}
-    .q-rec-card{border-radius:var(--ow-r-lg);padding:9px 12px;min-height:var(--ow-tap);box-shadow:none;}
-    .q-rec-card.selected{border-color:var(--ow-steel-950);background:var(--ow-paper);box-shadow:none;}
-    .q-rec-card.selected .q-rec-label,.q-rec-card.selected .q-rec-icon,.q-rec-card.selected .q-rec-use{color:var(--ow-ink-900);}
-    .q-rec-label{font-size:var(--ow-t-11);letter-spacing:.06em;}
-    .q-rec-value{font-size:15px;}
+    #ip_stage_view .q-sc-rank{height:18px;padding:0 6px;font-size:var(--ow-t-11);background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    #ip_stage_view .q-sc-radio{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+    #ip_stage_view .q-sc-body{flex-direction:row;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+    /* A zero basis: the name gives way to the price, which never truncates. */
+    #ip_stage_view .q-sc-top{flex:1 1 0;min-width:0;flex-wrap:nowrap;gap:6px;overflow:hidden;}
+    #ip_stage_view .q-sc-name{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    #ip_stage_view .q-sc-prices{display:flex;flex:none;margin-left:auto;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);
+      font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    #ip_stage_view .q-sc-prices .price{color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+    #ip_stage_view .q-sc-sep, #ip_stage_view .q-sc-pr{display:none;}
+    #ip_stage_view .q-sc-check{display:none;width:16px;height:16px;flex:none;color:var(--ow-ink-900);}
+    #ip_stage_view .q-supplier-card.selected .q-sc-check{display:block;}
+    /* The stock row's line is a sentence and may take two lines. */
+    #ip_stage_view .q-supplier-card.stock-card{padding:6px 12px;}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-body{flex-wrap:wrap;}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-top{flex:1 1 0;justify-content:flex-start;}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{order:9;}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{flex:1 1 100%;margin-left:0;white-space:normal;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);}
     .q-chosen-line{display:none;}
-    .q-stage-sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:14px;padding:12px 14px;
-      background:var(--ow-steel-050);border-radius:var(--ow-r-lg);}
-    .q-stage-sum-l{font-size:14px;font-weight:var(--ow-fw-600);}
-    .q-stage-sum-v{font-size:18px;font-weight:var(--ow-fw-600);white-space:nowrap;}
-    .q-stage-keep{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
-      width:100%;min-height:var(--ow-tap);padding:0 2px;font-size:var(--ow-t-13);color:var(--ow-ink-600);}
-    .q-stage-keep .icon{width:14px;height:14px;transition:transform .15s ease;}
-    .q-stage-keep.open .icon{transform:rotate(90deg);}
-    .q-stage-keep-v{display:block;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.5;padding:0 2px 8px;}
-    .q-stage-keep-v[hidden]{display:none;}
-    .q-stage-keep-v b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-    .q-stage-keep-v .q-margin-pill{height:22px;font-size:var(--ow-t-12);vertical-align:middle;}
-    .q-add-row{border-top:0;padding-top:6px;gap:10px;}
+    .q-stage-sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:12px;padding:10px 14px;
+      background:var(--ow-steel-050);border-radius:var(--ow-r-lg);min-width:0;}
+    .q-stage-sum-l{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-stage-sum-k{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+    .q-stage-sum-v{font-size:17px;font-weight:var(--ow-fw-600);white-space:nowrap;flex:none;}
+    .q-add-row{border-top:0;padding-top:0;gap:10px;margin-top:10px;}
     .q-add-row .q-other-field{flex:1 1 100%;}
-    .q-add-row .qbar-save{flex:1 1 100%;margin-left:0;min-height:48px;font-size:16px;}
+    .q-add-row .qbar-save{flex:1 1 100%;margin-left:0;min-height:46px;font-size:15px;}
   }
   .q-stage-col-right{min-width:0;}
 
@@ -9361,51 +9385,6 @@
        controls side by side, which is what the approved canvas draws:
        what the client pays on the left, the way to send it and the way
        to keep it on the right, all in the thumb zone. */
-    .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
-      gap:0;min-height:0;flex-wrap:wrap;padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px));}
-    /* THE DOCK. One line: what the client pays, the way to send it, the
-       way to keep it -- all in the thumb zone. Under it, a line that
-       opens the shop side; open, the two shop figures sit in a box
-       ABOVE the figure, and the disclosure moves up with them. The
-       finbar dissolves so its two halves can take different lines. */
-    .qp-finbar{display:contents;}
-    .qp-says{order:2;flex:1 1 auto;min-width:0;flex-direction:column;align-items:flex-start;gap:0;
-      padding-right:0;border-right:0;}
-    .qp-says-label{font-size:var(--ow-t-11);}
-    /* The figure the owner reads down the phone, at a size they can
-       read it at, and it NEVER breaks: at 390px "1,806,000 UGX"
-       wrapped after the comma and stopped looking like a number. */
-    .qp-says-value{font-size:19px;white-space:nowrap;}
-    /* The actions dissolve into the bar: WhatsApp and Save close the
-       first line; the ⋯ rides the disclosure line under it, where the
-       first line has no room for a third button beside an eight-digit
-       figure. Nothing leaves the screen. */
-    .q-stickybar-actions{display:contents;}
-    .qbar-wa{order:3;margin-left:8px;}
-    .qbar-save{order:4;margin-left:8px;}
-    .q-more-wrap{order:6;margin-left:auto;margin-top:6px;}
-    body.q-shop-open .q-more-wrap{order:0;margin-top:0;margin-bottom:8px;}
-    .qp-shop{order:1;display:none;flex:1 1 100%;margin-bottom:10px;
-      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
-    body.q-shop-open .qp-shop{display:flex;}
-    .qp-cost,.qp-shopline{flex:1 1 0;min-width:0;flex-direction:column;align-items:flex-start;gap:2px;
-      padding:var(--ow-sp-8) var(--ow-sp-12);border-right:0;}
-    .qp-shopline{border-left:1px solid var(--ow-rule-soft);}
-    .q-shop-toggle{all:unset;box-sizing:border-box;cursor:pointer;order:5;flex:1 1 auto;min-width:0;
-      display:flex;align-items:center;gap:6px;min-height:var(--ow-tap);margin-top:6px;
-      font-size:var(--ow-t-13);color:var(--ow-ink-600);}
-    .q-shop-toggle .icon{width:14px;height:14px;transition:transform .15s ease;}
-    body.q-shop-open .q-shop-toggle{order:0;margin:0 0 8px;}
-    body.on-quote-tab .q-stickybar{padding-top:6px;}
-    body.q-shop-open .q-shop-toggle .icon{transform:rotate(90deg);}
-    /* Buttons a thumb can hit. WhatsApp keeps its mark and its name and
-       drops its words; Save is the one filled control and says so. */
-    .qbar-btn{min-width:44px;min-height:44px;padding:0;flex:none;}
-    .qbar-wa .qbar-l{display:none;}
-    .qbar-save{min-height:44px;padding:0 16px;font-size:15px;flex:none;}
-    .qbar-save .icon{display:none;}
-    body.on-quote-tab #tab-quote{padding-bottom:110px;}
-    body.q-shop-open.on-quote-tab #tab-quote{padding-bottom:190px;}
     /* ---------- the phone's page: client folded, search a box, cards ---------- */
     .q-band{margin-bottom:10px;}
     .q-client-fold{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
@@ -9532,51 +9511,222 @@
     .bp-tbl .ow-tbl-a .btn.ow-sm{flex:1 1 auto;min-height:var(--ow-tap);}
     .bp-ord-a .btn{flex:1 1 calc(50% - 3px);min-height:var(--ow-tap);box-sizing:border-box;}
     .bp-bk .btn{flex:1 1 auto;min-height:var(--ow-tap);box-sizing:border-box;}
-    /* THE QUOTE'S LINE, AS A CARD. The layer turns every .ow-tbl-r into
-       a one-column card; this screen's rows carry a gutter (number and
-       remove) beside the name, and on a phone those two belong on one
-       line with the × at the far right, where a thumb expects it. So
-       the row keeps three columns and the gutter dissolves into it. */
-    .ow-tbl-r.q-line{grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;row-gap:9px;padding:14px 16px;}
+    /* ================= THE QUOTE ON A PHONE, CONDENSED =================
+       The first phone cut spent 190px of chrome before the first line
+       and 200px on each line. This one is the mockup's 3a/3b/3c: paper
+       ground edge to edge, hairlines between rows, 14px body, 54px a
+       line, the controls opening in the row on a tap, the shop's side a
+       36px strip above the dock. The two designs part at 820px. */
+    body.on-quote-tab .mobile-topbar{display:none;}
+    body.on-quote-tab main{padding:calc(48px + env(safe-area-inset-top)) 0 calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 24px);
+      background:var(--ow-paper);}
+    body.on-quote-tab #tab-quote > .ow-ph{display:none;}
+    /* The bar: 48px of navy, the mark, the name, Client copy, the ⋯. */
+    .q-phbar{position:fixed;top:0;left:0;right:0;z-index:90;display:flex;align-items:center;gap:10px;
+      height:calc(48px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 4px 0 12px;
+      background:var(--ow-steel-950);color:var(--ow-paper);}
+    .q-phbar-t{flex:1 1 auto;min-width:0;font-size:16px;font-weight:var(--ow-fw-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .q-phbar-t small{font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:#C7CFD8;margin-left:var(--ow-sp-8);}
+    .q-phbar-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      width:var(--ow-tap);height:var(--ow-tap);color:#C7CFD8;}
+    .q-phbar-btn .icon{width:22px;height:22px;}
+    .q-phbar-more{display:flex;flex:none;}
+    .q-phbar .q-more-wrap{display:block;}
+    .q-phbar .qbar-btn{border:0;min-width:var(--ow-tap);min-height:var(--ow-tap);color:#C7CFD8;}
+    .q-phbar .qbar-btn .icon{width:22px;height:22px;}
+    .q-phbar .q-more-menu{top:calc(100% + 4px);bottom:auto;right:4px;}
+    .q-more-ph{display:flex;}
+    /* The client: one 44px line on paper-2. */
+    .q-band{margin:0;border:0;border-radius:0;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+    .q-client-fold{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:var(--ow-sp-8);
+      width:100%;min-height:var(--ow-tap);padding:0 16px;}
+    .q-cf-name{font-size:14px;font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-cf-name.q-cf-empty{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+    .q-cf-phone,.q-cf-meta{flex:none;font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+    .q-cf-sp{flex:1 1 auto;}
+    .q-cf-chev{width:14px;height:14px;color:var(--ow-ink-400);flex:none;transition:transform .15s ease;}
+    .q-band.open .q-cf-chev{transform:rotate(180deg);}
+    .q-band > .ow-cb-f,.q-band > .ow-cb-k{display:none;}
+    .q-band.open > .ow-cb-f{display:block;border-left:0;border-top:1px solid var(--ow-rule-soft);flex:1 1 100%;min-width:0;padding:var(--ow-sp-8) 16px;}
+    .q-band.open > .ow-cb-k{display:flex;padding:var(--ow-sp-8) 16px;}
+    .q-client-cell{flex-wrap:wrap;gap:var(--ow-sp-4);}
+    .q-client-cell #q_client_name,.q-client-cell .q-client-phone{flex:1 1 100%;font-size:16px;}
+    .q-band #q_date{font-size:16px;}
+    .q-band .ow-cb-kn{flex:0 1 auto;padding:0;}
+    /* The search: a 44px line. 16px in the box so the phone does not
+       zoom the page when it is tapped. */
+    .q-doc{background:transparent;border:0;border-radius:0;}
+    .q-item-search-wrap{height:var(--ow-tap);padding:0 16px;margin:0;gap:10px;border:0;border-radius:0;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .q-item-search-wrap:focus-within{border-color:var(--ow-steel-950);}
+    .q-item-search-wrap > .icon{width:16px;height:16px;color:var(--ow-ink-400);}
+    #q_item_search{font-size:16px;}
+    .q-item-search-hint{display:none;}
+    .q-client-usual.show{display:none;}
+    #q_itemsWrap{background:var(--ow-paper);border:0;border-radius:0;}
+    /* The column header: 28px, the item and its total. */
+    .q-doc .ow-tbl-h{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:0 var(--ow-sp-8);align-items:center;
+      height:28px;padding:0 16px;background:var(--ow-paper-2);border-top:0;border-bottom:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-11);letter-spacing:.07em;}
+    .q-doc .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl-h > :nth-child(6),
+    .q-doc .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl-h > :nth-child(8){display:none;}
+    .q-doc .ow-tbl-h > .q-shop-first{display:none;}
+    .q-doc .ow-tbl-h > :nth-child(5){justify-self:end;}
+    /* THE LINE, 54px: number, name, total; under them the count and the
+       price as dotted taps, and who it is from. */
+    .q-doc .ow-tbl-r.q-line{display:grid;grid-template-columns:22px minmax(0,1fr) auto;column-gap:var(--ow-sp-8);row-gap:1px;
+      align-items:center;min-height:54px;padding:var(--ow-sp-8) 16px;font-size:14px;border-top:0;border-bottom:1px solid var(--ow-rule-soft);}
     .q-line > .q-gutter{display:contents;}
-    .q-line .q-row-num{grid-column:1;grid-row:1;align-self:start;padding-top:2px;font-size:var(--ow-t-12);}
-    .q-line > .q-name-cell{grid-column:2;grid-row:1;}
-    /* The name is one line, cut with a mark and carried whole in its
-       title; the unit and the supplier under it, because the supplier
-       cell is behind the shop-side tap here. */
-    .q-line > .q-name-cell .ow-tbl-p{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .q-item-sub .q-item-sup-ph{display:block;flex:0 1 auto;min-width:0;}
-    /* The × is a 44px target on the card's first line, bled into the padding. */
-    .q-line .q-remove-icon{grid-column:3;grid-row:1;display:flex;align-self:start;align-items:center;justify-content:center;
-      width:var(--ow-tap);height:var(--ow-tap);padding:0;margin:-10px -12px -10px 0;}
+    .q-line .q-row-num{grid-column:1;grid-row:1/3;align-self:start;padding-top:2px;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
     .q-line:hover .q-row-num{display:inline;}
-    .q-line > .ow-tbl-n,.q-line > .q-shop-first{grid-column:1/-1;}
-    /* Boxed figures: on a card there is no row hover to reveal the box. */
-    .q-line .ow-gi{font-size:14px;flex:0 1 auto;width:auto;min-width:96px;max-width:56%;
-      border-color:var(--ow-steel-100);background:var(--ow-paper);}
-    .q-sell-cell{flex:0 1 auto;width:auto;}
-    .q-line-total{font-size:14px;}
-    /* THE SHOP SIDE IS BEHIND A TAP. Supplier, buy @ and margin are not
-       drawn until the dock's disclosure opens them -- on a call the
-       phone may be facing the client. Open, they are a ruled-off block
-       at the foot of the card. */
+    .q-line > .q-name-cell{grid-column:2;grid-row:1;min-width:0;}
+    .q-line > .q-name-cell .ow-tbl-p{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .q-line > .q-name-cell .q-item-sub{display:none;}
+    .q-doc .q-line > .q-line-total{grid-column:3;grid-row:1;justify-self:end;font-size:14px;font-weight:var(--ow-fw-600);}
+    .q-doc .q-line > .q-line-total::before{display:none;}
+    .q-line > .q-ph-meta{grid-column:2/-1;grid-row:2;display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;}
+    .q-ph-tap{all:unset;box-sizing:border-box;cursor:pointer;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+      color:var(--ow-ink-900);text-decoration:underline dotted var(--ow-ink-400);text-underline-offset:3px;
+      min-height:28px;display:inline-flex;align-items:center;}
+    .q-ph-x{display:inline;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-13);color:var(--ow-ink-400);}
+    .q-ph-sp{flex:1 1 auto;}
+    .q-ph-src{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    /* The controls, the supplier column and the shop's cells are not
+       drawn until the row opens or the strip does. */
+    .q-doc .q-line > .q-ph-ctl{display:none;}
     .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Margin"]{display:none;}
-    body.q-shop-open .q-line > .q-shop-first,body.q-shop-open .q-line > [data-l="Buy @"],body.q-shop-open .q-line > [data-l="Margin"]{display:flex;}
-    body.q-shop-open .q-line > .q-shop-first{border-top:1px solid var(--ow-rule-soft);padding-top:10px;margin-top:2px;}
-    .q-line .q-shop-first{border-left:0;padding-left:0;align-self:auto;}
-    .q-supplier-picker{flex:1 1 auto;max-width:64%;}
-    .q-sup-text{text-align:right;font-size:15px;line-height:calc(var(--ow-tap) - 10px);padding-top:var(--ow-sp-4);padding-bottom:var(--ow-sp-4);}
-    .q-margin-pill{height:22px;font-size:var(--ow-t-12);}
+    .q-line .q-remove-icon{display:none;}
+    .q-doc .q-line > .q-ph-shop{display:none;}
+    body.q-shop-open .q-doc .q-line > .q-ph-shop{display:flex;align-items:center;gap:var(--ow-sp-4);grid-column:2/-1;grid-row:3;min-width:0;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;margin-top:2px;}
+    .q-ph-shop-s{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .q-ph-shop b,.q-ph-shop .q-margin-pill{flex:none;}
+    .q-ph-shop b{color:var(--ow-ink-900);font-weight:var(--ow-fw-500);}
+    .q-ph-shop .q-margin-pill{height:18px;font-size:var(--ow-t-11);vertical-align:middle;}
     .q-margin-pill .q-mp-kept{display:inline;}
-    /* The add row: the mark and the words on the first line, the taps
-       on their own line under them, each a thumb tall. */
-    .ow-tbl-r.q-add-row-trailing{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:var(--ow-sp-8);
-      align-items:center;min-height:var(--ow-tap);padding:var(--ow-sp-8) 16px 14px;}
+    /* THE ROW, OPEN (3b): the supplier joins the name line, the second
+       line is a stepper, ×, and the price field; the × to remove the
+       line sits at its end. One row at a time. */
+    .q-doc .ow-tbl-r.q-line.q-open{min-height:78px;}
+    .q-line.q-open > .q-ph-meta{display:none;}
+    .q-line.q-open > .q-name-cell{display:flex;align-items:baseline;gap:var(--ow-sp-4);}
+    .q-line.q-open > .q-name-cell .ow-tbl-p{flex:1 1 auto;}
+    .q-line.q-open > .q-name-cell .q-item-sub{display:flex;flex:0 1 auto;min-width:0;max-width:45%;margin:0;}
+    .q-line.q-open > .q-name-cell .q-item-unit{display:none;}
+    .q-item-sub .q-item-sup-ph{display:block;flex:0 1 auto;min-width:0;}
+    .q-doc .q-line.q-open > .q-ph-ctl{display:flex;grid-column:2/-1;grid-row:2;align-items:center;gap:var(--ow-sp-6);margin-top:5px;min-width:0;padding-right:38px;}
+    .q-ph-ctl > [data-l]::before{display:none;}
+    .q-doc .q-ph-ctl > .ow-tbl-n[data-l]{display:flex;align-items:center;flex:0 0 auto;min-width:0;}
+    .q-doc .q-ph-ctl > .ow-tbl-n[data-l="Price each"]{flex:1 1 auto;}
+    .q-ph-ctl .q-qty-pack{display:none;}
+    .q-qty-cell{display:inline-flex;align-items:center;gap:0;height:32px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);overflow:hidden;}
+    .q-rstp{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      width:32px;height:32px;flex:none;color:var(--ow-ink-600);font-size:16px;}
+    .q-doc .q-ph-ctl .q-qty{min-height:0;height:32px;width:44px;min-width:44px;flex:none;margin:0;padding:0 2px 0 4px;
+      border:0;border-left:1px solid var(--ow-rule);border-radius:0;background:transparent;text-align:right;font-size:14px;}
+    .q-qty-unit{height:32px;display:flex;align-items:center;padding:0 6px 0 3px;border-right:1px solid var(--ow-rule);
+      font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .q-sell-cell{flex:1 1 auto;width:auto;min-width:0;height:32px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      padding:0 10px;gap:var(--ow-sp-4);background:var(--ow-paper);}
+    .q-sell-cell:focus-within{border-color:var(--ow-steel-950);}
+    .q-doc .q-ph-ctl .q-sell{min-height:0;height:30px;flex:1 1 0;min-width:0;width:0;max-width:none;padding:0;
+      border:0;border-radius:0;background:transparent;text-align:left;font-size:14px;}
+    .q-ph-hint{display:inline;margin-left:auto;flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-400);white-space:nowrap;}
+    .q-sell-reset{width:22px;height:22px;flex:none;}
+    .q-line.q-open .q-remove-icon{display:flex;grid-column:3;grid-row:2;justify-self:end;align-self:center;z-index:1;
+      width:32px;height:32px;padding:0;margin:5px 0 0;align-items:center;justify-content:center;}
+    /* A charge, 44px: the name with "charge" after it, the amount as a
+       112px field at the right. The credit row is a charge here. */
+    .q-doc .ow-tbl-r.q-charge{min-height:var(--ow-tap);padding:var(--ow-sp-6) 16px;}
+    .q-charge > .q-name-cell{display:flex;align-items:baseline;gap:var(--ow-sp-4);}
+    .q-charge > .q-name-cell .ow-tbl-p{flex:0 1 auto;font-weight:var(--ow-fw-500);}
+    .q-charge > .q-name-cell .q-item-sub{display:flex;flex:0 1 auto;min-width:0;margin:0;}
+    .q-charge > .q-name-cell .q-item-unit{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    /* "charge", small, after the name. The credit row's sub is a figure
+       and keeps its case and its whole width under the name. */
+    .q-charge:not(.q-credit) > .q-name-cell .q-item-unit{text-transform:lowercase;}
+    .q-credit > .q-name-cell{flex-wrap:wrap;}
+    .q-credit > .q-name-cell .q-item-sub{flex:1 1 100%;max-width:none;}
+    .q-chg-name{font-size:14px;padding:0;}
+    .q-doc .q-charge > [data-l="Amount"],.q-doc .q-charge > [data-l="Rate"]{display:flex;grid-column:3;grid-row:1;width:112px;justify-self:end;}
+    .q-doc .q-charge > [data-l]::before{display:none;}
+    .q-charge .q-sell-cell{height:32px;}
+    .q-doc .q-charge .q-sell-cell .ow-gi{min-height:0;height:30px;flex:1 1 auto;min-width:0;width:auto;max-width:none;padding:0;
+      border:0;border-radius:0;background:transparent;text-align:left;font-size:14px;}
+    .q-charge .q-chg-pct{font-size:var(--ow-t-11);color:var(--ow-ink-400);margin-left:auto;}
+    .q-doc .q-charge > [data-l="Comes to"]{display:flex;grid-column:2/-1;grid-row:2;font-size:var(--ow-t-12);}
+    .q-doc .q-charge > [data-l="Comes to"]::before{display:block;}
+    .q-doc .q-charge .q-chg-same[data-l]{display:none;}
+    .q-doc .q-charge > .ow-tbl-n:empty,.q-doc .q-charge > .q-shop-first{display:none;}
+    .q-doc .q-charge .q-row-num{grid-row:1;}
+    .q-doc .q-credit .q-item-sub .q-item-unit{white-space:normal;}
+    /* The add row, 44px: the mark and the taps on one scrolling line,
+       fading at the right edge to say there are more. */
+    .q-doc .ow-tbl-r.q-add-row-trailing{display:flex;align-items:center;gap:var(--ow-sp-8);height:var(--ow-tap);min-height:0;
+      padding:0 16px;border-top:0;border-bottom:1px solid var(--ow-rule-soft);overflow-x:auto;overflow-y:hidden;
+      white-space:nowrap;scrollbar-width:none;}
+    .q-add-row-trailing::-webkit-scrollbar{display:none;}
+    .q-add-row-trailing .q-add-icon{width:20px;height:20px;flex:none;}
     .q-add-ph{display:contents;}
-    .q-add-ph .q-add-row-placeholder{font-size:14px;min-height:32px;display:flex;align-items:center;margin:0;}
-    .q-add-chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);}
-    .q-add-chips .q-chg-sug{min-height:38px;padding:0 14px;font-size:var(--ow-t-13);}
-    .q-cr-says{flex:1 1 100%;margin-left:0;}
+    .q-add-ph .q-add-row-placeholder{display:none;}
+    .q-add-chips{display:flex;align-items:center;gap:var(--ow-sp-8);flex:none;}
+    .q-add-chips .q-chg-sug{min-height:24px;height:24px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-12);flex:none;}
+    .q-cr-says,.q-chg-none{display:none;}
+    .q-add-fade{display:block;position:sticky;right:-16px;flex:none;width:36px;height:var(--ow-tap);margin-left:-36px;
+      background:linear-gradient(90deg,rgba(255,255,255,0),var(--ow-paper));pointer-events:none;}
+    /* The empty document names the next act and offers the usuals as
+       44px lines, the rest counted. */
+    .q-empty-doc{padding:28px 16px 16px;gap:6px;}
+    .q-empty-doc > .icon{display:none;}
+    .q-empty-doc-title{font-size:16px;font-weight:var(--ow-fw-600);}
+    .q-empty-doc-hint{font-size:14px;line-height:1.5;}
+    .q-empty-kbd{display:none;}
+    .q-usual-slot{display:block;}
+    .q-usual-rows{display:flex;flex-direction:column;gap:0;padding:0;border-top:1px solid var(--ow-rule-soft);}
+    .q-usual-rows-rest:not([hidden]){display:contents;}
+    .q-usual-row{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+      min-height:48px;padding:var(--ow-sp-6) 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
+    .q-usual-row[disabled]{cursor:default;color:var(--ow-ink-600);}
+    .q-usual-row .q-stage-thumb,.q-usual-row .q-stage-thumb-placeholder{width:30px;height:30px;border-radius:var(--ow-r-sm);}
+    .q-ur-t{flex:1 1 auto;min-width:0;}
+    .q-ur-n{display:block;font-size:14px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-ur-s{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .q-usual-row .q-add-icon{width:32px;height:32px;}
+    .q-usual-row .q-add-icon .icon{width:14px;height:14px;}
+    .q-usual-rows-more{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;
+      min-height:var(--ow-tap);line-height:var(--ow-tap);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+    /* The rail keeps its panel, under the work, with the page's gutter. */
+    #q_rail{padding:12px 16px 0;}
+    /* THE DOCK: the shop strip, then one 64px line -- the figure with
+       its line count, WhatsApp, Save. The ⋯ is in the bar above. */
+    .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
+      gap:var(--ow-sp-8);min-height:0;flex-wrap:wrap;padding:0 16px env(safe-area-inset-bottom, 0px);}
+    .qp-finbar{display:contents;}
+    .qp-says{order:2;flex:1 1 auto;min-width:0;height:64px;flex-direction:column;justify-content:center;align-items:flex-start;gap:0;
+      padding-right:0;border-right:0;}
+    .qp-says-label{font-size:var(--ow-t-11);}
+    .qp-says-n{display:inline;}
+    .qp-says-value{font-size:20px;white-space:nowrap;}
+    .qp-shop{display:none;}
+    .q-stickybar-actions{display:contents;}
+    .qbar-wa{order:3;width:42px;min-width:42px;height:42px;min-height:42px;padding:0;flex:none;}
+    .qbar-wa .qbar-l{display:none;}
+    .qbar-save{order:4;height:42px;min-height:42px;padding:0 18px;font-size:14px;flex:none;}
+    .qbar-save .icon{display:none;}
+    .q-shop-toggle{all:unset;box-sizing:border-box;cursor:pointer;order:0;flex:1 1 100%;display:flex;align-items:center;gap:var(--ow-sp-6);
+      height:36px;margin:0 -16px;padding:0 16px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;}
+    .q-shop-figs{display:inline;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .q-shop-figs b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:var(--ow-t-12);}
+    .q-shop-figs .qp-sf-c{color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+    .q-shop-figs .qp-sf-k{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+    .q-shop-figs .q-margin-pill{height:18px;font-size:var(--ow-t-11);margin-left:2px;}
+    .q-shop-toggle .icon{width:14px;height:14px;margin-left:auto;flex:none;transition:transform .15s ease;}
+    body.q-shop-open .q-shop-toggle .icon{transform:rotate(90deg);}
+    body.on-quote-tab #tab-quote{padding-bottom:110px;}
     .q-rec-value{font-size:14px;}
     /* Purchase Invoices / Invoices: swap the ledger table for stacked cards. */
     .pi-table-wrap{display:none;}
@@ -16379,6 +16529,20 @@
 
     <!-- NEW QUOTE -->
     <section id="tab-quote">
+      <!-- THE PHONE'S BAR. 48px of navy: the mark, the screen's name,
+           Client copy and the ⋯ -- which the dock hands up here so the
+           dock's one line is the figure and the two acts. The app's own
+           top bar and this screen's 26px heading are not drawn under it;
+           190px of chrome before the first line was the whole complaint.
+           Never drawn on the console. -->
+      <div class="q-phbar" id="q_phbar">
+        <div class="mt-mark" aria-hidden="true">OW</div>
+        <span class="q-phbar-t">New quote<small>Sell</small></span>
+        <button type="button" class="q-phbar-btn" id="q_phbar_print" aria-label="Client copy" title="Client copy — the client quotation">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        </button>
+        <span class="q-phbar-more" id="q_phbar_more"></span>
+      </div>
       <div class="ow-ph">
         <h1 class="ow-ph-t">New quote</h1>
         <p class="ow-ph-sub">Build the order live, on the call.</p>
@@ -16493,12 +16657,14 @@
         <div class="qp-finbar" id="q_finbar"></div>
         <!-- THE SHOP SIDE, BEHIND A TAP ON THE PHONE. The bar carries the
              figure the client is waiting to hear; what it costs and what
-             is kept are a line under it that opens on a tap and stays
+             is kept are a 36px strip above it that says both figures
+             small and opens the same reading on every line, and stays
              open for the session. On the console the two are always
-             beside the figure and this line is never drawn. -->
+             beside the figure and the strip is never drawn. -->
         <button type="button" class="q-shop-toggle" id="q_shop_toggle" aria-expanded="false" aria-controls="q_finbar">
-          <svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
           <span id="q_shop_toggle_t">Shop side</span>
+          <span class="q-shop-figs" id="q_shop_figs"></span>
+          <svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
         </button>
         <div class="q-stickybar-actions">
           <!-- Client copy owns its behaviour here and is never drawn on
@@ -16532,6 +16698,12 @@
               <button class="q-more-item" id="q_print_quote_phone" title="Client copy — the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
                 Client copy
+              </button>
+              <!-- The phone has no header to carry the link; it is a
+                   row here, clicking the header's own button. -->
+              <button class="q-more-item q-more-ph" id="q_track_orders_phone">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+                Order tracking
               </button>
               <button class="q-more-item" id="q_print_btn" title="Print supplier receipt — item, packing, supplier, qty, buy price and total (internal use)">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
@@ -35731,7 +35903,7 @@ function renderClientHistoryBox(){
   const name = (document.getElementById('q_client_name').value||'').trim();
   const nameLower = name.toLowerCase();
   const clear = ()=>{ box.innerHTML=''; };
-  quotePriorOrders = 0;
+  quotePriorOrders = 0; quoteClientOwed = null;
   if(!name){ clear(); renderClientUsualBuys(''); renderClientFold(); renderQuoteRail(); return; }
   const customer = data.customers.find(c=>(c.name||'').trim().toLowerCase()===nameLower);
   // Same rule: a cancelled order is not an order this client placed, and
@@ -35747,6 +35919,8 @@ function renderClientHistoryBox(){
   if(!customer && priorOrders===0){ clear(); renderQuoteRail(); return; }
   const standing = customerDebtStanding(customer);
   const band = debtStandingBand(standing);
+  quoteClientOwed = standing ? standing.owed : (customer ? 0 : null);
+  renderClientFold();
   const last = orders.reduce((best,q)=> (!best || String(q.savedAt||'') > String(best.savedAt||'')) ? q : best, null);
   const cells = [];
   cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Orders</span><span class="ow-cb-kv ow-fig">${priorOrders}</span></div>`);
@@ -35770,7 +35944,7 @@ function renderClientHistoryBox(){
 /* THE PHONE'S ONE LINE FOR THE CLIENT. Name, number, and how established
    they are; a tap opens the fields. Nothing here is a second copy of a
    fact -- it reads the same inputs and count the band draws from. */
-let quotePriorOrders = 0;
+let quotePriorOrders = 0, quoteClientOwed = null;
 function renderClientFold(){
   const nameEl = document.getElementById('q_cf_name');
   if(!nameEl) return;
@@ -35781,7 +35955,7 @@ function renderClientFold(){
   document.getElementById('q_cf_phone').textContent = phone;
   const n = quotePriorOrders;
   document.getElementById('q_cf_meta').textContent = name
-    ? (n ? `${n} order${n===1?'':'s'}` : fmtShortDate(document.getElementById('q_date').value || todayISO()))
+    ? (n ? `${n} order${n===1?'':'s'}${quoteClientOwed != null ? ` · owes ${Number(quoteClientOwed).toLocaleString('en-UG')}` : ''}` : fmtShortDate(document.getElementById('q_date').value || todayISO()))
     : '';
 }
 document.getElementById('q_client_fold').addEventListener('click', ()=>{
@@ -35938,7 +36112,7 @@ document.getElementById('q_client_name').addEventListener('focus', renderClientA
 (function(){
   const el = document.getElementById('q_item_search');
   const mq = window.matchMedia('(max-width:820px)');
-  const set = ()=>{ el.placeholder = mq.matches ? 'Add item…' : 'Add item — search name, SKU or supplier code…'; };
+  const set = ()=>{ el.placeholder = mq.matches ? 'Add item — name, SKU or supplier code' : 'Add item — search name, SKU or supplier code…'; };
   set();
   if(mq.addEventListener) mq.addEventListener('change', set); else if(mq.addListener) mq.addListener(set);
 })();
@@ -36424,12 +36598,12 @@ function quoteItemSearchPick(sel){
 function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
   const bits = [];
   if(product.category){
-    bits.push(`Category: ${esc(product.category)}${product.subcategory? ' \u2192 '+esc(product.subcategory) : ''}`);
+    bits.push(`<span class="q-sum-k">Category: </span>${esc(product.category)}${product.subcategory? ' \u2192 '+esc(product.subcategory) : ''}`);
   }
   if(selectedRow && selectedRow.packQty && selectedRow.packUnit){
-    bits.push(`Packaging: ${esc(String(selectedRow.packQty))} ${esc(unit||'units')} in a ${esc(selectedRow.packUnit)}`);
+    bits.push(`<span class="q-sum-k">Packaging: </span>${esc(String(selectedRow.packQty))} ${esc(unit||'units')} in a ${esc(selectedRow.packUnit)}`);
   } else if(unit){
-    bits.push(`Packaging: sold per ${esc(unit)}`);
+    bits.push(`<span class="q-sum-k">Packaging: </span>sold per ${esc(unit)}`);
   }
   /* THE RULE THAT IS ACTUALLY GOVERNING THIS LINE, not the other one.
      quoteItemSellPrice prices a line from our own stock by the STOCK
@@ -36448,14 +36622,11 @@ function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
     : r.source === 'variant' || r.source === 'variant-stock' ? ' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>'
     : r.source === 'default' ? ' <em style="font-style:normal;color:var(--ow-ink-400);">(shop default)</em>' : '';
   const fmtRule = r => r ? `${markupRuleLabel(r.type, r.value)}${srcLabel(r)}` : 'No rule set';
-  bits.push(`Price rule: Wholesale <strong>${fmtRule(wRule)}</strong>&nbsp;·&nbsp;Retail <strong>${fmtRule(rRule)}</strong>`
+  bits.push(`<span class="q-sum-k">Price rule: </span>Wholesale <strong>${fmtRule(wRule)}</strong>&nbsp;·&nbsp;Retail <strong>${fmtRule(rRule)}</strong>`
     + (fromStock ? ' <em style="font-style:normal;color:var(--ow-ink-400);">— for goods off your own shelf</em>' : ''));
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
 
-/* Whether the stage's "what you keep" line is open. Session-long, like
-   the quote page's own shop-side disclosure: opened once, it stays. */
-let ipKeepOpen = false;
 function ipSelectProduct(id, variantIdx=null){
   ipProductId = id;
   ipVariantIdx = variantIdx==null ? null : Number(variantIdx);
@@ -36679,7 +36850,6 @@ function renderIpStage(){
       <div class="q-sc-top">
         <span class="q-sc-rank stock">OUR STOCK</span>
         <span class="q-sc-name">${stockQty} in stock</span>${consignTagHTML(stockShelfConsign, false)}
-        <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
       </div>
       <div class="q-sc-prices">${stockConsign.qty > 0
         ? `Owed to ${stockConsign.consignors.length > 1 ? 'their consignors' : esc(supplierName(stockConsign.consignors[0].supplierId))} at ${fmtUGX(Math.round(stockConsign.value / stockConsign.qty))} each as they sell`
@@ -36688,6 +36858,7 @@ function renderIpStage(){
           : (refRow
               ? `No purchase cost on file — costed at ${fmtUGX(ipLineBuyPrice('__stock__', refRow, qty, null))} to replace`
               : 'No purchase cost on file, and no supplier price to estimate one from'))}</div>
+      <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
     </div>
   </label>` : '';
 
@@ -36704,9 +36875,9 @@ function renderIpStage(){
         <div class="q-sc-top">
           <span class="q-sc-rank ${i===0?'best':''}">${rankLabels[i]}</span>
           <span class="q-sc-name">${esc(r.sname)}</span>
-          <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
         </div>
-        <div class="q-sc-prices">${fmtUGXPerUnitPack(tieredUnitPrice(r, qty, 'wholesale'), r)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</div>
+        <div class="q-sc-prices">${fmtUGXPerUnitPack(tieredUnitPrice(r, qty, 'wholesale'), r)}<span class="q-sc-sep">/</span><span class="q-sc-pr">${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</span></div>
+        <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
       </div>
     </label>`;
   }).join('');
@@ -36766,6 +36937,7 @@ function renderIpStage(){
     <div class="q-stage-head">
       ${ipStageThumbHTML(product, variantIdx)}
       <div class="q-stage-name">${esc(displayName)}</div>
+      <button type="button" class="q-stage-x" id="ip_stage_x" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <div class="q-stage-summary">${ipStageSummaryLine(product, refRow, unit, variantIdx)}</div>
     </div>
 
@@ -36781,8 +36953,8 @@ function renderIpStage(){
       </div>
       <div class="field q-qty-field">
         <label>Sell price ${chosenIsPack ? `per ${esc(packUnit)}` : 'each'} (UGX)</label>
-        <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
-        <p class="q-price-help">What the client pays per ${esc(chosenUnit||'unit')}. The buy cost is recorded on its own.</p>
+        <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" aria-describedby="ip_price_help" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
+        <p class="q-price-help" id="ip_price_help">What the client pays per ${esc(chosenUnit||'unit')}. The buy cost is recorded on its own.</p>
       </div>
     </div>
 
@@ -36796,7 +36968,7 @@ function renderIpStage(){
           ${lastToClient ? `<div class="q-rec-card q-rec-last ${effectiveRecType==='last'?'selected':''} ${lastCovers?'':'q-rec-under'}" data-use="last" role="button" tabindex="0" title="${lastCovers ? 'The price this client was last given for this item' : 'This is now below what the item costs you — charging it would sell at a loss'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
             <div class="q-rec-info">
-              <span class="q-rec-label">Last given to ${esc(quoteClientName(data.quote) || 'this client')}</span>
+              <span class="q-rec-label">Last given<span class="q-rec-who"> to ${esc(quoteClientName(data.quote) || 'this client')}</span></span>
               <span class="q-rec-value">${fmtPriceCompact(lastToClient.price, unit)}</span>
               <span class="q-rec-when">${esc(lastToClient.qty)} ${esc(lastToClient.unit || unit || '')} · ${esc(savedAgoLabel(lastToClient.at))}${lastCovers ? '' : ' · below today’s cost'}</span>
             </div>
@@ -36837,15 +37009,13 @@ function renderIpStage(){
 
     <div class="q-chosen-line">Buying from: <strong>${ipSelectedSupplierId? esc(supplierName(ipSelectedSupplierId)) : 'no supplier chosen'}</strong>${ipSelectedSupplierId==='__stock__'?` <span style="color:var(--ink-soft);font-weight:400;">(${stockQty} on hand)</span>`:''}</div>
 
-    <!-- THE PHONE'S FOOT OF THE SHEET: what this line comes to, the
-         shop's side behind a tap, and the one filled commit. The figure
+    <!-- THE PHONE'S FOOT OF THE SHEET: what this line comes to and what
+         the shop keeps on it, then the one filled commit. The figure
          follows the price box as it is typed; what is kept is sell less
          the cost the chosen supplier would charge, per the unit the box
-         counts in. Neither is drawn on the console, which shows the same
-         things in its two columns. -->
-    <div class="q-stage-sum"><span class="q-stage-sum-l">This line</span><span class="q-stage-sum-v ow-fig" id="ip_line_total"></span></div>
-    <button type="button" class="q-stage-keep" id="ip_keep_btn" aria-expanded="false"><span id="ip_keep_t">Show what you keep</span><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
-    <div class="q-stage-keep-v" id="ip_keep_v" hidden></div>
+         counts in. Not drawn on the console, which shows the same things
+         in its two columns. -->
+    <div class="q-stage-sum"><span class="q-stage-sum-l">This line <span class="q-stage-sum-k" id="ip_keep_v"></span></span><span class="q-stage-sum-v ow-fig" id="ip_line_total"></span></div>
 
     <div class="q-add-row">
       ${(otherPriced.length+unpriced.length)>0 ? `<div class="field q-other-field searchable-select"><label>Other supplier</label>
@@ -36899,26 +37069,13 @@ function renderIpStage(){
     const cost = buyStart * perChosen;
     const kept = Math.round((price - cost) * count);
     const pct = price > 0 ? Math.round((price - cost) / price * 100) : 0;
-    keepV.innerHTML = !ipSelectedSupplierId
-      ? 'Choose who to buy from first.'
-      : kept > 0
-        ? `Buy @ <b class="ow-fig">${esc(fmtUGX(Math.round(cost)))}</b> per ${esc(chosenUnit||'unit')} from ${esc(supplierName(ipSelectedSupplierId))} · you keep <b class="ow-fig">${esc(fmtUGX(kept))}</b> <span class="q-margin-pill ${pct < 10 ? 'warn' : 'good'}">${pct}%</span>`
-        : `Buy @ <b class="ow-fig">${esc(fmtUGX(Math.round(cost)))}</b> per ${esc(chosenUnit||'unit')} from ${esc(supplierName(ipSelectedSupplierId))} · <span class="q-margin-pill danger">${pct}% · nothing kept</span>`;
+    keepV.textContent = !ipSelectedSupplierId ? '' : kept > 0
+      ? `· you keep ${Number(kept).toLocaleString('en-UG')} · ${pct}%`
+      : `· nothing kept · ${pct}%`;
   };
   drawLine();
   wrap.querySelector('#ip_price').addEventListener('input', drawLine);
-  const keepBtn = document.getElementById('ip_keep_btn');
-  const drawKeep = ()=>{
-    const open = ipKeepOpen;
-    keepV.hidden = !open;
-    const stage = wrap.querySelector('.q-stage');
-    if(stage) stage.classList.toggle('keep-open', open);
-    keepBtn.setAttribute('aria-expanded', String(open));
-    keepBtn.classList.toggle('open', open);
-    document.getElementById('ip_keep_t').textContent = open ? 'What you keep' : 'Show what you keep';
-  };
-  drawKeep();
-  keepBtn.addEventListener('click', ()=>{ ipKeepOpen = !ipKeepOpen; drawKeep(); });
+  wrap.querySelector('#ip_stage_x').addEventListener('click', ()=> closeModal('itemPickerModal'));
   const otherSearchEl = document.getElementById('ip_other_supplier_search');
   if(otherSearchEl){
     const otherBoxEl = document.getElementById('ip_other_supplier_suggestions');
@@ -37004,6 +37161,14 @@ function renderIpStage(){
   });
 }
 
+/* Which line's controls are open on the phone, kept across redraws. */
+let quoteOpenLine = null;
+document.addEventListener('click', (e)=>{
+  if(quoteOpenLine == null) return;
+  if(e.target.closest('.q-line.q-open')) return;
+  document.querySelectorAll('#q_itemsWrap .q-line.q-open').forEach(r=> r.classList.remove('q-open'));
+  quoteOpenLine = null;
+});
 function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
@@ -37084,7 +37249,7 @@ function renderQuoteItems(){
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
         <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
-        ${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
+        <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
     return `<div class="ow-tbl-r q-line${rowMarginClass}" data-line="${it.lineId}">
@@ -37096,18 +37261,25 @@ function renderQuoteItems(){
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span><span class="ow-tbl-s q-item-sup-ph" title="${esc(supLabel)}">· ${esc(supLabel)}</span>${consignTag}</span>
       </div>
-      <div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span></div>${
+      <div class="q-ph-ctl"><div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><button type="button" class="q-rstp" data-stp="-1" aria-label="One less">&minus;</button><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span><button type="button" class="q-rstp" data-stp="1" aria-label="One more">+</button></div>${
         /* A count in cartons is a count in cartons: no "= 200 Pair"
            under it. The pack size is in the unit's tooltip for anyone
            who wants it. Only the OLD reading -- a line written before
            the choice was recorded, with a remainder -- still says what
            the document will fold it into. */
         (!asPack && packView) ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
-      <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
+      <span class="q-ph-x">&times;</span><div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div></div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
       <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
+      <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
+           taps that open the row's controls, and who it is from. And a
+           third line, behind the shop strip, saying what the shop pays
+           and keeps on it. Neither is drawn on the console, whose
+           columns say the same things. -->
+      <span class="q-ph-meta"><button type="button" class="q-ph-tap" data-tap="qty">${esc(String(qtyShown))} ${esc(countUnit)}</button><span class="q-ph-x">&times;</span><button type="button" class="q-ph-tap" data-tap="price">${Number(Math.round(sell * per)).toLocaleString('en-UG')}</button><span class="q-ph-sp"></span><span class="q-ph-src" title="${esc(supLabel)}">${esc(supLabel)}</span></span>
+      <span class="q-ph-shop"><span class="q-ph-shop-s" title="${esc(supLabel)}">Buy @ ${esc(supLabel)}</span> <b class="ow-fig">${Number(Math.round(buy * per)).toLocaleString('en-UG')}</b> · <span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></span>
     </div>`;
   }).join('');
 
@@ -37143,7 +37315,7 @@ function renderQuoteItems(){
     <div class="ow-tbl-c q-gutter">
       <button class="q-add-icon" id="q_add_row_btn" title="Add item" aria-label="Add item"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    <div class="ow-tbl-c q-add-ph"><span class="q-add-row-placeholder" title="Add the next item — or type in the search above">Next item, a charge, or credit terms</span><span class="q-add-chips">${takesCharges ? chargeAddChipsHTML() : ''}${takesCredit ? creditOfferChipHTML(data.quote) : ''}</span></div>
+    <div class="ow-tbl-c q-add-ph"><span class="q-add-row-placeholder" title="Add the next item — or type in the search above">Next item, a charge, or credit terms</span><span class="q-add-chips">${takesCharges ? chargeAddChipsHTML() : ''}${takesCredit ? creditOfferChipHTML(data.quote) : ''}<span class="q-add-fade"></span></span></div>
   </div>`;
   /* An empty quote used to render the full grid anyway: eight column
      headers over nothing and three footer rows all reading 0 UGX --
@@ -37185,6 +37357,31 @@ function renderQuoteItems(){
   wrap.querySelectorAll('[data-line]').forEach(row=>{
     const lineId = Number(row.dataset.line);
     const item = data.quote.items.find(x=>x.lineId===lineId);
+    /* THE PHONE'S ROW OPENS ON A TAP. The dotted count or price opens
+       the controls strip and lands the caret on the one that was
+       tapped; the name opens it too. One row at a time; a tap outside
+       closes it. The open row survives the redraw an edit causes. */
+    if(quoteOpenLine === lineId) row.classList.add('q-open');
+    const openRow = (which)=>{
+      wrap.querySelectorAll('.q-line.q-open').forEach(r=>{ if(r!==row) r.classList.remove('q-open'); });
+      row.classList.add('q-open');
+      quoteOpenLine = lineId;
+      const el = row.querySelector(which==='price' ? '.q-sell' : '.q-qty');
+      if(el && window.matchMedia('(max-width:820px)').matches){ el.focus(); el.select(); }
+    };
+    row.querySelectorAll('.q-ph-tap').forEach(b=> b.addEventListener('click', ()=> openRow(b.dataset.tap)));
+    row.querySelector('.q-name-cell').addEventListener('click', (e)=>{
+      if(!window.matchMedia('(max-width:820px)').matches) return;
+      if(e.target.closest('button, input')) return;
+      openRow('qty');
+    });
+    /* The steppers move the count one whole unit of whatever the box
+       counts in, through the same change the typed count goes through. */
+    row.querySelectorAll('.q-rstp').forEach(b=> b.addEventListener('click', ()=>{
+      const el = row.querySelector('.q-qty');
+      el.value = Math.max(1, (Number(el.value)||0) + Number(b.dataset.stp));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }));
     row.querySelector('.q-qty').addEventListener('change', (e)=>{
       /* The same factor the row was drawn with: what is typed into a
          box counting cartons is cartons, and is multiplied back to the
@@ -37779,7 +37976,7 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTota
   else if(marginPct < 10) pillClass = 'warn';
   bar.innerHTML = `
     <div class="qp-says">
-      <div class="qp-says-label">Client pays</div>
+      <div class="qp-says-label">Client pays<span class="qp-says-n">${(data.quote.items||[]).length ? ` · ${data.quote.items.length} line${data.quote.items.length===1?'':'s'}` : ''}</span></div>
       <div class="qp-says-value${empty ? ' quiet' : ''}">${fmtUGX(pays)}</div>
     </div>
     <div class="qp-shop">
@@ -37797,6 +37994,9 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTota
      worth making. The handler still answers a tap with words. */
   const save = document.getElementById('q_save_btn');
   if(save) save.classList.toggle('q-save-off', !(data.quote && data.quote.items && data.quote.items.length));
+  /* The phone's strip: the same two figures, small, and the same pill. */
+  const figs = document.getElementById('q_shop_figs');
+  if(figs) figs.innerHTML = `· costs you <b class="qp-sf-c">${Number(grandBuy).toLocaleString('en-UG')}</b> · you keep <b class="qp-sf-k">${Number(profit).toLocaleString('en-UG')}</b> <span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%</span>`;
   renderShopToggleText();
 }
 
@@ -37807,9 +38007,7 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTota
 function renderShopToggleText(){
   const t = document.getElementById('q_shop_toggle_t');
   if(!t) return;
-  const open = document.body.classList.contains('q-shop-open');
-  const n = (data && data.quote && data.quote.items) ? data.quote.items.length : 0;
-  t.textContent = open ? 'Shop side' : `Shop side${n ? ` · ${n} line${n===1?'':'s'}` : ''}`;
+  t.textContent = 'Shop side';
 }
 function setShopSideOpen(open){
   document.body.classList.toggle('q-shop-open', !!open);
@@ -37818,6 +38016,29 @@ function setShopSideOpen(open){
   try{ sessionStorage.setItem('q_shop_open', open ? '1' : ''); }catch(e){}
   renderShopToggleText();
 }
+/* THE ⋯ LIVES IN THE PHONE'S BAR, and in the dock on the console. One
+   control, one menu, one set of handlers: the node is moved, not
+   copied, when the width changes. */
+(function(){
+  const wrap = document.querySelector('#q_stickybar .q-more-wrap');
+  const slot = document.getElementById('q_phbar_more');
+  const save = document.getElementById('q_save_btn');
+  if(!wrap || !slot || !save) return;
+  const mq = window.matchMedia('(max-width:820px)');
+  const place = ()=>{
+    if(mq.matches){ if(wrap.parentNode !== slot) slot.appendChild(wrap); }
+    else if(wrap.parentNode === slot) save.parentNode.insertBefore(wrap, save);
+  };
+  place();
+  if(mq.addEventListener) mq.addEventListener('change', place); else if(mq.addListener) mq.addListener(place);
+})();
+document.getElementById('q_phbar_print').addEventListener('click', ()=>{
+  document.getElementById('q_print_quote_btn').click();
+});
+document.getElementById('q_track_orders_phone').addEventListener('click', ()=>{
+  document.getElementById('q_more_menu').style.display = 'none';
+  document.getElementById('qn_track_orders_btn').click();
+});
 document.getElementById('q_shop_toggle').addEventListener('click', ()=>{
   setShopSideOpen(!document.body.classList.contains('q-shop-open'));
 });

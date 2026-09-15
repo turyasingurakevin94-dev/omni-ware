@@ -396,7 +396,9 @@ if (scope) {
      and the row wraps. Shrinking is still allowed, so a long supplier
      name on a narrow card still ellipsises rather than overflowing. */
   t.check(/\.q-sc-top\{[^}]*flex-wrap:wrap/.test(src), 'the supplier card head wraps');
-  const nameRule = (/\.q-sc-name\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  /* The console's own rule, at the file's top-level indent: the phone's
+     sheet gives the name a zero basis of its own, further down. */
+  const nameRule = (/\n  \.q-sc-name\{([^}]*)\}/.exec(src) || ['', ''])[1];
   t.check(/flex:0 1 auto/.test(nameRule),
     'and the name takes what it needs rather than all that is left, so the tag has somewhere to go');
   t.check(/text-overflow:ellipsis/.test(nameRule) && /min-width:0/.test(nameRule),

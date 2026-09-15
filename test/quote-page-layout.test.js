@@ -318,17 +318,39 @@ const src = read('index.html');
      money, so the bar ate about 150px of a screen whose whole job is
      the quote above it. The owner chose what the bar carries: the
      figure, WhatsApp, Save. */
-  /* The dock's first line is the figure, WhatsApp and Save, in the
-     thumb zone. The ⋯ rides the disclosure line under it: a third
-     button beside an eight-digit figure did not fit in 390px, and the
-     first fix for that wrapped the actions under the money, which ate
-     150px of a screen whose whole job is the quote above it. */
-  t.check(/\.q-stickybar-actions\{display:contents;\}/.test(src) && /\.q-more-wrap\{order:6;margin-left:auto;/.test(src),
-    'the actions dissolve into the dock, WhatsApp and Save closing the first line and the ⋯ on the line under');
-  t.check(/\.qbar-wa\{order:3;/.test(src) && /\.qbar-save\{order:4;/.test(src),
-    'in that order');
-  t.check(/\.q-print-owner\{display:none;\}/.test(src),
-    'Client copy is in the ⋯ menu here as everywhere — printing is the one thing nobody does from a handset');
+  /* THE DOCK IS ONE 64px LINE: the figure with its line count, WhatsApp
+     and Save, in the thumb zone. The ⋯ is not on it -- the phone's own
+     bar carries it, and the node is MOVED there, never copied, so there
+     is one menu and one set of handlers. Above the line, the 36px shop
+     strip. */
+  t.check(/\.q-stickybar-actions\{display:contents;\}/.test(src) && /\.qbar-wa\{order:3;/.test(src) && /\.qbar-save\{order:4;/.test(src),
+    'the actions dissolve into the dock, WhatsApp and Save closing the line in that order');
+  t.check(/\.qp-says\{order:2;flex:1 1 auto;min-width:0;height:64px;/.test(src),
+    'and the dock is one 64px line');
+  const place = (/const wrap = document\.querySelector\('#q_stickybar \.q-more-wrap'\);[\s\S]*?mq\.addListener\(place\);/.exec(src) || [''])[0];
+  t.check(/slot\.appendChild\(wrap\)/.test(place) && /insertBefore\(wrap, save\)/.test(place),
+    'the ⋯ is moved into the phone’s bar and back, one node at either width');
+  t.check(/\.q-print-owner\{display:none;\}/.test(src) && /getElementById\('q_phbar_print'\)\.addEventListener\('click'[\s\S]{0,120}?getElementById\('q_print_quote_btn'\)\.click\(\)/.test(src),
+    'Client copy is the bar’s document mark, clicking the button that owns the printing');
+  /* THE PHONE'S OWN CHROME. 190px of app bar, 26px heading, subtitle and
+     link stood above the first line; now a 48px bar of the screen's own
+     and no heading in the body. */
+  t.check(/body\.on-quote-tab \.mobile-topbar\{display:none;\}/.test(src) && /body\.on-quote-tab #tab-quote > \.ow-ph\{display:none;\}/.test(src),
+    'the phone draws its own 48px bar and no page heading under it');
+  t.check(/\.q-phbar\{position:fixed;top:0;left:0;right:0;z-index:90;display:flex;[^}]*height:calc\(48px \+ env\(safe-area-inset-top\)\)/.test(src),
+    'and the bar is 48px, fixed');
+  /* THE LINE IS 54px CLOSED, 78px OPEN. The count and the price are
+     dotted taps on the second line; a tap opens the row's own stepper
+     and price field, one row at a time. */
+  t.check(/\.q-doc \.ow-tbl-r\.q-line\{display:grid;grid-template-columns:22px minmax\(0,1fr\) auto;[^}]*min-height:54px;/.test(src),
+    'a line is 54px closed');
+  t.check(/\.q-doc \.ow-tbl-r\.q-line\.q-open\{min-height:78px;\}/.test(src),
+    'and 78px with its controls open');
+  const items2 = extractFunction(src, 'renderQuoteItems', 'index.html');
+  t.check(/class="q-ph-tap" data-tap="qty"/.test(items2) && /class="q-ph-tap" data-tap="price"/.test(items2),
+    'the count and the price are taps');
+  t.check(/row\.querySelectorAll\('\.q-ph-tap'\)\.forEach\(b=> b\.addEventListener\('click', \(\)=> openRow\(b\.dataset\.tap\)\)\)/.test(items2),
+    'that open the row on the control that was tapped');
 
   /* And it leaves as a PROXY, not a copy. The menu row has no handler
      of its own; it clicks the real button, which is display:none at
@@ -342,7 +364,7 @@ const src = read('index.html');
 
   /* A number must never break across two lines. At 390px "1,806,000
      UGX" wrapped after the comma and stopped looking like a number. */
-  t.check(/\.qp-says-value\{font-size:19px;white-space:nowrap;\}/.test(src),
+  t.check(/\.qp-says-value\{font-size:20px;white-space:nowrap;\}/.test(src),
     'the figure the owner reads down the phone never breaks');
   t.check(/\.qp-shopline b\{[^}]*white-space:nowrap/.test(src),
     'and neither does what the shop keeps');
@@ -362,16 +384,18 @@ const src = read('index.html');
     t.check(new RegExp('\\.qp-shopline b\\.' + c + '\\{color:').test(src),
       `all four readings are painted (${c})`);
   });
-  /* THE SHOP SIDE IS BEHIND A TAP ON THE PHONE. Cost and keep -- pill
-     included -- sit in a two-cell box that opens on the dock's
-     disclosure and stays open for the session; closed, the dock is the
-     figure and the two buttons. On a call the phone may be facing the
-     client. The pill fits here because the box has the room the one
-     line never had. */
-  t.check(/\.qp-shop\{order:1;display:none;/.test(src) && /body\.q-shop-open \.qp-shop\{display:flex;\}/.test(src),
-    'the shop’s two figures are not drawn until the disclosure opens them');
-  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src),
-    'and neither are the card’s supplier, buy @ and margin');
+  /* THE SHOP SIDE IS BEHIND A TAP ON THE PHONE. The 36px strip above
+     the dock says the shop's two figures small, with the pill; tapping
+     it opens a third line on every row -- buy @, what is kept -- and
+     stays open for the session. On a call the phone may be facing the
+     client. */
+  t.check(/\.qp-shop\{display:none;\}/.test(src) && /\.q-shop-toggle\{all:unset;[^}]*order:0;flex:1 1 100%;[^}]*height:36px;/.test(src),
+    'the two-cell box is not drawn on the phone; the strip carries the figures');
+  t.check(/figs\.innerHTML = `· costs you <b class="qp-sf-c">/.test(bar2) && /you keep <b class="qp-sf-k">/.test(bar2),
+    'and the strip is written by the same render as the bar, from the same figures');
+  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src)
+    && /body\.q-shop-open \.q-doc \.q-line > \.q-ph-shop\{display:flex;/.test(src),
+    'a line’s shop side is not drawn until the strip opens it');
   const toggle = extractFunction(src, 'setShopSideOpen', 'index.html');
   t.check(/sessionStorage\.setItem\('q_shop_open'/.test(toggle),
     'opened once, it stays open for the session');
