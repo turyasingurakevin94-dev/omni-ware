@@ -1152,6 +1152,29 @@
     font-size:16px;font-weight:600;letter-spacing:-.03em;}
   .fx-ord-v i{display:block;font-style:normal;font-size:12px;color:var(--fx-ink-3);margin-top:1px;}
 
+  /* ---- one client ---- */
+  /* Their rhythm, as a sentence rather than a chip. On the list a mark is
+     enough -- there are twelve names and you are scanning. Here there is
+     one name and the question is whether to drive out there, which a
+     "Due" pill cannot answer on its own. */
+  .fx-alert{display:flex;align-items:flex-start;gap:11px;padding:14px 15px;
+    background:var(--fx-card);border-radius:var(--fx-r-card);box-shadow:var(--fx-sh);
+    font-size:14px;line-height:1.5;color:var(--fx-ink-2);}
+  .fx-alert .icon{width:20px;height:20px;flex:none;margin-top:1px;stroke:var(--fx-ink-3);}
+  .fx-alert b{color:var(--fx-ink);font-weight:700;}
+  .fx-alert.late{border-left:3px solid var(--fx-oxide);}
+  .fx-alert.late .icon{stroke:var(--fx-oxide);}
+
+  /* Pinned above the tab bar. The screen runs past a phone once a client
+     has a few regulars and a few orders, and the whole point of arriving
+     here is to sell them something. */
+  .fx-cta{all:unset;box-sizing:border-box;cursor:pointer;position:fixed;z-index:45;
+    left:0;right:0;bottom:72px;max-width:504px;margin:0 auto;width:calc(100% - 32px);
+    display:flex;align-items:center;justify-content:center;min-height:52px;
+    background:var(--fx-oxide);color:#fff;border-radius:16px;box-shadow:var(--fx-sh-oxide);
+    font-size:15px;font-weight:600;}
+  .fx-cta:focus-visible{outline:2px solid var(--fx-ink);outline-offset:2px;}
+
   /* ---- a tab's own header ---- */
   .fx-page-hd{display:flex;align-items:center;gap:12px;padding:18px 16px 2px;}
   .fx-page-hd h1{flex:1;min-width:0;font-size:26px;font-weight:700;letter-spacing:-.025em;margin:0;}
@@ -1836,6 +1859,54 @@
         <div id="ag_clientsListWrap"></div>
       </div>
     </div>
+  </div>
+
+  <!-- ONE CLIENT. Reached by tapping a name on the Customers tab.
+       Everything here is about deciding whether to go and see them, and
+       then making the sale fast once you have: their own rhythm and where
+       they are in it, what they always buy, and what they have paid
+       before. -->
+  <div id="ag_clientView" class="fx" style="display:none;">
+    <div class="fx-mini">
+      <div class="fx-mini-top">
+        <button type="button" class="fx-iconbtn" id="ag_clientBack" aria-label="Back to clients">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></svg>
+        </button>
+        <span class="fx-sp"></span>
+        <span id="ag_clientCallWrap"></span>
+      </div>
+      <div class="fx-who">
+        <span class="fx-who-av" id="ag_clientAv">--</span>
+        <span class="fx-who-b">
+          <span class="fx-who-n" id="ag_clientName">Client</span>
+          <span class="fx-who-m" id="ag_clientPhone"></span>
+        </span>
+      </div>
+      <div class="fx-split">
+        <div><div class="l">You have earned</div><div class="v" id="ag_clientEarned">0</div></div>
+        <div><div class="l">Typical order</div><div class="v" id="ag_clientTypical">0</div></div>
+      </div>
+    </div>
+
+    <div class="fx-sheet" style="padding-bottom:96px;">
+      <!-- The one fact that decides whether to go: their own rhythm, and
+           where they are in it. -->
+      <div id="ag_clientRhythm"></div>
+
+      <div id="ag_clientRegularsSec" style="display:none;">
+        <div class="fx-sec"><h2>What they always buy</h2></div>
+        <div class="fx-card" id="ag_clientRegulars"></div>
+        <p class="fx-fine">Prices are what you last charged them. The order screen prices
+          everything against the shop's live book when you add it.</p>
+      </div>
+
+      <div>
+        <div class="fx-sec"><h2>Past orders</h2><span class="n" id="ag_clientOrdersN"></span></div>
+        <div class="fx-card" id="ag_clientOrders"></div>
+      </div>
+    </div>
+
+    <button type="button" class="fx-cta" id="ag_clientStartOrder">Start an order</button>
   </div>
 
   <!-- STANDING. Where he is against the other agents, and the next
@@ -3141,7 +3212,7 @@ const TAB_VIEW = {
   earnings: 'ag_earningsView', quote: 'ag_quoteView', account: 'ag_accountView',
   standing: 'ag_standingView'
 };
-const ALL_VIEWS = ['ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_orderHistoryListView','ag_standingView'];
+const ALL_VIEWS = ['ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_clientView','ag_orderHistoryListView','ag_standingView'];
 let lastMainTab = 'home';
 
 function showOnlyView(id){
@@ -4462,7 +4533,7 @@ function clientRowHTML(c, orders, cad){
       ? '<span class="fx-chip quiet">Quiet</span>'
       : '<span class="fx-chip due">Due</span>';
   }
-  return `<div class="fx-cl">
+  return `<div class="fx-cl" data-client-open="${esc(c.id)}">
     <span class="fx-lead-av">${esc(initials)}</span>
     <div class="fx-cl-b">
       <div class="fx-cl-h">
@@ -4931,6 +5002,232 @@ document.getElementById('ag_addClientBtn').addEventListener('click', ()=>{
     renderClientsListScreen();
     toast('Client saved');
   }, { makeActive: false });
+});
+// Tapping a name opens that client. The Call link inside the row is an
+// <a> handled by the browser and stopped here first, so a thumb aimed at
+// the phone button never lands on the screen behind it.
+document.getElementById('ag_clientsListWrap').addEventListener('click', (e)=>{
+  if(e.target.closest('.fx-call')) return;
+  const row = e.target.closest('[data-client-open]');
+  if(row) openClientScreen(row.dataset.clientOpen);
+});
+
+/* ---- One client ------------------------------------------------------
+ * The screen answers two questions in order: is it worth going out
+ * there, and -- once you are -- what do I put in front of them. Nothing
+ * on it is fetched; every figure is read off orders the app already
+ * holds, so it works with no signal like the rest of the app.
+ *
+ * What it deliberately does NOT say is whether the client pays on time.
+ * The mockup claimed "never a missed payment", and the agent app has no
+ * record of it: agentPaymentStatus and amountPaid are what HE owes the
+ * SHOP, not what his customer owes him. There is no table for the other
+ * half, so the screen stays quiet about it rather than inventing it.
+ */
+let clientViewId = null;
+
+// Counted once per ORDER, not once per line: a product on two lines of
+// the same order is still one order that included it.
+function clientRegulars(orders){
+  const live = (orders||[]).filter(o=>!o.voided);
+  const byKey = new Map();
+  live.forEach(o=>{
+    const seenHere = new Set();
+    const d = orderDate(o) || '';
+    (o.items||[]).forEach(it=>{
+      const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
+      if(!byKey.has(key)) byKey.set(key, {
+        key, productId: it.productId, variantIdx: it.variantIdx==null?null:it.variantIdx,
+        name: it.productName || it.name || '', orders:0, qtys:[],
+        lastDate:'', lastRate:0, lastUnitEarn:0, unit: it.unit || '',
+      });
+      const r = byKey.get(key);
+      if(!seenHere.has(key)){ seenHere.add(key); r.orders++; }
+      const qty = Number(it.qty)||0;
+      if(qty > 0) r.qtys.push(qty);
+      // Ties go to the later line, so the newest price wins on a day with
+      // two orders on it.
+      if(d >= r.lastDate){
+        r.lastDate = d;
+        r.lastRate = Number(it.agentSellPrice)||0;
+        r.lastUnitEarn = (Number(it.agentSellPrice)||0) - (Number(it.sellPrice)||0);
+        r.unit = it.unit || r.unit;
+      }
+    });
+  });
+  /* "Always buy" has to mean more than once, or the heading is a lie on
+     every client who has ordered a single time. A client with one order
+     therefore has no regulars at all, which is correct: one order is not
+     a pattern, and the order itself is on the screen directly below. */
+  return [...byKey.values()]
+    .filter(r=>r.orders >= 2)
+    .sort((a,b)=> b.orders - a.orders
+      || String(b.lastDate).localeCompare(String(a.lastDate))
+      || String(a.name).localeCompare(String(b.name)));
+}
+
+/* The MEDIAN, not the mean, everywhere this screen says "usually" or
+   "typical": one bulk order should not move "usually 4" to "usually 11"
+   for the twenty ordinary ones around it, and one big job should not
+   make a client's typical order twice what they normally spend. The mean
+   is the right average for a TOTAL -- what he has earned off them -- and
+   that is the only place this screen uses one. */
+function medianOf(nums){
+  const v = (nums||[]).filter(n=>Number.isFinite(n)).sort((a,b)=>a-b);
+  if(!v.length) return 0;
+  const mid = Math.floor(v.length/2);
+  return v.length % 2 ? v[mid] : (v[mid-1] + v[mid]) / 2;
+}
+function usualQty(qtys){
+  return Math.round(medianOf(qtys));
+}
+
+/* Their rhythm as a sentence. On the list a Due mark is enough -- there
+   are a dozen names and you are scanning. Here there is one name and the
+   question is whether to drive out there, which a pill cannot answer. */
+function clientRhythmHTML(cad, stats, orderCount){
+  if(!orderCount){
+    return `<div class="fx-alert">${ICON_CLOCK}<div>No orders yet. Whatever you sell them
+      first is what this page will be able to tell you about next time.</div></div>`;
+  }
+  const on = (key)=> key ? new Date(key+'T00:00:00').toLocaleDateString('en-UG',{day:'numeric',month:'long'}) : '';
+  if(!cad){
+    return `<div class="fx-alert">${ICON_CLOCK}<div>They have ordered once, on
+      <b>${esc(on(stats.lastAt))}</b> &mdash; not enough yet to tell you their rhythm.</div></div>`;
+  }
+  const every = Math.round(cad.avgGapDays);
+  const gap = Math.round(cad.daysSince - cad.avgGapDays);
+  const tail = `They order about every <b>${every} day${every===1?'':'s'}</b> and last bought on
+    <b>${esc(on(cad.lastDateKey))}</b> &mdash; ${cad.orders.length} orders so far.`;
+  if(gap >= 0){
+    return `<div class="fx-alert late">${ICON_CLOCK}<div><b>${gap === 0 ? 'Due today.' : `${gap} day${gap===1?'':'s'} late.`}</b> ${tail}</div></div>`;
+  }
+  const inDays = -gap;
+  return `<div class="fx-alert">${ICON_CLOCK}<div><b>Due in about ${inDays} day${inDays===1?'':'s'}.</b> ${tail}</div></div>`;
+}
+
+function openClientScreen(clientId){
+  clientViewId = String(clientId);
+  showOnlyView('ag_clientView');
+  renderClientScreen();
+  window.scrollTo(0, 0);
+}
+
+function renderClientScreen(){
+  const c = agentClients.find(x=>String(x.id)===clientViewId);
+  // The client can vanish under the screen -- a refresh that drops them,
+  // or a stale id off a cached snapshot. Going back to the list is the
+  // honest response; a blank screen with a name-shaped gap is not.
+  if(!c){ switchTab('customers'); return; }
+  const orders = (clientOrderCounts().get(c.id) || []).filter(o=>!o.voided);
+  const stats = clientStats(orders);
+  const cad = clientCadence(c, clientOrderCounts(), new Date());
+
+  document.getElementById('ag_clientAv').textContent = clientInitials(c.name);
+  document.getElementById('ag_clientName').textContent = c.name;
+  document.getElementById('ag_clientName').title = c.name;
+  document.getElementById('ag_clientPhone').innerHTML =
+    [c.phone, c.location].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join('')
+    || `<span>No phone on file</span>`;
+  document.getElementById('ag_clientCallWrap').innerHTML = c.phone
+    ? `<a class="fx-iconbtn" href="tel:${esc(c.phone)}" aria-label="Call ${esc(c.name)}">${ICON_PHONE}</a>`
+    : `<span style="width:44px;flex:none;display:block;"></span>`;
+  document.getElementById('ag_clientEarned').textContent = fmtNum(stats.earned);
+  // Their typical order, not their biggest and not their last. Blank
+  // rather than zero when there is nothing to average -- a measured zero
+  // on a money figure is the lie this app keeps refusing to tell.
+  document.getElementById('ag_clientTypical').textContent =
+    stats.count ? fmtNum(Math.round(medianOf(orders.map(orderTotal)))) : '--';
+
+  document.getElementById('ag_clientRhythm').innerHTML = clientRhythmHTML(cad, stats, stats.count);
+
+  /* What they always buy. The fastest sale on the screen: the product,
+     how reliably they take it, the quantity they usually take, and what
+     he charged them for it last time -- then one tap into the add sheet
+     with that quantity already in the field. */
+  const regulars = clientRegulars(orders).slice(0, 4);
+  const regSec = document.getElementById('ag_clientRegularsSec');
+  regSec.style.display = regulars.length ? 'block' : 'none';
+  if(regulars.length){
+    document.getElementById('ag_clientRegulars').innerHTML = regulars.map(r=>{
+      const qty = usualQty(r.qtys);
+      const how = r.orders >= stats.count ? 'Every order' : `${r.orders} of ${stats.count} orders`;
+      const meta = [how, qty ? `usually ${qty}${r.unit ? ' '+esc(r.unit) : ''}` : ''].filter(Boolean).join(' &middot; ');
+      return `<div class="fx-prod" data-regular="${esc(r.key)}" data-qty="${esc(qty)}">
+        <span class="fx-prod-b">
+          <span class="fx-prod-n" title="${esc(r.name)}">${esc(r.name)}</span>
+          <span class="fx-prod-u">${meta}</span>
+          <span class="fx-prod-p">
+            <span class="fx-prod-amt">${fmtNum(r.lastRate)}</span>
+            ${r.lastUnitEarn > 0 ? `<span class="fx-earn">${fmtNum(r.lastUnitEarn)} yours each</span>` : ''}
+          </span>
+        </span>
+        <span class="fx-prod-a">
+          <button type="button" class="fx-add" aria-label="Add ${esc(r.name)}">${ICON_PLUS}</button>
+        </span>
+      </div>`;
+    }).join('');
+  }
+
+  // Newest first, and capped -- the header says when it is showing part
+  // of a longer list rather than truncating quietly.
+  const sorted = orders.slice().sort((a,b)=> String(orderDate(b)||'').localeCompare(String(orderDate(a)||'')));
+  const shown = sorted.slice(0, 5);
+  // Not shelfCountLabel: these are orders, and "5 items" over a list of
+  // orders names the wrong thing.
+  document.getElementById('ag_clientOrdersN').textContent = !stats.count ? ''
+    : (stats.count > shown.length
+        ? `${shown.length} of ${stats.count}`
+        : `${stats.count} order${stats.count===1?'':'s'}`);
+  document.getElementById('ag_clientOrders').innerHTML = shown.length
+    ? shown.map(o=>{
+        const d = orderDate(o);
+        const date = d ? new Date(d+'T00:00:00').toLocaleDateString('en-UG',{day:'numeric',month:'long'}) : 'Undated';
+        const n = (o.items||[]).length;
+        const e = orderEarnings(o);
+        // The same completed-only rule the wallet uses: a bonus is not
+        // earned until the order is finished.
+        const earned = e.margin + (o.status==='completed' ? e.bonus : 0);
+        return `<div class="fx-ord">
+          <span class="fx-ord-b">
+            <span class="fx-ord-n">${esc(date)}</span>
+            <span class="fx-ord-m">${n} item${n===1?'':'s'} &middot; ${esc(ORDER_STATUS_LABEL[o.status] || o.status)}</span>
+          </span>
+          <span class="fx-ord-v"><b>${fmtNum(orderTotal(o))}</b>${earned ? `<i>${fmtNum(earned)} yours</i>` : ''}</span>
+        </div>`;
+      }).join('')
+    : `<div class="fx-empty">Nothing yet. Start their first order below.</div>`;
+
+  document.getElementById('ag_clientStartOrder').textContent =
+    `Start an order for ${firstWord(c.name)}`;
+}
+
+// The name a person is called by, for a button that has to fit one.
+// "Ssekitoleko Hardware Ltd" on a CTA wraps; "Ssekitoleko" does not.
+function firstWord(name){
+  return String(name||'').trim().split(/\s+/)[0] || 'them';
+}
+
+document.getElementById('ag_clientBack').addEventListener('click', ()=> switchTab('customers'));
+document.getElementById('ag_clientStartOrder').addEventListener('click', ()=>{
+  const c = agentClients.find(x=>String(x.id)===clientViewId);
+  if(!c) return;
+  selectClient(c);
+  switchTab('sell');
+  toast(`Order started for ${c.name}`);
+});
+document.getElementById('ag_clientView').addEventListener('click', (e)=>{
+  const row = e.target.closest('[data-regular]');
+  if(!row) return;
+  const [pid, vidxRaw] = String(row.dataset.regular).split('::');
+  const item = catalogEntry(pid, vidxRaw === '' ? null : Number(vidxRaw));
+  /* A product they always buy can have been discontinued since, and the
+     add sheet has nothing to price without a catalogue entry. Saying so
+     beats a sheet that opens empty. */
+  if(!item){ toast('That product is no longer in the shop’s catalogue'); return; }
+  const c = agentClients.find(x=>String(x.id)===clientViewId);
+  if(c && cartKey(chosenClient) !== cartKey(c)) selectClient(c);
+  openAddItemPanel(item, { qty: Number(row.dataset.qty) || 0 });
 });
 let orderHistorySegment = 'ongoing';
 
@@ -6308,7 +6605,8 @@ function openImageLightbox(src){
 // screen yet at that point to naturally absorb the extra taps the way
 // there would be once the panel is actually showing.
 let addPanelOpening = false;
-async function openAddItemPanel(item){
+async function openAddItemPanel(item, opts){
+  opts = opts || {};
   if(addPanelOpening) return;
   addPanelOpening = true;
   /* The sheet goes up FIRST, holding a spinner, and the price fills it in
@@ -6532,6 +6830,11 @@ async function openAddItemPanel(item){
     updateGuidance();
   }
   if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
+  /* A quantity handed in by the caller is always in BASE units -- the one
+     caller reads it off past orders, which record base qty -- so the unit
+     selector goes to base with it. Without that, "usually 12" on a packed
+     product would arrive as twelve PACKS. */
+  if(Number(opts.qty) > 0){ qtyEl.value = String(Number(opts.qty)); unitEl.value = 'unit'; }
   rerender();
 
   qtyEl.addEventListener('change', rerender);
