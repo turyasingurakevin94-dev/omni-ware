@@ -114,7 +114,9 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        var(--ow-lift) and none, and what .tl-x and .pr-tbl .tl-on already
        use for exactly this mark. It paints inside the box; nothing
        floats. */
-    'shadows': [57, /box-shadow:\s*([^;}]+)/g],
+    /* 56, not 57: the quote's sticky bar floated on a shadow of its own.
+       It is a bar, not a menu -- a hairline above it is the depth. */
+    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -406,7 +408,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'qp-items-table-wrap', 'qp-items-cards', 'qc-card'],
       uses: ['ow-cb', 'ow-grid', 'ow-pan', 'ow-side'],
       renders: 'renderQuoteItems',
-      rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
+      /* No ow-tbl-f: the document has no foot any more. The arithmetic
+         is stated once, on the sticky bar (renderQuoteFinbar), which is
+         the one surface that cannot scroll away. */
+      rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-gi'],
     },
     /* The Price registry. The form panel became fields in the layer's
        toolbar, the summary the strip, the card grid the layer's cards

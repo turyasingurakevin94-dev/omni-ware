@@ -165,36 +165,36 @@ const src = read('index.html');
   t.check(!/\.qp-tbtn\{/.test(src) && !/class="qp-toolbar"/.test(src),
     'the icon-over-label chip toolbar no longer exists');
 
-  /* ICON-ONLY SECONDARIES. Labelled, the three of them plus Save were
-     wider than a phone and wrapped to a second row -- the bar ate 150px
-     of a screen whose whole job is the quote above it.
-
-     A control with no text still has to say what it is, so each carries
-     an aria-label, and each is 40px square because a picture is not a
-     smaller target than a word. */
+  /* THE SECONDARIES, NAMED. Each carries an aria-label and a title, and
+     each is at least 40px because a control is a target before it is a
+     picture. The three used to be icon-only at every width; the
+     console has the room for the one word that tells sending from
+     printing at a glance, so Send on WhatsApp keeps its words there.
+     The aria-label says the same words, so it reads once, not twice. */
   const iconBtns = ['q_print_quote_btn', 'q_whatsapp_btn', 'q_more_btn'];
   iconBtns.forEach((id) => {
     const el = (new RegExp(`<button[^>]*id="${id}"[^>]*>`)).exec(bar);
     t.check(el && /aria-label="[^"]+"/.test(el[0]), `${id} is named for anything not reading the picture`);
     t.check(el && /title="[^"]+"/.test(el[0]), `and keeps the long explanation on hover`);
   });
-  /* The labels are gone from the markup, not merely hidden with CSS --
-     a hidden label still costs layout in some engines and reads out
-     twice.
-
-     Measured on the BAR'S OWN ROW, with the ⋯ menu cut out. A menu item
-     is supposed to have words -- Supplier copy and Clear quote always
-     did, and Client copy joined them when it left the phone's bar. What
-     must stay wordless is the row of icon buttons, which is what this
-     was ever about. */
+  t.check(/id="q_whatsapp_btn"[^>]*aria-label="Send on WhatsApp"[\s\S]{0,900}?<span class="qbar-l">Send on WhatsApp<\/span>/.test(bar),
+    'Send on WhatsApp keeps its words on the console, and the label says the same words, so it reads once');
+  t.check(/\.qbar-wa \.qbar-l\{display:none;\}/.test(src),
+    'and the phone keeps the mark and the name but drops the words — the dock has no room for them');
+  /* CLIENT COPY IS A MENU ITEM AT EVERY WIDTH. Printing is the
+     occasional act; sending and saving are the frequent ones. The
+     button that owns the behaviour stays in the bar's markup, never
+     drawn, and the menu item clicks it. */
   const barRow = bar.replace(/<div class="q-more-menu"[\s\S]*?<\/div>\s*<\/div>/, '');
   t.check(!/q_more_menu/.test(barRow), 'the ⋯ menu is cut out before the row is measured');
-  t.check(!/>\s*Client copy\s*<\/button>/.test(barRow) && !/>\s*WhatsApp\s*<\/button>/.test(barRow),
-    'and the words themselves are gone rather than hidden');
+  t.check(!/>\s*Client copy\s*<\/button>/.test(barRow),
+    'and Client copy has no words on the bar itself — it is not drawn there');
+  t.check(/class="qbar-btn q-print-owner" id="q_print_quote_btn"/.test(bar) && /\.q-print-owner\{display:none;\}/.test(src),
+    'the print button owns its behaviour and is never drawn');
 
   const btnRule = (/\.qbar-btn\{[^}]*\}/.exec(src) || [''])[0];
   t.check(/min-width:40px/.test(btnRule) && /min-height:40px/.test(btnRule),
-    'an icon-only button is still a thumb-sized target');
+    'a bar button is still a thumb-sized target');
   const saveRule = (/\.qbar-save\{[^}]*\}/.exec(src) || [''])[0];
   t.check(/min-height:40px/.test(saveRule),
     'and Save matches it, so the row sits on one line');
@@ -260,14 +260,25 @@ const src = read('index.html');
     'and the add entry exists in both branches for the wiring to find');
 
   /* What the books know about the client lives INSIDE the band, as the
-     cell after the date: the date's cell closes, the known-facts cell
-     follows, and only then does the band close. The usual-buys chips
-     sit UNDER the band on purpose -- the band is facts, the chips are a
-     door -- so for them the assertion is that they follow it directly. */
-  t.check(/id="q_date">\s*<\/div>\s*<div class="ow-cb-k" id="q_client_history"><\/div>\s*<\/div>/.test(src),
+     cells after the date: the date's cell closes, the known-facts cell
+     follows, and only then does the band close. The client and their
+     number share the first cell -- one client, one cell. */
+  t.check(/id="q_date">\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="ow-cb-k" id="q_client_history"><\/div>\s*<\/div>/.test(src),
     'what the books know is the band’s own last cell, not an island under it');
-  t.check(/id="q_client_history"><\/div>\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-client-usual" id="q_client_usual"><\/div>/.test(src),
-    'and the usual-buys chips follow the band directly');
+  t.check(/<div class="q-client-cell">\s*<input[^>]*id="q_client_name"[^>]*>\s*<input[^>]*id="q_client_phone"/.test(src),
+    'and the number sits in the client’s own cell beside the name');
+  /* The usual-buys chips are INSIDE the document now, under the search:
+     tapping one puts a line on it, so it belongs where the lines are.
+     The cut is counted on the last chip rather than scrolled off. */
+  const doc = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>\s*<div id="q_itemsWrap"/.test(doc),
+    'the usual-buys chips sit inside the document, between the search and the lines');
+  const fit = extractFunction(src, 'fitUsualChips', 'index.html');
+  t.check(/more\.textContent = `\+\$\{cut\}`;/.test(fit),
+    'and the chips that do not fit the line are counted, never silently cut');
+  const hist = extractFunction(src, 'renderClientHistoryBox', 'index.html');
+  t.check(/Orders<\/span>/.test(hist) && /Owed now/.test(hist) && /Last order<\/span>/.test(hist),
+    'the facts are orders, what is owed now and the last order — the rail’s client panel folded into the band');
 }
 
 /* ---------- 7. the dropdown is a member, not a copy ------------------ */
@@ -307,10 +318,17 @@ const src = read('index.html');
      money, so the bar ate about 150px of a screen whose whole job is
      the quote above it. The owner chose what the bar carries: the
      figure, WhatsApp, Save. */
-  t.check(/\.q-stickybar-actions\{margin-left:auto;width:auto;/.test(src),
-    'the actions sit beside the money rather than on a line of their own');
-  t.check(/#q_print_quote_btn\{display:none;\}/.test(src) && /\.q-more-phone\{display:flex;\}/.test(src),
-    'Client copy leaves the phone’s bar for the ⋯ menu — printing is the one thing nobody does from a handset');
+  /* The dock's first line is the figure, WhatsApp and Save, in the
+     thumb zone. The ⋯ rides the disclosure line under it: a third
+     button beside an eight-digit figure did not fit in 390px, and the
+     first fix for that wrapped the actions under the money, which ate
+     150px of a screen whose whole job is the quote above it. */
+  t.check(/\.q-stickybar-actions\{display:contents;\}/.test(src) && /\.q-more-wrap\{order:6;margin-left:auto;/.test(src),
+    'the actions dissolve into the dock, WhatsApp and Save closing the first line and the ⋯ on the line under');
+  t.check(/\.qbar-wa\{order:3;/.test(src) && /\.qbar-save\{order:4;/.test(src),
+    'in that order');
+  t.check(/\.q-print-owner\{display:none;\}/.test(src),
+    'Client copy is in the ⋯ menu here as everywhere — printing is the one thing nobody does from a handset');
 
   /* And it leaves as a PROXY, not a copy. The menu row has no handler
      of its own; it clicks the real button, which is display:none at
@@ -336,7 +354,7 @@ const src = read('index.html');
      also what lets the phone drop the pill: at 390px the bar has about
      150 pixels for the money, and the two together need closer to 180. */
   const bar2 = extractFunction(src, 'renderQuoteFinbar', 'index.html');
-  t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\} <b class="\$\{pillClass\}">/.test(bar2),
+  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b><span class="qp-margin-pill-lg \$\{pillClass\}">/.test(bar2),
     'the keep figure carries the same reading as the pill, not just the sign of the profit');
   t.check(!/style="color:/.test(bar2),
     'and takes it from a class rather than an inline colour, so a rule can reach it');
@@ -344,8 +362,19 @@ const src = read('index.html');
     t.check(new RegExp('\\.qp-shopline b\\.' + c + '\\{color:').test(src),
       `all four readings are painted (${c})`);
   });
-  t.check(/\.qp-margin-pill-lg\{display:none;\}/.test(src),
-    'and the phone drops the pill, because the number is now saying it');
+  /* THE SHOP SIDE IS BEHIND A TAP ON THE PHONE. Cost and keep -- pill
+     included -- sit in a two-cell box that opens on the dock's
+     disclosure and stays open for the session; closed, the dock is the
+     figure and the two buttons. On a call the phone may be facing the
+     client. The pill fits here because the box has the room the one
+     line never had. */
+  t.check(/\.qp-shop\{order:1;display:none;/.test(src) && /body\.q-shop-open \.qp-shop\{display:flex;\}/.test(src),
+    'the shop’s two figures are not drawn until the disclosure opens them');
+  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src),
+    'and neither are the card’s supplier, buy @ and margin');
+  const toggle = extractFunction(src, 'setShopSideOpen', 'index.html');
+  t.check(/sessionStorage\.setItem\('q_shop_open'/.test(toggle),
+    'opened once, it stays open for the session');
 }
 
 /* ---------- 9. the picker stage speaks the page's grammar ------------ */

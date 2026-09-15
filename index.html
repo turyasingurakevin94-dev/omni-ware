@@ -683,29 +683,30 @@
      grammar, and the total lived a scroll away from the Save. */
   .q-stickybar{
     position:fixed;left:var(--sidebar-w);right:0;bottom:0;z-index:40;
-    display:none;align-items:center;gap:18px;flex-wrap:wrap;
-    padding:9px 22px calc(9px + env(safe-area-inset-bottom, 0px));
+    display:none;align-items:center;gap:0;flex-wrap:nowrap;min-height:64px;
+    padding:0 24px env(safe-area-inset-bottom, 0px);
     background:var(--panel);border-top:1px solid var(--line);
-    box-shadow:0 -4px 16px rgba(20,30,40,0.06);
   }
   body.on-quote-tab .q-stickybar{display:flex;}
   /* The document must end above the bar, not under it. */
   body.on-quote-tab #tab-quote{padding-bottom:86px;}
-  .q-stickybar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
-  /* Icon-only, and square. Three labelled secondaries plus Save were
-     wider than a phone and wrapped to a second row, so the bar ate 150px
-     of a screen whose whole job is the quote above it. Named by
-     aria-label and title rather than by text, and sized to 40px because
-     a control with no label still has to be hittable with a thumb --
-     the labelled version was 28px tall, which was already under it. */
+  .q-stickybar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;}
+  /* The bar's buttons. Send on WhatsApp keeps its words on the console;
+     the ⋯ is a square. Each is 40px tall because a control is a target
+     before it is a picture. */
   .qbar-btn{
     all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
-    justify-content:center;min-width:40px;min-height:40px;padding:0 10px;
-    border-radius:8px;border:1px solid var(--line);color:var(--ink-soft);
+    justify-content:center;gap:7px;min-width:40px;min-height:40px;padding:0 12px;
+    border-radius:var(--ow-r-lg);border:1px solid var(--line);color:var(--ink);
+    font-size:13px;font-weight:600;white-space:nowrap;
   }
-  .qbar-btn:hover{border-color:var(--ink-soft);color:var(--ink);}
-  .qbar-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .qbar-btn.q-more-btn{padding:0;}
+  .qbar-btn:hover{border-color:var(--ink-soft);}
+  .qbar-btn:focus-visible{outline:2px solid var(--navy);outline-offset:1px;}
   .qbar-btn .icon{width:18px;height:18px;flex-shrink:0;}
+  /* Client copy owns the print behaviour and is reached from the ⋯
+     menu at every width; the button itself is never drawn. */
+  .q-print-owner{display:none;}
   /* Keeps its words: it is the commit, and an unlabelled save on a money
      document is the one button worth the space. min-height matches the
      icon buttons beside it so the row sits on one line rather than one
@@ -714,12 +715,18 @@
   .qbar-save{
     all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
     justify-content:center;gap:7px;min-height:40px;padding:0 18px;
-    border-radius:8px;background:var(--accent);color:#fff;
-    font-size:13px;font-weight:700;white-space:nowrap;
+    border-radius:var(--ow-r-lg);background:var(--accent);color:#fff;
+    font-size:14px;font-weight:700;white-space:nowrap;
   }
   .qbar-save:hover{filter:brightness(1.07);}
   .qbar-save:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
   .qbar-save .icon{width:15px;height:15px;}
+  /* Nothing to save yet. Steel, not a disabled attribute: a tap still
+     gets an answer in words. */
+  .qbar-save.q-save-off{background:var(--ow-steel-100);color:var(--ow-ink-600);}
+  .qbar-save.q-save-off:hover{filter:none;}
+  /* The phone's disclosure of the shop side; never drawn on the console. */
+  .q-shop-toggle{display:none;}
   .q-more-wrap{position:relative;}
   .q-more-menu{
     position:absolute;bottom:calc(100% + 6px);right:0;min-width:180px;z-index:50;
@@ -732,9 +739,6 @@
   }
   .q-more-item:hover{background:var(--ow-steel-050);}
   .q-more-item .icon{width:14px;height:14px;color:var(--ink-soft);}
-  /* Shown only at the phone breakpoint, where the bar has no room for
-     the control this one stands in for. */
-  .q-more-phone{display:none;}
   .q-more-item.danger{color:var(--danger);}
   .q-more-item.danger .icon{color:var(--danger);}
 
@@ -6131,7 +6135,8 @@
   .q-item-search-wrap > .icon{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
   #q_item_search{all:unset;flex:1;min-width:0;font-size:13.5px;color:var(--ink);}
   #q_item_search::placeholder{color:var(--ink-soft);opacity:.8;}
-  .q-item-search-hint{font-size:10.5px;color:var(--ink-soft);opacity:0;transition:opacity .15s ease;white-space:nowrap;}
+  .q-item-search-hint{font-size:var(--ow-t-11);color:var(--ink-soft);white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);padding:1px 6px;}
   .q-item-search-wrap:focus-within .q-item-search-hint{opacity:.8;}
   .q-item-search-dd{
     position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;
@@ -6234,19 +6239,54 @@
   .q-add-icon .icon{width:13px;height:13px;}
   .q-add-row-trailing:hover .q-add-icon{border-color:var(--ink);border-style:solid;color:var(--ink);}
   .q-add-row-placeholder{grid-column:2/-1;color:var(--ink-soft);font-size:12px;cursor:pointer;min-width:0;}
-  /* The arithmetic at the foot: three rows on the table's own tracks,
-     the label right-aligned across the client's columns, the figure in
-     the line-total column so it sits under the figures it totals, and
-     the shop's columns empty behind the rule. */
-  .q-doc .q-foot{padding-top:var(--ow-sp-4);padding-bottom:var(--ow-sp-4);background:var(--ow-paper);border-top:0;font-weight:500;}
-  .q-doc .q-foot-pays{border-top:1px solid var(--ow-rule);padding-top:var(--ow-sp-10);}
-  .q-doc .q-foot-keep{padding-bottom:var(--ow-sp-12);}
-  .q-doc .q-foot-l{grid-column:1/5;text-align:right;font-size:12px;color:var(--ink-soft);}
-  .q-doc .q-foot-pays .q-foot-l{font-size:13px;font-weight:600;color:var(--ink);}
-  .q-doc .q-foot-v{font-size:13px;}
-  .q-doc .q-foot-pays .q-foot-v{font-size:15px;}
-  .q-doc .q-foot-cost .q-foot-v{color:var(--ink-soft);font-weight:500;}
-  .q-doc .q-foot-x{grid-column:6/-1;}
+  /* THE BAND. One client, one cell: the name and the number share it,
+     the number in the figure face beside the name. The date follows,
+     then the facts the books hold. The phone's fold is not drawn here. */
+  .q-client-fold{display:none;}
+  .q-band .ow-cb-f-name{flex:1.4 1 0;}
+  .q-client-cell{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  .q-client-cell #q_client_name{flex:1 1 auto;min-width:0;font-size:15px;}
+  .q-client-cell .q-client-phone{flex:0 1 128px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;font-weight:400;color:var(--ow-ink-600);}
+  .q-band .ow-cb-f-dt{flex:.8 1 0;min-width:150px;}
+  .q-band #q_date{font-size:15px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .q-band .ow-cb-k{flex:2.7 1 0;padding:0;}
+  .q-band .ow-cb-kn{flex:.8 1 0;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-6);align-self:stretch;}
+  .q-band .ow-cb-kn:first-child{flex:.6 1 0;}
+  .q-band .ow-cb-kn:last-child{flex:1.3 1 0;}
+  .q-band .ow-cb-kn .ow-cb-l{margin-bottom:var(--ow-sp-2);}
+  .q-band .ow-cb-kv{font-size:15px;}
+  .q-band .ow-cb-kv.ow-fig{font-weight:var(--ow-fw-500);}
+  .ow-cb-ks{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;}
+  /* The usual-buys line under the search: one line, chips that do not
+     fit counted on the last one. Opened, it wraps. */
+  .q-client-usual{display:none;position:relative;align-items:center;gap:var(--ow-sp-6);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;}
+  .q-client-usual.show{display:flex;}
+  .q-client-usual.open{flex-wrap:wrap;}
+  .q-usual-l{flex:none;margin-right:var(--ow-sp-4);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .q-client-usual .q-chg-sug{margin-left:0;flex:none;white-space:nowrap;}
+  /* A chip the count has cut is gone: the chip's own inline-flex would
+     otherwise outrank the hidden attribute. */
+  .q-chg-sug[hidden]{display:none;}
+  .q-usual-chip[disabled]{cursor:default;color:var(--ink-soft);}
+  .q-usual-chip[disabled]:hover{border-color:var(--ow-rule-soft);}
+  /* The empty document's usual rows are the phone's; the console has the chips. */
+  .q-usual-slot{display:none;}
+  /* The one add row: the words, then the taps, all on one line. */
+  .q-add-ph{grid-column:2/-1;display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;min-width:0;}
+  .q-add-ph .q-chg-sug{margin-left:0;}
+  .q-add-ph .q-add-row-placeholder{margin-right:var(--ow-sp-4);}
+  .q-add-chips{display:contents;}
+  /* What the line keeps, and the supplier under the name: both read on
+     the phone, where the shop's columns are behind a tap. */
+  .q-margin-pill .q-mp-kept,.q-item-sub .q-item-sup-ph{display:none;}
+  /* The rail is one panel; each reading rules itself off with its header. */
+  .q-rail-sec:empty{display:none;}
+  .q-rail-sec + .q-rail-sec:not(:empty) > .ow-pan-h{border-top:1px solid var(--ow-rule-soft);}
+  .q-rail-sec .ow-mini{padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);}
 
   /* CHARGES ARE ROWS OF THE DOCUMENT, not a panel beneath it.
 
@@ -6393,71 +6433,58 @@
 
 
 
-  /* "Usually buys" strip -- shown right under the history box once a known
-     client with prior orders is typed/selected. Horizontally scrollable
-     chips (not a dropdown/table) so it stays glanceable on a live call and
-     never fights the client-name autocomplete for vertical space. */
-  .q-client-usual{display:none;gap:8px;margin:-8px 0 16px;overflow-x:auto;padding-bottom:2px;}
-  .q-client-usual.show{display:flex;}
-  .q-usual-chip{
-    flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--panel);
-    border:1px solid var(--line);border-radius:9px;padding:7px 8px 7px 7px;max-width:220px;
-  }
-  .q-usual-chip .q-stage-thumb, .q-usual-chip .q-stage-thumb-placeholder{width:32px;height:32px;border-radius:7px;}
-  .q-usual-chip-info{min-width:0;}
-  .q-usual-chip-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
-  .q-usual-chip-meta{font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .q-usual-chip-add{
-    all:unset;flex-shrink:0;cursor:pointer;width:22px;height:22px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;
-  }
-  .q-usual-chip-add:hover{background:var(--ow-oxide-deep);}
-  .q-usual-chip-add .icon{width:14px;height:14px;stroke-width:2.5;}
 
-  /* The one number a rep says out loud, given the weight of being the
-     answer rather than one of four equal cells. Everything the shop
-     needs sits under it, quieter, and is never mistaken for the
-     price. */
-  /* The sticky bar's left half. It was a bordered panel block sitting
-     ABOVE the items and pushing them down; on the bar it is two quiet
-     lines: the figure the admin reads aloud, and under it -- at a size
-     the client across the counter cannot read -- what the shop keeps. */
-  .qp-finbar{display:flex;flex-direction:column;gap:1px;}
-  .qp-says{display:flex;align-items:baseline;gap:10px;}
-  .qp-says-label{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink-soft);}
-  .qp-says-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:20px;
-    line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums;}
-  .qp-shopline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-    font-size:11.5px;color:var(--ink-soft);}
-  .qp-shopline b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;}
-  /* The split of the bill goes on the phone, for the same reason the
-     pill does: the bar has about 150 pixels for money at 390, and this
-     is the third figure competing for them. It wrapped into a four-line
-     column beside the buttons. What the client pays and what the shop
-     keeps are the two the bar exists for; the foot in the table above
-     carries the breakdown in full. */
-  @media (max-width:820px){ .qp-split{display:none;} }
+
+  /* THE BAR'S THREE FIGURES: what the client pays, what it costs, what
+     is kept -- once, ruled off from each other by hairlines. The first
+     is the one said down the phone and leads at 22px; the shop's two
+     sit beside it at 15px, the kept figure coloured by the pill's own
+     reading so the two cannot disagree. */
+  .qp-finbar{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
+  .qp-says{display:flex;align-items:baseline;gap:12px;padding-right:22px;border-right:1px solid var(--ow-rule-soft);}
+  .qp-says-label{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .qp-says-value{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:var(--ow-fw-600);font-size:22px;
+    line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;}
+  .qp-says-value.quiet{color:var(--ow-ink-400);}
+  .qp-shop{display:flex;align-items:center;flex:none;}
+  .qp-cost,.qp-shopline{display:flex;align-items:baseline;gap:8px;padding:0 22px;flex:none;}
+  .qp-cost{border-right:1px solid var(--ow-rule-soft);}
+  .qp-cost-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:15px;font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
+  .qp-keep-v{display:flex;align-items:center;gap:8px;flex:none;}
+  /* A narrower console: the groups close up and WhatsApp keeps its
+     mark and its name but not its words -- 1024px holds the three
+     figures or the three words, not both. */
+  @media (max-width:1460px){
+    .qp-says{padding-right:14px;gap:8px;}
+    .qp-cost,.qp-shopline{padding:0 14px;}
+    .qbar-wa .qbar-l{display:none;}
+    .qbar-wa{padding:0;}
+  }
+  .qp-shopline b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:15px;font-weight:var(--ow-fw-600);color:var(--ink);white-space:nowrap;}
   /* THE FIGURE AND THE PILL USED TO DISAGREE.
      The pill has four readings -- healthy, thin, losing, nothing yet --
      and the figure beside it had two: green unless the profit was
      negative. So a quote keeping 6% showed an amber pill next to a green
      figure, two things saying opposite things about one number. The
-     figure now takes the same reading the pill does, which is also what
-     lets the phone drop the pill: one object carries the meaning instead
-     of two, and the one it carries is the number itself.
+     figure takes the same reading the pill does.
      All four clear on paper -- 6.38, 7.48, 10.03 and the caption grey. */
   .qp-shopline b.good{color:var(--good);}
   .qp-shopline b.warn{color:var(--warn-ink);}
   .qp-shopline b.danger{color:var(--danger);}
   .qp-shopline b.quiet{color:var(--ink-soft);}
-  .qp-shopline-sep{color:var(--ow-ink-400);}
-
+  /* The margin pill on the bar wears the row pill's clothes: 18px, mono
+     11px, the four readings. */
   .qp-margin-pill-lg{
-    font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;padding:3px 11px;border-radius:20px;
+    display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);border-radius:var(--ow-r-sm);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
+    white-space:nowrap;background:var(--ow-steel-050);color:var(--ink-soft);
   }
   .qp-margin-pill-lg.good{background:var(--good-bg);color:var(--good);}
-  .qp-margin-pill-lg.warn{background:#FCEACB;color:var(--accent-ink);}
-  .qp-margin-pill-lg.danger{background:#F7D9D3;color:var(--danger);}
+  .qp-margin-pill-lg.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .qp-margin-pill-lg.danger{background:var(--ow-crimson-soft);color:var(--danger);}
   /* Nothing on the quote yet. Grey says "no reading", where red said
      "this quote loses money" about a form nobody had filled in. */
   .qp-margin-pill-lg.quiet{background:var(--ow-steel-050);color:var(--ink-soft);}
@@ -6544,6 +6571,10 @@
     padding:6px 9px;border:1px solid var(--line);border-radius:7px;
     font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;background:#fff;
   }
+  /* The phone's parts of the stage -- steppers, the price helper, the
+     check, the line's figure and the keep disclosure -- are not drawn
+     on the console, whose two columns already say these things. */
+  .q-stp,.q-price-help,.q-sc-check,.q-stage-sum,.q-stage-keep,.q-stage-keep-v{display:none;}
   .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .q-stage-thumb-placeholder{
     width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
@@ -6645,6 +6676,75 @@
     .q-stage-head{flex-wrap:wrap;}
     .q-stage-head .q-stage-summary{flex:1 1 100%;}
     .q-stage-name{align-self:flex-start;}
+  }
+  /* THE ITEM STAGE ON A PHONE: a sheet, and the three decisions in a
+     column -- how many, at what price, from whom -- each a thumb tall,
+     then what the line comes to and the one filled commit. The shop's
+     side (buy prices, what is kept) sits behind a tap, as it does on
+     the page under the sheet. */
+  @media (max-width:820px){
+    .ip-back{font-size:var(--ow-t-13);min-height:var(--ow-tap);margin-bottom:0;}
+    .q-stage-head{border-bottom:0;margin-bottom:0;padding-bottom:0;gap:2px 12px;}
+    .q-stage-head .q-stage-thumb,.q-stage-head .q-stage-thumb-placeholder{display:none;}
+    .q-stage-name{font-size:18px;font-weight:var(--ow-fw-700);line-height:1.25;padding-top:0;flex:1 1 100%;}
+    .q-stage-head .q-stage-summary{background:none;padding:0;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.4;}
+    .q-qty-row{background:none;border:0;border-radius:0;padding:0;margin:0;flex-direction:column;align-items:stretch;gap:0;}
+    .q-qty-field{margin-top:14px;flex:1 1 auto;}
+    .q-qty-field label{font-size:var(--ow-t-11);letter-spacing:.09em;font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+    .q-qty-input-group{gap:var(--ow-sp-8);align-items:center;width:100%;min-width:0;}
+    .q-stp{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      width:var(--ow-tap);height:var(--ow-tap);flex:none;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:20px;color:var(--ow-ink-900);background:var(--ow-paper);}
+    .q-qty-input-group input{flex:1 1 0;min-width:0;width:0;height:48px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      text-align:center;font-size:18px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .q-qty-input-group input:focus{outline:0;border-color:var(--ow-steel-950);}
+    .q-qty-input-group select{height:48px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);font-size:var(--ow-t-13);
+      color:var(--ow-ink-600);flex:0 1 auto;min-width:0;max-width:110px;}
+    .q-qty-field:last-child > input{height:48px;padding:0 12px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      font-size:18px;font-weight:var(--ow-fw-500);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .q-qty-field:last-child > input:focus{outline:0;border-color:var(--ow-steel-950);}
+    .q-price-help{display:block;margin:6px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;}
+    .q-section-label{font-size:var(--ow-t-11);letter-spacing:.09em;margin:14px 0 6px;color:var(--ow-ink-600);}
+    .q-stage-columns{display:flex;flex-direction:column;gap:0;margin-bottom:0;}
+    /* Who to buy from: rows, the chosen one ruled in steel with a check;
+       the buy prices behind the keep disclosure. */
+    .q-supplier-cards{gap:6px;max-height:none;overflow:visible;padding-right:0;}
+    #ip_stage_view .q-supplier-card{padding:11px 12px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);gap:10px;min-height:var(--ow-tap);
+      background:var(--ow-paper);box-shadow:none;}
+    #ip_stage_view .q-supplier-card.selected{border-color:var(--ow-steel-950);}
+    /* One accent on the sheet, and it is the commit: the rank marks go
+       to steel. */
+    #ip_stage_view .q-sc-rank{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .q-sc-radio{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+    .q-sc-body{gap:2px;}
+    .q-sc-top{flex-wrap:nowrap;}
+    .q-sc-name{font-size:14px;font-weight:var(--ow-fw-600);flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-sc-check{display:none;width:18px;height:18px;flex:none;margin-left:auto;color:var(--ow-ink-900);}
+    .q-supplier-card.selected .q-sc-check{display:block;}
+    .q-sc-prices{display:none;font-size:var(--ow-t-12);}
+    .q-stage.keep-open .q-sc-prices{display:flex;}
+    .q-rec-cards{gap:6px;}
+    .q-rec-card{border-radius:var(--ow-r-lg);padding:9px 12px;min-height:var(--ow-tap);box-shadow:none;}
+    .q-rec-card.selected{border-color:var(--ow-steel-950);background:var(--ow-paper);box-shadow:none;}
+    .q-rec-card.selected .q-rec-label,.q-rec-card.selected .q-rec-icon,.q-rec-card.selected .q-rec-use{color:var(--ow-ink-900);}
+    .q-rec-label{font-size:var(--ow-t-11);letter-spacing:.06em;}
+    .q-rec-value{font-size:15px;}
+    .q-chosen-line{display:none;}
+    .q-stage-sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:14px;padding:12px 14px;
+      background:var(--ow-steel-050);border-radius:var(--ow-r-lg);}
+    .q-stage-sum-l{font-size:14px;font-weight:var(--ow-fw-600);}
+    .q-stage-sum-v{font-size:18px;font-weight:var(--ow-fw-600);white-space:nowrap;}
+    .q-stage-keep{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+      width:100%;min-height:var(--ow-tap);padding:0 2px;font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+    .q-stage-keep .icon{width:14px;height:14px;transition:transform .15s ease;}
+    .q-stage-keep.open .icon{transform:rotate(90deg);}
+    .q-stage-keep-v{display:block;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.5;padding:0 2px 8px;}
+    .q-stage-keep-v[hidden]{display:none;}
+    .q-stage-keep-v b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+    .q-stage-keep-v .q-margin-pill{height:22px;font-size:var(--ow-t-12);vertical-align:middle;}
+    .q-add-row{border-top:0;padding-top:6px;gap:10px;}
+    .q-add-row .q-other-field{flex:1 1 100%;}
+    .q-add-row .qbar-save{flex:1 1 100%;margin-left:0;min-height:48px;font-size:16px;}
   }
   .q-stage-col-right{min-width:0;}
 
@@ -9262,39 +9362,101 @@
        what the client pays on the left, the way to send it and the way
        to keep it on the right, all in the thumb zone. */
     .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
-      gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));flex-wrap:nowrap;}
-    .q-stickybar-actions{margin-left:auto;width:auto;gap:6px;flex-wrap:nowrap;flex:none;}
-    #q_print_quote_btn{display:none;}
-    .q-more-phone{display:flex;}
-    /* The figure the owner reads down the phone, at a size they can read
-       it at. It is the one number on this screen that a customer is
-       waiting to hear. */
-    .qp-finbar{min-width:0;flex:1 1 auto;}
-    /* The label above the figure, as the canvas draws it -- side by side
-       they cost 80px the figure needs. And the figure NEVER breaks: at
-       390px "1,806,000 UGX" wrapped after the comma, which turned the
-       one number somebody is reading down a phone into two lines of
-       something that no longer looked like a number. */
-    .qp-says{flex-direction:column;align-items:flex-start;gap:0;}
+      gap:0;min-height:0;flex-wrap:wrap;padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px));}
+    /* THE DOCK. One line: what the client pays, the way to send it, the
+       way to keep it -- all in the thumb zone. Under it, a line that
+       opens the shop side; open, the two shop figures sit in a box
+       ABOVE the figure, and the disclosure moves up with them. The
+       finbar dissolves so its two halves can take different lines. */
+    .qp-finbar{display:contents;}
+    .qp-says{order:2;flex:1 1 auto;min-width:0;flex-direction:column;align-items:flex-start;gap:0;
+      padding-right:0;border-right:0;}
     .qp-says-label{font-size:var(--ow-t-11);}
+    /* The figure the owner reads down the phone, at a size they can
+       read it at, and it NEVER breaks: at 390px "1,806,000 UGX"
+       wrapped after the comma and stopped looking like a number. */
     .qp-says-value{font-size:19px;white-space:nowrap;}
-    .qp-shopline{font-size:var(--ow-t-12);gap:6px;flex-wrap:nowrap;min-width:0;}
-    /* The pill goes. At 390px the bar has about 150 pixels left for the
-       money once the figure, WhatsApp and Save have taken theirs, and
-       "You keep 196,000 UGX" plus a pill needs closer to 180 -- so the
-       line wrapped and broke the keep figure across two lines, which is
-       the one thing a number must never do. The reading is not lost: the
-       figure itself now carries it. */
-    .qp-margin-pill-lg{display:none;}
-    /* Save is the primary action of this screen and the only filled
-       control on the bar, so it says what it does. The icon goes: at
-       this width the label is what carries it, and the 15px mark beside
-       it only costs the figure room. The two icon buttons come down to
-       40px -- still a thumb -- for the same reason. */
-    .qbar-save{padding:0 12px;font-size:14px;flex:none;}
+    /* The actions dissolve into the bar: WhatsApp and Save close the
+       first line; the ⋯ rides the disclosure line under it, where the
+       first line has no room for a third button beside an eight-digit
+       figure. Nothing leaves the screen. */
+    .q-stickybar-actions{display:contents;}
+    .qbar-wa{order:3;margin-left:8px;}
+    .qbar-save{order:4;margin-left:8px;}
+    .q-more-wrap{order:6;margin-left:auto;margin-top:6px;}
+    body.q-shop-open .q-more-wrap{order:0;margin-top:0;margin-bottom:8px;}
+    .qp-shop{order:1;display:none;flex:1 1 100%;margin-bottom:10px;
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    body.q-shop-open .qp-shop{display:flex;}
+    .qp-cost,.qp-shopline{flex:1 1 0;min-width:0;flex-direction:column;align-items:flex-start;gap:2px;
+      padding:var(--ow-sp-8) var(--ow-sp-12);border-right:0;}
+    .qp-shopline{border-left:1px solid var(--ow-rule-soft);}
+    .q-shop-toggle{all:unset;box-sizing:border-box;cursor:pointer;order:5;flex:1 1 auto;min-width:0;
+      display:flex;align-items:center;gap:6px;min-height:var(--ow-tap);margin-top:6px;
+      font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+    .q-shop-toggle .icon{width:14px;height:14px;transition:transform .15s ease;}
+    body.q-shop-open .q-shop-toggle{order:0;margin:0 0 8px;}
+    body.on-quote-tab .q-stickybar{padding-top:6px;}
+    body.q-shop-open .q-shop-toggle .icon{transform:rotate(90deg);}
+    /* Buttons a thumb can hit. WhatsApp keeps its mark and its name and
+       drops its words; Save is the one filled control and says so. */
+    .qbar-btn{min-width:44px;min-height:44px;padding:0;flex:none;}
+    .qbar-wa .qbar-l{display:none;}
+    .qbar-save{min-height:44px;padding:0 16px;font-size:15px;flex:none;}
     .qbar-save .icon{display:none;}
-    .qbar-btn{min-width:40px;min-height:40px;padding:0 6px;flex:none;}
     body.on-quote-tab #tab-quote{padding-bottom:110px;}
+    body.q-shop-open.on-quote-tab #tab-quote{padding-bottom:190px;}
+    /* ---------- the phone's page: client folded, search a box, cards ---------- */
+    .q-band{margin-bottom:10px;}
+    .q-client-fold{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+      width:100%;min-height:48px;padding:var(--ow-sp-8) 14px;}
+    .q-cf-name{font-size:15px;font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-cf-name.q-cf-empty{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+    .q-cf-phone,.q-cf-meta{flex:none;font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+    .q-cf-sp{flex:1 1 auto;}
+    .q-cf-chev{width:16px;height:16px;color:var(--ow-ink-400);flex:none;transition:transform .15s ease;}
+    .q-band.open .q-cf-chev{transform:rotate(180deg);}
+    .q-band > .ow-cb-f,.q-band > .ow-cb-k{display:none;}
+    .q-band.open > .ow-cb-f{display:block;border-left:0;border-top:1px solid var(--ow-rule-soft);flex:1 1 100%;min-width:0;}
+    .q-band.open > .ow-cb-k{display:flex;}
+    .q-client-cell{flex-wrap:wrap;gap:var(--ow-sp-4);}
+    .q-client-cell #q_client_name,.q-client-cell .q-client-phone{flex:1 1 100%;font-size:16px;}
+    .q-band #q_date{font-size:16px;}
+    .q-band .ow-cb-kn{flex:0 1 auto;padding:0;}
+    /* The search is a box of its own, 48px, and the panel it sat in
+       gives way to the list under it. */
+    .q-doc{background:transparent;border:0;border-radius:0;}
+    .q-item-search-wrap{height:48px;padding:0 14px;margin:0 0 10px;gap:10px;
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .q-item-search-wrap:focus-within{border-color:var(--ow-steel-950);}
+    .q-item-search-wrap > .icon{width:18px;height:18px;}
+    #q_item_search{font-size:16px;}
+    .q-item-search-hint{display:none;}
+    .q-client-usual.show{display:none;}
+    #q_itemsWrap{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    /* The empty document names the next act and offers the usuals as
+       lines a thumb can take. The keyboard hint is a desk's. */
+    .q-empty-doc{padding:36px 20px 20px;gap:6px;}
+    .q-empty-doc > .icon{display:none;}
+    .q-empty-doc-title{font-size:16px;font-weight:var(--ow-fw-600);}
+    .q-empty-doc-hint{font-size:14px;line-height:1.5;}
+    .q-empty-kbd{display:none;}
+    .q-usual-slot{display:block;}
+    .q-usual-rows{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:0 16px 14px;}
+    .q-usual-rows-rest:not([hidden]){display:contents;}
+    .q-usual-row{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+      min-height:48px;padding:var(--ow-sp-8) 14px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      background:var(--ow-paper);}
+    .q-usual-row[disabled]{cursor:default;color:var(--ow-ink-600);}
+    .q-usual-row .q-stage-thumb,.q-usual-row .q-stage-thumb-placeholder{width:30px;height:30px;border-radius:var(--ow-r-sm);}
+    .q-ur-t{flex:1 1 auto;min-width:0;}
+    .q-ur-n{display:block;font-size:15px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-ur-s{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .q-usual-row .q-add-icon{width:36px;height:36px;}
+    .q-usual-row .q-add-icon .icon{width:16px;height:16px;}
+    .q-usual-rows-more{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;
+      min-height:var(--ow-tap);line-height:var(--ow-tap);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+
     /* Chase debts' own phone block stood here. That screen is the
        Follow-ups Money lens now and the block under this one already
        orders the worked client first, so nothing of it was carried:
@@ -9375,26 +9537,46 @@
        remove) beside the name, and on a phone those two belong on one
        line with the × at the far right, where a thumb expects it. So
        the row keeps three columns and the gutter dissolves into it. */
-    .ow-tbl-r.q-line{grid-template-columns:auto minmax(0,1fr) auto;column-gap:var(--ow-sp-8);row-gap:var(--ow-sp-2);}
+    .ow-tbl-r.q-line{grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;row-gap:9px;padding:14px 16px;}
     .q-line > .q-gutter{display:contents;}
-    .q-line .q-row-num{grid-column:1;grid-row:1;align-self:start;padding-top:3px;}
+    .q-line .q-row-num{grid-column:1;grid-row:1;align-self:start;padding-top:2px;font-size:var(--ow-t-12);}
     .q-line > .q-name-cell{grid-column:2;grid-row:1;}
-    .q-line .q-remove-icon{grid-column:3;grid-row:1;display:flex;align-self:start;padding:6px;margin:-4px -6px 0 0;}
+    /* The name is one line, cut with a mark and carried whole in its
+       title; the unit and the supplier under it, because the supplier
+       cell is behind the shop-side tap here. */
+    .q-line > .q-name-cell .ow-tbl-p{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .q-item-sub .q-item-sup-ph{display:block;flex:0 1 auto;min-width:0;}
+    /* The × is a 44px target on the card's first line, bled into the padding. */
+    .q-line .q-remove-icon{grid-column:3;grid-row:1;display:flex;align-self:start;align-items:center;justify-content:center;
+      width:var(--ow-tap);height:var(--ow-tap);padding:0;margin:-10px -12px -10px 0;}
     .q-line:hover .q-row-num{display:inline;}
     .q-line > .ow-tbl-n,.q-line > .q-shop-first{grid-column:1/-1;}
+    /* Boxed figures: on a card there is no row hover to reveal the box. */
+    .q-line .ow-gi{font-size:14px;flex:0 1 auto;width:auto;min-width:96px;max-width:56%;
+      border-color:var(--ow-steel-100);background:var(--ow-paper);}
+    .q-sell-cell{flex:0 1 auto;width:auto;}
+    .q-line-total{font-size:14px;}
+    /* THE SHOP SIDE IS BEHIND A TAP. Supplier, buy @ and margin are not
+       drawn until the dock's disclosure opens them -- on a call the
+       phone may be facing the client. Open, they are a ruled-off block
+       at the foot of the card. */
+    .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Margin"]{display:none;}
+    body.q-shop-open .q-line > .q-shop-first,body.q-shop-open .q-line > [data-l="Buy @"],body.q-shop-open .q-line > [data-l="Margin"]{display:flex;}
+    body.q-shop-open .q-line > .q-shop-first{border-top:1px solid var(--ow-rule-soft);padding-top:10px;margin-top:2px;}
     .q-line .q-shop-first{border-left:0;padding-left:0;align-self:auto;}
-    .q-line .ow-gi{font-size:16px;flex:1 1 auto;width:auto;max-width:56%;}
-    .q-sell-cell{flex:1 1 auto;}
     .q-supplier-picker{flex:1 1 auto;max-width:64%;}
     .q-sup-text{text-align:right;font-size:15px;line-height:calc(var(--ow-tap) - 10px);padding-top:var(--ow-sp-4);padding-bottom:var(--ow-sp-4);}
-    /* The foot: label and figure on one line each, the empty shop cell gone. */
-    .ow-tbl-f.q-foot{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-12);
-      padding:var(--ow-sp-6) var(--ow-sp-12);}
-    .q-doc .q-foot-x{display:none;}
-    .q-doc .q-foot-l{text-align:left;font-size:14px;}
-    /* The add row is the one dashed card the canvas draws. */
-    .ow-tbl-r.q-add-row-trailing{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:var(--ow-tap);}
-    .q-add-row-placeholder{font-size:14px;}
+    .q-margin-pill{height:22px;font-size:var(--ow-t-12);}
+    .q-margin-pill .q-mp-kept{display:inline;}
+    /* The add row: the mark and the words on the first line, the taps
+       on their own line under them, each a thumb tall. */
+    .ow-tbl-r.q-add-row-trailing{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:var(--ow-sp-8);
+      align-items:center;min-height:var(--ow-tap);padding:var(--ow-sp-8) 16px 14px;}
+    .q-add-ph{display:contents;}
+    .q-add-ph .q-add-row-placeholder{font-size:14px;min-height:32px;display:flex;align-items:center;margin:0;}
+    .q-add-chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);}
+    .q-add-chips .q-chg-sug{min-height:38px;padding:0 14px;font-size:var(--ow-t-13);}
+    .q-cr-says{flex:1 1 100%;margin-left:0;}
     .q-rec-value{font-size:14px;}
     /* Purchase Invoices / Invoices: swap the ledger table for stacked cards. */
     .pi-table-wrap{display:none;}
@@ -16216,26 +16398,40 @@
            fills the facts the moment a known name is typed. Out of the
            header on purpose: who the quote is for is the first thing you
            fill in, not a caption on the screen's name. -->
-      <div class="ow-cb" id="q_client_band">
+      <div class="ow-cb q-band" id="q_client_band">
+        <!-- THE PHONE FOLDS THE BAND TO ONE LINE. Who it is for, their
+             number, and the one fact that says how established they are
+             -- on a 48px line with a chevron. Tapping it opens the
+             fields below; on the console the fields are always open and
+             this line is never drawn. Written by renderClientFold. -->
+        <button type="button" class="q-client-fold" id="q_client_fold" aria-expanded="false" aria-controls="q_client_band">
+          <span class="q-cf-name" id="q_cf_name">Who is it for?</span>
+          <span class="q-cf-phone ow-fig" id="q_cf_phone"></span>
+          <span class="q-cf-sp"></span>
+          <span class="q-cf-meta" id="q_cf_meta"></span>
+          <svg class="icon q-cf-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <!-- The name and the number share the first cell: one client,
+             one cell. The number is the thing WhatsApp sends to, so it
+             stays a field of its own, in the figure face beside the
+             name rather than in a column of its own. -->
         <div class="ow-cb-f ow-cb-f-name q-client-ac-wrap">
           <label class="ow-cb-l" for="q_client_name">Client</label>
-          <input type="text" class="ow-cb-in" id="q_client_name" placeholder="e.g. Sarah Namono" autocomplete="off">
+          <div class="q-client-cell">
+            <input type="text" class="ow-cb-in" id="q_client_name" placeholder="e.g. Sarah Namono" autocomplete="off">
+            <input type="text" class="ow-cb-in q-client-phone" id="q_client_phone" placeholder="0700 000 000" aria-label="Phone">
+          </div>
           <div class="q-client-ac-dropdown" id="q_client_ac_dropdown" style="display:none;"></div>
-        </div>
-        <div class="ow-cb-f ow-cb-f-ph">
-          <label class="ow-cb-l" for="q_client_phone">Phone</label>
-          <input type="text" class="ow-cb-in" id="q_client_phone" placeholder="e.g. 0700 000 000">
         </div>
         <div class="ow-cb-f ow-cb-f-dt">
           <label class="ow-cb-l" for="q_date">Date</label>
           <input type="date" class="ow-cb-in" id="q_date">
         </div>
+        <!-- What the books hold on whoever was just named: orders, what
+             they owe, the last order -- cells of the same band, after the
+             date. renderClientHistoryBox writes them. -->
         <div class="ow-cb-k" id="q_client_history"></div>
       </div>
-      <!-- What they usually take, as chips that add straight to the
-           quote. Under the band rather than in it: the band is facts,
-           this is a door. Keeps its id and its render function. -->
-      <div class="q-client-usual" id="q_client_usual"></div>
 
       <div class="ow-grid">
         <!-- ============ THE DOCUMENT ============ -->
@@ -16247,13 +16443,19 @@
           <div class="q-item-search-wrap">
             <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="q_item_search" placeholder="Add item — search name, SKU or supplier code…" autocomplete="off">
-            <span class="q-item-search-hint">Enter adds the top result</span>
+            <span class="q-item-search-hint" title="Press / to jump here; Enter adds the top result">/</span>
             <!-- searchable-select: membership in the scope that styles
                  suggestion rows everywhere else (hover, sid, variant
                  notes) -- the first cut reused the MARKUP but not the
                  scope, and the rows rendered as an unstyled stack. -->
             <div class="q-item-search-dd searchable-select" id="q_item_search_dd" style="display:none;"></div>
           </div>
+          <!-- What they usually take, as chips on one line under the
+               search -- inside the document, because tapping one puts a
+               line on it. Chips that do not fit are counted, never
+               dropped: the last chip says how many. renderClientUsualBuys
+               keeps its id and its render. -->
+          <div class="q-client-usual" id="q_client_usual"></div>
           <div id="q_itemsWrap"></div>
         </div>
 
@@ -16264,10 +16466,19 @@
              a derivation another screen already owns. See
              renderQuoteRail. -->
         <div class="ow-side" id="q_rail">
-          <div class="ow-pan" id="q_rail_client"></div>
-          <div class="ow-pan" id="q_rail_cheaper"></div>
-          <div class="ow-pan" id="q_rail_with"></div>
-          <div class="ow-pan" id="q_rail_stock"></div>
+          <!-- ONE panel, four readings, each ruled off by its own 34px
+               header. Four separate panels spent three gaps and six
+               hairlines saying nothing the headers do not. "This client"
+               draws only when it has more to say than the band already
+               does: a warning about the standing, or what this quote
+               takes the balance to. -->
+          <div class="ow-pan">
+            <div class="q-rail-sec" id="q_rail_client"></div>
+            <div class="q-rail-sec" id="q_rail_cheaper"></div>
+            <div class="q-rail-sec" id="q_rail_stock"></div>
+            <div class="q-rail-sec" id="q_rail_with"></div>
+            <div class="q-rail-sec" id="q_rail_last"></div>
+          </div>
         </div>
       </div>
 
@@ -16280,38 +16491,45 @@
            (body.on-quote-tab, set by the tab switch). -->
       <div class="q-stickybar" id="q_stickybar">
         <div class="qp-finbar" id="q_finbar"></div>
+        <!-- THE SHOP SIDE, BEHIND A TAP ON THE PHONE. The bar carries the
+             figure the client is waiting to hear; what it costs and what
+             is kept are a line under it that opens on a tap and stays
+             open for the session. On the console the two are always
+             beside the figure and this line is never drawn. -->
+        <button type="button" class="q-shop-toggle" id="q_shop_toggle" aria-expanded="false" aria-controls="q_finbar">
+          <svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span id="q_shop_toggle_t">Shop side</span>
+        </button>
         <div class="q-stickybar-actions">
-          <!-- Icon-only. The bar carries four controls above a phone's
-               bottom nav; labelled, they took two rows of a screen whose
-               whole job is the quote above them. aria-label carries the
-               name for anything not reading the picture, and the title
-               keeps the full explanation on hover. -->
-          <button class="qbar-btn" id="q_print_quote_btn" aria-label="Client copy" title="Client copy — print the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
+          <!-- Client copy owns its behaviour here and is never drawn on
+               the bar itself: at every width it is reached from the ⋯
+               menu, whose item clicks this button. Printing is the
+               occasional act; sending and saving are the frequent ones. -->
+          <button class="qbar-btn q-print-owner" id="q_print_quote_btn" aria-label="Client copy" title="Client copy — print the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
             <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
           </button>
-          <button class="qbar-btn" id="q_whatsapp_btn" aria-label="Send on WhatsApp" title="WhatsApp — open a chat with the client's quote pre-filled (their number, no cost or margin)">
+          <!-- Keeps its words on the console, where there is room and
+               the word is what tells WhatsApp from Client copy at a
+               glance. The phone drops the word and keeps the mark: the
+               aria-label carries the same name, so it reads once. -->
+          <button class="qbar-btn qbar-wa" id="q_whatsapp_btn" aria-label="Send on WhatsApp" title="WhatsApp — open a chat with the client's quote pre-filled (their number, no cost or margin)">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <span class="qbar-l">Send on WhatsApp</span>
           </button>
           <!-- The occasional actions live one press away, and the
                destructive one gets distance AND keeps its confirm. -->
           <div class="q-more-wrap">
-            <button class="qbar-btn q-more-btn" id="q_more_btn" aria-label="More actions" title="More actions — supplier copy, clear the quote" aria-haspopup="true" aria-expanded="false">
+            <button class="qbar-btn q-more-btn" id="q_more_btn" aria-label="More actions" title="More actions — client copy, supplier copy, clear the quote" aria-haspopup="true" aria-expanded="false">
               <svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
             </button>
             <div class="q-more-menu" id="q_more_menu" style="display:none;">
-              <!-- Client copy, on the phone only. It sits on the bar at
-                   desk width, where printing actually happens and there
-                   is room for it; on a phone the bar has to hold the
-                   figure, WhatsApp and Save, and printing is the one
-                   action nobody does from a handset.
-
-                   It carries no handler of its own -- it clicks the real
-                   button, which is display:none at this width but still
-                   fires. Same pattern the More sheet already uses for
-                   Export, Import and Clear: a phone control proxies to
-                   the one that owns the behaviour rather than keeping a
-                   second copy of it to drift. -->
-              <button class="q-more-item q-more-phone" id="q_print_quote_phone" title="Client copy — the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
+              <!-- Client copy, at every width. It carries no handler of
+                   its own -- it clicks the real button, which owns the
+                   behaviour and is never drawn. Same pattern the More
+                   sheet already uses for Export, Import and Clear: one
+                   control proxies to the one that owns the behaviour
+                   rather than keeping a second copy of it to drift. -->
+              <button class="q-more-item" id="q_print_quote_phone" title="Client copy — the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
                 Client copy
               </button>
@@ -29094,6 +29312,7 @@ function goToTab(tab){
      only while this tab does -- gated by a body class the bar's CSS
      reads, set here where every tab switch already passes. */
   document.body.classList.toggle('on-quote-tab', tab==='quote');
+  if(tab==='quote') fitUsualChips();
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   // One screen, two registers: the lens decides which is drawn, and it
@@ -35388,38 +35607,109 @@ function lastPriceToClient(nameLower, productId, variantIdx){
   return best;
 }
 
-// Horizontally-scrollable chip strip of what this client usually buys --
-// tapping the + jumps straight into the item picker's supplier/price stage
-// for that product (not a raw re-add of the old line), so the quote always
-// picks up current pricing/stock rather than whatever was true last time.
+/* WHAT THEY USUALLY TAKE, as chips on one line under the search.
+   Tapping one jumps straight into the item picker's supplier/price
+   stage for that product (not a raw re-add of the old line), so the
+   quote always picks up current pricing and stock rather than whatever
+   was true last time.
+
+   ONE LINE, AND THE CUT IS COUNTED. The row never wraps and never
+   scrolls: chips that do not fit are hidden and the last chip says how
+   many ("+3"), which opens the row. A strip that scrolled sideways hid
+   its own tail with nothing to say it had one. On the phone this row
+   is not drawn at all; the same rows sit in the empty document as
+   thumb-sized lines (usualBuysRowsHTML), because there the usuals are
+   the next act, not a garnish. */
+let quoteUsualRows = [];
+function usualBuysAdd(r){
+  if(!r || !r.productId) return;
+  openModal('itemPickerModal');
+  ipSelectProduct(r.productId, r.variantIdx);
+  const qtyEl = document.getElementById('ip_qty');
+  if(qtyEl && r.lastQty>0) qtyEl.value = r.lastQty;
+}
 function renderClientUsualBuys(nameLower){
   const wrap = document.getElementById('q_client_usual');
   if(!wrap) return;
   const rows = nameLower ? customerPurchaseHistory(nameLower).slice(0,8) : [];
-  if(!rows.length){ wrap.classList.remove('show'); wrap.innerHTML=''; return; }
-  wrap.innerHTML = rows.map((r,i)=>{
-    const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
-    return `<div class="q-usual-chip" data-idx="${i}">
-      ${ipStageThumbHTML(product||{}, r.variantIdx)}
-      <div class="q-usual-chip-info">
-        <div class="q-usual-chip-name" title="${esc(r.productName)}">${esc(r.productName)}</div>
-        <div class="q-usual-chip-meta">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</div>
-      </div>
-      ${product ? `<button type="button" class="q-usual-chip-add" title="Add to this quote" data-idx="${i}">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      </button>` : ''}
-    </div>`;
-  }).join('');
+  quoteUsualRows = rows;
+  /* The empty document draws the same rows; if it is on screen, it is
+     told the client changed. */
+  const slot = document.querySelector('#q_itemsWrap .q-usual-slot');
+  if(slot){ slot.innerHTML = usualBuysRowsHTML(); wireUsualRows(slot); }
+  if(!rows.length){ wrap.classList.remove('show','open'); wrap.innerHTML=''; return; }
+  wrap.innerHTML = `<span class="q-usual-l">Usually buys</span>` + rows.map((r,i)=>{
+    const when = savedAgoLabel(r.lastOrderedAt);
+    return `<button type="button" class="q-chg-sug q-usual-chip" data-idx="${i}"${r.productId ? '' : ' disabled'} title="${esc(r.productName)} — last ${esc(r.lastQty)} ${esc(r.unit)}, ${esc(when)}${r.productId ? '. Add it to this quote' : '. Not in the catalogue any more'}">${esc(r.productName)}<b>${esc(r.lastQty)} ${esc(r.unit)}</b></button>`;
+  }).join('') + `<button type="button" class="q-chg-sug q-chg-sug-more q-usual-more" hidden></button>`;
   wrap.classList.add('show');
-  wrap.querySelectorAll('.q-usual-chip-add').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const r = rows[Number(btn.dataset.idx)];
-      if(!r || !r.productId) return;
-      openModal('itemPickerModal');
-      ipSelectProduct(r.productId, r.variantIdx);
-      const qtyEl = document.getElementById('ip_qty');
-      if(qtyEl && r.lastQty>0) qtyEl.value = r.lastQty;
-    });
+  wrap.querySelectorAll('.q-usual-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=> usualBuysAdd(rows[Number(btn.dataset.idx)]));
+  });
+  wrap.querySelector('.q-usual-more').addEventListener('click', ()=>{
+    wrap.classList.toggle('open');
+    fitUsualChips();
+  });
+  fitUsualChips();
+  /* Once more after layout: at boot the row is drawn before the screen
+     is shown and measures nothing. */
+  requestAnimationFrame(fitUsualChips);
+}
+/* Hides the chips that do not fit the line and counts them on the last
+   one. Measured, because the names are as long as somebody typed them. */
+function fitUsualChips(){
+  const wrap = document.getElementById('q_client_usual');
+  if(!wrap || !wrap.classList.contains('show')) return;
+  const chips = [...wrap.querySelectorAll('.q-usual-chip')];
+  const more = wrap.querySelector('.q-usual-more');
+  if(!chips.length || !more) return;
+  chips.forEach(c=>{ c.hidden = false; });
+  if(wrap.classList.contains('open')){ more.hidden = false; more.textContent = 'Fewer'; return; }
+  more.hidden = true;
+  const width = wrap.clientWidth;
+  if(!width) return;
+  const over = chips.some(c=> c.offsetLeft + c.offsetWidth > width);
+  if(!over) return;
+  more.hidden = false; more.textContent = `+${chips.length}`;
+  const limit = width - more.offsetWidth - 6;
+  let cut = 0;
+  chips.forEach(c=>{
+    if(cut || c.offsetLeft + c.offsetWidth > limit){ c.hidden = true; cut++; }
+  });
+  more.textContent = `+${cut}`;
+}
+window.addEventListener('resize', ()=>{
+  clearTimeout(fitUsualChips._t);
+  fitUsualChips._t = setTimeout(fitUsualChips, 120);
+});
+/* The phone's empty document: the first three usuals as lines a thumb
+   can take, and how many more there are. Named rather than dropped. */
+function usualBuysRowsHTML(){
+  const rows = quoteUsualRows || [];
+  if(!rows.length) return '';
+  const line = (r, i)=>{
+    const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
+    return `<button type="button" class="q-usual-row" data-usual="${i}"${product ? '' : ' disabled'} title="${product ? 'Add to this quote' : 'Not in the catalogue any more'}">
+      ${ipStageThumbHTML(product||{}, r.variantIdx)}
+      <span class="q-ur-t"><span class="q-ur-n">${esc(r.productName)}</span><span class="q-ur-s">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</span></span>
+      <span class="q-add-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+    </button>`;
+  };
+  const rest = rows.length - 3;
+  return `<div class="q-usual-rows">${rows.slice(0,3).map(line).join('')}${rest > 0
+    ? `<div class="q-usual-rows-rest" hidden>${rows.slice(3).map((r,i)=> line(r, i+3)).join('')}</div><button type="button" class="q-usual-rows-more">${rest} more usual${rest===1?'':'s'}</button>`
+    : ''}</div>`;
+}
+function wireUsualRows(slot){
+  slot.querySelectorAll('.q-usual-row').forEach(btn=>{
+    btn.addEventListener('click', ()=> usualBuysAdd(quoteUsualRows[Number(btn.dataset.usual)]));
+  });
+  const more = slot.querySelector('.q-usual-rows-more');
+  if(more) more.addEventListener('click', ()=>{
+    const rest = slot.querySelector('.q-usual-rows-rest');
+    rest.hidden = !rest.hidden;
+    const n = quoteUsualRows.length - 3;
+    more.textContent = rest.hidden ? `${n} more usual${n===1?'':'s'}` : 'Fewer';
   });
 }
 /* THE BAND'S KNOWN FACTS. What the books already hold on whoever was
@@ -35441,7 +35731,8 @@ function renderClientHistoryBox(){
   const name = (document.getElementById('q_client_name').value||'').trim();
   const nameLower = name.toLowerCase();
   const clear = ()=>{ box.innerHTML=''; };
-  if(!name){ clear(); renderClientUsualBuys(''); renderQuoteRail(); return; }
+  quotePriorOrders = 0;
+  if(!name){ clear(); renderClientUsualBuys(''); renderClientFold(); renderQuoteRail(); return; }
   const customer = data.customers.find(c=>(c.name||'').trim().toLowerCase()===nameLower);
   // Same rule: a cancelled order is not an order this client placed, and
   // this count sits directly beside their debt standing as a measure of
@@ -35450,25 +35741,56 @@ function renderClientHistoryBox(){
     !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
   );
   const priorOrders = orders.length;
+  quotePriorOrders = priorOrders;
   renderClientUsualBuys(nameLower);
+  renderClientFold();
   if(!customer && priorOrders===0){ clear(); renderQuoteRail(); return; }
   const standing = customerDebtStanding(customer);
   const band = debtStandingBand(standing);
   const last = orders.reduce((best,q)=> (!best || String(q.savedAt||'') > String(best.savedAt||'')) ? q : best, null);
   const cells = [];
-  cells.push(`<div class="ow-cb-kn"><span class="ow-cb-kl">Orders</span><span class="ow-cb-kv ow-fig">${priorOrders}</span></div>`);
-  if(last){
-    const when = fmtShortDate(String(last.savedAt || last.date || '').slice(0,10));
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-kl">Last order</span><span class="ow-cb-kv">${esc(when)} · <span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span></span></div>`);
-  }
+  cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Orders</span><span class="ow-cb-kv ow-fig">${priorOrders}</span></div>`);
+  /* "Owed now": the same words the rail and the customer book use for
+     the same figure. A known client owing nothing reads 0 -- that is a
+     fact from the books, not a blank. */
   if(standing){
     const age = standing.oldestDays == null ? '' : ` · ${standing.oldestDays} day${standing.oldestDays===1?'':'s'} old`;
     const tone = band==='severe' ? ' ow-bad' : band==='late' ? ' ow-warn' : '';
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-kl">Owes now${esc(age)}</span><span class="ow-cb-kv ow-fig${tone}">${esc(fmtUGX(standing.owed))}</span></div>`);
+    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now${esc(age)}</span><span class="ow-cb-kv ow-fig${tone}">${esc(fmtUGX(standing.owed))}</span></div>`);
+  } else if(customer){
+    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now</span><span class="ow-cb-kv ow-fig">${esc(fmtUGX(0))}</span></div>`);
+  }
+  if(last){
+    const when = savedAgoLabel(last.savedAt || last.date || '');
+    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
   }
   box.innerHTML = cells.join('');
   renderQuoteRail();
 }
+/* THE PHONE'S ONE LINE FOR THE CLIENT. Name, number, and how established
+   they are; a tap opens the fields. Nothing here is a second copy of a
+   fact -- it reads the same inputs and count the band draws from. */
+let quotePriorOrders = 0;
+function renderClientFold(){
+  const nameEl = document.getElementById('q_cf_name');
+  if(!nameEl) return;
+  const name = (document.getElementById('q_client_name').value||'').trim();
+  const phone = (document.getElementById('q_client_phone').value||'').trim();
+  nameEl.textContent = name || 'Who is it for?';
+  nameEl.classList.toggle('q-cf-empty', !name);
+  document.getElementById('q_cf_phone').textContent = phone;
+  const n = quotePriorOrders;
+  document.getElementById('q_cf_meta').textContent = name
+    ? (n ? `${n} order${n===1?'':'s'}` : fmtShortDate(document.getElementById('q_date').value || todayISO()))
+    : '';
+}
+document.getElementById('q_client_fold').addEventListener('click', ()=>{
+  const band = document.getElementById('q_client_band');
+  const open = !band.classList.contains('open');
+  band.classList.toggle('open', open);
+  document.getElementById('q_client_fold').setAttribute('aria-expanded', String(open));
+  if(open && !(document.getElementById('q_client_name').value||'').trim()) document.getElementById('q_client_name').focus();
+});
 // How long this customer's OLDEST unpaid invoice has been unpaid, and how
 // many are open. A balance on its own does not tell you anything: 200,000
 // three days old is a normal trading position, 1,340,000 at forty-seven
@@ -35611,6 +35933,15 @@ document.getElementById('q_client_name').addEventListener('input', (e)=>{
   renderClientHistoryBox();
 });
 document.getElementById('q_client_name').addEventListener('focus', renderClientAcDropdown);
+/* The search's placeholder at the phone's width. A placeholder cannot
+   ellipsis, so the long one is not shown where it would be cut. */
+(function(){
+  const el = document.getElementById('q_item_search');
+  const mq = window.matchMedia('(max-width:820px)');
+  const set = ()=>{ el.placeholder = mq.matches ? 'Add item…' : 'Add item — search name, SKU or supplier code…'; };
+  set();
+  if(mq.addEventListener) mq.addEventListener('change', set); else if(mq.addListener) mq.addListener(set);
+})();
 document.getElementById('q_client_name').addEventListener('blur', ()=>{ setTimeout(closeClientAcDropdown, 150); });
 document.getElementById('q_client_name').addEventListener('keydown', (e)=>{
   if(e.key==='Enter'){
@@ -35623,7 +35954,7 @@ document.getElementById('q_client_name').addEventListener('keydown', (e)=>{
     closeClientAcDropdown();
   }
 });
-document.getElementById('q_client_phone').addEventListener('input', (e)=>{ ensureQuote(); data.quote.client.phone = e.target.value; saveData(); });
+document.getElementById('q_client_phone').addEventListener('input', (e)=>{ ensureQuote(); data.quote.client.phone = e.target.value; saveData(); renderClientFold(); });
 document.getElementById('q_date').addEventListener('change', (e)=>{ ensureQuote(); data.quote.date = e.target.value; saveData(); });
 
 // Shared helpers for the whole-product searchable-selects (quote, price
@@ -36122,6 +36453,9 @@ function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
 
+/* Whether the stage's "what you keep" line is open. Session-long, like
+   the quote page's own shop-side disclosure: opened once, it stays. */
+let ipKeepOpen = false;
 function ipSelectProduct(id, variantIdx=null){
   ipProductId = id;
   ipVariantIdx = variantIdx==null ? null : Number(variantIdx);
@@ -36345,6 +36679,7 @@ function renderIpStage(){
       <div class="q-sc-top">
         <span class="q-sc-rank stock">OUR STOCK</span>
         <span class="q-sc-name">${stockQty} in stock</span>${consignTagHTML(stockShelfConsign, false)}
+        <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
       </div>
       <div class="q-sc-prices">${stockConsign.qty > 0
         ? `Owed to ${stockConsign.consignors.length > 1 ? 'their consignors' : esc(supplierName(stockConsign.consignors[0].supplierId))} at ${fmtUGX(Math.round(stockConsign.value / stockConsign.qty))} each as they sell`
@@ -36369,6 +36704,7 @@ function renderIpStage(){
         <div class="q-sc-top">
           <span class="q-sc-rank ${i===0?'best':''}">${rankLabels[i]}</span>
           <span class="q-sc-name">${esc(r.sname)}</span>
+          <svg class="icon q-sc-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
         </div>
         <div class="q-sc-prices">${fmtUGXPerUnitPack(tieredUnitPrice(r, qty, 'wholesale'), r)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</div>
       </div>
@@ -36437,13 +36773,16 @@ function renderIpStage(){
       <div class="field q-qty-field">
         <label>Quantity</label>
         <div class="q-qty-input-group">
+          <button type="button" class="q-stp" data-stp="-1" aria-label="One less">&minus;</button>
           <input type="number" id="ip_qty" min="0" step="any" value="${ipQtyRaw}">
           <select id="ip_qty_unit">${qtyUnitOptionsHTML}</select>
+          <button type="button" class="q-stp" data-stp="1" aria-label="One more">+</button>
         </div>
       </div>
       <div class="field q-qty-field">
         <label>Sell price ${chosenIsPack ? `per ${esc(packUnit)}` : 'each'} (UGX)</label>
         <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
+        <p class="q-price-help">What the client pays per ${esc(chosenUnit||'unit')}. The buy cost is recorded on its own.</p>
       </div>
     </div>
 
@@ -36498,6 +36837,16 @@ function renderIpStage(){
 
     <div class="q-chosen-line">Buying from: <strong>${ipSelectedSupplierId? esc(supplierName(ipSelectedSupplierId)) : 'no supplier chosen'}</strong>${ipSelectedSupplierId==='__stock__'?` <span style="color:var(--ink-soft);font-weight:400;">(${stockQty} on hand)</span>`:''}</div>
 
+    <!-- THE PHONE'S FOOT OF THE SHEET: what this line comes to, the
+         shop's side behind a tap, and the one filled commit. The figure
+         follows the price box as it is typed; what is kept is sell less
+         the cost the chosen supplier would charge, per the unit the box
+         counts in. Neither is drawn on the console, which shows the same
+         things in its two columns. -->
+    <div class="q-stage-sum"><span class="q-stage-sum-l">This line</span><span class="q-stage-sum-v ow-fig" id="ip_line_total"></span></div>
+    <button type="button" class="q-stage-keep" id="ip_keep_btn" aria-expanded="false"><span id="ip_keep_t">Show what you keep</span><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+    <div class="q-stage-keep-v" id="ip_keep_v" hidden></div>
+
     <div class="q-add-row">
       ${(otherPriced.length+unpriced.length)>0 ? `<div class="field q-other-field searchable-select"><label>Other supplier</label>
         <input type="text" id="ip_other_supplier_search" placeholder="Search suppliers..." autocomplete="off">
@@ -36531,6 +36880,45 @@ function renderIpStage(){
   };
   wrap.querySelector('#ip_qty').addEventListener('change', handleQtyChange);
   wrap.querySelector('#ip_qty_unit').addEventListener('change', handleQtyChange);
+  /* The steppers move the count one whole unit and hand it to the same
+     change handler a typed count goes through. Never below one. */
+  wrap.querySelectorAll('.q-stp').forEach(b=> b.addEventListener('click', ()=>{
+    const el = document.getElementById('ip_qty');
+    el.value = Math.max(1, (Number(el.value)||0) + Number(b.dataset.stp));
+    handleQtyChange();
+  }));
+  /* What this line comes to, as the price is typed: the count in the
+     chosen unit times the price per that unit. And what is kept on it,
+     against the cost the chosen supplier would charge for this many. */
+  const lineFig = document.getElementById('ip_line_total');
+  const keepV = document.getElementById('ip_keep_v');
+  const drawLine = ()=>{
+    const price = Number(document.getElementById('ip_price').value) || 0;
+    const count = Number(document.getElementById('ip_qty').value) || 0;
+    lineFig.textContent = fmtUGX(Math.round(price * count));
+    const cost = buyStart * perChosen;
+    const kept = Math.round((price - cost) * count);
+    const pct = price > 0 ? Math.round((price - cost) / price * 100) : 0;
+    keepV.innerHTML = !ipSelectedSupplierId
+      ? 'Choose who to buy from first.'
+      : kept > 0
+        ? `Buy @ <b class="ow-fig">${esc(fmtUGX(Math.round(cost)))}</b> per ${esc(chosenUnit||'unit')} from ${esc(supplierName(ipSelectedSupplierId))} · you keep <b class="ow-fig">${esc(fmtUGX(kept))}</b> <span class="q-margin-pill ${pct < 10 ? 'warn' : 'good'}">${pct}%</span>`
+        : `Buy @ <b class="ow-fig">${esc(fmtUGX(Math.round(cost)))}</b> per ${esc(chosenUnit||'unit')} from ${esc(supplierName(ipSelectedSupplierId))} · <span class="q-margin-pill danger">${pct}% · nothing kept</span>`;
+  };
+  drawLine();
+  wrap.querySelector('#ip_price').addEventListener('input', drawLine);
+  const keepBtn = document.getElementById('ip_keep_btn');
+  const drawKeep = ()=>{
+    const open = ipKeepOpen;
+    keepV.hidden = !open;
+    const stage = wrap.querySelector('.q-stage');
+    if(stage) stage.classList.toggle('keep-open', open);
+    keepBtn.setAttribute('aria-expanded', String(open));
+    keepBtn.classList.toggle('open', open);
+    document.getElementById('ip_keep_t').textContent = open ? 'What you keep' : 'Show what you keep';
+  };
+  drawKeep();
+  keepBtn.addEventListener('click', ()=>{ ipKeepOpen = !ipKeepOpen; drawKeep(); });
   const otherSearchEl = document.getElementById('ip_other_supplier_search');
   if(otherSearchEl){
     const otherBoxEl = document.getElementById('ip_other_supplier_suggestions');
@@ -36706,7 +37094,7 @@ function renderQuoteItems(){
       </div>
       <div class="ow-tbl-c q-name-cell">
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
-        <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span>${consignTag}</span>
+        <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span><span class="ow-tbl-s q-item-sup-ph" title="${esc(supLabel)}">· ${esc(supLabel)}</span>${consignTag}</span>
       </div>
       <div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span></div>${
         /* A count in cartons is a count in cartons: no "= 200 Pair"
@@ -36719,16 +37107,9 @@ function renderQuoteItems(){
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
       <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
-      <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%</span></div>
+      <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
     </div>`;
   }).join('');
-
-  const addRowHtml = `<div class="ow-tbl-r q-add-row-trailing">
-    <div class="ow-tbl-c q-gutter">
-      <button class="q-add-icon" id="q_add_row_btn" title="Add item" aria-label="Add item"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-    </div>
-    <div class="ow-tbl-c q-add-row-placeholder">Add the next item — or type in the search above</div>
-  </div>`;
 
   const profit = grandSell - grandBuy;
   /* The charges resolve against the GOODS on this quote, which is
@@ -36747,42 +37128,23 @@ function renderQuoteItems(){
   const takesCharges = orderTakesCharges(data.quote);
   const takesCredit = orderTakesCredit(data.quote);
 
-  /* The client's side of the quote first, then the shop's, with a rule
-     between them. "Price each" is the wording the printed quotation
-     already uses for the same figure, so the screen and the document
-     the client is handed say the same words about the same number.
+  /* ONE ADD ROW, at the foot of the document. It offers the next item,
+     a charge, or credit terms: the words (and the mark in the gutter)
+     open the picker, the chips beside them add a charge or put the
+     order on credit. It was three rows in a column -- item, charge,
+     credit -- three ways of asking "and then?" under a document that
+     only needs one.
 
-     The foot names whose money each row is. It read "Grand total" over
-     the COST -- the number a rep says down the phone -- while the
-     printed quotation, the WhatsApp message and the client copy all
-     totalled the sell. Measured on a three-line quote: the screen said
-     3,845,000 and every document the client received said 4,806,250.
-
-     "You keep" is ink unless the quote loses money: what is kept is a
-     size, and only a loss is a warning. */
-  /* THE FOOT IS THREE ROWS AGAIN. It briefly carried "Items" and
-     "Charges" above the client's figure, from when the charges lived in
-     a block below the foot and the jump from one to the other had to be
-     explained. Every charge is now a row directly above these, so those
-     two restated what was already on the screen -- and the split still
-     rides the sticky bar, which is the one place it cannot scroll away.
-     The number the rep says down the phone leads, as it always did. */
-  const footHtml = `
-    <div class="ow-tbl-f q-foot q-foot-pays">
-      <div class="q-foot-l">The client pays</div>
-      <div class="ow-tbl-n q-foot-v">${fmtUGX(paysTotal)}</div>
-      <div class="q-foot-x q-shop-first"></div>
+     THERE IS NO FOOT. The arithmetic -- what the client pays, what it
+     costs, what is kept -- lives once, on the sticky bar, which is the
+     one surface that cannot scroll away. The foot said the same three
+     figures a second time, forty pixels above the bar. */
+  const addRowHtml = `<div class="ow-tbl-r q-add-row-trailing">
+    <div class="ow-tbl-c q-gutter">
+      <button class="q-add-icon" id="q_add_row_btn" title="Add item" aria-label="Add item"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    <div class="ow-tbl-f q-foot q-foot-cost">
-      <div class="q-foot-l">Costs you</div>
-      <div class="ow-tbl-n q-foot-v">${fmtUGX(grandBuy)}</div>
-      <div class="q-foot-x q-shop-first"></div>
-    </div>
-    <div class="ow-tbl-f q-foot q-foot-keep">
-      <div class="q-foot-l"${chargesTotal > 0 || creditCharge > 0 ? ' title="On the items. What a delivery or a cut actually costs the shop is not known until somebody records it, and what waiting for the money costs is on no book at all — so neither is counted here as kept."' : ''}>You keep${chargesTotal > 0 || creditCharge > 0 ? ' on the items' : ''}</div>
-      <div class="ow-tbl-n q-foot-v ow-fig${profit < 0 ? ' ow-bad' : ''}">${fmtUGX(profit)}</div>
-      <div class="q-foot-x q-shop-first"></div>
-    </div>`;
+    <div class="ow-tbl-c q-add-ph"><span class="q-add-row-placeholder" title="Add the next item — or type in the search above">Next item, a charge, or credit terms</span><span class="q-add-chips">${takesCharges ? chargeAddChipsHTML() : ''}${takesCredit ? creditOfferChipHTML(data.quote) : ''}</span></div>
+  </div>`;
   /* An empty quote used to render the full grid anyway: eight column
      headers over nothing and three footer rows all reading 0 UGX --
      zeros presented as an account. An empty document is an invitation
@@ -36791,14 +37153,15 @@ function renderQuoteItems(){
   if(items.length===0){
     wrap.innerHTML = `<div class="q-empty-doc">
       <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <div class="q-empty-doc-title">No items yet</div>
-      <div class="q-empty-doc-hint">Search above to add the first one — or press <b>/</b> to jump to the search.</div>
+      <div class="q-empty-doc-title">Nothing on the quote yet</div>
+      <div class="q-empty-doc-hint">Search above to add the first one<span class="q-empty-kbd"> — or press <b>/</b> to jump to the search</span>${quoteUsualRows.length ? `, or take one of ${esc(String(data.quote.client.name||'').trim().split(/\s+/)[0])}'s usuals` : ''}.</div>
       <button type="button" class="q-add-icon" id="q_add_row_btn" style="display:none;"></button>
       <div class="q-add-row-placeholder" style="display:none;"></div>
-    </div>`;
+    </div><div class="q-usual-slot">${usualBuysRowsHTML()}</div>`;
     renderQuoteFinbar(0, 0, 0);
     wrap.querySelector('#q_add_row_btn').addEventListener('click', openItemPicker);
     wrap.querySelector('.q-add-row-placeholder').addEventListener('click', openItemPicker);
+    wireUsualRows(wrap.querySelector('.q-usual-slot'));
     renderQuoteRail();
     return;
   }
@@ -36812,7 +37175,7 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-shop-first">Supplier</div>
       <div class="ow-tbl-n">Buy @</div>
       <div class="ow-tbl-n">Margin</div>
-    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${takesCredit ? creditOfferRowHTML(data.quote) : ''}${footHtml}
+    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}
   </div>`;
 
   if(takesCharges || takesCredit) wireQuoteCharges(wrap);
@@ -36950,7 +37313,8 @@ function renderQuoteRail(){
   const cheaperEl = document.getElementById('q_rail_cheaper');
   const withEl = document.getElementById('q_rail_with');
   const stockEl = document.getElementById('q_rail_stock');
-  if(!clientEl || !cheaperEl || !withEl || !stockEl) return;
+  const lastEl = document.getElementById('q_rail_last');
+  if(!clientEl || !cheaperEl || !withEl || !stockEl || !lastEl) return;
   ensureQuote();
   const items = data.quote.items || [];
   const n = (v)=> Number(v).toLocaleString('en-UG');
@@ -36961,30 +37325,25 @@ function renderQuoteRail(){
     !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
   ).length : 0;
 
-  /* ---- this client ---- */
+  /* ---- this client ----
+     Orders, what they owe and the last order are cells of the band
+     now, so this section draws only what the band cannot hold: what
+     this quote takes the balance to, how many invoices are open, and
+     the warning when the oldest is late. A client with nothing owed
+     has nothing here, and the section is not drawn. */
   {
     const standing = customerDebtStanding(customer);
     const band = debtStandingBand(standing);
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">This client</span>${priorOrders ? `<span class="ow-pan-n">${priorOrders} order${priorOrders===1?'':'s'}</span>` : ''}</div>`;
     let body = '';
-    if(!nameLower){
-      body = `<p class="ow-mini">Type who this is for. What they owe and what they usually take appear as you type.</p>`;
-    } else if(!customer && !priorOrders){
-      body = `<p class="ow-mini">New to the books — nothing owed, no orders on file.</p>`;
-    } else if(!standing){
-      body = `<div class="ow-sr"><span class="ow-sr-k">Owed now</span><span class="ow-sr-v">${esc(fmtUGX(0))}</span></div>`;
-    } else {
+    if(standing){
       const tone = band==='severe' ? ' ow-bad' : band==='late' ? ' ow-warn' : '';
-      const age = standing.oldestDays==null ? '' : `, oldest ${standing.oldestDays} day${standing.oldestDays===1?'':'s'}`;
-      body = `<div class="ow-sr"><span class="ow-sr-k">Owed now${esc(age)}</span><span class="ow-sr-v${tone}">${esc(fmtUGX(standing.owed))}</span></div>`;
       if(standing.openCount>1) body += `<div class="ow-sr"><span class="ow-sr-k">Unpaid invoices</span><span class="ow-sr-v">${standing.openCount}</span></div>`;
       if(grandSell>0) body += `<div class="ow-sr"><span class="ow-sr-k">After this quote</span><span class="ow-sr-v${tone}">${esc(fmtUGX(standing.owed + grandSell + orderChargesTotal(data.quote)))}</span></div>`;
-
       if(band==='late' || band==='severe'){
         body += `<p class="ow-mini">${band==='severe' ? 'Past sixty days' : 'Past thirty days'} on the oldest unpaid invoice${standing.oldestLabel ? ' ('+esc(standing.oldestLabel)+')' : ''}. Ask for something on account before more goes out on credit.</p>`;
       }
     }
-    clientEl.innerHTML = head + body;
+    clientEl.innerHTML = body ? `<div class="ow-pan-h"><span class="ow-pan-t">This client</span></div>` + body : '';
   }
 
   /* ---- cheaper elsewhere ---- */
@@ -37097,7 +37456,7 @@ function renderQuoteRail(){
 
   /* ---- stock to cover it ---- */
   {
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span></div>`;
+    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span>${items.length ? `<span class="ow-pan-n">${items.length} line${items.length===1?'':'s'}</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and the shelf count sits beside it.</p>`;
     else {
@@ -37148,6 +37507,26 @@ function renderQuoteRail(){
         toast(`Line swapped to ${it.productName}.`);
       });
     });
+  }
+
+  /* ---- last order ----
+     What this client took last time, line by line, as the books wrote
+     it: the same filtered list the band counts, the figure the client
+     was actually billed. Three lines, and how many more. */
+  {
+    const orders = nameLower ? data.savedQuotes.filter(q=>
+      !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId) : [];
+    const last = orders.reduce((best,q)=> (!best || String(q.savedAt||'') > String(best.savedAt||'')) ? q : best, null);
+    if(!last){ lastEl.innerHTML = ''; }
+    else {
+      const lines = last.items || [];
+      const head = `<div class="ow-pan-h"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">${esc(fmtShortDate(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
+      const body = lines.slice(0, 3).map(it=>{
+        const q2 = quoteLineQtyText(it);
+        return `<div class="ow-sr"><span class="ow-sr-k" title="${esc(it.productName)}">${esc(it.productName)} · ${esc(q2.text)}</span><span class="ow-sr-v">${n((Number(it.qty)||0) * quoteItemSellPrice(it))}</span></div>`;
+      }).join('') + (lines.length > 3 ? `<p class="ow-mini">${lines.length - 3} more line${lines.length - 3 === 1 ? '' : 's'} on it.</p>` : '');
+      lastEl.innerHTML = head + body;
+    }
   }
 }
 
@@ -37218,19 +37597,15 @@ function chargeRowsHTML(q, goodsTotal){
   }).join('');
 }
 
-/* The add row, on the pattern of "Add the next item" directly above it.
-   The services are the taps; "Something else" is the one-off. */
-function chargeAddRowHTML(){
+/* The shop's own services as taps on the one add row, their usual
+   amounts riding with them: "Delivery" and "Delivery 60,000" are
+   different amounts of help at a counter. "Other" is the one-off. */
+function chargeAddChipsHTML(){
   const services = data.presetServices || [];
-  const chips = services.map((s, i)=> `<button type="button" class="q-chg-sug" data-chg-add="${i}">${esc(s.name)}${
+  const chips = services.map((s, i)=> `<button type="button" class="q-chg-sug" data-chg-add="${i}" title="Add ${esc(s.name)} to this quote">${esc(s.name)}${
     Number(s.value) > 0 ? `<b>${s.type === 'percent' ? Number(s.value) + '%' : esc(fmtUGX(s.value))}</b>` : ''}</button>`).join('');
-  return `<div class="ow-tbl-r q-add-row-trailing q-chg-add-row">
-    <div class="ow-tbl-c q-gutter">
-      <button class="q-add-icon" data-chg-one="1" title="Add a charge" aria-label="Add a charge"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-    </div>
-    <div class="q-add-row-placeholder q-chg-add-line"><span class="q-chg-add-t">Add a charge</span>${chips}<button type="button" class="q-chg-sug q-chg-sug-more" data-chg-one="1">Something else</button>${
-      services.length ? '' : '<span class="q-chg-none">&mdash; name what this shop charges for on <b>The shop</b>, under &ldquo;What you charge for&rdquo;, and they appear here as a tap.</span>'}</div>
-  </div>`;
+  return `${chips}<button type="button" class="q-chg-sug q-chg-sug-more" data-chg-one="1" title="A one-off charge — name it on its row">Other</button>${
+    services.length ? '' : '<span class="q-chg-none">&mdash; name what this shop charges for on <b>The shop</b>, under &ldquo;What you charge for&rdquo;, and they appear here as a tap.</span>'}`;
 }
 
 /* THE CREDIT ROW, and the offer that precedes it.
@@ -37288,16 +37663,15 @@ function creditRowHTML(q, cash){
   </div>`;
 }
 
-function creditOfferRowHTML(q){
+/* The offer of credit, as a chip on the same row, and what it would
+   come to beside it -- both prices on one screen, so the rep says them
+   in one breath instead of quoting one and discovering the other at
+   the counter. */
+function creditOfferChipHTML(q){
   const offer = orderCreditOffer(q);
   if(!offer) return '';
   const term = offer.days > 0 ? `${offer.days} days` : 'your terms';
-  return `<div class="ow-tbl-r q-add-row-trailing q-chg-add-row">
-    <div class="ow-tbl-c q-gutter">
-      <button class="q-add-icon" data-cr-on="1" title="Put this order on credit" aria-label="Put this order on credit"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-    </div>
-    <div class="q-add-row-placeholder q-chg-add-line"><span class="q-chg-add-t">Or on credit</span><button type="button" class="q-chg-sug" data-cr-on="1">${esc(term)}<b>+${esc(String(offer.pct))}%</b></button><span class="q-cr-says">they pay ${esc(fmtUGX(offer.total))} instead of ${esc(fmtUGX(offer.cash))}</span></div>
-  </div>`;
+  return `<button type="button" class="q-chg-sug" data-cr-on="1" title="Put this order on credit — ${esc(term)} at ${esc(String(offer.pct))}%">On credit<b>+${esc(String(offer.pct))}%</b></button><span class="q-cr-says">on ${esc(term)} they pay ${esc(fmtUGX(offer.total)).replace(/ /g, '&nbsp;')}</span>`;
 }
 
 function wireQuoteCharges(wrap){
@@ -37312,11 +37686,17 @@ function wireQuoteCharges(wrap){
       label: s.name, type: s.type === 'percent' ? 'percent' : 'fixed',
       value: Math.max(0, Number(s.value)||0), cost: null });
     redraw();
+    /* The caret lands on the figure just added: on a call the next
+       thing said is the amount, and it should not need a second tap. */
+    const inp = document.querySelector(`#q_itemsWrap [data-chg-val="${orderCharges(q).length - 1}"]`);
+    if(inp){ inp.focus(); inp.select(); }
   }));
   wrap.querySelectorAll('[data-chg-one]').forEach(btn=> btn.addEventListener('click', ()=>{
     orderCharges(q).push({ id: nextChargeId(q), service: null, label: '',
       type: 'fixed', value: 0, cost: null });
     redraw();
+    const inp = document.querySelector(`#q_itemsWrap [data-chg-name="${orderCharges(q).length - 1}"]`);
+    if(inp) inp.focus();
   }));
   wrap.querySelectorAll('[data-chg-name]').forEach(inp=> inp.addEventListener('change', ()=>{
     const ch = orderCharges(q)[Number(inp.dataset.chgName)];
@@ -37369,18 +37749,17 @@ function wireQuoteCharges(wrap){
 function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTotal){
   const bar = document.getElementById('q_finbar');
   if(!bar) return;
-  /* What the client pays includes the charges and the credit -- it is
-     the figure said down the phone, and a bar that leaves one out sends
-     a rep to argue at the door. What is KEPT is still worked out on the
-     goods alone: a delivery nobody has costed is not profit, it is a
-     delivery nobody has costed, and this app reports missing rather than
-     scoring it as zero.
+  /* THE ARITHMETIC LIVES HERE, ONCE. What the client pays includes the
+     charges and the credit -- it is the figure said down the phone, and
+     a bar that leaves one out sends a rep to argue at the door. What
+     it COSTS and what is KEPT sit beside it: the table has no foot any
+     more, so this is the only place the three are stated, and the one
+     place that cannot scroll away.
 
-     The split names the two separately rather than adding them up. They
-     are different kinds of money -- one is work the shop did, the other
-     is time the shop waited -- and a single "charged" figure covering
-     both would be the one number on this bar that cannot be checked
-     against a row above it. */
+     What is kept is still worked out on the goods alone: a delivery
+     nobody has costed is not profit, it is a delivery nobody has
+     costed, and this app reports missing rather than scoring it as
+     zero. The label says so when that is the case. */
   const charges = Math.max(0, Number(chargesTotal)||0);
   const credit = Math.max(0, Number(creditTotal)||0);
   const pays = grandSell + charges + credit;
@@ -37398,23 +37777,51 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTota
   if(empty) pillClass = 'quiet';
   else if(grandSell<=0 || profit<=0) pillClass = 'danger';
   else if(marginPct < 10) pillClass = 'warn';
-  /* Lives on the sticky bar now, beside the actions: the figure the
-     admin reads aloud leads, the shop's own line sits under it at a
-     size the client across the counter cannot read. "Costs you" is
-     deliberately NOT here any more -- it is derivable (pays minus
-     keep), and the bar is glanced at, not studied. */
   bar.innerHTML = `
     <div class="qp-says">
       <div class="qp-says-label">Client pays</div>
-      <div class="qp-says-value">${fmtUGX(pays)}</div>
+      <div class="qp-says-value${empty ? ' quiet' : ''}">${fmtUGX(pays)}</div>
     </div>
-    <div class="qp-shopline">
-      ${charges > 0 || credit > 0 ? `<span class="qp-split">${fmtUGX(grandSell)} of items${charges > 0 ? `, ${fmtUGX(charges)} charged` : ''}${credit > 0 ? `, ${fmtUGX(credit)} on credit` : ''}</span>` : ''}
-      <span>You keep${charges > 0 || credit > 0 ? ' on the items' : ''} <b class="${pillClass}">${fmtUGX(profit)}</b></span>
-      <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
+    <div class="qp-shop">
+      <div class="qp-cost">
+        <div class="qp-says-label">Costs you</div>
+        <div class="qp-cost-v">${fmtUGX(grandBuy)}</div>
+      </div>
+      <div class="qp-shopline">
+        <div class="qp-says-label">You keep${charges > 0 || credit > 0 ? ' on the items' : ''}</div>
+        <div class="qp-keep-v"><b class="${pillClass}">${fmtUGX(profit)}</b><span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span></div>
+      </div>
     </div>
   `;
+  /* Save looks like what it is on an empty quote: not yet a saving
+     worth making. The handler still answers a tap with words. */
+  const save = document.getElementById('q_save_btn');
+  if(save) save.classList.toggle('q-save-off', !(data.quote && data.quote.items && data.quote.items.length));
+  renderShopToggleText();
 }
+
+/* THE SHOP SIDE, BEHIND A TAP ON THE PHONE. Buy @, margin and the two
+   shop figures on the bar open together and stay open for the session,
+   default closed: on a call the phone may be facing the client. The
+   console never folds them -- there the two designs part. */
+function renderShopToggleText(){
+  const t = document.getElementById('q_shop_toggle_t');
+  if(!t) return;
+  const open = document.body.classList.contains('q-shop-open');
+  const n = (data && data.quote && data.quote.items) ? data.quote.items.length : 0;
+  t.textContent = open ? 'Shop side' : `Shop side${n ? ` · ${n} line${n===1?'':'s'}` : ''}`;
+}
+function setShopSideOpen(open){
+  document.body.classList.toggle('q-shop-open', !!open);
+  const b = document.getElementById('q_shop_toggle');
+  if(b) b.setAttribute('aria-expanded', String(!!open));
+  try{ sessionStorage.setItem('q_shop_open', open ? '1' : ''); }catch(e){}
+  renderShopToggleText();
+}
+document.getElementById('q_shop_toggle').addEventListener('click', ()=>{
+  setShopSideOpen(!document.body.classList.contains('q-shop-open'));
+});
+try{ if(sessionStorage.getItem('q_shop_open')==='1') setShopSideOpen(true); }catch(e){}
 
 function renderQuoteAll(){
   ensureQuote();

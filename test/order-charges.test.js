@@ -228,8 +228,10 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
     'an agent’s order does not, because the agent app would never see it');
   t.check(/const takesCharges = orderTakesCharges\(data\.quote\);/.test(src)
     && /\${takesCharges \? chargeRowsHTML\(data\.quote, grandSell\) : ''}/.test(src)
-    && /\${takesCharges \? chargeAddRowHTML\(\) : ''}/.test(src),
-    'and the screen draws the rows, and offers the row that adds one, only where charges are allowed');
+    /* The offer is chips on the document's one add row now, not a row of
+       its own; the gate is the same. */
+    && /\${takesCharges \? chargeAddChipsHTML\(\) : ''}/.test(src),
+    'and the screen draws the rows, and offers the taps that add one, only where charges are allowed');
 }
 
 /* ---------- 8. numbered inside the order it belongs to ------------------ */
