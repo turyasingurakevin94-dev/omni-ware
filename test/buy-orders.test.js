@@ -89,6 +89,14 @@ const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockO
   'quoteItemSellPrice', 'invoiceLineCost', 'buyKeptPct',
   'buyKeyParts', 'buyKeyLabel', 'buyPriceStamp', 'buyPriceNow', 'buyHoldFor',
   'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyRanOut', 'daysSinceDate', 'buyLineMerge',
+  /* The plan names the next rung down the supplier's own ladder
+     beside every line it costs, so the reading that finds one
+     and the rule that decides whether to say it travel with the
+     chain. */
+  'cmpNextBreak', 'buyNextTier', 'buyTierWorthIt',
+  /* The plan now names the next rung down the supplier's ladder
+     beside every line, so the reading that finds one comes along. */
+  'cmpNextBreak', 'buyNextTier', 'buyTierWorthIt',
   'buyLineReason', 'buyLineAlsoReason',
   'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',
@@ -99,7 +107,8 @@ const CHAIN = ['waSalesByKey', 'waDaysBetween', 'waWeekday', 'stockKey', 'stockO
   'buyOrderToolLines', 'purchasePlan',
   // A delivery goes on the shelf in the shelf's unit.
   'stockUnitFor', 'stockMoveOnRowUnit'];
-const CONSTS = ['REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
+const CONSTS = ['BUY_TIER_MIN_PCT', 'buyTierTaken',
+  'REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
   'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS', 'BUY_ORDER_STALE_DAYS', 'BUY_ORDER_KEEP_DAYS'];
 
 const SUPPLIERS = { S1: 'Kampala Steel', S2: 'Roto', S3: 'Okuosi Gypsum' };

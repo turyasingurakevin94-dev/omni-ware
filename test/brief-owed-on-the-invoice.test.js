@@ -35,6 +35,7 @@ const src = read('index.html');
 /* ---- the reader, as the app really computes it ----------------------- */
 const data = { savedQuotes: [], customers: [{ id: 'C1', name: 'Bright (PAM)' }] };
 const R = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'savedQuoteCashTotal', 'orderCreditTerms', 'orderCreditCharge',
   'savedQuoteTotal', 'invoiceBalanceDue', 'customerOutstandingInvoices'];
 const reader = compileScope(R.map((n) => extractFunction(src, n, 'index.html')),
   { data, quoteItemSellPrice: (it) => Number(it.sellPrice) || 0 }, R);

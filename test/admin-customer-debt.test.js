@@ -43,7 +43,7 @@ const env = {
   quoteSuggestedStockPrice: () => null,
 };
 const NAMES = [
-  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+  'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue', 'invoiceDebtDesired',
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'customerLedgerTotal', 'customerDebtDrift',

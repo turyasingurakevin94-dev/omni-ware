@@ -38,6 +38,9 @@ const TODAY = '2026-08-04';
 const data = { customers: [], savedQuotes: [] };
 
 const scope = compileScope([
+  extractFunction(src, 'savedQuoteCashTotal', 'index.html'),
+  extractFunction(src, 'orderCreditTerms', 'index.html'),
+  extractFunction(src, 'orderCreditCharge', 'index.html'),
   extractFunction(src, 'orderCharges', 'index.html'),
   extractFunction(src, 'chargeAmount', 'index.html'),
   extractFunction(src, 'savedQuoteGoodsTotal', 'index.html'),

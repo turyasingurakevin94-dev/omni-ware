@@ -56,6 +56,15 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     const body = fs.readFileSync(p, 'utf8');
     [...body.matchAll(/account:\s*([^,\n]+)/g)].forEach(m => {
       const v = m[1].trim();
+      // `account: {` opens a nested object -- client-portal answers a
+      // customer with { ok, account: { owed, termsDays, ... } }, which is
+      // a response shape and not a cash account at all. A brace can never
+      // be an account id, so it is the one value skipped. Deliberately
+      // NOT narrowed to "only quoted strings count": the bug section 1
+      // pins is `account: providerLabel`, an unquoted identifier, and a
+      // sweep that ignored those would stop catching the thing it exists
+      // for. Checked by planting that very line and watching this fail.
+      if (v === '{') return;
       if (!/^"(cash|momo|bank)"$/.test(v)) bad.push(`${path.basename(path.dirname(p))}: ${v}`);
     });
   });

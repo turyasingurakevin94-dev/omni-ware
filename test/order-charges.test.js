@@ -23,16 +23,29 @@
  *
  * Run: node test/order-charges.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('order charges');
 const src = read('index.html');
+const code = src;
 
 const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
-  'orderChargesCost', 'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
+  'chargeCostTxn', 'chargeCostOf', 'orderChargesCost', 'chargeCostedCashIds',
+  'orderChargeLines', 'orderTakesCharges', 'nextChargeId',
+  /* The bill total now has a third part -- what waiting for the money
+     costs -- and this file's subject is what the CHARGES come to. The
+     credit chain rides along so the totals are the real ones; every
+     order here takes no credit, so it adds nothing and proves it. */
+  'savedQuoteCashTotal', 'orderCreditTerms', 'orderCreditCharge',
   'savedQuoteTotal', 'anInvoiceTotals'];
 
+/* What a charge COST is read back off the cash book, so the scope needs
+   one. A live binding rather than a copy: the reversal case empties it
+   and expects the readers to notice. */
+const store = { cashTxns: [], savedQuotes: [] };
+
 const s = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
+  data: store,
   // What a LINE sells for is not this file's subject: the price on the
   // fixture is the price, so the goods total is arithmetic a reader can
   // check by eye.
@@ -134,22 +147,48 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
     'the charge is nowhere among them, so picking, costing and the shelf never meet it');
 }
 
-/* ---------- 5. what it COST the shop, and what nobody has said ---------- *
- * A delivery nobody has costed and a delivery that cost nothing are
- * different facts, and one figure cannot tell them apart.
+/* ---------- 5. what it COST the shop is a PAYMENT, not a figure -------- *
+ * A delivery costs what the driver was handed, and that money leaves the
+ * drawer -- so it is already a cash entry, and the honest way to say what
+ * the delivery cost is to point at that entry rather than type the amount
+ * a second time beside it. Two copies of one figure is the drift this app
+ * writes migrations about, and a typed cost with no money behind it is a
+ * number invented to make a margin look answered.
+ *
+ * A delivery nobody has costed and a delivery that cost nothing are still
+ * different facts, and one figure still cannot tell them apart.
  */
 {
+  store.cashTxns = [
+    { id: 900, date:'2026-09-13', account:'cash', type:'payment', category:'Transport', amount:40000 },
+  ];
   const mixed = order({ charges: [
-    { id:1, label:'Delivery', type:'fixed', value:60000, cost:40000 },
-    { id:2, label:'Cutting', type:'fixed', value:20000, cost:null },
+    { id:1, label:'Delivery', type:'fixed', value:60000, costTxnId:900 },
+    { id:2, label:'Cutting', type:'fixed', value:20000, costTxnId:null },
   ]});
   const c = s.orderChargesCost(mixed);
-  eq(c.total, 40000, 'what is known is added up');
-  eq(c.uncosted, 1, 'and what nobody has priced is counted, not read as free');
+  eq(c.total, 40000, 'what was actually paid is added up, read back off the cash book');
+  eq(c.uncosted, 1, 'and what nobody has paid for is counted, not read as free');
 
-  const none = order({ charges: [{ id:1, label:'Delivery', type:'fixed', value:60000, cost:null }] });
+  const none = order({ charges: [{ id:1, label:'Delivery', type:'fixed', value:60000, costTxnId:null }] });
   eq(s.orderChargesCost(none).total, 0, 'an entirely uncosted set costs nothing so far');
   eq(s.orderChargesCost(none).uncosted, 1, 'and says so rather than looking cheap');
+
+  /* REVERSE THE PAYMENT AND THE COST GOES WITH IT. This is the whole
+     reason the amount is not stored on the charge: a figure left behind
+     with nothing under it would go on claiming the shop paid a fare it
+     has taken back. */
+  store.cashTxns = [];
+  eq(s.orderChargesCost(mixed).total, 0, 'a payment reversed in the cash book takes the cost with it');
+  eq(s.orderChargesCost(mixed).uncosted, 2, 'and the charge reads as uncosted again, which is the truth');
+
+  /* The statement lifts those entries out of running costs, so one fare
+     is never both a cost of service and a cost of running the shop. */
+  store.cashTxns = [{ id: 900, amount: 40000 }];
+  store.savedQuotes = [mixed];
+  const claimed = s.chargeCostedCashIds();
+  t.check(claimed.has('900'),
+    'and the statement can find the entry a charge has claimed, so the same fare is never charged twice');
 }
 
 /* ---------- 6. what a document is allowed to print ---------------------- */
@@ -164,12 +203,16 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
   eq(lines[0].label, 'Delivery', 'each printed charge is named');
   eq(lines[1].amount, 75000, 'and a percent reaches the paper as shillings, not as a percent');
 
-  /* Every client-facing document draws from this one list, so one cannot
-     print a delivery the next leaves out. */
+  /* Every client-facing document draws from ONE list, so one cannot
+     print a delivery the next leaves out. That list is orderBillLines,
+     which is these charges plus the price of credit -- the charges
+     reach the paper through it, never around it. */
   ['buildQuoteA5HTML', 'buildReceiptHTML', 'orderInvoiceCheckHTML'].forEach((fn)=>{
-    t.check(/orderChargeLines\(q\)/.test(extractFunction(src, fn, 'index.html')),
-      `${fn} draws its charges from the one list`);
+    t.check(/orderBillLines\(q\)/.test(extractFunction(src, fn, 'index.html')),
+      `${fn} draws what it prints from the one bill list`);
   });
+  t.check(/function orderBillLines\(q\)\{\s*const lines = orderChargeLines\(q\);/.test(src),
+    'and that list starts from these charges, so nothing can print one without the other');
   const receipt = extractFunction(src, 'buildReceiptHTML', 'index.html');
   t.check(/item\$\{items\.length===1\?'':'s'\}`, receiptNum\(goods\)\)/.test(receipt),
     'and the receipt’s "n items" line totals the items, not the bill they ride on');
@@ -183,8 +226,12 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
   t.check(s.orderTakesCharges(order()) === true, 'an ordinary order takes charges');
   t.check(s.orderTakesCharges(order({ originAgentId: 'A3' })) === false,
     'an agent’s order does not, because the agent app would never see it');
-  t.check(/orderTakesCharges\(data\.quote\) \? quoteChargesHTML/.test(src),
-    'and the screen offers the block only where it is allowed');
+  t.check(/const takesCharges = orderTakesCharges\(data\.quote\);/.test(src)
+    && /\${takesCharges \? chargeRowsHTML\(data\.quote, grandSell\) : ''}/.test(src)
+    /* The offer is chips on the document's one add row now, not a row of
+       its own; the gate is the same. */
+    && /\${takesCharges \? chargeAddChipsHTML\(\) : ''}/.test(src),
+    'and the screen draws the rows, and offers the taps that add one, only where charges are allowed');
 }
 
 /* ---------- 8. numbered inside the order it belongs to ------------------ */
@@ -204,7 +251,7 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
  * missing key is invisible to arithmetic.
  */
 {
-  t.check(/payload:\{client:q\.client, items:q\.items, charges:q\.charges\|\|\[\], savedAt:q\.savedAt,/.test(src),
+  t.check(/payload:\{client:q\.client, items:q\.items, charges:q\.charges\|\|\[\], credit:q\.credit\|\|null, savedAt:q\.savedAt,/.test(src),
     'the charges are named in the payload the sync sends');
   t.check(/client:\{name:'', phone:''\}, items:\[\], savedAt:null, payments:\[\], customerId:null, debtCharged:0,\n\s*charges:\[\],/.test(src),
     'and in the defaults an order saved before charges existed reads back through');
@@ -215,6 +262,115 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
      through to the saved record. */
   t.check(/charges: JSON\.parse\(JSON\.stringify\(orderCharges\(q\)\)\),/.test(src),
     'and editing a saved order carries its charges in, by copy');
+}
+
+/* ---------- 10. the group message says what the client pays ------------ *
+ * The sales group gets a copy of every saved order. It went out totalling
+ * the GOODS while the invoice, the receipt and the customer all said a
+ * larger figure -- so the one message the shop's own people read carried
+ * a number that matched nothing. The charges ride the item column with
+ * the quantity left empty: there is one delivery, and a "1" under a
+ * quantity column invites somebody to ask for two.
+ */
+{
+  const NAMES2 = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+    'orderChargeLines', 'savedQuoteCashTotal', 'orderCreditTerms', 'orderCreditCharge',
+    'creditTermLabel', 'orderBillLines',
+    'waPadEnd', 'waPadStart', 'waFmtNum', 'waFitQty', 'waQtyLabel',
+    'waAbbrUnit', 'quoteLinePack', 'buildSalesGroupQuoteMessage'];
+  const g = compileScope(
+    [extractDeclaration(src, 'WA_UNIT_ABBR', 'index.html')]
+      .concat(NAMES2.map((n)=> extractFunction(src, n, 'index.html'))), {
+    quoteItemSellPrice: (it)=> Number(it.sellPrice) || 0,
+  }, NAMES2);
+
+  const items = [{ productId:'P001', productName:'Cement', unit:'Bag', qty:30, sellPrice:32000 }];
+  const withCharges = { items, charges: [
+    { id:1, service:'Delivery', label:'Delivery', type:'fixed', value:60000 },
+    { id:2, service:'Urgent', label:'Urgent', type:'percent', value:5 },
+  ]};
+  const msg = g.buildSalesGroupQuoteMessage(items, { name:'Kato' }, withCharges);
+
+  // 30 x 32,000 = 960,000 of goods, 60,000 carried, 5% of the goods = 48,000.
+  t.check(/TOTAL\s+1,068,000/.test(msg),
+    `the total is the whole bill, not the goods alone (${(/TOTAL\s+([\d,]+)/.exec(msg) || [])[1]})`);
+  t.check(/Delivery/.test(msg) && /Urgent/.test(msg),
+    'and each charge is named, so the total is explained rather than just larger');
+
+  /* The Ref section is about where to BUY each line. A delivery is not
+     bought, so it must not appear there beside a supplier. */
+  const ref = msg.slice(msg.indexOf('Ref:'));
+  t.check(!/Delivery/.test(ref) && !/Urgent/.test(ref),
+    'while the sourcing list below stays about goods, which is all it can be about');
+
+  /* An order with no charges reads exactly as it did before any of this. */
+  const plain = g.buildSalesGroupQuoteMessage(items, { name:'Kato' }, { items, charges: [] });
+  t.check(/TOTAL\s+960,000/.test(plain), 'an order with no charge on it totals the goods, as it always did');
+  t.check(plain === g.buildSalesGroupQuoteMessage(items, { name:'Kato' }),
+    'and a caller that passes no order at all is unchanged, so nothing else that builds this message breaks');
+}
+
+/* ---------- 11. every statement line opens its own figure -------------- *
+ * The drill-down adds its rows up and compares them against the line it
+ * was opened from -- "a preview that quietly showed less than the
+ * statement would teach a reader to distrust exactly the thing built to
+ * earn trust". Splitting revenue into two lines broke that: Item sales
+ * opened a panel that expected REVENUE and listed only the goods.
+ */
+{
+  const drill = (/function stDrillData\(key, ctx\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(key === 'pl:itemsales'\)[\s\S]{0,240}?rows: invoiceRows\('sales'\)/.test(drill)
+    && /if\(key === 'pl:itemsales'\)[\s\S]{0,80}?expect: is\.itemSales/.test(drill),
+    'Item sales opens the goods, and expects the goods');
+  t.check(/if\(key === 'pl:services'\)[\s\S]{0,240}?rows: invoiceRows\('services'\)/.test(drill)
+    && /if\(key === 'pl:services'\)[\s\S]{0,80}?expect: is\.serviceIncome/.test(drill),
+    'Service income opens the charges, and expects the charges');
+  t.check(/if\(key === 'pl:revenue'\)[\s\S]{0,260}?rows: invoiceRows\('takings'\)/.test(drill),
+    'and Revenue opens the two together, so it agrees whether or not anything was charged');
+  /* Each line points at the key that states its own figure. */
+  const pl = (/function stProfitAndLoss\(ctx\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/stLine\('Item sales'[^)]*drill:'pl:itemsales'/.test(pl.replace(/\s+/g, ' '))
+    || /'Item sales'[\s\S]{0,160}?drill:'pl:itemsales'/.test(pl),
+    'the Item sales line opens pl:itemsales');
+  t.check(/'Service income'[\s\S]{0,300}?drill:'pl:services'/.test(pl),
+    'the Service income line opens pl:services');
+}
+
+/* ---------- 12. one fare, charged once ---------------------------------- *
+ * Paying a driver is money out under Transport, and left alone it is a
+ * running cost of the day it was paid. Named as what a delivery cost, it
+ * belongs against the service income that delivery earned instead --
+ * and counting it in both places would charge the shop twice for one
+ * fare. Driven in the harness on a 12,750 delivery costed at 9,000:
+ *
+ *   recorded   cost of service 9,000 · Transport 0 · gross profit -9,000
+ *   unlinked   cost of service 0 · Transport 9,000 · gross profit back
+ *
+ * The cash entry survives the unlink either way: this screen does not
+ * quietly reverse a payment somebody really made.
+ */
+{
+  const opex = (/function statementOpexRows\(cashRows, fromISO, toISO\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const costed = chargeCostedCashIds\(\);/.test(opex)
+    && /!costed\.has\(String\(t\.id\)\)/.test(opex),
+    'an entry a charge has claimed leaves its running-cost category, the way a settled month already does');
+
+  const inc = (/function incomeStatement\(fromISO, toISO\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/costOfService \+= c\.total;/.test(inc) && /uncostedServices \+= c\.uncosted;/.test(inc),
+    'and comes back as the cost of the service, in the period of the invoice it rode');
+  t.check(/const grossProfit = revenue - trade\.cost - costOfService;/.test(inc),
+    'so gross profit carries it, and a delivery stops reading as kept in full');
+
+  /* An uncosted charge understates that cost and flatters the line, so
+     the statement says so rather than letting it pass as answered. */
+  const checks = (/function statementChecks\(is, bs, cf\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(is\.uncostedServices > 0\)/.test(checks) && /no cost recorded/.test(checks),
+    'and a charge nobody has costed is named on the trust checks, never passed off as free');
+
+  /* The unlink leaves the money where it was. */
+  const unlink = (/function otUnlinkChargeCost\(btn\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/ch\.costTxnId = null;/.test(unlink) && !/removeCashTxn|splice/.test(unlink),
+    'unlinking forgets the payment, it does not reverse it — the cash book is where money is taken back');
 }
 
 process.exit(t.done() ? 1 : 0);

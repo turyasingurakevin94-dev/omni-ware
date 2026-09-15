@@ -47,7 +47,16 @@ const env = {
   anInvoicesInRange: (from, to) => store.savedQuotes.filter(q => {
     const d = q.invoicedAt || q.date; return q.invoiced && !q.voided && d >= from && d <= to;
   }),
-  anInvoiceTotals: (q) => ({ sales: q._sales || 0, cost: q._cost || 0, estimatedQty: q._est || 0 }),
+  /* The same four fields the real one returns, and for the reason this
+     suite exists: a stub that is missing what the shipped function
+     carries makes the drill-down look broken when it is not, or -- far
+     worse -- whole when it is not. sales is the goods, services is what
+     was charged to move them, takings is the two together, and each
+     statement line drills to the one it states. */
+  anInvoiceTotals: (q) => ({ sales: q._sales || 0, cost: q._cost || 0, estimatedQty: q._est || 0,
+    services: q._services || 0, takings: (q._sales || 0) + (q._services || 0) }),
+  orderChargesTotal: (q) => q._services || 0,
+  orderChargeLines: (q) => (q._charges || []),
   invoiceNumberLabel: (q) => 'INV-' + String(q.id).padStart(4, '0'),
   purchaseInvoiceNumberLabel: (pi) => 'PINV-' + String(pi.id).padStart(4, '0'),
   // Assets and loans, stubbed as data-shaped fixtures.
@@ -132,7 +141,11 @@ if (fns) {
   const seed = () => {
     store.savedQuotes = [
       { id: 1, invoiced: true, voided: false, invoicedAt: '2026-08-03', client: { name: 'Onora' }, _sales: 500000, _cost: 300000 },
-      { id: 2, invoiced: true, voided: false, invoicedAt: '2026-08-10', client: { name: 'Mulongo' }, _sales: 700000, _cost: 450000, _est: 2 },
+      { id: 2, invoiced: true, voided: false, invoicedAt: '2026-08-10', client: { name: 'Mulongo' }, _sales: 700000, _cost: 450000, _est: 2,
+        /* One invoice in the window was charged for moving the goods, so
+           Item sales, Service income and Revenue are three different
+           figures here rather than one wearing three names. */
+        _services: 60000, _charges: [{ label: 'Delivery', amount: 60000 }] },
       { id: 3, invoiced: true, voided: false, invoicedAt: '2026-07-01', client: { name: 'OldSale' }, _sales: 999999, _cost: 1 },
     ];
     store.cashTxns = [
@@ -182,7 +195,8 @@ if (fns) {
     const cf = cashFlowStatement(from, to);
     // The slice of incomeStatement/balanceSheet the providers read.
     const is = {
-      revenue: 1200000, costOfSales: 750000,
+      // 500,000 + 700,000 of goods, and 60,000 charged to deliver one of them.
+      revenue: 1260000, itemSales: 1200000, serviceIncome: 60000, costOfSales: 750000,
       opexRows: { Transport: 50000 }, opex: 50000,
       depreciation: 0, interest: 45000, loanFees: 0, disposals: [], disposalGain: 0,
     };
@@ -205,6 +219,17 @@ if (fns) {
   {
     const ctx = ctxFor();
     reconciles(stDrillData('pl:revenue', ctx), 'revenue');
+    /* THE SPLIT IS WHERE THIS GOES WRONG QUIETLY. Item sales opened a
+       panel that expected REVENUE and listed only the goods, so the
+       statement appeared to disagree with itself on every quote that
+       had been charged for. Each line opens the figure it states. */
+    reconciles(stDrillData('pl:itemsales', ctx), 'item sales');
+    reconciles(stDrillData('pl:services', ctx), 'service income');
+    const svc = stDrillData('pl:services', ctx);
+    t.check(svc.rows.length === 1,
+      `service income lists only the invoices that were charged (${svc.rows.length})`);
+    t.check(/Delivery/.test(svc.rows[0].s),
+      'and names what each was charged for, so the figure can be argued with');
     reconciles(stDrillData('pl:cogs', ctx), 'cost of sales');
     reconciles(stDrillData('pl:opex:Transport', ctx), 'an expense category');
     reconciles(stDrillData('pl:interest', ctx), 'loan interest');

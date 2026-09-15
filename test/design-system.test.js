@@ -114,7 +114,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        var(--ow-lift) and none, and what .tl-x and .pr-tbl .tl-on already
        use for exactly this mark. It paints inside the box; nothing
        floats. */
-    'shadows': [57, /box-shadow:\s*([^;}]+)/g],
+    /* 56, not 57: the quote's sticky bar floated on a shadow of its own.
+       It is a bar, not a menu -- a hairline above it is the depth. */
+    /* 54, not 56, and both went with the same removal. The three
+       sideways run tracks are gone -- the buying round, the delivery
+       runs and the pickup clusters are hairline rows in the board's one
+       dialog now -- and with them went .dr-nav's floating arrow and
+       .bl-send's filled button, each of which carried an elevation of
+       its own. Depth on this app is hairlines; two fewer shadows is the
+       gain, and this is where it is locked in. */
+    'shadows': [54, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -406,7 +415,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'qp-items-table-wrap', 'qp-items-cards', 'qc-card'],
       uses: ['ow-cb', 'ow-grid', 'ow-pan', 'ow-side'],
       renders: 'renderQuoteItems',
-      rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
+      /* No ow-tbl-f: the document has no foot any more. The arithmetic
+         is stated once, on the sticky bar (renderQuoteFinbar), which is
+         the one surface that cannot scroll away. */
+      rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-gi'],
     },
     /* The Price registry. The form panel became fields in the layer's
        toolbar, the summary the strip, the card grid the layer's cards
@@ -843,10 +855,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
              'ow-seg', 'ow-seg-b', 'ow-seg-n',
              'ow-dy-nav', 'ow-dy-b', 'ow-dy-d',
              'ow-fc-pane', 'ow-fc-acts', 'ow-fc-roof'],
+      /* THE DAY BECAME A SPINE, and two names left this list with it.
+         dayTile drew the day's own four-figure strip with a verdict
+         line (.ow-mt-d) under each figure; the Today lens now reads as
+         one timeline of the day's movements, and its only comparison
+         is the cumulative line against a typical same-weekday, drawn
+         on the runway's own .ow-ah-* classes -- so there is no tile and
+         no verdict line to hold to. .ow-tbl-g went the same way: it was
+         the till table's band ("In and out, by account"), and the till
+         is now the spine's closing node and the closing checks. What
+         the lens still emits -- .ow-pan, .ow-ck, .ow-tbl on Who paid,
+         .ow-cp, .ow-mini, .ow-empty -- stays pinned. */
       renders: ['fcRenderRoof', 'renderAhead', 'renderPurchasePlanPanel',
-                'renderDay', 'renderDayMeeting', 'dayTile'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-v', 'ow-mt-d', 'ow-grid', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
-                    'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-g', 'ow-tbl-note',
+                'renderDay', 'renderDayMeeting'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-v', 'ow-grid', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+                    'ow-side', 'ow-stack', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-note',
                     'ow-ck', 'ow-cp', 'ow-mini', 'ow-empty', 'ow-bk'],
     },
     /* Invoices. A filing cabinet became a register. The .panel.qp-panel

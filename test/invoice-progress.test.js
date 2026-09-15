@@ -27,7 +27,7 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const data = { products: [] };
-const NAMES = ['invoicePaymentProgress', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal',
+const NAMES = ['invoicePaymentProgress', 'orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge', 'savedQuoteCashTotal', 'orderChargesTotal',
   'savedQuoteTotal', 'quoteItemSellPrice'];
 let scope = null; let err = null;
 try {

@@ -1,0 +1,224 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+  /* Lifted from index.html, not redrawn to taste. The 23-colour palette
+     is .claude/skills/ow-design/SKILL.md; the grid, the ghost input, the
+     foot and the divider are the real declarations, cited in the plan. */
+  :root{
+    --ow-steel-950:#14171B; --ow-steel-100:#DCE0E4; --ow-steel-050:#E9EBED;
+    --ow-paper:#FFFFFF; --ow-paper-2:#F7F9FB;
+    --ow-oxide:#B23A26; --ow-oxide-soft:#F6E7E3;
+    --ow-amber-soft:#FBEFD9; --ow-amber-ink:#7A4A02;
+    --ow-crimson:#7F1D1A; --ow-crimson-soft:#F7E4E2;
+    --ow-ink-900:#14171B; --ow-ink-600:#59626B; --ow-ink-400:#8A939C;
+    --ow-rule:#CFD5DA; --ow-rule-soft:#E3E7EA;
+    --ink:#14171B; --ink-soft:#59626B; --line:#CFD5DA;
+    --ow-tap:44px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#E9EBED;
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    font-size:13px;line-height:1.35;color:#14171B;-webkit-font-smoothing:antialiased;}
+  a{color:#B23A26;} a:hover{color:#8E2C1C;}
+
+  .page{padding:16px;}
+  .panel{background:#fff;border-radius:8px;overflow:hidden;}
+  .q-search{display:flex;align-items:center;gap:8px;padding:11px 14px;
+    border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-400);font-size:13px;}
+  .q-search svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+
+  /* THE GRID. index.html:6109 — eight tracks, and every figure in the
+     document sits on one of them. */
+  .ow-tbl{--ow-tbl-cols:30px minmax(0,1fr) 88px 116px minmax(112px,auto) 156px 88px 76px;
+    display:grid;grid-template-columns:var(--ow-tbl-cols);}
+  .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;
+    grid-template-columns:var(--ow-tbl-cols);align-items:center;
+    gap:8px;padding:6px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .ow-tbl-h{border-top:0;font-size:11px;font-weight:600;letter-spacing:.06em;
+    color:var(--ow-ink-600);text-transform:uppercase;}
+  .ow-tbl-r{min-height:42px;}
+  .ow-tbl-c{min-width:0;}
+  .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:600;}
+  .ow-tbl-p{display:block;min-width:0;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:12px;color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;
+    color:var(--ow-ink-900);white-space:nowrap;}
+  .ow-fig-u{font-size:.82em;font-weight:400;color:var(--ow-ink-400);letter-spacing:0;}
+
+  /* The rule between the client's side and the shop's. index.html:6117 —
+     stretched to the row so it reads as one line down the document. */
+  .q-shop-first{align-self:stretch;display:flex;align-items:center;min-width:0;
+    border-left:1px solid var(--ow-rule);padding-left:8px;}
+  .q-gutter{display:flex;align-items:center;justify-content:center;min-width:0;}
+  .q-row-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+    min-width:14px;text-align:center;}
+  .q-remove{width:20px;height:20px;border-radius:6px;color:var(--ow-ink-400);
+    display:flex;align-items:center;justify-content:center;}
+  .q-remove svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;}
+
+  /* THE GHOST INPUT. index.html:12749 — transparent until the row is
+     hovered, a dark border only on focus. This is why a typed figure
+     never out-weighs a printed one. */
+  .ow-gi{display:block;width:100%;min-width:0;margin:0;
+    border:1px solid transparent;border-radius:4px;background:transparent;padding:4px 6px;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:13px;font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);text-align:right;}
+  .ow-gi.is-hover{border-color:var(--ow-steel-100);background:#fff;}
+  .ow-gi.is-focus{border-color:var(--ow-steel-950);background:#fff;}
+
+  .q-supp{font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .q-margin-pill{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:4px;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;
+    font-weight:600;white-space:nowrap;background:var(--ow-steel-050);color:var(--ink-soft);}
+  .q-margin-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
+  .q-add-icon{width:22px;height:22px;border-radius:4px;border:1px dashed var(--ow-rule);
+    color:var(--ink-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .q-add-icon svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;}
+  .q-add-row-placeholder{grid-column:2/-1;color:var(--ink-soft);font-size:12px;min-width:0;}
+
+  /* The arithmetic at the foot. index.html:6185-6193 — the label right
+     aligned across the client's columns, the figure in the line-total
+     column so it sits under the figures it totals. */
+  .q-foot{padding-top:4px;padding-bottom:4px;background:#fff;border-top:0;font-weight:500;}
+  .q-foot-pays{border-top:1px solid var(--ow-rule);padding-top:10px;}
+  .q-foot-keep{padding-bottom:12px;}
+  .q-foot-l{grid-column:1/5;text-align:right;font-size:12px;color:var(--ink-soft);}
+  .q-foot-pays .q-foot-l{font-size:13px;font-weight:600;color:var(--ink);}
+  .q-foot-v{font-size:13px;}
+  .q-foot-pays .q-foot-v{font-size:15px;}
+  .q-foot-cost .q-foot-v{color:var(--ink-soft);font-weight:500;}
+  .q-foot-x{grid-column:6/-1;}
+
+
+  /* ---- THE CHANGE ---------------------------------------------------
+     A CHARGE IS A ROW OF THE DOCUMENT, not a panel beside it. It rides
+     the same eight tracks as every other row, so its figure lands in
+     the line-total column, under the figures it is added to -- which is
+     the law the foot already keeps and the block below the table could
+     not.
+
+     What marks it as NOT A GOOD is what it has not got: no number in
+     the gutter, no quantity, no supplier, no margin. Three empty cells
+     and a quieter name say it without a tint band, a badge, or a second
+     state colour -- and the shop-side rule runs through it unbroken, so
+     the document still reads as one document. */
+  .q-charge .ow-tbl-p{font-weight:500;}
+
+  /* The unit slot an item uses for "Ctn" carries the one word that
+     names what this row is. Same slot, same 12px ink-600: a marker that
+     costs no new chrome. */
+
+  /* The add row, on the pattern of "Add the next item" directly above
+     it -- dashed gutter mark, the line itself across the client's
+     columns. The services the shop has named are the taps; their usual
+     amounts ride with them, because "Delivery" and "Delivery 60,000"
+     are different amounts of help at the counter. */
+  .q-chg-sug{display:inline-flex;align-items:center;gap:5px;margin-left:6px;
+    padding:2px 8px;border:1px solid var(--ow-rule-soft);border-radius:999px;
+    font-size:12px;color:var(--ink);background:#fff;vertical-align:middle;}
+  .q-chg-sug b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:600;color:var(--ink-soft);}
+  .q-chg-sug-more{color:var(--ink-soft);border-style:dashed;}
+  .q-pct{font-size:11px;color:var(--ow-ink-600);margin-left:3px;}
+
+  </style>
+</helmet>
+<div class="page">
+  <div class="panel">
+    <div class="q-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span>Add item &mdash; search name, SKU or supplier code&hellip;</span></div>
+    <div class="ow-tbl">
+      <div class="ow-tbl-h">
+        <div class="ow-tbl-c"></div>
+        <div class="ow-tbl-c">Item</div>
+        <div class="ow-tbl-n">Qty</div>
+        <div class="ow-tbl-n">Price each</div>
+        <div class="ow-tbl-n">Line total</div>
+        <div class="ow-tbl-c q-shop-first">Supplier</div>
+        <div class="ow-tbl-n">Buy @</div>
+        <div class="ow-tbl-n">Margin</div>
+      </div>
+      <div class="ow-tbl-r">
+        <div class="ow-tbl-c q-gutter"><span class="q-row-num">1</span></div>
+        <div class="ow-tbl-c"><span class="ow-tbl-p">Normal Mulper &mdash; Flat</span><span class="ow-tbl-s">Ctn</span></div>
+        <div class="ow-tbl-n"><div style="display:flex;align-items:center;gap:3px;justify-content:flex-end;">
+          <input class="ow-gi" value="1" style="width:40px;"><span style="font-size:11px;color:var(--ow-ink-600);">Ctn</span></div></div>
+        <div class="ow-tbl-n"><div style="display:flex;align-items:center;gap:2px;justify-content:flex-end;">
+          <input class="ow-gi" value="155000"><span style="color:var(--ink-soft);display:flex;"><svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></span></div></div>
+        <div class="ow-tbl-n"><span class="ow-fig">155,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="ow-tbl-c q-shop-first"><span class="q-supp">Our stock (2)</span></div>
+        <div class="ow-tbl-n"><input class="ow-gi" value="145000"></div>
+        <div class="ow-tbl-n"><span class="q-margin-pill warn">6%</span></div>
+      </div>
+      <div class="ow-tbl-r q-charge">
+        <div class="ow-tbl-c q-gutter"></div>
+        <div class="ow-tbl-c"><span class="ow-tbl-p">Transport</span><span class="ow-tbl-s">Charge</span></div>
+        <div class="ow-tbl-n"></div>
+        <div class="ow-tbl-n"><div style="display:flex;align-items:center;gap:2px;justify-content:flex-end;">
+          <input class="ow-gi" value="5000"></div></div>
+        <div class="ow-tbl-n"><span class="ow-fig">5,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="ow-tbl-c q-shop-first"></div>
+        <div class="ow-tbl-n"></div>
+        <div class="ow-tbl-n"></div>
+      </div>
+      <div class="ow-tbl-r q-charge" style="background:var(--ow-paper-2);">
+        <div class="ow-tbl-c q-gutter"><span class="q-remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+        <div class="ow-tbl-c"><span class="ow-tbl-p">Delivery &mdash; Kyaliwajjala</span><span class="ow-tbl-s">Charge</span></div>
+        <div class="ow-tbl-n"></div>
+        <div class="ow-tbl-n"><div style="display:flex;align-items:center;gap:2px;justify-content:flex-end;">
+          <input class="ow-gi is-hover" value="60000"></div></div>
+        <div class="ow-tbl-n"><span class="ow-fig">60,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="ow-tbl-c q-shop-first"></div>
+        <div class="ow-tbl-n"></div>
+        <div class="ow-tbl-n"></div>
+      </div>
+      <div class="ow-tbl-r" style="min-height:38px;">
+        <div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+        <div class="q-add-row-placeholder">Add the next item &mdash; or type in the search above</div>
+      </div>
+      <div class="ow-tbl-r" style="min-height:38px;">
+        <div class="ow-tbl-c q-gutter"><span class="q-add-icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+        <div class="q-add-row-placeholder">Add a charge
+          <span class="q-chg-sug">Transport <b>5,000</b></span>
+          <span class="q-chg-sug">Delivery <b>60,000</b></span>
+          <span class="q-chg-sug">Urgent <b>5%</b></span>
+          <span class="q-chg-sug q-chg-sug-more">Something else</span>
+        </div>
+      </div>
+      <div class="ow-tbl-f q-foot q-foot-pays">
+        <div class="q-foot-l">The client pays</div>
+        <div class="ow-tbl-n q-foot-v"><span class="ow-fig">220,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="q-foot-x q-shop-first"></div>
+      </div>
+      <div class="ow-tbl-f q-foot q-foot-cost">
+        <div class="q-foot-l">Costs you</div>
+        <div class="ow-tbl-n q-foot-v"><span class="ow-fig" style="color:var(--ink-soft);font-weight:500;">145,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="q-foot-x q-shop-first"></div>
+      </div>
+      <div class="ow-tbl-f q-foot q-foot-keep">
+        <div class="q-foot-l">You keep on the items</div>
+        <div class="ow-tbl-n q-foot-v"><span class="ow-fig">10,000 <span class="ow-fig-u">UGX</span></span></div>
+        <div class="q-foot-x q-shop-first"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

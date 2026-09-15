@@ -224,39 +224,26 @@ const reset = () => {
     'and nothing to buy says which of the two silences it is');
   t.check(/case 'pickups': openPickupRuns\(\); break;/.test(src), 'and opens the panel');
 
-  // Shared with the delivery carousel rather than copied: the two fiddly
-  // parts of that track -- counting the gap into the stride, and rounding
-  // to a card before stepping -- are exactly the kind that get fixed once
-  // and stay broken in a duplicate.
-  t.check(/function wireRunCarousel\(trackId, prevId, nextId\)/.test(src),
-    'the sideways track is one implementation taking ids');
-  t.check(/wireRunCarousel\('dr_track', 'dr_prev', 'dr_next'\)/.test(src)
-    && /wireRunCarousel\('pu_track', 'pu_prev', 'pu_next'\)/.test(src),
-    'used by both the delivery runs and the pickup runs');
-  /* AND THE PICKUP SET IS pu_, NOT pr_. It was pr_ once, which is
-     PAYROLL's prefix: that screen's month stepper owns pr_prev and
-     pr_next, is static markup so it is in the document at all times, and
-     comes first in document order. wireRunCarousel looks its arguments
-     up with getElementById, so while this modal was open it wired
-     Payroll's two month buttons and these arrows did nothing at all --
-     no error, nothing on screen to say so. The three carousels are dr_,
-     bl_ and pu_, and none of them may take a prefix a screen owns. */
-  /* Counted on the file, not matched near a class name: the paragraph
-     above names id="pr_prev" in prose, and a check that reads prose as
-     markup is the trap section-structure already records. */
+  /* THE CAROUSEL IS GONE, AND SO IS THE ID CLASH IT CARRIED.
+
+     The buying round, the delivery runs and the buying list were three
+     sideways tracks sharing one implementation (wireRunCarousel) and
+     three id prefixes, and the reason this block existed at all is that
+     one of those prefixes -- pr_ -- belonged to PAYROLL's month stepper,
+     so the arrows in this modal silently wired somebody else's buttons.
+     All three screens are hairline rows in the board's one dialog now:
+     the round is read down the page, so there is no track, no prefix and
+     no clash. What is kept from the old block is the half that was never
+     about the carousel: Payroll still owns pr_prev and pr_next, and
+     nothing else in the file may take them. */
   const payroll = (/<section id="tab-payroll"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="pr_prev"/.test(payroll) && /id="pr_next"/.test(payroll),
     'pr_prev and pr_next belong to Payroll’s month stepper');
   t.check((src.match(/\sid="pr_prev"/g) || []).length === 1
-    && (src.match(/\sid="pr_next"/g) || []).length === 1
-    && (src.match(/\sid="pu_prev"/g) || []).length === 1,
+    && (src.match(/\sid="pr_next"/g) || []).length === 1,
     'and to it alone — two elements sharing an id made one of them unreachable, silently');
-
-  const fn = (/function wireRunCarousel[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(!/openModal\(/.test(fn),
-    'and it wires the track without opening anything — which modal to show is the caller\'s business');
-  t.check(/if\(track && prev && next\)/.test(fn),
-    'guarded, since a board with nothing to buy renders no track at all');
+  t.check(!/wireRunCarousel\('/.test(src),
+    'and no screen opens a sideways track any more — the round is a list you read down');
 }
 
 /* ---------- a shop you have no reason to enter is not a stop ---------
@@ -316,7 +303,7 @@ const reset = () => {
 
 /* ---------- and the screen says which silence it is ------------------- */
 {
-  t.check(/Nowhere to go — all \$\{settled\} bought-in line/.test(src),
+  t.check(/Nowhere to go — all \$\{p\.settled\} bought-in line/.test(src),
     'an empty route says the goods have arrived, not that there was never anything to buy');
   t.check(/Nothing on the board has to be bought in/.test(src),
     'while a board that genuinely buys nothing still says that');
@@ -325,19 +312,28 @@ const reset = () => {
 
   /* "0 places to reach · 0 UGX to spend" sat directly above the sentence
      explaining there is nowhere to go -- the same fact twice, the second
-     time in figures that mean nothing. */
-  t.check(/cards\.length \? `<div class="bl-top">/.test(src),
-    'and the journey header only appears when there is a journey');
+     time in figures that mean nothing. The dialog's header is a mono
+     count now and it counts what is really there, so an empty round
+     reads "0 stops · 0 items" only in the one place, with the sentence
+     under it doing the explaining. */
+  t.check(/\$\{stops\.length\} stop\$\{stops\.length === 1 \? '' : 's'\} · \$\{lines\} item/.test(src),
+    'and the journey header counts the journey rather than repeating it in figures');
 
-  /* The line reads "<product> · <qty> <unit>", so an ellipsis lands on
-     the quantity: "Chrome Pipe — 19mm - Light · 40…" tells somebody in a
-     shop everything except how many to ask for. */
-  const nameCss = (/\.dr-order-name\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!/text-overflow:ellipsis/.test(nameCss),
-    `the item line is not truncated (${nameCss.replace(/\s+/g, ' ')})`);
-  t.check(!/white-space:nowrap/.test(nameCss), 'it is allowed to wrap');
-  t.check(/overflow-wrap:anywhere/.test(nameCss),
-    'and a single unbroken product code still breaks rather than escaping the card');
+  /* THE QUANTITY IS ITS OWN COLUMN NOW, and that is what settles this.
+
+     On the card the line read "<product> · <qty> <unit>" as one string,
+     so an ellipsis landed on the quantity -- "Chrome Pipe — 19mm -
+     Light · 40…" tells somebody in a shop everything except how many to
+     ask for. That was why the line was allowed to wrap instead. On the
+     grid the item and the quantity are separate cells: the item may
+     truncate, with all three declarations and the min-width that lets
+     it, and the quantity is sized to its content and never cut. */
+  const itemCss = (/\.ow-dlg-c\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/min-width:0/.test(itemCss) && /overflow:hidden/.test(itemCss)
+       && /text-overflow:ellipsis/.test(itemCss) && /white-space:nowrap/.test(itemCss),
+    `the item cell truncates properly rather than escaping the row (${itemCss.replace(/\s+/g, ' ')})`);
+  t.check(/\.ow-bl-r\{grid-template-columns:34px minmax\(0,1fr\) 150px 110px 120px 92px;\}/.test(src),
+    'and the quantity has a column of its own, so nothing eats it');
 }
 
 process.exit(t.done() ? 1 : 0);

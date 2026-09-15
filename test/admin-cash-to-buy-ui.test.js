@@ -91,7 +91,13 @@ const scope = compileScope([
   extractFunction(src, 'consignTagHTML', 'index.html'),
   extractFunction(src, 'consignedForOrder', 'index.html'),
   extractFunction(src, 'orderCashStripHTML', 'index.html'),
-  extractFunction(src, 'openBuyingList', 'index.html'),
+  extractFunction(src, 'otBuyingSpec', 'index.html'),
+  extractFunction(src, 'otBuyingStops', 'index.html'),
+  extractFunction(src, 'otStopActHTML', 'index.html'),
+  extractFunction(src, 'otStopTripsHTML', 'index.html'),
+  extractFunction(src, 'otStopSuppliers', 'index.html'),
+  extractFunction(src, 'otBuyerFor', 'index.html'),
+  extractFunction(src, 'otDayName', 'index.html'),
   /* The list counts each line in the unit it was chosen in, through the
      same reader every document uses. Compiled in, not stubbed; a loose
      line reads exactly as before. */
@@ -145,10 +151,39 @@ const scope = compileScope([
       addEventListener(_e, fn) { modal.planWiring = fn; },
     }),
   },
-}, ['orderBoardCashToBuy', 'orderCashStripHTML', 'openBuyingList',
+  /* The buying list is a spec poured into the board's one dialog now,
+     so its collaborators come in as stubs rather than as a DOM. */
+  supplierLocationFor: (id) => ((data.suppliers || []).find((x) => String(x.id) === String(id)) || {}).location || '',
+  destinationKey: (place) => String(place || '').toLowerCase(),
+  orderLinesWithNobodySent: () => [],
+  blStrandedTripsHTML: () => '',
+  lineIsOnATrip: () => false,
+  tripIsLive: () => false,
+  quoteLineShortfall: (it) => {
+    if (!it || !it.receivedAt) return 0;
+    return Math.max(0, (Number(it.qty) || 0) - (Number(it.receivedQty) || 0));
+  },
+  otDlgFig: (label, n) => `<span class="ow-mt-l">${label}</span><span class="ow-dlg-fig-v">${Number(n || 0).toLocaleString('en-US')}</span>`,
+  otDlgGhost: (a, label, ds) => `<button data-dlg="${a}"${ds || ''}>${label}</button>`,
+  otDlgPrimary: (a, label) => `<button class="btn-accent" data-dlg="${a}">${label}</button>`,
+  otFig: (n) => Number(n || 0).toLocaleString('en-US'),
+  OT_TICK: '<svg data-i="tick"></svg>',
+}, ['orderBoardCashToBuy', 'orderCashStripHTML', 'otBuyingSpec',
   'cashOnHandFor', 'cashOnHandByAccount', 'cashPositionForBuying', 'cashPositionHTML',
   'orderPurchaseLines', 'orderCashToBuy', 'orderUnpricedLines', 'beingPreparedOrders',
   'buyingListRuns', 'orderLineIsBoughtIn', 'quoteClientName']);
+
+
+/* The dialog is a spec -- a title, a mono sub-line, a body of blocks and
+   a footer. The footer leads with the figure the round costs, which is
+   what the old modal put at the top of its body, so the two are read in
+   the same order here. */
+const openBuyingList = () => {
+  const spec = scope.otBuyingSpec();
+  modal.opened = 'otDlg';
+  modal.html = String(spec.foot) + String(spec.act || '') + String(spec.body);
+  modal.sub = String(spec.sub);
+};
 
 // packQty 0 with one price on both kinds: "this supplier sells it at this,
 // there is no pack deal". Deliberately unambiguous, so the assertions below
@@ -200,7 +235,7 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
 
   const orders = scope.beingPreparedOrders();
   const bannerTotal = scope.orderBoardCashToBuy(orders).total;
-  scope.openBuyingList();
+  openBuyingList();
   const listTotal = figures(modal.html)[0];
   const stripTotal = orders
     .map((q) => figures(scope.orderCashStripHTML(q)).pop() || 0)
@@ -313,8 +348,8 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(/with no price on file/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
     'and the strip names it under the figure');
 
-  scope.openBuyingList();
-  t.check(/Nails/.test(modal.html) && /bl-gap/.test(modal.html),
+  openBuyingList();
+  t.check(/Nails/.test(modal.html) && /Not on any stop/.test(modal.html),
     'the buying list names it, so somebody can go and put a price on file');
 
   // The card is where this is easiest to get wrong: the order has a real
@@ -376,12 +411,18 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.prices = [price()];
   data.savedQuotes = [order({ id: 1, client: undefined }), order({ id: 2, client: { name: 'Sarah' } })];
   let threw = null;
-  try { scope.openBuyingList(); } catch (e) { threw = e.message; }
+  try { openBuyingList(); } catch (e) { threw = e.message; }
   t.check(!threw, `the buying list opens with a clientless order on the board (${threw || 'ok'})`);
-  t.check(threw === null && /Sarah/.test(modal.html),
+  /* THE ROW SAYS WHICH ORDER, NOT WHICH CLIENT. The round is grouped by
+     place and its rows are item / supplier / for order / cost / qty, so
+     an order is identified by its number the way the buyer will read it
+     out at the counter. The client's name still appears where it decides
+     something -- on a line that came back short, which is somebody's
+     order left incomplete. */
+  t.check(threw === null && /#2/.test(modal.html) && /#1/.test(modal.html),
     'and the orders either side of it are still listed');
 
-  const unguarded = /\.order\.client\.name/.test(extractFunction(src, 'openBuyingList', 'index.html'));
+  const unguarded = /\.order\.client\.name/.test(extractFunction(src, 'otBuyingSpec', 'index.html'));
   t.check(!unguarded, 'with no unguarded client read left in the function');
 }
 
@@ -391,12 +432,18 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.savedQuotes = [order({
     client: { name: '<img src=x onerror=alert(1)>' },
     items: [line({ productName: '<b>Cement</b>' })] })];
-  scope.openBuyingList();
+  openBuyingList();
 
+  t.check(!/<b>Cement<\/b>/.test(modal.html) && /&lt;b&gt;Cement/.test(modal.html),
+    'a product name is escaped into the buying list -- names are typed by people and land here verbatim');
+  /* And the client's name, on the one row that carries it. */
+  data.savedQuotes = [order({
+    client: { name: '<img src=x onerror=alert(1)>' },
+    items: [line({ receivedAt: '2026-08-03', receivedQty: 4, receivedPrice: 10000 })] })];
+  openBuyingList();
   t.check(!/<img src=x/.test(modal.html) && /&lt;img/.test(modal.html),
-    'a client name is escaped into the buying list -- names are typed by people and land here verbatim');
-  t.check(!/<b>Cement<\/b>/.test(modal.html), 'and so is a product name');
-  t.check(modal.opened === 'buyingListModal', 'and the list is what gets opened');
+    'and so is a client name, where a short line names whose order it is');
+  t.check(modal.opened === 'otDlg', 'and the list is what gets opened');
 }
 
 /* ---------- 10. one supplier, one card, sliding sideways --------------
@@ -419,26 +466,32 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
 {
   data.prices = [price()];
   data.savedQuotes = [order()];
-  scope.openBuyingList();
+  openBuyingList();
 
   t.check(!/<table/.test(modal.html),
     'the run no longer draws a table — that was the thing forcing a full-width block');
-  t.check(/class="dr-carousel"/.test(modal.html) && /class="dr-track" id="bl_track"/.test(modal.html),
-    'the suppliers sit in the same track the pickup and delivery runs use');
-  t.check(/class="dr-card bl-card"/.test(modal.html),
-    'and carry the shared card class, so one change of that pattern moves all three screens');
-  t.check(/id="bl_prev"/.test(modal.html) && /id="bl_next"/.test(modal.html),
-    'with the same arrows');
-  t.check(/wireRunCarousel\('bl_track', 'bl_prev', 'bl_next'\)/.test(src),
-    'wired by the shared helper rather than a second copy of the scrolling');
-  t.check(/Slide sideways for the next supplier/.test(modal.html),
-    'and says so, the way the other two do');
+  /* AND THE TRACK IS GONE TOO. Cards in a sideways track fixed the
+     width the table forced, at the cost of hiding two thirds of the
+     morning behind a swipe -- and it did that on all three run screens
+     at once. They are one dialog now, and the round is grouped by PLACE
+     rather than by supplier, which is the shape the morning actually
+     has: a stop is a place you walk to, and the suppliers at it are
+     named inside it. Rows under a group head, read down the page, with
+     nothing hidden and no columns to collide. */
+  t.check(!/dr-carousel|dr-track|bl_track|bl_prev|bl_next/.test(modal.html),
+    'the suppliers are no longer cards in a sideways track');
+  t.check(!/wireRunCarousel\('/.test(src),
+    'and no screen opens one at all — one fix, three screens, rather than a copy each');
+  t.check(/class="ow-dlg-g"/.test(modal.html) && /Stop 1 · /.test(modal.html),
+    'the round is a group per stop, numbered in the order it is worth walking');
+  t.check(/class="ow-dlg-g-v"/.test(modal.html) && /Cash for this stop/.test(modal.html),
+    'each carrying what that stop costs to walk into');
 
-  // The card still carries everything the table row did.
-  t.check(/class="bl-items"/.test(modal.html), 'the lines are a list');
-  t.check(/class="bl-item-cost"/.test(modal.html) && /class="bl-item-qty"/.test(modal.html),
+  // The row still carries everything the card did.
+  t.check(/class="ow-dlg-r ow-bl-r"/.test(modal.html), 'the lines are rows on one grid');
+  t.check(/class="ow-dlg-v ow-dlg-rt"/.test(modal.html) && /class="ow-dlg-m ow-dlg-rt"/.test(modal.html),
     'still showing what each line costs and how much of it there is');
-  t.check(/class="bl-receive"/.test(modal.html), 'and still offering to receive it');
+  t.check(/class="ow-dlg-ck bl-receive"/.test(modal.html), 'and still offering to receive it');
 
   /* IN THE UNIT THE LINE WAS CHOSEN IN. A line chosen as 2 Ctn is on the
      list as 2 Ctn at the carton price, not as 200 Pair at the pair price
@@ -446,11 +499,16 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.savedQuotes = [order({ id: 41, items: [line({ productId: 'P1', productName: 'Soft Close',
     unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200, price: 2150 })] })];
   data.prices = [price({ id: 1, supplierId: 'S1', wholesale: 2150, retail: 2400, packQty: 100, packUnit: 'Ctn', unit: 'Pair' })];
-  scope.openBuyingList();
-  t.check(/class="bl-item-qty">2 Ctn/.test(modal.html) && !/200 Pair/.test(modal.html),
-    `a carton line is listed as 2 Ctn (${(modal.html.match(/class="bl-item-qty">([^<]*)/) || [])[1]})`);
-  t.check(/@ 215,000 UGX/.test(modal.html),
-    `at the carton price, 100 × 2,150 = 215,000 (${(modal.html.match(/bl-item-each">([^<]*)/) || [])[1]})`);
+  openBuyingList();
+  const qtyCell = (modal.html.match(/class="ow-dlg-m ow-dlg-rt">([^<]*)/) || [])[1];
+  t.check(/>2 Ctn</.test(modal.html) && !/200 Pair/.test(modal.html),
+    `a carton line is listed as 2 Ctn (${qtyCell})`);
+  /* At the carton price: 2 Ctn of 100 Pair at 2,150 is 430,000, and the
+     cost column is what will actually be handed over. The old card said
+     the per-carton price beside the quantity; the row says the line's
+     own cost, which is the figure the buyer counts out. */
+  t.check(/>430,000</.test(modal.html),
+    `costed at the carton price, 200 × 2,150 = 430,000 (${(modal.html.match(/class="ow-dlg-v ow-dlg-rt">([^<]*)/) || [])[1]})`);
 
   /* Every branch of that control, not just the common one. Blanking the
      shortfall test still leaves a plain "Receive" on an unreceived line,
@@ -464,19 +522,23 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     line({ receivedAt: '2026-08-03', receivedQty: 4, receivedPrice: 10000 }),    // 4 of 10 came
     line({ productName: 'Cement (second line)', receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
   ] })];
-  scope.openBuyingList();
-  t.check(/Receive rest/.test(modal.html),
+  openBuyingList();
+  t.check(/still owed to/.test(modal.html) && /bl-receive/.test(modal.html),
     'a line that came back short offers to receive the rest');
-  t.check(/class="bl-undo"/.test(modal.html),
+  t.check(/class="ow-dlg-undo bl-undo"/.test(modal.html),
     'and a line already received offers to undo it');
-  t.check(/class="bl-item-row bl-short"/.test(modal.html)
-    && /class="bl-item-row bl-received"/.test(modal.html),
+  /* THE TICK IS THE DIFFERENCE. Received in full wears one and is
+     finished business; received short does not, so it still reads as
+     something somebody has to act on -- and its box is still the
+     check-in, which is what tops up the rest. */
+  t.check(/class="ow-dlg-ck ow-on bl-undo"/.test(modal.html)
+    && /class="ow-dlg-ck bl-receive"/.test(modal.html),
     'with the two drawn differently — short still needs somebody, received in full does not');
 
   data.savedQuotes = [order()];
-  scope.openBuyingList();
-  t.check(/class="bl-send"/.test(modal.html) && /class="bl-bringing"/.test(modal.html),
-    'with both ways of getting the goods in the card footer');
+  openBuyingList();
+  t.check(/data-dlg="sendstop"/.test(modal.html) && /data-dlg="bringstop"/.test(modal.html),
+    'with both ways of getting the goods on the stop head');
 
   /* Every table rule is gone rather than left behind unused. Named by
      their own selector, not by a bare property: "table-layout:fixed"
@@ -489,11 +551,17 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(!/\.bl-lines table\{min-width/.test(src),
     'and so is the phone minimum-width that existed only to make those columns scrollable');
 
-  /* And the card's own width is what keeps it on a phone, rather than a
-     scroller inside a scroller. */
-  const cardCss = (/\.bl-card\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(/flex-basis:clamp\(/.test(cardCss),
-    `the card is sized by clamp so it fits a phone and a monitor alike (${cardCss})`);
+  /* And what keeps it on a phone is no longer a card width at all. The
+     card went with the track it slid in; the round is rows on a grid
+     now, and 820px re-shapes that grid into three columns -- the box,
+     the item, the figure -- rather than trying to fit six into 390px.
+     Same rule as everywhere else in this app: the switch is a switch,
+     not a scroller inside a scroller. */
+  const phoneRow = (/\.ow-dlg-r,\.ow-bl-r,\.ow-rn-r,\.ow-iv-r\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/grid-template-columns:auto minmax\(0,1fr\) auto/.test(phoneRow),
+    `a dense row becomes three columns on a phone (${phoneRow.replace(/\s+/g, ' ')})`);
+  t.check(/\.ow-dlg-ck\{grid-column:1;grid-row:1\/span 3;[^}]*width:24px;height:24px;\}/.test(src),
+    'with the box a thumb-sized target beside them');
 }
 
 /* ---------- 11. the answer is the headline, and it is not grey -------- */
@@ -515,7 +583,7 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
 {
   data.prices = [price()];
   data.savedQuotes = [order()];
-  scope.openBuyingList();
+  openBuyingList();
 
   t.check(/class="bl-verdict/.test(modal.html), 'the cash answer is its own block');
   const figs = [...modal.html.matchAll(/class="bl-fig-label">([^<]+)</g)].map((m) => m[1]);
@@ -574,7 +642,7 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.savedQuotes = [order({ items: [
     line({ receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
   ] })];
-  scope.openBuyingList();
+  openBuyingList();
 
   t.check(/class="bl-verdict done"/.test(modal.html),
     'a board with nothing left to buy gets its own state');
@@ -585,12 +653,15 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(/on hand/.test(modal.html),
     'while what the shop is holding is still worth a glance');
 
-  /* The card for a run with nothing left to spend on it. */
-  t.check(/class="dr-card bl-card done"/.test(modal.html),
-    'and its supplier card is marked finished');
-  t.check(/class="bl-card-done">All in</.test(modal.html),
-    'reading "All in" rather than a price of zero');
-  t.check(!/class="bl-send"/.test(modal.html),
+  /* The stop with nothing left to spend on it. It is still LISTED --
+     its lines keep their Undo, which is the whole reason the list keeps
+     a line a walking round would drop -- and it costs nothing, because
+     nothing is left to spend there. What it does not do is offer to send
+     anybody: there is nothing to fetch. */
+  t.check(/Stop 1 · /.test(modal.html), 'the stop is still listed, so its receipts can still be undone');
+  t.check(/class="ow-dlg-g-v">0</.test(modal.html),
+    'costing nothing, because nothing is left to buy there');
+  t.check(!/data-dlg="sendstop"/.test(modal.html),
     'with nobody offered to be sent, because there is nothing to fetch');
 
   /* A run only half in is NOT finished, or the card would go quiet while
@@ -599,14 +670,14 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     line({ receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
     line({ productName: 'Cement (still coming)' }),
   ] })];
-  scope.openBuyingList();
-  t.check(!/bl-card done/.test(modal.html),
-    'one line still to come keeps the card live');
+  openBuyingList();
+  t.check(/data-dlg="sendstop"/.test(modal.html),
+    'one line still to come keeps the stop live');
   t.check(!/bl-verdict done/.test(modal.html) && /bl-fig-label/.test(modal.html),
     'and the figures come back, because there is buying left to afford');
 
   data.savedQuotes = [order()];
-  scope.openBuyingList();
+  openBuyingList();
 }
 
 

@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F4F1EA">
+<title>Your account &middot; Omni-ware</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+  /* COUNTER — the client-facing design language.
+     .design/client-portal holds the canvas this is built from, and the
+     rules behind every value here. It shares NO token with index.html:
+     the staff app is a dense work console and this is the shop's counter,
+     and a customer must never be unable to tell which one they are
+     looking at. */
+  :root{
+    --paper:#FFFFFF;      /* the sheet */
+    --ground:#F4F1EA;     /* warm linen, the page behind it */
+    --pale:#FAF8F4;       /* an opening row */
+    --warm:#F7F5F0;       /* a stated fact, or a failure */
+    --mat:#EDE8DF;        /* behind a photograph */
+    --mark:#B6AC9E;       /* a step not yet reached */
+    --ink:#1A1714;        /* warm near-black */
+    --ink-2:#6B635A;
+    --meta:#9A9187;
+    --rule:#E3DDD3;
+    --hair:#EFEAE2;       /* between rows inside one sheet */
+    --rule-firm:#C7BFB2;  /* under a total */
+    /* Two accents, one meaning each, matched in lightness and chroma.
+       Verdigris has exactly two jobs: THE one filled action, and links.
+       Oxide means money owed and nothing else — not a button, not an
+       error, not out of stock. */
+    --go:#14594A;
+    --go-deep:#0E3F35;
+    --owe:#9B3A22;
+    /* The one tinted ground in the system, and it earns it: this is the
+       shop saying something a customer could not have worked out. */
+    --advice:#EDF3F0; --advice-rule:#C9D7D1; --advice-ink:#14392F;
+    /* The three advice tones arrive with the screen that uses them —
+       quantity advice, which needs product_links. A token nothing renders
+       is a colour nobody has had to get right. */
+    --sans:'Public Sans','Helvetica Neue',Arial,sans-serif;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ground);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+  /* Money is a component, not a span. Tabular so a column of figures
+     lines up; right-aligned everywhere; and it never truncates — a
+     clipped figure is not a shortened figure, it is a wrong one. */
+  .fig{
+    font-family:var(--serif);font-variant-numeric:tabular-nums lining;
+    font-feature-settings:'tnum' 1;letter-spacing:-.01em;font-weight:400;
+    white-space:nowrap;
+  }
+  .ser{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;}
+  .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--meta);}
+  .meta{font-size:11.5px;color:var(--meta);line-height:1.4;}
+  .trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+
+  /* Paper has square corners. Sheets carry no radius and no shadow;
+     depth in this language is a hairline. */
+  .sheet{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  .row{display:flex;align-items:baseline;gap:12px;padding:13px 20px;min-height:56px;}
+  .row+.row{border-top:1px solid var(--hair);}
+  /* A row whose whole height is a target centres its contents; the
+     baseline the others share is for figures sitting beside words. */
+  .row-act{align-items:center;}
+  .grow{flex-grow:1;min-width:0;}
+  .bar{background:var(--paper);border-top:1px solid var(--rule);padding:12px 20px calc(16px + env(safe-area-inset-bottom));}
+  .spacer{flex-grow:1;}
+
+  .btn{
+    all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    width:100%;min-height:52px;border-radius:4px;font-size:15.5px;font-weight:600;
+    cursor:pointer;text-align:center;
+  }
+  .btn-go{background:var(--go);color:#FFFFFF;}
+  .btn-go:active{background:var(--go-deep);}
+  .btn-line{background:var(--paper);border:1px solid var(--rule-firm);color:var(--ink);min-height:48px;font-size:14.5px;font-weight:500;}
+  .btn[disabled]{opacity:.5;cursor:default;}
+  .btn:focus-visible,.field:focus-visible,.pinbox:focus-visible{outline:2px solid var(--go);outline-offset:2px;}
+
+  .field{
+    all:unset;box-sizing:border-box;display:block;width:100%;min-height:54px;
+    padding:0 15px;background:var(--paper);border:1px solid var(--rule-firm);border-radius:4px;
+    font-family:var(--serif);font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  }
+  .pinrow{display:flex;gap:12px;}
+  .pinbox{
+    all:unset;box-sizing:border-box;flex:1 1 0;min-width:0;height:76px;
+    background:var(--paper);border:1px solid var(--rule-firm);border-radius:4px;
+    font-family:var(--serif);font-size:30px;text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .pinbox.on{border-color:var(--ink);border-width:1.5px;}
+
+  /* A failure names itself — in ink, in words, on the warm ground, under
+     a firm rule. NEVER in oxide: that colour means money owed, and an
+     error wearing it would make "you owe" and "you mistyped" the same
+     thing at a glance. */
+  .say{background:var(--warm);border:1px solid var(--rule-firm);border-radius:4px;padding:14px 15px;font-size:13.5px;line-height:1.6;}
+
+  .tap{display:flex;align-items:center;justify-content:center;min-height:44px;}
+  a{color:var(--go);text-decoration:none;}
+  a:hover{color:var(--go-deep);}
+  [hidden]{display:none !important;}
+
+  /* A PHOTOGRAPH SITS ON A MAT. Square, ruled, never rounded and never
+     shadowed — a rounded, shadowed thumbnail turns a ledger into a shop.
+     overflow:hidden so a photograph of any shape is cropped to the mat
+     rather than deciding the row's height. */
+  .img{background:var(--mat);border:1px solid var(--rule-firm);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .img img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* No photograph is a FACT, said in words. A grey rectangle pretending
+     to be one is the shop guessing at something it has not got. */
+  .img-none{background:var(--warm);border-style:dashed;}
+
+  /* The aisles. overflow-x:auto, never hidden: hidden made every aisle
+     past the fourth unreachable on a phone, which is the whole catalogue
+     for a shop with more than four categories. */
+  .aisles{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:2px;}
+  .aisles::-webkit-scrollbar{display:none;}
+  .aisle{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;flex-shrink:0;
+    min-height:44px;padding:0 14px;border-radius:4px;border:1px solid var(--rule-soft);
+    background:var(--paper);font-size:13.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+  .aisle-on{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600;}
+
+  .search{all:unset;box-sizing:border-box;display:block;width:100%;min-height:48px;
+    padding:0 14px 0 40px;background:var(--warm);border:1px solid var(--rule);border-radius:4px;
+    font-size:15px;font-family:var(--sans);}
+  .search-wrap{position:relative;}
+  .search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;}
+
+  /* A row in the ledger is a button, because the whole row is the target.
+     A 15px name with a tappable 15px name inside it is a row most thumbs
+     miss. */
+  .listrow{all:unset;box-sizing:border-box;display:flex;align-items:flex-start;gap:13px;
+    width:100%;padding:14px 20px;min-height:78px;cursor:pointer;text-align:left;}
+  .listrow+.listrow{border-top:1px solid var(--hair);}
+  .listrow:active{background:var(--pale);}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;padding:16px 20px;}
+  .gcell{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:7px;
+    min-width:0;cursor:pointer;}
+
+  /* The view switch. One tap between a ledger and a gallery; the ledger
+     is the default because a trade customer reordering already knows what
+     they want. */
+  .vsw{display:flex;border:1px solid var(--rule-firm);border-radius:4px;overflow:hidden;flex-shrink:0;}
+  .vsw button{all:unset;box-sizing:border-box;width:44px;height:44px;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;background:var(--paper);}
+  .vsw button+button{border-left:1px solid var(--rule-firm);}
+  .vsw button[aria-pressed="true"]{background:var(--ink);}
+
+  .step{all:unset;box-sizing:border-box;width:52px;height:52px;flex-shrink:0;
+    border:1px solid var(--rule-firm);border-radius:4px;background:var(--paper);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .step:active{background:var(--pale);}
+  .step[disabled]{opacity:.4;cursor:default;}
+  .qty{all:unset;box-sizing:border-box;flex-grow:1;min-width:0;text-align:center;
+    font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;padding:0 4px;}
+
+  .topbar{display:flex;align-items:center;gap:8px;padding:0 16px 0 6px;min-height:56px;
+    background:var(--paper);border-bottom:1px solid var(--rule);}
+  .back{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;flex-shrink:0;cursor:pointer;}
+
+  /* THE ONE FLOATING THING IN THE SYSTEM. Everything else in Counter sits
+     on the page; the basket follows you, so it gets the single shadow the
+     language allows and a firm rule above it. */
+  /* FIXED, not sticky. It was sticky and it did not stick: a bottom-stuck
+     element can only float above where it naturally sits, and this one is
+     the last thing in the section, so its natural place is already the
+     foot of the page. With 485 items above it that made the basket
+     reachable only by scrolling past the whole shop -- which is the one
+     moment you do not need it. The quote screen in the admin app fixes
+     its own bar to the viewport for exactly this reason.
+     Centred rather than left:0/right:0 because the portal is a 430px
+     column on a wide screen, and a bar spanning the window would leave
+     the shop floating in the middle of its own footer. */
+  .bbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:430px;z-index:20;
+    background:var(--paper);border-top:1px solid var(--rule-firm);
+    box-shadow:0 -4px 16px rgba(26,23,20,.07);
+    padding:12px 20px calc(16px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:14px;}
+  /* Room for it. A fixed bar is out of the flow, so without this the last
+     row of the shop sits underneath it and cannot be read or tapped. Only
+     while there is a bar: an empty basket should not leave a hole. */
+  .bar-room{padding-bottom:calc(88px + env(safe-area-inset-bottom));}
+
+  /* Four steps, named. The only place the flow is drawn. */
+  .steps{display:flex;align-items:center;gap:8px;padding:0 20px 13px;
+    background:var(--paper);border-bottom:1px solid var(--rule);}
+  .steps span.s{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--mark);white-space:nowrap;}
+  .steps span.s-on{color:var(--ink);font-weight:600;}
+  .steps i{flex-grow:1;height:1px;background:var(--rule);}
+
+  .advice{border:1px solid var(--advice-rule);background:var(--advice);border-radius:4px;
+    padding:14px 15px;display:flex;flex-direction:column;gap:10px;}
+  .advice-say{font-size:13.5px;color:var(--advice-ink);line-height:1.5;}
+  .advice-say b{font-weight:600;}
+
+  .chev{flex-shrink:0;}
+  .brand{font-size:11.5px;font-weight:600;letter-spacing:.16em;}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+
+  <!-- Boot. Says what it is doing, and says if it cannot. -->
+  <section id="scBoot" style="padding:80px 28px;text-align:center;">
+    <div class="meta">Opening your account&hellip;</div>
+  </section>
+
+  <section id="scError" hidden style="padding:72px 28px;display:flex;flex-direction:column;gap:14px;">
+    <div class="ser" style="font-size:26px;line-height:1.2;">This is not working</div>
+    <div class="say" id="errorSay"></div>
+    <button class="btn btn-line" type="button" id="errorRetry">Try again</button>
+  </section>
+
+  <!-- 1 · Sign in. No price anywhere on this screen. -->
+  <section id="scSignIn" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div style="padding:64px 28px 0;display:flex;flex-direction:column;gap:4px;">
+      <div class="brand">OMNI&#8209;WARE</div>
+      <div class="meta" style="letter-spacing:.02em;">Hardware &amp; building materials</div>
+    </div>
+    <div style="padding:44px 28px 0;display:flex;flex-direction:column;gap:10px;">
+      <h1 class="ser" style="font-size:32px;line-height:1.15;margin:0;font-weight:400;">Your account</h1>
+      <p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5;max-width:30ch;">
+        Sign in to see your prices, your balance and everything you have bought from us.
+      </p>
+    </div>
+    <form id="signInForm" style="padding:36px 28px 0;display:flex;flex-direction:column;gap:9px;">
+      <label class="lbl" for="phone">Your phone number</label>
+      <input class="field" id="phone" name="phone" type="tel" inputmode="tel"
+             autocomplete="tel" placeholder="0772 418 903">
+      <div class="meta" id="signInNote">The shop gives you four figures to sign in with. They last ten minutes.</div>
+    </form>
+    <div class="spacer"></div>
+    <div style="padding:0 28px 12px;">
+      <button class="btn btn-go" type="submit" form="signInForm" id="signInBtn">Continue</button>
+    </div>
+    <div style="padding:6px 28px calc(22px + env(safe-area-inset-bottom));">
+      <!-- The mockups carried a sample telephone number. It is in no
+           settings table this page can read, and a number printed here
+           that nobody at the shop answers sends a customer to a stranger.
+           An account is opened by the shop anyway — there is no self
+           sign-up to point anyone at. -->
+      <div class="tap"><span class="meta">No account yet? Ask for one at the shop.</span></div>
+      <div class="meta" style="text-align:center;line-height:1.5;margin-top:4px;">
+        We never ask for your PIN on the phone. If somebody rings asking for it, it is not us.
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · The PIN -->
+  <section id="scPin" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div style="display:flex;align-items:center;min-height:56px;padding:0 16px 0 6px;">
+      <button class="btn" type="button" id="pinBack" aria-label="Back"
+              style="width:44px;min-height:44px;flex:0 0 44px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+    </div>
+    <div style="padding:18px 28px 0;display:flex;flex-direction:column;gap:10px;">
+      <h1 class="ser" style="font-size:30px;line-height:1.15;margin:0;font-weight:400;">Enter your PIN</h1>
+      <p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5;" id="pinWho"></p>
+    </div>
+    <div id="pinSay" hidden style="padding:22px 28px 0;"></div>
+    <form id="pinForm" style="padding:26px 28px 0;">
+      <div class="pinrow">
+        <input class="pinbox" id="pin1" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="First figure">
+        <input class="pinbox" id="pin2" inputmode="numeric" maxlength="1" aria-label="Second figure">
+        <input class="pinbox" id="pin3" inputmode="numeric" maxlength="1" aria-label="Third figure">
+        <input class="pinbox" id="pin4" inputmode="numeric" maxlength="1" aria-label="Fourth figure">
+      </div>
+      <div style="margin-top:16px;font-size:12.5px;color:var(--ink-2);" id="pinClock"></div>
+    </form>
+    <div class="spacer"></div>
+    <div style="padding:0 28px 12px;display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-go" type="submit" form="pinForm" id="pinBtn">Sign in</button>
+      <button class="btn btn-line" type="button" id="pinAgain">Ask for another</button>
+      <!-- Says where the ceiling is BEFORE it is hit, because the moment
+           after is the moment this button stops being the answer. -->
+      <div class="meta" style="text-align:center;">Three wrong tries and only the shop can let you back in.</div>
+    </div>
+    <div style="padding:6px 28px calc(22px + env(safe-area-inset-bottom));">
+      <div class="meta" style="text-align:center;line-height:1.5;">
+        Not your number? Go back and change it.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Your account -->
+  <section id="scAccount" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="sheet" style="border-top:0;display:flex;align-items:center;gap:12px;padding:0 20px;min-height:56px;">
+      <div class="brand grow">OMNI&#8209;WARE</div>
+      <button class="btn" type="button" id="whoBtn" aria-expanded="false" aria-controls="whoSheet"
+              style="width:auto;min-height:44px;max-width:190px;gap:6px;font-size:13px;font-weight:400;color:var(--ink-2);">
+        <span class="trunc" id="whoName"></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" id="whoChev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Getting back in needs a PIN only the shop can give out, so signing
+         out is never one stray tap on your own name. The chevron in the
+         bar above now points at something. -->
+    <div class="sheet" id="whoSheet" hidden style="border-top:0;background:var(--pale);padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:13.5px;color:var(--ink-2);line-height:1.5;" id="whoLine"></div>
+      <button class="btn btn-line" type="button" id="signOut">Sign out</button>
+    </div>
+
+    <!-- The figure that matters. Oxide only where money is owed. -->
+    <div class="sheet" style="border-top:0;padding:24px 20px 20px;display:flex;flex-direction:column;gap:6px;">
+      <div class="lbl" id="owedLbl">You owe</div>
+      <div style="display:flex;align-items:baseline;gap:8px;" id="owedWrap">
+        <span style="font-size:15px;font-weight:600;letter-spacing:.04em;" id="owedCur">UGX</span>
+        <span class="fig" style="font-size:44px;line-height:1.05;" id="owedFig">&mdash;</span>
+      </div>
+      <div class="meta" style="font-size:12.5px;color:var(--ink-2);" id="owedBasis"></div>
+    </div>
+
+    <div class="sheet" style="border-top:0;" id="termsSheet"></div>
+
+    <div class="lbl" style="padding:24px 20px 9px;">Your last orders</div>
+    <div class="sheet" id="ordersSheet"></div>
+
+    <div class="sheet" style="margin-top:14px;">
+      <button class="btn" type="button" id="toStatement"
+              style="width:100%;justify-content:flex-start;gap:12px;padding:13px 20px;min-height:56px;font-weight:400;font-size:15px;">
+        <span class="grow" style="text-align:left;">
+          <span style="display:block;">Statement of account</span>
+          <span class="meta" style="display:block;margin-top:2px;" id="statementSince"></span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="orderAgain">What we stock</button>
+      <div class="meta" style="text-align:center;">Prices you see are yours. Nothing is charged here.</div>
+    </div>
+  </section>
+
+  <!-- 4 · What we stock -->
+  <section id="scBrowse" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="browseBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">What we stock</div>
+      <div class="vsw" role="group" aria-label="How to show them">
+        <button type="button" id="viewList" aria-pressed="true" aria-label="As a list">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <button type="button" id="viewGrid" aria-pressed="false" aria-label="As photographs">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B635A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div style="background:var(--paper);border-bottom:1px solid var(--rule);padding:0 20px 14px;display:flex;flex-direction:column;gap:12px;">
+      <div class="search-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input class="search" id="browseSearch" type="search" autocomplete="off"
+               aria-label="Search what we stock" placeholder="Search &mdash; mabati, cement, nails&hellip;">
+      </div>
+      <div class="aisles" id="browseAisles"></div>
+    </div>
+
+    <div class="lbl" id="browseCount" style="padding:18px 20px 8px;"></div>
+    <div id="browseBody"></div>
+
+    <div style="padding:14px 20px 22px;">
+      <div class="meta">Not listed? Ask us &mdash; we source what we do not keep on the shelf.</div>
+    </div>
+    <div class="spacer"></div>
+    <div id="browseBar"></div>
+  </section>
+
+  <!-- 5 · One item -->
+  <section id="scItem" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="itemBack" aria-label="Back to what we stock">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" id="itemTitle" style="font-size:17px;font-weight:600;"></div>
+    </div>
+    <div id="itemBody"></div>
+    <div class="spacer"></div>
+    <div id="itemAddWrap" class="bar" hidden style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="itemAdd"></button>
+    </div>
+    <div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">
+      <div class="meta" id="itemFoot"></div>
+    </div>
+  </section>
+
+  <!-- 9 &middot; Every order -->
+  <section id="scOrders" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar">
+      <button class="back" type="button" id="ordersBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;" id="ordersTitle">Your orders</div>
+    </div>
+    <div id="ordersBody"></div>
+    <div class="spacer"></div>
+  </section>
+
+  <!-- 10 &middot; One order -->
+  <section id="scOrder" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="orderBack" aria-label="Back to your orders">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;" id="orderTitle"></div>
+    </div>
+    <div id="orderBody"></div>
+    <div class="spacer"></div>
+  </section>
+
+  <!-- 8 &middot; Statement of account -->
+  <section id="scStatement" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="stmtBack" aria-label="Back to your account">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">Statement of account</div>
+    </div>
+    <div style="padding:0 20px 14px;background:var(--paper);border-bottom:1px solid var(--rule);">
+      <div class="meta trunc" style="font-size:12.5px;" id="stmtWho"></div>
+    </div>
+    <div id="stmtBody"></div>
+    <div class="spacer"></div>
+    <!-- No accent on this screen. A statement is read, not acted on. -->
+  </section>
+
+  <!-- 6 &middot; Check your order -->
+  <section id="scBasket" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div class="topbar" style="border-bottom:0;">
+      <button class="back" type="button" id="basketBack" aria-label="Back to what we stock">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="grow trunc" style="font-size:17px;font-weight:600;">Check your order</div>
+    </div>
+    <div class="steps">
+      <span class="s">Browse</span><i></i><span class="s">How many</span><i></i>
+      <span class="s s-on">Check</span><i></i><span class="s">Send</span>
+    </div>
+    <div id="basketBody"></div>
+    <div class="spacer"></div>
+    <div class="bar" style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-go" type="button" id="basketSend">Send this order</button>
+      <div class="meta" style="text-align:center;">Nothing is charged and nothing is booked until we confirm it with you.</div>
+    </div>
+  </section>
+
+  <!-- 7 &middot; Sent -->
+  <section id="scSent" hidden style="display:flex;flex-direction:column;flex-grow:1;">
+    <div id="sentBody" style="padding:64px 28px 0;"></div>
+    <div class="spacer"></div>
+    <div class="bar">
+      <button class="btn btn-line" type="button" id="sentDone">Back to your account</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+'use strict';
+/* ---------------------------------------------------------------------
+ * The client portal.
+ *
+ * Talks to ONE endpoint — the client-portal Edge Function — which is the
+ * only thing that knows anything about this shop and hands back fields it
+ * has picked one at a time. Nothing here computes a price, and nothing
+ * here has ever seen a supplier: there is no code path to add one to,
+ * which is the point.
+ *
+ * Standalone, like catalogue.html: it shares no script with index.html
+ * and is not meant to. A copied helper here is a copied helper; the admin
+ * app's version of it must never start reaching a customer.
+ * ------------------------------------------------------------------- */
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const FN_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-portal';
+
+const K_TOKEN = 'ow_client_token';
+const K_SHOP  = 'ow_client_shop';
+const K_DEV   = 'ow_client_device';
+
+/* The shop this portal belongs to. Carried in the link the first time —
+   ?s=<shopId> — and remembered afterwards, so a customer types it never
+   and a second shop on the same build cannot be reached by accident. */
+function shopId(){
+  const fromUrl = new URLSearchParams(location.search).get('s');
+  if(fromUrl){ store(K_SHOP, fromUrl); return fromUrl; }
+  return store(K_SHOP);
+}
+/* localStorage throws in a private window and in some in-app browsers.
+   Every read and write goes through here so the portal degrades to a
+   sign-in-every-time experience instead of a blank screen. */
+function store(k, v){
+  try{
+    if(v === undefined) return localStorage.getItem(k);
+    if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+    return v;
+  }catch(_){ return null; }
+}
+/* Identifies a browser profile and nothing about a person. Clearing
+   storage makes a new one, which shows at the shop as a new device
+   rather than pretending to recognise the old — 0062's rule. */
+function deviceId(){
+  let d = store(K_DEV);
+  if(!d){
+    const b = new Uint8Array(8); (crypto||{}).getRandomValues && crypto.getRandomValues(b);
+    d = Array.from(b, x => x.toString(16).padStart(2,'0')).join('') || String(Date.now());
+    store(K_DEV, d);
+  }
+  return d;
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* Grouped in threes and never rounded. A figure a customer cannot match
+   against their own book is worse than no figure. */
+function money(n){
+  const v = Math.round(Number(n) || 0);
+  return v.toLocaleString('en-US');
+}
+function plural(n, one, many){ return Number(n) === 1 ? one : many; }
+
+async function api(action, extra){
+  const shop = shopId();
+  if(!shop) throw new Error('This link is missing which shop it is for. Ask the shop for it again.');
+  let res, data;
+  try{
+    res = await fetch(FN_URL, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ shopId: shop, action }, extra || {})),
+    });
+    data = await res.json().catch(()=>({}));
+  }catch(_){
+    throw new Error('We could not reach the shop. Check your line and try again.');
+  }
+  if(!res.ok || data.error){
+    const e = new Error(data.error || ('Something went wrong (' + res.status + ')'));
+    e.status = res.status; e.triesLeft = data.triesLeft;
+    throw e;
+  }
+  return data;
+}
+
+const SCREENS = ['scBoot','scError','scSignIn','scPin','scAccount','scBrowse','scItem','scBasket','scSent','scStatement','scOrders','scOrder'];
+const SUBMIT_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/client-submit-order';
+/* Where the shop was left, in pixels. Every screen shares one scrolling
+   document, so this has to be read while the shop is still the screen
+   that is showing -- once it is hidden there is nothing to read. */
+let browseAt = 0;
+
+/* `at` is where to land. Nought for every screen a customer arrives at,
+   because the top is the start of it. The exception is coming BACK to
+   the shop: 485 items deep, a customer who opens one item, or checks
+   their order, and is then returned to the top has been told to find
+   their place again, and in a yard on a phone they will not -- they will
+   take the three things they can still see and go. */
+function show(id, at){
+  const browse = document.getElementById('scBrowse');
+  if(browse && !browse.hidden) browseAt = window.scrollY;
+  SCREENS.forEach(s => { document.getElementById(s).hidden = (s !== id); });
+  window.scrollTo(0, Number(at) || 0);
+}
+function fail(message, retry){
+  document.getElementById('errorSay').textContent = message;
+  document.getElementById('errorRetry').onclick = retry || (()=>location.reload());
+  show('scError');
+}
+
+/* ---------- sign in ------------------------------------------------- */
+let pendingPhone = '';
+let pinDeadline = 0;
+let clockTimer = null;
+/* Three wrong tries and only the shop can issue another. Held here
+   because the clock below would otherwise run down and say "ask for
+   another" over the top of a message saying that will not work — the
+   countdown knows the time is up, it does not know why. */
+let pinLocked = false;
+
+document.getElementById('signInForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('signInBtn');
+  const phone = document.getElementById('phone').value.trim();
+  const note = document.getElementById('signInNote');
+  if(phone.replace(/\D/g,'').length < 9){
+    note.textContent = 'That does not look like a whole number. Type it as the shop has it.';
+    note.style.color = 'var(--ink)';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Just a moment…';
+  try{
+    const r = await api('start', { phone });
+    pendingPhone = phone;
+    pinDeadline = Date.now() + (Number(r.expiresInSeconds) || 600) * 1000;
+    openPin();
+  }catch(err){
+    note.textContent = err.message;
+    note.style.color = 'var(--ink)';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Continue';
+  }
+});
+
+function openPin(){
+  /* The copy says what is TRUE. Delivery over WhatsApp is not wired —
+     the function says so and so does this. When it is, this line
+     changes and not before: a portal that claims to have sent a message
+     it never sent has spent the only thing it was built to earn. */
+  document.getElementById('pinWho').innerHTML =
+    'The shop has four figures for the number ending <strong style="font-weight:600;color:var(--ink);">'
+    + esc(pendingPhone.replace(/\D/g,'').slice(-3)) + '</strong>. Ask for them at the counter or on WhatsApp.';
+  ['pin1','pin2','pin3','pin4'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('pinSay').hidden = true;
+  pinLocked = false;
+  setPinAgain();
+  show('scPin');
+  tickClock();
+  clearInterval(clockTimer); clockTimer = setInterval(tickClock, 1000);
+  document.getElementById('pin1').focus();
+}
+
+/* The one control that stops being an answer. While a PIN is merely
+   spent, asking again works; once the tries are gone, start refuses to
+   mint and the button would do nothing at all. It says which. */
+function setPinAgain(){
+  const b = document.getElementById('pinAgain');
+  b.disabled = pinLocked;
+  b.textContent = pinLocked ? 'Only the shop can help now' : 'Ask for another';
+}
+
+function tickClock(){
+  const left = Math.max(0, pinDeadline - Date.now());
+  const el = document.getElementById('pinClock');
+  if(pinLocked){
+    el.innerHTML = 'Ring the shop for a new PIN.';
+    clearInterval(clockTimer);
+    return;
+  }
+  if(left <= 0){
+    el.innerHTML = 'That PIN has run out. Ask for another.';
+    clearInterval(clockTimer);
+    return;
+  }
+  const m = Math.floor(left/60000), s = Math.floor(left%60000/1000);
+  el.innerHTML = 'It lasts ten minutes. <span class="fig">' + m + ':' + String(s).padStart(2,'0') + '</span> left.';
+}
+
+/* Four boxes that behave like one field: typing moves on, backspace
+   moves back, and a PIN pasted or auto-filled from a message fills all
+   four. Nothing here draws a keyboard — the real one renders on top. */
+const boxes = ['pin1','pin2','pin3','pin4'].map(id => document.getElementById(id));
+boxes.forEach((box, i) => {
+  box.addEventListener('input', () => {
+    const digits = box.value.replace(/\D/g,'');
+    if(digits.length > 1){
+      digits.split('').slice(0,4-i).forEach((d,j)=>{ boxes[i+j].value = d; });
+      boxes[Math.min(3, i + digits.length - 1)].focus();
+    }else{
+      box.value = digits;
+      if(digits && i < 3) boxes[i+1].focus();
+    }
+    boxes.forEach(b => b.classList.toggle('on', b === document.activeElement));
+    if(boxes.every(b => b.value)) document.getElementById('pinForm').requestSubmit();
+  });
+  box.addEventListener('keydown', (e) => {
+    if(e.key === 'Backspace' && !box.value && i > 0){ boxes[i-1].focus(); boxes[i-1].value=''; e.preventDefault(); }
+  });
+  box.addEventListener('focus', () => boxes.forEach(b => b.classList.toggle('on', b === box)));
+});
+
+document.getElementById('pinForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const pin = boxes.map(b => b.value).join('');
+  if(!/^\d{4}$/.test(pin)) return;
+  const btn = document.getElementById('pinBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    const r = await api('verify', { phone: pendingPhone, pin, deviceId: deviceId() });
+    store(K_TOKEN, r.token);
+    clearInterval(clockTimer);
+    await openAccount();
+  }catch(err){
+    const say = document.getElementById('pinSay');
+    const left = err.triesLeft;
+    // 429 is the ceiling already reached; triesLeft 0 is this try reaching
+    // it. Either way the next PIN comes from a person.
+    if(err.status === 429 || left === 0){ pinLocked = true; setPinAgain(); tickClock(); }
+    say.innerHTML = '<div class="say"><strong style="font-weight:600;">' + esc(err.message) + '.</strong> '
+      + (left > 0
+          /* What the function ACTUALLY does after three: it stops
+             accepting PINs for this number until somebody at the shop
+             issues a new one. There is no timed lock-out, so this does not
+             claim one — and it does not send them to the button below
+             either, because asking for another PIN is exactly what stops
+             working. Only a person can let them back in. */
+          ? esc(left + ' ' + plural(left,'try','tries') + ' left, then you will need to ring the shop for a new one.')
+          : 'Ring the shop for a new one — asking here will not help now.')
+      + '</div>';
+    say.hidden = false;
+    boxes.forEach(b => { b.value = ''; });
+    boxes[0].focus();
+  }finally{
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+});
+
+document.getElementById('pinBack').onclick = () => { clearInterval(clockTimer); show('scSignIn'); };
+document.getElementById('pinAgain').onclick = async () => {
+  const btn = document.getElementById('pinAgain');
+  btn.disabled = true;
+  try{
+    const r = await api('start', { phone: pendingPhone });
+    pinDeadline = Date.now() + (Number(r.expiresInSeconds) || 600) * 1000;
+    document.getElementById('pinSay').hidden = true;
+    boxes.forEach(b => { b.value = ''; });
+    boxes[0].focus();
+    tickClock();
+  }catch(err){
+    const say = document.getElementById('pinSay');
+    say.innerHTML = '<div class="say">' + esc(err.message) + '</div>';
+    say.hidden = false;
+  }finally{ btn.disabled = false; }
+};
+
+/* ---------- the account --------------------------------------------- */
+async function openAccount(){
+  let data;
+  try{
+    data = await api('account', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    fail(err.message, () => openAccount());
+    return;
+  }
+  renderAccount(data);
+  show('scAccount');
+}
+
+function renderAccount(data){
+  const a = data.account || {};
+  /* Kept so the basket can say what this order does to their balance
+     without asking the shop again. Terms and a limit are facts about the
+     relationship, not about the basket. */
+  accountData = a;
+  document.getElementById('whoName').textContent = a.name || '';
+  document.getElementById('whoLine').textContent = a.name
+    ? 'Signed in as ' + a.name + '.'
+    : 'Signed in.';
+
+  /* Nothing outstanding is a sentence, not a zero. A balance screen
+     reading 0 makes a working account look like a broken app. */
+  const owed = Number(a.owed) || 0;
+  const owing = owed > 0;
+  document.getElementById('owedCur').hidden = !owing;
+  document.getElementById('owedCur').style.color = 'var(--owe)';
+  const figEl = document.getElementById('owedFig');
+  if(owing){
+    figEl.className = 'fig';
+    figEl.style.cssText = 'font-size:44px;line-height:1.05;color:var(--owe);';
+    figEl.textContent = money(owed);
+  }else{
+    figEl.className = 'ser';
+    figEl.style.cssText = 'font-size:30px;line-height:1.15;';
+    figEl.textContent = 'Nothing outstanding';
+  }
+  /* "You owe / Nothing outstanding" reads as a contradiction. The label
+     follows the figure. */
+  document.getElementById('owedLbl').textContent = owing ? 'You owe' : 'Your balance';
+
+  const basis = [];
+  if(owing){
+    if(a.oldestDays != null) basis.push('Oldest ' + a.oldestDays + ' ' + plural(a.oldestDays,'day','days'));
+    if(a.termsDays != null) basis.push('on ' + a.termsDays + '-day terms');
+  }else if(!Number(a.orderCount)){
+    /* Only sayable when there is genuinely no history. A customer who has
+       bought for years and cleared their balance has had plenty charged
+       to this account, and telling them otherwise is the portal getting
+       their own past wrong in front of them. */
+    basis.push('Nothing has been charged to this account yet.');
+  }
+  document.getElementById('owedBasis').textContent = basis.join(' · ');
+
+  /* Terms and a limit are shown ONLY where somebody has said. Null means
+     nobody agreed one, and a portal that prints "30 days" by default has
+     put a promise on the screen the shop never made. */
+  const rows = [];
+  document.getElementById('statementSince').textContent = 'Every charge and payment we have recorded';
+  if(a.termsDays != null){
+    rows.push('<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Your terms</div>'
+      + '<div style="font-size:14.5px;">' + esc(a.termsDays) + ' days</div></div>');
+  }
+  if(a.creditLimit != null){
+    rows.push('<div class="row"><div class="grow"><div style="font-size:14.5px;color:var(--ink-2);">Your limit</div>'
+      + (a.available != null ? '<div class="meta" style="margin-top:2px;">' + money(a.available) + ' still available</div>' : '')
+      + '</div><div class="fig" style="font-size:16px;">' + money(a.creditLimit) + '</div></div>');
+  }
+  const terms = document.getElementById('termsSheet');
+  terms.innerHTML = rows.join('');
+  terms.hidden = rows.length === 0;
+
+  /* Named rather than dropped: an empty list says what will appear here
+     and how many there are in total when there are more than shown. */
+  const orders = Array.isArray(data.orders) ? data.orders : [];
+  const sheet = document.getElementById('ordersSheet');
+  if(!orders.length && !Number(a.orderCount)){
+    sheet.innerHTML = '<div style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What you buy will be listed here &mdash; every item, what you paid for it, and where it went.</div>'
+      + '</div>';
+  }else{
+    sheet.innerHTML = orders.map(o =>
+      '<div class="row" style="min-height:62px;">'
+      + '<div class="grow">'
+      +   '<div class="trunc" style="font-size:15px;">' + esc(longDate(o.date)) + ' · ' + esc(o.items) + ' ' + plural(o.items,'item','items') + '</div>'
+      +   '<div class="meta trunc" style="margin-top:2px;">' + (o.invoiced ? 'Invoiced' : 'Not yet invoiced') + '</div>'
+      + '</div>'
+      + '<div class="fig" style="font-size:16px;">' + money(o.total) + '</div>'
+      + '</div>').join('')
+      /* This stated the count as a fact for four commits, because the
+         screen it would have led to did not exist and a verdigris row
+         that does nothing when tapped is how the accent stops meaning
+         anything. The screen exists now, so it is a row again — and the
+         count stays in it, because "all 34" tells a customer whether it
+         is worth the tap. */
+      + '<button type="button" class="btn row row-act" id="allOrders"'
+      +   ' style="width:100%;min-height:52px;font-weight:400;font-size:14.5px;">'
+      +   '<span class="grow" style="text-align:left;color:var(--go);">'
+      +     (Number(a.orderCount) > orders.length
+        ? 'All ' + esc(a.orderCount) + ' orders'
+        : (orders.length ? 'Every order, in full' : 'Your orders')) + '</span>'
+      +   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14594A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'
+      + '</button>';
+  }
+  const all = document.getElementById('allOrders');
+  if(all) all.onclick = () => openOrders();
+}
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function longDate(iso){
+  const s = String(iso || '');
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if(!m) return s || 'No date';
+  return Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1];
+}
+
+document.getElementById('whoBtn').onclick = () => {
+  const sheet = document.getElementById('whoSheet');
+  const open = sheet.hidden;
+  sheet.hidden = !open;
+  document.getElementById('whoBtn').setAttribute('aria-expanded', String(open));
+  document.getElementById('whoChev').style.transform = open ? 'rotate(90deg)' : '';
+};
+
+document.getElementById('signOut').onclick = async () => {
+  const token = store(K_TOKEN);
+  store(K_TOKEN, null);
+  /* The catalogue carries THIS customer's own prices. Signing out has to
+     take them with it, or the next person to pick up the handset and tap
+     Back is reading them. */
+  stock = null; item = null; aisle = ''; itemQty = 1;
+  accountData = {}; basket = []; basketWhere = ''; adviceFor = '';
+  renderBasketBar();
+  document.getElementById('browseSearch').value = '';
+  document.getElementById('whoSheet').hidden = true;
+  document.getElementById('whoBtn').setAttribute('aria-expanded', 'false');
+  document.getElementById('whoChev').style.transform = '';
+  show('scSignIn');
+  document.getElementById('phone').value = '';
+  if(token){ try{ await api('signout', { token }); }catch(_){ /* the token is gone locally either way */ } };
+};
+
+/* ---------- every order --------------------------------------------- */
+/* The shop's board has five stages and this names them in a customer's
+   words. The KEYS and their order come from the server, which takes them
+   from the same ladder index.html draws — so a sixth stage, or a
+   different order, cannot appear on one side and not the other. Only the
+   words live here, with the rest of the copy. */
+const STAGE_WORDS = {
+  draft:            'With the shop',
+  awaiting_goods:   'Getting your goods',
+  preparing:        'Being prepared',
+  pending_delivery: 'On the way',
+  completed:        'Delivered',
+};
+/* Said under the stage it belongs to, and only where it is TRUE of every
+   order at that stage. Anything about a particular order — which line is
+   short, which lorry it is on — the books do not hold. */
+const STAGE_SAYS = {
+  awaiting_goods: 'What is not on our shelf, we fetch.',
+  pending_delivery: 'It has left the shop.',
+};
+
+document.getElementById('ordersBack').onclick = () => show('scAccount');
+document.getElementById('orderBack').onclick = () => show('scOrders');
+
+async function openOrders(){
+  show('scOrders');
+  document.getElementById('ordersBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching your orders&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('orders', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('ordersBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderOrders(d);
+}
+
+function stageWord(stage, cancelled){
+  if(cancelled) return 'Cancelled';
+  return STAGE_WORDS[stage] || 'With the shop';
+}
+
+function renderOrders(d){
+  const rows = Array.isArray(d.orders) ? d.orders : [];
+  document.getElementById('ordersTitle').textContent =
+    rows.length ? 'Your ' + rows.length + ' ' + plural(rows.length, 'order', 'orders') : 'Your orders';
+  const body = document.getElementById('ordersBody');
+  if(!rows.length){
+    body.innerHTML = '<div class="sheet" style="margin-top:16px;padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What you buy will be listed here &mdash; every item, what you paid for it, and where it got to.</div>'
+      + '</div>';
+    return;
+  }
+  /* Grouped by month, because thirty-four orders in one column is a wall.
+     The heading is the only thing between them. */
+  let lastMonth = '';
+  const out = [];
+  rows.forEach((o, i) => {
+    const m = monthLabel(o.date);
+    if(m !== lastMonth){
+      if(lastMonth) out.push('</div>');
+      out.push('<div class="lbl" style="padding:22px 20px 8px;">' + esc(m) + '</div><div class="sheet">');
+      lastMonth = m;
+    }
+    out.push(orderRowHTML(o, i));
+  });
+  if(lastMonth) out.push('</div>');
+  body.innerHTML = out.join('');
+  body.querySelectorAll('[data-o]').forEach(el => {
+    el.onclick = () => openOrder(rows[Number(el.dataset.o)].id);
+  });
+}
+
+function monthLabel(iso){
+  const m = /^(\d{4})-(\d{2})/.exec(String(iso || ''));
+  return m ? MONTHS[Number(m[2]) - 1] + ' ' + m[1] : 'No date';
+}
+
+function orderRowHTML(o, i){
+  const word = stageWord(o.stage, o.cancelled);
+  return '<button type="button" class="listrow" data-o="' + i + '" style="align-items:center;min-height:66px;">'
+    + '<span class="grow" style="display:block;">'
+    +   '<span class="trunc" style="display:block;font-size:15px;">' + esc(longDate(o.date)) + ' · '
+    +     esc(o.items) + ' ' + plural(o.items, 'item', 'items') + '</span>'
+    +   '<span class="meta" style="display:block;margin-top:2px;'
+    +     (o.cancelled ? 'text-decoration:none;' : '') + '">' + esc(word)
+    +     (o.fromPortal ? ' · sent from here' : '') + '</span>'
+    + '</span>'
+    + '<span class="fig" style="flex-shrink:0;font-size:16px;'
+    +   (o.cancelled ? 'color:var(--meta);' : '') + '">' + money(o.total) + '</span>'
+    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9187" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="chev" aria-hidden="true" style="margin-left:10px;"><path d="M9 6l6 6-6 6"/></svg>'
+    + '</button>';
+}
+
+async function openOrder(id){
+  show('scOrder');
+  document.getElementById('orderTitle').textContent = 'Order ' + id;
+  document.getElementById('orderBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching it&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('order', { token: store(K_TOKEN), orderId: id });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('orderBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderOrder(d.order || {});
+}
+
+/* The ladder. A stage that has not happened carries NO date, because
+   nothing in the shop's books records when a status changed — only when
+   an order was sent and when it was invoiced. A day this screen cannot
+   derive is the one thing it must not invent. */
+function ladderHTML(o){
+  const stages = Array.isArray(o.stages) ? o.stages : [];
+  const at = stages.indexOf(o.stage);
+  return stages.map((s, i) => {
+    const done = i < at, here = i === at, future = i > at;
+    const dot = here
+      ? '<span style="width:15px;height:15px;border-radius:8px;border:4px solid var(--ink);background:var(--paper);flex-shrink:0;"></span>'
+      : done
+        ? '<span style="width:11px;height:11px;border-radius:6px;background:var(--ink);flex-shrink:0;"></span>'
+        : '<span style="width:11px;height:11px;border-radius:6px;border:1px solid var(--rule-firm);background:var(--ground);flex-shrink:0;"></span>';
+    /* ONLY the first step, and only from the moment that is actually
+       written down. invoiced_at was going against "Delivered" here, and
+       an invoice date is not a delivery date — they are different events
+       and nothing in the books says when the second one happened. The
+       invoice date is a real fact and gets its own line, beside the
+       money, rather than standing in for one it is not. */
+    const when = i === 0 && o.sentAt ? longDate(String(o.sentAt).slice(0, 10)) : '';
+    const says = (done || here) ? (STAGE_SAYS[s] || '') : '';
+    return '<div style="display:flex;gap:14px;padding:0 20px;">'
+      + '<div style="width:16px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">' + dot
+      +   (i < stages.length - 1 ? '<span style="width:1px;flex-grow:1;background:var(--rule-soft);"></span>' : '')
+      + '</div>'
+      + '<div class="grow" style="padding-bottom:' + (i < stages.length - 1 ? 20 : 4) + 'px;margin-top:-3px;">'
+      +   '<div style="font-size:14.5px;' + (future ? 'color:var(--meta);' : 'font-weight:600;') + '">'
+      +     esc(STAGE_WORDS[s] || s) + '</div>'
+      +   (when ? '<div class="meta" style="margin-top:2px;">' + esc(when) + '</div>' : '')
+      +   (says ? '<div style="font-size:13px;color:var(--ink-2);margin-top:4px;line-height:1.5;">' + esc(says) + '</div>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+function renderOrder(o){
+  const lines = Array.isArray(o.lines) ? o.lines : [];
+  document.getElementById('orderTitle').textContent = 'Order ' + (o.id == null ? '' : o.id);
+
+  document.getElementById('orderBody').innerHTML =
+    '<div class="sheet" style="border-top:0;padding:4px 20px 20px;display:flex;flex-direction:column;gap:6px;">'
+    + '<div class="meta" style="font-size:12.5px;">' + esc(longDate(o.date)) + ' · '
+    +   esc(lines.length) + ' ' + plural(lines.length, 'item', 'items')
+    +   (o.deliverTo ? ' · to ' + esc(o.deliverTo) : '') + '</div>'
+    + '<div class="ser" style="font-size:26px;line-height:1.2;'
+    +   (o.cancelled ? 'color:var(--ink-2);' : '') + '">'
+    +   esc(stageWord(o.stage, o.cancelled)) + '</div>'
+    + (o.cancelled
+      /* Voiding an order drives its desired debt charge to nought
+         (invoiceDebtDesired) and the sync reverses what was charged — so
+         this is true. It is still put as something the customer can
+         CHECK rather than something they must take on trust, because the
+         statement screen already admits the two can drift. */
+      ? '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.5;">This order was cancelled. It should not appear on your statement — tell us if it does.</div>'
+      : '')
+    + '</div>'
+
+    + '<div class="lbl" style="padding:22px 20px 9px;">What was on it</div>'
+    + '<div class="sheet">'
+    + (lines.length
+      ? lines.map(l =>
+        '<div class="row" style="align-items:flex-start;min-height:60px;">'
+        + '<div class="grow">'
+        +   '<div class="trunc" style="font-size:14.5px;">' + esc(l.name)
+        +     (l.variantLabel ? ' — ' + esc(l.variantLabel) : '') + '</div>'
+        +   '<div class="meta" style="margin-top:2px;">' + esc(l.qty) + ' '
+        +     esc(l.unit ? (l.qty === 1 ? l.unit : many(l.unit)) : plural(l.qty, 'one', 'of them'))
+        +     ' at ' + money(l.unitPrice) + '</div>'
+        + '</div>'
+        + '<div class="fig" style="font-size:16px;flex-shrink:0;">' + money(l.lineTotal) + '</div>'
+        + '</div>').join('')
+      : '<div style="padding:20px;"><div class="meta">Nothing was written on this order.</div></div>')
+    /* The charges, then what the credit costs, then the total — each
+       named, because a figure on an invoice a customer cannot account
+       for is a figure they ring about. The shop adds these after the
+       order is taken, so they are the part of the bill the customer did
+       NOT see when they sent it. */
+    + ((o.charges || []).length || o.credit
+      ? '<div class="row" style="border-top:1.5px solid var(--rule-firm);"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Goods</div>'
+        + '<div class="fig" style="font-size:16px;">' + money(o.goods) + '</div></div>'
+      : '')
+    + (o.charges || []).map(c =>
+      '<div class="row"><div class="grow trunc" style="font-size:14.5px;color:var(--ink-2);">' + esc(c.label) + '</div>'
+      + '<div class="fig" style="font-size:16px;">' + money(c.amount) + '</div></div>').join('')
+    + (o.credit
+      ? '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">' + esc(o.credit.label) + '</div>'
+        + '<div class="fig" style="font-size:16px;">' + money(o.credit.amount) + '</div></div>'
+      : '')
+    + '<div class="row" style="border-top:1.5px solid var(--rule-firm);padding:16px 20px;">'
+    +   '<div class="grow" style="font-size:15px;font-weight:600;">Order total</div>'
+    +   '<div class="fig" style="font-size:22px;' + (o.cancelled ? 'color:var(--meta);' : '') + '">' + money(o.total) + '</div>'
+    + '</div>'
+    /* A line the shop never priced counts as nothing in that total. Said
+       out loud, because a total quietly short is worse than one that
+       admits what it is missing. */
+    + (o.unpriced
+      ? '<div style="padding:0 20px 15px;"><div class="meta">' + esc(o.unpriced) + ' '
+        + plural(o.unpriced, 'line has', 'lines have') + ' no price recorded against '
+        + plural(o.unpriced, 'it', 'them') + ', so ' + plural(o.unpriced, 'it is', 'they are')
+        + ' not in this total. Your invoice is the figure that counts.</div></div>'
+      : '')
+    + (!o.cancelled && o.invoicedAt
+      ? '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Invoiced</div>'
+        + '<div style="font-size:14.5px;">' + esc(longDate(o.invoicedAt)) + '</div></div>'
+      : '')
+    + (!o.cancelled && o.paid > 0
+      ? '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Paid</div>'
+        + '<div class="fig" style="font-size:16px;">' + money(o.paid) + '</div></div>'
+        + '<div class="row"><div class="grow" style="font-size:14.5px;color:var(--ink-2);">Still to pay</div>'
+        + '<div class="fig" style="font-size:16px;' + (o.due > 0 ? 'color:var(--owe);' : '') + '">'
+        + (o.due > 0 ? money(o.due) : 'Nothing') + '</div></div>'
+      : '')
+    + '</div>'
+
+    + (o.cancelled ? '' :
+      '<div class="lbl" style="padding:22px 20px 10px;">Where it has reached</div>'
+      + '<div class="sheet" style="padding:18px 0 4px;">' + ladderHTML(o) + '</div>')
+
+    + (o.cancelled ? '' :
+      '<div style="padding:16px 20px calc(22px + env(safe-area-inset-bottom));">'
+      + '<div class="meta" style="line-height:1.55;">We only put a day against a step the books can date.</div>'
+      + '</div>');
+}
+
+/* ---------- the statement ------------------------------------------- */
+/* The same document the shop's own screen builds, from the same table and
+   by the same arithmetic. Read, never acted on — which is why there is no
+   verdigris anywhere on it. */
+document.getElementById('toStatement').onclick = () => openStatement();
+document.getElementById('stmtBack').onclick = () => show('scAccount');
+
+async function openStatement(){
+  show('scStatement');
+  document.getElementById('stmtWho').textContent = accountData.name || '';
+  document.getElementById('stmtBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;padding:26px 20px;"><div class="meta">Fetching your statement&hellip;</div></div>';
+  let d;
+  try{
+    d = await api('statement', { token: store(K_TOKEN) });
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('stmtBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+    return;
+  }
+  renderStatement(d);
+}
+
+/* "1 June to 14 September 2026". The year once, at the end, because a
+   statement is read as one period and not as two dates. */
+function periodLabel(from, to){
+  const a = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(from || ''));
+  const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(to || ''));
+  if(!a || !b) return '';
+  const day = (m) => Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1];
+  return day(a) + (a[1] === b[1] ? '' : ' ' + a[1]) + ' to ' + day(b) + ' ' + b[1];
+}
+
+function stmtRowHTML(r){
+  /* A payment is shown as a negative charge in the one money column, the
+     way a ledger reads — two columns for charges and payments would put
+     an empty cell on every line and make the eye do the subtraction. */
+  const money2 = r.type === 'charge' ? money(r.charge) : '−' + money(r.payment);
+  return '<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 20px;border-bottom:1px solid var(--hair);">'
+    + '<div class="grow">'
+    +   '<div class="trunc" style="font-size:14px;">' + esc(shortDate(r.date)) + ' · '
+    +     (r.type === 'charge' ? 'Charge' : 'Payment') + '</div>'
+    +   (r.ref ? '<div class="meta" style="margin-top:2px;">' + esc(r.ref) + '</div>' : '')
+    + '</div>'
+    + '<div class="fig" style="width:86px;flex-shrink:0;text-align:right;font-size:14.5px;">' + money2 + '</div>'
+    /* The balance column is as wide as the charge column it accumulates.
+       Narrower, it clips the larger of the two figures. */
+    + '<div class="fig" style="width:86px;flex-shrink:0;text-align:right;font-size:14.5px;">' + money(r.balance) + '</div>'
+    + '</div>';
+}
+
+function shortDate(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1].slice(0, 3) : (iso || '');
+}
+
+function renderStatement(d){
+  document.getElementById('stmtWho').textContent =
+    (d.name || '') + (periodLabel(d.from, d.to) ? ' · ' + periodLabel(d.from, d.to) : '');
+  const rows = Array.isArray(d.rows) ? d.rows : [];
+
+  if(!rows.length && !d.opening && !d.owed){
+    document.getElementById('stmtBody').innerHTML =
+      '<div class="sheet" style="margin-top:16px;padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing on your account</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">Nothing has been charged to this account, and nothing paid. What you buy on credit will be listed here.</div>'
+      + '</div>';
+    return;
+  }
+
+  document.getElementById('stmtBody').innerHTML =
+    '<div class="sheet" style="margin-top:16px;">'
+    + '<div style="display:flex;align-items:baseline;gap:12px;padding:14px 20px;background:var(--pale);">'
+    +   '<div class="grow" style="font-size:13.5px;color:var(--ink-2);">Balance brought forward</div>'
+    +   '<div class="fig" style="font-size:15px;color:var(--ink-2);">' + money(d.opening) + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;padding:9px 20px 7px;border-top:1px solid var(--hair);border-bottom:1px solid var(--rule);">'
+    +   '<div class="lbl grow">Date and item</div>'
+    +   '<div class="lbl" style="width:86px;flex-shrink:0;text-align:right;">Charge</div>'
+    +   '<div class="lbl" style="width:86px;flex-shrink:0;text-align:right;">Balance</div>'
+    + '</div>'
+    + (rows.length
+      ? rows.map(stmtRowHTML).join('')
+      : '<div style="padding:20px;"><div class="meta">Nothing charged or paid in this period.</div></div>')
+    + '<div style="display:flex;align-items:baseline;gap:12px;padding:16px 20px;border-top:1.5px solid var(--rule-firm);">'
+    +   '<div class="grow" style="font-size:15px;font-weight:600;">Balance now due</div>'
+    +   '<div class="fig" style="font-size:24px;' + (d.owed > 0 ? 'color:var(--owe);' : '') + '">'
+    +     (d.owed > 0 ? money(d.owed) : 'Nothing') + '</div>'
+    + '</div>'
+    + '</div>'
+    /* The self-check, said out loud. The ledger and the balance are kept
+       alongside each other and nothing forces them to agree; a statement
+       that quietly disagreed with the figure the shop will chase for
+       would be worse than one that admits it. */
+    + (d.agrees ? '' :
+      '<div style="padding:16px 20px 0;"><div class="say">These entries come to <strong style="font-weight:600;">'
+      + money(d.closing) + '</strong>, and the balance we are carrying is <strong style="font-weight:600;">'
+      + money(d.owed) + '</strong>. We are checking the difference — tell us what your own book says.</div></div>')
+    + '<div style="padding:14px 20px calc(22px + env(safe-area-inset-bottom));">'
+    +   '<div class="meta" style="line-height:1.55;">Every line here is a charge or a payment we recorded. '
+    +   'If a figure does not match your own book, say so and we will look at it together — before it becomes a dispute.</div>'
+    + '</div>';
+}
+
+/* ---------- what we stock ------------------------------------------- */
+/* Fetched once per sign-in and held here, not in localStorage: it carries
+   this customer's own prices, and a price cached on a shared handset is a
+   price somebody else can read. Gone when the tab is. */
+let stock = null;
+let aisle = '';
+let view = 'list';
+let accountData = {};
+/* Quantities only, in memory only. No price is kept here — the shop
+   prices every line again when the order is sent, and a basket that
+   outlived the tab on a site handset would be the next person's reading
+   of what this customer is building. */
+let basket = [];
+
+const AVAIL = {
+  'in-stock': 'In stock',
+  'to-order': 'We order this in',
+  'out': 'Out of stock just now',
+};
+
+document.getElementById('orderAgain').onclick = () => openBrowse();
+document.getElementById('browseBack').onclick = () => show('scAccount');
+document.getElementById('itemBack').onclick = () => show('scBrowse', browseAt);
+
+async function openBrowse(){
+  /* The top, deliberately, and not browseAt. This is the way IN to the
+     shop from the account screen -- "Order again" starts an order, it
+     does not resume reading. The four ways BACK to the shop restore the
+     place; arriving is not one of them. */
+  show('scBrowse');
+  if(!stock){
+    document.getElementById('browseBody').innerHTML =
+      '<div class="sheet" style="padding:26px 20px;"><div class="meta">Fetching what we stock&hellip;</div></div>';
+    try{
+      const r = await api('catalogue', { token: store(K_TOKEN) });
+      stock = Array.isArray(r.items) ? r.items : [];
+    }catch(err){
+      if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+      document.getElementById('browseBody').innerHTML =
+        '<div class="sheet" style="padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+      document.getElementById('browseCount').textContent = '';
+      return;
+    }
+  }
+  renderAisles();
+  renderBrowse();
+  renderBasketBar();
+}
+
+function matching(){
+  const q = document.getElementById('browseSearch').value.trim().toLowerCase();
+  return (stock || []).filter(it => {
+    if(aisle && (it.category || '') !== aisle) return false;
+    if(!q) return true;
+    return (it.name + ' ' + it.variantLabel + ' ' + it.category + ' ' + it.subcategory)
+      .toLowerCase().includes(q);
+  });
+}
+
+function renderAisles(){
+  const counts = {};
+  (stock || []).forEach(it => { const c = it.category || ''; counts[c] = (counts[c] || 0) + 1; });
+  const names = Object.keys(counts).filter(Boolean).sort();
+  /* "All" is a chip like the others, so there is always somewhere to tap
+     back to — an aisle you cannot leave is a catalogue with one aisle. */
+  document.getElementById('browseAisles').innerHTML =
+    ['', ...names].map(name =>
+      '<button type="button" class="aisle' + (aisle === name ? ' aisle-on' : '') + '" data-aisle="'
+      + esc(name) + '"' + (aisle === name ? ' aria-pressed="true"' : ' aria-pressed="false"') + '>'
+      + esc(name || 'All') + '</button>').join('');
+  document.getElementById('browseAisles').querySelectorAll('.aisle').forEach(b => {
+    b.onclick = () => { aisle = b.dataset.aisle; renderAisles(); renderBrowse(); };
+  });
+}
+
+/* A photograph, or the fact that there is not one. Never a grey rectangle
+   standing in for one: a customer deciding between two finishes needs to
+   know the difference between "this is what it looks like" and "we have
+   not photographed it". */
+function imgHTML(it, size){
+  const box = size === 'cell' ? 'width:100%;aspect-ratio:4/3;max-width:100%;'
+    : size === 'item' ? 'width:96px;height:96px;'
+    : 'width:48px;height:48px;';
+  const ico = size === 'row' ? 18 : 26;
+  if(it.image) return '<span class="img" style="' + box + '"><img src="' + esc(it.image)
+    + '" alt="" loading="lazy" decoding="async"></span>';
+  /* Where there is room, the absence is WORDED. A customer choosing
+     between two finishes has to be able to tell "this is what it looks
+     like" from "we have not photographed it", and a plain grey square
+     says the first while meaning the second.
+
+     NOT at 48px in the ledger, though the canvas puts it there. Rendered
+     against real rows it landed on every un-photographed line — below the
+     held price and below "Out of stock just now", which are the two lines
+     that actually change what a customer does. A rule meant to stop a
+     customer being misled had ended up burying the things they needed to
+     read. The dashed, crossed-through mat at 48px is not disguising
+     itself as a photograph in the first place; at 96px and in the gallery,
+     where a plain box could be mistaken for one, the words stay. */
+  const words = size === 'row' ? ''
+    : '<span class="meta" style="font-size:10.5px;">No photograph</span>';
+  return '<span class="img img-none" style="' + box + 'flex-direction:column;gap:7px;">'
+    + '<svg width="' + ico + '" height="' + ico
+    + '" viewBox="0 0 24 24" fill="none" stroke="#C7BFB2" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<rect x="4" y="5" width="16" height="14"/><path d="M4 19L20 5"/></svg>' + words + '</span>';
+}
+
+function unitWord(it){ return it.unit || 'each'; }
+
+/* Enough English for the units a hardware shop uses — sheet, bundle, box,
+   bag, piece, bunch. Appending a bare "s" gave "boxs" and "bunchs".
+   An abbreviation is left alone: kg, m, pc are already both, and "kgs"
+   is not a word anybody at a counter says. */
+function many(word){
+  const w = String(word || '');
+  if(!w || w.length <= 2) return w;
+  return /(s|x|z|ch|sh)$/i.test(w) ? w + 'es' : w + 's';
+}
+
+/* The line under a name: how it is sold, and the pack if there is one. */
+function packLine(it){
+  const bits = [];
+  if(it.unit) bits.push('per ' + it.unit);
+  if(it.packQty > 0 && it.packUnit) bits.push(it.packQty + ' to a ' + it.packUnit);
+  return bits.join(' · ');
+}
+
+function renderBrowse(){
+  const rows = matching();
+  const label = aisle || 'Everything';
+  document.getElementById('browseCount').textContent = stock && stock.length
+    ? label + ' · ' + rows.length + ' ' + plural(rows.length, 'item', 'items')
+    : '';
+  const body = document.getElementById('browseBody');
+
+  if(!stock || !stock.length){
+    body.innerHTML = '<div class="sheet" style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing listed yet</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">What we keep will appear here, with your own price against each one.</div></div>';
+    return;
+  }
+  if(!rows.length){
+    const q = document.getElementById('browseSearch').value.trim();
+    body.innerHTML = '<div class="sheet" style="padding:26px 20px;display:flex;flex-direction:column;gap:9px;">'
+      + '<div style="font-size:15px;font-weight:600;">Nothing here matches' + (q ? ' &ldquo;' + esc(q) + '&rdquo;' : '') + '</div>'
+      + '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;">Try another word, or another aisle. We also source what we do not keep on the shelf.</div></div>';
+    return;
+  }
+
+  body.innerHTML = view === 'grid'
+    ? '<div class="grid">' + rows.map((it, i) => cellHTML(it, i)).join('') + '</div>'
+    : '<div class="sheet">' + rows.map((it, i) => rowHTML(it, i)).join('') + '</div>';
+  body.querySelectorAll('[data-i]').forEach(el => {
+    el.onclick = () => openItem(rows[Number(el.dataset.i)]);
+  });
+}
+
+/* Only the exceptions are said on a list. "In stock" against every line is
+   noise that makes the two lines that matter invisible. */
+function exceptionHTML(it){
+  if(it.availability === 'in-stock') return '';
+  return '<span style="display:block;margin-top:4px;font-size:11.5px;color:var(--ink-2);">'
+    + esc(AVAIL[it.availability] || '') + '</span>';
+}
+
+function heldHTML(it){
+  if(!it.heldFrom) return '';
+  return '<span style="margin-top:5px;display:flex;align-items:center;gap:5px;">'
+    + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>'
+    + '<span style="font-size:11.5px;color:var(--ink);font-weight:600;">Your price, held from '
+    + esc(longDate(it.heldFrom)) + '</span></span>';
+}
+
+function cheaperHTML(it){
+  if(!(it.nextMinQty > 0) || it.nextPrice == null) return '';
+  return '<span style="display:block;margin-top:4px;font-size:11.5px;color:var(--ink-2);">Cheaper from '
+    + esc(it.nextMinQty) + ' — ' + money(it.nextPrice) + ' ' + esc(unitWord(it) ? 'a ' + unitWord(it) : 'each') + '</span>';
+}
+
+function figureHTML(it){
+  if(!it.available) return '<span class="meta" style="display:block;text-align:right;">Ask us</span>';
+  /* A price that cannot be bought today is still the price. It goes grey
+     rather than away, because a customer planning a job needs the number
+     as much as a customer buying one. */
+  const grey = it.availability === 'out' ? 'color:var(--meta);' : '';
+  return '<span class="fig" style="display:block;font-size:18px;' + grey + '">' + money(it.unitPrice) + '</span>'
+    + '<span class="meta" style="display:block;margin-top:1px;">' + esc(it.unit ? 'per ' + it.unit : 'each') + '</span>';
+}
+
+function rowHTML(it, i){
+  return '<button type="button" class="listrow" data-i="' + i + '">'
+    + imgHTML(it, 'row')
+    + '<span class="grow" style="display:block;">'
+    +   '<span class="trunc" style="display:block;font-size:15px;font-weight:500;">' + esc(it.name)
+    +     (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</span>'
+    +   (packLine(it) ? '<span class="meta trunc" style="display:block;margin-top:3px;">' + esc(packLine(it)) + '</span>' : '')
+    +   heldHTML(it) + cheaperHTML(it) + exceptionHTML(it)
+    + '</span>'
+    + '<span style="text-align:right;flex-shrink:0;">' + figureHTML(it) + '</span>'
+    + '</button>';
+}
+
+function cellHTML(it, i){
+  return '<button type="button" class="gcell" data-i="' + i + '">'
+    + imgHTML(it, 'cell')
+    + '<span class="trunc" style="display:block;font-size:14px;font-weight:500;">' + esc(it.name)
+    +   (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</span>'
+    + '<span style="display:flex;align-items:baseline;gap:6px;">'
+    +   (it.available
+        ? '<span class="fig" style="font-size:16px;' + (it.availability === 'out' ? 'color:var(--meta);' : '') + '">'
+          + money(it.unitPrice) + '</span><span class="meta">' + esc(it.unit ? 'per ' + it.unit : 'each') + '</span>'
+        : '<span class="meta">Ask us</span>')
+    + '</span>'
+    + (it.heldFrom ? '<span class="meta" style="color:var(--ink);font-weight:600;">Your held price</span>' : '')
+    + exceptionHTML(it)
+    + '</button>';
+}
+
+function setView(next){
+  view = next;
+  const l = document.getElementById('viewList'), g = document.getElementById('viewGrid');
+  l.setAttribute('aria-pressed', String(next === 'list'));
+  g.setAttribute('aria-pressed', String(next === 'grid'));
+  l.querySelector('svg').setAttribute('stroke', next === 'list' ? '#FFFFFF' : '#6B635A');
+  g.querySelector('svg').setAttribute('stroke', next === 'grid' ? '#FFFFFF' : '#6B635A');
+  renderBrowse();
+}
+document.getElementById('viewList').onclick = () => setView('list');
+document.getElementById('viewGrid').onclick = () => setView('grid');
+document.getElementById('browseSearch').addEventListener('input', renderBrowse);
+
+/* ---------- one item ------------------------------------------------- */
+/* The ladder is fetched ONCE when the screen opens and every further
+   quantity is resolved against it here. A request per tap of the plus
+   button would put a network round trip between a thumb and a figure, on
+   a handset on a building site. */
+let item = null;
+let itemQty = 1;
+
+async function openItem(it){
+  item = { it, priced: null };
+  itemQty = 1;
+  document.getElementById('itemTitle').textContent = it.name;
+  document.getElementById('itemFoot').textContent = '';
+  document.getElementById('itemBody').innerHTML =
+    '<div class="sheet" style="padding:26px 20px;"><div class="meta">Working out your price&hellip;</div></div>';
+  show('scItem');
+  try{
+    const r = await api('price', {
+      token: store(K_TOKEN), productId: it.productId, variantIdx: it.variantIdx, qty: 1,
+    });
+    if(item && item.it === it){ item.priced = r; renderItem(); }
+  }catch(err){
+    if(err.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    document.getElementById('itemBody').innerHTML =
+      '<div class="sheet" style="padding:22px 20px;"><div class="say">' + esc(err.message) + '</div></div>';
+  }
+}
+
+/* The rung a quantity actually earns: the highest breakpoint it clears.
+   The ladder always carries a rung at 1, so there is always one to find
+   and no fallback to get wrong. */
+function rungFor(tiers, qty){
+  let best = null;
+  (tiers || []).forEach(r => {
+    if(qty >= r.minQty && (!best || r.minQty >= best.minQty)) best = r;
+  });
+  return best;
+}
+
+function renderItem(){
+  const it = item.it, p = item.priced || {};
+  const tiers = Array.isArray(p.tiers) ? p.tiers : [];
+  const rung = rungFor(tiers, itemQty);
+  const unit = p.unit || it.unit || '';
+  const packQty = Number(p.packQty) || 0;
+  const packUnit = p.packUnit || '';
+
+  /* An item with no price row comes back as "out", because there is no
+     live row to order against — but on this screen that renders as "Out
+     of stock just now" directly above "We have no price on file", which
+     are two different facts and only one of them is true. The price block
+     says the real one, so the availability line stands down. */
+  const avail = p.available ? (AVAIL[p.availability] || '') : '';
+  const availTick = p.availability === 'in-stock'
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>'
+    : '';
+
+  let priceBlock = '';
+  if(p.available && rung){
+    const line = rung.unitPrice * itemQty;
+    /* Which side of the pack this quantity sits on, said in the shop's own
+       words rather than "wholesale" and "retail" — a customer buying
+       fourteen sheets is not buying wholesale, they are buying more than a
+       bundle. */
+    const next = tiers.filter(r => r.minQty > itemQty).sort((a,b)=>a.minQty-b.minQty)[0];
+    const explain = [];
+    if(packQty > 0 && packUnit && itemQty >= packQty){
+      explain.push('You are buying by the ' + esc(packUnit) + ', so this is the ' + esc(packUnit) + ' price.');
+    }
+    if(next){
+      explain.push('From ' + esc(next.minQty) + ' it is ' + money(next.unitPrice) + ' '
+        + (unit ? 'a ' + esc(unit) : 'each') + '.');
+    }
+    priceBlock =
+      '<div class="sheet" style="border-top:0;padding:20px;display:flex;flex-direction:column;gap:5px;">'
+      + '<div class="lbl">Your price</div>'
+      + '<div style="display:flex;align-items:baseline;gap:8px;">'
+      +   '<span style="font-size:13px;color:var(--ink-2);font-weight:600;letter-spacing:.04em;">UGX</span>'
+      +   '<span class="fig" style="font-size:34px;line-height:1.1;">' + money(line) + '</span>'
+      + '</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-2);">' + money(rung.unitPrice) + ' '
+      +   (unit ? 'a ' + esc(unit) : 'each')
+      +   (p.heldFrom ? ' · held from ' + esc(longDate(p.heldFrom)) : '') + '</div>'
+      + (explain.length
+        ? '<div style="margin-top:10px;padding-top:12px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-2);line-height:1.5;">'
+          + explain.join(' ') + '</div>'
+        : '')
+      + '</div>';
+  }else{
+    priceBlock = '<div class="sheet" style="border-top:0;padding:20px;display:flex;flex-direction:column;gap:6px;">'
+      + '<div class="lbl">Your price</div>'
+      + '<div class="ser" style="font-size:20px;">We have no price on file</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;">Ask us and we will quote it.</div></div>';
+  }
+
+  document.getElementById('itemBody').innerHTML =
+    '<div class="sheet" style="border-top:0;padding:16px 20px 18px;display:flex;gap:16px;">'
+    +   imgHTML(it, 'item')
+    +   '<div class="grow" style="display:flex;flex-direction:column;gap:4px;">'
+    +     '<div style="font-size:16.5px;font-weight:600;line-height:1.3;">' + esc(it.name)
+    +       (it.variantLabel ? ' — ' + esc(it.variantLabel) : '') + '</div>'
+    +     (packLine(it) ? '<div class="meta" style="font-size:12.5px;">' + esc(packLine(it)) + '</div>' : '')
+    +     (it.description ? '<div class="meta" style="font-size:12.5px;">' + esc(it.description) + '</div>' : '')
+    +     (avail ? '<div style="margin-top:4px;display:flex;align-items:center;gap:5px;">' + availTick
+    +       '<span style="font-size:11.5px;color:' + (p.availability === 'in-stock' ? 'var(--ink)' : 'var(--ink-2)')
+    +       ';font-weight:600;">' + esc(avail) + '</span></div>' : '')
+    +   '</div>'
+    + '</div>'
+    + (p.available
+      ? '<div class="sheet" style="border-top:0;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">'
+        /* Always the plural. It is a label on a box asking for a count,
+           not a sentence about the count that is in it — "How many sheet"
+           reads as a typo however correct it is at one. */
+        + '<div class="lbl">How many' + (unit ? ' ' + esc(many(unit)) : '') + '</div>'
+        + '<div style="display:flex;align-items:center;gap:14px;">'
+        +   '<button class="step" type="button" id="qtyDown" aria-label="One fewer"' + (itemQty <= 1 ? ' disabled' : '') + '>'
+        +     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>'
+        +   '<input class="qty" id="qtyBox" inputmode="numeric" aria-label="How many" value="' + esc(itemQty) + '">'
+        +   '<button class="step" type="button" id="qtyUp" aria-label="One more">'
+        +     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+        + '</div>'
+        + (packQty > 1 && packUnit && itemQty >= packQty
+          ? '<div class="meta" style="text-align:center;">' + esc(packSplit(itemQty, packQty, packUnit, unit)) + '</div>'
+          : '')
+        + '</div>'
+      : '')
+    + priceBlock;
+
+  const down = document.getElementById('qtyDown'), up = document.getElementById('qtyUp');
+  if(down) down.onclick = () => setQty(itemQty - 1);
+  if(up) up.onclick = () => setQty(itemQty + 1);
+  const box = document.getElementById('qtyBox');
+  if(box){
+    box.addEventListener('change', () => setQty(parseInt(box.value, 10)));
+    box.addEventListener('blur', () => setQty(parseInt(box.value, 10)));
+  }
+  /* The one action on this screen, and only where there is something to
+     add. An item with no price on file gets no button rather than a
+     button that would send the shop a line it cannot fill. */
+  const wrap = document.getElementById('itemAddWrap');
+  const add = document.getElementById('itemAdd');
+  const addable = !!(p.available && rung);
+  wrap.hidden = !addable;
+  if(addable){
+    add.textContent = 'Add ' + itemQty + ' '
+      + (unit ? (itemQty === 1 ? unit : many(unit)) : plural(itemQty, 'item', 'items'))
+      + ' to the order';
+  }
+  document.getElementById('itemFoot').textContent = addable
+    ? 'Nothing is charged and nothing is booked until we confirm it with you.'
+    : '';
+}
+
+/* "11 bundles and 8 loose". A trade customer orders in bundles and thinks
+   in bundles, and 140 is not a number of bundles. */
+function packSplit(qty, packQty, packUnit, unit){
+  const whole = Math.floor(qty / packQty), loose = qty % packQty;
+  const a = whole + ' ' + plural(whole, packUnit, many(packUnit));
+  return loose ? a + ' and ' + loose + ' loose' : a;
+}
+
+function setQty(next){
+  const n = Math.max(1, Math.min(99999, Math.floor(Number(next) || 1)));
+  if(n === itemQty){ renderItem(); return; }
+  itemQty = n;
+  renderItem();
+}
+
+/* ---------- the basket --------------------------------------------- */
+const lineKey = (productId, variantIdx) =>
+  productId + '::' + (variantIdx == null ? '' : String(variantIdx));
+
+function basketTotal(){ return basket.reduce((n, l) => n + l.qty * (Number(l.unitPrice) || 0), 0); }
+
+function addToBasket(){
+  const it = item.it, p = item.priced || {};
+  const rung = rungFor(p.tiers, itemQty);
+  if(!rung) return;
+  const key = lineKey(it.productId, it.variantIdx);
+  const existing = basket.find(l => l.key === key);
+  /* Adding the same item twice REPLACES the quantity rather than adding
+     to it. The screen it was added from shows a quantity, not an
+     increment — a customer who goes back, sets 140 and taps Add again
+     means 140, and a basket that quietly held 280 would be found at the
+     counter. */
+  if(existing) existing.qty = itemQty;
+  else basket.push({ key, productId: it.productId, variantIdx: it.variantIdx,
+    name: it.name, variantLabel: it.variantLabel, unit: p.unit || it.unit || '',
+    packUnit: p.packUnit || '', packQty: Number(p.packQty) || 0, qty: itemQty,
+    unitPrice: rung.unitPrice, tiers: p.tiers || [] });
+  show('scBrowse', browseAt);
+  renderBasketBar();
+}
+
+/* A price shown in the basket is re-resolved against that line's own
+   ladder whenever its quantity changes, so a customer who raises 10 to
+   140 in the basket sees the bundle rate there and not the loose one they
+   first tapped Add at. The shop prices it again at send either way; this
+   is about the two figures agreeing before they do. */
+function setBasketQty(key, next){
+  const line = basket.find(l => l.key === key);
+  if(!line) return;
+  const n = Math.max(0, Math.min(99999, Math.floor(Number(next) || 0)));
+  if(n === 0){ basket = basket.filter(l => l.key !== key); }
+  else {
+    line.qty = n;
+    const rung = rungFor(line.tiers, n);
+    if(rung) line.unitPrice = rung.unitPrice;
+  }
+  if(!basket.length){ show('scBrowse', browseAt); renderBasketBar(); return; }
+  renderBasket();
+  renderBasketBar();
+}
+
+function renderBasketBar(){
+  const bar = document.getElementById('browseBar');
+  /* The screen makes room for the bar only while there is one. Guarded
+     because the browse section is not in the test's stub list and a null
+     here would take the whole basket file down with a stack trace. */
+  const screen = document.getElementById('scBrowse');
+  if(screen) screen.classList.toggle('bar-room', basket.length > 0);
+  if(!basket.length){ bar.innerHTML = ''; return; }
+  const n = basket.length;
+  bar.innerHTML = '<div class="bbar">'
+    + '<div class="grow">'
+    +   '<div style="font-size:14px;font-weight:500;">' + esc(n) + ' ' + plural(n, 'item', 'items') + '</div>'
+    +   '<div class="fig" style="font-size:17px;margin-top:1px;">' + money(basketTotal()) + '</div>'
+    + '</div>'
+    + '<button class="btn btn-go" type="button" id="toBasket" style="width:auto;padding:0 26px;">Check</button>'
+    + '</div>';
+  document.getElementById('toBasket').onclick = () => { renderBasket(); show('scBasket'); };
+}
+
+document.getElementById('basketBack').onclick = () => show('scBrowse', browseAt);
+document.getElementById('itemAdd').onclick = addToBasket;
+
+function renderBasket(){
+  const body = document.getElementById('basketBody');
+  const total = basketTotal();
+  const lines = basket.map(l =>
+    '<div class="row" style="align-items:flex-start;min-height:66px;gap:14px;">'
+    + '<div class="grow">'
+    +   '<div class="trunc" style="font-size:14.5px;">' + esc(l.name)
+    +     (l.variantLabel ? ' — ' + esc(l.variantLabel) : '') + '</div>'
+    +   '<div class="meta" style="margin-top:2px;">' + money(l.unitPrice) + ' '
+    +     (l.unit ? 'a ' + esc(l.unit) : 'each') + '</div>'
+    +   '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;">'
+    +     '<button class="step" type="button" style="width:40px;height:40px;" data-less="' + esc(l.key) + '" aria-label="One fewer">'
+    +       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>'
+    +     '<span class="fig" style="min-width:44px;text-align:center;font-size:17px;">' + esc(l.qty) + '</span>'
+    +     '<button class="step" type="button" style="width:40px;height:40px;" data-more="' + esc(l.key) + '" aria-label="One more">'
+    +       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+    +     '<button class="btn" type="button" data-drop="' + esc(l.key) + '"'
+    +       ' style="width:auto;min-height:40px;padding:0 10px;font-size:12.5px;font-weight:500;color:var(--ink-2);">Take out</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="fig" style="font-size:16px;flex-shrink:0;">' + money(l.qty * l.unitPrice) + '</div>'
+    + '</div>').join('');
+
+  body.innerHTML = '<div class="sheet" style="margin-top:16px;">' + lines + '</div>'
+    + '<div class="sheet" style="margin-top:18px;">'
+    +   '<div class="row" style="border-top:1.5px solid var(--rule-firm);padding:16px 20px;">'
+    +     '<div class="grow" style="font-size:15px;font-weight:600;">Order total</div>'
+    +     '<div class="fig" style="font-size:26px;">' + money(total) + '</div>'
+    +   '</div>'
+    +   (standingHTML(total) ? '<div style="padding:0 20px 15px;"><div class="meta">' + standingHTML(total) + '</div></div>' : '')
+    + '</div>'
+    + '<div style="padding:20px 20px 0;display:flex;flex-direction:column;gap:9px;">'
+    +   '<label class="lbl" for="basketWhere">Where it should go</label>'
+    +   '<input class="field" id="basketWhere" style="font-family:var(--sans);font-size:15px;"'
+    +     ' autocomplete="off" placeholder="Site or shop — optional" value="' + esc(basketWhere) + '">'
+    + '</div>'
+    + '<div id="basketAdvice" style="padding:18px 20px 0;"></div>'
+    + '<div id="basketSay" style="padding:18px 20px 0;"></div>';
+
+  body.querySelectorAll('[data-less]').forEach(b => b.onclick = () => {
+    const l = basket.find(x => x.key === b.dataset.less); if(l) setBasketQty(l.key, l.qty - 1);
+  });
+  body.querySelectorAll('[data-more]').forEach(b => b.onclick = () => {
+    const l = basket.find(x => x.key === b.dataset.more); if(l) setBasketQty(l.key, l.qty + 1);
+  });
+  body.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => setBasketQty(b.dataset.drop, 0));
+  const where = document.getElementById('basketWhere');
+  if(where) where.addEventListener('input', () => { basketWhere = where.value; });
+  loadAdvice();
+}
+
+/* ---------- what this order still needs ------------------------------
+   0090 is the shop's own sentence — "iron sheets needs roofing nails, 8
+   per sheet" — and this is the one place a customer ever reads it. It is
+   also the whole commercial argument: a customer who is told 140 sheets
+   takes about 1,120 nails is buying a LIST, and a list is the thing a
+   single supplier cannot fill.
+
+   Fetched after the basket renders, never before it. A customer looking
+   at their own order must not wait on the shop's opinion of it. */
+let adviceFor = '';   // the basket this advice was asked about
+
+function basketShape(){
+  return basket.map(l => l.key + ':' + l.qty).sort().join('|');
+}
+
+async function loadAdvice(){
+  const shape = basketShape();
+  if(!basket.length || shape === adviceFor) return;
+  adviceFor = shape;
+  let rows = [];
+  try{
+    const r = await api('advice', {
+      token: store(K_TOKEN),
+      items: basket.map(l => ({ productId: l.productId, variantIdx: l.variantIdx, qty: l.qty })),
+    });
+    rows = Array.isArray(r.advice) ? r.advice : [];
+  }catch(err){
+    /* A shop that has written none of this down, or a request that did
+       not land, leaves the basket exactly as useful as it was. Nothing is
+       said, because there is nothing to say. */
+    rows = [];
+  }
+  if(shape !== basketShape()) return;   // they changed it while we asked
+  renderAdvice(rows);
+}
+
+/* The sentence. Built here rather than server-side because it is copy,
+   and the copy lives with the rest of the customer's words. */
+function adviceLine(a){
+  const b = (a.because || [])[0];
+  const item = esc(a.name) + (a.variantLabel ? ' — ' + esc(a.variantLabel) : '');
+  if(!b || a.qty == null){
+    /* No ratio means no figure. An invented quantity is worse than none —
+       the shop has said these two go together and nothing more, so that
+       is all this says. */
+    /* No verb between the two names. "Your Iron sheets goes with" breaks
+       on a plural product name and "Ridge caps goes with" breaks on a
+       singular one, and the shop's own product names are whichever they
+       are — so the sentence is built so that neither has to agree with
+       anything. */
+    return b
+      ? '<b>' + item + '</b> — worth taking with your ' + esc(b.name) + '. We have not written down how much.'
+      : '<b>' + item + '</b> — worth taking with what you have on this order.';
+  }
+  /* "140 Iron sheets takes about..." is what the first version said, and
+     a plural subject does not take a singular verb. Written as the
+     customer's own line — "Your 140 Iron sheets take about" — which also
+     puts the thing they already chose first, where it belongs. */
+  const more = (a.because || []).length - 1;
+  return 'Your ' + money(b.qty) + ' ' + esc(b.name) + ' '
+    + plural(b.qty, 'takes', 'take') + ' about <b>' + money(a.qty) + ' ' + item + '</b>'
+    + (b.ratioQty ? ', at ' + esc(b.ratioQty) + ' ' + (b.ratioPer ? 'a ' + esc(b.ratioPer) : 'each') : '')
+    + '.'
+    + (more > 0
+      ? ' Your other ' + (more === 1 ? 'line needs' : esc(more) + ' lines need') + ' some too.'
+      : '')
+    + ' You have none on this order.';
+}
+
+function renderAdvice(rows){
+  const el = document.getElementById('basketAdvice');
+  if(!el) return;
+  if(!rows.length){ el.innerHTML = ''; return; }
+  el.innerHTML = rows.map((a, i) =>
+    '<div class="advice"' + (i ? ' style="margin-top:10px;"' : '') + '>'
+    + '<div style="display:flex;align-items:flex-start;gap:10px;">'
+    +   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#14594A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+    +   '<div class="advice-say">' + adviceLine(a)
+    +     (a.availability === 'out' ? ' We are out of them just now.' : '') + '</div>'
+    + '</div>'
+    + (a.availability === 'out' ? '' :
+      /* With a figure, the button says the figure and what it comes to.
+         Without one it says only the thing — "Add caps — 22,000" priced a
+         quantity the shop never wrote down, and "Add ones" was what came
+         out of pluralising a unit that did not exist. */
+      '<button class="btn btn-line" type="button" data-add="' + i + '">'
+      + (a.qty == null
+        ? 'Add ' + esc(a.name)
+        : 'Add ' + money(a.qty) + ' '
+          + esc(a.unit ? (a.qty === 1 ? a.unit : many(a.unit)) : plural(a.qty, 'one', 'of them'))
+          + ' — ' + money(a.qty * a.unitPrice))
+      + '</button>')
+    + '</div>').join('');
+  el.querySelectorAll('[data-add]').forEach(btn => btn.onclick = () => {
+    const a = rows[Number(btn.dataset.add)];
+    basket.push({ key: lineKey(a.productId, a.variantIdx), productId: a.productId,
+      variantIdx: a.variantIdx, name: a.name, variantLabel: a.variantLabel,
+      unit: a.unit, packUnit: '', packQty: 0, qty: a.qty || 1,
+      unitPrice: a.unitPrice, tiers: [] });
+    renderBasket();
+    renderBasketBar();
+    loadAdvice();
+  });
+}
+
+/* What this order does to their standing, from facts the shop has already
+   agreed. Nothing here refuses anything — the app itself does not enforce
+   a limit and the admin screen says so — but a customer finding out at the
+   counter that an order puts them past it is a customer who was not
+   told. */
+function standingHTML(total){
+  const bits = [];
+  if(accountData.termsDays != null){
+    bits.push(accountData.termsDays === 0 ? 'Cash on the day.' : 'On your ' + esc(accountData.termsDays) + '-day terms.');
+  }
+  const owed = Number(accountData.owed) || 0;
+  const limit = accountData.creditLimit;
+  if(limit != null){
+    const over = owed + total - Number(limit);
+    if(over > 0){
+      bits.push((owed > 0 ? 'With the ' + money(owed) + ' already on your account this' : 'This')
+        + ' order stands <strong style="font-weight:600;">' + money(over)
+        + '</strong> over your limit — we will call you about it.');
+    }else{
+      bits.push('Within your limit, with ' + money(Number(limit) - owed - total) + ' still to spare.');
+    }
+  }
+  return bits.join(' ');
+}
+
+let basketWhere = '';
+let sending = false;
+
+document.getElementById('basketSend').onclick = async () => {
+  if(sending || !basket.length) return;
+  sending = true;
+  const btn = document.getElementById('basketSend');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const say = document.getElementById('basketSay');
+  say.innerHTML = '';
+  try{
+    /* QUANTITIES ONLY. Not a price, not a total, not even the figure the
+       screen is showing — the shop prices every line again. */
+    const res = await fetch(SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        shopId: shopId(), token: store(K_TOKEN),
+        items: basket.map(l => ({ productId: l.productId, variantIdx: l.variantIdx, qty: l.qty })),
+        deliverTo: basketWhere,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if(res.status === 401){ store(K_TOKEN, null); show('scSignIn'); return; }
+    if(!res.ok || data.error) throw new Error(data.error || ('Something went wrong (' + res.status + ')'));
+
+    /* The shop's figures are the figures. Where one differs from what this
+       screen was showing, the customer is told which and by how much
+       BEFORE they see the total — finding it on the invoice instead is how
+       a portal loses the trust it was built to earn. */
+    const moved = (data.lines || []).filter(l => {
+      const mineLine = basket.find(x => x.key === lineKey(l.productId, l.variantIdx));
+      return mineLine && Math.round(mineLine.unitPrice) !== Math.round(l.unitPrice);
+    });
+    showSent(data, moved);
+    basket = [];
+    basketWhere = '';
+    renderBasketBar();
+  }catch(err){
+    say.innerHTML = '<div class="say">' + esc(err.message) + '</div>';
+  }finally{
+    sending = false;
+    btn.disabled = false; btn.textContent = 'Send this order';
+  }
+};
+
+function showSent(data, moved){
+  const n = (data.lines || []).length;
+  document.getElementById('sentBody').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<h1 class="ser" style="font-size:30px;line-height:1.15;margin:0;font-weight:400;">'
+    +   (data.duplicate ? 'You had already sent that' : 'Sent to the shop') + '</h1>'
+    + '<p style="margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.55;">'
+    +   (data.duplicate
+        ? 'That same order reached us a moment ago, so we have not written it twice. It is order '
+          + esc(data.orderId) + '.'
+        : 'Order <strong style="font-weight:600;color:var(--ink);">' + esc(data.orderId) + '</strong>, '
+          + esc(n) + ' ' + plural(n, 'line', 'lines')
+          + '. Somebody at the shop checks it and rings you. Nothing is charged and nothing is booked until then.')
+    + '</p></div>'
+    + (data.duplicate ? '' :
+      '<div class="sheet" style="margin:22px -28px 0;">'
+      + '<div class="row" style="border-top:0;">'
+      +   '<div class="grow" style="font-size:14.5px;color:var(--ink-2);">What we have priced it at</div>'
+      +   '<div class="fig" style="font-size:20px;">' + money(data.total) + '</div>'
+      + '</div></div>')
+    + (moved && moved.length
+      ? '<div class="say" style="margin-top:18px;"><strong style="font-weight:600;">'
+        + esc(moved.length) + ' ' + plural(moved.length, 'price has', 'prices have') + ' moved since you filled the basket.</strong> '
+        + esc(moved.map(l => l.name + ' is now ' + money(l.unitPrice) + (l.unit ? ' a ' + l.unit : '')).join('; '))
+        + '. The shop will go through it with you.</div>'
+      : '');
+  show('scSent');
+}
+
+document.getElementById('sentDone').onclick = () => { openAccount(); };
+
+/* ---------- boot ----------------------------------------------------- */
+(async function boot(){
+  if(!shopId()){
+    fail('This link is missing which shop it is for. Ask the shop to send it again.', null);
+    return;
+  }
+  if(store(K_TOKEN)){ await openAccount(); return; }
+  show('scSignIn');
+})();
+</script>
+</body>
+</html>

@@ -30,12 +30,34 @@ const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
 const layer = src.slice(src.indexOf('THE OW LAYER'), src.lastIndexOf('</style>'));
 const phone = layer.slice(layer.indexOf('THE PHONE.'));
 const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
+const SQ_STATUS_ORDER_NAMES = JSON.parse(
+  (/const SQ_STATUS_ORDER = (\[[^\]]*\]);/.exec(src) || ['', '[]'])[1].replace(/'/g, '"'));
 
 /* ---------- 1. the shape ---------------------------------------------- */
 {
-  t.check(/<div class="ow-strip ow-strip-5" id="ot_strip"><\/div>/.test(section), 'the strip has its mount');
+  /* FOUR FIGURES AND THE DAY, not five figures.
+
+     The strip was five equal tiles, one of them "Needs you" -- a count
+     of the queue printed directly above the queue, which says its own
+     count in its own head. It is four now (live, cash to buy in, past
+     the stage limit, to invoice) and the fifth cell is the day: where
+     the buying round goes, what it costs to carry, and what is out.
+     That cell is what the 304px right rail used to be a column of, at
+     the width it actually needs and none of the height it did not. */
+  t.check(/<div class="ow-strip ow-ot-strip" id="ot_strip"><\/div>/.test(section), 'the strip has its mount');
+  t.check(/id="ot_dock"/.test(section) && /id="ot_board"/.test(section),
+    'and so do the queue that serves one decision at a time, and the board');
+  /* THE PHONE IS A DIFFERENT SCREEN (SKILL.md §1). Five lanes in one
+     hand is five columns of nothing, so below 820px the board and the
+     dock are gone and the phone keeps exactly what it had: the queue as
+     cards, the stage lens, the orders as cards, the day's rail under
+     them. Both shapes are written from the same derivations in one
+     render, so they cannot come to say different things. */
   t.check(/id="ot_needs"/.test(section) && /id="ot_seg"/.test(section) && /id="ot_rail"/.test(section),
-    'and so do the queue, the lens and the rail');
+    "and so do the phone's own queue, lens and rail");
+  t.check(/<div class="ow-ot-fone">/.test(section) && /\.ow-ot-board,\.ow-ot-dock,\.ow-ot-day\{display:none;\}/.test(phone)
+       && /\.ow-ot-fone\{display:block;\}/.test(phone) && /\.ow-ot-fone\{display:none;\}/.test(desk),
+    'and 820px is the switch between them, not a reflow of one');
   t.check(/<div class="ow-pan"><div class="ow-tbl ow-ot" id="savedQuotesWrap"><\/div><\/div>/.test(section),
     'the table keeps the wrap id eight test files compile against, inside a panel');
   t.check(!/sq-board|sq-stepper|sq-card|sq-col|sqStepperMount|sq_select_all|sq_print_selected/.test(section),
@@ -64,8 +86,13 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
      the row's form) and 'loadgo' (the form's own button). 'release' is
      the way back to the queue for an order held by somebody whose phone
      cannot show it. */
+  /* qnext/qprev/qjump step the dock's queue; invoicepick opens the
+     invoice dialog off the Delivered lane's own head, which is where
+     "Invoice all delivered" went when it stopped being a header button
+     that billed everything without saying which. */
   ['open', 'leave', 'announce', 'ask', 'confirmed', 'undoconfirm', 'confirm', 'next', 'prev', 'buying', 'pickups', 'runs',
-    'loaded', 'loadgo', 'release', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete'].forEach((a) => {
+    'loaded', 'loadgo', 'release', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete',
+    'qnext', 'qprev', 'qjump', 'invoicepick'].forEach((a) => {
     t.check(new RegExp(`case '${a}':`).test(dispatch), `otAct knows ${a}`);
   });
 }
@@ -79,8 +106,21 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(render),
     "the cash to buy in is the buying list's own figure, over both working stages");
   t.check(/deliveryRuns\(pendingDeliveryOrders\(\)\)/.test(render), "and out-for-delivery is the delivery runs' own clustering");
-  t.check(/needs\.length \? 'ow-warn' : ''/.test(render) && /toInvoice\.length \? 'ow-warn' : ''/.test(render),
-    'amber only on the two tiles that are chores, and only when they are not empty');
+  /* A FIGURE IS A SIZE, NOT A WARNING. The strip used to tint two tiles
+     amber for having anything in them at all -- "Needs you" and "To
+     invoice" -- which marked the ordinary state of a working shop. Both
+     are ink now. The one tile that carries colour is Past stage limit,
+     and it is crimson, because an order past the limit the shop itself
+     set is the genuinely bad case rather than a busy one. */
+  t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : ''\)/.test(render),
+    'crimson only on the tile that is genuinely bad, and only when it is not empty');
+  t.check(!/'ow-warn'/.test(render.slice(render.indexOf('put(strip,'), render.indexOf('put(dock,'))),
+    'and nothing else in the strip is tinted at all');
+  /* AND IT SAYS SO WHEN IT CANNOT SAY. With no stage limit set in
+     Presets there is no such thing as past one, so the tile shows a dash
+     rather than a zero that reads as "none are late". */
+  t.check(/anyLimit \? String\(late\.length\) : '—'/.test(render),
+    'a shop with no limits set gets a dash, not a zero it has not earned');
 }
 
 /* ---------- 4. the queue: named derivations, longest first ------------ */
@@ -532,6 +572,127 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
     sc.owScrollGiveBack();
     t.check(later.tbl.scrollLeft === 40, 'while one already somewhere is left exactly where it is');
   }
+}
+
+/* ---------- the board itself: five lanes, and one decision at a time --
+ *
+ * The console this replaced said where an order was three times -- a
+ * strip tile, a stage cell and a table group -- and asked the owner to
+ * read a list to find out. A stage is a POSITION, and a position is read
+ * at a glance. So: five lanes, one card per order, oldest at the top of
+ * its lane, and above them a queue that serves ONE decision at a time
+ * out of however many are waiting. A list of twenty decisions is not
+ * twenty decisions; it is a reason to make none.
+ */
+{
+  const board = extractFunction(src, 'otLaneHTML', 'index.html');
+  const card = extractFunction(src, 'otCardHTML', 'index.html');
+  const dock = extractFunction(src, 'otDockHTML', 'index.html');
+  const rule = extractDeclaration(src, 'OT_LANE_RULE', 'index.html');
+  const empty = extractDeclaration(src, 'OT_LANE_EMPTY', 'index.html');
+  const laneAct = extractDeclaration(src, 'OT_LANE_ACT', 'index.html');
+
+  /* The lanes ARE the pipeline, off the one constant every other screen
+     reads it from -- so a stage added to SQ_STATUS_ORDER is a lane, and
+     cannot be a lane this screen forgot. */
+  t.check(/SQ_STATUS_ORDER\.map\(s=>\{/.test(render) && /put\(board, SQ_STATUS_ORDER/.test(render),
+    'the board is drawn off SQ_STATUS_ORDER, not a second list of stages');
+  SQ_STATUS_ORDER_NAMES.forEach((st) => {
+    t.check(new RegExp(`${st}:`).test(rule), `${st} says what moves an order out of it`);
+    t.check(new RegExp(`${st}:`).test(empty), `and what would put one in it when it is empty`);
+  });
+  t.check(/Nothing preparing\. Orders arrive here when the last line is checked in\./.test(empty),
+    'an empty lane names the next action rather than being a blank column');
+
+  /* Each lane's action is the dialog that lane is the reason for, and
+     only where there is one: Taken and Preparing have nothing to open. */
+  t.check(/awaiting_goods: \{ act:'buying'/.test(laneAct) && /pending_delivery: \{ act:'runs'/.test(laneAct)
+       && /completed: \{ act:'invoicepick'/.test(laneAct),
+    'Buying opens the buying list, Out the runs, Delivered the invoicing');
+  t.check(!/draft:|preparing:/.test(laneAct),
+    'and the two lanes with nothing to open carry no button at all');
+
+  /* MONEY NEVER TRUNCATES; THE NAME GIVES WAY. "1,240,00" is a tenth of
+     "1,240,000" and looks entirely plausible. */
+  t.check(/\.ow-ot-card-v\{[^}]*white-space:nowrap/.test(desk) && !/\.ow-ot-card-v\{[^}]*text-overflow/.test(desk),
+    'the money on a card is nowrap and never ellipsised');
+  t.check(/\.ow-ot-card-c\{[^}]*min-width:0[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/.test(desk),
+    'and the client name truncates with all three declarations and a min-width that lets it');
+
+  /* The lanes scroll, the screen does not. Without the row constraint the
+     auto row sizes to its tallest lane and the rest clip below the panel
+     with no scrollbar -- there is none on something never told it was
+     too tall. */
+  t.check(/grid-template-rows:minmax\(0,1fr\)/.test(desk),
+    'the board grid pins its row, or the lanes clip unreachably');
+  t.check(/\.ow-ot-cards\{[^}]*overflow:hidden auto/.test(desk),
+    'and a lane body says both axes, never overflow-y alone, which adds a stray horizontal bar');
+
+  /* ONE DECISION. The dock draws the longest-waiting one, names the two
+     behind it, and steps -- and its primary is the decision itself, not
+     a word like Submit. */
+  t.check(/otQIndex/.test(dock) && /needs\[otQIndex\]/.test(dock),
+    'the dock draws one of the queue at a time, by index');
+  t.check(/data-act="qprev"/.test(dock) && /data-act="qnext"/.test(dock) && /data-act="qjump"/.test(dock),
+    'with a way forward, a way back, and a way to the two named behind it');
+  t.check(/\$\{otQIndex \+ 1\} of \$\{needs\.length\}/.test(dock),
+    'saying where in the queue it has got to');
+  t.check(/Nothing is waiting on a decision/.test(dock),
+    'and an empty queue says so rather than drawing an empty card');
+  /* THE ACCENT APPEARS ONCE. The dock's primary is the decision; the
+     ghost beside it is a real second act, never a button that does
+     nothing. */
+  const primaries = (dock.match(/btn-accent/g) || []).length;
+  t.check(primaries === 1, `the dock spends the accent exactly once (${primaries})`);
+  t.check(/btn\(primary, 'btn-accent'\)/.test(dock) && /btn\(secondary, 'btn-ghost'\)/.test(dock),
+    'and it is the primary the decision named, with a real second act beside it');
+  t.check(/const primary = \(need\.acts && need\.acts\[0\]\) \|\| orderActSpec\(q\)/.test(
+    extractFunction(src, 'otDecisionActs', 'index.html')),
+    "and that primary is the stage's own act, not a label invented for the dock");
+
+  /* A card opens the order. Everything else on this screen is a lane
+     head or the dock -- a card carries no controls of its own, which is
+     what the six-buttons-per-card board was rebuilt to stop. */
+  t.check(/data-act="preview"/.test(card),
+    'a card opens the order preview');
+  t.check((card.match(/data-act=/g) || []).length === 1,
+    'and carries nothing else to press -- six controls on every card is what this board replaced');
+}
+
+/* ---------- the dialogs: one object, one accent each ------------------ */
+{
+  const names = ['otPreviewSpec', 'otBuyingSpec', 'otTripSpec', 'otRunsSpec', 'otAnnounceSpec', 'otInvoiceSpec'];
+  const dialogs = extractDeclaration(src, 'OT_DIALOGS', 'index.html');
+  names.forEach((n) => t.check(dialogs.includes(n), `${n} is in the one dialog table`));
+  t.check(/id="otDlg"/.test(src) && (src.match(/class="ow-dlg-sc"/g) || []).length === 1,
+    'and there is exactly one shell in the markup for all six of them');
+  /* EXACTLY ONE OXIDE PER DIALOG. otDlgPrimary is the only thing that
+     writes btn-accent, so counting its calls per spec counts the
+     accents. The preview's is "Send the client an update", which is why
+     its footer's move is drawn in ink instead. */
+  /* The buying list is the one spec that writes it twice, and they are
+     the two arms of one ternary: when somebody is out, the thing to do
+     next is check in what they brought back; when nobody is, it is to
+     get somebody out. Never both, which is what the shape below pins. */
+  const ARMS = { otBuyingSpec: 2 };
+  names.forEach((n) => {
+    const fn = extractFunction(src, n, 'index.html');
+    t.check(!/btn-accent/.test(fn), `${n} does not write the accent itself`);
+    const accents = (fn.match(/otDlgPrimary\(/g) || []).length;
+    t.check(accents <= (ARMS[n] || 1), `${n} spends the accent at most once (${accents})`);
+  });
+  t.check(/\$\{out \? otDlgPrimary\([\s\S]{0,200}?: stops\.length \? otDlgPrimary\([^)]*\) : ''\}/
+    .test(extractFunction(src, 'otBuyingSpec', 'index.html')),
+    'and the buying list chooses between its two rather than drawing both');
+  t.check(/ow-ink/.test(extractFunction(src, 'otPreviewSpec', 'index.html')),
+    "and the preview's own move is ink, because its oxide is already spent on telling the client");
+  /* NOTHING SENDS ITSELF. Every dialog that reaches outside the shop
+     opens a window for the owner to press send in; none of them posts. */
+  const act = extractFunction(src, 'otDlgAct', 'index.html');
+  t.check(/window\.open\(waComposeUrl/.test(act),
+    'telling a client or a buyer opens WhatsApp rather than sending anything');
+  t.check(/nothing is sent until you press send/.test(extractFunction(src, 'otAnnounceSpec', 'index.html')),
+    'and the announcement says so on the dialog that drafts it');
 }
 
 process.exit(t.done() ? 1 : 0);
