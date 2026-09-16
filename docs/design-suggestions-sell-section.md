@@ -95,7 +95,13 @@ than two, and the confirmation is where that is now visible.
 ### 1.7 Broadcast (Messages)
 
 Top-bar secondary action, and the handoff defines it in one clause — *"a post
-sent once to a picked list"* — then never draws it. It needs:
+sent once to a picked list"* — then never draws it.
+
+**Today the button opens the console's existing broadcast composer**, on the
+Posting lens, which already carries the one thing a broadcast most needs: the
+arithmetic of whether it is worth sending at all, against the free Status post.
+That composer is the console's, not the card system's, and it has no list
+picker. What the drawn screen needs:
 
 - **The list picker**, which is the whole screen: who is being written to, and
   on what basis (a lens over customers — everyone, everyone owing, everyone who
@@ -130,8 +136,8 @@ state**.
 | Customers | **Best 20** | Ranked by what? The handoff implies margin, not turnover — draw the distinction, because the biggest buyer is usually not the best one. |
 | Customers | **Gone quiet 7** | Partially specified (*"bought 9.1m before, nothing in 90 days"*). Needs the row, and the reading: which of them went quiet **because** of a debt. |
 | Agents | **Last month / Year** | Same grid, different window. The question is whether the waterfall and the KPIs re-scale, and whether "Owed to the shop" is period-scoped or always current. It should be always current — money owed is not a monthly fact. |
-| Messages | **Sent 184** | The archive. Needs the reply state per row, and it is the source of the reply-rate figures the other panels quote. |
-| Messages | **Waiting on a reply 21** | Drawn as a dimmed group inside the To-send list, but not as its own lens body. |
+| Messages | ~~**Sent 184**~~ | **Built** (§8.14). Read from the follow-up ledger, newest first, with a panel breaking it down by reason. It cannot be the source of the reply-rate figures the other panels quote, for the reason §8.14 gives: a debt chase leaves one stamp per debtor, not a history. |
+| Messages | ~~**Waiting on a reply 21**~~ | **Built** (§8.14). Its own lens, longest wait first, with the panel saying what silence costs — and saying plainly that a row here means somebody pressed *It was sent*, not that WhatsApp delivered anything. |
 
 ---
 
@@ -201,6 +207,18 @@ Messages, which means it needs the box, the deep link and the stamp.
 
 The Posting lens reads a **cap** (3 a day) and a **send window** (9–11am), and
 says both live in Setup. The Setup rows that hold them are not drawn.
+
+Where these stand now that both lenses are built:
+
+- **The cap is a real setting** — `presetWaPostsPerDay`, persisted with the
+  other presets, defaulting to 3 — because the panel's own sentence says it is
+  one and a constant would have made that a lie. **It still has no field on
+  Setup.** One number, one row, and the sentence already written for it.
+- **The send window is not a setting and should not become one.** The frame
+  reads *"9–11am · replies twice as likely as afternoons"* — a finding, not a
+  preference — so it is computed from the inbox and says **Not yet** until
+  twelve sends are on record there. What Setup could usefully hold instead is a
+  quiet window: hours the shop does *not* want a message drafted for.
 
 ### 4.4 Today — the unstamped-post row
 
