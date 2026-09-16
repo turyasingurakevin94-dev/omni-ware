@@ -372,39 +372,38 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   t.check(/promisedOn: \(r\.payload && r\.payload\.promisedOn\) \|\| null/.test(code)
     && /payload: \{contacts: f\.contacts\|\|\[\], promisedOn: f\.promisedOn\|\|null\}/.test(code),
     'the promised day rides in the payload column — no migration, and a shop without it reads null');
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  t.check(/class="btn btn-ghost ow-sm fup-tel" href="tel:/.test(contact),
+  /* THE PANE IS DELETED. These six acts were on its card and are on the
+     recipient panel; each is checked there, and the two that are not
+     rebuilt are named rather than quietly dropped. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  /* RING IS STILL THE OWNER'S OWN THUMB. It was a tel: anchor on the
+     card; it is a button that records the attempt first and then opens
+     the dialler, because the dialler leaves the page and may not come
+     back -- and the frame asks for the attempt to be on the record, so
+     the history reads as attempts rather than as messages only. Nothing
+     is sent either way. */
+  t.check(/window\.open\('tel:' \+ String\(r\.phone\|\|''\)/.test(side),
     'Ring is a tel: link — the owner’s own thumb, the only kind of sending allowed');
-  /* THE PICTURE IS LOOKED AT BEFORE IT IS SENT. This used to pin
-     `fup-picture`, a bare "Send the picture" button whose whole job was
-     to call shareBrief -- a price list built from the client's own
-     dealings, leaving the shop, that the owner had never seen. The claim
-     the old assertion made is unchanged (the picture is reachable from
-     the card); what changed is that reaching it now shows it. */
-  t.check(/fup-pay/.test(contact) && /fup-promise/.test(contact) && /fup-when/.test(contact)
-    && /fup-edit/.test(contact) && /fup-lead/.test(contact) && /fup-see-picture/.test(contact),
-    'a payment, a promise, a day, the qty, the lead and the picture are all reachable from the card');
-  /* ONE BUILDER, TWO DISPOSITIONS. The panel is still the account
-     screen's -- that is the whole point, and a second copy of
-     briefStripHTML would be free to show a filmstrip the picture does
-     not match. What is new is the argument: an account is a place to
-     READ and keeps the reasoning open, while this is a place to ACT and
-     folds it behind a link, because eight lines of argument between the
-     picture and Send are read once and scrolled past every morning
-     after. Asserted as the option rather than the bare call, so the fold
-     cannot quietly become a second panel. */
-  t.check(/customerBriefPanelHTML\(cid, \{fold: true/.test(contact) && !/fup-picture"/.test(contact),
-    'and the picture is the SAME panel the client’s account draws — one builder, so the filmstrip approved here and the one there can never say different things');
-  const why0 = extractFunction(src, 'briefWhyHTML', 'index.html');
-  t.check(/opts && opts\.fold/.test(why0) && /ow-bn-watch/.test(why0) && /fup-see-why/.test(why0),
-    'and the folded form still leaves the amber weigh-before-you-send block on the surface — a warning behind a link is a warning nobody reads');
+  t.check(/recordFollowUpClient\(r\.customerId[\s\S]{0,120}window\.open\('tel:/.test(side),
+    'and it records the attempt BEFORE it dials, since the dialler may never hand the page back');
+  /* WHAT IS REACHABLE FROM THE CARD. A payment and a promise are on it;
+     Their follow-up list is where a day, a quantity and a note are set
+     now that the inline editors went with the pane; the two picture acts
+     are on a telling row. The lead door and the in-app picture PREVIEW
+     are not rebuilt and are recorded in the paper -- named here so the
+     next reader does not have to find that out by looking. */
+  t.check(/fup-pay/.test(side) && /data-msgform="promise"/.test(side)
+    && /fup-record/.test(side) && /data-tell="share"/.test(side) && /data-tell="save"/.test(side),
+    'a payment, a promise, their follow-up list and the two picture acts are all reachable from the card');
+  t.check(!/fup-see-picture/.test(src) && !/fup-picture"/.test(src),
+    'and the in-app preview is GONE rather than half-wired — the acts produce the image, and the paper says the preview wants a frame');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
-  t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire) && /addPaymentPromise\(/.test(wire)
-    && /openSourcingLead\(/.test(wire) && /shareBrief\(/.test(wire),
+  t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire)
+    && /addPaymentPromise\(/.test(side) && /shareBrief\(/.test(wire),
     'each through the door that page already uses, never a copy of it');
-  t.check(/unrecordFollowUpClient\(fupLastTold\)/.test(wire), 'and "it did not go" undoes every stamp, not only ours');
-  t.check(/data-tell/.test(wire) && /saveBriefGif\(/.test(wire) && /undoBriefSent\(/.test(wire),
-    'the picture panel’s own Share, Save and Undo are wired on the ids it already uses, rather than a second vocabulary for one panel');
+  t.check(/unrecordFollowUpClient/.test(src), 'and "it did not go" undoes every stamp, not only ours');
+  t.check(/data-tell/.test(wire) && /saveBriefGif\(/.test(wire),
+    'the picture panel’s own Share and Save are wired on the ids it already uses, rather than a second vocabulary for one panel');
   t.check(/fupLeave\(\)/.test(extractFunction(src, 'goToTab', 'index.html')),
     'leaving the tab forgets an open chat — a stale "WhatsApp is open with these words" was greeting people a day later');
   /* THE LENS MOVED FROM A CHIP ROW TO THE STRIP. It was six .ow-seg-b
@@ -413,9 +412,13 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      unchanged (the queue can be narrowed by why) and now points at the
      five tiles, which were already saying those words with those
      figures. */
-  const summary0 = extractFunction(src, 'renderFollowUpSummary', 'index.html');
-  t.check(!/data-fupwhy/.test(contact) && /data-fupwhy=/.test(summary0),
-    'the queue can be narrowed by why, from the strip rather than a chip row beneath it');
+  /* AND THE LENS MOVED AGAIN, from the strip to the screen's own lens
+     row. The strip is gone with the pane -- four of its five figures
+     read 0 -- so the narrowing is where the second handoff puts it: the
+     three lenses above the list, which are the only navigation on this
+     screen. */
+  t.check(!/data-fupwhy/.test(src) && /data-msglens="money"/.test(src) && /data-msglens="telling"/.test(src),
+    'the queue can be narrowed by why, from the lens row rather than a strip or a chip row beneath it');
   t.check(/\$\{waiting\}/.test(extractFunction(src, 'productLineHTML', 'index.html'))
     && /pgAskers = waAskersByProduct\(\);/.test(extractFunction(src, 'renderProducts', 'index.html')),
     'the products register says who is waiting, read once per render');

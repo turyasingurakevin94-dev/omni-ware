@@ -51,7 +51,7 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpCompanionIn', 'followUpSourcingProgress',
   'followUpPriceMoved', 'followUpGoneQuiet', 'followUpReasons', 'followUpClientsToContact',
   'followUpDigest', 'findFollowUp', 'addFollowUp', 'recordFollowUpContact',
-  'closeFollowUp', 'reopenFollowUp', 'followUpBoughtSince', 'followUpAlreadyBought', 'followUpStatePill',
+  'closeFollowUp', 'reopenFollowUp', 'followUpBoughtSince', 'followUpAlreadyBought',
   // The promised day and the crossings index, which followUpReasons and
   // followUpClientsToContact now reach for.
   'followUpPromised', 'followUpStanding', 'stockCrossingsByKey',
@@ -373,26 +373,38 @@ const stockMove = (before, after, whenDays) => {
 {
 
   /* THE LAW HERE IS UNCHANGED and it is the important one: opening a
-     chat records nothing. What changed is the call's arity, because the
-     message is now on the screen in a box the owner can edit before
-     sending -- and an app that shows you words, lets you change them and
-     then sends the unedited ones has made that box a decoration. So the
-     url is built from what is actually in front of them, and the test
-     asks for that too rather than for the no-argument form it used to
-     pin. The second half of the assertion is the law and is untouched. */
-  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
-  t.check(/window\.open\(followUpWaUrl\(row[\s\S]{0,200}toast\(/.test(wire)
-    && !/window\.open\(followUpWaUrl[\s\S]{0,200}recordFollowUpContact/.test(wire),
+     chat records nothing. What changed twice is where the send lives.
+     First it grew a box the owner can edit before sending -- and an app
+     that shows you words, lets you change them and then sends the
+     unedited ones has made that box a decoration -- so the url took the
+     text as an argument. Then the pane became the recipient panel and
+     followUpWaUrl, a one-line wrapper over waComposeUrl whose only
+     caller was the pane, went with it. The panel calls waComposeUrl
+     itself, which is the same claim with one fewer name in it. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  /* Scoped to the handler's own body. A window of N characters reaches
+     past the closing brace into the NEXT handler, which is where the
+     stamp legitimately lives -- so a range match here would fail on a
+     correct screen and, worse, could pass on a wrong one. */
+  const sendFn = (side.match(/send\.onclick = \(\)=>\{[\s\S]*?\n  \};/) || [''])[0];
+  t.check(/window\.open\(waComposeUrl\(/.test(sendFn) && !/recordFollowUp/.test(sendFn),
     'opening the chat records NOTHING — a chat opened is not a message sent, and a stamp saying the client knows when they were never told is worse than no stamp');
-  t.check(/window\.open\(followUpWaUrl\(row, draftOf\(/.test(wire),
+  t.check(/window\.open\(waComposeUrl\(r\.phone \|\| '', box \? box\.value : body\)/.test(sendFn),
     'and it sends the words on the screen, not the ones the digest would have written — the box is editable, so it has to be the box that goes');
   /* And the other half of the same law, which the old screen got wrong
      in the opposite direction: "I told them" sat beside "Message" as a
-     PEER, so it could be pressed having sent nothing at all. It is asked
-     as a consequence of the send now -- the footer changes after the
-     chat opens -- which is what fupAwaiting is for. */
-  t.check(/fupAwaiting = cid;/.test(wire) && /fup-notsent/.test(wire),
+     PEER, so it could be pressed having sent nothing at all. The pane
+     answered that with fupAwaiting -- a footer that redrew itself into a
+     question after the chat opened. The panel does not need the state:
+     the send, the sentence saying the app cannot see WhatsApp, and the
+     two stamps are one block in that order, so the question is asked
+     every time and is never a peer of the send. */
+  t.check(/cannot see WhatsApp[\s\S]{0,400}id="msg_was_sent"[\s\S]{0,200}id="msg_not_sent"/.test(side),
     'and the send asks afterwards whether it went, rather than offering "I told them" as a button beside it');
+  const sentFn = (side.match(/sent\.onclick = \(\)=>\{[\s\S]*?\n  \};/) || [''])[0];
+  t.check(/recordFollowUpClient\(r\.customerId/.test(sentFn)
+    && /not\.onclick = \(\)=> toast\('Nothing recorded/.test(side),
+    'with the stamp written only by the one that says it went, and nothing at all by the one that says it did not');
 }
 
 /* ---------- 7. what it refuses to record ------------------------------ */
@@ -480,34 +492,42 @@ const stockMove = (before, after, whenDays) => {
      restyled all 44 of their contact rows and a bare .sc-head won the
      cascade on document order, while every test passed. A prefix check is
      the only thing that catches that before somebody sees it. */
-  const fns = ['renderFollowUpsContact', 'renderFollowUpsAll', 'renderFollowUpListModal',
-    'renderFollowUpAddResults', 'renderFollowUpSummary']
+  /* WHAT IS LEFT TO CHECK, AND WHY IT IS STILL WORTH CHECKING.
+     This list used to name renderFollowUpsContact, renderFollowUpsAll and
+     renderFollowUpSummary — the three renderers of the second tab. That
+     tab is gone and so are they: the queue, the strip, the work pane and
+     the register are the Messages screen now, drawn in the .om- layer
+     whose own gate (design-system.test.js) is a harder version of this
+     one — every selector prefixed, every colour a token, every size on a
+     ramp, and the palette closed at a number that may only fall.
+     What still answers to THIS rule is what still renders fup- markup:
+     the follow-up list modal, its add-results rows, and the rules-and-
+     measurement panel that the Sent group opens. The rule has not moved
+     an inch — a NEW bare or colliding family is still a stray, and the
+     three screens that would have introduced one are the three that no
+     longer exist. */
+  const fns = ['renderFollowUpListModal', 'renderFollowUpAddResults', 'renderFollowUpScore']
     .map((n) => extractFunction(src, n, 'index.html')).join('\n');
   const used = [...new Set(
     (fns.match(/class="[^"$]*"/g) || []).map((m) => m.replace(/class="|"/g, '')).join(' ').split(/\s+/).filter(Boolean)
   )];
-  /* dir-summary-card is the app's own summary strip, the one Suppliers and
-     Customers already carry. Reusing it is the point -- a third opinion
-     about what a summary tile looks like is exactly what makes a screen
-     read as bolted on. Named here rather than pattern-matched so a fourth
-     borrowed class has to be argued for. */
   /* ow- IS NOT A STRAY PREFIX, IT IS THE HOUSE.
      This list used to name dir-summary-card as one borrowed class, on
      the argument that a third opinion about what a summary tile looks
      like is what makes a screen read as bolted on. That argument is why
-     the OW layer exists, and this screen is built on it now: the strip,
-     the list row, the chip, the initials, the panel, the table and the
-     message box are the same ones Chase debts and What to buy draw, and
-     holding this screen to a private prefix would be holding it away
-     from the very thing the prefix rule was protecting.
-     What the rule was actually catching stays caught: a NEW bare or
-     colliding family. Anything that is neither the layer nor this
-     screen's own fup- is still a stray. */
-  const ALLOWED = ['btn', 'preset-hint', 'good', 'warn', 'closed'];
+     the OW layer exists, and what is left of this screen is built on it:
+     the panel, the side row and the mini note are the same ones Chase
+     debts and What to buy draw. */
+  /* tl-sc, tl-sc-l and tl-bar are Worth telling's scoreboard bar, and
+     the measurement panel draws three of them. Borrowing it is the
+     point: a second opinion about what "57 of 184" looks like is what
+     makes a panel read as bolted on. Named here rather than pattern-
+     matched, so a fourth borrowed family has to be argued for. */
+  const ALLOWED = ['btn', 'preset-hint', 'good', 'warn', 'closed', 'tl-sc', 'tl-sc-l', 'tl-bar'];
   const stray = used.filter((c) => !c.startsWith('fup-') && !c.startsWith('ow-')
     && !ALLOWED.includes(c) && !c.startsWith('btn-'));
   t.check(stray.length === 0,
-    `every class the follow-up screens render is fup- prefixed or the layer's (stray: ${stray.join(', ') || 'none'})`);
+    `every class the follow-up markup renders is fup- prefixed or the layer's (stray: ${stray.join(', ') || 'none'})`);
   ['good', 'warn', 'closed'].forEach((m) => {
     t.check(!new RegExp(`^\\s*\\.${m}\\{`, 'm').test(code),
       `.${m} is never a rule on its own, so using it here cannot restyle anything else`);
@@ -516,16 +536,33 @@ const stockMove = (before, after, whenDays) => {
      MARKUP, so renaming a rule in the stylesheet left the class unstyled
      with every assertion still passing. The structural few are named
      here, so losing one is a failure rather than a silent flattening. */
-  /* .fup-card, .fup-item and .fup-pill are gone rather than renamed: the
-     card wall they built is what this redesign removed, and a chip is
-     the layer's .ow-cp on every other screen. The four below are what
-     this screen still owns -- the client being worked, one thing they
-     are waiting on, its footer, and the modal's rows and their quiet
-     Close. Losing a rule for one of them is still a silent flattening,
-     which is the whole point of naming them. */
-  ['fup-work', 'fup-it', 'fup-w-foot', 'fup-row', 'fup-link'].forEach((c) => {
+  /* .fup-work, .fup-it and .fup-w-foot named the work pane — the client
+     being worked, one thing they were waiting on, and the footer Send
+     sat in. The pane is the recipient panel now and its rules went with
+     it, so naming them here would be pinning three empty selectors and
+     calling it structure. What this screen still OWNS is the settling
+     row: the modal's line, the two halves of it, and the quiet Close.
+     Losing a rule for one of them is still a silent flattening, which is
+     the whole point of naming them. */
+  ['fup-row', 'fup-row-main', 'fup-row-who', 'fup-link', 'fup-check'].forEach((c) => {
     t.check(new RegExp(`^\\s*\\.${c}\\{`, 'm').test(code),
       `.${c} has a rule of its own — without it the class renders as unstyled text and nothing else would notice`);
+  });
+  /* THE DELETION ITSELF, asserted rather than assumed. Code nothing
+     calls is code the next reader has to prove is dead before they can
+     change anything near it, and an unreachable renderer that still
+     compiles is the easiest thing in this file to leave behind. */
+  ['renderFollowUpsContact', 'renderFollowUpsAll', 'renderFollowUpSummary',
+   'followUpStatePill', 'fupRowLenses', 'fupRowChip', 'fupCp', 'fupDaysQuiet'].forEach((n) => {
+    t.check(!new RegExp(`^\\s*(function ${n}\\b|const ${n} *=)`, 'm').test(src),
+      `${n} is gone, not merely unreachable — the second tab took its renderers and their private helpers with it`);
+  });
+  /* And the rules they wore went too. A selector nothing renders is a
+     rule that cannot be tested by looking at the screen, which is how
+     .fup-link.fup-act survived needing a class that no longer existed. */
+  ['fup-work', 'fup-it', 'fup-w-foot', 'fup-w-head', 'fup-tel', 'fup-mt', 'fup-acts', 'fup-send'].forEach((c) => {
+    t.check(!new RegExp(`\\.${c}[{ ,:]`).test(code),
+      `.${c} has no rule left either — the pane's stylesheet went with the pane`);
   });
 }
 
@@ -544,16 +581,25 @@ const stockMove = (before, after, whenDays) => {
   }
   t.check(/\.fup-link\{[^}]*position:relative;/.test(code),
     'and it is positioned, or the ring would hang off the page instead of the button');
-  /* The 1000px block and .fup-acts went with the card wall. The rule it
-     was enforcing did not: the buttons this screen is worked with must
-     be a thumb tall on a phone. It is enforced at the layer's own
-     breakpoint now, against the layer's own token, rather than against a
-     padding figure measured once by hand -- and it is Send that has to
-     clear it, which the old assertion could not say. */
-  t.check(/@media \(max-width:820px\)\{[\s\S]*?\.fup-w-foot \.btn\{[^}]*min-height:var\(--ow-tap\)/.test(code),
-    'and on a phone every button in the footer is a full tap target, measured against --ow-tap rather than a hand-counted padding');
-  t.check(/\.fup-w-foot \.btn-accent\{[^}]*flex:1 1 100%[^}]*order:9;\}/.test(code),
-    'with Send taking the full width, last, where a thumb already is');
+  /* WHERE SEND IS NOW, AND WHY THE ASSERTION MOVED WITH IT. This pair
+     used to read .fup-w-foot .btn{min-height:var(--ow-tap)} and
+     .fup-w-foot .btn-accent{flex:1 1 100%;order:9} — every button in the
+     work pane's footer a thumb tall, with Send taking the full width
+     last. The footer is the recipient panel's send block now, in the
+     .om- layer, and the phone does not reflow it: .om-ph-detail is a
+     design of its own, so the heights are stated outright rather than
+     inherited from a desktop rule with a minimum bolted on.
+     The claim is the same claim and it is a stronger form of it — the
+     old rule could only say "at least 44"; this says the send is 48 and
+     the two stamps that follow it are 44, which is what the frame draws.
+     And it is still Send that has to clear it, which is the part the
+     original assertion existed for. */
+  t.check(/\.om-ph-detail \.om-btn-w\{height:48px ?!important/.test(code),
+    'on a phone the send is 48px tall — stated in the phone’s own design rather than reflowed out of the desktop’s');
+  t.check(/\.om-ph-detail #msg_was_sent,\.om-ph-detail #msg_not_sent\{height:44px ?!important/.test(code),
+    'and the two stamps under it are a full tap target each, which is what the owner presses when they come back');
+  t.check(/id="msg_send" style="height:40px;width:100%"/.test(code),
+    'and the send takes the whole width, where a thumb already is');
 }
 
 /* ---------- 11. the three capture points ------------------------------ */
@@ -588,149 +634,192 @@ const stockMove = (before, after, whenDays) => {
   const r = scope.followUpBackInStock(f, NOW);
   t.check(/Cement 50kg/.test(r.text), 'the message names the item, since the client has no card to look at');
   t.check(!/Cement 50kg/.test(r.short || ''), 'the card form does not, because the name is on the line above it');
-  const render = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  t.check(/esc\(r\.short \|\| r\.text\)/.test(render),
-    'and the card renders the short form, falling back rather than going blank');
+  /* THE ROW IS THE CARD NOW. renderFollowUpsContact drew a card whose
+     heading was the item and whose second line was the reason; the
+     Messages row draws the client and then one line saying what the
+     message is about, which is the same two-part shape with the client
+     in the heading instead of the item. So the short/full split is
+     unchanged and it is msgReasonWords that makes it — still falling
+     back to the full text rather than going blank, which is the part
+     this assertion was really protecting. */
+  const words = extractFunction(src, 'msgReasonWords', 'index.html');
+  t.check(/esc\(why\.short \|\| why\.text\)/.test(words),
+    'and the row renders the short form, falling back rather than going blank');
   const digest = extractFunction(src, 'followUpDigest', 'index.html');
   t.check(/r\.text/.test(digest) && !/r\.short/.test(digest),
     'while the message keeps the full one');
 }
 
-/* ---------- 11bis. the pill says WHICH kind of silence ---------------- */
+/* ---------- 11bis. silence that is patience, and silence that is work - */
 {
-  /* It read "Never told" in amber from the moment a follow-up was made,
-     which told the user off twenty minutes after they had done the right
-     thing, for not saying something there was nothing to say. Two
-     situations wanting opposite reactions were wearing one label. */
+  /* THE PILL IS GONE AND ITS QUESTION IS NOT.
+     followUpStatePill read "Never told" in amber from the moment a
+     follow-up was made, which told the owner off twenty minutes after
+     they had done the right thing, for not saying something there was
+     nothing to say. Two situations wanting opposite reactions wore one
+     label, and the fix was to ask followUpReasons — "is there anything
+     to tell them today" — instead of asking the clock.
+
+     The pill drew on the register, the register is the Messages queue's
+     Sent group, and a four-state chip on every row is not what that
+     screen draws: membership of the queue IS the state now. So the pill
+     was three lines of derivation over engines that all survive, and
+     these assertions go to those engines directly — which is where the
+     rule always lived, and where a regression would actually happen.
+
+       Waiting    no reasons, never told → not in the queue at all
+       Not told   reasons → in the queue, which is the only amber there is
+       Told       told, nothing outstanding since → out of the queue and
+                  into the Sent group, which msgSentLog draws
+       Closed     closedAt → fupClosedLabel, on their own follow-up list
+
+     Stated as a claim rather than as a label: nothing is ever put in
+     front of the owner as work because time passed and no news came. */
   reset();
   // A day old, well inside the 14-day quiet threshold, so the only thing
   // that can change its state is real news.
   const fresh = fu({ createdAt: ago(1) });
-  eq(scope.followUpStatePill(fresh, NOW).label, 'Waiting',
-    'nothing has happened yet, so nothing was said — that is patience, not a failure');
-  eq(scope.followUpStatePill(fresh, NOW).cls, '',
-    'and it is not painted amber, or amber stops meaning anything');
+  eq(scope.followUpReasons(fresh, NOW).length, 0,
+    'nothing has happened yet, so nothing was said — that is patience, not a failure, and the queue does not ask for it');
+  t.check(!scope.followUpLastContact(fresh),
+    'and it is not "told" either — it is simply waiting, which is the state that used to be painted as a failure');
 
   stockMove(0, 20, 0);                       // now there IS something to say
-  eq(scope.followUpStatePill(fresh, NOW).label, 'Not told',
-    'once the goods are in and nobody has rung, that is work');
-  eq(scope.followUpStatePill(fresh, NOW).cls, 'warn', 'and it says so in amber');
+  t.check(scope.followUpReasons(fresh, NOW).length > 0,
+    'once the goods are in and nobody has rung, that is work — and work is the only thing the queue carries');
 
   fresh.contacts.push({ at: new Date(NOW).toISOString(), reason: 'back_in_stock' });
-  eq(scope.followUpStatePill(fresh, NOW).label, 'Told', 'told, and nothing outstanding since');
-  eq(scope.followUpStatePill(fresh, NOW).cls, 'good', 'which is the only green state');
+  eq(scope.followUpReasons(fresh, NOW).length, 0,
+    'told, and nothing outstanding since — so it leaves the queue');
+  t.check(!!scope.followUpLastContact(fresh),
+    'and it is told rather than merely quiet, which is what puts it in the Sent group instead');
 
   fresh.closedAt = new Date(NOW).toISOString();
-  eq(scope.followUpStatePill(fresh, NOW).label, 'Closed', 'and a settled one is simply closed');
+  t.check(!scope.followUpIsOpen(fresh), 'and a settled one is simply closed');
+  const closedLabel = extractFunction(src, 'fupClosedLabel', 'index.html');
+  t.check(/closedReason/.test(closedLabel) && /'Closed'/.test(closedLabel),
+    'with the word for it written on their own follow-up list, where a settled row is still readable');
 }
 {
   // Silence that has gone on long enough IS work, even with no news.
   reset();
   const old = fu({ createdAt: ago(40) });
-  eq(scope.followUpStatePill(old, NOW).label, 'Not told',
-    '40 days of nothing is not patience — the quiet rule already says so, and the pill now agrees with it');
+  t.check(scope.followUpReasons(old, NOW).some((r) => r.kind === 'gone_quiet'),
+    '40 days of nothing is not patience — the quiet rule says so, and it is the rule the queue reads');
 }
 {
   // Told once, then news again: still owed a word.
   reset();
   const f = fu({ contacts: [{ at: ago(10), reason: 'x' }] });
   stockMove(0, 8, 2);
-  eq(scope.followUpStatePill(f, NOW).label, 'Not told',
+  t.check(scope.followUpReasons(f, NOW).length > 0,
     'told before is not told about THIS — a client already spoken to can still be owed the next update');
 }
 
 /* ---------- 11c. the screen reads before it is read ------------------- */
 {
-  const all = extractFunction(src, 'renderFollowUpsAll', 'index.html');
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+  /* THE THREE PANES ARE ONE SCREEN NOW, so the three extractions are
+     three different ones. renderFollowUpSummary's five tiles are the
+     figure cards, renderFollowUpsAll's grouped register is the queue
+     itself with its Sent group, and renderFollowUpsContact's work pane
+     is the recipient panel. Each assertion below says what it used to
+     mean and what it means at the new address. */
+  const kpis = extractFunction(src, 'renderMessageKpis', 'index.html');
+  const screen = extractFunction(src, 'renderMessages', 'index.html');
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
 
-  /* Counted, not merely present -- the argument for counting is
-     unchanged, and it is why this still asserts a number rather than a
-     substring: one tile swapped for something else is exactly the
-     inconsistency a strip exists to avoid.
-     What changed is what the tiles are. Three borrowed .dir-summary-card
-     boxes said "Clients to message / Being watched / Never followed up",
-     and only the first was a decision -- the third is a curiosity, and
-     none of them said what today's work IS. Five of the layer's own
-     tiles do: the size of the queue, and then its composition, which is
-     the four reasons followUpReasons already computes. A strip that
-     names the work is a triage line; one that counts rows is a header.
-     The composition changed once more when the screen became the hub
-     for every client contact: the four kept-posted kinds are one tile
-     now (News), beside the day the owner promised, the money Chase would
-     ask for, and what is worth a word. The rule is the same -- the
-     strip names what the work IS -- and the sub-kinds are still on every
-     row as chips and on the Why row as counts. */
-  /* STILL ONE TEMPLATE, AND NOW IT IS A BUTTON. The strip used to be a
-     read-only row above six filter chips that named the same five things
-     with the same five figures -- one control and a label for it, with
-     the label bigger. The tile is the control now, so the template
-     carries .fup-mt (the button reset, written at .ow-mt's own
-     specificity and earlier in the file so the layer's geometry still
-     lands at both widths) and data-fupwhy. One template is the claim
-     that has not changed. */
-  eq((summary.match(/class="ow-mt fup-mt\$\{/g) || []).length, 1,
-    'the tiles are the layer’s, drawn from one template rather than five copies of a box');
-  eq((summary.match(/data-fupwhy=/g) || []).length, 1,
-    'and every one of them is the filter, from that same template — the six chips under the search are gone');
-  eq((summary.match(/\$\{tile\(/g) || []).length, 5,
-    'and there are five of them — the queue, and then what the queue is made of');
-  ['To message', 'Promised', 'Money', 'News', 'Worth a word'].forEach((k) => {
-    t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — the composition of the work, not a count of rows`);
+  /* COUNTED, NOT MERELY PRESENT, and the count changed on purpose.
+     Three borrowed .dir-summary-card boxes said "Clients to message /
+     Being watched / Never followed up", and only the first was a
+     decision. Five of the layer's own tiles replaced them and named the
+     composition of the work. The frame this screen is built from draws
+     THREE cards, and the middle one has no figure at all — it exists so
+     the other counts do not have to be printed as noughts. That is the
+     same argument the five were making, carried one step further: a tile
+     reading 0 is not a reading, it is a box. So the number is still
+     asserted rather than a substring — one card swapped for something
+     else is exactly the inconsistency a strip exists to avoid. */
+  eq((kpis.match(/<div class="om-kpi["$]/g) || []).length, 3,
+    'there are three figure cards — the frame’s own count, not a strip that grew a tile every time something else was worth saying');
+  t.check(/NO FIGURE ON THIS ONE, on purpose/.test(kpis) && /om-kpi-w/.test(kpis),
+    'and the middle one carries words rather than a figure, because a 0 on it would put back exactly what it was made to remove');
+  ['To message', 'Everything else is clear', 'Chases that got paid'].forEach((k) => {
+    t.check(kpis.includes(k), `the cards name ${k.toLowerCase()} — what the work IS, not a count of rows`);
   });
-  t.check(/counts\[r\.kind\]/.test(summary),
-    'and the kept-posted kinds are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
-  /* THE STRONGER FORM OF THAT SAME CLAIM. A tile that is pressable has
-     to open what it counted: "Money 15" that opens fourteen rows is
-     worse than no tile. Both figures and filter go through fupRowLenses,
-     which is one reading of one row -- so they cannot drift. */
-  t.check(/fupRowLenses/.test(summary) && /fupRowLenses/.test(contact),
-    'and the figure on a tile is the number of clients its own filter opens, through one shared reading');
-  t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
-    'and the strip and the queue are drawn from the same hub rows, computed once per render');
 
-  /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
+  /* THE STRIP CANNOT DISAGREE WITH THE QUEUE BENEATH IT. The old form of
+     this was `counts[r.kind]` and a shared fupRowLenses: one reading of
+     one row, feeding both the figure and the filter it opened. The
+     reading is followUpHubRows now, computed ONCE per render and handed
+     to the cards and the list as the same array — which is a stronger
+     guarantee than two call sites agreeing, because there is only one. */
+  t.check(/const rows = followUpHubRows\(now, chase\);/.test(screen),
+    'the hub rows are computed once per render');
+  t.check(/renderMessageKpis\(rows, money, telling, held\)/.test(screen)
+       && /const money = rows\.filter\(/.test(screen) && /const telling = rows\.filter\(/.test(screen),
+    'and the cards and the list are handed that same array — the figure on a card counts the rows the list is drawn from, because it is the same rows');
+  t.check(/rows\.filter\(r=> r\.kinds\.has\('promised'\)\)/.test(kpis),
+    'and the composition is counted from the hub’s own kinds, so a card can never name work the queue is not showing');
+
+  /* KEYED ON THE CUSTOMER AND NOTHING ELSE. `byCustomer` being mentioned
      proved nothing: a map keyed per row still has the name and still
-     builds groups, it just builds one per item -- which is the flat list
-     again wearing a group's clothes. */
-  t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
-    'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
-  t.check(/ow-tbl-g/.test(all), 'and renders them as groups — the layer’s group heading inside its table, not a private card');
-  t.check(/followUpStatePill/.test(all) && /fupCp\(/.test(all),
-    'and state is a chip, not a sentence in grey among other sentences in grey');
+     builds groups, it just builds one per item — which is the flat list
+     again wearing a group's clothes. renderFollowUpsAll did that
+     grouping itself; followUpHubRows does it for every engine now, which
+     the hub test proves row by row. What this screen has to get right is
+     narrower and it is checked here: ONE row per hub row, so a client
+     owed three updates is one line and one message. */
+  t.check(/lensRows\.map\(r=> msgRowHTML\(r\)\)/.test(screen),
+    'the list draws one row per client — the flat one repeated a name down the page while splitting the two things one person was waiting for');
+  t.check(/msgGroupHTML\('Held back'/.test(screen) && /msgGroupHTML\('Sent'/.test(screen),
+    'and the states are groups inside that one list rather than tabs beside it — two renderings of one queue disagree the moment one is refreshed and the other is not');
 
   /* The initials used to be a private 38px square painting the brand
      accent on navy -- 2.7:1 at 14px bold, which is under the floor and
-     was the worst pairing in the app on a phone in daylight. .ow-av is
-     the same idea in the layer's hands, and it passes. */
-  t.check(/nameInitials/.test(contact) && /ow-av/.test(contact),
-    'a client is shown with the layer’s initials, not a private square painting the accent on navy');
+     was the worst pairing in the app on a phone in daylight. .om-av is
+     the same idea in the card system's hands, and it passes. */
+  t.check(/nameInitials/.test(side) && /om-av/.test(side),
+    'a client is shown with the system’s initials, not a private square painting the accent on navy');
 
-  /* NO PHONE NUMBER IS STILL A BLOCKER, and it is now said in three
+  /* NO PHONE NUMBER IS STILL A BLOCKER, and it is still said in three
      places at once rather than in one amber band below the items: on the
-     contact line where the number would be, in the line addressing the
-     message, and by the absence of Send itself. The banner said it
-     loudest; this says it where the reader is already looking, and --
-     the part the banner could not do -- it makes the missing button
-     explicable instead of mysterious. */
-  t.check(/fup-w-none/.test(contact) && /no phone number on file/.test(contact),
+     contact line where the number would be, in the phone's own head
+     where the name is, and by the absence of Send itself. The banner
+     said it loudest; this says it where the reader is already looking,
+     and -- the part the banner could not do -- it makes the missing
+     button explicable instead of mysterious.
+     This one caught a real regression: the redesign drew the send
+     unconditionally, so a client with no number got a button that opened
+     wa.me/ with nothing in it and failed inside WhatsApp, where this
+     screen cannot see it. */
+  const head = extractFunction(src, 'renderMessagePhoneHead', 'index.html');
+  t.check(/no phone number on file/.test(side) && /om-caution-ink/.test(side),
     'no phone number is named where the number would be, in the caution ink');
-  t.check(/no number to send it to/.test(contact),
-    'and again on the line that says where the message is going');
-  t.check(/\$\{row\.phone \? `<button type="button" class="btn btn-accent fup-send"/.test(contact),
+  t.check(/no number on file/.test(head),
+    'and again in the phone’s own head, which is the only place the name appears at 390px');
+  t.check(/\$\{r\.phone \? `<button type="button" class="om-btn om-btn-w" id="msg_send"/.test(side),
     'and Send is withheld rather than offered and then failing — which is what makes the other two lines an explanation');
+  t.check(/No number to send it to/.test(side),
+    'with the gap named where the button would have been, so the missing control is legible rather than mysterious');
 
-  // Close is routine housekeeping. Painted in --accent it was a red, which
-  // made the most ordinary action on the screen look like the worst one.
   /* THE ACCENT APPEARS ONCE. The old screen put an oxide "Message on
      WhatsApp" on every card and painted every avatar in it too: at this
      shop's fourteen clients that is twenty-eight oxide elements on a
      screen whose rule is that the accent means the one thing to do next.
-     There is one now, and it is the send. */
-  const oxide = (contact.match(/btn-accent/g) || []).length;
-  eq(oxide, 2, 'the accent is drawn in exactly two branches — Send, and the confirmation that replaces it — so only ever one is on the screen');
-  t.check(!/btn-accent/.test(all), 'and the register carries none at all: nothing on that side is an act');
+     In the card system the accent is the coral .om-btn-p, and the only
+     things wearing it are the confirms on the two small forms — which
+     cannot both be open, because opening either closes the other. The
+     send is not the accent at all: it is WhatsApp's own green, which is
+     the one place in this app a brand colour is the honest signal. */
+  const panelForm = extractFunction(src, 'msgPanelFormHTML', 'index.html');
+  eq((panelForm.match(/om-btn-p/g) || []).length, 2,
+    'the accent is drawn in exactly two branches — the hold’s confirm and the promise’s — and msgPanelForm can only be one of them at a time');
+  t.check(!/om-btn-p/.test(side.replace(/\$\{msgPanelFormHTML\(r\)\}/g, '')),
+    'and the panel itself carries none outside those two forms: with no form open there is no accent on the screen at all');
+  t.check(/if\(msgPanelForm\) msgHeldForm = null;/.test(code)
+       && /if\(msgHeldForm\) msgPanelForm = null;/.test(code),
+    'and a form opening on a held row closes the panel’s, so two coral buttons saying different things can never share a screen');
+  t.check(!/om-btn-p/.test(kpis), 'and the figure cards carry none at all: nothing on that side is an act');
 
   const linkRule = (code.match(/\.fup-link\{[^}]*\}/) || [''])[0];
   t.check(/color:var\(--ink-soft\)/.test(linkRule),

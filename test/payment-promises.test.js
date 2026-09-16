@@ -358,18 +358,26 @@ if (chase) {
  * screen in changed where those places are, not how many.
  */
 {
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  const held = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  /* THE PANE AND ITS HELD-BACK BAND ARE BOTH DELETED. The three places
+     are still three and the assertions follow them: the card is the
+     recipient panel, and the two off-queue ones are held rows on the one
+     list, each carrying its own small form instead of a browser prompt.
+     A date typed into a prompt is a date typed blind. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  const form = extractFunction(src, 'msgPanelFormHTML', 'index.html');
+  const heldAct = extractFunction(src, 'msgHeldActHTML', 'index.html');
+  const heldForm = extractFunction(src, 'msgHeldFormHTML', 'index.html');
+  const render = extractFunction(src, 'renderMessages', 'index.html');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
 
-  t.check(/They promised to pay on…/.test(contact),
+  t.check(/They promised a date/.test(side),
     'the button sits on the card, beside Receive a payment — where the conversation just happened');
-  t.check(/fup-promise-set/.test(contact) && /addPaymentPromise\(/.test(wire),
+  t.check(/msg_prom_set/.test(form) && /addPaymentPromise\(r\.customerId, on, amt/.test(side),
     'and writes a real row');
   t.check(/said \$\{fmtShortDate\(r\.promise\.promisedOn\)\}/.test(
       extractFunction(src, 'followUpHeldBack', 'index.html')),
     'the ones waiting are shown, so the queue’s silence about them is visible rather than mysterious');
-  t.check(/fup-held-unpromise/.test(held) && /deletePaymentPromise\(/.test(wire),
+  t.check(/data-msgunpromise/.test(heldForm) && /deletePaymentPromise\(/.test(render),
     'with a way to take back one entered by mistake');
 
   /* WHERE THE CONVERSATION ACTUALLY HAPPENS. The person most likely to
@@ -384,18 +392,24 @@ if (chase) {
      row. What changed is that the old screen had to draw all three
      itself; the hub already had a panel for anybody it is deliberately
      not messaging, so the two off-queue ones live there. */
-  t.check(/fup-held-promise/.test(held),
+  t.check(/They rang back/.test(heldAct) && /A different day/.test(heldAct),
     'a customer chased today who then rings back with a day can be written down without waiting out the rest period, '
     + 'and one already on a promise can name a different day — both are held-back rows, and both carry the button');
   const heldFn = extractFunction(src, 'followUpHeldBack', 'index.html');
   t.check(/'promised'/.test(heldFn) && /'chased'/.test(heldFn)
-    && /h\.kind === 'promised'/.test(held) && /h\.kind === 'chased'/.test(held),
+    && /h\.kind === 'promised'/.test(heldAct) && /h\.kind === 'chased'/.test(heldAct),
     'so the button is on all three places a customer can be standing, not only the queue — the card, '
     + 'the ones who named a day, and the ones inside the rest period');
+  /* AND THE ENGINE'S OWN HOLDS STAY THE ENGINE'S. An owner hold lifts
+     from its row; a rule's does not, because the rule is the thing to
+     change -- and that distinction is the whole reason the fourth kind
+     of hold was worth adding rather than overloading these three. */
+  t.check(/if\(h\.own\) return/.test(heldAct) && /data-msglift=/.test(heldAct),
+    'while a hold the OWNER put on lifts from the row, since there is no rule behind it to change');
   t.check(/brokenPromises: r\.brokenPromises/.test(heldFn)
-    && /ch\.brokenPromises > 1/.test(contact),
+    && /ch\.brokenPromises > 1/.test(extractFunction(src, 'msgChaseChipHTML', 'index.html')),
     'and a repeat offender is named as one');
-  t.check(/confirm\('Remove that promise/.test(wire),
+  t.check(/confirm\('Remove that promise/.test(render),
     'removing one is confirmed — it is a record of something somebody said, not a scratch note');
 
   const ahead = extractFunction(src, 'renderAhead', 'index.html');
