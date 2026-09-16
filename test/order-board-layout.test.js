@@ -112,15 +112,34 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
      are ink now. The one tile that carries colour is Past stage limit,
      and it is crimson, because an order past the limit the shop itself
      set is the genuinely bad case rather than a busy one. */
-  t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : ''\)/.test(render),
+  t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : '',/.test(render),
     'crimson only on the tile that is genuinely bad, and only when it is not empty');
-  t.check(!/'ow-warn'/.test(render.slice(render.indexOf('put(strip,'), render.indexOf('put(dock,'))),
+  const stripAt = render.lastIndexOf('put(strip,');
+  const stripSrc = render.slice(stripAt, render.indexOf('put(dock,', stripAt));
+  t.check(!/'ow-warn'/.test(stripSrc),
     'and nothing else in the strip is tinted at all');
   /* AND IT SAYS SO WHEN IT CANNOT SAY. With no stage limit set in
      Presets there is no such thing as past one, so the tile shows a dash
      rather than a zero that reads as "none are late". */
   t.check(/anyLimit \? String\(late\.length\) : '—'/.test(render),
     'a shop with no limits set gets a dash, not a zero it has not earned');
+  /* A FIGURE ON ITS OWN IS NOT A READING, which is what the fourth
+     argument is. On an ordinary morning three of these four tiles read
+     "0", "0" and "—", and a tile that says nothing on an ordinary
+     morning is furniture. Each carries a second line now: what the
+     figure rests on when there is one, and what the zero MEANS when
+     there is not. The old assertion pinned the tile call at three
+     arguments, which is the only reason it had to change; the argument
+     it was making -- crimson on exactly one tile, and only when that
+     tile is not empty -- is unchanged and still checked above. */
+  const tiles = stripSrc.match(/tile\(/g) || [];
+  t.check(tiles.length === 4, `four tiles and the day, not five figures (${tiles.length})`);
+  ['nothing confirmed to pay for', 'nothing delivered to bill', 'every lane inside its limit', 'no limits set']
+    .forEach((say) => {
+      t.check(stripSrc.includes(say), `an empty tile says what the zero means: "${say}"`);
+    });
+  t.check(/tile\('On the board', String\(quotes\.length\)/.test(render) && /const boardValue = quotes\.reduce/.test(render),
+    'and the count of live orders carries what they are worth, which is the question behind the count');
 }
 
 /* ---------- 4. the queue: named derivations, longest first ------------ */
@@ -591,6 +610,7 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   const rule = extractDeclaration(src, 'OT_LANE_RULE', 'index.html');
   const empty = extractDeclaration(src, 'OT_LANE_EMPTY', 'index.html');
   const laneAct = extractDeclaration(src, 'OT_LANE_ACT', 'index.html');
+  const laneMoney = extractDeclaration(src, 'OT_LANE_MONEY', 'index.html');
 
   /* The lanes ARE the pipeline, off the one constant every other screen
      reads it from -- so a stage added to SQ_STATUS_ORDER is a lane, and
@@ -604,6 +624,33 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   t.check(/Nothing preparing\. Orders arrive here when the last line is checked in\./.test(empty),
     'an empty lane names the next action rather than being a blank column');
 
+  /* THE RULE IS STILL SAID; THE LANE NO LONGER SPENDS 40px SAYING IT.
+     `.ow-ot-lh-w` gave every lane two lines of room for a sentence that
+     is read once and then never again -- five lanes, forty pixels, for
+     the life of the shop. The sentence itself has not gone anywhere: it
+     is the lane head's own title, and it is written out stage by stage
+     in the page's "i". What the freed line carries instead is read every
+     time the board is: how much money is standing in this lane. */
+  t.check(!/ow-ot-lh-w/.test(src), 'the lane no longer prints its rule on itself');
+  t.check(/<div class="ow-ot-lh" title="\$\{esc\(rule\)\}">/.test(board),
+    'the rule is the lane head\'s title');
+  const help = (/<p class="ow-ph-help">Every order from saved quote[\s\S]*?<\/p>/.exec(section) || [''])[0];
+  ['suppliers answer, then it moves itself', 'moves on when the last line is checked in',
+   'you pack it, then mark it out', 'the run closes it on delivery', 'today only; older sit in money']
+    .forEach((say) => {
+      t.check(help.toLowerCase().includes(say), `and the page's "i" still says it in words: "${say}"`);
+    });
+  SQ_STATUS_ORDER_NAMES.forEach((st) => {
+    t.check(new RegExp(`${st}:`).test(laneMoney), `${st} says what the money standing in it IS`);
+  });
+  t.check(/const value = orders\.reduce\(\(t, q\)=> t \+ savedQuoteTotal\(q\), 0\);/.test(board)
+       && /orders\.length\s*\n?\s*\? `<span class="ow-ot-lh-f">/.test(board),
+    'the money line is summed from the lane\'s own cards');
+  t.check(/: '';/.test(board.slice(board.indexOf('const money'))),
+    'and an empty lane prints no figure at all -- a zero is a figure, and there is none');
+  t.check(/\.ow-ot-lh-m\{[^}]*min-height:16px/.test(desk),
+    'the line holds its height whether the lane has money in it or not, so five lanes start level');
+
   /* Each lane's action is the dialog that lane is the reason for, and
      only where there is one: Taken and Preparing have nothing to open. */
   t.check(/awaiting_goods: \{ act:'buying'/.test(laneAct) && /pending_delivery: \{ act:'runs'/.test(laneAct)
@@ -611,6 +658,13 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
     'Buying opens the buying list, Out the runs, Delivered the invoicing');
   t.check(!/draft:|preparing:/.test(laneAct),
     'and the two lanes with nothing to open carry no button at all');
+  /* A MARK, NOT A WORD -- and the word is still there for anyone who
+     needs it. At 228px "Buying list" was a third of the lane head, and
+     the dialog it opens is named after the lane it sits on. */
+  t.check(/icon:'<svg class="icon ow-i14"/.test(laneAct),
+    'each lane act carries its own mark, sized on the svg because the layer may not name .icon');
+  t.check(/title="\$\{esc\(act\.label\)\}" aria-label="\$\{esc\(act\.label\)\}">\$\{act\.icon\}/.test(board),
+    'and the word rides on it as both a title and an aria-label, so an icon-only button is never unnamed');
 
   /* MONEY NEVER TRUNCATES; THE NAME GIVES WAY. "1,240,00" is a tenth of
      "1,240,000" and looks entirely plausible. */
@@ -618,6 +672,59 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
     'the money on a card is nowrap and never ellipsised');
   t.check(/\.ow-ot-card-c\{[^}]*min-width:0[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/.test(desk),
     'and the client name truncates with all three declarations and a min-width that lets it');
+  /* THE NAME KEEPS ITS OWN LINE. The card was drawn at 1680, where a
+     lane is 282px and the client's name still gets sixteen characters
+     beside the money. It has to work from 1440 (README), where a lane is
+     228px and the same two items leave the name six -- "Ssekitoleko
+     Hardware" as "Ssekit…", which reads as a different customer rather
+     than as a truncation, which is the exact fault this app's truncation
+     rule exists to stop. So the money drops to a line of its own with
+     the age at the far end of it. */
+  t.check(/<span class="ow-ot-card-h">\s*<span class="ow-ot-card-c">\$\{esc\(quoteClientName\(q\)\)\}<\/span>\s*<\/span>/.test(card),
+    'the first line of a card is the client and nothing else');
+  t.check(/<span class="ow-ot-card-g">\s*<span class="ow-ot-card-v">/.test(card)
+       && /\.ow-ot-card-g\{[^}]*justify-content:space-between/.test(desk),
+    'and the money shares its line with the age alone, at opposite ends');
+
+  /* THE EDGE IS A POINTER, NOT A STATE. Every card in the queue used to
+     carry an oxide edge -- six at once on a working morning, beside the
+     dock's own oxide card and its oxide button. "A device that marks
+     everything marks nothing", and §2 spends the accent ONCE per screen.
+     So the chip on the third line says "one of the six", which is a
+     state, and the edge says which one the dock is standing on, which is
+     a pointer -- and a pointer is navy. */
+  t.check(/class="ow-ot-card\$\{now \? ' ow-now' : ''\}"/.test(card),
+    'the navy edge is on the one the dock is standing on');
+  /* AND THE CHIP SAYS WHICH DECISION. It read "Needs you" on every card
+     in the queue — the same two words the dock's count has just said,
+     spending 68px of a 228px lane to say them, which left the line
+     beside it truncating on every card on the board. It carries the
+     queue's own word now ("Not asked", "Packed", "Not invoiced"), which
+     is the same string the dock is showing, so the two can never come to
+     describe one order differently. */
+  t.check(/\$\{chip \? `<span class="ow-ot-card-t" title="One of the queue above">\$\{esc\(chip\)\}<\/span>` : ''\}/.test(card),
+    'and every other order waiting on you carries the queue\'s own word for what it needs');
+  t.check(/const queued = new Map\(needs\.map\(x=> \[x\.q\.id, x\.need\.chip\]\)\);/.test(render),
+    'which is the chip the queue itself derived, not a second reading of the same order');
+  t.check(/const w = orderWho\(q\);/.test(card) && !/orderWhoText\(q\)/.test(card),
+    'and the line under it is the fact alone — orderWhoText joins the basis on, which is two ellipses at 228px');
+  t.check(/chip \? \(w\.sub \|\| w\.main\) : w\.main/.test(card),
+    'and where the chip has said the fact, that line carries what it rests on instead of saying it twice');
+  /* ONE WORD, ONE BUTTON. A draft with suppliers that have not been asked
+     drew a ghost "Suppliers" beside an oxide "Suppliers" -- the same word
+     twice, in two weights, doing two different things. The guard existed;
+     it compared the act, and these are two acts with one name. */
+  t.check(/if\(secondary\.act === primary\.act \|\| secondary\.label === primary\.label\)/.test(
+    extractFunction(src, 'otDecisionActs', 'index.html')),
+    'the dock never draws two buttons with the same word on them');
+  t.check(/\.ow-ot-card\.ow-now\{border:2px solid var\(--ow-steel-950\)/.test(desk)
+       && !/\.ow-ot-card\.ow-now\{[^}]*oxide/.test(desk),
+    'the edge is navy and never the accent');
+  t.check(/otCardHTML\(q, o\.queued && o\.queued\.get\(q\.id\), o\.now === q\.id\)/.test(board),
+    'and the lane is told both, separately');
+  t.check(/const nowId = needs\.length \? \(needs\[otQIndex\] \|\| needs\[0\]\)\.q\.id : 0;/.test(render)
+       && render.indexOf('const nowId') > render.indexOf('put(dock,', render.indexOf('const needs')),
+    "read after the dock draws, which is where the index is wrapped back into range");
 
   /* The lanes scroll, the screen does not. Without the row constraint the
      auto row sizes to its tallest lane and the rest clip below the panel
@@ -634,7 +741,29 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   t.check(/otQIndex/.test(dock) && /needs\[otQIndex\]/.test(dock),
     'the dock draws one of the queue at a time, by index');
   t.check(/data-act="qprev"/.test(dock) && /data-act="qnext"/.test(dock) && /data-act="qjump"/.test(dock),
-    'with a way forward, a way back, and a way to the two named behind it');
+    'with a way forward, a way back, and a way to the one named after it');
+  /* THE QUEUE, SAID ONCE. The dock drew its order in an oxide-edged card
+     beside a 300px "Behind it" panel naming two more -- and underneath,
+     on the board, every one of those orders already had a card. Three
+     copies of one queue on one screen, and 300px spent so that "Nothing
+     else behind it." could have somewhere to be printed. The panel's one
+     real job -- naming the one after this, so a queue you cannot see the
+     end of is a queue somebody believes -- is a sentence in the head,
+     and it is still the thing you click to jump. */
+  t.check(!/ow-ot-peek/.test(src), 'and no panel restating the queue the board is already showing');
+  t.check(/class="ow-ot-dk-x" title="Waiting \$\{esc\(otAge\(nxt\.q\)\)\}">Then <button type="button" class="ow-ot-dk-j" data-act="qjump"/.test(dock),
+    'the one after this is named in the head, and the name is the jump');
+  /* Its age is the title, not the sentence. At 1280 the clause gives way
+     first and a cut age ("waiting 1…") is a figure that reads as a
+     shorter wait than it is — the same fault as a cut price. What gives
+     way instead is the client's name, which is the only thing on the
+     line that can be cut and still be honest. */
+  t.check(!/waiting \$\{esc\(otAge\(nxt\.q\)\)\}\./.test(dock),
+    'and its age rides in the title, where a narrow screen cannot slice a figure in half');
+  t.check(/\.ow-ot-dk-s\{flex:1 1 auto;\}/.test(desk) && /\.ow-ot-dk-x\{flex:0 1 auto;\}/.test(desk),
+    'and on a narrow laptop the generic half gives way first, never the half naming an order');
+  t.check(!/\.ow-ot-now\{[^}]*border:1px solid var\(--ow-oxide\)/.test(desk),
+    'the one being decided is the dock\'s body, not a second bordered card inside it');
   t.check(/\$\{otQIndex \+ 1\} of \$\{needs\.length\}/.test(dock),
     'saying where in the queue it has got to');
   t.check(/Nothing is waiting on a decision/.test(dock),
