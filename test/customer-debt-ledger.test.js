@@ -212,7 +212,11 @@ const invoice = (id, total, paid) => {
      longer a path it can be left off -- which is a stronger guarantee
      than three copies that have to agree. What is pinned is that
      structure: emitted once, and not inside the branch. */
-  const render = extractFunction(src, 'renderDebtorsList', 'index.html');
+  /* Debtors folded into the Customers screen's Owing lens -- it was a
+     second renderer over the same people, and all ten of its call sites
+     already called renderCustomers on the line above. The drift banner it
+     drew is drawn by renderCustomers now, above the register. */
+  const render = extractFunction(src, 'renderCustomers', 'index.html');
   const uses = (render.match(/debtDriftBannerHTML\(\)/g) || []).length;
   t.check(uses === 1, `the banner is emitted from one place (${uses} references)`);
   const shell = (/wrap\.innerHTML = `[\s\S]*?`;/.exec(render) || [''])[0];

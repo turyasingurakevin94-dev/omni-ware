@@ -318,20 +318,33 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
      customers and how much money the filters took away. Both are
      checked, because the second is the one a reader who has scrolled
      actually sees. */
-  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  const panHead = (/<div class="ow-pan-h">[\s\S]*?<\/div>/.exec(render) || [''])[0];
-  t.check(/rows\.length !== owingAll\.length \? ' of ' \+ owingAll\.length/.test(panHead),
-    'the panel head counts what it is showing against the whole book, not a bare total');
+  /* WHERE THIS SCREEN WENT. Debtors was a second list over the same people
+   as Customers, and the evidence is stronger than the argument: every one
+   of its ten call sites already called renderCustomers on the line
+   directly above it, so the two could only ever disagree about the same
+   money, never add anything. It is the Customers screen's Owing lens now.
+
+   Sections 1-6 below are unchanged and still pass -- they test the aging
+   MACHINERY (bands, ages, the chase order), which moved intact. What is
+   re-pointed here is only the presentation, and each one is the same rule
+   at a new address. */
+  const render = extractFunction(src, 'renderCustomers', 'index.html');
+  t.check(/rows\.length !== all\.length \? rows\.length \+ ' of ' \+ all\.length/.test(render),
+    'the card header counts what it is showing against the whole book, not a bare total');
   t.check(/customer\$\{hiddenCount===1\?'':'s'\} owing/.test(render)
     && /hiddenSum/.test(render),
-    'and the foot names how many customers, and how much money, the filters removed');
-  t.check(/debBandFilter \?/.test(render) && /bandDef \? bandDef\.label/.test(render),
+    'and the note names how many customers, and how much money, the filter removed');
+  t.check(/bandDef \? bandDef\.label/.test(render),
     'naming the band when one is narrowing it');
 }
 
 /* ---------- 8. the bar is honest and reachable ----------------------- */
 {
-  const pos = (/function renderDebtorsPosition[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  /* The bar rides on the Owed-to-you card of the Customers strip: the
+     handoff puts the aging picture beside the figure it is the shape of,
+     rather than on a panel of its own. Every rule it carried is
+     unchanged. */
+  const pos = extractFunction(src, 'renderCustomerKpis', 'index.html');
   t.check(/flex-grow:\$\{b\.amount\}/.test(pos),
     'segment widths come from the money in each band, not from how many rows it fills');
   t.check(/live = p\.bands\.filter\(b=> b\.amount > 0\)/.test(pos),
@@ -341,12 +354,14 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 
   /* Clicking the band you are already in clears it: the way out is the
      same control as the way in. */
-  t.check(/debBandFilter = \(debBandFilter === el\.dataset\.band\) \? '' : el\.dataset\.band/.test(pos),
+  t.check(/debBandFilter = \(debBandFilter === b\.dataset\.band\) \? '' : b\.dataset\.band/.test(pos),
     'clicking the active band turns the filter off again');
 
   // A filter set in one panel and felt in another has to be visible in
   // the second, or it is a filter somebody forgets they set.
-  t.check(/function renderDebFilterNote/.test(code) && /Show everyone/.test(code),
+  /* The note is emitted by the register itself now rather than by a
+     function of its own, which is one fewer thing to forget to call. */
+  t.check(/om-fnote/.test(code) && /Show everyone/.test(code),
     'the list says when a band filter is narrowing it, with the way out beside it');
 
   /* "Largest single debt, 100% of the total" is not a finding when it is
@@ -361,7 +376,7 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
      condition to one branch left every check green. */
   t.check(/Nothing is owed to you yet/.test(pos) && /Every customer on file is settled up/.test(pos),
     'an empty book and a settled book say different things');
-  t.check(/const any = \(data\.customers\|\|\[\]\)\.length > 0;/.test(pos),
+  t.check(/\(data\.customers\|\|\[\]\)\.length > 0/.test(pos),
     'and which one is said turns on whether there are any customers at all');
 }
 
@@ -402,12 +417,21 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 
 /* ---------- 10. the column headings say what they hold --------------- */
 {
-  const section = (/<section id="tab-analytics-debtors"[\s\S]*?\n    <\/section>/.exec(src) || [''])[0];
-  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  /* THE REGISTER IS SIX COLUMNS AND THE HANDOFF SPECIFIES ALL SIX --
+     avatar, Customer, Owes, Oldest, How they pay, Ask. Two facts the old
+     screen carried have no column there and were not worth losing, so
+     they moved to the panel, which is where the debt is already being
+     read: when they last paid anything, and how far through their current
+     debt they are. That is why this section now reads two functions. */
+  const section = (/<section id="tab-customers"[\s\S]*?\n    <\/section>/.exec(src) || [''])[0];
+  const render = extractFunction(src, 'custRegisterRowHTML', 'index.html');
+  const side = extractFunction(src, 'renderCustomerSide', 'index.html');
 
   /* It was headed "Category" while showing c.location, and the search
      placeholder promised a category to search by that never existed. */
-  t.check(/r\.location/.test(render) && !/r\.category/.test(render),
+  /* customerBookRows names it r.place, which is the same correction one
+     layer down: the field was c.location and the column said Category. */
+  t.check(/r\.place/.test(render) && !/r\.category/.test(render),
     'the customer\'s place is called a place');
   // Both the heading and the field it reads: renaming only the variable
   // left a column still headed "Category" over a list of towns.
@@ -419,9 +443,17 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
   /* Nothing in this app has payment terms, so nothing in it can be
      "overdue" -- only outstanding. The old heading claimed a due date
      the shop never agreed. */
-  t.check(!/Overdue/i.test(render), 'nothing claims to be overdue, since no terms are ever agreed');
-  t.check(/>Owing for/.test(render), 'it says how long the money has been owing');
-  t.check(/>Last payment/.test(render), 'and when they last paid anything');
+  /* TERMS EXIST NOW, and that is why this one changed. When this was
+     written nothing in the app had payment terms, so nothing could be
+     overdue -- only outstanding. Customers carry termsDays today and the
+     shop carries presetChaseAfterDays, so "past due" is a fact somebody
+     agreed rather than a claim the screen invents. What has NOT changed
+     is the rule underneath: an account with no terms agreed is never past
+     due, and the row says "no terms agreed" where a date would go. */
+  t.check(/no terms agreed/.test(render),
+    'an account with no agreed terms is never called overdue');
+  t.check(/Oldest/.test(section), 'it says how long the money has been owing');
+  t.check(/>Last payment</.test(side), 'and when they last paid anything, on the panel');
 }
 
 /* ---------- 11. how far through their debt they are ------------------ *
@@ -490,24 +522,25 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 
 /* ---------- 12. what the cell says ----------------------------------- */
 {
-  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  /* WAS <th>Paid off</th>. There is no <thead> in a queue of rows, so
-     the column names are a header band on the same grid tracks the rows
-     use -- and it is hidden on the phone, where each card carries its
-     own labels instead. The requirement is that the column be NAMED,
-     not that it be named in a table. */
-  t.check(/<div class="ow-db-h">[\s\S]*?>Paid off</.test(render),
-    'the list names the column it draws the bar in');
-  t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
+  /* WAS <th>Paid off</th>, then a header band on the register's own grid
+     tracks. It is a labelled row on the panel now, for the reason in
+     section 10: the register has six specified columns and this is not
+     one of them. The requirement was never that it be a column -- it is
+     that the figure be NAMED, so a bar is never left to speak for
+     itself. */
+  const render = extractFunction(src, 'renderCustomerSide', 'index.html');
+  t.check(/>Paid off</.test(render),
+    'the panel names the figure it draws the bar for');
+  t.check(/om-bar-s" style="width:\$\{pct\}%/.test(render),
     'drawn as a bar whose width is the share paid');
   /* A dash, not an empty bar: an empty bar reads as "has paid nothing",
      which is the one thing it must not say when the answer is unknown. */
-  t.check(/p\.pct === null/.test(render) && /deb-prog-none/.test(render),
+  t.check(/prog\.pct === null/.test(render) && /om-progn/.test(render),
     'and a dash rather than an empty bar when there is nothing to measure');
   t.check(/does not match its own history/.test(render)
     && /No dated charges behind this balance/.test(render),
     'with the two reasons worded differently, since they are different problems');
-  t.check(/paid of \$\{esc\(fmtUGX\(Math\.round\(p\.charged\)\)\)\} charged on what is still open/.test(render),
+  t.check(/paid of \$\{esc\(fmtUGX\(Math\.round\(prog\.charged\)\)\)\} charged on what is still open/.test(render),
     'and the figures behind the percentage available on the cell');
 }
 

@@ -369,3 +369,57 @@ call off the same document, because the last time this screen hand-wrote two
 templates they drifted and the phone card carried a rank the table numbered
 differently. The phone drops the Invoiced column; on a phone the question is what
 is still owed.
+
+### 8.6 Customers: three blocks the frames do not draw, and one that eats a phone screen
+
+Building Customers and deleting Debtors surfaced four things with no home in
+the frame. The first three are kept because they are the app's own laws; the
+fourth is a request.
+
+- **The debt-drift banner.** A customer's stored balance can disagree with its
+  own debt log. The banner names every account it happens to, says which figure
+  is overstated and by how much, and offers two repairs — *trust the balance and
+  write the missing entry*, or *trust the history and set the balance*. It came
+  off Debtors and now sits above the register. **It needs a compact form**: at
+  390px it currently fills the whole first screen and pushes the list, which is
+  what the screen is for, below the fold. One line and a way in would be enough.
+- **The credit-cost panel.** The rate the shop reckons its waiting at is set
+  beside the figure it changes, which is this app's standing rule. It has no
+  place in the frame and sits at the foot of the detail column.
+- **Last payment, and how far through the current debt.** The register is six
+  columns and the handoff specifies all six, so neither fits. Both moved to the
+  panel. The progress figure is a bar whose width is the share paid, a dash when
+  it cannot be measured, and **two differently-worded reasons** for that dash —
+  a balance that contradicts its own history needs fixing; a balance with no
+  dated charges behind it simply cannot be read. An empty bar would say *they
+  have paid nothing*, which is a claim about somebody's conduct the records do
+  not support.
+- **The full account view is still the console.** The record with the statement
+  of account — the sheet handed across the counter — steps in place of the book
+  as it always did, reached from the panel now rather than from the row. It
+  needs its own frame before it can be converted.
+
+### 8.7 Two things the frames assume about the data
+
+Both came up on Customers and will come up again:
+
+- **The aging bar assumes four populated bands.** A band holding nothing is left
+  off the bar entirely rather than drawn as a sliver of zero, and a band too
+  small to see still carries a 14px floor so it can be pressed. Neither is in
+  the frame.
+- **A concentration figure needs more than one account.** *"Largest single debt,
+  100% of the total"* is not a finding when it is also the only debt — it is the
+  same number printed twice, so it is withheld. Equally, a shop with no
+  customers has not *settled up*, it has not started, and being told the first
+  on day one reads as the app misreading what it is looking at. Those are two
+  different sentences and the frame draws neither.
+
+### 8.8 One correction to the handoff's Debtors argument
+
+The README says Debtors and Customers "must be called together after every void
+or payment; when one is missed the two screens disagree". **Every one of the ten
+call sites already called `renderCustomers` on the line directly above.** The
+second renderer never added anything — the two lists could only ever disagree.
+The cut removed a line, not logic, which makes the case for it stronger than the
+handoff states, and the same reasoning applies unchanged to `renderCreditorsList`
+beside Suppliers.
