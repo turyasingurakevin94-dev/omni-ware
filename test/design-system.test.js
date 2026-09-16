@@ -1220,8 +1220,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      is the pressed green, Money's fill the studied card, Setup the track
      over ink-3 — so six are new, and they are a closed set: there are
      six groups and there is no seventh. */
-  t.check(colours.length <= 67,
-    `the palette holds ${colours.length} colours (ceiling 67)`);
+  /* 70, not 67: the quote table brings three, and each is a surface
+     rather than a state. #fbfaf8 is the ground a charge row sits on --
+     charges and credit terms are document rows inside the same table as
+     the goods, and the tint is what says "this one is not a good"
+     without moving it out of the money column. The other two are the
+     suggestion chip's border at rest and under the pointer; a chip that
+     adds a line in one press is not a button and should not wear one's
+     weight. */
+  t.check(colours.length <= 70,
+    `the palette holds ${colours.length} colours (ceiling 70)`);
 
   /* ---- THE CORAL RULE, which is the one a reviewer cannot see ----
      #ef4b39 under white is 3.1:1 and fails at every size this app uses.
@@ -1341,7 +1349,13 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        to the half-step between the 14px of a list row and the 15px of a
        panel figure. It is a name rather than a heading — it wants to sit
        above the rows without reading as one — and it appears once. */
-    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 17, 19, 20, 24, 26]);
+    /* 22 is the eighteenth, and it is the quote dock's total -- the one
+       figure on that screen a shop says out loud on a call. It is
+       larger than a panel figure (15-17) and smaller than a screen
+       title (24) on purpose: it is a number, not a heading, and it is
+       the only thing in the dock anyone reads first. 20px on the phone,
+       which is already on the ramp. */
+    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 17, 19, 20, 22, 24, 26]);
   {
     const sizes = [...om.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
     const off = [...new Set(sizes)].filter((s) => !RAMP.has(s));
@@ -1352,7 +1366,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
   /* ---- radii and elevation ---- */
   {
-    const RADII = new Set(['2px', '3px', '6px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
+    /* 7px joins for the quote's typed figures and its steppers: a box
+       that appears under the pointer around a number inside a table
+       row, which wants a softer corner than the 9px of a button that
+       is always drawn. Specified as "steppers 7" in the quote handoff. */
+    const RADII = new Set(['2px', '3px', '6px', '7px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
     const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()));
     const bad = [...r].filter((x) => !RADII.has(x));
     t.check(bad.length === 0, bad.length ? `radii off the system: ${bad.join(' | ')}` : `${r.size} radii, all from the system`);

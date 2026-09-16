@@ -119,11 +119,23 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
      divider is the same rule on the same class, carried through the
      header, every row and the foot. */
-  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
-    'the shop’s columns start behind a divider');
+  /* THE COLUMN IS CALLED "BUY FROM" NOW, and the divider is a grid
+     track rather than only a border.
+     
+     What the old assertion meant: no cost figure may sit in the run of
+     client figures, and the first shop column is where that boundary is
+     drawn. That is unchanged and still checked below -- q-shop-first
+     still carries the rule. Two things moved. The column asks "buy
+     from" rather than naming a record type, which is the question a
+     person building a quote is actually answering; and the boundary is
+     now also an explicit 1px track in the grid, so it lands in the same
+     place on the header, every line, every charge and the credit row
+     instead of depending on each cell drawing its own left border. */
+  t.check(/<span class="om-idiv" aria-hidden="true"><\/span>\s*<div class="ow-tbl-c q-shop-first">Buy from<\/div>/.test(items),
+    'the shop’s columns start behind a divider, which is its own grid track');
   t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
     'which is a real rule, not just a class name');
-  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
+  t.check(/<span class="om-idiv" aria-hidden="true"><\/span>\s*<div class="ow-tbl-c q-shop-first" data-l="Buy from">\$\{supplierPickerHTML\}<\/div>/.test(items),
     'and every row honours it');
   /* The divider runs the length of the document: the header, every
      line, every charge, and the credit row all carry the class. The
@@ -223,7 +235,13 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'there is no second template for the phone');
   t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
     'the one row carries the client’s line total under its column name, which is the phone’s label');
-  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
+  /* data-l IS THE PHONE'S LABEL, so renaming a column renames what the
+     card says. Supplier became "Buy from" and Margin became "Keep" --
+     the first asks the question the person is answering, the second
+     names the money rather than the ratio, and a shop reads "keep"
+     without translating it. The card follows the column by
+     construction, which is the point of there being one template. */
+  ['Qty', 'Price each', 'Buy from', 'Buy @', 'Keep'].forEach((l) => {
     t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
   });
   t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');

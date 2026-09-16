@@ -16339,6 +16339,9 @@
     --om-tile-ca:#d9f2e6;
     --om-tile-mo-ink:#164a96;
     --om-tile-in:#ffdfe9;         --om-tile-in-ink:#8a2450;
+    /* ---- the quote table ---- */
+    --om-charge:#fbfaf8;          /* charge and credit-terms rows     */
+    --om-sug-rule:#e6e4df;        --om-sug-rule-hover:#c9c6bf;
     --om-rail-hover:rgba(255,255,255,.07);
     --om-rail-on:rgba(255,255,255,.13);
 
@@ -16542,6 +16545,104 @@
   .om-rail .sidebar-foot button:hover{color:var(--om-on-navy);background:var(--om-rail-hover)}
   .om-rail .sidebar-foot .nav-icon{width:17px;height:17px;stroke-width:2}
 
+  /* ---- THE QUOTE TABLE ---------------------------------------------
+     EVERYTHING IN THIS BLOCK IS DESKTOP-ONLY, and that is not a
+     shortcut. In this codebase the quote's desktop row and its phone
+     card are emitted from ONE template -- deliberately, because a
+     second template built beside the first drifted, and a test holding
+     the two to the same figure was the only thing keeping them in
+     agreement. The console layer reshapes that one row into a card
+     below 820px across about a hundred rules.
+     
+     So the table cannot be converted on one side and left alone on the
+     other by changing class names: the phone skin keys on the classes
+     the desktop grid is written in. Scoping the new grid above the
+     switch lets the console skin go on owning the phone until the
+     phone design (1c) is built, and 820px is a switch between two
+     designs anyway -- converting one side first is what that law
+     allows, not a thing it forbids. The row carries both class sets
+     until 1c lands.
+     ------------------------------------------------------------------ */
+  @media (min-width: 821px){
+  /* ---- the client side, the divider, the shop side -----------------
+     One table, split by a rule. The client side (Item · Qty · Price
+     each · Line total) and the shop side (Buy from · Buy @ · Keep) are
+     separated by a 1px divider that is ITS OWN GRID TRACK, so it lands
+     in the same place on the header, every row and the charge rows.
+     Two tables would let the eye lose the line it is on; a colour
+     change alone would not say "these figures are yours, those are the
+     customer's".
+
+     The item column's floor is 200px and the figures never shrink: a
+     name is cut before a figure ever is, because "1,240,00" is a tenth
+     of "1,240,000" and looks entirely plausible.
+     ------------------------------------------------------------------ */
+  .om-irow{display:grid;grid-template-columns:26px minmax(200px,1fr) 68px 92px 100px 1px 108px 88px 52px;align-items:center;column-gap:8px;padding:9px 14px;border-top:1px solid var(--om-rule-inner)}
+  .om-irow:hover{background:var(--om-hover)}
+  /* Charges and credit terms are DOCUMENT ROWS, not a side panel. They
+     are part of what the client pays, so they sit in the list that says
+     what the client pays -- on a tint, with the quantity and unit-price
+     cells empty, so the money column still lines up. */
+  .om-irow-charge{background:var(--om-charge)}
+  /* The divider, as a track: 14px in the header, full height in a row. */
+  .om-idiv{width:1px;height:14px;background:var(--om-rule-btn)}
+  .om-irow .om-idiv{height:100%;background:var(--om-rule-inner)}
+  .om-ihead{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner)}
+  .om-ihead .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
+
+  /* A figure that can be typed. The affordance is the box appearing
+     under the pointer, not a permanent border -- a table of bordered
+     inputs reads as a form, and this is a document. */
+  .om-gi{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:500;font-size:13px;color:var(--om-ink);background:none;border:1px solid transparent;border-radius:7px;padding:4px 7px;text-align:right}
+  .om-gi:hover{border-color:var(--om-rule-input);background:var(--om-sunken)}
+  .om-gi:focus{outline:none;border-color:var(--om-navy);background:var(--om-surface)}
+
+  /* The chips that add a line without a form: this client's own repeat
+     lines under the search, and the charges the shop adds most often on
+     the add row. Suggested from history, never from a catalogue dump. */
+  .om-sug{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:1px solid var(--om-sug-rule);border-radius:999px;background:var(--om-surface);font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:var(--om-ink);white-space:nowrap;flex:none;cursor:pointer}
+  .om-sug:hover{border-color:var(--om-sug-rule-hover);background:var(--om-sunken)}
+  .om-sug-more{border-style:dashed;color:var(--om-ink-3)}
+
+  /* The add row closes the table rather than floating under it. */
+  .om-addrow{display:flex;align-items:center;gap:9px;padding:10px 14px;border-top:1px solid var(--om-rule-inner);overflow:hidden}
+  .om-addtile{width:22px;height:22px;flex:none;border:1px dashed var(--om-sug-rule-hover);border-radius:7px;display:flex;align-items:center;justify-content:center}
+
+  /* ---- THE DOCK ----------------------------------------------------
+     THE ARITHMETIC HAPPENS ONCE, AND IT HAPPENS HERE. Client pays,
+     Costs you, You keep and the kept-% live in this 72px footer and
+     nowhere else -- no running total in the table, no second subtotal
+     above the actions. A figure computed twice is a figure that can
+     disagree with itself, and this screen's whole job is one number the
+     shop can say out loud on a call.
+     ------------------------------------------------------------------ */
+  .om-dock{flex:none;height:72px;background:var(--om-surface);border-top:1px solid var(--om-rule);display:flex;align-items:center;padding:0 22px}
+  .om-dock-cell{padding:0 22px;border-left:1px solid var(--om-rule-inner)}
+  .om-dock-first{padding:0 22px 0 0}
+  .om-dock-total{font-size:22px;white-space:nowrap}
+
+  /* ---- the page geometry the table needs ---------------------------
+     The grid's floor is 799px: 535px of fixed money tracks, 64px of
+     gaps, and the item column's own 200px minimum. That floor is the
+     point -- a name is cut before a figure ever is -- so when the
+     column is narrower than 799 it is the FIGURES that get clipped,
+     which is the one thing this table may not do.
+     
+     The card system's page padding is 22px and its right column 310px,
+     and that is not a coincidence: 1440 - 236 rail - 44 padding - 310
+     - 22 gap = 828, less the card's own 28, is 800. The design is drawn
+     to clear its own floor by a pixel.
+     
+     `main` still carries the console's 40px, which leaves 776 and clips
+     the Keep column. Moving main would move all thirty-odd console
+     screens as a side effect of converting one, so the quote reclaims
+     the difference itself. The negative margin is a BRIDGE, not a
+     layout: it says "this screen already uses the new page padding",
+     and it comes out the day main's padding becomes 22px for everyone.
+     ------------------------------------------------------------------ */
+  .om-qpage{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px;align-items:start;margin:0 -18px}
+  }
+
   /* 820px IS A SWITCH BETWEEN TWO DESIGNS, NOT A REFLOW, and the rail
      belongs to only one of them. The phone has its own chrome -- a top
      bar, a five-slot bottom bar and the More sheet -- and a 236px navy
@@ -16554,6 +16655,8 @@
      whichever layer last set the display. */
   @media (max-width: 820px){
     .om-rail{display:none}
+    /* The divider is a column separator, and a card has no columns. */
+    .om-idiv{display:none}
   }
 
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
@@ -17304,7 +17407,7 @@
         <div class="ow-cb-k" id="q_client_history"></div>
       </div>
 
-      <div class="ow-grid">
+      <div class="ow-grid om-qpage">
         <!-- ============ THE DOCUMENT ============ -->
         <div class="ow-pan q-doc">
           <!-- The document's own front door: search, type, pick. The
@@ -37808,7 +37911,7 @@ function renderQuoteItems(){
         <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
-    return `<div class="ow-tbl-r q-line${rowMarginClass}" data-line="${it.lineId}">
+    return `<div class="ow-tbl-r om-irow q-line${rowMarginClass}" data-line="${it.lineId}">
       <div class="ow-tbl-c q-gutter">
         <span class="q-row-num">${idx+1}</span>
         <button class="q-remove-icon" title="Remove item" aria-label="Remove line ${idx+1}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -37826,9 +37929,10 @@ function renderQuoteItems(){
         (!asPack && packView) ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
       <span class="q-ph-x">&times;</span><div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div></div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
-      <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
+      <span class="om-idiv" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}</div>
       <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
-      <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
+      <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
            third line, behind the shop strip, saying what the shop pays
@@ -37867,7 +37971,7 @@ function renderQuoteItems(){
      costs, what is kept -- lives once, on the sticky bar, which is the
      one surface that cannot scroll away. The foot said the same three
      figures a second time, forty pixels above the bar. */
-  const addRowHtml = `<div class="ow-tbl-r q-add-row-trailing">
+  const addRowHtml = `<div class="ow-tbl-r om-addrow q-add-row-trailing">
     <div class="ow-tbl-c q-gutter">
       <button class="q-add-icon" id="q_add_row_btn" title="Add item" aria-label="Add item"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
@@ -37894,15 +37998,16 @@ function renderQuoteItems(){
     return;
   }
   wrap.innerHTML = `<div class="ow-tbl">
-    <div class="ow-tbl-h">
+    <div class="ow-tbl-h om-irow om-ihead">
       <div class="ow-tbl-c q-gutter"></div>
       <div class="ow-tbl-c">Item</div>
       <div class="ow-tbl-n">Qty</div>
       <div class="ow-tbl-n">Price each</div>
       <div class="ow-tbl-n">Line total</div>
-      <div class="ow-tbl-c q-shop-first">Supplier</div>
+      <span class="om-idiv" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first">Buy from</div>
       <div class="ow-tbl-n">Buy @</div>
-      <div class="ow-tbl-n">Margin</div>
+      <div class="ow-tbl-n">Keep</div>
     </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}
   </div>`;
 
@@ -38336,7 +38441,7 @@ function chargeRowsHTML(q, goodsTotal){
     const amount = chargeAmount(ch, goodsTotal);
     const named = String(ch.label || '').trim();
     const asked = named || 'This charge';
-    return `<div class="ow-tbl-r q-line q-charge" data-chg="${i}">
+    return `<div class="ow-tbl-r om-irow om-irow-charge q-line q-charge" data-chg="${i}">
       <div class="ow-tbl-c q-gutter">
         <span class="q-row-num"></span>
         <button type="button" class="q-remove-icon" data-chg-del="${i}" title="Take off ${esc(asked)}" aria-label="Take off ${esc(asked)}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -38403,7 +38508,7 @@ function creditRowHTML(q, cash){
   if(!t) return '';
   const amount = orderCreditCharge(q);
   const label = creditTermLabel(t);
-  return `<div class="ow-tbl-r q-line q-charge q-credit" data-credit="1">
+  return `<div class="ow-tbl-r om-irow om-irow-charge q-line q-charge q-credit" data-credit="1">
     <div class="ow-tbl-c q-gutter">
       <span class="q-row-num"></span>
       <button type="button" class="q-remove-icon" data-cr-del="1" title="Take the credit off — the client pays the cash price" aria-label="Take the credit off"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
