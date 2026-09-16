@@ -605,3 +605,66 @@ Knowing deviations, each for a reason:
   it has learned, the whole argument behind the order (*Why this order* scrolls
   to it), the paid broadcast and its arithmetic, and the channel's health. None
   is in the frame; all are live.
+
+### 8.14 The outbox (frame 1a), and the one place the handoff contradicts itself
+
+**The handoff draws the lens group two different ways.** In 1a it is *To send ·
+Waiting on a reply · Sent*; in 1c and on the 1c phone it is *Money · Telling ·
+Posting*. Only one of them can be the control, because 1a's own list is already
+grouped **Money**, **Telling them something**, **Waiting on a reply** — a lens
+that repeated the grouping would be a control that does nothing.
+
+The build takes the states, with Posting joined to them because 1c puts it there
+and the rail has one row for all of this: **To send · Waiting on a reply · Sent ·
+Posting**. Nothing is lost — *To send* is exactly 1c's Money plus Telling, and
+those two counts are on the group headers where 1a puts them. The two old doors
+(*Chase debts*, *Worth telling*) open the outbox **focused** on the group each of
+those screens used to be, and the list says so with the way back to all of it.
+**If a later frame settles this, the lens group is one line and the grouping is
+another; they are independent.**
+
+What the frame asks for that the books could not supply, and what was done:
+
+- **"Chases that got paid — 31%, 57 of 184 sent, 4.2 days to the money."** Not
+  derivable. `presetDebtChases` holds ONE stamp per debtor, the latest, and
+  prunes it the moment they pay, so there is no chase history to divide. The
+  tile asks the same question of the people standing chased *now* — how many
+  have paid anything since, and how long it took on the middle case — and says
+  so in the panel. **To draw the frame, a chase needs to be an append-only row
+  (customer, date, amount asked) rather than a single stamp.** That is the
+  second-most valuable thing these frames ask for, after the price history in
+  §8.13.
+- **"Best hour to send — 9–11am, replies twice as likely as afternoons."** Only
+  half-derivable. The inbox is the only place this app can see a reply, and a
+  send that went out as a WhatsApp deep link left no record there. It is
+  computed from outbound inbox messages that got an inbound reply inside a day,
+  and below twelve such messages the tile reads **Not yet** and says how many
+  are on record rather than crowning an hour off three.
+- **"6th chase"** on the panel header. The code was already claiming this, off a
+  field called `chasedCount` that nothing has ever written — so the chip never
+  drew, which is the only reason no shop was ever shown an invented ordinal. It
+  says what the books do know instead: when the last ask went, or how many named
+  days have come and gone.
+- **The roll-up row** ("+5 five more about money · all under 700,000 · none past
+  30 days") is built: a group past five rows keeps its first four and rolls the
+  rest into one row carrying their **total**, their worst figure and their oldest
+  age, which opens on a press. Summarising, not hiding.
+
+Knowing deviations:
+
+- **The search and the Broadcast button stay in the card header**, where the
+  frame puts them in the app's top bar. That bar is shared by all 41 screens and
+  is not a screen's to furnish; the Quote screen set the precedent.
+- **"Select many" is not built.** The frame draws the control and not what it
+  does. The only bulk action this screen could honestly offer is *stamp several
+  as sent* — a bulk **send** is impossible (a WhatsApp deep link opens one chat)
+  and would in any case be the one thing this app must never look like it did.
+  **The frame needs to say what Select many selects for.**
+- **No multi-recipient row.** The frame has *"3× Three past buyers of PVC
+  conduit"* — one row standing for three people. The hub groups by customer
+  precisely so that one person gets one message; a row that is three people
+  needs a different unit of work and a different stamp, and that is a design
+  decision rather than a rendering one.
+- **The state chip never reads "sent" in the outbox.** Every row there is owed a
+  word *now*; a row saying "sent" in a list of things to write contradicts the
+  list it is in. What has gone is what the Waiting and Sent lenses are for.

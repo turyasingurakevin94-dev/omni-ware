@@ -320,8 +320,23 @@ const INDEX = railIndex();
     t.check(!INDEX.some((x) => x.tab === 'telling') && !/id="tab-telling"/.test(src),
       'Worth telling is not a destination any more, and has no section left behind');
     const alias = extractFunction(src, 'resolveTab', 'index.html');
-    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'telling'[^}]*return 'messages'; \}/.test(alias),
+    /* THE LENSES ARE STATES NOW and the outbox is grouped by reason
+       inside them, because the handoff draws a lens group both ways and
+       only one of them can be the control: a lens that repeated the
+       grouping would do nothing, and a screen that cannot say "twenty-one
+       people have not come back" cannot tell a queue that is working from
+       one that is being ignored. So Worth telling's door opens the outbox
+       FOCUSED on the group that screen was -- msgFocus, not msgLens. The
+       claim is exactly what it was: the old address still lands on the
+       slice it meant, resolved once at the top of goToTab so a saved
+       last-tab cannot boot into a section that is gone. */
+    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'send'; msgFocus = 'telling'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
+    /* And the slice says it is one. A filtered list with nothing saying
+       it is filtered is how a shop comes to believe half its work does
+       not exist. */
+    t.check(/data-msgclear="1"/.test(src) && /Show the whole outbox/.test(src),
+      'and says it is showing one group, with the way back to all of it');
     const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
     const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
     t.check(/Worth telling/.test(why) || /Worth telling/.test(sec),
@@ -344,7 +359,7 @@ const INDEX = railIndex();
       'and not "owing", which belongs to the screen that owns the whole book — Customers, since Debtors folded into it');
     t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
       'Chase debts is not a destination any more, and has no section left behind');
-    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'money'[^}]*return 'messages'; \}/.test(alias),
+    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'send'; msgFocus = 'money'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the money lens it meant — same resolve, same reason');
     /* And so do the two doors the merge itself closed. A saved last-tab
        is the case this is really about: a shop that shut the app on

@@ -227,7 +227,11 @@ if (scope) {
   t.check(!/id="tab-chase"/.test(src) && !/data-tab="chase"/.test(sidebar),
     'Chase debts is not a destination of its own any more');
   const alias = extractFunction(src, 'resolveTab', 'index.html');
-  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'money'[^}]*return 'messages'; \}/.test(alias),
+  /* msgFocus, not msgLens: the lenses are the STATES of a message now --
+     to send, waiting on a reply, sent -- and the outbox is grouped by
+     reason inside them. Chase debts WAS one of those groups, so its door
+     opens the outbox focused on it. Same address, same slice. */
+  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'send'; msgFocus = 'money'; return 'messages'; \}/.test(alias),
     'but the old door still opens it, on the money lens it meant — resolved once at the top of goToTab, '
     + 'so a saved last-tab cannot boot into a section that is gone');
   t.check(!/function renderChaseScreen/.test(src) && !/renderChaseBadge/.test(src),
@@ -358,7 +362,7 @@ if (scope) {
   /* And it is the MONEY lens's alone. Under Telling there is no book of
      news for it to point at, so a note that stayed up would be a
      pointer to nothing. */
-  t.check(/book\.style\.display = \(msgLens === 'money'\)/.test(extractFunction(src, 'renderMessages', 'index.html')),
+  t.check(/book\.hidden = !\(msgLens === 'send' && msgFocus !== 'telling'\)/.test(extractFunction(src, 'renderMessages', 'index.html')),
     'and only under the lens it is about');
 
   /* 5. THE TWO RULES. They were a sentence and a fold-out form in the

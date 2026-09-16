@@ -17006,6 +17006,8 @@
   .om-av.om-bad{background:var(--om-bad);color:var(--om-bad-ink)}
   .om-av.om-warn{background:var(--om-caution);color:var(--om-caution-ink)}
   .om-av.om-studied{background:var(--om-studied);color:var(--om-studied-ink)}
+  /* The roll-up's "+5", and a row that is history rather than work. */
+  .om-av.om-neutral-av{background:var(--om-neutral);color:var(--om-neutral-ink)}
   .om-av-onnavy{background:var(--om-coral-text);color:var(--om-on-navy)}
   .om-av-lg{width:32px;height:32px;font-size:12px}
   /* A segment of a bar. Widths are always computed from ONE denominator
@@ -17151,6 +17153,11 @@
      window edges on both sides. The hub carries the gutter the screen
      gave up. */
   .om-hub{padding:0 22px 22px}
+  /* A button that reads as a sentence, for a way out offered INSIDE a
+     line of prose: a 32px chip in the middle of a paragraph is a chip
+     nobody reads as part of the sentence it is in. */
+  .om-linkb{background:none;border:0;padding:0;font-family:'IBM Plex Sans',sans-serif;font-size:inherit;font-weight:600;color:var(--om-link);text-decoration:underline;cursor:pointer}
+  .om-linkb:hover{color:var(--om-link-hover)}
   .om-footrow{display:flex;align-items:flex-start;gap:14px;padding:0 22px 20px}
   .om-footrow .om-foot{flex:1;padding:0}
   .om-footrow .om-btn{flex:none}
@@ -17191,8 +17198,13 @@
     .om-ph-fig-bad{background:var(--om-bad-card)}
     .om-ph-fig-l{font-size:9.5px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-on-navy-4)}
     .om-ph-fig-v{margin-top:2px;font-size:14px;color:var(--om-on-navy)}
-    .om-ph-tabs{display:flex;gap:2px;margin-top:10px}
-    .om-ph-tab{flex:1;min-width:0;height:34px;background:none;border:0;border-bottom:2px solid transparent;color:var(--om-on-navy-3);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer}
+    /* FOUR TABS AT 390 do not fit a row, and the worst answer is to let
+       them wrap: a tab row that reflows to two lines moves under the
+       thumb every time a count changes. It scrolls sideways instead,
+       with the bar hidden, and the tabs size to their own words. */
+    .om-ph-tabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+    .om-ph-tabs::-webkit-scrollbar{display:none}
+    .om-ph-tab{flex:0 0 auto;white-space:nowrap;min-width:0;height:34px;padding:0 10px;background:none;border:0;border-bottom:2px solid transparent;color:var(--om-on-navy-3);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer}
     .om-ph-tab.om-on{color:var(--om-on-navy);font-weight:700;border-bottom-color:var(--om-coral)}
     /* Two-line grids with a 44px floor, and never a horizontal
        scroller. The figure keeps a column of its own. */
@@ -18792,9 +18804,24 @@
             <h1 class="om-qtitle-t" id="msg_title_t">Messages</h1>
             <p class="om-qtitle-s" id="msg_title_s">Every word the shop owes someone, and the box it is written in</p>
           </div>
+          <!-- THE LENSES ARE STATES, and the list inside them is grouped
+               by reason. The handoff draws it both ways -- 1a's group is
+               To send / Waiting on a reply / Sent, 1c's is Money /
+               Telling / Posting -- and they cannot both be the control,
+               because 1a's own list is already grouped Money, Telling
+               them something, Waiting on a reply. A lens that repeated
+               the grouping would be a control that does nothing.
+
+               So the lenses are the states, which is the question the
+               grouping cannot answer -- has this been written, is it out,
+               did it ever go -- and Posting joins them because 1c puts it
+               there and the rail has one row for all of this. Nothing is
+               lost: To send is exactly 1c's Money plus Telling, and those
+               two counts are on the group headers where 1a puts them. -->
           <div class="om-lensgroup" id="msg_lens" role="tablist" aria-label="Which messages">
-            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-msglens="money">Money <span class="om-chip om-lenschip" id="msgSegMoney"></span></button>
-            <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="telling">Telling <span class="om-chip om-lenschip" id="msgSegTelling"></span></button>
+            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-msglens="send">To send <span class="om-chip om-lenschip" id="msgSegSend"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="waiting">Waiting on a reply <span class="om-chip om-lenschip" id="msgSegWaiting"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="sent">Sent <span class="om-chip om-lenschip" id="msgSegSent"></span></button>
             <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="posting">Posting <span class="om-chip om-lenschip" id="msgSegPosting"></span></button>
           </div>
         </div>
@@ -18805,8 +18832,8 @@
         <div class="om-body" id="msg_queue_body">
           <div class="om-card om-list">
             <div class="om-card-h">
-              <span class="om-card-t" id="msg_card_t">Who you owe a word</span>
-              <span class="om-fig om-n" id="msg_card_n" style="font-size:11.5px;color:var(--om-ink-3)"></span>
+              <span class="om-card-t" id="msg_card_t">The outbox</span>
+              <span class="om-t" id="msg_card_n" style="font-size:11.5px;color:var(--om-ink-3)">grouped by why you are writing</span>
               <span style="flex:1"></span>
               <!-- A REAL BASIS, not flex:1 against a flex:1 spacer. With
                    basis 0 the field's hypothetical size is nothing and the
@@ -18853,7 +18880,7 @@
              without it are reachable by nobody at all. One element, one
              listener, both designs. -->
         <div class="om-footrow" id="msg_queue_footrow">
-        <p class="om-foot" id="msg_queue_note"><span id="msg_note_book">Only who is past your terms today. What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing</b>, which owns that reading. </span>One message per client, however many things they are waiting for &mdash; this queue groups by person, not by item, so nobody is sent four notes in a morning.</p>
+        <p class="om-foot" id="msg_queue_note"><span id="msg_note_book">Only who is past your terms today. What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing</b>, which owns that reading. </span><span id="msg_note_rule">One message per client, however many things they are waiting for &mdash; this queue groups by person, not by item, so nobody is sent four notes in a morning.</span><span id="msg_note_hist" hidden>Stamped, not delivered. The app cannot see WhatsApp, so every state on this list is what somebody said they did &mdash; a row leaves <b>Waiting</b> the moment a reply lands in the inbox, or the moment you write again.</span></p>
           <button type="button" class="om-btn om-btn-s" id="msg_hub_btn" aria-expanded="false" aria-controls="msg_fup_body">Rules &amp; register</button>
         </div>
 
@@ -31132,8 +31159,8 @@ function resolveTab(tab){
      content came from the list. 'whatsapp' opens the Posting lens,
      because the post desk is what that screen actually was; 'followups'
      opens the queue. */
-  if(tab === 'whatsapp'){ msgLens = 'posting'; return 'messages'; }
-  if(tab === 'followups'){ msgLens = msgLens === 'posting' ? 'money' : msgLens; return 'messages'; }
+  if(tab === 'whatsapp'){ msgLens = 'posting'; msgFocus = null; return 'messages'; }
+  if(tab === 'followups'){ msgLens = msgLens === 'posting' ? 'send' : msgLens; return 'messages'; }
   /* DEBTORS IS THE CUSTOMERS SCREEN'S OWING LENS. It was a second list
      over the same people: renderCustomers and renderDebtorsList had to be
      called together after every void and every payment, and every one of
@@ -31156,7 +31183,7 @@ function resolveTab(tab){
      whose last screen was Worth telling boots into
      getElementById('tab-telling').style and throws before anything
      renders. */
-  if(tab === 'telling'){ fupTab = 'contact'; fupWhy = 'telling'; msgLens = 'telling'; return 'messages'; }
+  if(tab === 'telling'){ fupTab = 'contact'; fupWhy = 'telling'; msgLens = 'send'; msgFocus = 'telling'; return 'messages'; }
   /* AND CHASE DEBTS, for the same reason and by the same reading. That
      page built its queue from debtChaseRows(); so does this hub, which
      has carried every one of its four bands since the day it was
@@ -31171,7 +31198,7 @@ function resolveTab(tab){
      hub puts both in one message. So the door that said "chase" presses
      the Money tile, and a shop whose last screen was Chase debts boots
      into it rather than into getElementById('tab-chase').style. */
-  if(tab === 'chase'){ fupTab = 'contact'; fupWhy = 'money'; msgLens = 'money'; return 'messages'; }
+  if(tab === 'chase'){ fupTab = 'contact'; fupWhy = 'money'; msgLens = 'send'; msgFocus = 'money'; return 'messages'; }
   /* And the score's own door. It was a peer view; the measurement is now
      the Register's rail, so a saved last-tab or an old link lands on the
      material rather than on a pane that is gone. */
@@ -97004,21 +97031,33 @@ function renderFollowUpScore(){
 
 /* MESSAGES: the queue and the box, which were never usable apart.
 
-   msgLens is which of the three is open. Money and Telling are the same
-   queue read two ways -- followUpHubRows tags every row with the kinds it
-   is here for -- and Posting is the daily product post, which is a
-   message with a product attached instead of an invoice. */
-let msgLens = 'money';
+   msgLens is the STATE being read -- to send, waiting on a reply, sent,
+   or the daily post -- and inside To send the list is GROUPED by why you
+   are writing, which is the other question and not the same one. The
+   handoff draws a lens group both ways; a lens repeating the grouping
+   would be a control that does nothing, and a screen that cannot say
+   "twenty-one people have not come back" cannot tell a queue that is
+   working from one that is being ignored.
+
+   msgFocus narrows To send to one of its two groups. It is how the old
+   Chase debts and Worth telling doors still land somewhere exact: those
+   screens WERE those groups, so their doors open the outbox with that
+   group alone. */
+let msgLens = 'send';
+let msgFocus = null;       // null | 'money' | 'telling', inside To send
 let msgPickedId = null;
 /* Shut by default: the queue is the work, and the rules, the held-back
    reasons and the register are the settings and the audit behind it. */
 let msgHubOpen = false;
 
-function msgSetLens(key){
+function msgSetLens(key, focus){
   msgLens = key;
+  /* Choosing a lens by hand clears a focus a door set: somebody pressing
+     To send wants the outbox, not whatever slice they arrived on. */
+  msgFocus = (key === 'send') ? (focus === undefined ? null : focus) : null;
   /* The hub's own lens follows, so the panes below and the badge keep
      describing the same walk of the ledger. */
-  if(key === 'money' || key === 'telling'){ fupTab = 'contact'; fupWhy = key; }
+  if(key === 'send'){ fupTab = 'contact'; fupWhy = msgFocus || 'all'; }
   document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
     const on = b.dataset.msglens === key;
     b.classList.toggle('om-on', on);
@@ -97097,16 +97136,6 @@ function renderMessages(){
     phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen) ? 'true' : 'false');
     phubBtn.classList.toggle('om-on', onPost && postHubOpen);
   }
-  /* THE TITLE BLOCK IS THE LENS'S. Posting is a different question from
-     the queue -- what to post today, not who is owed a word -- and a
-     screen whose name does not follow its work is a screen that has not
-     noticed which one it is on. */
-  const t = document.getElementById('msg_title_t');
-  const sub = document.getElementById('msg_title_s');
-  if(t) t.textContent = onPost ? 'What to post today' : 'Messages';
-  /* The one-message rule reads under both queue lenses; the whole-book
-     pointer is the money lens's alone, because under Telling there is no
-     book of news for it to point at. */
   /* THE QUEUE'S OWN CHROME goes with the queue. The KPI strip, the phone
      head and the note-and-door row sit OUTSIDE #msg_queue_body -- they
      are the screen's, not the list's -- so switching the body alone left
@@ -97120,8 +97149,25 @@ function renderMessages(){
   if(qfoot) qfoot.style.display = onPost ? 'none' : '';
   const foot = document.getElementById('msg_queue_note');
   if(foot) foot.style.display = onPost ? 'none' : '';
+  /* The one-message rule reads under every queue lens; the whole-book
+     pointer belongs to the money group alone, because under Telling and
+     under the two history lenses there is no book of debt to point at. */
   const book = document.getElementById('msg_note_book');
-  if(book) book.style.display = (msgLens === 'money') ? '' : 'none';
+  if(book) book.hidden = !(msgLens === 'send' && msgFocus !== 'telling');
+  /* The one-message rule is about the OUTBOX. On the two history lenses
+     the fact worth stating is the other one -- that every state here is
+     what somebody stamped, not what WhatsApp did. */
+  const rule = document.getElementById('msg_note_rule');
+  if(rule) rule.hidden = msgLens !== 'send';
+  const hist = document.getElementById('msg_note_hist');
+  if(hist) hist.hidden = (msgLens === 'send' || onPost);
+  /* THE TITLE BLOCK IS THE LENS'S. Posting is a different question from
+     the queue -- what to post today, not who is owed a word -- and a
+     screen whose name does not follow its work is a screen that has not
+     noticed which one it is on. */
+  const t = document.getElementById('msg_title_t');
+  const sub = document.getElementById('msg_title_s');
+  if(t) t.textContent = onPost ? 'What to post today' : 'Messages';
   document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
     const on = b.dataset.msglens === msgLens;
     b.classList.toggle('om-on', on);
@@ -97137,6 +97183,8 @@ function renderMessages(){
   const rows = followUpHubRows(now, chase);
   const money = rows.filter(r=> r.kinds.has('money'));
   const telling = rows.filter(r=> r.kinds.has('telling') || r.kinds.has('news'));
+  const waiting = msgWaitingRows(now, rows);
+  const sentLog = msgSentLog();
   const setN = (id, n, bad)=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -97144,8 +97192,9 @@ function renderMessages(){
     el.style.background = bad && n ? 'var(--om-bad)' : 'var(--om-neutral)';
     el.style.color = bad && n ? 'var(--om-bad-ink)' : 'var(--om-neutral-ink)';
   };
-  setN('msgSegMoney', money.length, true);
-  setN('msgSegTelling', telling.length, false);
+  setN('msgSegSend', money.length + telling.length, true);
+  setN('msgSegWaiting', waiting.length, false);
+  setN('msgSegSent', sentLog.length, false);
   /* THE POSTING COUNT IS THE NOMINATIONS, and it is deliberately NOT in
      the badge: a nomination is the algorithm's suggestion, not a word the
      shop owes anybody, and a badge that rises because the queue grew
@@ -97153,77 +97202,233 @@ function renderMessages(){
   const picks = (typeof waPickView === 'function') ? waPickView(todayISO()) : null;
   const nominated = picks ? (picks.candidates || picks.ranked || []).length : 0;
   setN('msgSegPosting', nominated, false);
-  postLastCounts = {money: money.length, telling: telling.length, posting: nominated};
+  postLastCounts = {money: money.length, telling: telling.length, posting: nominated,
+    send: money.length + telling.length, waiting: waiting.length, sent: sentLog.length};
 
   if(onPost){
-    if(sub) sub.textContent = `${nominated} product${nominated===1?'':'s'} nominated \u00b7 ranked by the signal, capped at ${waDailyCap()} a day \u00b7 you pick, the rest roll over`;
+    if(sub) sub.textContent = `${nominated} product${nominated===1?'':'s'} nominated · ranked by the signal, capped at ${waDailyCap()} a day · you pick, the rest roll over`;
     renderPosting();
     return;
   }
-  if(sub) sub.textContent = 'Every word the shop owes someone, and the box it is written in';
-  renderMessageKpis(money, telling, picks);
-  renderMessagePhoneHead(money, telling, picks);
+  const owed = money.length + telling.length;
+  if(sub) sub.textContent = `${owed} ${owed===1?'person':'people'} you owe a word · the app writes the draft, you send it and say whether it left`;
+  renderMessageKpis(money, telling, waiting, sentLog);
+  renderMessagePhoneHead(money, telling, waiting, sentLog, nominated);
 
   const list = document.getElementById('msg_list');
   if(!list) return;
   const tokens = searchTokens(document.getElementById('msg_search') ? document.getElementById('msg_search').value : '');
-  let shown = (msgLens === 'money' ? money : telling);
-  if(tokens.length){
-    shown = shown.filter(r=> matchesAllTokens(
-      [r.name, r.phone, (r.items||[]).map(i=>i.productName||'').join(' ')].join(' ').toLowerCase(), tokens));
-  }
-  const title = document.getElementById('msg_card_t');
-  if(title){
-    /* .om-card-t ellipsises, and an ellipsis with nothing behind it is a
-       sentence the owner cannot finish reading. */
-    title.textContent = msgLens === 'money'
-      ? 'About money — worst-aged first'
-      : 'Telling them something';
-    title.title = title.textContent;
-  }
-  const n = document.getElementById('msg_card_n');
-  if(n) n.textContent = `${shown.length} to write`;
+  const hay = (r)=> [r.name, r.phone, ((r.items||[]).map(i=>i.productName||'').join(' ')), r.subject||'', r.why||'']
+    .join(' ').toLowerCase();
+  const narrow = (list)=> tokens.length ? list.filter(r=> matchesAllTokens(hay(r), tokens)) : list;
 
-  if(!shown.length){
-    list.innerHTML = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
-      + (msgLens === 'money'
-        ? `Nobody is due a chase today. The Chase engine is holding the rest back &mdash; open <b>Rules &amp; register</b> above to read why, one customer at a time.`
-        : `Nobody is waiting on news. A row appears here when something a client asked about comes in, or a price they were quoted moves.`)
-      + `</div>`;
-    msgPickedId = null;
-    renderMessageSide(null);
-    return;
+  const title = document.getElementById('msg_card_t');
+  const n = document.getElementById('msg_card_n');
+  const LENS_TITLE = {
+    send: ['The outbox', 'grouped by why you are writing'],
+    waiting: ['Waiting on a reply', 'nothing back — longest wait first'],
+    sent: ['Sent', 'every message stamped as gone, newest first'],
+  };
+  const lt = LENS_TITLE[msgLens] || LENS_TITLE.send;
+  if(title){ title.textContent = lt[0]; title.title = lt[0]; }
+  if(n) n.textContent = tokens.length ? 'matching what you typed' : lt[1];
+
+  let html = '', picked = null, pickable = [];
+  if(msgLens === 'send'){
+    const m = narrow(money), tl = narrow(telling);
+    const showMoney = msgFocus !== 'telling';
+    const showTelling = msgFocus !== 'money';
+    const stake = m.reduce((s,r)=> s + (r.chase ? (Number(r.chase.debt)||0) : 0), 0);
+    if(showMoney && m.length){
+      html += msgGroupHTML('Money', `${m.length} to write`, esc(fmtUGX(Math.round(stake))), 'bad');
+      const cut = msgRollup(m, 'money');
+      html += cut.shown.map(r=> msgRowHTML(r)).join('') + cut.tail;
+      pickable = pickable.concat(cut.shown);
+    }
+    if(showTelling && tl.length){
+      const why = msgTellingBreakdown(tl);
+      html += msgGroupHTML('Telling them something', `${tl.length} to write`, why || 'no money at stake', 'studied');
+      const cut = msgRollup(tl, 'telling');
+      html += cut.shown.map(r=> msgRowHTML(r)).join('') + cut.tail;
+      pickable = pickable.concat(cut.shown);
+    }
+    if(!html){
+      html = msgEmptyHTML(tokens.length, msgFocus);
+    } else if(msgFocus){
+      /* A door landed on one group. Say so, and offer the whole outbox
+         back: a filtered list with nothing saying it is filtered is how
+         a shop comes to believe half its work does not exist. */
+      html += `<div class="om-nrow"><span>Showing <b>${msgFocus === 'money' ? 'Money' : 'Telling them something'}</b> only &mdash; the door you came through opens this group. <button type="button" class="om-linkb" data-msgclear="1">Show the whole outbox</button></span></div>`;
+    }
+  } else if(msgLens === 'waiting'){
+    const w = narrow(waiting);
+    if(!w.length){
+      html = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">${tokens.length
+        ? 'Nobody waiting matches that.'
+        : 'Nobody is waiting on a reply. Everything this shop has said has been answered, or it has not said anything yet.'}</div>`;
+    } else {
+      const oldest = Math.max(0, Math.round((now - new Date(w[0].at).getTime()) / 86400000));
+      html = msgGroupHTML('Waiting on a reply', `${w.length} sent`, `oldest ${oldest} day${oldest===1?'':'s'}`, 'neutral')
+        + w.map(r=> msgWaitRowHTML(r, now)).join('');
+    }
+  } else {
+    const g = narrow(sentLog);
+    if(!g.length){
+      html = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">${tokens.length
+        ? 'Nothing sent matches that.'
+        : 'Nothing has been stamped as sent yet. A message appears here the moment you say one went.'}</div>`;
+    } else {
+      html = msgGroupHTML('Sent', `${g.length} stamped`, 'newest first', 'good')
+        + g.slice(0, 60).map(r=> msgSentRowHTML(r, now)).join('')
+        + (g.length > 60 ? `<div class="om-nrow"><span>and ${g.length - 60} older, all stamped the same way.</span></div>` : '');
+    }
   }
-  list.innerHTML = shown.map(r=> msgRowHTML(r)).join('');
+  list.innerHTML = html;
   list.querySelectorAll('[data-msgrow]').forEach(row=>{
-    row.addEventListener('click', ()=>{
-      msgPickedId = row.dataset.msgrow;
-      renderMessages();
-    });
+    row.addEventListener('click', ()=>{ msgPickedId = row.dataset.msgrow; renderMessages(); });
   });
-  if(msgPickedId != null && !shown.some(r=> String(r.customerId) === String(msgPickedId))) msgPickedId = null;
-  const picked = msgPickedId == null ? null : shown.find(r=> String(r.customerId) === String(msgPickedId));
-  renderMessageSide(picked || null);
+  const clear = list.querySelector('[data-msgclear]');
+  if(clear) clear.addEventListener('click', ()=>{ msgFocus = null; msgPickedId = null; renderMessages(); });
+  const more = list.querySelectorAll('[data-msgmore]');
+  more.forEach(b=> b.addEventListener('click', ()=>{ msgRolledOpen[b.dataset.msgmore] = true; renderMessages(); }));
+
+  /* The panel only ever works a row that can be WRITTEN. Waiting and Sent
+     are history: there is a message to read there, not one to send, and
+     opening the draft box on a message already gone is how one gets sent
+     twice. */
+  if(msgLens === 'send'){
+    if(msgPickedId != null && !pickable.some(r=> String(r.customerId) === String(msgPickedId))) msgPickedId = null;
+    picked = msgPickedId == null ? null : pickable.find(r=> String(r.customerId) === String(msgPickedId)) || null;
+    renderMessageSide(picked);
+  } else {
+    renderMessageHistorySide(msgLens, msgLens === 'waiting' ? waiting : sentLog, now);
+  }
+}
+
+/* A GROUP HEADER, which is what the outbox is organised by. Chip, count,
+   and on the right the one figure that group is about. */
+function msgGroupHTML(word, count, right, tone){
+  const t = {bad:['--om-bad','--om-bad-ink'], studied:['--om-studied','--om-studied-ink'],
+    good:['--om-good','--om-good-ink'], neutral:['--om-neutral','--om-neutral-ink']}[tone] || ['--om-neutral','--om-neutral-ink'];
+  return `<div class="om-grow">
+    <span class="om-chip" style="background:var(${t[0]});color:var(${t[1]})">${esc(word)}</span>
+    <span style="font-size:12.5px;font-weight:700">${esc(count)}</span>
+    <span style="flex:1"></span>
+    <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">${right}</span>
+  </div>`;
+}
+
+/* THE TAIL OF A GROUP, ROLLED UP RATHER THAN CUT.
+
+   A group of nine is nine rows of scrolling for the four that matter.
+   The frame rolls the rest into one row that still carries their total,
+   which is the difference between hiding work and summarising it: the
+   figure is there, the count is there, and one press opens them. */
+const MSG_GROUP_SHOWN = 4;
+const msgRolledOpen = Object.create(null);
+function msgRollup(rows, key){
+  if(msgRolledOpen[key] || rows.length <= MSG_GROUP_SHOWN + 1) return {shown: rows, tail: ''};
+  const shown = rows.slice(0, MSG_GROUP_SHOWN);
+  const rest = rows.slice(MSG_GROUP_SHOWN);
+  const stakeOf = (r)=> r.chase ? (Number(r.chase.debt)||0) : 0;
+  const sum = rest.reduce((s,r)=> s + stakeOf(r), 0);
+  const worst = rest.reduce((m,r)=> Math.max(m, stakeOf(r)), 0);
+  const oldest = rest.reduce((m,r)=> Math.max(m, (r.chase && r.chase.oldestDays) || 0), 0);
+  const facts = [
+    worst > 0 ? `all under ${esc(fmtUGX(Math.ceil(worst/100000)*100000))}` : '',
+    oldest > 0 ? `none past ${oldest + 1} days` : '',
+  ].filter(Boolean).join(' · ') || 'the shorter end of the same queue';
+  return {shown, tail: `<div class="om-mrow" data-msgmore="${esc(key)}" tabindex="0" role="button" style="opacity:.8">
+    <span class="om-av om-neutral-av">+${rest.length}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px">${rest.length} more about ${key === 'money' ? 'money' : 'news'}</div>
+      <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${facts}</div>
+    </div>
+    <div class="om-fig om-n" style="font-size:13px;text-align:right;color:var(--om-ink-3)">${sum > 0 ? esc(fmtUGX(Math.round(sum))) : '&mdash;'}</div>
+    <div class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">&mdash;</div>
+    <div style="text-align:right"><span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-neutral);color:var(--om-neutral-ink)">drafts</span></div>
+    <div class="om-mrow-ph">
+      <span class="om-t om-mrow-ph-p">${rest.length} more about ${key === 'money' ? 'money' : 'news'}</span>
+      <span class="om-fig om-mrow-ph-f om-n" style="color:var(--om-ink-3)">${sum > 0 ? esc(fmtUGX(Math.round(sum))) : '&mdash;'}</span>
+      <span class="om-t om-mrow-ph-s">${facts}</span>
+      <span style="text-align:right"><span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-neutral);color:var(--om-neutral-ink)">drafts</span></span>
+    </div>
+  </div>`};
+}
+
+function msgEmptyHTML(searching, focus){
+  return `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
+    + (searching
+      ? 'Nobody in the outbox matches that.'
+      : focus === 'money'
+        ? 'Nobody is due a chase today. The Chase engine is holding the rest back &mdash; open <b>Rules &amp; register</b> below to read why, one customer at a time.'
+        : focus === 'telling'
+          ? 'Nobody is waiting on news. A row appears here when something a client asked about comes in, or a price they were quoted moves.'
+          : 'Nobody is owed a word today. The engines are holding the rest back &mdash; open <b>Rules &amp; register</b> below to read why, one customer at a time.')
+    + `</div>`;
+}
+
+/* WHY THIS ROW IS HERE, in one line the owner can check.
+
+   The frame's is "INV-0175 · 74 days · five chases, none answered" --
+   the document, its age, and what has already been tried. Every part of
+   that is on the chase row already; the line says as much of it as is
+   TRUE and stops, rather than padding to a shape. */
+const MSG_COUNT_WORDS = ['no','one','two','three','four','five','six','seven','eight','nine','ten'];
+function msgAboutHTML(r){
+  const ch = r.chase;
+  if(ch){
+    const inv = (ch.invoices||[])[0];
+    const bits = [];
+    if(inv && inv.no) bits.push(esc(String(inv.no).replace(/-/g, '\u2011')));
+    if(ch.ageDays >= 0) bits.push(`${ch.ageDays} days`);
+    if(ch.promise && ch.promise.state === 'broken'){
+      bits.push(`said ${esc(fmtShortDate(ch.promise.promisedOn))} and did not pay`);
+    } else if(ch.promise && ch.promise.promisedOn){
+      bits.push(`promised ${esc(fmtShortDate(ch.promise.promisedOn))}`);
+    } else if(ch.lastChased){
+      /* Chased before and still owing is the fact worth saying: it is
+         the difference between a first ask and one that is not landing. */
+      bits.push(`chased ${esc(fmtShortDate(ch.lastChased))}, nothing since`);
+    } else if(ch.brokenPromises > 1){
+      bits.push(`${MSG_COUNT_WORDS[Math.min(10, ch.brokenPromises)] || ch.brokenPromises} promises broken before`);
+    } else {
+      /* NOT the balance again: it is already the figure column two
+         inches to the right, and a row that says one number twice
+         teaches the eye to stop reading one of them. What is worth
+         saying instead is that nobody has asked yet. */
+      bits.push(`never asked`);
+    }
+    return bits.join(' &middot; ');
+  }
+  if(r.items && r.items.length){
+    const names = r.items.slice(0,2).map(i=> i.productName || 'an item').join(', ');
+    const why = (r.items[0].reasons||[]).find(x=> x.kind !== 'gone_quiet');
+    return esc(why ? (why.short || why.text) : names);
+  }
+  return 'something you said you would tell them';
 }
 
 function msgRowHTML(r){
   const stake = r.chase ? (Number(r.chase.debt)||0) : (Number(r.debt)||0);
   const lw = msgLastWord(r);
   const on = String(msgPickedId) === String(r.customerId) ? ' om-on' : '';
-  const about = r.chase
-    ? `owes ${esc(fmtUGX(Math.round(stake)))}${r.chase.oldestDays != null ? ` &middot; ${r.chase.oldestDays} days` : ''}`
-    : (r.items && r.items.length)
-      ? esc(r.items.slice(0,2).map(i=> i.productName || 'an item').join(', '))
-      : 'something you said you would tell them';
+  const about = msgAboutHTML(r);
   const tone = r.chase ? 'om-bad' : 'om-studied';
-  /* State is what the SHOP has done, never what WhatsApp did: draft means
-     nothing has been written, due means it is owed today, sent means the
-     owner stamped it. */
-  const state = lw.who === 'you'
-    ? `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-good);color:var(--om-good-ink)">sent</span>`
-    : r.chase
-      ? `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-bad);color:var(--om-bad-ink)">draft</span>`
-      : `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-neutral);color:var(--om-neutral-ink)">due</span>`;
+  /* STATE IS WHAT THE SHOP HAS DONE, never what WhatsApp did -- and on
+     this lens it is never "sent". Every row in the outbox is owed a word
+     NOW; a row that reads "sent" in a list of things to write is a row
+     that contradicts the list it is in, and the message already gone is
+     what the Waiting lens is for.
+
+     draft  a demand or a digest is written and waiting to go, or the
+            owner has typed their own words into one
+     due    owed today, with nothing written yet beyond the greeting */
+  const hasDraft = !!r.chase || fupDrafts[String(r.customerId)] != null
+    || !!(r.items && r.items.length);
+  const state = hasDraft
+    ? `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-bad);color:var(--om-bad-ink)">draft</span>`
+    : `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-neutral);color:var(--om-neutral-ink)">due</span>`;
   const lwText = lw.who === 'never' ? 'never'
     : `${lw.who}, ${esc(fmtShortDate(lw.at))}`;
   return `<div class="om-mrow${on}" data-msgrow="${esc(String(r.customerId))}" tabindex="0" role="button">
@@ -97232,48 +97437,167 @@ function msgRowHTML(r){
       <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(r.name)}</div>
       <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${about}</div>
     </div>
-    <div class="om-fig om-n" style="font-size:13px;text-align:right;color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'—'}</div>
+    <div class="om-fig om-n" style="font-size:13px;text-align:right;color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'&mdash;'}</div>
     <div class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">${lwText}</div>
     <div style="text-align:right">${state}</div>
     <div class="om-mrow-ph">
       <span class="om-t om-mrow-ph-p">${esc(r.name)}</span>
-      <span class="om-fig om-mrow-ph-f om-n" style="color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'—'}</span>
+      <span class="om-fig om-mrow-ph-f om-n" style="color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'&mdash;'}</span>
       <span class="om-t om-mrow-ph-s">${about} &middot; ${lwText}</span>
       <span style="text-align:right">${state}</span>
     </div>
   </div>`;
 }
 
-function renderMessageKpis(money, telling, picks){
+/* A ROW ON THE TWO HISTORY LENSES. Dimmed, because it is a record rather
+   than work, and NOT clickable into the draft box: there is a message to
+   read here, not one to send. */
+function msgHistoryRowHTML(o){
+  const days = o.days;
+  return `<div class="om-mrow" style="opacity:${o.dim};cursor:default">
+    <span class="om-av ${o.tone}">${esc(nameInitials(o.name))}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px">${esc(o.name)}</div>
+      <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${o.about}</div>
+    </div>
+    <div class="om-fig om-n" style="font-size:13px;text-align:right;color:var(${o.stake>0?'--om-bad-ink':'--om-ink-3'})">${o.stake>0?esc(fmtUGX(Math.round(o.stake))):'&mdash;'}</div>
+    <div class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">${o.when}</div>
+    <div style="text-align:right">${o.chip}</div>
+    <div class="om-mrow-ph">
+      <span class="om-t om-mrow-ph-p">${esc(o.name)}</span>
+      <span class="om-fig om-mrow-ph-f om-n" style="color:var(${o.stake>0?'--om-bad-ink':'--om-ink-3'})">${o.stake>0?esc(fmtUGX(Math.round(o.stake))):'&mdash;'}</span>
+      <span class="om-t om-mrow-ph-s">${o.about} &middot; ${o.when}</span>
+      <span style="text-align:right">${o.chip}</span>
+    </div>
+  </div>`;
+}
+function msgDaysAgo(iso, now){
+  const t = new Date(iso).getTime();
+  if(isNaN(t)) return null;
+  return Math.max(0, Math.round((now - t) / 86400000));
+}
+function msgWaitRowHTML(r, now){
+  const d = msgDaysAgo(r.at, now);
+  return msgHistoryRowHTML({name: r.name, tone: r.stake > 0 ? 'om-bad' : 'om-studied', dim: '.82',
+    about: `${esc(r.why)} &middot; nothing back`,
+    stake: r.stake,
+    when: `you, ${esc(fmtShortDate(String(r.at).slice(0,10)))}`,
+    chip: `<span class="om-chip" style="height:19px;padding:0 7px;background:var(${d != null && d >= 7 ? '--om-caution' : '--om-neutral'});color:var(${d != null && d >= 7 ? '--om-caution-ink' : '--om-neutral-ink'})">${d == null ? 'waiting' : d + 'd'}</span>`});
+}
+function msgSentRowHTML(r, now){
+  return msgHistoryRowHTML({name: r.name, tone: 'om-neutral-av', dim: '.72',
+    about: esc(r.subject || r.reason || 'a message'),
+    stake: 0,
+    when: `you, ${esc(fmtShortDate(String(r.at).slice(0,10)))}`,
+    chip: `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-good);color:var(--om-good-ink)">${r.closed ? 'closed' : 'sent'}</span>`});
+}
+
+/* THE PANEL ON THE TWO HISTORY LENSES. No draft box, because opening one
+   on a message that has already gone is how a client is chased twice. */
+function renderMessageHistorySide(lens, rows, now){
+  const el = document.getElementById('msg_side');
+  if(!el) return;
+  if(lens === 'waiting'){
+    const old = rows.filter(r=> (msgDaysAgo(r.at, now) || 0) >= 7);
+    const stake = rows.reduce((s,r)=> s + (Number(r.stake)||0), 0);
+    el.innerHTML = `<div class="om-card">
+      <div class="om-card-h"><span class="om-card-t">What silence costs</span></div>
+      <div style="padding:0 14px 12px">
+        <div class="om-read">${rows.length
+          ? `${rows.length} ${rows.length===1?'person has':'people have'} been written to and ${rows.length===1?'has':'have'} not come back${
+              stake > 0 ? `, and <b class="om-fig om-n">${esc(fmtUGX(Math.round(stake)))}</b> of that is money` : ''}. ${
+              old.length ? `${old.length} of them ${old.length===1?'has':'have'} been quiet more than a week.` : 'None of them has been quiet more than a week.'}`
+          : 'Nothing is waiting. Either everything said has been answered, or nothing has been said.'}</div>
+        <div class="om-read" style="margin-top:9px">This is a reading of what the shop <b>stamped</b>, not of what WhatsApp did. The app cannot see a delivery or a read, and never claims to: a row here means somebody pressed <b>It was sent</b> and nothing has arrived in the inbox since.</div>
+        ${old.length ? `<div class="om-read" style="margin-top:9px">A week of silence is what the app can tell you; what to do about it is yours. A call, or a visit, is usually the next lever &mdash; a fourth message rarely is.</div>` : ''}
+      </div>
+    </div>`;
+    return;
+  }
+  const byReason = new Map();
+  rows.forEach(r=> byReason.set(r.reason || 'unnamed', (byReason.get(r.reason || 'unnamed')||0) + 1));
+  const top = [...byReason.entries()].sort((a,b)=> b[1]-a[1]).slice(0,4);
+  const worked = msgChaseWorked();
+  el.innerHTML = `<div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">What has gone out</span></div>
+    <div style="padding:0 14px 12px">
+      <div class="om-read">${rows.length
+        ? `${rows.length} message${rows.length===1?'':'s'} stamped as sent, oldest ${esc(fmtShortDate(String(rows[rows.length-1].at).slice(0,10)))}.`
+        : 'Nothing stamped yet.'}</div>
+      ${top.length ? `<div class="om-sig">${top.map(([k,n])=>{
+        const pct = Math.round(100*n/rows.length);
+        /* The app's own word for the reason, not the key it files it
+           under: "back in stock", never "back_in". */
+        const label = (typeof fupReasonChip === 'function') ? fupReasonChip({kind:k}).label : k;
+        return `<div>
+          <div class="om-sig-h"><span>${esc(label)}</span><span class="om-fig om-n" style="margin-left:auto;color:var(--om-ink-3)">${n}</span></div>
+          <div class="om-sig-t"><span class="om-sig-b" style="width:${pct}%;background:var(--om-studied-card)"></span></div>
+        </div>`; }).join('')}</div>` : ''}
+      <div class="om-read" style="margin-top:10px">${worked
+        ? `Of the ${worked.asked} ${worked.asked===1?'debtor':'debtors'} standing chased right now, ${worked.paid} ${worked.paid===1?'has':'have'} paid something since${
+            worked.medianDays != null ? `, ${worked.medianDays} day${worked.medianDays===1?'':'s'} after being asked on the middle case` : ''}.`
+        : 'Nobody is standing chased, so there is nothing to say yet about whether asking works.'}</div>
+      <div class="om-read" style="margin-top:9px"><b>This list is the follow-up ledger only.</b> A debt chase is stamped one customer at a time and the stamp is replaced by the next one, then cleared when they pay &mdash; so there is no chase history to count here, and the figure above is about who stands chased today rather than about every chase ever sent.</div>
+    </div>
+  </div>`;
+}
+
+function renderMessageKpis(money, telling, waiting, sentLog){
   const el = document.getElementById('msg_kpis');
   if(!el) return;
   const stake = money.reduce((s,r)=> s + (r.chase ? (Number(r.chase.debt)||0) : 0), 0);
-  const overdue = money.reduce((s,r)=> s + ((r.chase && r.chase.oldestDays >= 0) ? (Number(r.chase.debt)||0) : 0), 0);
-  const held = money.concat(telling).reduce((s,r)=> s + (r.held ? r.held.length : 0), 0);
+  /* Overdue is money past the shop's own terms, which is what ageDays
+     measures against; a debt inside its terms is not late, it is owed. */
+  const grace = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  const overdue = money.reduce((s,r)=> s + ((r.chase && r.chase.ageDays >= grace) ? (Number(r.chase.debt)||0) : 0), 0);
+  const why = msgTellingBreakdown(telling);
+  const worked = msgChaseWorked();
+  const hour = msgBestSendHour(waInbox && waInbox.allMsgs);
   el.innerHTML = `
   <div class="om-kpi om-kpi-bad">
     <div class="om-lbl" style="font-size:10.5px">About money</div>
     <div class="om-fig om-kpi-f om-n">${money.length}</div>
-    <div class="om-kpi-s" style="color:var(--om-bad-card-ink)">${esc(fmtUGX(Math.round(stake)))} riding on them${overdue>0?` &middot; ${esc(fmtUGX(Math.round(overdue)))} of it overdue`:''}</div>
+    <div class="om-kpi-s" style="color:var(--om-bad-card-ink)">${esc(fmtUGX(Math.round(stake)))} riding on them${
+      overdue <= 0 ? '' : Math.round(overdue) >= Math.round(stake)
+        /* The same figure printed twice is not a second fact. When every
+           shilling in the queue is past terms, say that in words. */
+        ? ' &middot; all of it past your terms'
+        : ` &middot; ${esc(fmtUGX(Math.round(overdue)))} of it past your terms`}</div>
   </div>
   <div class="om-kpi">
     <div class="om-lbl" style="font-size:10.5px">Telling someone something</div>
     <div class="om-fig om-kpi-f om-n">${telling.length}</div>
-    <div class="om-kpi-s">no money at stake${held?` &middot; ${held} held back with a reason`:''}</div>
+    <div class="om-kpi-s">${why || 'no money at stake'}</div>
   </div>
-  <div class="om-kpi">
-    <div class="om-lbl" style="font-size:10.5px">Nominated to post</div>
-    <div class="om-fig om-kpi-f om-n">${picks ? (picks.ranked||[]).length : 0}</div>
-    <div class="om-kpi-s">${picks ? `${(picks.picks||[]).length} of 3 slots taken today` : 'the post desk is still reading'}</div>
+  <!-- THE FRAME'S TILE HERE IS A LIFETIME RATE -- "31%, 57 of 184 sent,
+       4.2 days to the money" -- and this app cannot produce one:
+       presetDebtChases keeps ONE stamp per debtor and prunes it the
+       moment they pay, so there is no history to divide. What the books
+       can answer is the same question about the people standing chased
+       right now, which is a smaller claim and a true one. -->
+  <div class="om-kpi${worked && worked.paid ? ' om-kpi-good' : ''}">
+    <div class="om-lbl" style="font-size:10.5px${worked && worked.paid ? ';color:var(--om-good-card-ink)' : ''}">Chases that got paid</div>
+    <div class="om-fig om-kpi-f om-n" style="${worked && worked.paid ? 'color:var(--om-good-ink)' : ''}">${worked ? worked.pct + '%' : '&mdash;'}</div>
+    <div class="om-kpi-s"${worked && worked.paid ? ' style="color:var(--om-good-card-ink)"' : ''}>${worked
+      ? `${worked.paid} of ${worked.asked} standing chased have paid since${worked.medianDays != null ? ` &middot; ${worked.medianDays} day${worked.medianDays===1?'':'s'} to the money` : ''}`
+      : 'nobody stands chased, so there is nothing to divide'}</div>
   </div>
+  <!-- AND THIS ONE IS READ FROM THE INBOX OR NOT AT ALL. The inbox is
+       the only place the app can see a reply; a send that went out as a
+       deep link left no record here, so the tile says how short it is
+       rather than inventing an hour. -->
   <div class="om-kpi">
-    <div class="om-lbl" style="font-size:10.5px">Waiting on a reply</div>
-    <div class="om-fig om-kpi-f om-n">${(typeof waWaitingConvs === 'function' && waInbox) ? waWaitingConvs(waInbox.convs, waInbox.allMsgs, Date.now()).length : 0}</div>
-    <div class="om-kpi-s">in the inbox &mdash; the only place the shop hears back</div>
+    <div class="om-lbl" style="font-size:10.5px">Best hour to send</div>
+    <div class="om-fig om-kpi-f om-n" style="font-size:20px">${hour && !hour.tooFew ? esc(hour.label) : 'Not yet'}</div>
+    <div class="om-kpi-s">${hour && !hour.tooFew
+      ? `${Math.round(100*hour.best.answered/hour.best.sent)}% answered inside a day${hour.restRate != null ? ` &middot; ${Math.round(100*hour.restRate)}% the rest of the day` : ''}`
+      : hour
+        ? `${hour.sent} message${hour.sent===1?'':'s'} on record in the inbox &mdash; ${hour.need} is where an hour stops being a coincidence`
+        : 'the inbox is the only place a reply can be seen, and it is empty'}</div>
   </div>`;
 }
 
-function renderMessagePhoneHead(money, telling, picks){
+function renderMessagePhoneHead(money, telling, waiting, sentLog, nominated){
   const el = document.getElementById('msg_ph_head');
   if(!el) return;
   const stake = money.reduce((s,r)=> s + (r.chase ? (Number(r.chase.debt)||0) : 0), 0);
@@ -97284,9 +97608,13 @@ function renderMessagePhoneHead(money, telling, picks){
     <div class="om-ph-figs">
       <div class="om-ph-fig om-ph-fig-bad"><div class="om-ph-fig-l" style="color:var(--om-bad-ink)">At stake</div><div class="om-fig om-ph-fig-v" style="color:var(--om-bad-ink)">${esc(short(stake))}</div></div>
       <div class="om-ph-fig"><div class="om-ph-fig-l">To write</div><div class="om-fig om-ph-fig-v">${money.length + telling.length}</div></div>
-      <div class="om-ph-fig"><div class="om-ph-fig-l">Nominated</div><div class="om-fig om-ph-fig-v">${picks ? (picks.ranked||[]).length : 0}</div></div>
+      <div class="om-ph-fig"><div class="om-ph-fig-l">No reply</div><div class="om-fig om-ph-fig-v">${waiting.length}</div></div>
     </div>
-    <div class="om-ph-tabs">${tab('money','Money',money.length)}${tab('telling','Telling',telling.length)}${tab('posting','Posting','')}</div>`;
+    <!-- FOUR TABS AT 390, which is one more than fits a row and the
+         reason this strip scrolls sideways rather than wrapping: a tab
+         row that reflows to two lines moves under the thumb every time
+         a count changes. -->
+    <div class="om-ph-tabs">${tab('send','To send',money.length + telling.length)}${tab('waiting','No reply',waiting.length)}${tab('sent','Sent',sentLog.length)}${tab('posting','Posting',nominated)}</div>`;
   el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens)));
 }
 
@@ -97313,9 +97641,31 @@ function renderMessageSide(r){
         <span class="om-av om-av-onnavy om-av-lg">${esc(nameInitials(r.name))}</span>
         <div style="min-width:0;flex:1">
           <div class="om-pan-t">${esc(r.name)}</div>
-          <div class="om-pan-m">${r.phone ? esc(r.phone) : 'no number on file'}${stake>0?` &middot; ${esc(fmtUGX(Math.round(stake)))} at stake`:''}</div>
+          <!-- The DOCUMENT this is about, which is the thing the client
+               will look for when they read it, rather than the balance --
+               that is already the figure on their row and in the box. -->
+          <div class="om-pan-m">${r.phone ? esc(r.phone) : 'no number on file'}${(()=>{
+            const inv = r.chase && (r.chase.invoices||[])[0];
+            if(inv && inv.no) return ` &middot; about ${esc(String(inv.no).replace(/-/g, '\u2011'))}`;
+            return stake > 0 ? ` &middot; ${esc(fmtUGX(Math.round(stake)))} at stake` : '';
+          })()}</div>
         </div>
-        ${r.chase && r.chase.chasedCount ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">${r.chase.chasedCount+1}${r.chase.chasedCount===0?'st':'th'} chase</span>` : ''}
+        <!-- THE FRAME'S CHIP HERE READS "6th chase" and this app cannot
+             say that: presetDebtChases keeps ONE stamp per debtor, the
+             latest, and clears it when they pay, so there is no count of
+             chases to put an ordinal on. It said it anyway, off a field
+             called chasedCount that nothing has ever written -- so the
+             chip never drew at all, which is the only reason nobody was
+             ever shown an invented ordinal. What the books DO know is
+             when the last ask went and whether days they named have come
+             and gone; both are here instead. -->
+        ${r.chase && r.chase.brokenPromises > 1
+          ? `<span class="om-chip" style="background:var(--om-bad);color:var(--om-bad-ink)">${r.chase.brokenPromises} promises broken</span>`
+          : r.chase && r.chase.chasedDaysAgo != null
+            ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">${esc(fupChasedWords(r.chase.chasedDaysAgo))}</span>`
+            : r.chase
+              ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">never asked</span>`
+              : ''}
       </div>
     </div>
     <div style="padding:12px 14px">
@@ -97428,6 +97778,165 @@ function msgMeasure(el, box){
   f.style.color = fits ? 'var(--om-neutral-ink)' : 'var(--om-caution-ink)';
 }
 
+
+/* ================= THE OUTBOX'S OTHER TWO STATES =====================
+
+   The queue answers "who is owed a word". The screen also has to answer
+   the two questions that follow it -- who has been written to and has
+   not come back, and what has gone out at all -- because a shop that
+   cannot see those has no way to tell a queue that is working from one
+   that is being ignored.
+
+   Both are read from the ledger the stamp already writes. A follow-up
+   carries its own `contacts`, each with the moment and the reason; a
+   debtor carries one chase stamp, the latest. Neither is a delivery
+   receipt and neither is treated as one: the app cannot see WhatsApp,
+   so all any of this says is what the owner said they did. */
+
+/* WHO WE WROTE TO AND WHO HAS NOT COME BACK.
+
+   Deliberately excludes anybody in today's queue: they are owed a word
+   NOW, which outranks being owed a reply, and a client on two lists of
+   the same screen is a client who gets messaged twice. */
+function msgWaitingRows(now, queueRows){
+  const inQueue = new Set((queueRows||[]).map(r=> String(r.customerId)));
+  const out = new Map();
+  const add = (cid, at, why, stake)=>{
+    const key = String(cid);
+    if(!key || key === 'null' || inQueue.has(key)) return;
+    const c = (data.customers||[]).find(x=> String(x.id) === key);
+    if(!c) return;
+    const prev = out.get(key);
+    /* The MOST RECENT word is the one the wait is measured from. */
+    if(prev && prev.at >= at) return;
+    out.set(key, {customerId: c.id, customer: c, name: c.name,
+      phone: contactPhones(c)[0] || '', at, why, stake: stake || 0});
+  };
+  followUpsAll().forEach(f=>{
+    if(!followUpIsOpen(f)) return;
+    const last = followUpLastContact(f);
+    if(!last || !last.at) return;
+    add(f.customerId, last.at, followUpSubject(f).label, 0);
+  });
+  Object.keys(data.presetDebtChases || {}).forEach(cid=>{
+    const c = (data.customers||[]).find(x=> String(x.id) === String(cid));
+    if(!c) return;
+    add(cid, String(data.presetDebtChases[cid]) + 'T12:00:00', 'the money they owe', Number(c.debt)||0);
+  });
+  /* Longest wait first: the person who has been ignored for eleven days
+     is the one worth doing something else about. */
+  return [...out.values()].sort((a,b)=> new Date(a.at) - new Date(b.at));
+}
+
+/* WHAT HAS GONE OUT. Every stamp on every follow-up, newest first.
+   A debtor's chase stamp is NOT in here and that is a gap rather than a
+   decision: the app keeps one stamp per debtor, the latest, and prunes
+   it when they pay, so there is no chase history to count. Said on the
+   screen rather than papered over. */
+function msgSentLog(limit){
+  const out = [];
+  followUpsAll().forEach(f=>{
+    const subj = followUpSubject(f);
+    (f.contacts||[]).forEach(c=>{
+      if(!c || !c.at) return;
+      const cust = (data.customers||[]).find(x=> String(x.id) === String(f.customerId));
+      out.push({customerId: f.customerId, customer: cust || null,
+        name: cust ? cust.name : '(customer no longer on file)',
+        phone: cust ? (contactPhones(cust)[0] || '') : '',
+        at: c.at, reason: c.reason || '', subject: subj.label,
+        closed: !followUpIsOpen(f)});
+    });
+  });
+  out.sort((a,b)=> new Date(b.at) - new Date(a.at));
+  return limit ? out.slice(0, limit) : out;
+}
+
+/* DID THE ASKING WORK. The frame's tile is a lifetime rate -- "31%, 57
+   of 184 sent, 4.2 days to the money" -- and this app cannot produce
+   one: presetDebtChases holds ONE stamp per debtor, the latest, and
+   prunes it the moment they pay up, so there is no history to divide.
+
+   What the books CAN answer is the same question about the people
+   standing chased right now: how many of them have paid anything since
+   they were asked, and how long it took. That is a smaller claim and it
+   is a true one, which is the trade this app makes everywhere. */
+function msgChaseWorked(){
+  const stamps = data.presetDebtChases || {};
+  const ids = Object.keys(stamps);
+  let paid = 0, days = [];
+  ids.forEach(cid=>{
+    const c = (data.customers||[]).find(x=> String(x.id) === String(cid));
+    if(!c) return;
+    const last = customerLastPaymentDate(c);
+    if(!last || last < stamps[cid]) return;
+    paid++;
+    days.push(Math.max(0, waDaysBetween(String(stamps[cid]), String(last))));
+  });
+  if(!ids.length) return null;
+  return {asked: ids.length, paid,
+    pct: Math.round(100 * paid / ids.length),
+    medianDays: days.length ? waMedian(days) : null};
+}
+
+/* WHEN A MESSAGE ACTUALLY GETS ANSWERED.
+
+   Read from the inbox and nowhere else, because the inbox is the only
+   place this app can see a reply at all. An outbound message counts when
+   something inbound followed it on the same conversation inside a day;
+   the hour it was SENT is the hour that gets the credit.
+
+   Returns null rather than a guess when there is too little to say. A
+   "best hour" off three messages is a coincidence with a label on it. */
+const MSG_HOUR_MIN = 12;
+function msgBestSendHour(msgs){
+  const list = (msgs||[]).filter(m=> m.sent_at && (m.direction === 'in' || m.direction === 'out'));
+  if(!list.length) return null;
+  const byConv = new Map();
+  list.forEach(m=>{
+    const k = String(m.conversation_id || m.conv_id || m.wa_conversation_id || '');
+    if(!byConv.has(k)) byConv.set(k, []);
+    byConv.get(k).push(m);
+  });
+  const bands = [[6,12,'morning'], [12,17,'afternoon'], [17,22,'evening']];
+  const tally = bands.map(b=> ({from:b[0], to:b[1], name:b[2], sent:0, answered:0}));
+  byConv.forEach(ms=>{
+    ms.sort((a,b)=> new Date(a.sent_at) - new Date(b.sent_at));
+    ms.forEach((m,i)=>{
+      if(m.direction !== 'out') return;
+      const t = new Date(m.sent_at);
+      if(isNaN(t)) return;
+      const band = tally.find(b=> t.getHours() >= b.from && t.getHours() < b.to);
+      if(!band) return;
+      band.sent++;
+      const next = ms.slice(i+1).find(x=> x.direction === 'in');
+      if(next && (new Date(next.sent_at) - t) <= 86400000) band.answered++;
+    });
+  });
+  const total = tally.reduce((s,b)=> s + b.sent, 0);
+  if(total < MSG_HOUR_MIN) return {tooFew: true, sent: total, need: MSG_HOUR_MIN};
+  const ranked = tally.filter(b=> b.sent >= 3).sort((a,b)=> (b.answered/b.sent) - (a.answered/a.sent));
+  if(!ranked.length) return {tooFew: true, sent: total, need: MSG_HOUR_MIN};
+  const best = ranked[0], rest = ranked.slice(1);
+  const restRate = rest.length ? rest.reduce((s,b)=> s + b.answered, 0) / rest.reduce((s,b)=> s + b.sent, 0) : null;
+  return {best, restRate, sent: total,
+    label: `${best.from > 12 ? best.from - 12 : best.from}\u2013${best.to > 12 ? best.to - 12 : best.to}${best.to > 12 ? 'pm' : 'am'}`};
+}
+
+/* WHAT THE TELLING QUEUE IS ABOUT, in the app's own words for each
+   reason rather than a count with no subject: "3 back in stock · 1 they
+   were promised" says what four messages are FOR. */
+function msgTellingBreakdown(rows){
+  const tally = new Map();
+  (rows||[]).forEach(r=> (r.items||[]).forEach(i=> (i.reasons||[]).forEach(x=>{
+    if(x.kind === 'gone_quiet') return;
+    tally.set(x.kind, (tally.get(x.kind)||0) + 1);
+  })));
+  const words = {back_in:'back in stock', companion_in:'goes-with arrived',
+    sourcing_progress:'sourcing moved', price_moved:'price changed',
+    promised:'a day they were promised'};
+  return [...tally.entries()].sort((a,b)=> b[1]-a[1]).slice(0,2)
+    .map(([k,n])=> `${n} ${words[k] || k}`).join(' \u00b7 ');
+}
 
 /* ============================ THE POSTING LENS ============================
 
