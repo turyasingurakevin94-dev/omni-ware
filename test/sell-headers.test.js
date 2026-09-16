@@ -64,8 +64,13 @@ const src = read('index.html');
    its Owing lens now. The folded paragraph went the way Invoices' did --
    what it explained is said by the screen, per row. The two facts worth
    keeping are checked below rather than taken on trust. */
-const SELL = ['quote-saved', 'followups', 'agents', 'whatsapp'];
-const CARD_SYSTEM = ['quote', 'invoices', 'customers'];
+/* Sales agents joins them. Its folded paragraph explained the four
+   prices an order line carries and which of the three profits is whose;
+   the screen says that now where it matters -- the standing chip on the
+   register, and the waterfall on the panel, which draws all five figures
+   on one denominator so two equal bars always mean equal money. */
+const SELL = ['quote-saved', 'followups', 'whatsapp'];
+const CARD_SYSTEM = ['quote', 'invoices', 'customers', 'agents'];
 const sectionOf = (tab) => {
   const i = src.indexOf(`<section id="tab-${tab}"`);
   const next = src.slice(i + 10).search(/<section id="tab-/);
@@ -147,6 +152,17 @@ const sectionOf = (tab) => {
   });
 }
 
+/* AGENTS' privacy rule, at its new address. The folded paragraph said
+   "clients' identities stay private to them"; the screen says it where
+   somebody is actually deciding whether to invite one, and says it as the
+   consequence rather than the policy: you see the order, never the buyer.
+   That is the same rule in the words that make it actionable. */
+{
+  const ag = extractFunction(src, 'renderAgents', 'index.html');
+  t.check(/Their clients stay private to them &mdash; you see the order, never the buyer/.test(ag),
+    'agents keeps the agent privacy rule, on the screen that has not started yet');
+}
+
 /* Invoices' two facts, checked at their new addresses rather than in a
    paragraph the card system does not have. */
 {
@@ -163,8 +179,7 @@ const sectionOf = (tab) => {
 {
   const kept = [
 
-    ['agents', "clients' identities stay private to them",
-      "the agent privacy rule"],
+
     ['whatsapp', "counted live from the shop's own records",
       'the derived-never-invented claim, on the screen that most needs it'],
     ['quote-saved', 'how it got here',

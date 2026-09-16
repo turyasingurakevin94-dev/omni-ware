@@ -423,3 +423,44 @@ second renderer never added anything — the two lists could only ever disagree.
 The cut removed a line, not logic, which makes the case for it stronger than the
 handoff states, and the same reasoning applies unchanged to `renderCreditorsList`
 beside Suppliers.
+
+### 8.9 Agents: the frame's widths assume bare figures, and an agent can go negative
+
+- **The money columns had to widen.** The handoff sizes them for bare figures;
+  every figure here carries `UGX`, and at the frame's 92px `1,340,000 UGX` and
+  `1,600,000 UGX` touched — two figures with no gap between them read as one
+  wrong number. Same proportions, four columns wider. This is the third screen
+  where the unit has cost layout (see §8.2); it is worth deciding once.
+- **The card screens sit outside `main`'s gutter.** `main` pads 40px and the card
+  layout brings the handoff's own 22px, so a card screen inside that padding is
+  80px narrower than the frame it is drawn from — which is exactly how the
+  register's last column fell off the end. Escaped with a negative margin, as
+  the quote already does. At 390px `main` pads 16px, not 40, so the phone needs
+  its own value; the first version dragged the whole screen 24px off both edges.
+- **"They kept" can be negative, and the frame does draw that** — `−24,000` in
+  bad ink with *sells under your price* on the row. What the frame does not draw
+  is what it means for the waterfall: the agent's increment runs *backwards*
+  from the client-paid total rather than forwards from the shop-billed one. It is
+  drawn that way now, in bad ink rather than the agent violet, because a violet
+  bar of the same length would read as margin they earned.
+- **The settlement figure is the one the screen exists to protect.** The block
+  states what they owe *at the shop price* and, beside it, what their clients
+  actually paid — *"5,940,000, not the 7,463,077 their clients paid. Their
+  margin is not yours to collect."* The frame's copy says this; it is repeated
+  here because it is the error the whole screen is built to prevent and it must
+  survive any future edit.
+
+### 8.10 Three things kept on the console, on the Agents screen
+
+None are drawn in the frame and all three are live:
+
+- **The roster position and the attention band** above the register — how many
+  of the roster is actually working, and who needs a decision today.
+- **The credit decision.** Moving an agent to *pay on delivery* is a credit
+  decision made from a dropdown, and it asks first, naming what they already owe
+  and flagging an agent who has never sold. Declining puts the dropdown back.
+  The frame draws the terms as a `prepay` / `credit` pill with no way to change
+  them and no question attached.
+- **Promotions and Claims**, the supplier-bonus machinery. The handoff says the
+  bonus figure "has no admin-side home today" — it has two. The panel's Supplier
+  bonus block summarises them rather than replacing them.

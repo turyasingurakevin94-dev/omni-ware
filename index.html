@@ -16463,7 +16463,11 @@
   .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on{background:var(--om-selected)}
   .om-lrow,.om-cols-l{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
   .om-crow,.om-cols-c{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
-  .om-arow{grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px}
+  /* WIDER MONEY TRACKS THAN THE FRAME. The handoff sizes these for bare
+     figures; every figure in this app carries UGX, and at 92px "1,340,000
+     UGX" and "1,600,000 UGX" touch -- two figures with no gap read as one
+     wrong number. Same proportions, four columns wider. */
+  .om-arow,.om-cols-a{grid-template-columns:30px minmax(150px,1fr) 112px 104px 104px 116px 58px}
   .om-mrow{grid-template-columns:30px minmax(160px,1fr) 96px 96px 74px}
 
   /* The agent waterfall. Five rows on ONE denominator — client paid is
@@ -16849,7 +16853,14 @@
      phone header replaces the top bar, the KPI strip and the title block
      wholesale rather than reflowing them. */
   .om-ph-only{display:none}
-  .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground)}
+  /* OUT OF MAIN'S GUTTER. main pads 40px each side and the card layout
+     brings its own 22px, which is the handoff's page padding -- so a card
+     screen that sits inside main's padding is 80px narrower than the frame
+     it is drawn from, and the register's last column falls off the end.
+     The quote escapes the same way with margin:0 -18px. */
+  .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground);margin:0 -40px}
+  @media (min-width:1600px){ .om-screen{margin:0 -56px} }
+  @media (min-width:2000px){ .om-screen{margin:0 -72px} }
   /* THE SCREEN'S OWN SEARCH. The handoff draws this inside a 58px top bar
      with the breadcrumb and the avatar -- but that bar is the APP's, not
      this screen's, and the app already draws one above every screen. A
@@ -16995,6 +17006,25 @@
   /* A filter set on the strip and felt in the list has to be visible in
      the list, or it is a filter somebody forgets they set. */
   .om-fnote{display:flex;align-items:center;gap:9px;padding:9px 14px;background:var(--om-caution-card);border-bottom:1px solid var(--om-caution-card-rule);font-size:11.5px;color:var(--om-caution-card-ink)}
+  /* THE WATERFALL'S ONE DENOMINATOR. Every width on it is a share of what
+     the CLIENT paid, so two bars of equal length always mean equal money.
+     Drawing each figure against its own total is the fault this exists to
+     prevent: the shop's 5,640,000 and the client's 7,050,000 would both
+     run the full width and the screen would say they were the same. */
+  .om-wf-neg{color:var(--om-bad-ink)}
+  .om-arow-ph{display:none}
+  @media (max-width: 820px){
+    .om-arow{display:block;padding:10px 16px;min-height:44px}
+    .om-arow > :not(.om-arow-ph){display:none}
+    .om-arow-ph{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-arow-ph-p{font-size:14px;font-weight:600}
+    .om-arow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
+    .om-arow-ph-f{font-size:14px;text-align:right}
+    /* Narrower tracks, and the Shop billed row drops: at 390 the five
+       rows crowd, and the shop's own billing is the one figure the phone
+       can ask for later. */
+    .om-wf{grid-template-columns:62px minmax(0,1fr) 84px}
+  }
   .om-menu-w{position:relative}
   .om-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:var(--om-surface);border:1px solid var(--om-rule);border-radius:11px;box-shadow:var(--om-shadow);padding:4px;display:none}
   .om-menu.om-on{display:block}
@@ -17037,6 +17067,9 @@
   /* ---- the phone, which is a separate design and not a reflow ---- */
   @media (max-width: 820px){
     .om-kpis{display:none}
+    /* main pads 16px at this width, not 40 -- the desktop escape would
+       drag the whole screen 24px off both edges. */
+    .om-screen{margin:0 -16px}
     .om-ph-only{display:block}
     .om-qtitle{display:none}
     .om-card.om-list{border:0;border-radius:0;box-shadow:none}
@@ -19179,49 +19212,77 @@
          agent is a ghost. Where nothing is waiting, Invite takes the
          accent back. One, always, either way. -->
     <section id="tab-agents" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Sales agents</h1>
-        <p class="ow-ph-sub">Who is holding your stock, what they owe you, and what you owe them.</p>
-        <p class="ow-ph-help">Agents sell your stock through the standalone Agent app, at your prices, and keep their own margin on top &mdash; that margin is collected from their own client and never touches your books. Their clients' identities stay private to them &mdash; an order they submit shows up here under their own name with an &ldquo;Agent order&rdquo; badge. The only money you owe an agent is supplier-funded bonus commission, which is claimed monthly and settled below.</p>
-        <span class="ow-ph-sp"></span>
-        <button type="button" class="btn btn-ghost ow-sm" id="ag_invite_btn">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Invite an agent
-        </button>
-        <span id="agHeadAct"></span>
+      <!-- SALES AGENTS, and the four prices an order line carries.
+
+           price is the shop's supplier cost, sellPrice is what the shop
+           is owed, agentSellPrice is what the agent charges their client,
+           and bonusCommission is the supplier's money snapshotted at
+           submit. One row therefore holds three different profits, and
+           the identity the code guarantees is the whole screen:
+
+               client pays  -  shop is owed  =  the agent's margin
+
+           Never mix the two totals. Never charge an agent their client
+           price -- their margin is not the shop's to collect, and the
+           settlement block says so in words because it is the error this
+           screen exists to prevent.
+
+           Promotions and Claims stay the console's for now: they are the
+           supplier-bonus machinery and the handoff draws neither. The
+           bonus block on the agent's panel summarises them. -->
+      <div class="om-screen">
+        <div class="om-qtitle">
+          <div style="flex:1;min-width:0">
+            <h1 class="om-qtitle-t">Sales agents</h1>
+            <p class="om-qtitle-s">What each one sold, what you kept on it, and what they still owe the shop</p>
+          </div>
+          <div class="om-lensgroup" id="ag_lens" role="tablist" aria-label="Which window">
+            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-aglens="month">This month</button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-aglens="last">Last month</button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-aglens="year">Year</button>
+          </div>
+        </div>
+
+        <div class="om-kpis" id="ag_kpis"></div>
+
+        <div class="om-ph-only om-ph-head" id="ag_ph_head"></div>
+
+        <div class="om-body">
+          <div class="om-card om-list" id="agRosterPan">
+            <div class="om-card-h">
+              <span class="om-card-t">The roster</span>
+              <!-- The standing clarification, because the two words are
+                   confused on every sales screen in every shop: margin is
+                   the SHOP's and commission is the AGENT's. -->
+              <span class="om-chip" style="background:var(--om-agent);color:var(--om-agent-ink)">margin is yours &middot; commission is theirs</span>
+              <span class="om-fig om-n" id="agRosterN" style="font-size:11.5px;color:var(--om-ink-3)"></span>
+              <span style="flex:1"></span>
+              <div class="om-find" style="max-width:230px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="om-find-i" id="ag_search" type="search" placeholder='Agent, order no., or "owes the shop"' aria-label="Search agents" autocomplete="off">
+              </div>
+              <button type="button" class="om-btn om-btn-s" id="ag_invite_btn" style="height:32px;padding:0 11px;font-size:12.5px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                Invite an agent
+              </button>
+              <span id="agHeadAct"></span>
+            </div>
+            <div class="om-cols om-cols-a">
+              <span></span>
+              <span class="om-col">Agent</span>
+              <span class="om-col" style="text-align:right">Shop billed</span>
+              <span class="om-col" style="text-align:right">You kept</span>
+              <span class="om-col" style="text-align:right">They kept</span>
+              <span class="om-col" style="text-align:right">Owes you</span>
+              <span class="om-col" style="text-align:right">Terms</span>
+            </div>
+            <div class="om-scroll" id="agentsWrap"></div>
+          </div>
+          <div class="om-side" id="ag_side"></div>
+        </div>
       </div>
 
-      <!-- The position and the queue. Rendered together because the foot
-           of the queue makes a claim about the whole roster, and the two
-           must never be able to disagree about what was counted. -->
       <div id="agentsTop"></div>
-
-      <div class="ow-pan ow-ag-rp" id="agRosterPan">
-        <div class="ow-pan-h">
-          <span class="ow-pan-t">The roster</span>
-          <span class="ow-pan-nt">Most owed first, then who sold most recently</span>
-          <span class="ow-pan-n" id="agRosterN"></span>
-        </div>
-        <!-- Static, so typing here never loses the caret to a re-render,
-             and so every existing caller can still read its value before
-             the screen has drawn once. The placeholder says what is
-             actually searched: renderAgents built its haystack from name,
-             phone and id, while the invite form REFUSES to save an agent
-             without a location -- so "who do I have in Jinja" was a
-             question the app could answer and this box could not. -->
-        <div class="ow-tb">
-          <label class="ow-f ow-f-grow ow-tb-s">
-            <span class="ow-f-l">Find an agent</span>
-            <span class="ow-f-in">
-              <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-              <input class="ow-f-v ow-f-t" id="ag_search" type="text" placeholder="Name, phone, place or Agent ID">
-            </span>
-          </label>
-        </div>
-        <div class="ow-tbl ow-ag-tbl" id="agentsWrap"></div>
-        <p class="ow-mini"><b>Brought in</b> is what the shop was paid, at the shop&rsquo;s own prices. <b>They earned</b> is the agent&rsquo;s own margin on top, collected from their client &mdash; it is not money the shop pays out and it is not in your books. The only money you owe an agent is the supplier-funded bonus, and that is below.</p>
-      </div>
-
       <div class="ow-ag-grid">
         <div class="ow-pan">
           <div class="ow-pan-h">
@@ -19245,6 +19306,8 @@
         </div>
       </div>
     </section>
+
+    <!-- WORKER PICK & PACK -->
 
     <!-- WORKER PICK & PACK -->
     <section id="tab-worker" style="display:none;">
@@ -52423,40 +52486,462 @@ function agentOldestUnpaidDays(){
    2,500,000 of the shop's stock and the one who has never sold anything
    rendered at the same size, and left-to-right-then-down is not a
    ranking anybody perceives. */
+/* WHAT THE GOODS COST THE SHOP, over an agent's completed orders. The
+   quote computes this inline while it draws its rows, tangled with the
+   row markup, so there is nothing to reuse -- this is the one place the
+   sum is written as a function, and every other figure on this screen
+   comes from agentStanding(). */
+function agentOrdersCost(orders){
+  return (orders||[]).filter(q=> q.status==='completed').reduce((s,q)=>
+    s + (q.items||[]).reduce((t,it)=> t + (Number(it.price)||0) * (Number(it.qty)||0), 0), 0);
+}
+/* THE FIVE FIGURES OF ONE AGENT, on one denominator.
+
+   client paid = what the shop billed + what the agent kept on top. The
+   identity the code guarantees is that the agent's margin IS the
+   difference, so this cannot drift from orderEarnings: it is the same
+   subtraction read the other way round. */
+function agentWaterfall(a, s){
+  const cost = agentOrdersCost(agentOrders(a));
+  const billed = s.revenue;
+  const theyKept = s.earned;
+  const clientPaid = billed + theyKept;
+  return { cost, youKept: billed - cost, billed, theyKept, clientPaid };
+}
+const AG_LENS_STATE = {key:'month'};
+let agPickedId = null;
+/* The window the lenses choose. Money owed is NOT scoped by it: a debt
+   does not stop being a debt because the month turned. */
+function agLensRange(){
+  const t = todayISO();
+  if(AG_LENS_STATE.key === 'year') return {from: t.slice(0,4)+'-01-01', to: t};
+  if(AG_LENS_STATE.key === 'last'){
+    const d = new Date(t+'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth()-1);
+    const from = d.toISOString().slice(0,10);
+    const e = new Date(from+'T00:00:00'); e.setMonth(e.getMonth()+1); e.setDate(0);
+    return {from, to: e.toISOString().slice(0,10)};
+  }
+  return {from: t.slice(0,8)+'01', to: t};
+}
+function agSetLens(key){
+  AG_LENS_STATE.key = key;
+  document.querySelectorAll('#ag_lens .om-lens').forEach(b=>{
+    const on = b.dataset.aglens === key;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderAgents(document.getElementById('ag_search') ? document.getElementById('ag_search').value : '');
+}
+
 function agentRowHTML(a){
   const retired = !!a.retiredAt;
   const s = agentStanding(a);
-  const open = agOpen.where === 'row' && agOpen.id === a.id;
+  const w = agentWaterfall(a, s);
   const money = (n)=> esc(fmtUGX(Math.round(n)));
-  // A dash is not a nought. Nought owed is a fact; nought brought in by
-  // somebody who has never sold is a claim that they were measured.
-  const dash = '<span class="ow-ag-none">&mdash;</span>';
+  /* A dash is not a nought. Nought owed is a fact; nought brought in by
+     somebody who has never sold is a claim that they were measured. */
+  const dash = '<span class="om-ag-none">&mdash;</span>';
   const never = s.idleDays == null;
-
-  const state = retired ? '<span class="ow-cp">Retired</span>'
-    : a.unavailable ? '<span class="ow-cp ow-warn">Paused</span>' : '';
+  const on = agPickedId === a.id ? ' om-on' : '';
+  const dim = (never || retired) ? ' om-done' : '';
+  const initials = nameInitials(a.name);
+  const tone = s.owed > 0 ? (s.onCredit ? 'om-bad' : 'om-warn') : never ? '' : 'om-studied';
+  /* SELLING UNDER THE SHOP'S PRICE is the one thing the row must not let
+     pass quietly: the agent's margin is negative, they are paying for the
+     privilege of selling, and it will be a conversation. */
+  const under = w.theyKept < -0.5;
   const terms = retired
-    ? `<span class="ow-quiet-v">Retired ${esc(fmtShortDate(String(a.retiredAt).slice(0,10)))}</span>`
+    ? `<span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">retired</span>`
     : s.onCredit
-      ? '<span class="ow-cp ow-bad"><span class="ow-cp-d"></span>Pay on delivery</span>'
-      : '<span class="ow-quiet-v">Prepay</span>';
-
-  return `<div class="ow-tbl-r ow-tbl-k ow-ag-r${open?' ow-open':''}${never||retired?' ow-ag-quiet':''}"
-      data-agrow="${esc(a.id)}" role="button" tabindex="0" aria-expanded="${open}">
-    <div class="ow-tbl-c">
-      <span class="ow-tbl-p" title="${esc(a.name)}">${esc(a.name)}</span>
-      <span class="ow-tbl-s">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''} &middot; ${
-        s.orders} order${s.orders===1?'':'s'}</span>
+      ? `<span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">credit</span>`
+      : `<span class="om-chip" style="background:var(--om-good);color:var(--om-good-ink)">prepay</span>`;
+  const state = a.unavailable && !retired ? `<span class="om-chip" style="height:18px;padding:0 6px;background:var(--om-caution);color:var(--om-caution-ink)">paused</span>` : '';
+  const sub = never
+    ? `<span style="font-size:11px;color:var(--om-ink-3)">never sold &mdash; the invite has not been taken up</span>`
+    : under
+      ? `<span style="font-size:11px;color:var(--om-bad-ink);font-weight:600">sells under your price</span>`
+      : `<span style="font-size:11px;color:var(--om-ink-3)">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''} &middot; ${s.orders} order${s.orders===1?'':'s'} &middot; ${never ? 'never' : esc(agingDaysLabel(s.idleDays)) + (s.idleDays===0?'':' ago')}</span>`;
+  return `<div class="om-arow${dim}${on}" data-agrow="${esc(a.id)}" role="button" tabindex="0">
+    <span class="om-av${tone?' '+tone:''}">${esc(initials)}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(a.name)}</div>
+      <div style="margin-top:2px;display:flex;gap:6px;align-items:center;overflow:hidden">${sub}${state}</div>
     </div>
-    <div class="ow-tbl-c" data-l="Terms">${terms}${state?' '+state:''}</div>
-    <div class="ow-tbl-n" data-l="Brought in">${s.revenue>0 ? money(s.revenue) : dash}</div>
-    <div class="ow-tbl-n" data-l="They earned">${s.earned>0 ? money(s.earned) : dash}</div>
-    <div class="ow-tbl-n" data-l="Owed to you">${s.owed>0
-      ? `<span class="ow-fig ${s.onCredit?'ow-bad':'ow-warn'}">${money(s.owed)}</span>` : dash}</div>
-    <div class="ow-tbl-n" data-l="In flight">${s.live>0 ? s.live : dash}</div>
-    <div class="ow-tbl-c" data-l="Last order"><span class="ow-quiet-v">${
-      never ? 'never' : esc(agingDaysLabel(s.idleDays)) + (s.idleDays===0?'':' ago')}</span></div>
-  </div>${open ? agentOpenHTML(a, s) : ''}`;
+    <div class="om-fig om-n" style="font-size:13.5px;text-align:right">${s.revenue>0?money(s.revenue):dash}</div>
+    <div class="om-fig om-n" style="font-size:13.5px;text-align:right">${s.revenue>0?money(w.youKept):dash}</div>
+    <div class="om-fig om-n${under?' om-wf-neg':''}" style="font-size:13.5px;text-align:right">${s.done>0?(under?'−'+money(Math.abs(w.theyKept)):money(w.theyKept)):dash}</div>
+    <div class="om-fig om-n" style="font-size:13.5px;text-align:right;color:var(${s.owed>0?(s.onCredit?'--om-bad-ink':'--om-caution-ink'):'--om-ink-3'})">${s.owed>0?money(s.owed):dash}</div>
+    <div style="text-align:right">${terms}</div>
+    <div class="om-arow-ph">
+      <span class="om-t om-arow-ph-p">${esc(a.name)}</span>
+      <span class="om-fig om-arow-ph-f om-n" style="color:var(${s.owed>0?'--om-bad-ink':'--om-ink-3'})">${s.owed>0?money(s.owed):dash}</span>
+      <span class="om-t om-arow-ph-s">${never?'never sold':`${s.done} sold &middot; kept ${w.theyKept<-0.5?'\u2212'+money(Math.abs(w.theyKept)):money(w.theyKept)}`}</span>
+      <span style="text-align:right">${terms}</span>
+    </div>
+  </div>`;
+}
+
+function renderAgentKpis(rows){
+  const el = document.getElementById('ag_kpis');
+  if(!el) return;
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  let billed=0, cost=0, theyKept=0, owed=0, behind=0, orders=0;
+  rows.forEach(({a,s})=>{
+    const w = agentWaterfall(a, s);
+    billed += w.billed; cost += w.cost; theyKept += w.theyKept; owed += s.owed; orders += s.done;
+    if(s.owed > 0) behind++;
+  });
+  const youKept = billed - cost;
+  const keptPct = billed > 0 ? (youKept/billed*100) : null;
+  /* The counter's own margin, for the comparison the handoff asks for --
+     read off the same books rather than typed in as a constant. */
+  const shopDone = (data.savedQuotes||[]).filter(q=> q.status==='completed' && q.invoiced && !q.voided);
+  const shopSell = shopDone.reduce((s,q)=> s + savedQuoteTotal(q), 0);
+  const shopCost = shopDone.reduce((s,q)=> s + (q.items||[]).reduce((t,it)=> t + (Number(it.price)||0)*(Number(it.qty)||0), 0), 0);
+  const shopPct = shopSell > 0 ? ((shopSell-shopCost)/shopSell*100) : null;
+  const allSell = shopSell || 1;
+  el.innerHTML = `
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Sold through agents</div>
+    <div class="om-fig om-kpi-f om-n">${money(billed)}</div>
+    <div class="om-kpi-s">${orders} order${orders===1?'':'s'}${shopSell>0?` &middot; ${Math.round(billed/allSell*100)}% of everything you sold`:''}</div>
+  </div>
+  <div class="om-kpi om-kpi-good">
+    <div class="om-lbl" style="font-size:10.5px;color:var(--om-good-card-ink)">You kept</div>
+    <div class="om-fig om-kpi-f om-n" style="color:var(--om-good-ink)">${money(youKept)}</div>
+    <div class="om-kpi-s" style="color:var(--om-good-card-ink)">${keptPct==null?'nothing sold in the window':`${keptPct.toFixed(1)}%${shopPct==null?'':` &middot; shop counter runs ${shopPct.toFixed(0)}%`}`}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">They kept</div>
+    <div class="om-fig om-kpi-f om-n${theyKept<-0.5?' om-wf-neg':''}">${theyKept<-0.5?'−'+money(Math.abs(theyKept)):money(theyKept)}</div>
+    <div class="om-kpi-s">their own margin, not your cost</div>
+  </div>
+  <div class="om-kpi${owed>0?' om-kpi-warn':''}">
+    <div class="om-lbl" style="font-size:10.5px"${owed>0?' style="color:var(--om-caution-card-ink)"':''}>Owed to the shop</div>
+    <div class="om-fig om-kpi-f om-n">${money(owed)}</div>
+    <div class="om-kpi-s"${owed>0?' style="color:var(--om-caution-card-ink)"':''}>${owed>0?`${behind} agent${behind===1?'':'s'} behind &middot; at the shop price, not theirs`:'every agent is settled up'}</div>
+  </div>`;
+}
+
+/* THE WATERFALL. Five rows, one denominator, and the increments offset so
+   each starts where its base ends. */
+function agentWaterfallHTML(w, opts){
+  const skipBilled = opts && opts.skipBilled;
+  const denom = w.clientPaid > 0 ? w.clientPaid : 0;
+  const pc = (n)=> denom > 0 ? Math.max(0, Math.min(100, n/denom*100)) : 0;
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  if(denom <= 0){
+    return `<div class="om-read">Nothing has completed through this agent yet, so there is no split to draw. A bar at zero would say they sold at cost, which is a different claim.</div>`;
+  }
+  const row = (label, width, offset, tok, fig, neg)=> `<div class="om-wf">
+    <span class="om-lbl" style="font-size:10.5px">${esc(label)}</span>
+    <span style="display:block"><span class="om-wfb" style="display:block;width:${width.toFixed(1)}%;margin-left:${offset.toFixed(1)}%;background:var(${tok})"></span></span>
+    <span class="om-fig om-n${neg?' om-wf-neg':''}" style="font-size:12.5px;text-align:right">${fig}</span>
+  </div>`;
+  const under = w.theyKept < -0.5;
+  return row('Your cost', pc(w.cost), 0, '--om-track', money(w.cost))
+    + row('You kept', pc(w.youKept), pc(w.cost), '--om-good-ink', money(w.youKept))
+    + (skipBilled ? '' : row('Shop billed', pc(w.billed), 0, '--om-navy', money(w.billed)))
+    + row('They kept', pc(Math.abs(w.theyKept)), under ? pc(w.clientPaid) : pc(w.billed), under ? '--om-bad-ink' : '--om-agent-bar',
+        (under?'−':'') + money(Math.abs(w.theyKept)), under)
+    + row('Client paid', 100, 0, '--om-agent-ink', money(w.clientPaid));
+}
+
+function renderAgentSide(a){
+  const el = document.getElementById('ag_side');
+  if(!el) return;
+  if(!a){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick an agent to read the split three ways &mdash; what the goods cost, what the shop kept, and what they kept on top.</div>`;
+    return;
+  }
+  const s = agentStanding(a);
+  const w = agentWaterfall(a, s);
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  /* WHAT THEY OWE IS AT THE SHOP'S PRICE, and the block says so because
+     this is the error the screen exists to prevent: their clients paid
+     more, and that difference is the agent's margin, not the shop's to
+     collect. */
+  const clientSide = s.owed > 0 && w.billed > 0 ? s.owed * (w.clientPaid / w.billed) : 0;
+  const bonus = agentBonusSummary(a);
+  const tops = agentTopLines(a);
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-pan">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span class="om-av om-av-onnavy om-av-lg">${esc(nameInitials(a.name))}</span>
+        <div style="min-width:0;flex:1">
+          <div class="om-pan-t">${esc(a.name)}</div>
+          <div class="om-pan-m">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''} &middot; ${s.done} completed</div>
+        </div>
+        <span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">${s.onCredit?'credit':'prepay'}</span>
+      </div>
+    </div>
+    <div style="padding:12px 14px">
+      <div class="om-lbl" style="font-size:10.5px;margin-bottom:4px">Where the money went</div>
+      ${agentWaterfallHTML(w)}
+    </div>
+    ${s.owed > 0 ? `<div style="padding:0 14px 12px"><div class="om-note om-note-warn">
+      <b>Owes the shop ${money(s.owed)}.</b> At your price on ${s.orders - s.live} delivered order${(s.orders-s.live)===1?'':'s'}, not the ${money(clientSide)} their clients paid. Their margin is not yours to collect.
+    </div></div>` : ''}
+    <div class="om-acts">
+      <button type="button" class="om-btn om-btn-p" id="ag_pan_settle" style="height:34px">Record a settlement</button>
+      <button type="button" class="om-btn om-btn-s" id="ag_pan_hold" style="height:34px">${a.unavailable?'Lift the hold':'Hold new orders'}</button>
+    </div>
+  </div>
+
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">Supplier bonus</span></div>
+    <div style="padding:0 14px 12px">
+      <div class="om-figs" style="padding:10px 0">
+        <div><div class="om-lbl" style="font-size:10.5px">Shown as earned</div><div class="om-fig om-figs-f om-n">${money(bonus.earned)}</div></div>
+        <div><div class="om-lbl" style="font-size:10.5px">Claimable</div><div class="om-fig om-figs-f om-n">${money(bonus.claimable)}</div></div>
+        <div><div class="om-lbl" style="font-size:10.5px">Not yet counted</div><div class="om-fig om-figs-f om-n" style="color:var(--om-ink-3)">${money(bonus.pending)}</div></div>
+      </div>
+      <div style="margin-top:4px">${bonus.agrees
+        ? `<span class="om-chip" style="background:var(--om-good);color:var(--om-good-ink)">screen agrees with payout &middot; checked</span>`
+        : `<span class="om-chip" style="background:var(--om-bad);color:var(--om-bad-ink)">screen and payout disagree by ${money(Math.abs(bonus.drift))}</span>`}</div>
+      <div class="om-read" style="margin-top:9px">A bonus counts once the order is completed, and it is the supplier&rsquo;s money &mdash; never yours.</div>
+    </div>
+  </div>
+
+  ${tops.length ? `<div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">Which lines they sell</span></div>
+    <div style="padding:0 14px 12px">
+      ${tops.map(l=>`<div class="om-drow">
+        <span class="om-t" style="flex:1;font-size:12.5px">${esc(l.name)}</span>
+        <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${l.share}% of orders</span>
+      </div>`).join('')}
+      <div class="om-read" style="margin-top:9px">Their round is mostly <b>${esc(tops[0].name)}</b>, which is why what you keep here sits where it does. Selling them a thinner-carrying line would move it more than raising that one would.</div>
+    </div>
+  </div>` : ''}
+
+  <div class="om-card" id="ag_record_wrap"></div>`;
+
+  /* The credit decision, the invoices behind the figure, and the two acts
+     that close an agent down -- all of it the console's, all of it kept.
+     Pause and retire are not degrees of one thing and the existing block
+     is the only place that says so properly. */
+  const rec = el.querySelector('#ag_record_wrap');
+  if(rec) rec.innerHTML = agentOpenHTML(a, s);
+  /* A settlement is a payment against one of THEIR invoices, at the shop
+     price -- so it is the invoice payment modal, not a second flow that
+     could come to disagree with it about the same money. The oldest
+     unpaid one is the one a shop settles first. */
+  const settle = el.querySelector('#ag_pan_settle');
+  if(settle) settle.onclick = ()=>{
+    const open = agentOrders(a).filter(q=> q.invoiced && invoiceBalanceDue(q) > 0.5)
+      .sort((x,y)=> String(x.invoicedAt||x.date||'').localeCompare(String(y.invoicedAt||y.date||'')));
+    if(!open.length){ toast('This agent owes the shop nothing — there is no invoice to settle.'); return; }
+    openInvoicePaymentModal(open[0].id);
+  };
+  const hold = el.querySelector('#ag_pan_hold');
+  if(hold) hold.onclick = ()=> toggleAgentAvailability(a.id);
+}
+
+/* The supplier's money, summarised from the promotion claims that already
+   exist. Earned is what the completed orders show; claimable is what has
+   been approved to pay; pending is the rest. */
+function agentBonusSummary(a){
+  const done = agentOrders(a).filter(q=> q.status==='completed');
+  const earned = done.reduce((s,q)=> s + (q.items||[]).reduce((t,it)=> t + (Number(it.bonusCommission)||0), 0), 0);
+  /* commissionClaims is the payout side, loaded from the server -- the
+     same rows the Settle button at the top of the screen acts on. */
+  const claims = (commissionClaims || []).filter(c=> String(c.agent_id) === String(a.id));
+  const claimable = claims.filter(c=> c.status === 'requested' || c.status === 'paid')
+    .reduce((s,c)=> s + (Number(c.bonus_amount)||0), 0);
+  const pending = Math.max(0, earned - claimable);
+  const drift = Math.round(earned - (claimable + pending));
+  return { earned, claimable, pending, drift, agrees: Math.abs(drift) < 1 };
+}
+/* Which lines carry their round, by share of the orders they appear on. */
+function agentTopLines(a){
+  const done = agentOrders(a).filter(q=> q.status==='completed');
+  if(!done.length) return [];
+  const count = new Map();
+  done.forEach(q=> new Set((q.items||[]).map(it=> it.productName||'')).forEach(n=>{
+    if(n) count.set(n, (count.get(n)||0) + 1);
+  }));
+  return [...count.entries()].sort((x,y)=> y[1]-x[1]).slice(0,3)
+    .map(([name,n])=> ({name, share: Math.round(n/done.length*100)}));
+}
+
+function renderAgentPhoneHead(rows){
+  const el = document.getElementById('ag_ph_head');
+  if(!el) return;
+  let billed=0, cost=0, owed=0;
+  rows.forEach(({a,s})=>{ const w = agentWaterfall(a,s); billed+=w.billed; cost+=w.cost; owed+=s.owed; });
+  const keptPct = billed > 0 ? ((billed-cost)/billed*100) : null;
+  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.?0+$/,'') + 'm'
+    : n >= 1000 ? Math.round(n/1000) + 'k' : String(Math.round(n));
+  const tab = (key,label)=>`<button type="button" class="om-ph-tab${AG_LENS_STATE.key===key?' om-on':''}" data-aglens="${key}">${esc(label)}</button>`;
+  const cell = (label, val, warn)=>`<div class="om-ph-fig"${warn?' style="background:var(--om-caution-card)"':''}>
+    <div class="om-ph-fig-l"${warn?' style="color:var(--om-caution-card-ink)"':''}>${esc(label)}</div>
+    <div class="om-fig om-ph-fig-v"${warn?' style="color:var(--om-caution-card-ink)"':''}>${esc(val)}</div></div>`;
+  el.innerHTML = `<div class="om-ph-t">Sales agents</div>
+    <div class="om-ph-figs">
+      ${cell('Sold', short(billed), false)}
+      ${cell('You kept', keptPct==null?'—':keptPct.toFixed(1)+'%', false)}
+      ${cell('Owed you', short(owed), owed>0)}
+    </div>
+    <div class="om-ph-tabs">${tab('month','Month')}${tab('last','Last')}${tab('year','Year')}</div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>agSetLens(b.dataset.aglens)));
+}
+
+function renderAgents(filter=''){
+  const tokens = searchTokens(filter);
+  /* Retired agents sink to the bottom rather than disappearing -- still
+     findable (and still visibly holding their Agent ID), just out of the
+     way of the active roster. */
+  let rows = (data.agents||[]).slice().sort((a,b)=>{
+    if(!!a.retiredAt !== !!b.retiredAt) return a.retiredAt ? 1 : -1;
+    const sa = agentStanding(a), sb = agentStanding(b);
+    if(sa.owed !== sb.owed) return sb.owed - sa.owed;
+    // Never sold sorts BELOW anyone who has, whichever way the rest
+    // points -- an agent with no history has no position on a recency
+    // axis, and a raw '' put them at the far end of it as though they
+    // were the oldest.
+    if((sa.lastAt == null) !== (sb.lastAt == null)) return sa.lastAt == null ? 1 : -1;
+    if(sa.lastAt !== sb.lastAt) return String(sb.lastAt||'').localeCompare(String(sa.lastAt||''));
+    return String(a.name||'').localeCompare(String(b.name||''));
+  });
+  if(tokens.length){
+    rows = rows.filter(a=> matchesAllTokens(
+      (a.name+' '+(a.phone||'')+' '+(a.location||'')+' '+(a.email||'')+' '+a.id).toLowerCase(), tokens));
+  }
+  const top = document.getElementById('agentsTop');
+  const rosterPan = document.getElementById('agRosterPan');
+  const grid = document.querySelector('#tab-agents .ow-ag-grid');
+  const screen = document.querySelector('#tab-agents .om-screen');
+  const wrap = document.getElementById('agentsWrap');
+  if(!wrap) return;
+  const total = (data.agents||[]).length;
+
+  /* NO AGENTS AT ALL is not an empty list, it is a screen that has not
+     started. It says what an agent IS and what the two terms mean, because
+     the decision is made before the invite goes out. */
+  if(!total){
+    if(top) top.innerHTML = `<div class="ow-pan"><div class="ow-empty">
+      <b>You have no sales agents.</b>
+      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">An agent sells your stock through the Agent app, at your prices, and keeps their own margin on top. Their clients stay private to them &mdash; you see the order, never the buyer.</p>
+      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">Inviting one sends an email; they pick their own password and you never see it. Their Agent ID is issued by the server rather than typed here, so it can never collide with an ID that already has order history behind it. Decide the terms before you invite: <b>pay before we prepare</b> means nothing leaves the shop until the money is in, and <b>pay on delivery</b> means goods go out on trust to somebody who does not work for you.</p>
+    </div></div>`;
+    if(screen) screen.style.display = 'none';
+    if(grid) grid.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  if(screen) screen.style.display = '';
+  if(rosterPan) rosterPan.style.display = '';
+  if(grid) grid.style.display = '';
+
+  const stood = rows.map(a=> ({a, s: agentStanding(a)}));
+  renderAgentKpis(stood);
+  renderAgentPhoneHead(stood);
+  renderAgentHeadAction();
+
+  /* The roster position and the attention band stay the console's: the
+     handoff draws neither, and both say things no card on this screen
+     says -- how many of the roster is actually working, and who needs a
+     decision today. */
+  if(top) top.innerHTML = agentRosterPositionHTML() + agentAttentionHTML();
+
+  const live = rows.filter(a=> !a.retiredAt);
+  const gone = rows.filter(a=> !!a.retiredAt);
+  const n = document.getElementById('agRosterN');
+  if(n) n.textContent = tokens.length
+    ? `${rows.length} of ${total}`
+    : `${live.length} selling${gone.length ? ` \u00b7 ${gone.length} retired` : ''}`;
+
+  if(!rows.length){
+    wrap.innerHTML = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">No agent matches &ldquo;${esc(filter)}&rdquo;. The search reads names, phone numbers, places, emails and Agent IDs.</div>`;
+    agPickedId = null;
+    renderAgentSide(null);
+    return;
+  }
+
+  /* Behind on settlement first, because that is money already out of the
+     building. Retired keep their own band under both, with the line that
+     says an Agent ID is never reused. */
+  const liveStood = stood.filter(r=> !r.a.retiredAt);
+  const behind = liveStood.filter(r=> r.s.owed > 0.5);
+  const settled = liveStood.filter(r=> !(r.s.owed > 0.5));
+  const groups = [
+    {rows:behind, word:'Behind on settlement', tok:'--om-caution', ink:'--om-caution-ink',
+     sub: fmtUGX(Math.round(behind.reduce((s,r)=>s+r.s.owed,0))) + ' owed'},
+    {rows:settled, word:'Settled up', tok:'--om-good', ink:'--om-good-ink',
+     sub: 'prepay or paid on delivery'},
+  ].filter(g=>g.rows.length);
+
+  wrap.innerHTML = groups.map(g=>`<div class="om-grow">
+      <span class="om-chip" style="background:var(${g.tok});color:var(${g.ink})">${esc(g.word)}</span>
+      <span style="font-size:12.5px;font-weight:700">${g.rows.length} agent${g.rows.length===1?'':'s'}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${esc(g.sub)}</span>
+    </div>` + g.rows.map(r=> agentRowHTML(r.a)).join('')).join('')
+    + (gone.length ? `<div class="om-grow">
+      <span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">Retired</span>
+      <span style="font-size:12.5px;font-weight:700">${gone.length}</span>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:var(--om-ink-3)">their Agent ID stays reserved and can never be reused</span>
+    </div>` + gone.map(agentRowHTML).join('') : '');
+
+  if(top) top.querySelectorAll('.ow-q[data-agq]').forEach(q=>{
+    q.querySelectorAll('.ow-q-r,.ow-q-card').forEach(btn=> btn.addEventListener('click', ()=>{
+      const k = q.dataset.agq;
+      agOpen = (agOpen.where === 'band' && agOpen.id === k) ? { id:null, where:null } : { id:k, where:'band' };
+      refreshAgentsScreen();
+    }));
+  });
+
+  wrap.querySelectorAll('[data-agrow]').forEach(row=>{
+    const open = ()=>{
+      agPickedId = row.dataset.agrow;
+      /* agentOpenHTML reads agOpen to decide it is showing, and the panel
+         is where it shows now. */
+      agOpen = { id: agPickedId, where: 'row' };
+      renderAgents(document.getElementById('ag_search') ? document.getElementById('ag_search').value : '');
+    };
+    row.addEventListener('click', (e)=>{ if(e.target.closest('button,select,a,input')) return; open(); });
+    row.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+  });
+
+  /* THE CREDIT DECISION, asked in the one place it can be asked well.
+     Putting an agent on "pay on delivery" means their orders can be
+     prepared and handed over with no money in. It was made from a bare
+     dropdown that said nothing and raised the same toast either way.
+     Reached through the section rather than the list, because the
+     dropdown lives on the picked agent's panel now. */
+  document.querySelectorAll('#tab-agents .ag-payment-term-select').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const a = data.agents.find(x=>x.id===sel.dataset.id); if(!a) return;
+      const prior = a.paymentTerm;
+      if(sel.value === 'pay_on_delivery' && prior !== 'pay_on_delivery'){
+        const s = agentStanding(a);
+        if(!confirm(`Let ${a.name} take goods before paying?\n\nTheir orders will be prepared and handed over with no money in, and whatever they have not paid for is yours to chase.${
+          s.owed > 0 ? `\n\nThey already owe ${fmtUGX(Math.round(s.owed))}.` : ''}${
+          s.idleDays == null ? '\n\nThey have never sold anything yet.' : ''}`)){
+          sel.value = prior; return;
+        }
+      }
+      a.paymentTerm = sel.value;
+      saveData();
+      refreshAgentsScreen();
+      toast(sel.value === 'pay_on_delivery'
+        ? `${a.name} can now take goods before paying`
+        : `${a.name} must now pay before anything is prepared`);
+    });
+  });
+  if(agPickedId != null && !stood.some(r=> String(r.a.id) === String(agPickedId))) agPickedId = null;
+  const picked = agPickedId == null ? null : stood.find(r=> String(r.a.id) === String(agPickedId));
+  renderAgentSide(picked ? picked.a : null);
+
+  /* The two tables at the foot are the old sub-tabs, part of the screen
+     rather than behind it, so they load with it. Both are drawn from
+     whatever has arrived; neither shows a nought while it is still
+     reading. */
+  loadAgentSideTables();
+  renderAgentPromotions();
+  renderCommissionClaims();
 }
 
 /* WHAT THE ROW OPENS INTO: the case for the figure, the invoices behind
@@ -52871,136 +53356,6 @@ async function settleWaitingClaims(){
 /* THE ROSTER. Ordered by what needs doing rather than by the alphabet:
    money owed first, then who sold most recently, retired last. That sort
    was already here and a grid of equal cards threw it away. */
-function renderAgents(filter=''){
-  const tokens = searchTokens(filter);
-  /* Retired agents sink to the bottom rather than disappearing -- still
-     findable (and still visibly holding their Agent ID), just out of the
-     way of the active roster. */
-  let rows = (data.agents||[]).slice().sort((a,b)=>{
-    if(!!a.retiredAt !== !!b.retiredAt) return a.retiredAt ? 1 : -1;
-    const sa = agentStanding(a), sb = agentStanding(b);
-    if(sa.owed !== sb.owed) return sb.owed - sa.owed;
-    // Never sold sorts BELOW anyone who has, whichever way the rest
-    // points -- an agent with no history has no position on a recency
-    // axis, and a raw '' put them at the far end of it as though they
-    // were the oldest.
-    if((sa.lastAt == null) !== (sb.lastAt == null)) return sa.lastAt == null ? 1 : -1;
-    if(sa.lastAt !== sb.lastAt) return String(sb.lastAt||'').localeCompare(String(sa.lastAt||''));
-    return String(a.name||'').localeCompare(String(b.name||''));
-  });
-  if(tokens.length){
-    rows = rows.filter(a=> matchesAllTokens(
-      (a.name+' '+(a.phone||'')+' '+(a.location||'')+' '+(a.email||'')+' '+a.id).toLowerCase(), tokens));
-  }
-
-  const top = document.getElementById('agentsTop');
-  const rosterPan = document.getElementById('agRosterPan');
-  const grid = document.querySelector('#tab-agents .ow-ag-grid');
-  const wrap = document.getElementById('agentsWrap');
-  if(!wrap) return;
-  const total = (data.agents||[]).length;
-
-  renderAgentHeadAction();
-
-  /* NOBODY INVITED YET. No strip: five figures of nought are five
-     figures that mean nothing. The screen instead explains what an agent
-     is, since this is the one place somebody meets the idea, and names
-     the two things that go wrong later. */
-  if(!total){
-    if(top) top.innerHTML = `<div class="ow-pan" style="margin-bottom:16px;"><div class="ow-empty">
-      <b>You have no sales agents.</b>
-      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">An agent sells your stock through the Agent app, at your prices, and keeps their own margin on top. Their clients stay private to them &mdash; you see the order, never the buyer.</p>
-      <p style="max-width:56ch;margin:8px auto 0;text-align:left;">Inviting one sends an email; they pick their own password and you never see it. Their Agent ID is issued by the server rather than typed here, so it can never collide with an ID that already has order history behind it. Decide the terms before you invite: <b>pay before we prepare</b> means nothing leaves the shop until the money is in, and <b>pay on delivery</b> means goods go out on trust to somebody who does not work for you.</p>
-    </div></div>`;
-    if(rosterPan) rosterPan.style.display = 'none';
-    if(grid) grid.style.display = 'none';
-    wrap.innerHTML = '';
-    return;
-  }
-  if(rosterPan) rosterPan.style.display = '';
-  if(grid) grid.style.display = '';
-
-  if(top) top.innerHTML = agentRosterPositionHTML() + agentAttentionHTML();
-
-  const live = rows.filter(a=> !a.retiredAt);
-  const gone = rows.filter(a=> !!a.retiredAt);
-  const head = `<div class="ow-tbl-h">
-    <div class="ow-tbl-c">Agent</div>
-    <div class="ow-tbl-c">Terms</div>
-    <div class="ow-tbl-n">Brought in</div>
-    <div class="ow-tbl-n">They earned</div>
-    <div class="ow-tbl-n">Owed to you</div>
-    <div class="ow-tbl-n">In flight</div>
-    <div class="ow-tbl-c">Last order</div>
-  </div>`;
-  wrap.innerHTML = !rows.length
-    ? head + `<div class="ow-empty">No agent matches &ldquo;${esc(filter)}&rdquo;. The search reads names, phone numbers, places, emails and Agent IDs.</div>`
-    : head + live.map(agentRowHTML).join('')
-      + (gone.length
-        ? `<div class="ow-ag-sect">Retired &mdash; their Agent ID stays reserved and can never be reused</div>` + gone.map(agentRowHTML).join('')
-        : '');
-
-  const n = document.getElementById('agRosterN');
-  if(n) n.textContent = tokens.length
-    ? `${rows.length} of ${total}`
-    : `${live.length} selling${gone.length ? ` · ${gone.length} retired` : ''}`;
-
-  if(top) top.querySelectorAll('.ow-q[data-agq]').forEach(q=>{
-    q.querySelectorAll('.ow-q-r,.ow-q-card').forEach(btn=> btn.addEventListener('click', ()=>{
-      const k = q.dataset.agq;
-      agOpen = (agOpen.where === 'band' && agOpen.id === k) ? { id:null, where:null } : { id:k, where:'band' };
-      refreshAgentsScreen();
-    }));
-  });
-
-  wrap.querySelectorAll('.ow-ag-r').forEach(row=>{
-    const open = ()=>{
-      const id = row.dataset.agrow;
-      agOpen = (agOpen.where === 'row' && agOpen.id === id) ? { id:null, where:null } : { id, where:'row' };
-      refreshAgentsScreen();
-    };
-    row.addEventListener('click', (e)=>{ if(e.target.closest('button,select,a,input')) return; open(); });
-    row.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
-  });
-
-  wrap.querySelectorAll('.ag-payment-term-select').forEach(sel=>{
-    sel.addEventListener('change', ()=>{
-      const a = data.agents.find(x=>x.id===sel.dataset.id); if(!a) return;
-      const prior = a.paymentTerm;
-      /* Putting an agent on "pay on delivery" is a credit decision: from
-         then on their orders can be prepared and handed over with no
-         money in. It was made from a bare dropdown that said nothing and
-         raised a toast reading "payment terms updated" -- the same
-         sentence for either direction.
-
-         Asked in the one place it can be asked well, with what they
-         already owe named, because that is the figure the answer turns
-         on and it was on no screen at all. */
-      if(sel.value === 'pay_on_delivery' && prior !== 'pay_on_delivery'){
-        const s = agentStanding(a);
-        if(!confirm(`Let ${a.name} take goods before paying?\n\nTheir orders will be prepared and handed over with no money in, and whatever they have not paid for is yours to chase.${
-          s.owed > 0 ? `\n\nThey already owe ${fmtUGX(Math.round(s.owed))}.` : ''}${
-          s.idleDays == null ? '\n\nThey have never sold anything yet.' : ''}`)){
-          sel.value = prior; return;
-        }
-      }
-      a.paymentTerm = sel.value;
-      saveData();
-      refreshAgentsScreen();
-      toast(sel.value === 'pay_on_delivery'
-        ? `${a.name} can now take goods before paying`
-        : `${a.name} must now pay before anything is prepared`);
-    });
-  });
-
-  /* The two tables at the foot are the old sub-tabs, and they are now
-     part of the screen rather than behind it -- so they load with it.
-     Both are drawn from whatever has arrived; neither shows a nought
-     while it is still reading. */
-  loadAgentSideTables();
-  renderAgentPromotions();
-  renderCommissionClaims();
-}
 /* Pausing an agent. The flag was written to the database and read by
    NOTHING -- not current_agent_id(), not agent-submit-order, not
    agent.html. "Mark inactive" greyed a card in the admin's own browser

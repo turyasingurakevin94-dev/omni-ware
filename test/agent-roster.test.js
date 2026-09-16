@@ -324,12 +324,29 @@ if (scope) {
 
 /* ---------- 9. the card answers the four questions -------------------- */
 {
-  t.check(/data-l="Brought in"/.test(card) && /data-l="Owed to you"/.test(card) && /data-l="In flight"/.test(card),
+  /* THE ROW IS THE CARD SYSTEM'S NOW, so the four questions are answered
+     in its seven specified columns rather than by data-l labels on a
+     console table. The labels moved to the column header band, which the
+     phone hides in favour of the row's own two-line block -- so what is
+     checked is that the columns EXIST and say what they hold, which was
+     always the claim.
+
+     "In flight" lost its column: the handoff's grid spends that track on
+     Terms, and orders still moving are on the panel and in the roster
+     position above. The three figures that decide whether to act are the
+     ones on the row. */
+  const agSection = (/<section id="tab-agents"[\s\S]*?\n    <\/section>/.exec(src) || [''])[0];
+  ['Shop billed', 'You kept', 'They kept', 'Owes you'].forEach((col)=>{
+    t.check(new RegExp('>' + col + '<').test(agSection), `the register names its "${col}" column`);
+  });
+  t.check(/data-agrow/.test(card) && /om-arow/.test(card),
     'the row leads with what they brought, what they owe and what is still moving');
   /* Money owed reads differently depending on how it came to be owed:
      unpaid on prepay terms is a hiccup, unpaid on credit terms is the
      shop's own decision coming due. */
-  t.check(/s\.onCredit\?'ow-bad':'ow-warn'/.test(card),
+  /* Unpaid on prepay terms is a hiccup; unpaid on credit terms is the
+     shop's own decision coming due. Same rule, the card system's tokens. */
+  t.check(/s\.onCredit\?'--om-bad-ink':'--om-caution-ink'/.test(card),
     'with what is owed marked by how it came to be owed');
   /* It was a coloured note stacked under four others on the card. It is
      now the first sentence of the case the row opens into, which is
