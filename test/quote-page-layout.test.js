@@ -285,7 +285,7 @@ const src = read('index.html');
      cells after the date: the date's cell closes, the known-facts cell
      follows, and only then does the band close. The client and their
      number share the first cell -- one client, one cell. */
-  t.check(/id="q_date">\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="ow-cb-k" id="q_client_history"><\/div>\s*<\/div>/.test(src),
+  t.check(/id="q_date">\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="[^"]*\bow-cb-k\b[^"]*" id="q_client_history"><\/div>\s*<\/div>/.test(src),
     'what the books know is the band’s own last cell, not an island under it');
   t.check(/<div class="q-client-cell">\s*<input[^>]*id="q_client_name"[^>]*>\s*<input[^>]*id="q_client_phone"/.test(src),
     'and the number sits in the client’s own cell beside the name');
