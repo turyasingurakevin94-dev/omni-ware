@@ -115,8 +115,19 @@ const stripComments = (s) => s
   t.check(!/var\(--/.test(login) && !/var\(--/.test(extractFunction(agentHtml, 'showLoginScreen', 'agent.html')),
     'nor does either markup');
 
-  t.check(/#B23A26/.test(styles) && /#14171B/.test(styles),
-    'the palette is the same one, written literally');
+  /* Was: literal /#B23A26/ and /#14171B/. Those were the palette's accent
+     and navy on the day it was written, and a re-skin moved both while the
+     thing being asserted -- that this screen paints the SAME palette it
+     cannot read through a token -- did not change. Read the values from
+     the one file that declares them, so the next re-skin cannot make this
+     assertion quietly false. */
+  const root = read('index.html');
+  const tok = (n) => (new RegExp(`--ow-${n}:\\s*(#[0-9A-Fa-f]{6})`).exec(root) || [])[1];
+  const accent = tok('oxide'), navy = tok('steel-950');
+  t.check(!!accent && !!navy, 'the palette declares an accent and a navy to compare against');
+  t.check(styles.toUpperCase().includes(accent.toUpperCase())
+       && styles.toUpperCase().includes(navy.toUpperCase()),
+    `the palette is the same one, written literally (${accent}, ${navy})`);
   t.check(/'Archivo Black','Manrope'/.test(styles) || /'Manrope','Archivo Black'/.test(styles),
     'and the display face names both hosts\' faces, so each app is set in the one it already loads');
   t.check(!/fonts\.googleapis/.test(agentStyles) && !/@import/.test(agentStyles),

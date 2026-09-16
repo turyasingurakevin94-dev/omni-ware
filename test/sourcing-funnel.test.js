@@ -2204,8 +2204,12 @@ async function main() {
   const faint = srcHues.filter(h=> onWhite(h) < 3);
   t.check(faint.length === 0,
     `and every one clears 3:1 on white${faint.length ? ' — ' + faint.join(', ') : ''}`);
-  eq(srcHues[4], '#1C6B58',
-    'with the last one the shop\'s own verdigris, because reaching it is the good outcome');
+  /* Was: a literal '#1C6B58'. Verdigris is what is being asserted, not
+     that particular hex -- the re-skin moved it and the meaning did not.
+     PALETTE above is index.html's :root, so read it from there. */
+  const verdigris = (/--ow-verdigris:\s*(#[0-9A-Fa-f]{6})/.exec(read('index.html')) || [])[1];
+  eq(srcHues[4], (verdigris || '').toUpperCase(),
+    `with the last one the shop's own verdigris (${verdigris}), because reaching it is the good outcome`);
 }
 
 /* ---------- 8. the two boards do not reach into each other ----------- */

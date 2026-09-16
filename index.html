@@ -6,17 +6,26 @@
 <title>Omni-Ware — Hardware shop management</title>
 <link rel="manifest" href="/manifest.json">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
   :root{
     /* ---------------------------------------------------------------
        Omni-ware design tokens. One palette, four surfaces.
 
-       Ground is galvanized sheet -- a cool grey with a blue cast.
-       Accent is oxide primer / red mabati roofing. Both come from what
-       a hardware yard actually looks like rather than from software
-       convention, and oxide holds up in direct sun where the previous
-       amber washed out.
+       Ground is warm paper -- a cream with the barest red in it, the
+       page the work sits on. Chrome is a deep indigo navy. Accent is a
+       bright red, and it is the one thing to do next.
+
+       This replaced a yard palette (galvanized-sheet grey, oxide primer
+       red) at the owner's request, matching a CRM they wanted this to
+       look like. The token NAMES did not move -- --ow-oxide is still
+       what every accent rule reads -- because they are read ~700 times
+       across this file and renaming them would have been a diff nobody
+       could review. Read `oxide` as `the accent`.
+
+       Every value here is held to 4.5:1 on the ground it is used on,
+       and the design system test computes that from these declarations
+       rather than from a list, so changing one is checked.
 
        The four apps previously ran three unrelated accents (amber here,
        teal in agent/catalogue, green in worker), so nothing signalled
@@ -27,33 +36,33 @@
        ~700 times across this file. Re-skinning happens here; no markup
        moves. To revert, restore the old literal values in the aliases.
        --------------------------------------------------------------- */
-    --ow-steel-950:#14171B;
-    --ow-steel-800:#252A31;
-    --ow-steel-400:#8A939C;
-    --ow-steel-100:#DCE0E4;
-    --ow-steel-050:#E9EBED;
+    --ow-steel-950:#16203C;
+    --ow-steel-800:#243052;
+    --ow-steel-400:#767F91;
+    --ow-steel-100:#E0DCD4;
+    --ow-steel-050:#F7F5F2;
     --ow-paper:#FFFFFF;
-    --ow-oxide:#B23A26;
-    --ow-oxide-deep:#8E2C1C;
-    --ow-oxide-light:#C9573F;
-    --ow-oxide-soft:#F6E7E3;
-    --ow-verdigris:#1C6B58;
-    --ow-verdigris-soft:#E2EFEB;
-    --ow-amber:#B0700A;
-    --ow-amber-soft:#FBEFD9;
+    --ow-oxide:#C93A30;
+    --ow-oxide-deep:#A82D24;
+    --ow-oxide-light:#E5483D;
+    --ow-oxide-soft:#FDE8E4;
+    --ow-verdigris:#0F6B43;
+    --ow-verdigris-soft:#E4F4EA;
+    --ow-amber:#95530C;
+    --ow-amber-soft:#FDEEE1;
     /* A tint, not a fill: soft is right behind a chip-sized label and far
        too loud spread across a whole calendar square. Named rather than
        written into the rule so it is reviewable alongside the family it
        belongs to, like every other colour in this file. */
-    --ow-amber-faint:#FEFAF2;
+    --ow-amber-faint:#FEF8F2;
     --ow-amber-ink:#7A4A02;
-    --ow-crimson:#7F1D1A;
-    --ow-crimson-soft:#F7E4E2;
-    --ow-ink-900:#14171B;
-    --ow-ink-600:#59626B;
-    --ow-ink-400:#8A939C;
-    --ow-rule:#CFD5DA;
-    --ow-rule-soft:#E3E7EA;
+    --ow-crimson:#8E2A22;
+    --ow-crimson-soft:#FBE5E2;
+    --ow-ink-900:#1C2233;
+    --ow-ink-600:#5F6980;
+    --ow-ink-400:#767F91;
+    --ow-rule:#E6E3DD;
+    --ow-rule-soft:#EFECE6;
 
     /* Aliases -- admin surface */
     --bg: var(--ow-steel-050);
@@ -83,7 +92,7 @@
   body{
     background:var(--bg);
     color:var(--ink);
-    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-family:'Figtree',system-ui,-apple-system,sans-serif;
     min-height:100vh;
   }
   .app{display:flex;min-height:100vh;}
@@ -190,7 +199,7 @@
   }
   .tb-results button .nav-icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;
     stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .tb-results button .tbr-group{margin-left:auto;font-size:11px;color:#7C8894;padding-left:12px;}
+  .tb-results button .tbr-group{margin-left:auto;font-size:11px;color:#8D99B5;padding-left:12px;}
   /* One highlight, driven by the keyboard cursor rather than by :hover --
      two highlighted rows, one under the pointer and one under the arrow
      keys, is worse than none. */
@@ -345,7 +354,11 @@
   nav button .nav-icon{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   nav button .nav-label{overflow:hidden;text-overflow:ellipsis;}
   nav button:hover{background:rgba(255,255,255,0.07);color:#fff;}
-  nav button.active{background:var(--accent);color:#fff;font-weight:700;}
+  /* White, not the accent. The handoff's rail marks the current row by
+     inverting it; painting it with --accent put a second oxide element
+     on every screen in the app, permanently, competing with whatever
+     that screen's one action was. */
+  nav button.active{background:var(--ow-paper);color:var(--ow-steel-950);font-weight:700;}
   /* Nav item with hover submenu (e.g. "Quotes" -> Add New Quote / Saved Quote).
      Positioned as position:fixed and placed via JS (see Tabs script) so it isn't
      clipped by the sidebar's overflow-y:auto (which forces overflow-x to clip too). */
@@ -360,7 +373,7 @@
   }
   .nav-submenu.show{display:flex;flex-direction:column;gap:2px;}
   .nav-submenu button{padding:9px 11px;font-size:13px;}
-  .nav-item.active > .nav-parent-btn{background:var(--accent);color:#fff;font-weight:700;}
+  .nav-item.active > .nav-parent-btn{background:var(--ow-paper);color:var(--ow-steel-950);font-weight:700;}
 
   /* The heading is the whole argument for a list this long. Without it
      twenty-seven rows are a wall; with it they are six short lists you
@@ -395,7 +408,7 @@
     all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
     font-family:inherit;
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
-    color:#7C8894;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
+    color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
     /* Sticky because the list is taller than the rail: scrolled into the
        middle of Money, the heading that says so has already gone past.
        The background is the sidebar's own, or the rows would show
@@ -423,7 +436,7 @@
   .nav-section-label::after{order:1;margin-left:auto;content:"";}
   .nav-group.folded > .nav-section-label::after{
     content:attr(data-n);font-family:'IBM Plex Mono',ui-monospace,monospace;
-    font-size:10px;font-weight:700;letter-spacing:0;color:#7C8894;
+    font-size:10px;font-weight:700;letter-spacing:0;color:#8D99B5;
   }
   /* The rows go, the heading stays, and so does wherever you are. */
   .nav-group.folded > button[data-tab]{display:none;}
@@ -766,7 +779,7 @@
     color:var(--ink-soft);padding:9px 10px;border-bottom:2px solid var(--line);font-weight:700;
   }
   td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink);}
-  tbody tr:hover td{background:#F7F9FB;}
+  tbody tr:hover td{background:#FCFBF9;}
   tr.best td{background:var(--good-bg);}
   tr.best:hover td{background:var(--good-bg);}
   .price{font-family:'IBM Plex Mono',monospace;font-weight:600;}
@@ -825,11 +838,11 @@
   .cat-basis select{
     font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);
     background:var(--panel);border:1px solid var(--line);border-right:none;
-    border-radius:8px 0 0 8px;padding:0 9px;cursor:pointer;
+    border-radius:12px 0 0 12px;padding:0 9px;cursor:pointer;
   }
   .cat-basis select:hover{background:var(--bg);}
   .cat-basis select:focus{outline:none;border-color:var(--accent);z-index:1;}
-  .cat-basis .btn{border-radius:0 8px 8px 0;}
+  .cat-basis .btn{border-radius:0 12px 12px 0;}
   @media (max-width:520px){
     .cat-basis{flex-direction:column;align-items:stretch;}
     .cat-basis select{border-right:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 9px;}
@@ -1478,7 +1491,7 @@
   .mgr-lv td.sc{text-align:right;padding-right:var(--ow-sp-12);white-space:nowrap;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
-  .mgr-lv td.sc .b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .mgr-lv td.sc .b{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
   .mgr-lv td.sc.t{color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
   /* The only colour in the table, and it is on the verdict alone. */
@@ -1882,7 +1895,7 @@
      colours the palette already has for exactly that, and the only
      colour in this table. A non-answer ("level", "not bought before") is
      grey and set in the interface face, because it is not a figure. */
-  .pan-none{color:var(--ow-ink-400);font-family:'Inter',system-ui,-apple-system,sans-serif;
+  .pan-none{color:var(--ow-ink-400);font-family:'Figtree',system-ui,-apple-system,sans-serif;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);letter-spacing:0;}
   /* A column that cannot honestly be totalled prints a dash and says why
      on hover -- it never falls through to a generic sum. */
@@ -1915,7 +1928,7 @@
   th.sortable .sort-arrow{margin-left:4px;font-size:9px;}
   .an-rank{color:var(--ink-soft);}
   .an-scroll{overflow-x:auto;}
-  .an-total-row td{border-top:2px solid var(--line);background:#F7F9FB;}
+  .an-total-row td{border-top:2px solid var(--line);background:#FCFBF9;}
 
   /* Compare tab */
   .compare-select{max-width:360px;margin-bottom:22px;position:relative;}
@@ -1938,7 +1951,7 @@
      needs to visually stand out from the plain per-variant rows around it,
      or it just reads as one more list item and never gets noticed. */
   .searchable-select .suggestion-item.suggestion-bulk{
-    background:#FEF6E7;border-left:3px solid var(--accent);padding-left:9px;
+    background:#FFF6E8;border-left:3px solid var(--accent);padding-left:9px;
   }
   .searchable-select .suggestion-item.suggestion-bulk:hover{background:#FCEACB;}
   .suggestion-bulk-badge{
@@ -2108,7 +2121,7 @@
   .icon-btn:hover{color:var(--danger);border-color:var(--danger);}
   .icon-btn .icon{width:15px;height:15px;}
   .variants-table-wrap table{margin-top:0;}
-  .variants-empty{font-size:12.5px;color:var(--ink-soft);padding:14px;background:#F7F9FB;border:1px dashed var(--line);border-radius:10px;}
+  .variants-empty{font-size:12.5px;color:var(--ink-soft);padding:14px;background:#FCFBF9;border:1px dashed var(--line);border-radius:10px;}
   .combo-chip{
     font-size:11px;font-weight:600;color:var(--ink);background:#EEF1F3;padding:2px 8px;
     border-radius:20px;white-space:nowrap;margin:0 4px 4px 0;display:inline-block;
@@ -2951,7 +2964,7 @@
 
   /* Product modal — sectioned panels + per-variant cards */
   .modal.modal-xwide{max-width:940px;}
-  .form-panel{background:#F7F9FB;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
+  .form-panel{background:#FCFBF9;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
   .form-panel:last-child{margin-bottom:0;}
   .form-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
   .form-panel-head .fp-icon{
@@ -2994,7 +3007,7 @@
   .vc-grid .field label{font-size:11px;}
   .vc-grid input, .vc-grid select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;font-family:inherit;}
   .vc-grid input:focus, .vc-grid select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
-  .vc-markup-block{background:#F7F9FB;border:1px solid var(--line);border-radius:9px;padding:12px 14px;}
+  .vc-markup-block{background:#FCFBF9;border:1px solid var(--line);border-radius:9px;padding:12px 14px;}
   .vc-markup-hint{font-size:11px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink-soft);}
   .vc-effective{font-size:11.5px;color:var(--ink-soft);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
   .vc-effective b{color:var(--ink);font-weight:700;}
@@ -3075,7 +3088,7 @@
      suppliers who actually win something. AFTER .sc-stat.best b, which
      it ties with on specificity (0,2,1) and beats only on order. */
   .sc-stat.zero b{color:var(--ink-soft);}
-  .sc-matches{background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:9px;}
+  .sc-matches{background:#FCFBF9;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:9px;}
   .sc-matches-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
 
   /* Staff cards (reuse .supplier-grid/.supplier-card/.sc-* for layout) */
@@ -3534,7 +3547,7 @@
   .cs-empty{padding:8px 0 4px;}
   .cs-empty p{margin:0 0 8px;font-size:14px;line-height:1.5;}
   .cs-empty-note{color:var(--ink-soft);font-size:12.5px;}
-  .cc-history{background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:7px;max-height:150px;overflow-y:auto;}
+  .cc-history{background:#FCFBF9;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:7px;max-height:150px;overflow-y:auto;}
   .cc-history-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;}
   .cc-history-row .amt.charge{color:var(--danger);font-weight:700;}
   .cc-history-row .amt.payment{color:var(--good);font-weight:700;}
@@ -3837,7 +3850,7 @@
   }
   .pc-thumb-placeholder{
     width:44px;height:44px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);
-    background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+    background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .pc-thumb-placeholder .icon{width:18px;height:18px;}
   .pc-actions{display:flex;gap:6px;flex-shrink:0;}
@@ -3872,7 +3885,7 @@
   }
   .img-upload-placeholder{
     width:76px;height:76px;border-radius:10px;flex-shrink:0;border:1px dashed var(--line);
-    background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+    background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .img-upload-placeholder .icon{width:26px;height:26px;}
   .img-upload-controls{display:flex;flex-direction:column;gap:8px;}
@@ -3881,7 +3894,7 @@
   .field-hint{font-size:11px;color:var(--ink-soft);margin-top:4px;}
   .img-upload-sm{margin-bottom:12px;}
   .img-upload-sm .thumb-sm-preview{width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
-  .img-upload-sm .thumb-sm-placeholder{width:52px;height:52px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .img-upload-sm .thumb-sm-placeholder{width:52px;height:52px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
   .img-upload-sm .thumb-sm-placeholder .icon{width:18px;height:18px;}
   .preset-cat-photo{display:flex;align-items:center;gap:8px;}
   .pack-none{color:var(--ink-soft);}
@@ -4014,9 +4027,9 @@
   .iv-f.iv-c1{grid-column:4;}
   .iv-f.iv-c2{grid-column:5;}
   .iv-f.iv-c3{grid-column:6;font-size:var(--ow-t-14);}
-  .iv-f .iv-u{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .iv-f .iv-u{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:400;color:var(--ow-ink-600);letter-spacing:0;margin-left:var(--ow-sp-4);}
-  .iv-f .iv-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .iv-f .iv-b{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:400;color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* A count is a size, not a warning: 88 sheets is ink. Amber only where
@@ -4046,7 +4059,7 @@
   .iv-fs-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-14);
     font-weight:600;white-space:nowrap;}
-  .iv-fs-v .iv-u{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .iv-fs-v .iv-u{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:400;color:var(--ow-ink-600);margin-left:var(--ow-sp-4);}
   .iv-fs-v.ow-warn{color:var(--ow-amber-ink);}
   .iv-mv{margin:0 0 var(--ow-sp-10);}
@@ -4114,7 +4127,7 @@
     .iv-cq{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
       font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:var(--ow-t-28);
       font-weight:500;line-height:1.05;display:block;}
-    .iv-cq .iv-u{font-family:'Inter',system-ui,sans-serif;font-size:13px;font-weight:400;
+    .iv-cq .iv-u{font-family:'Figtree',system-ui,sans-serif;font-size:13px;font-weight:400;
       color:var(--ow-ink-600);letter-spacing:0;margin-left:var(--ow-sp-4);}
     .iv-cq.ow-warn{color:var(--ow-amber-ink);}
     .iv-cl{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;
@@ -4241,9 +4254,9 @@
   .pg-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     font-size:var(--ow-t-13);font-weight:600;letter-spacing:-.02em;display:block;
     line-height:var(--ow-lh-tight);white-space:nowrap;}
-  .pg-f .pg-u{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:400;
+  .pg-f .pg-u{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:400;
     color:var(--ow-ink-600);margin-left:2px;letter-spacing:0;}
-  .pg-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .pg-b{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:400;color:var(--ow-ink-600);line-height:var(--ow-lh-snug);margin-top:2px;
     letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* A dash is not a zero. A zero would claim the line is free. */
@@ -4406,7 +4419,7 @@
     .sl-c-n:empty{display:none;}
     .sl-tbl .ow-tbl-n{font-size:var(--ow-t-14);}
     .sl-tbl .ow-tbl-n[data-l]::before{content:attr(data-l) ' ';
-      font-family:'Inter',system-ui,sans-serif;letter-spacing:.06em;
+      font-family:'Figtree',system-ui,sans-serif;letter-spacing:.06em;
       font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
       text-transform:uppercase;color:var(--ow-ink-600);}
     .sl-tbl .ow-tbl-a .btn.ow-sm{width:100%;min-height:var(--ow-tap);
@@ -4772,7 +4785,7 @@
   .cmp-ev-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     letter-spacing:-.02em;font-size:14px;font-weight:600;white-space:nowrap;display:block;}
   .cmp-ev-warn{color:var(--ow-amber-ink);}
-  .cmp-ev-na{font-family:'Inter',system-ui,sans-serif;font-size:12px;font-weight:500;
+  .cmp-ev-na{font-family:'Figtree',system-ui,sans-serif;font-size:12px;font-weight:500;
     color:var(--ow-ink-400);letter-spacing:0;}
   .cmp-q-foot{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
     padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
@@ -6128,7 +6141,7 @@
      stated here too -- overriding one property of a rule written for a
      different ground is how a thing goes invisible. */
   .q-client-ac-add kbd{
-    font:700 10px/1 'Inter',sans-serif;background:rgba(0,0,0,0.22);border:0;
+    font:700 10px/1 'Figtree',sans-serif;background:rgba(0,0,0,0.22);border:0;
     border-radius:4px;padding:2px 5px;color:inherit;
   }
   .q-client-ac-divider{border-top:1px solid var(--line);margin-top:6px;}
@@ -6276,7 +6289,7 @@
   .q-band .ow-cb-kn .ow-cb-l{margin-bottom:var(--ow-sp-2);}
   .q-band .ow-cb-kv{font-size:15px;}
   .q-band .ow-cb-kv.ow-fig{font-weight:var(--ow-fw-500);}
-  .ow-cb-ks{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;}
+  .ow-cb-ks{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;}
   /* The usual-buys line under the search: one line, chips that do not
      fit counted on the last one. Opened, it wraps. */
   .q-client-usual{display:none;position:relative;align-items:center;gap:var(--ow-sp-6);
@@ -6334,7 +6347,7 @@
   .q-chg-name{width:100%;min-width:0;box-sizing:border-box;margin:0;
     border:1px solid transparent;border-radius:var(--ow-r-sm);background:transparent;
     padding:var(--ow-sp-4) var(--ow-sp-6);outline:0;
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);
     font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
   .ow-tbl-r:hover .q-chg-name{border-color:var(--ow-steel-100);background:var(--ow-paper);}
   .q-chg-name:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);}
@@ -6524,7 +6537,7 @@
   #ip_list .ip-item-main, #cmp_suggestions .ip-item-main, .q-item-search-dd .ip-item-main{flex:1;min-width:0;}
   #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{gap:11px;}
   .ip-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
-  .ip-thumb-placeholder{width:34px;height:34px;border-radius:6px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .ip-thumb-placeholder{width:34px;height:34px;border-radius:6px;flex-shrink:0;border:1px dashed var(--line);background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
   .ip-thumb-placeholder .icon{width:15px;height:15px;}
   #ip_item-price, #ip_list .ip-item-price, .q-item-search-dd .ip-item-price{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap;}
   /* The figure the admin is about to say out loud reads at full ink; the
@@ -6596,7 +6609,7 @@
   .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .q-stage-thumb-placeholder{
     width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
-    background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+    background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .q-stage-thumb-placeholder .icon{width:19px;height:19px;}
   /* NOT flex-shrink:0. A product name is as long as somebody typed it --
@@ -6774,7 +6787,7 @@
     #ip_stage_view .q-supplier-card.stock-card .q-sc-body{flex-wrap:wrap;}
     #ip_stage_view .q-supplier-card.stock-card .q-sc-top{flex:1 1 0;justify-content:flex-start;}
     #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{order:9;}
-    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{flex:1 1 100%;margin-left:0;white-space:normal;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{flex:1 1 100%;margin-left:0;white-space:normal;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);}
     .q-chosen-line{display:none;}
     .q-stage-sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:12px;padding:10px 14px;
       background:var(--ow-steel-050);border-radius:var(--ow-r-lg);min-width:0;}
@@ -7151,7 +7164,7 @@
      the first. */
   .st-trend{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-10);}
   .st-trend-key{display:flex;align-items:center;gap:var(--ow-sp-6);
-    font-size:var(--ow-t-11);color:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);font-family:'Figtree',system-ui,sans-serif;}
   .st-trend-key .st-trend-dot{margin-left:var(--ow-sp-8);}
   .st-trend-key .st-trend-dot:first-child{margin-left:0;}
   .st-trend-dot{width:8px;height:8px;border-radius:var(--ow-r-sm);display:inline-block;}
@@ -7250,7 +7263,7 @@
 
   /* The delta chip, worn beside a figure in the strip. */
   .st-delta{
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
     padding:1px 6px;border-radius:var(--ow-r-sm);letter-spacing:.02em;
   }
   .st-delta.up{color:var(--ow-verdigris);background:var(--ow-verdigris-soft);}
@@ -7285,7 +7298,7 @@
   .st-table td.st-v .st-delta{margin-left:7px;}
   .st-hint{display:block;font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
   .st-table tr.st-head td{
-    padding:0 0 6px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:700;
+    padding:0 0 6px;font-family:'Figtree',system-ui,sans-serif;font-size:9.5px;font-weight:700;
     letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-400);
   }
   /* The three headings on a balance sheet are structure, not the thing
@@ -8440,7 +8453,7 @@
   .inv-tbl .inv-c-doc .ow-link{font-size:15px;}
   .inv-tbl .inv-c-who .ow-tbl-p{font-size:16px;white-space:normal;}
   .inv-tbl .inv-c-date::before{content:'Date';flex:none;margin-right:auto;padding-right:var(--ow-sp-12);
-    font-family:'Inter',system-ui,sans-serif;letter-spacing:.06em;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;letter-spacing:.06em;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-600);text-transform:uppercase;color:var(--ow-ink-600);}
   /* THE FIGURE KEEPS THE RIGHT EDGE AND ITS BASIS DROPS UNDER IT.
      .ow-fig-b is a block, but the labelled line is a flex row, so it
@@ -8519,7 +8532,7 @@
   .pi-card .sc-stats{padding-top:9px;}
   .pi-card-foot{display:flex;flex-direction:column;gap:8px;padding-top:9px;border-top:1px solid var(--line);}
   .pi-cards-summary{
-    display:flex;gap:8px;margin-top:4px;padding:12px 14px;background:#F7F9FB;
+    display:flex;gap:8px;margin-top:4px;padding:12px 14px;background:#FCFBF9;
     border:1px solid var(--line);border-radius:11px;
   }
   /* Analytics report cards can carry 4-6 numeric columns (see
@@ -8528,7 +8541,7 @@
   .an-card-stats{flex-wrap:wrap;gap:10px 14px;}
   .an-card-stats .sc-stat{flex:1 1 40%;min-width:100px;}
 
-  .inv-pay-summary{display:flex;gap:18px;flex-wrap:wrap;background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .inv-pay-summary{display:flex;gap:18px;flex-wrap:wrap;background:#FCFBF9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
   .inv-pay-summary .ip-cell{display:flex;flex-direction:column;gap:3px;}
   .inv-pay-summary .ip-label{font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
   .inv-pay-summary .ip-value{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;}
@@ -8633,7 +8646,7 @@
   .info-tip:hover, .info-tip:focus-visible{background:var(--accent);color:#fff;outline:none;}
   .info-tip .tip-bubble{
     position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%) translateY(4px);
-    width:max-content;max-width:270px;background:var(--navy);color:#EDF0F2;font:500 12px/1.45 'Inter',sans-serif;
+    width:max-content;max-width:270px;background:var(--navy);color:#EDF0F2;font:500 12px/1.45 'Figtree',sans-serif;
     text-transform:none;letter-spacing:normal;padding:10px 12px;border-radius:8px;
     box-shadow:0 10px 26px rgba(20,30,40,0.28);opacity:0;visibility:hidden;
     transition:opacity .15s ease,transform .15s ease;pointer-events:none;z-index:80;
@@ -8733,13 +8746,13 @@
   .mbn-dot[hidden]{display:none;}
   /* The bar is a <nav> on purpose, so goToTab's `nav button[data-tab]`
      finds it -- which also means the sidebar's
-     `nav button.active{background:var(--accent);color:#fff}` reaches it
-     and paints a red tile behind the selected tab. This rule carries two
-     classes and so wins the colour, which set amber INK on that red:
-     dark olive on oxide, the worst contrast on the phone. The bar is
-     white and a selected tab is marked by colour, not by a tile, so the
-     tile is turned off here rather than the text being made to survive
-     it. */
+     `nav button.active{...}` reaches it and paints a tile behind the
+     selected tab. This rule carries two classes and so wins the colour.
+     (It used to have to: the sidebar rule was an oxide fill, and the
+     amber INK this bar sets on top of it made dark olive on red, the
+     worst contrast on the phone. The sidebar rule is white-on-navy now,
+     so the fight is gone -- but the bar still marks a selected tab by
+     colour rather than by a tile, which is what this turns off.) */
   .mbn-btn.active{background:transparent;color:var(--accent);}
   .mbn-btn.active .mbn-icon{color:var(--accent);}
   .mobile-more-sheet{
@@ -9704,7 +9717,7 @@
   /* Collection trips. A worker who has been sent out is not on the shop
      floor -- what they need on the phone in Katwe is the list in their
      hand, so this sits above the picking rather than under it. */
-  .wv-trip{background:var(--panel,#fff);border:1px solid var(--line,#E3E7EA);border-radius:14px;
+  .wv-trip{background:var(--panel,#fff);border:1px solid var(--line,#EFECE6);border-radius:14px;
     padding:13px 15px;margin-bottom:12px;}
   .wv-trip-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
   .wv-trip-label{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
@@ -9721,7 +9734,7 @@
     gap:8px;flex-wrap:wrap;min-height:44px;padding:8px 11px;border-radius:9px;
     background:var(--bg,#F5F7F8);border:1px solid transparent;font-size:13px;}
   .wv-trip-line.done{background:#EAF6EE;border-color:#BFE0CC;}
-  .wv-trip-line.short{background:#FBEFD9;border-color:rgba(180,130,20,0.28);}
+  .wv-trip-line.short{background:#FDEEE1;border-color:rgba(180,130,20,0.28);}
   .wv-trip-item{font-weight:700;color:var(--ink,#182026);flex:1;min-width:0;}
   .wv-trip-qty{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     color:var(--ink,#182026);}
@@ -9792,7 +9805,7 @@
   /* A delivery that came up short, said on the picker's own card. Amber
      rather than red: the goods that did arrive are still to be picked,
      so this is a caution to read before hunting, not a stop. */
-  .wv-carousel-owed{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 12px;padding:5px 8px;border-radius:8px;background:var(--ow-amber-soft,#FBEFD9);color:var(--warn-ink);font-size:11.5px;font-weight:700;text-align:center;}
+  .wv-carousel-owed{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 12px;padding:5px 8px;border-radius:8px;background:var(--ow-amber-soft,#FDEEE1);color:var(--warn-ink);font-size:11.5px;font-weight:700;text-align:center;}
   .wv-carousel-owed svg{width:13px;height:13px;flex-shrink:0;}
   /* The part of a pack-forced delivery that is not going out. A plain
      note, not a warning: nothing is wrong, there is simply more in the
@@ -10189,7 +10202,7 @@
   .mp-legend div{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-soft);}
   .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}
   /* Nothing owed is HOLLOW, not a second verdigris. The old legend had
-     two entries painted #1C6B58 and it signalled nothing at all. */
+     two entries painted #0F6B43 and it signalled nothing at all. */
   .mp-legend i.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
   .mp-legend em{font-style:normal;margin-left:auto;font-size:11px;color:var(--ow-ink-400);}
 
@@ -10225,7 +10238,7 @@
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     font-size:13px;font-weight:600;letter-spacing:-.02em;}
   .mp-person-amt.mp-zero{color:var(--ow-ink-400);font-weight:400;}
-  .mp-person-amt small{display:block;font-family:'Inter',system-ui,sans-serif;font-size:11px;
+  .mp-person-amt small{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:11px;
     font-weight:400;color:var(--ink-soft);letter-spacing:0;margin-top:1px;}
   .mp-note{margin:0;padding:9px 12px;font-size:11px;color:var(--ink-soft);line-height:1.5;
     border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
@@ -10720,7 +10733,7 @@
      a table cell shrink below its content so the ellipsis can appear. */
   .po-ca td.po-nm{width:auto;min-width:0;padding-left:var(--ow-sp-12);
     text-align:left;overflow:hidden;text-overflow:ellipsis;
-    font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-500);letter-spacing:0;}
+    font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-500);letter-spacing:0;}
   .po-ca td.po-w{font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
   .po-ca td.po-w.po-thin{color:var(--ow-ink-900);}
   .po-ca tr.po-on td{background:var(--ow-paper-2);}
@@ -11406,7 +11419,7 @@
      accent on this screen is already spent on Record a payment. */
   .cu-back{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;
     align-items:center;gap:var(--ow-sp-6);height:26px;margin-bottom:var(--ow-sp-6);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);
     font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
   .cu-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
     stroke-linecap:round;stroke-linejoin:round;flex:none;}
@@ -11705,7 +11718,7 @@
      here is spent on asking for prices). */
   .su-back{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;
     align-items:center;gap:var(--ow-sp-6);height:26px;margin-bottom:var(--ow-sp-6);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);
     font-weight:var(--ow-fw-600);color:var(--ow-ink-600);position:relative;}
   .su-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
     stroke-linecap:round;stroke-linejoin:round;flex:none;}
@@ -11848,7 +11861,7 @@
   /* Small enough to sit inside the value it qualifies, and never
      mistaken for the figure itself. */
   .tl-undo{all:unset;cursor:pointer;margin-left:var(--ow-sp-6);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-600);color:var(--ow-oxide-deep);
     text-decoration:underline;text-underline-offset:2px;}
   .tl-undo:hover{color:var(--ow-crimson);}
@@ -11901,7 +11914,7 @@
   /* Amber, and only ever on the shop's side of the glass. */
   .bf-up{grid-area:2/4;text-align:right;font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
   .bf-was s{opacity:.85;}
-  .bf-gh{margin-left:auto;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+  .bf-gh{margin-left:auto;font-family:'Figtree',system-ui,sans-serif;letter-spacing:0;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-400);
     text-transform:none;}
   .bf{position:relative;aspect-ratio:3/4;border-radius:var(--ow-r);overflow:hidden;
@@ -11937,7 +11950,7 @@
     stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
   .pr-find{all:unset;box-sizing:border-box;width:100%;height:34px;padding:0 var(--ow-sp-10) 0 32px;
     border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
   .pr-find:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
   .pr-find::placeholder{color:var(--ow-ink-400);}
   .pr-flt{display:flex;gap:var(--ow-sp-6);padding:0 var(--ow-sp-12) var(--ow-sp-10);flex-wrap:wrap;
@@ -11994,7 +12007,7 @@
   .pr-pick.pr-num{width:82px;}
   .pr-pick.pr-per{width:110px;}
   .pr-sel,.pr-in{all:unset;box-sizing:border-box;height:32px;padding:0 var(--ow-sp-10);
-    min-width:0;max-width:100%;font-family:'Inter',system-ui,sans-serif;
+    min-width:0;max-width:100%;font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
   .pr-pick.pr-verb .pr-sel{color:var(--ow-oxide-deep);}
   .pr-pick.pr-num .pr-in{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
@@ -12296,9 +12309,15 @@
     --ow-sp-10:10px;--ow-sp-12:12px; --ow-sp-16:16px; --ow-sp-20:20px;
     --ow-sp-24:24px;--ow-sp-32:32px;
 
-    /* Radius: four, replacing twenty-seven. --ow-r-lg is 8px and
-       --ow-r-pill folds both existing pill idioms (99px and 999px). */
-    --ow-r-sm:4px; --ow-r:6px; --ow-r-lg:8px; --ow-r-pill:999px;
+    /* Radius: four, replacing twenty-seven. --ow-r-pill folds both
+       existing pill idioms (99px and 999px).
+
+       8 / 9 / 12, not 4 / 6 / 8. The console's corners were drawn
+       when a panel was a bordered REGION and a hairline did all the
+       separating; a softer corner on a hairline box just looks
+       unresolved. These are the handoff's three: 8 is a chip, 9 is a
+       button, a field and a nav row, 12 is a card. */
+    --ow-r-sm:8px; --ow-r:9px; --ow-r-lg:12px; --ow-r-pill:999px;
 
     /* Type: integers only. Named by pixel value so a wrong one is
        visible at the call site rather than hidden behind an index. */
@@ -12313,11 +12332,16 @@
 
     /* ONE new colour, and it replaces raw hex already in this file
        rather than adding to the seventeen near-whites the audit found:
-       #F7F9FB is the table-row hover, used sixteen times already and
+       #FCFBF9 is the table-row hover, used sixteen times already and
        promoted here to a name. Everything else maps onto --ow-*. */
-    --ow-paper-2:#F7F9FB;
+    --ow-paper-2:#FCFBF9;
 
-    --ow-lift:0 4px 16px rgba(15,20,25,.14);
+    /* ONE elevation, and it is now the thing a card wears rather than
+       only the thing a menu wears. Two layers: a 1px contact shadow
+       that holds the edge against the ground, and a wide soft one for
+       the lift. Tinted with the navy rather than black, so a card on
+       the warm ground does not go grey at its edge. */
+    --ow-lift:0 1px 2px rgba(27,36,56,.06), 0 6px 20px rgba(27,36,56,.09);
     --ow-tap:44px;
     --ow-measure:76ch;
     --ow-ph-h:56px;
@@ -12348,7 +12372,7 @@
      because it moves the screen rather than following a URL, styled as
      the link it reads as -- an <a href="#"> here would put a stray
      history entry behind every one of these. */
-  .ow-quiet-v{font-family:'Inter',system-ui,sans-serif;color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .ow-quiet-v{font-family:'Figtree',system-ui,sans-serif;color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
   .ow-link{all:unset;cursor:pointer;color:var(--ow-oxide);font-weight:var(--ow-fw-600);}
   .ow-link:hover{color:var(--ow-oxide-deep);text-decoration:underline;}
   .ow-link:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:2px;}
@@ -12440,8 +12464,11 @@
     border-bottom:1px solid var(--ow-rule);padding:var(--ow-sp-16) 0 var(--ow-sp-12);
     margin-bottom:var(--ow-sp-16);
     display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;}
-  .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;
-    letter-spacing:-.015em;line-height:1.1;}
+  /* Inter 700, not Archivo Black. The display face was the console's
+     one piece of voice; this vocabulary says the page name in the same
+     face as everything else and lets weight and size carry it. */
+  .ow-ph-t{font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-700);
+    font-size:19px;margin:0;letter-spacing:-.015em;line-height:1.1;}
   .ow-ph-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0 0 1px;}
   .ow-ph-sp{flex:1;}
   /* The longer explanation. foldPageInstructions MOVES it into the "i"
@@ -12601,7 +12628,7 @@
   .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
     font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
-  .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-lr-b{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
 
   /* ---- the avatar: two letters in a quiet square ---- */
@@ -12616,7 +12643,7 @@
      nothing has been sent, which is the promise the whole app keeps. */
   .ow-msg{display:block;width:100%;box-sizing:border-box;margin:0;
     border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
-    padding:var(--ow-sp-10) var(--ow-sp-12);font-family:'Inter',system-ui,sans-serif;
+    padding:var(--ow-sp-10) var(--ow-sp-12);font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-13);line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);
     overflow:auto;resize:vertical;}
   .ow-msg:focus{outline:0;border-color:var(--ow-steel-950);background:var(--ow-paper);}
@@ -12696,7 +12723,7 @@
   .ow-pg-i[disabled],.ow-pg-s[disabled]{opacity:.4;cursor:not-allowed;}
   /* The step controls say where they go in words, so a mark is never the
      only thing carrying it. */
-  .ow-pg-s{font-family:'Inter',system-ui,sans-serif;letter-spacing:0;}
+  .ow-pg-s{font-family:'Figtree',system-ui,sans-serif;letter-spacing:0;}
   .ow-pg-g{padding:0 var(--ow-sp-4);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
 
   /* ---- layout: the work column and its context rail ---- */
@@ -12973,7 +13000,7 @@
   }
   .ow-fig-u{font-size:.82em;font-weight:var(--ow-fw-400);color:var(--ow-ink-400);letter-spacing:0;}
   .ow-fig-b{
-    display:block;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+    display:block;font-family:'Figtree',system-ui,sans-serif;letter-spacing:0;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
     white-space:normal;
   }
@@ -13012,7 +13039,7 @@
   .ow-cb-l{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.08em;
     text-transform:uppercase;color:var(--ow-ink-600);margin-bottom:var(--ow-sp-2);}
   .ow-cb-in{display:block;width:100%;min-width:0;margin:0;padding:0;border:0;border-radius:0;
-    background:none;outline:0;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-14);
+    background:none;outline:0;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-14);
     font-weight:var(--ow-fw-500);line-height:var(--ow-lh-snug);color:var(--ow-ink-900);}
   .ow-cb-in::placeholder{color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
   /* The known facts: labelled cells with hairlines between them. */
@@ -13038,7 +13065,7 @@
     color:var(--ow-ink-900);text-align:right;}
   .ow-tbl-r:hover .ow-gi{border-color:var(--ow-steel-100);background:var(--ow-paper);}
   .ow-gi:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);}
-  .ow-gi.ow-gi-t{text-align:left;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;font-weight:var(--ow-fw-400);}
+  .ow-gi.ow-gi-t{text-align:left;font-family:'Figtree',system-ui,sans-serif;letter-spacing:0;font-weight:var(--ow-fw-400);}
 
   /* ---- the card grid, and the card: one thing, its facts, its acts ---- */
   /* Cards where a table would have to repeat a name on every row and a
@@ -13126,9 +13153,9 @@
      a choice instead of a figure. Same box, same label. */
   .ow-f-grow{flex:1 1 180px;}
   .ow-f-grow .ow-f-in{width:100%;min-width:0;}
-  .ow-f-t{font-family:'Inter',system-ui,sans-serif;letter-spacing:0;flex:1 1 auto;width:auto;min-width:0;}
+  .ow-f-t{font-family:'Figtree',system-ui,sans-serif;letter-spacing:0;flex:1 1 auto;width:auto;min-width:0;}
   .ow-f-sel{border:0;background:none;outline:0;padding:0;margin:0;flex:1 1 auto;min-width:0;height:100%;
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
   /* A field that is doing something says so, so the list below is never
      silently a subset. */
   .ow-f.ow-set .ow-f-in{border-color:var(--ow-steel-400);}
@@ -13151,7 +13178,7 @@
     border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
   .ow-seg-b{all:unset;display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:100%;padding:0 var(--ow-sp-12);
     box-sizing:border-box;border-radius:var(--ow-r-sm);cursor:pointer;white-space:nowrap;
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
   .ow-seg-b:hover{color:var(--ow-ink-900);background:var(--ow-paper-2);}
   .ow-seg-b:focus-visible{outline:2px solid var(--ow-steel-950);}
   .ow-seg-b.ow-on,.ow-seg-b.ow-on:hover{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
@@ -13893,7 +13920,7 @@
   .ow-cal-f{display:flex;align-items:center;gap:var(--ow-sp-6);margin-top:var(--ow-sp-8);
     padding-top:var(--ow-sp-6);border-top:1px solid var(--ow-rule-soft);}
   .ow-cal-b{padding:var(--ow-sp-2) var(--ow-sp-6);border-radius:var(--ow-r);cursor:pointer;
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
     color:var(--ow-ink-600);}
   .ow-cal-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
   .ow-cal-b.ow-cal-b-r{margin-left:auto;}
@@ -13932,7 +13959,7 @@
     font-weight:var(--ow-fw-600);letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
   .ow-selm-o{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:26px;
     padding:var(--ow-sp-4) var(--ow-sp-8);border-radius:var(--ow-r);cursor:pointer;
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
     color:var(--ow-ink-900);}
   /* The row the pointer or the arrow keys are on. One highlight, never
      two: hover and the keyboard write the same class. */
@@ -13984,7 +14011,7 @@
     gap:var(--ow-sp-10);margin-top:var(--ow-sp-12);}
   .ow-db-ag-b{all:unset;display:flex;flex-direction:column;gap:1px;min-width:0;
     cursor:pointer;padding:0 0 0 var(--ow-sp-8);border-left:2px solid var(--age-hue);
-    font-family:'Inter',system-ui,sans-serif;text-align:left;}
+    font-family:'Figtree',system-ui,sans-serif;text-align:left;}
   .ow-db-ag-b:hover{background:var(--ow-paper-2);}
   .ow-db-ag-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
   .ow-db-ag-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
@@ -14086,7 +14113,7 @@
   .ow-db-fc{all:unset;display:inline-flex;align-items:center;gap:var(--ow-sp-4);
     height:28px;padding:0 var(--ow-sp-8);box-sizing:border-box;cursor:pointer;
     border-radius:var(--ow-r-sm);background:var(--ow-amber-soft);color:var(--ow-amber-ink);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-600);white-space:nowrap;}
   .ow-db-fc-x{width:11px;height:11px;flex:none;}
   .ow-db-fc:focus-visible{outline:2px solid var(--ow-steel-950);}
@@ -14107,7 +14134,7 @@
   .ow-db-em{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
   .ow-db-rl + .ow-db-rl{border-top:1px solid var(--ow-rule-soft);}
   .ow-db-go{all:unset;cursor:pointer;color:var(--ow-oxide);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-600);}
   .ow-db-go:hover{color:var(--ow-oxide-deep);text-decoration:underline;}
   .ow-db-go:focus-visible{outline:2px solid var(--ow-steel-950);}
@@ -14199,7 +14226,7 @@
      the amount and the age of it are already on screen to name it
      against. */
   .ow-cr-dy{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-500);white-space:nowrap;}
   .ow-cr-dy-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
@@ -14219,7 +14246,7 @@
   .ow-cr-dy-set{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;
     gap:var(--ow-sp-4);height:26px;padding:0 var(--ow-sp-8);cursor:pointer;
     border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
-    font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
   .ow-cr-dy-set:hover{border-color:var(--ow-steel-950);color:var(--ow-ink-900);}
   .ow-cr-dy-set:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
@@ -14319,7 +14346,7 @@
     border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper);}
   .ow-pr-sg-b{all:unset;box-sizing:border-box;display:inline-block;line-height:28px;
     height:100%;padding:0 var(--ow-sp-10);cursor:pointer;
-    border-left:1px solid var(--ow-rule);font-family:'Inter',system-ui,sans-serif;
+    border-left:1px solid var(--ow-rule);font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
   .ow-pr-sg-b:first-child{border-left:0;}
   .ow-pr-sg-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
@@ -14407,7 +14434,7 @@
   .ow-pr-of-r{all:unset;box-sizing:border-box;display:grid;
     grid-template-columns:minmax(0,1fr) 148px 18px;align-items:center;gap:var(--ow-sp-10);
     min-height:var(--ow-tap);padding:var(--ow-sp-8) var(--ow-sp-10);cursor:pointer;
-    background:var(--ow-paper);font-family:'Inter',system-ui,sans-serif;text-align:left;}
+    background:var(--ow-paper);font-family:'Figtree',system-ui,sans-serif;text-align:left;}
   .ow-pr-of-r:hover{background:var(--ow-paper-2);}
   .ow-pr-of-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
   .ow-pr-of-r.ow-on{background:var(--ow-paper-2);}
@@ -14417,7 +14444,7 @@
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
     letter-spacing:-.02em;color:var(--ow-ink-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-of-ph.ow-pr-nonum{font-family:'Inter',system-ui,sans-serif;color:var(--ow-ink-600);}
+  .ow-pr-of-ph.ow-pr-nonum{font-family:'Figtree',system-ui,sans-serif;color:var(--ow-ink-600);}
   .ow-pr-of-b{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ow-pr-of-x{padding:0 var(--ow-sp-10) var(--ow-sp-10);background:var(--ow-paper-2);}
@@ -14608,14 +14635,14 @@
   .ow-ah-yl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
     font-size:var(--ow-t-11);fill:var(--ow-ink-600);}
-  .ow-ah-xl{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-ah-xl{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
   /* The second line under the first and last tick: which day is today,
      and which year the window ends in. Axis ticks carry no year, because
      thirty of them saying 2026 is thirty repetitions of one fact. */
-  .ow-ah-xl-t{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-ah-xl-t{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
-  .ow-ah-cap{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-ah-cap{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
   /* WHAT LEAVES EACH DAY. One bar per day money goes out, on the same
      day axis as the line, sized by what goes out. The line's flat
@@ -14692,7 +14719,7 @@
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
     font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);fill:var(--ow-ink-900);}
   .ow-ah-lowlab.ow-bad{fill:var(--ow-crimson);}
-  .ow-ah-lowsub{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-ah-lowsub{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
   .ow-ah-endlab{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
@@ -14762,13 +14789,13 @@
   .ow-ah-out{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);
     color:var(--ow-ink-600);white-space:nowrap;}
-  .ow-ah-uncosted{font-style:normal;font-family:'Inter',system-ui,sans-serif;
+  .ow-ah-uncosted{font-style:normal;font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
   /* THE COLUMN THE SCREEN EXISTS FOR. */
   .ow-ah-bal{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);
     font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
-  .ow-ah-bal-b{display:block;font-family:'Inter',system-ui,sans-serif;
+  .ow-ah-bal-b{display:block;font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);letter-spacing:0;
     color:var(--ow-ink-600);white-space:normal;}
   .ow-ah-lr.ow-bad .ow-ah-bal,.ow-ah-lr.ow-bad .ow-ah-bal-b{color:var(--ow-crimson);}
@@ -14788,7 +14815,7 @@
   .ow-ah-lr.ow-ah-said{border-bottom:1px dashed var(--ow-rule-soft);}
   .ow-ah-lr.ow-ah-said:last-child{border-bottom:none;}
   .ow-ah-said .ow-ah-out{color:var(--ow-verdigris);}
-  .ow-ah-said .ow-ah-bal{font-family:'Inter',system-ui,sans-serif;
+  .ow-ah-said .ow-ah-bal{font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);letter-spacing:0;
     color:var(--ow-ink-600);font-style:italic;white-space:normal;}
   .ow-ah-said-a{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;
@@ -15155,7 +15182,7 @@
   /* A FIGURE AND ITS BASIS in a table's number column. .ow-tbl-n never
      wraps and never gives way, so the basis goes UNDER it in the
      interface face rather than beside it as a second figure. */
-  .ow-tbl-nb{display:block;font-family:'Inter',system-ui,sans-serif;
+  .ow-tbl-nb{display:block;font-family:'Figtree',system-ui,sans-serif;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
     letter-spacing:0;margin-top:1px;}
   /* On the phone the figure cell becomes a flex row carrying its column
@@ -15236,7 +15263,7 @@
      all:unset, as .btn does, so the user agent's button never shows. */
   .ow-dy-sp-b{all:unset;display:block;box-sizing:border-box;min-width:0;
     margin:0 calc(-1 * var(--ow-sp-6));padding:0 var(--ow-sp-6) var(--ow-sp-12);
-    border-radius:var(--ow-r-sm);text-align:left;font-family:'Inter',system-ui,sans-serif;}
+    border-radius:var(--ow-r-sm);text-align:left;font-family:'Figtree',system-ui,sans-serif;}
   .ow-dy-sp-b.ow-last{padding-bottom:0;}
   .ow-dy-sp-b.ow-dy-sp-k{cursor:pointer;}
   .ow-dy-sp-b.ow-dy-sp-k:hover{background:var(--ow-paper-2);}
@@ -15360,7 +15387,7 @@
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
     letter-spacing:-.02em;white-space:nowrap;}
   .ow-ck-v.ow-bad{color:var(--ow-crimson);}
-  .ow-ck-u{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-ck-u{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;
     white-space:normal;}
   .ow-ck-a{display:flex;justify-content:flex-end;gap:var(--ow-sp-6);flex:none;}
@@ -15397,7 +15424,7 @@
     border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
   /* A word beside a figure — a share, or which of three totals it is.
      Never .ow-u, which is 9px ink-400 and below the contrast floor. */
-  .ow-pi-u{font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+  .ow-pi-u{font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-400);
     font-size:var(--ow-t-11);color:var(--ow-ink-600);letter-spacing:0;margin-left:var(--ow-sp-4);}
   .ow-pi-h-c{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.04em;
     text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
@@ -15441,27 +15468,27 @@
   .ow-pi-tr:last-child .ow-pi-td{border-bottom:0;}
   /* MONEY NEVER TRUNCATES; the name gives way. */
   .ow-pi-td.ow-nm{width:auto;padding-left:0;text-align:left;white-space:nowrap;
-    font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-500);
+    font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-500);
     min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;}
   .ow-pi-td.ow-w{font-weight:var(--ow-fw-600);}
   .ow-pi-td.ow-q2{color:var(--ow-ink-600);}
   .ow-pi-td.ow-bf{color:var(--ow-ink-600);}
-  .ow-pi-when{font-style:normal;color:var(--ow-ink-600);font-family:'Inter',system-ui,sans-serif;}
+  .ow-pi-when{font-style:normal;color:var(--ow-ink-600);font-family:'Figtree',system-ui,sans-serif;}
   /* A missing word, said in the cell where it is missing. Amber: this is
      a caution to come back to, not a loss -- the money on the line is
      known and paid. */
-  .ow-pi-nounit{font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+  .ow-pi-nounit{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-600);color:var(--ow-amber-ink);background:var(--ow-amber-soft);
     border-radius:var(--ow-r-sm);padding:1px 5px;margin-left:4px;cursor:help;}
   .ow-pi-td.ow-up{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   .ow-pi-td.ow-dn{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
-  .ow-pi-sub{display:block;font-family:'Inter',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+  .ow-pi-sub{display:block;font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-400);
     font-size:var(--ow-t-11);letter-spacing:0;color:var(--ow-ink-600);}
   .ow-pi-tr.ow-hi .ow-pi-td{background:var(--ow-crimson-soft);}
   .ow-pi-tr.ow-hi .ow-pi-td.ow-nm{box-shadow:inset 3px 0 0 var(--ow-crimson);padding-left:var(--ow-sp-8);}
   .ow-pi-ft .ow-pi-td{border-top:1px solid var(--ow-rule);border-bottom:0;
     font-weight:var(--ow-fw-600);padding-top:var(--ow-sp-8);}
-  .ow-pi-ft .ow-pi-td.ow-nm{font-family:'Inter',system-ui,sans-serif;color:var(--ow-ink-600);
+  .ow-pi-ft .ow-pi-td.ow-nm{font-family:'Figtree',system-ui,sans-serif;color:var(--ow-ink-600);
     font-weight:var(--ow-fw-500);}
   /* billed / paid / still owed, above the acts */
   .ow-pi-bs{display:flex;gap:var(--ow-sp-24);margin:0 0 var(--ow-sp-10);flex-wrap:wrap;}
@@ -15794,7 +15821,7 @@
     .ow-q-cv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
       font-variant-numeric:tabular-nums;font-size:15px;font-weight:var(--ow-fw-600);
       letter-spacing:-.02em;}
-    .ow-q-cv .ow-q-b{display:inline;font-family:'Inter',system-ui,sans-serif;
+    .ow-q-cv .ow-q-b{display:inline;font-family:'Figtree',system-ui,sans-serif;
       font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
       margin-left:var(--ow-sp-6);letter-spacing:0;}
     .ow-q-cv.ow-bad{color:var(--ow-crimson);}
@@ -15879,7 +15906,7 @@
     }
     .ow-tbl-c[data-l]::before,.ow-tbl-n[data-l]::before{
       content:attr(data-l);flex:none;margin-right:auto;padding-right:var(--ow-sp-12);
-      font-family:'Inter',system-ui,sans-serif;letter-spacing:.06em;
+      font-family:'Figtree',system-ui,sans-serif;letter-spacing:.06em;
       font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
       text-transform:uppercase;color:var(--ow-ink-600);
     }
@@ -22172,7 +22199,7 @@ const OW_ENV = (function () {
       el.id = 'ow-env-mark';
       el.textContent = 'STAGING — test data, not the real books';
       el.style.cssText = 'position:fixed;left:0;bottom:0;z-index:899;'
-        + 'pointer-events:none;background:#B23A26;color:#fff;'
+        + 'pointer-events:none;background:#C93A30;color:#fff;'
         + 'font:600 11px/1.1 system-ui,-apple-system,sans-serif;'
         + 'padding:5px 9px;border-radius:0 6px 0 0';
       document.body.appendChild(el);
@@ -22817,11 +22844,11 @@ const SOURCING_STATUSES = {
      The board these coloured is gone (see .ow-sf in the layer). They are
      still what the lead's own stage rail and the graduation screen draw
      with, through the shared stageStepsHTML the order preview uses. */
-  asked:   { label:'Step 1. Asked For',   color:'#8A939C' },
-  looking: { label:'Step 2. Looking',     color:'#59626B' },
-  sourced: { label:'Step 3. Source Found',color:'#252A31' },
-  priced:  { label:'Step 4. Priced',      color:'#14171B' },
-  listed:  { label:'Step 5. Listed',      color:'#1C6B58' }
+  asked:   { label:'Step 1. Asked For',   color:'#767F91' },
+  looking: { label:'Step 2. Looking',     color:'#5F6980' },
+  sourced: { label:'Step 3. Source Found',color:'#243052' },
+  priced:  { label:'Step 4. Priced',      color:'#1C2233' },
+  listed:  { label:'Step 5. Listed',      color:'#0F6B43' }
 };
 const SOURCING_STATUS_ORDER = ['asked','looking','sourced','priced','listed'];
 const SOURCING_SHORT_LABELS = {asked:'Asked For', looking:'Looking', sourced:'Source Found', priced:'Priced', listed:'Listed'};
@@ -26135,12 +26162,12 @@ function waWrapText(ctx, text, maxWidth){
 function waDrawStatus(canvas, pick, shopName, phone, img){
   const c = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
-  c.fillStyle = '#14171B'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#16203C'; c.fillRect(0, 0, W, H);
   // photo, covered into a rounded frame
   const fx = 60, fy = 60, fw = W-120, fh = 1020;
   c.save();
   c.beginPath(); c.roundRect(fx, fy, fw, fh, 36); c.clip();
-  c.fillStyle = '#252A31'; c.fillRect(fx, fy, fw, fh);
+  c.fillStyle = '#243052'; c.fillRect(fx, fy, fw, fh);
   if(img){
     const scale = Math.max(fw/img.width, fh/img.height);
     const dw = img.width*scale, dh = img.height*scale;
@@ -26158,7 +26185,7 @@ function waDrawStatus(canvas, pick, shopName, phone, img){
   }
   c.restore();
   if(pick.dropped){
-    c.fillStyle = '#B23A26';
+    c.fillStyle = '#C93A30';
     c.beginPath(); c.roundRect(fx, fy+24, 460, 88, 44); c.fill();
     c.fillStyle = '#FFFFFF'; c.font = 'bold 44px Inter, sans-serif';
     c.textBaseline = 'middle'; c.fillText('NEW LOWER PRICE', fx+40, fy+70);
@@ -26170,18 +26197,18 @@ function waDrawStatus(canvas, pick, shopName, phone, img){
   const py = 1210 + nameLines.length*84 + 96;
   c.fillStyle = '#F0B429'; c.font = 'bold 104px Inter, sans-serif';
   c.fillText(`UGX ${Number(pick.price).toLocaleString('en-UG')}`, 80, py);
-  c.fillStyle = '#8A939C'; c.font = '46px Inter, sans-serif';
+  c.fillStyle = '#767F91'; c.font = '46px Inter, sans-serif';
   if(pick.unit) c.fillText(`per ${pick.unit}`, 80, py+66);
   const b = (pick.breaks||[])[0];
   if(b){
-    c.fillStyle = '#DCE0E4'; c.font = '48px Inter, sans-serif';
+    c.fillStyle = '#E0DCD4'; c.font = '48px Inter, sans-serif';
     c.fillText(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}`, 80, py+170);
   }
   c.strokeStyle = '#3A4149'; c.lineWidth = 2;
   c.beginPath(); c.moveTo(80, H-260); c.lineTo(W-80, H-260); c.stroke();
   c.fillStyle = '#FFFFFF'; c.font = 'bold 52px Inter, sans-serif';
   c.fillText(shopName || '', 80, H-160);
-  c.fillStyle = '#8A939C'; c.font = '46px Inter, sans-serif';
+  c.fillStyle = '#767F91'; c.font = '46px Inter, sans-serif';
   c.fillText(phone ? `WhatsApp ${phone}` : 'Send us a message to order', 80, H-90);
 }
 
@@ -27158,7 +27185,7 @@ function waDrawOrderReceipt(canvas, receipt){
    reads on a phone in the sun, which is the same reading condition that
    got the oxide chosen over amber in the first place. Everything faint
    is MUTE (#6B7280, 4.83:1) now; nothing else about the paper moved. */
-const WA_DOC_ACCENT = '#8E2C1C', WA_DOC_INK = '#12151A', WA_DOC_MUTE = '#6B7280';
+const WA_DOC_ACCENT = '#A82D24', WA_DOC_INK = '#12151A', WA_DOC_MUTE = '#6B7280';
 const WA_DOC_RULE = '#E9EBEF', WA_DOC_HAIR = '#F1F3F5';
 const WA_DOC_SANS = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
 const WA_DOC_MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", monospace';
@@ -32123,11 +32150,11 @@ function mapClearPin(name){
 /* The colour a marker wears. Bands come straight from AGING_BANDS so the
    map and the Debtors list can never disagree about what "late" means. */
 const MAP_BAND_COLOURS = {
-  b30: '#1C6B58', b60: '#B0700A', b90: '#B23A26', b90p: '#7F1D1A',
-  unknown: '#59626B',
+  b30: '#0F6B43', b60: '#95530C', b90: '#C93A30', b90p: '#8E2A22',
+  unknown: '#5F6980',
 };
 function mapBandColour(band){
-  return MAP_BAND_COLOURS[band] || '#1C6B58';
+  return MAP_BAND_COLOURS[band] || '#0F6B43';
 }
 /* Marker radius from headcount, on a square root so a place with twenty
    people is not a hundred times the area of a place with two -- area is
@@ -32565,7 +32592,7 @@ function renderMap(){
       + AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
       + `<div><i class="mp-hollow"></i>Nothing owed</div>`
       + `<em>Circle size is how many are there · the square is your shop</em>`
-    : `<b>Suppliers</b><div><i style="background:#B23A26"></i>You owe them</div>`
+    : `<b>Suppliers</b><div><i style="background:#C93A30"></i>You owe them</div>`
       + `<div><i class="mp-hollow"></i>Nothing owed</div>`
       + `<em>Circle size is how many are there · the square is your shop</em>`;
 
@@ -32604,7 +32631,7 @@ function renderMap(){
       const n = mapPeopleAt(r, mpLayer);
       const owed = mapMoneyAt(r, mpLayer);
       const hollow = owed <= 0.5;
-      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#B23A26';
+      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#C93A30';
       mapAddMarker(r, n, colour, hollow, r.name, ()=>{ mpSelected = r.name; renderMapSide(); });
     });
     mapAddHome(home);
@@ -32660,8 +32687,8 @@ function renderDeliveryMap(){
     : 'Nothing waiting for delivery';
   document.getElementById('mp_legend').innerHTML =
     '<b>Today\'s round</b>'
-    + '<div><i style="background:#B0700A"></i>No driver yet</div>'
-    + '<div><i style="background:#1C6B58"></i>Driver assigned</div>'
+    + '<div><i style="background:#95530C"></i>No driver yet</div>'
+    + '<div><i style="background:#0F6B43"></i>Driver assigned</div>'
     + '<em>Circle size is how many drops · the square is your shop</em>';
 
   if(mpMap){
@@ -32671,7 +32698,7 @@ function renderDeliveryMap(){
          handled. Both are the app's own state colours -- the blue this
          used to draw was not one of the palette's values and meant
          nothing anywhere else in the app. */
-      const colour = r.unassigned > 0 ? '#B0700A' : '#1C6B58';
+      const colour = r.unassigned > 0 ? '#95530C' : '#0F6B43';
       mapAddMarker(r, r.orders.length, colour, false, r.label,
         ()=>{ mpSelected = r.label; renderDeliverySide(); });
     });
@@ -32716,7 +32743,7 @@ function renderDeliverySide(){
   } else {
     panels.push(`<div class="ow-pan">
       <div class="mp-rh">
-        <span class="mp-rh-dot" style="background:${r.unassigned > 0 ? '#B0700A' : '#1C6B58'};"></span>
+        <span class="mp-rh-dot" style="background:${r.unassigned > 0 ? '#95530C' : '#0F6B43'};"></span>
         <div style="min-width:0;">
           <h3>${esc(r.label)}</h3>
           <p>${r.orders.length} order${r.orders.length === 1 ? '' : 's'}${
@@ -32875,10 +32902,10 @@ function renderMapResults(){
       const money = mapMoneyAt(r, layer);
       const dot = !r.pin ? 'off' : (money > 0.5 ? '' : 'mp-hollow');
       const colour = (r.pin && money > 0.5)
-        ? (layer === 'customers' ? mapBandColour(r.band) : '#B23A26') : '';
+        ? (layer === 'customers' ? mapBandColour(r.band) : '#C93A30') : '';
       const age = layer === 'customers' ? r.oldestDays : null;
-      const ageColour = age == null ? '' : age >= 90 ? '#7F1D1A' : age >= 60 ? '#B23A26'
-        : age >= 30 ? '#7A4A02' : '#1C6B58';
+      const ageColour = age == null ? '' : age >= 90 ? '#8E2A22' : age >= 60 ? '#C93A30'
+        : age >= 30 ? '#7A4A02' : '#0F6B43';
       const bits = [];
       if(r.customers.length) bits.push(`${r.customers.length} customer${r.customers.length === 1 ? '' : 's'}`);
       if(r.suppliers.length) bits.push(`${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}`);
@@ -33000,7 +33027,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
     panels.push(`<div class="ow-pan">
       <div class="mp-rh">
         <span class="mp-rh-dot${money > 0.5 ? '' : ' mp-hollow'}"${money > 0.5
-          ? ` style="background:${layer === 'customers' ? mapBandColour(r.band) : '#B23A26'};"` : ''}></span>
+          ? ` style="background:${layer === 'customers' ? mapBandColour(r.band) : '#C93A30'};"` : ''}></span>
         <div style="min-width:0;">
           <h3>${esc(r.name)}</h3>
           <p>${r.customers.length} customer${r.customers.length === 1 ? '' : 's'} · ${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}${
@@ -56396,11 +56423,11 @@ function gifEncode(frames, w, h){
    The same palette and the same faces the app is built in, because the
    picture is the shop turning up in somebody's phone and it should look
    like the shop. */
-const BRIEF_INK = { navy:'#14171B', oxide:'#B23A26', oxideLight:'#C9573F', paper:'#FFFFFF',
-  paper2:'#F7F9FB', verdigris:'#1C6B58', verdigrisSoft:'#E2EFEB', ink600:'#59626B',
-  ink400:'#8A939C', rule:'#E3E7EA', oxideSoft:'#F6E7E3', amber:'#B0700A' };
+const BRIEF_INK = { navy:'#16203C', oxide:'#C93A30', oxideLight:'#E5483D', paper:'#FFFFFF',
+  paper2:'#FCFBF9', verdigris:'#0F6B43', verdigrisSoft:'#E4F4EA', ink600:'#5F6980',
+  ink400:'#767F91', rule:'#EFECE6', oxideSoft:'#FDE8E4', amber:'#95530C' };
 const BRIEF_DISPLAY = "'Archivo Black', system-ui, sans-serif";
-const BRIEF_BODY = "'Inter', system-ui, sans-serif";
+const BRIEF_BODY = "'Figtree', system-ui, sans-serif";
 const BRIEF_MONO = "'IBM Plex Mono', ui-monospace, monospace";
 
 function briefRoundRect(x, y, w, h, r){
@@ -65692,49 +65719,49 @@ document.getElementById('p_catalogue_btn').addEventListener('click', ()=>{
   win.document.write(`<html><head><title>${esc(shop)} — ${esc(basis.label)}</title><style>
     @page{size:A4;margin:14mm 12mm;}
     *{box-sizing:border-box;}
-    body{font-family:Arial,Helvetica,sans-serif;color:#14171B;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#1C2233;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     /* Each section starts a page, so a category never splits across a
        turn and the trade list always begins on a fresh sheet. */
     section{page-break-after:always;break-after:page;}
     section:last-child{page-break-after:auto;break-after:auto;}
     .pg-head{display:flex;justify-content:space-between;align-items:flex-start;
-      border-bottom:2px solid #14171B;padding-bottom:6px;margin-bottom:12px;}
+      border-bottom:2px solid #1C2233;padding-bottom:6px;margin-bottom:12px;}
     .pg-shop{font-size:17px;font-weight:bold;letter-spacing:-.3px;}
-    .pg-tag{font-size:8.5px;letter-spacing:1.1px;text-transform:uppercase;color:#59626B;margin-top:2px;}
-    .pg-sec{font-size:11px;font-weight:bold;color:#B23A26;text-transform:uppercase;letter-spacing:.8px;text-align:right;}
-    .pg-foot{position:running(foot);margin-top:14px;padding-top:6px;border-top:1px solid #E3E7EA;
-      display:flex;justify-content:space-between;font-size:7.5px;color:#8A939C;}
+    .pg-tag{font-size:8.5px;letter-spacing:1.1px;text-transform:uppercase;color:#5F6980;margin-top:2px;}
+    .pg-sec{font-size:11px;font-weight:bold;color:#C93A30;text-transform:uppercase;letter-spacing:.8px;text-align:right;}
+    .pg-foot{position:running(foot);margin-top:14px;padding-top:6px;border-top:1px solid #EFECE6;
+      display:flex;justify-content:space-between;font-size:7.5px;color:#767F91;}
 
     .cat-hero{background:#F1F3F5;border-radius:4px;padding:12px 14px;margin-bottom:12px;}
     .cat-hero-t{font-size:22px;font-weight:bold;line-height:1.05;}
-    .cat-hero-s{font-size:9px;color:#59626B;margin-top:3px;}
+    .cat-hero-s{font-size:9px;color:#5F6980;margin-top:3px;}
     .cat-items{display:flex;flex-direction:column;}
     /* A single item never breaks across a page. */
     .cat-item{display:flex;gap:10px;align-items:center;padding:7px 0;
       border-bottom:1px solid #EDEFF1;page-break-inside:avoid;break-inside:avoid;}
-    .cat-img{width:46px;height:46px;flex-shrink:0;border-radius:3px;object-fit:cover;border:1px solid #E3E7EA;}
+    .cat-img{width:46px;height:46px;flex-shrink:0;border-radius:3px;object-fit:cover;border:1px solid #EFECE6;}
     .cat-img-none{display:flex;align-items:center;justify-content:center;background:#F5F7F8;
       color:#A9B2B9;font-size:6.5px;text-align:center;}
     .cat-info{flex:1;min-width:0;}
     .cat-name{font-size:11px;font-weight:bold;line-height:1.25;}
-    .cat-desc{font-size:8px;color:#59626B;margin-top:1px;}
+    .cat-desc{font-size:8px;color:#5F6980;margin-top:1px;}
     .cat-right{text-align:right;flex-shrink:0;}
     .cat-price{font-size:13px;font-weight:bold;line-height:1.1;}
-    .cat-per{font-size:7.5px;color:#8A939C;}
-    .cat-break{font-size:7.5px;color:#1C6B58;font-weight:bold;margin-top:2px;}
+    .cat-per{font-size:7.5px;color:#767F91;}
+    .cat-break{font-size:7.5px;color:#0F6B43;font-weight:bold;margin-top:2px;}
 
     .tr-cat{font-size:10px;font-weight:bold;letter-spacing:.9px;text-transform:uppercase;
-      color:#B23A26;margin:12px 0 4px;}
+      color:#C93A30;margin:12px 0 4px;}
     .tr-table{width:100%;border-collapse:collapse;font-size:9px;}
     .tr-table th{text-align:left;font-size:7.5px;letter-spacing:.6px;text-transform:uppercase;
-      color:#8A939C;border-bottom:1px solid #CFD5DA;padding:0 4px 3px;}
+      color:#767F91;border-bottom:1px solid #E6E3DD;padding:0 4px 3px;}
     .tr-table td{padding:3px 4px;border-bottom:1px solid #F2F4F5;}
     .tr-table .r{text-align:right;}
-    .tr-break{color:#1C6B58;font-weight:bold;white-space:nowrap;}
+    .tr-break{color:#0F6B43;font-weight:bold;white-space:nowrap;}
     .tr-table tr{page-break-inside:avoid;break-inside:avoid;}
 
-    .note{font-size:8.5px;color:#59626B;margin-top:10px;line-height:1.5;}
-    @media screen{ body{background:#E9EBED;padding:18px;}
+    .note{font-size:8.5px;color:#5F6980;margin-top:10px;line-height:1.5;}
+    @media screen{ body{background:#F7F5F2;padding:18px;}
       section{background:#fff;padding:16mm 14mm;margin:0 auto 18px;max-width:210mm;min-height:297mm;
         box-shadow:0 2px 12px rgba(20,30,40,.15);} }
   </style></head><body>
@@ -73271,9 +73298,9 @@ function cbCategoryBreakdown(date, types){
    read the same way round, and the two rings survive a grayscale print.
    A transfer is neither earned nor spent, so it is steel on both sides
    and the note under each ring says what that slice is. */
-const CB_RING_IN  = ['#1C6B58','#3D8471','#649D8B','#8AB6A6','#B0CFC3'];
-const CB_RING_OUT = ['#7F1D1A','#9D4340','#B76B68','#CE9591','#E2C0BD'];
-const CB_RING_OWN = '#8A939C';
+const CB_RING_IN  = ['#0F6B43','#3D8471','#649D8B','#8AB6A6','#B0CFC3'];
+const CB_RING_OUT = ['#8E2A22','#9D4340','#B76B68','#CE9591','#E2C0BD'];
+const CB_RING_OWN = '#767F91';
 function cbIsOwnMoney(cat){ return /transfer/i.test(String(cat||'')); }
 function cbRingColor(kind, rank){
   const ramp = kind==='in' ? CB_RING_IN : CB_RING_OUT;
@@ -77837,7 +77864,7 @@ function prPaneHTML(e, unit, packCtx){
       <p style="margin:8px 0 0;font-size:12px;line-height:1.55;color:var(--ow-ink-600);max-width:76ch;">
         Nothing is erased. A reversal is posted and the original row stays in the log, marked.</p>
       <div class="pir-note ${plan.soldOn > 0 ? 'bad' : 'good'}">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="${plan.soldOn > 0 ? '#7F1D1A' : '#1C6B58'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="${plan.soldOn > 0 ? '#8E2A22' : '#0F6B43'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${
           plan.soldOn > 0 ? '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
                           : '<path d="M20 6L9 17l-5-5"/>'}</svg>
         <span>${plan.soldOn > 0
@@ -77845,7 +77872,7 @@ function prPaneHTML(e, unit, packCtx){
           : `None of these have been sold on, so all ${esc(fmtStockQty(plan.takeBack))} come back.`}</span>
       </div>
       ${plan.bill ? `<div class="pir-note bad">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#7F1D1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#8E2A22" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
         <span><b>${esc(purchaseInvoiceNumberLabel(plan.bill))} is still owed for these goods.</b> Money is not touched here — void that bill on Invoices, under Purchases, if nothing was ever bought.</span>
       </div>` : ''}
       <div class="field" style="margin-top:12px;"><label for="pir_why">Why — kept on the reversal</label>
@@ -99035,7 +99062,7 @@ const FG_PLUG_INK = {
   Brown:['#7A5236','#A98261','#4A2E1B'], Blue:['#3A6E96','#7FA8C6','#1F415C'],
   '':['#9AA1A6','#D2D7DA','#5E666C'],
 };
-const FG_BG = '#14171B';   // the viewport ground; the sawtooth cuts back to it
+const FG_BG = '#16203C';   // the viewport ground; the sawtooth cuts back to it
 
 function fgDefs(uid, finish){
   const f = FG_FINISH[finish] || FG_FINISH.zinc, b = f[0], hi = f[1], lo = f[2], deep = f[3];

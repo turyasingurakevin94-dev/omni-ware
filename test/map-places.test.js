@@ -329,8 +329,14 @@ const reset = () => {
      verdigris (handled), which is exactly what those colours mean on
      every other screen. The assertion that matters is unchanged: the
      stop with nobody taking it is the one that stands out. */
-  t.check(/r\.unassigned > 0 \? '#B0700A' : '#1C6B58'/.test(dm),
-    'a stop with no driver is amber and a taken one verdigris — the app\'s own two states, not an invented colour');
+  /* The two literals moved with the re-skin; which two COLOURS they are
+     is the assertion. Read them from the palette rather than restating
+     them, so this cannot drift out of agreement with :root again. */
+  const pal = (n) => (new RegExp(`--ow-${n}:\\s*(#[0-9A-Fa-f]{6})`).exec(read('index.html')) || [])[1];
+  const amber = pal('amber'), verd = pal('verdigris');
+  t.check(!!amber && !!verd, 'the palette declares the two states this map paints');
+  t.check(new RegExp(`r\\.unassigned > 0 \\? '${amber}' : '${verd}'`, 'i').test(dm),
+    `a stop with no driver is amber (${amber}) and a taken one verdigris (${verd}) — the app's own two states, not an invented colour`);
   /* Scoped to the map. The same blue is still on the order-status
      pipeline chip in the top bar -- a different screen's colour
      language, and not this change's to rewrite. */

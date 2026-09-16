@@ -137,6 +137,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        border, its own two near-whites for a card and a settled row, and
        its own hover fill -- all four gone when that screen became a
        console on the layer.)) */
+    /* 103 still, through a swap that had to pay for itself. The palette
+       moved to the design handoff's own values, and that split ONE
+       literal into two: #14171B was both the navy chrome and the
+       darkest ink, where the handoff has a rail navy (#16203C) and a
+       body ink (#1C2233) that are not the same colour. That is a real
+       distinction and it costs a slot, so a slot was found rather than
+       the ceiling raised: .obs-note's ground was #FEF6E7 and
+       .info-banner.warn's was #FFF6E8 -- two hand-written caution
+       creams one rgb unit apart, which no eye has ever told apart.
+       They are one cream now. */
     'distinct colours': [103, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
@@ -257,7 +267,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     'every weight in the layer is one of the four that are loaded');
 
   const fams = [...layer.matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1]);
-  t.check(fams.every((f) => /IBM Plex Mono|Archivo Black|Inter|inherit|ui-monospace/.test(f)),
+  t.check(fams.every((f) => /IBM Plex Mono|Archivo Black|Figtree|inherit|ui-monospace/.test(f)),
     'and every family is one of the three the app loads');
 
   const radii = [...new Set([...layer.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()))];

@@ -133,8 +133,15 @@ const bare = layer.replace(/\/\*[\s\S]*?\*\//g, '');
      palette offers two. The layer needed a hover surface; it was taken
      from hex ALREADY in the file rather than invented, so the count of
      distinct colours in this stylesheet does not grow by one. */
-  t.check(/--ow-paper-2:#F7F9FB;/.test(layer) && /#F7F9FB/.test(before),
-    'the hover surface is the table-row hover that already existed, promoted to a token');
+  /* Was: a literal check for #F7F9FB. That hex was the value on the day
+     this was written; the assertion it was standing in for is that the
+     layer's hover surface is a colour the legacy sheet ALREADY paints,
+     not a new near-white. The re-skin moved every near-white at once, so
+     the literal went stale while the invariant did not. Read the token's
+     value and hold it to the same rule. */
+  const hoverHex = (/--ow-paper-2:\s*(#[0-9A-Fa-f]{6});/.exec(layer) || [])[1];
+  t.check(!!hoverHex && before.toUpperCase().includes(hoverHex.toUpperCase()),
+    `the hover surface (${hoverHex}) is a row hover that already existed, promoted to a token`);
   const newHex = [...new Set([...layer.matchAll(/#[0-9A-Fa-f]{6}/g)].map(m => m[0].toUpperCase()))]
     .filter(h => !before.toUpperCase().includes(h));
   t.check(newHex.length === 0,

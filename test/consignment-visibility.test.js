@@ -372,11 +372,16 @@ if (scope) {
   t.check(!!ink && !!ground, 'both colours the tag names are defined in this file');
   t.check(ratio(ink, ground) >= 4.5,
     `and 10px bold on that ground clears AA (${ratio(ink, ground).toFixed(2)}:1)`);
-  /* The lighter amber does not, which is why the tag does not use it --
-     recorded here so a later "make it brighter" has to argue with a
-     measurement rather than with taste. */
-  t.check(ratio(token('ow-amber'), ground) < 4.5,
-    'while the lighter amber beside it does not, which is why it is not the text colour');
+  /* WAS: the lighter amber measured under 4.5 on this ground, so the rule
+     recorded that it could not be the text colour. The re-skin's caution
+     family is darker and --ow-amber now clears it too, so that particular
+     fact stopped being true -- but the reason it was written down has not:
+     a later "make it brighter" should still have to argue with a
+     measurement. So assert what survives. The tag takes the DARKER of the
+     two ambers, and the margin is stated. */
+  const lighter = ratio(token('ow-amber'), ground);
+  t.check(ratio(ink, ground) >= lighter,
+    `and it is the darker of the two ambers (${ratio(ink, ground).toFixed(2)}:1 against ${lighter.toFixed(2)}:1), which is why it is the text colour`);
 
   const rule = (/\.consign-tag\{([^}]*)\}/.exec(src) || ['', ''])[1];
   t.check(/background:var\(--ow-amber-soft\)/.test(rule) && /color:var\(--ow-amber-ink\)/.test(rule),

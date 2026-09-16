@@ -864,11 +864,24 @@ const INDEX = railIndex();
   t.check(/color:var\(--accent\)/.test(activeRule),
     'the selected tab is marked in the accent, on the bar’s own white');
 
-  /* The rail is the thing that rule belongs to and must be untouched:
-     white on oxide there is correct and is what the sidebar has always
-     looked like. */
-  t.check(/nav button\.active\{background:var\(--accent\);color:#fff;font-weight:700;\}/.test(src),
-    'while the rail keeps its own white-on-oxide row');
+  /* WAS: `nav button.active{background:var(--accent);color:#fff;...}` --
+     "white on oxide there is correct and is what the sidebar has always
+     looked like". It stopped being correct when the app took the design
+     handoff's rail, which marks the current row by INVERTING it: white
+     ground, navy ink. The reason is not taste. An accent fill on the rail
+     is on screen on every single page, so the app permanently carried two
+     oxide elements -- the row you are on, and whatever that screen's one
+     action was -- and the house rule is that the accent appears once and
+     means "the thing to do next". A row you are already on is not that.
+
+     What this test is actually here to protect is unchanged and is
+     asserted above: the phone bar must cancel whatever tile it inherits
+     from this bare selector. So assert the rail's own state, inverted, and
+     that it is no longer an accent fill. */
+  t.check(/nav button\.active\{background:var\(--ow-paper\);color:var\(--ow-steel-950\);font-weight:700;\}/.test(src),
+    'while the rail marks its own row by inverting it — white ground, navy ink');
+  t.check(!/nav button\.active\{[^}]*var\(--accent\)/.test(src),
+    'and the rail no longer spends the accent on a row you are already on');
 
   /* Order matters: the override has to come after the rule it cancels.
      Equal specificity is decided by source order, and the same fix

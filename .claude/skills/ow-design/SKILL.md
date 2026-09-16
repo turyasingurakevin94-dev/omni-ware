@@ -9,6 +9,14 @@ This is a wholesale hardware shop in Uganda. One owner, a phone in a
 yard in daylight, and a computer on a desk. Every figure on screen is
 money that is really theirs. Nothing here is decoration.
 
+**The palette, the type and the corners were re-skinned onto the design
+handoff's system** (navy rail, warm ground, white cards, one red
+action). What moved: §2 colour, §3 faces, §4 radius and elevation.
+What did NOT move, and is not up for grabs because a screenshot looks
+different: the two-designs law, the meaning rules, the component
+anatomy, the contrast floor, and the ratchet. A re-skin changes what the
+app is made of, not how densely it works.
+
 **Read this whole file before you draw or build.** Then run
 `node test/design-system.test.js` — it enforces mechanically most of
 what follows, and it is not optional.
@@ -45,37 +53,50 @@ Duplicate what each needs. Do not reach for a middle.
 **These 23 values are the entire palette. Never introduce a 24th.**
 
 ```
---ow-steel-950  #14171B   navy chrome, and --ow-ink-900
---ow-steel-800  #252A31
---ow-steel-400  #8A939C   and --ow-ink-400
---ow-steel-100  #DCE0E4
---ow-steel-050  #E9EBED   the page ground (--bg)
+--ow-steel-950  #16203C   the rail / navy chrome
+--ow-steel-800  #243052   raised navy
+--ow-steel-400  #767F91   and --ow-ink-400
+--ow-steel-100  #E0DCD4   table divider
+--ow-steel-050  #F7F5F2   the page ground (--bg), a warm paper
 --ow-paper      #FFFFFF   panels, cards
---ow-paper-2    #F7F9FB   row hover
---ow-oxide      #B23A26   THE accent
---ow-oxide-deep #8E2C1C
---ow-oxide-light #C9573F
---ow-oxide-soft #F6E7E3   chip ground
---ow-verdigris  #1C6B58   good
---ow-verdigris-soft #E2EFEB
---ow-amber      #B0700A   caution
---ow-amber-soft #FBEFD9
---ow-amber-faint #FEFAF2
+--ow-paper-2    #FCFBF9   row hover
+--ow-oxide      #C93A30   THE accent
+--ow-oxide-deep #A82D24   hover, and chip ink
+--ow-oxide-light #E5483D  the bright red: FILLS AND ICONS ONLY, never
+                          under small text (white on it is 3.94:1)
+--ow-oxide-soft #FDE8E4   chip ground
+--ow-verdigris  #0F6B43   good
+--ow-verdigris-soft #E4F4EA
+--ow-amber      #95530C   caution
+--ow-amber-soft #FDEEE1
+--ow-amber-faint #FEF8F2
 --ow-amber-ink  #7A4A02   dark ink FOR amber grounds — never on oxide
---ow-crimson    #7F1D1A   bad
---ow-crimson-soft #F7E4E2
---ow-ink-900    #14171B   body text
---ow-ink-600    #59626B   secondary text
---ow-ink-400    #8A939C   captions, labels, meta
---ow-rule       #CFD5DA   borders
---ow-rule-soft  #E3E7EA   hairlines
+--ow-crimson    #8E2A22   bad
+--ow-crimson-soft #FBE5E2
+--ow-ink-900    #1C2233   body text
+--ow-ink-600    #5F6980   secondary text
+--ow-ink-400    #767F91   captions, labels, meta
+--ow-rule       #E6E3DD   borders
+--ow-rule-soft  #EFECE6   hairlines
 ```
 
-Rail-only, inside the navy sidebar: text `#C7CFD8`, section labels
-`#7C8894`, hover `rgba(255,255,255,0.07)`.
+Rail-only, inside the navy: text `#B3BCD2`, group rows `#C5CDDF`,
+counts and section labels `#8D99B5`, hover `rgba(255,255,255,0.08)`.
+**The row you are on is INVERTED — white ground, navy ink — never an
+accent fill.** An accent fill on the rail is on screen on every page,
+which permanently spends the one accent on a row you are already on.
 
-The oxide was chosen deliberately: amber washed out in Ugandan sun and
-oxide primer holds up. Do not "warm it up".
+**The token names are historical.** `--ow-oxide` is read ~700 times
+across index.html, so when the palette moved to the design handoff's
+values the names stayed put rather than producing a diff nobody could
+review. Read `oxide` as **the accent**, `steel` as **the neutrals**.
+
+The accent is `#C93A30` and not the handoff's `#E5483D`, and this is the
+one place the handoff was not followed literally. White on `#E5483D`
+measures **3.94:1**, and every accent button in this app is white text
+on that fill. `#C93A30` is the handoff's own hover/tint red, reads as the
+same colour, and clears at **5.08:1**. The bright one is kept as
+`--ow-oxide-light` for fills and icons, where it is legal.
 
 ### The contrast rule
 
@@ -101,9 +122,17 @@ daylight — and nothing caught it. The test computes this now.
 
 ## 3. Type
 
-Loaded faces, and the only ones: **Inter** 400/500/600/700 (interface),
-**Archivo Black** (page names only), **IBM Plex Mono** 400/500/600
-(every figure).
+Loaded faces, and the only ones: **Figtree** 400/500/600/700
+(interface, and the page name), **IBM Plex Mono** 400/500/600 (every
+figure), **Archivo Black** (two legacy screens only — the sign-in door
+and the loan form's verdict; do not reach for it in new work).
+
+The page name is Figtree 700, not a display face. The handoff's system
+says the page name in the same face as everything else and lets weight
+and size carry it.
+
+The handoff lists a fifth weight, 800. It is not loaded and not a token:
+the four below are the system.
 
 **Weights: 400 / 500 / 600 / 700. Nothing else.** 650 and 800 appear in
 the legacy file and are *not loaded* — the browser fakes them, which is
@@ -149,14 +178,20 @@ not line up is unreadable at a glance, which is the only way it is read.
 
 ```
 space   2 4 6 8 10 12 16 20 24 32     (--ow-sp-*)  even steps only
-radius  --ow-r-sm 4 · --ow-r 6 · --ow-r-lg 8 · --ow-r-pill 999
-lift    --ow-lift  0 4px 16px rgba(15,20,25,.14)   ONE elevation
+radius  --ow-r-sm 8 (chip) · --ow-r 9 (button, field, nav row)
+        --ow-r-lg 12 (card) · --ow-r-pill 999
+lift    --ow-lift  0 1px 2px rgba(27,36,56,.06),
+                   0 6px 20px rgba(27,36,56,.09)   ONE elevation
 tap     --ow-tap 44px
 measure --ow-measure 76ch
 ```
 
 **Depth is hairlines, not shadows.** `--ow-lift` is for things that
-genuinely float — a menu, a search result. A card does not float.
+genuinely float — a menu, a search result. A card does not float. This
+survived the re-skin on the handoff's own evidence: the only shadow in
+its token table is on the mockup BOARD, the frame the artboard sits in,
+which is a presentation device and not a surface in the app. Its cards
+are a hairline on white, exactly as here.
 
 **Every prose block gets a measure.** On a 1660px screen an unmeasured
 paragraph runs 180 characters and is unreadable. This was the single
