@@ -173,8 +173,16 @@ const sectionOf = (tab) => {
   CARD_SYSTEM.forEach((tab) => {
     const sec = sectionOf(tab);
     t.check(/<div class="om-qtitle">/.test(sec), `${tab} has the card system's title block`);
-    t.check(/<(?:h1|div) class="om-qtitle-t">/.test(sec), `${tab} names itself in it`);
-    t.check(/<(?:p|div) class="om-qtitle-s">/.test(sec), `${tab} says in one line what it is`);
+    /* An id on the title or its sub is allowed, on the same grounds the
+       console header's sub carries one two blocks above: a line the
+       RENDER writes needs a handle. Messages needs both, because Posting
+       is a different question from the queue -- "What to post today", not
+       "Messages" -- and a screen whose name does not follow its lens is a
+       screen that has not noticed which one it is on. What is asserted is
+       unchanged: the screen names itself in the card system's title block
+       and says in one line what it is. */
+    t.check(/<(?:h1|div) class="om-qtitle-t"[ >]/.test(sec), `${tab} names itself in it`);
+    t.check(/<(?:p|div) class="om-qtitle-s"[ >]/.test(sec), `${tab} says in one line what it is`);
     /* And it is NOT wearing both. A screen carrying the console header
        and the card title block would draw two names, one above the
        other, which is what a half-finished conversion looks like. */

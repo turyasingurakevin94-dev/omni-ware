@@ -16463,9 +16463,9 @@
 
   /* THE LIST ROWS. One grid per screen, because the columns are the
      screen's argument about what matters and they are not shared. */
-  .om-lrow,.om-crow,.om-arow,.om-mrow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
-  .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover{background:var(--om-hover)}
-  .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on{background:var(--om-selected)}
+  .om-lrow,.om-crow,.om-arow,.om-mrow,.om-prow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
+  .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover,.om-prow:hover{background:var(--om-hover)}
+  .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on,.om-prow.om-on{background:var(--om-selected)}
   .om-lrow,.om-cols-l{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
   .om-crow,.om-cols-c{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
   /* WIDER MONEY TRACKS THAN THE FRAME. The handoff sizes these for bare
@@ -16476,6 +16476,42 @@
   /* Wider money and last-word tracks than the frame, for the same
      reason as the other registers: the figures here carry UGX. */
   .om-mrow,.om-cols-m{grid-template-columns:30px minmax(150px,1fr) 118px 108px 74px}
+  /* The post queue. Rank, thumbnail, product, the signal it is here for,
+     how many days the shelf covers, what the shop keeps, and the pick.
+     Wider than the frame in the last two tracks for the usual reason --
+     "no sales" and "at cost" are words where the frame drew figures. */
+  .om-prow,.om-cols-p{grid-template-columns:26px 38px minmax(150px,1fr) 132px 84px 84px 66px}
+  /* A held-back row is still drawn, dimmed: what the shop may NOT post
+     today, and why, is the second half of this screen's answer. */
+  .om-prow-held{opacity:.62;cursor:default}
+  .om-prow-held:hover{background:none}
+  .om-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;background:var(--om-track);display:flex;align-items:center;justify-content:center;flex:none;color:var(--om-ink-3)}
+  /* THE PRICE CARD, which is what goes out when a product has no photo.
+     Not a placeholder: a navy card carrying the shop's name, the product,
+     the price and what the shelf holds is a better post than a stock
+     photo of somebody else's iron sheets. */
+  .om-pc{background:var(--om-navy);padding:14px 13px 12px}
+  .om-pc-sh{font-size:10px;font-weight:700;letter-spacing:0.14em;color:var(--om-on-navy-4);text-transform:uppercase}
+  .om-pc-n{margin-top:7px;font-size:19px;font-weight:700;color:var(--om-on-navy);letter-spacing:-0.01em}
+  .om-pc-s{margin-top:2px;font-size:12px;color:var(--om-on-navy-3)}
+  .om-pc-p{margin-top:12px;display:flex;align-items:flex-end;gap:9px}
+  .om-pc-was{font-size:13px;color:var(--om-on-navy-4);text-decoration:line-through;padding-bottom:3px}
+  .om-pc-f{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:9px}
+  /* Three pips and a figure: how many of the day's slots are spent. A
+     bar would imply a quantity; these are slots, and you can count them. */
+  .om-pips{margin-top:5px;display:flex;align-items:center;gap:11px}
+  .om-pipset{display:flex;align-items:center;gap:7px}
+  .om-pip{width:26px;height:8px;border-radius:999px;background:var(--om-track)}
+  .om-pip-on{background:var(--om-good-ink)}
+  /* How often a signal has actually been followed by a sale. */
+  .om-sig{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+  .om-sig-h{display:flex;align-items:baseline;gap:8px;font-size:12px}
+  .om-sig-t{height:6px;border-radius:999px;background:var(--om-track);overflow:hidden;margin-top:4px}
+  .om-sig-b{display:block;height:100%}
+  .om-slot{display:flex;align-items:center;gap:9px}
+  .om-slot-i{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;background:var(--om-track);color:var(--om-ink-3)}
+  .om-slot-on{background:var(--om-navy);color:var(--om-on-navy)}
+  .om-slot-open{background:none;border:1px dashed var(--om-rule);color:var(--om-ink-3)}
 
   /* The agent waterfall. Five rows on ONE denominator — client paid is
      100% — so two different totals can never be drawn the same length. */
@@ -17039,7 +17075,7 @@
        can ask for later. */
     .om-wf{grid-template-columns:62px minmax(0,1fr) 84px}
   }
-  .om-mrow-ph{display:none}
+  .om-mrow-ph,.om-prow-ph{display:none}
   @media (max-width: 820px){
     .om-mrow{display:block;padding:10px 16px;min-height:44px}
     .om-mrow > :not(.om-mrow-ph){display:none}
@@ -17047,6 +17083,17 @@
     .om-mrow-ph-p{font-size:14px;font-weight:600}
     .om-mrow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
     .om-mrow-ph-f{font-size:14px;text-align:right}
+    /* The phone keeps the thumbnail -- a post is about a PRODUCT, and
+       the picture is the fastest way to know which one -- and drops the
+       rank column, which is the desktop's way of saying the same thing
+       the order already says. */
+    .om-prow{display:block;padding:10px 16px;min-height:44px}
+    .om-prow > :not(.om-prow-ph){display:none}
+    .om-prow-ph{display:grid;grid-template-columns:38px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-prow-ph-p{font-size:14px;font-weight:600;grid-column:2}
+    .om-prow-ph-s{font-size:11.5px;color:var(--om-ink-3);grid-column:2}
+    .om-prow-ph-t{grid-row:span 2}
+    .om-prow-ph-a{grid-column:3;grid-row:span 2;text-align:right}
   }
   .om-menu-w{position:relative}
   .om-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:var(--om-surface);border:1px solid var(--om-rule);border-radius:11px;box-shadow:var(--om-shadow);padding:4px;display:none}
@@ -17098,6 +17145,12 @@
   .om-qline > div:first-child{flex:1;min-width:0}
   .om-qline-q{color:var(--om-ink-3)}
   .om-qline-f{border-bottom:0;border-top:1px solid var(--om-rule);padding-top:9px}
+  /* THE CONSOLE PANES INSIDE A CARD SCREEN. .om-screen escapes main's
+     gutter with a negative margin so the card layout can bring its own
+     22px; a console panel dropped straight into it therefore ran to the
+     window edges on both sides. The hub carries the gutter the screen
+     gave up. */
+  .om-hub{padding:0 22px 22px}
   .om-footrow{display:flex;align-items:flex-start;gap:14px;padding:0 22px 20px}
   .om-footrow .om-foot{flex:1;padding:0}
   .om-footrow .om-btn{flex:none}
@@ -17126,6 +17179,7 @@
     .om-subhead{padding:12px 16px}
     /* Stacked, and the door is a thumb-sized target rather than a 32px
        chip beside a paragraph. */
+    .om-hub{padding:0 16px 16px}
     .om-footrow{flex-direction:column;gap:12px;padding:14px 16px 18px}
     .om-footrow .om-btn{width:100%;height:44px}
     .om-list{overflow:visible}
@@ -18735,8 +18789,8 @@
       <div class="om-screen">
         <div class="om-qtitle">
           <div style="flex:1;min-width:0">
-            <h1 class="om-qtitle-t">Messages</h1>
-            <p class="om-qtitle-s">Every word the shop owes someone, and the box it is written in</p>
+            <h1 class="om-qtitle-t" id="msg_title_t">Messages</h1>
+            <p class="om-qtitle-s" id="msg_title_s">Every word the shop owes someone, and the box it is written in</p>
           </div>
           <div class="om-lensgroup" id="msg_lens" role="tablist" aria-label="Which messages">
             <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-msglens="money">Money <span class="om-chip om-lenschip" id="msgSegMoney"></span></button>
@@ -18798,32 +18852,79 @@
              one design only, and these are three live features that
              without it are reachable by nobody at all. One element, one
              listener, both designs. -->
-        <div class="om-footrow">
+        <div class="om-footrow" id="msg_queue_footrow">
         <p class="om-foot" id="msg_queue_note"><span id="msg_note_book">Only who is past your terms today. What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing</b>, which owns that reading. </span>One message per client, however many things they are waiting for &mdash; this queue groups by person, not by item, so nobody is sent four notes in a morning.</p>
           <button type="button" class="om-btn om-btn-s" id="msg_hub_btn" aria-expanded="false" aria-controls="msg_fup_body">Rules &amp; register</button>
         </div>
 
-        <!-- THE POSTING LENS is the WhatsApp post desk, which already did
-             this job: a recommendation over signals, capped at three a
-             day, with the same hand-off and the same stamp. -->
+        <!-- THE POSTING LENS. What to post today, and why.
+
+             The picking machinery underneath is untouched and is the
+             reason this screen can exist at all: waPostCandidates walks
+             every product, works out what is in the way (no price, too
+             little stock to fill an order, posted inside the fortnight),
+             and gives each survivor a list of REASONS that are sentences
+             the owner can check. Nothing here is a recommendation the
+             books cannot support.
+
+             THE CAP IS THE SCREEN'S ARGUMENT. Three a day, because past
+             that the posts compete with each other for the same reader.
+             What is not picked is not lost -- it rolls to tomorrow, and
+             the screen says how many. -->
         <div id="msg_posting_body" style="display:none;">
 
-        <!-- THE TWO THINGS THE WHATSAPP HEADER OWNED, at the lens that
-             holds its desk. The live headline says how many people are
-             waiting and how long the worst of them has waited -- the one
-             line on this screen that rots, which is why it was never
-             foldable and is not foldable here. The search reaches every
-             chat, answered or not, which no panel below can do: the
-             panes are queues, and a chat that has been answered has
-             left them. -->
-        <div class="om-subhead">
-          <span class="om-t" id="wa_ph_sub" style="font-size:12.5px;color:var(--om-ink-2)"></span>
-          <span style="flex:1"></span>
-          <button type="button" class="om-btn om-btn-s" id="wa_find_btn" title="Search every chat, waiting or not" style="height:30px;padding:0 10px;font-size:12px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            Search all chats
-          </button>
-        </div>
+          <div class="om-kpis" id="post_kpis"></div>
+          <div class="om-ph-only om-ph-head" id="post_ph_head"></div>
+
+          <div class="om-body">
+            <div class="om-card om-list">
+              <div class="om-card-h">
+                <span class="om-card-t">The queue</span>
+                <span class="om-fig om-n" id="post_card_n" style="font-size:11.5px;color:var(--om-ink-3)">every row says why it is here</span>
+                <span style="flex:1"></span>
+                <div class="om-find" style="flex:1 1 210px;min-width:150px;max-width:250px">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input class="om-find-i" id="post_search" type="search" placeholder="A product, or a signal to sort by" aria-label="Search the post queue" autocomplete="off">
+                </div>
+                <button type="button" class="om-btn om-btn-s" id="post_why_btn" style="height:32px;padding:0 11px;font-size:12.5px">Why this order</button>
+              </div>
+              <div class="om-cols om-cols-p">
+                <span class="om-col">#</span>
+                <span></span>
+                <span class="om-col">Product</span>
+                <span class="om-col">Why it is here</span>
+                <span class="om-col" style="text-align:right">Cover</span>
+                <span class="om-col" style="text-align:right">You keep</span>
+                <span class="om-col" style="text-align:right">Pick</span>
+              </div>
+              <div class="om-scroll" id="post_list"></div>
+            </div>
+            <div class="om-side" id="post_side"></div>
+          </div>
+
+          <!-- THE INBOX AND THE RECORD, which the frame has no place for
+               and which are every one of them live: who is waiting for an
+               answer and who has been answered, what the system is
+               answering on its own, the words it has learned, the whole
+               argument behind the order above, the paid broadcast and its
+               arithmetic, and the channel's own health. One door, shut by
+               default, because the post is the work and these are the
+               reading behind it. -->
+          <div class="om-footrow">
+            <p class="om-foot">Nominated from your own books &mdash; what a price did, what the shelf is doing, what people asked for in the chat &mdash; and ranked by what posts like it have actually moved here. Nothing is posted by the app: it writes the card, you post it, and you stamp whether it went.</p>
+            <button type="button" class="om-btn om-btn-s" id="post_hub_btn" aria-expanded="false" aria-controls="post_hub_body">The inbox &amp; the record</button>
+          </div>
+
+          <div class="om-hub" id="post_hub_body" hidden>
+
+      <div class="om-subhead">
+        <span class="om-t" id="wa_ph_sub" style="font-size:12.5px;color:var(--om-ink-2)"></span>
+        <span style="flex:1"></span>
+        <button type="button" class="om-btn om-btn-s" id="wa_find_btn" title="Search every chat, waiting or not" style="height:30px;padding:0 10px;font-size:12px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Search all chats
+        </button>
+      </div>
 
       <div class="ow-strip ow-strip-5" id="wa_strip"></div>
 
@@ -18866,17 +18967,19 @@
         <div class="ow-pan-h"><span class="ow-pan-t">Not connected</span></div>
         <div id="wa_connect"></div>
       </div>
-        <!-- THE APP'S OLDEST LAW, stated on the screen it matters most.
-             Everything on this desk -- what somebody is worth, what a
-             product has been asked for, what a post is expected to earn
-             -- is read from the shop's own books, and every send is a
-             tap. Neither half of that sentence is decoration. -->
-        <p class="om-foot">Every figure on this desk is counted live from the shop&rsquo;s own records, and nothing leaves the shop until you press send.</p>
+          </div>
+
+          <!-- THE APP'S OLDEST LAW, stated on the screen it matters most.
+               Everything on this desk -- what somebody is worth, what a
+               product has been asked for, what a post is expected to earn
+               -- is read from the shop's own books, and every send is a
+               tap. Neither half of that sentence is decoration. -->
+          <p class="om-foot">Every figure on this desk is counted live from the shop&rsquo;s own records, and nothing leaves the shop until you press send.</p>
         </div>
 
         <!-- Kept and still rendered: the chase timing, the held-back
              reasons and the register. None of it is in the frame. -->
-        <div id="msg_fup_body" hidden>
+        <div class="om-hub" id="msg_fup_body" hidden>
         <div class="ow-seg fup-tabs" id="fup_tabs">
           <!-- "Work" was the name when this WAS the work. The work is the
                card queue above now, so this tab is what stands behind it:
@@ -24507,6 +24610,7 @@ async function loadData(shopId){
        at a time from the post panel, because these are facts the books
        have no way to hold. */
     presetWaNeverPost: Array.isArray(presets.waNeverPost) ? presets.waNeverPost : [],
+    presetWaPostsPerDay: presets.waPostsPerDay != null ? Number(presets.waPostsPerDay) : WA_DAILY_CAP_DEFAULT,
     /* The words this shop's customers use, confirmed one at a time from
        chats the owner answered by hand -- and the ones waved away, so a
        rejected word is never offered twice. */
@@ -24828,7 +24932,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waPostsPerDay:d.presetWaPostsPerDay, waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -26510,6 +26614,16 @@ const WA_SITTING_DAYS = 30;    // stock unmoved this long starts to count
 const WA_PICK_COUNT = 6;       // slots on the board -- swap pool behind them
 const WA_JUSTIN_DAYS = 7;      // a restock this fresh is news
 const WA_DEPTH_DAYS = 5;       // a pick must cover this many days of its own pace
+/* HOW MANY POSTS A DAY, and why there is a ceiling at all. Past about
+   three the replies fall off -- the posts start competing with each
+   other for the same reader on the same day. It is the shop's call, so
+   it is a setting rather than a constant; this is only what a shop that
+   has never changed it gets. */
+const WA_DAILY_CAP_DEFAULT = 3;
+function waDailyCap(){
+  const n = Math.round(Number(data.presetWaPostsPerDay));
+  return n >= 1 ? n : WA_DAILY_CAP_DEFAULT;
+}
 
 function waDaysBetween(a, b){
   return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
@@ -26868,6 +26982,85 @@ function waUnitsByKeyDate(quotes){
   return out;
 }
 
+/* The same walk, in money. waUnitsByKeyDate answers "how many moved";
+   this answers "what did they come to", which is the only currency the
+   owner thinks in. Same rules -- invoiced, not voided, dated -- and the
+   SELL price off the line, so a product whose price has changed since is
+   valued at what it actually fetched on the day. */
+function waValueByKeyDate(quotes){
+  const out = new Map();
+  (quotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced || !q.date) return;
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
+      const m = out.get(key) || new Map();
+      m.set(q.date, (m.get(q.date)||0) + (Number(it.qty)||0) * (Number(quoteItemSellPrice(it))||0));
+      out.set(key, m);
+    });
+  });
+  return out;
+}
+
+/* WHAT POSTING HAS ACTUALLY BEEN WORTH, in money, over the same window
+   and the same before/after comparison the unit lift uses. Signed, and
+   summed signed: a post that was followed by a quiet week is evidence
+   too, and dropping the negative ones would make posting look better
+   than the record says it is.
+
+   Returns null rather than a zero when nothing is ripe yet -- "not
+   enough posts to say" is an answer, and a bold 0 is not. */
+function waMoneyAfterPosts(posts, quotes, dateISO, windowDays){
+  const win = windowDays || WA_LIFT_DAYS;
+  const byKeyDate = waValueByKeyDate(quotes);
+  let ripe = 0, money = 0;
+  (posts||[]).forEach(w=>{
+    if(!w.date) return;
+    if(!(waDaysBetween(w.date, dateISO) >= win)) return;
+    ripe++;
+    const m = byKeyDate.get(stockKey(w.productId, w.variantIdx==null?null:w.variantIdx));
+    if(!m) return;
+    m.forEach((val, d)=>{
+      const dd = waDaysBetween(w.date, d);
+      if(dd > 0 && dd <= win) money += val;
+      else if(dd < 0 && dd >= -win) money -= val;
+    });
+  });
+  return ripe ? { ripe, money: Math.round(money), days: win } : null;
+}
+
+/* WHICH SIGNALS ACTUALLY SELL. The lift table keeps a median per kind,
+   which answers "how much"; the screen also asks "how often", and those
+   are different questions -- one post that moved forty units and five
+   that moved none has a healthy median and a terrible record.
+
+   Counted from the ripe outcomes directly: how many posts carried the
+   kind, and how many of those were followed by more units than the week
+   before. A kind nothing ripe carries does not appear at all rather than
+   appearing as nought of nought. */
+function waSignalScoreboard(outcomes){
+  const rows = new Map();
+  (outcomes||[]).forEach(o=>{
+    if(!o.ripe || !o.kinds || !o.kinds.length) return;
+    o.kinds.forEach(k=>{
+      const r = rows.get(k) || { kind: k, n: 0, moved: 0 };
+      r.n++;
+      if(o.lift > 0) r.moved++;
+      rows.set(k, r);
+    });
+  });
+  /* A REASON WITH TOO LITTLE BEHIND IT DOES NOT SPEAK. One post that
+     happened to be followed by a sale is a 100% record, and sorted on
+     ratio alone it beats a reason with three out of four -- so the
+     screen would crown whichever signal had been tried once. The same
+     floor the estimate uses (WA_LIFT_MIN_KIND) decides who is allowed
+     an opinion; the rest are still RETURNED, because the panel lists
+     them and says how thin they are rather than hiding them. */
+  return [...rows.values()]
+    .map(r=> Object.assign(r, {thin: r.n < WA_LIFT_MIN_KIND}))
+    .sort((a,b)=> (a.thin - b.thin) || (b.moved/b.n) - (a.moved/a.n) || b.n - a.n);
+}
+
 /* One row per recorded post. A post younger than the window is RIPE
    false -- it is not evidence yet, and counting it as a zero would
    quietly drag every median down as the shop posts more. */
@@ -27212,7 +27405,12 @@ function waDailyPicks(dateISO, skipKeys, opts){
      arrival and a shelf-mover onto a grid of six by KIND, overriding
      rank -- and the shop has since said the post is for earning, so a
      kind may inform the estimate but may not override the answer. */
-  return { picks, ranked, others: rest, excluded, barred, gaps, table, cold };
+  /* THE WHOLE NOMINATED LIST comes back too. `ranked` is the top six the
+     argument panel shows; the Posting screen draws every candidate, in
+     the same order, because "14 nominated, 3 picked, 11 roll over" is
+     the sentence that screen exists to say and it cannot say it from a
+     list already cut to six. */
+  return { picks, ranked, candidates, others: rest, excluded, barred, gaps, table, cold };
 }
 
 // What leaves the building. SELL prices only -- the mutation suite holds
@@ -45440,9 +45638,30 @@ document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
   const bc = document.getElementById('msg_broadcast_btn');
   if(bc) bc.addEventListener('click', ()=>{
     msgSetLens('posting');
+    postHubOpen = true;
+    renderMessages();
     const open = document.getElementById('wa_bc_open');
     if(open) open.click();
     const pan = document.getElementById('wa_bc_pan');
+    if(pan) pan.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+  /* The Posting lens's own three, bound the same way and for the same
+     reason: they sit in the static header, not in what renderPosting
+     redraws. */
+  const pfind = document.getElementById('post_search');
+  if(pfind) pfind.addEventListener('input', ()=> renderMessages());
+  const phub = document.getElementById('post_hub_btn');
+  if(phub) phub.addEventListener('click', ()=>{ postHubOpen = !postHubOpen; renderMessages();
+    if(postHubOpen){ const b = document.getElementById('post_hub_body'); if(b) b.scrollIntoView({behavior:'smooth', block:'nearest'}); } });
+  /* WHY THIS ORDER opens the argument itself -- the panel that names
+     every candidate's reasons, what was excluded and why, and the shop's
+     own veto list with the way to undo it. It is not a summary of the
+     ranking, it IS the ranking, which is what makes the order checkable. */
+  const pwhy = document.getElementById('post_why_btn');
+  if(pwhy) pwhy.addEventListener('click', ()=>{
+    postHubOpen = true;
+    renderMessages();
+    const pan = document.getElementById('wa_why_pan');
     if(pan) pan.scrollIntoView({behavior:'smooth', block:'nearest'});
   });
 })();
@@ -96870,9 +97089,35 @@ function renderMessages(){
     hubBtn.setAttribute('aria-expanded', (!onPost && msgHubOpen) ? 'true' : 'false');
     hubBtn.classList.toggle('om-on', !onPost && msgHubOpen);
   }
+  /* Posting has a door of its own, onto the inbox and the record. */
+  const phub = document.getElementById('post_hub_body');
+  if(phub) phub.hidden = !onPost || !postHubOpen;
+  const phubBtn = document.getElementById('post_hub_btn');
+  if(phubBtn){
+    phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen) ? 'true' : 'false');
+    phubBtn.classList.toggle('om-on', onPost && postHubOpen);
+  }
+  /* THE TITLE BLOCK IS THE LENS'S. Posting is a different question from
+     the queue -- what to post today, not who is owed a word -- and a
+     screen whose name does not follow its work is a screen that has not
+     noticed which one it is on. */
+  const t = document.getElementById('msg_title_t');
+  const sub = document.getElementById('msg_title_s');
+  if(t) t.textContent = onPost ? 'What to post today' : 'Messages';
   /* The one-message rule reads under both queue lenses; the whole-book
      pointer is the money lens's alone, because under Telling there is no
      book of news for it to point at. */
+  /* THE QUEUE'S OWN CHROME goes with the queue. The KPI strip, the phone
+     head and the note-and-door row sit OUTSIDE #msg_queue_body -- they
+     are the screen's, not the list's -- so switching the body alone left
+     the queue's four tiles stacked above Posting's four, and a door to
+     the chase rules on a screen with no chase in it. */
+  const qkpi = document.getElementById('msg_kpis');
+  if(qkpi) qkpi.style.display = onPost ? 'none' : '';
+  const qhead = document.getElementById('msg_ph_head');
+  if(qhead) qhead.style.display = onPost ? 'none' : '';
+  const qfoot = document.getElementById('msg_queue_footrow');
+  if(qfoot) qfoot.style.display = onPost ? 'none' : '';
   const foot = document.getElementById('msg_queue_note');
   if(foot) foot.style.display = onPost ? 'none' : '';
   const book = document.getElementById('msg_note_book');
@@ -96906,11 +97151,18 @@ function renderMessages(){
      shop owes anybody, and a badge that rises because the queue grew
      teaches people to ignore badges. */
   const picks = (typeof waPickView === 'function') ? waPickView(todayISO()) : null;
-  setN('msgSegPosting', picks ? (picks.ranked || []).length : 0, false);
+  const nominated = picks ? (picks.candidates || picks.ranked || []).length : 0;
+  setN('msgSegPosting', nominated, false);
+  postLastCounts = {money: money.length, telling: telling.length, posting: nominated};
 
+  if(onPost){
+    if(sub) sub.textContent = `${nominated} product${nominated===1?'':'s'} nominated \u00b7 ranked by the signal, capped at ${waDailyCap()} a day \u00b7 you pick, the rest roll over`;
+    renderPosting();
+    return;
+  }
+  if(sub) sub.textContent = 'Every word the shop owes someone, and the box it is written in';
   renderMessageKpis(money, telling, picks);
   renderMessagePhoneHead(money, telling, picks);
-  if(onPost) return;
 
   const list = document.getElementById('msg_list');
   if(!list) return;
@@ -97174,6 +97426,569 @@ function msgMeasure(el, box){
   f.textContent = fits ? 'fits a phone bubble' : `folds — a bubble wraps at ${MSG_BUBBLE}`;
   f.style.background = fits ? 'var(--om-neutral)' : 'var(--om-caution)';
   f.style.color = fits ? 'var(--om-neutral-ink)' : 'var(--om-caution-ink)';
+}
+
+
+/* ============================ THE POSTING LENS ============================
+
+   What to post today, and why.
+
+   The picking machinery under this screen is untouched: waPostCandidates
+   walks every product, says what is in the way -- no price on file, too
+   little stock to fill an order, posted inside the last fortnight -- and
+   hangs a list of REASONS on each survivor, every one of them a sentence
+   the owner can check against their own books. This screen draws that,
+   ranks it, and caps it.
+
+   THE CAP IS THE ARGUMENT. Three a day by default, because past that the
+   posts compete with each other for the same reader on the same day.
+   What is not picked is not lost: it rolls to tomorrow, and the screen
+   says how many. */
+
+/* The other two lenses' counts, so the Posting phone head can draw the
+   same tab row the queue does without walking the ledger a second time.
+   renderMessages fills it on every pass, before either head is drawn. */
+let postLastCounts = {money: 0, telling: 0, posting: 0};
+function postLensCounts(){ return postLastCounts; }
+let postPickedKey = null;
+let postWhyOpen = false;
+let postHubOpen = false;
+let postView = null;    // the last read of the picker, so the panel and the list agree
+
+/* The signal a row is here for, as the shop would say it. The kinds are
+   waPostCandidates' own; the words and the tone are this screen's, and a
+   kind with no entry keeps its own sentence rather than being dropped. */
+const POST_SIGNALS = {
+  drop:      {label:'price cut',       tone:'good'},
+  sitting:   {label:'idle stock',      tone:'caution'},
+  justin:    {label:'just restocked',  tone:'good'},
+  asked:     {label:'asked for',       tone:'studied'},
+  inbox:     {label:'asked in chat',   tone:'studied'},
+  rival:     {label:'cheaper here',    tone:'good'},
+  waseller:  {label:'sells in chat',   tone:'good'},
+  fast:      {label:'moving',          tone:'good'},
+  weekday:   {label:'sells today',     tone:'studied'},
+  catalogue: {label:'in the catalogue',tone:'neutral'},
+  fresh:     {label:'never posted',    tone:'neutral'},
+  nophoto:   {label:'no photo',        tone:'neutral'},
+};
+const POST_TONE = {
+  good:     ['--om-good','--om-good-ink'],
+  caution:  ['--om-caution','--om-caution-ink'],
+  studied:  ['--om-studied','--om-studied-ink'],
+  bad:      ['--om-bad','--om-bad-ink'],
+  neutral:  ['--om-neutral','--om-neutral-ink'],
+};
+function postSignalOf(c){
+  const r = (c.reasons||[])[0];
+  if(!r) return {label:'nominated', tone:'neutral', why:''};
+  const d = POST_SIGNALS[r.kind] || {label:r.kind, tone:'neutral'};
+  return {label:d.label, tone:d.tone, why:r.text};
+}
+function postChip(label, tone, extra){
+  const t = POST_TONE[tone] || POST_TONE.neutral;
+  return `<span class="om-chip" style="height:20px;padding:0 8px;background:var(${t[0]});color:var(${t[1]})${extra||''}">${esc(label)}</span>`;
+}
+
+/* HOW MANY DAYS THE SHELF COVERS at the pace the product actually sells.
+   Returns null when nothing has sold this month -- a line with stock and
+   no pace has no cover, it has stock, and dividing by nought to print
+   "Infinity days" is the sort of figure that ends trust in a screen. */
+function postCoverDays(c){
+  const pace = (Number(c.units30)||0) / 30;
+  if(!(pace > 0)) return null;
+  return Math.floor((Number(c.qty)||0) / pace);
+}
+/* What the shop keeps on one, as a share of what it charges. null when
+   the books carry no purchase price to work it out from -- absent, never
+   a zero, because a zero here reads as "sold at cost". */
+function postKeepPct(c){
+  if(c.marginUnit == null || !(Number(c.price) > 0)) return null;
+  return Math.round(100 * c.marginUnit / c.price);
+}
+
+/* ---- the screen ---- */
+function postSetHubOpen(v){ postHubOpen = v; renderMessages(); }
+
+function renderPosting(){
+  const list = document.getElementById('post_list');
+  if(!list) return;
+  const today = todayISO();
+  const view = postView = waPickView(today);
+  const cap = waDailyCap();
+  const postedToday = (data.waPosts||[]).filter(w=> w.date === today);
+  const candidates = view.candidates || view.ranked || [];   // waDailyPicks returns the full list too
+
+  /* The nominated list in the picker's own order. waDailyPicks keeps the
+     ranking honest and separate from its swap pool, so the screen draws
+     the RANKING -- an order the screen has quietly rearranged is an order
+     nobody can check. */
+  const tokens = searchTokens(document.getElementById('post_search') ? document.getElementById('post_search').value : '');
+  const all = candidates.length ? candidates : (view.ranked || []);
+  const shown = !tokens.length ? all : all.filter(c=> matchesAllTokens(
+    `${c.name} ${(c.reasons||[]).map(r=> r.text + ' ' + (POST_SIGNALS[r.kind]||{}).label).join(' ')}`.toLowerCase(), tokens));
+  const held = (view.gaps && view.gaps.lowStock) ? view.gaps.lowStock : [];
+
+  const n = document.getElementById('post_card_n');
+  if(n) n.textContent = tokens.length
+    ? `${shown.length} of ${all.length} match`
+    : 'every row says why it is here';
+
+  const postedKeys = new Set(postedToday.map(w=> stockKey(w.productId, w.variantIdx==null?null:w.variantIdx)));
+  const slotsLeft = Math.max(0, cap - postedToday.length);
+
+  /* WHAT HAS ALREADY GONE OUT TODAY STAYS ON THE LIST. The picker drops
+     it -- a product posted inside the fortnight is resting, which is the
+     right answer for tomorrow's nomination -- but a row that vanishes the
+     moment you stamp it reads as "that did not work". So today's posts
+     are drawn at the top, out of the record rather than the picker, and
+     they are the one group here that is history rather than a suggestion. */
+  let html = '';
+  if(postedToday.length){
+    html += `<div class="om-grow">
+      <span class="om-chip" style="background:var(--om-good);color:var(--om-good-ink)">Posted today</span>
+      <span style="font-size:12.5px;font-weight:700">${postedToday.length} of ${cap}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">${slotsLeft ? `${slotsLeft} slot${slotsLeft===1?'':'s'} left` : 'the day is full'}</span>
+    </div>`;
+    html += postedToday.map((w,i)=>{
+      const why = String(w.reason||'').split(' \u00b7 ')[0];
+      return `<div class="om-prow om-prow-held" style="opacity:1;cursor:default">
+        <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${i+1}</span>
+        <span class="om-thumb">${postThumbSVG()}</span>
+        <div style="min-width:0">
+          <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(w.name||'')}</div>
+          <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${esc(why || 'stamped today')}</div>
+        </div>
+        <div>${postChip('gone out','good')}</div>
+        <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(--om-ink-3)">&mdash;</div>
+        <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(--om-ink-3)">&mdash;</div>
+        <div style="text-align:right">${postChip('posted','good',';background:var(--om-good-ink);color:var(--om-on-navy)')}</div>
+        <div class="om-prow-ph">
+          <span class="om-thumb om-prow-ph-t">${postThumbSVG()}</span>
+          <span class="om-t om-prow-ph-p">${esc(w.name||'')}</span>
+          <span class="om-t om-prow-ph-s">${esc(why || 'stamped today')}</span>
+          <span class="om-prow-ph-a">${postChip('posted','good',';background:var(--om-good-ink);color:var(--om-on-navy)')}</span>
+        </div>
+      </div>`;
+    }).join('');
+    if(shown.length) html += `<div class="om-grow">
+      <span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">Still nominated</span>
+      <span style="font-size:12.5px;font-weight:700">${shown.length}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">ranked by the signal</span>
+    </div>`;
+  }
+  if(!shown.length){
+    html += `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
+      + (tokens.length
+        ? 'Nothing in the queue matches that.'
+        : postedToday.length
+          ? `Nothing else is nominated today. What went out is above; the rest of the book is resting or held back.`
+          : (data.products||[]).length
+          ? ((view.gaps.noPrice.length || held.length)
+            ? 'Nothing can be posted today &mdash; what is in the way is below.'
+            : 'Everything postable has gone out inside the last fortnight and is resting.')
+            : 'No products yet. A product appears here once it carries a selling price.')
+      + `</div>`;
+  } else {
+    html += shown.map((c,i)=> postRowHTML(c, i+1, postedKeys.has(c.key), slotsLeft)).join('');
+  }
+  if(held.length){
+    html += `<div class="om-grow">
+      <span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">Held back</span>
+      <span style="font-size:12.5px;font-weight:700">${held.length} product${held.length===1?'':'s'}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">not enough stock to fill an order</span>
+    </div>`;
+    html += held.slice(0, 8).map(name=> `<div class="om-prow om-prow-held">
+      <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">&mdash;</span>
+      <span class="om-thumb">${postThumbSVG()}</span>
+      <div style="min-width:0">
+        <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(name)}</div>
+        <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">posting it would sell what you cannot deliver</div>
+      </div>
+      <div>${postChip('low stock','bad')}</div>
+      <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(--om-bad-ink)">thin</div>
+      <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(--om-ink-3)">&mdash;</div>
+      <div style="text-align:right;font-size:11px;color:var(--om-ink-3)">held</div>
+      <div class="om-prow-ph">
+        <span class="om-thumb om-prow-ph-t">${postThumbSVG()}</span>
+        <span class="om-t om-prow-ph-p">${esc(name)}</span>
+        <span class="om-t om-prow-ph-s">not enough stock to fill an order</span>
+        <span class="om-prow-ph-a">${postChip('held','neutral')}</span>
+      </div>
+    </div>`).join('');
+    if(held.length > 8) html += `<div class="om-nrow"><span>and ${held.length - 8} more, all for the same reason &mdash; their own pace would empty the shelf before the week was out.</span></div>`;
+  }
+  list.innerHTML = html;
+  list.querySelectorAll('[data-prow]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-pick]')) return;
+      postPickedKey = row.dataset.prow;
+      renderMessages();
+    });
+  });
+  list.querySelectorAll('[data-pick]').forEach(b=>{
+    b.addEventListener('click', ()=>{ postPickedKey = b.dataset.pick; renderMessages(); });
+  });
+
+  if(postPickedKey != null && !all.some(c=> c.key === postPickedKey)) postPickedKey = null;
+  const picked = postPickedKey == null ? (shown[0] || null) : all.find(c=> c.key === postPickedKey) || null;
+  renderPostKpis(view, cap, postedToday, held);
+  renderPostPhoneHead(view, cap, postedToday);
+  renderPostSide(picked, view, cap, postedToday);
+}
+
+function postThumbSVG(){
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>`;
+}
+function postThumbHTML(c){
+  return c.image
+    ? `<img class="om-thumb" loading="lazy" src="${esc(c.image)}" alt="">`
+    : `<span class="om-thumb" title="No photo — it posts as a price card">${postThumbSVG()}</span>`;
+}
+
+function postRowHTML(c, rank, postedAlready, slotsLeft){
+  const sig = postSignalOf(c);
+  const cover = postCoverDays(c);
+  const keep = postKeepPct(c);
+  const on = postPickedKey === c.key ? ' om-on' : '';
+  const act = postedAlready
+    ? postChip('posted','good',';background:var(--om-good-ink);color:var(--om-on-navy)')
+    : slotsLeft > 0
+      ? `<button type="button" class="om-btn om-btn-s" data-pick="${esc(c.key)}" style="height:26px;padding:0 9px;font-size:11.5px">Pick</button>`
+      : `<span class="om-t" style="font-size:11px;color:var(--om-ink-3)">tomorrow</span>`;
+  return `<div class="om-prow${on}" data-prow="${esc(c.key)}" tabindex="0" role="button">
+    <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${rank}</span>
+    ${postThumbHTML(c)}
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(c.name)}</div>
+      <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${esc(sig.why)}</div>
+    </div>
+    <div>${postChip(sig.label, sig.tone)}</div>
+    <div class="om-fig om-n" style="font-size:12.5px;text-align:right${cover != null && cover < WA_DEPTH_DAYS ? ';color:var(--om-bad-ink)' : ''}">${
+      cover == null ? '<span style="color:var(--om-ink-3)">no sales</span>' : cover + ' days'}</div>
+    <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(${keep != null && keep > 0 ? '--om-good-ink' : '--om-ink-3'})">${
+      keep == null ? '&mdash;' : keep <= 0 ? 'at cost' : keep + '%'}</div>
+    <div style="text-align:right">${act}</div>
+    <div class="om-prow-ph">
+      ${postThumbHTML(c).replace('class="om-thumb"', 'class="om-thumb om-prow-ph-t"')}
+      <span class="om-t om-prow-ph-p">${esc(c.name)}</span>
+      <span class="om-t om-prow-ph-s">${esc(sig.why)}</span>
+      <span class="om-prow-ph-a">${act}</span>
+    </div>
+  </div>`;
+}
+
+function renderPostKpis(view, cap, postedToday, held){
+  const el = document.getElementById('post_kpis');
+  if(!el) return;
+  const today = todayISO();
+  const outcomes = waPostOutcomes(data.waPosts, data.savedQuotes, today);
+  const money = waMoneyAfterPosts(data.waPosts, data.savedQuotes, today);
+  const board = waSignalScoreboard(outcomes);
+  /* Only a reason with enough behind it may be called the best one. */
+  const speaking = board.filter(r=> !r.thin);
+  const best = speaking[0] || null;
+  const worst = speaking.length > 1 ? speaking[speaking.length-1] : null;
+  const nominated = (view.ranked && view.ranked.length ? view.ranked : (view.candidates||[])).length;
+  const rolling = Math.max(0, nominated - Math.max(0, cap - postedToday.length));
+  const pips = Array.from({length: cap}, (_,i)=>
+    `<span class="om-pip${i < postedToday.length ? ' om-pip-on' : ''}"></span>`).join('');
+  const slots = Math.max(0, cap - postedToday.length);
+  const nameOf = (k)=> (POST_SIGNALS[k] || {label:k}).label;
+  el.innerHTML = `
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Picked for today</div>
+    <div class="om-pips"><span class="om-pipset">${pips}</span><span class="om-fig om-n" style="font-size:15px">${postedToday.length} of ${cap}</span></div>
+    <div class="om-kpi-s">${slots ? `${slots} slot${slots===1?'':'s'} left` : 'the day is full'}${
+      rolling ? ` &middot; ${rolling} roll to tomorrow` : ''}</div>
+  </div>
+  <div class="om-kpi${money && money.money > 0 ? ' om-kpi-good' : ''}">
+    <div class="om-lbl" style="font-size:10.5px${money && money.money > 0 ? ';color:var(--om-good-card-ink)' : ''}">Sold after a post</div>
+    <div class="om-fig om-kpi-f om-n" style="${money && money.money > 0 ? 'color:var(--om-good-ink)' : ''}">${
+      money ? esc(fmtUGX(money.money)) : '&mdash;'}</div>
+    <div class="om-kpi-s">${money
+      ? `${money.ripe} post${money.ripe===1?'':'s'} &middot; the ${money.days} days after each, against the ${money.days} before`
+      : `nothing has been stamped long enough to read yet &mdash; ${WA_LIFT_DAYS} days is the window`}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Signal that sells best</div>
+    <div class="om-fig om-kpi-f om-n" style="font-size:20px">${best ? esc(nameOf(best.kind)) : 'Too early'}</div>
+    <div class="om-kpi-s">${best
+      ? `${best.moved} of ${best.n} moved${worst && worst !== best ? ` &middot; ${esc(nameOf(worst.kind))}, ${worst.moved} of ${worst.n}` : ''}`
+      : board.length
+        ? `no reason has ${WA_LIFT_MIN_KIND} posts behind it yet &mdash; one lucky post is not a finding`
+        : 'no stamped post has come of age yet'}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Held back</div>
+    <div class="om-fig om-kpi-f om-n">${held.length}</div>
+    <div class="om-kpi-s">too little stock to fill an order</div>
+  </div>`;
+}
+
+function renderPostPhoneHead(view, cap, postedToday){
+  const el = document.getElementById('post_ph_head');
+  if(!el) return;
+  const nominated = (view.ranked && view.ranked.length ? view.ranked : (view.candidates||[])).length;
+  const tab = (key,label,n)=>`<button type="button" class="om-ph-tab${msgLens===key?' om-on':''}" data-msglens="${key}">${esc(label)} ${n}</button>`;
+  const counts = postLensCounts();
+  el.innerHTML = `<div class="om-ph-t">What to post today</div>
+    <div class="om-ph-figs">
+      <div class="om-ph-fig"><div class="om-ph-fig-l">Picked</div><div class="om-fig om-ph-fig-v">${postedToday.length} of ${cap}</div></div>
+      <div class="om-ph-fig"><div class="om-ph-fig-l">Nominated</div><div class="om-fig om-ph-fig-v">${nominated}</div></div>
+      <div class="om-ph-fig"><div class="om-ph-fig-l">Held back</div><div class="om-fig om-ph-fig-v">${(view.gaps.lowStock||[]).length}</div></div>
+    </div>
+    <div class="om-ph-tabs">${tab('money','Money',counts.money)}${tab('telling','Telling',counts.telling)}${tab('posting','Posting',nominated)}</div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens)));
+}
+
+/* THE PANEL. What actually goes out, and the two readings behind it.
+
+   The card at the top is the POST: a photo when the product has one, and
+   the shop's own price card when it does not. The price card is not a
+   placeholder for a missing photo -- a navy card carrying the shop's
+   name, the product, what it costs and what is on the shelf is a better
+   post than somebody else's stock photograph of iron sheets. */
+function renderPostSide(c, view, cap, postedToday){
+  const el = document.getElementById('post_side');
+  if(!el) return;
+  if(!c){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick a product to read what would go out. The app cannot see what you post &mdash; stamping it is what lets the next ${WA_LIFT_DAYS} days of sales be read against it.</div>`;
+    return;
+  }
+  const sig = postSignalOf(c);
+  const today = todayISO();
+  const postedAlready = postedToday.some(w=> stockKey(w.productId, w.variantIdx==null?null:w.variantIdx) === c.key);
+  const idx = postedToday.findIndex(w=> stockKey(w.productId, w.variantIdx==null?null:w.variantIdx) === c.key);
+  const caption = postDraftFor(c);
+  const cover = postCoverDays(c);
+
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-pan">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="min-width:0;flex:1">
+          <div class="om-pan-t">${esc(c.name)}</div>
+          <div class="om-pan-m">${postedAlready ? `post ${idx+1} of ${postedToday.length} picked` : `not picked yet &middot; ${Math.max(0, cap - postedToday.length)} slot${cap - postedToday.length === 1 ? '' : 's'} left`} &middot; ${esc(sig.label)}</div>
+        </div>
+        ${c.needsPhoto ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">no photo</span>` : ''}
+      </div>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="om-lbl" style="font-size:10.5px">What will be posted</span>
+        <span style="font-size:11px;color:var(--om-ink-3);margin-left:auto">edit it &mdash; the box is what ships</span>
+      </div>
+      <div style="margin-top:8px;border:1px solid var(--om-rule-input);border-radius:11px;overflow:hidden">
+        ${c.image
+          ? `<img src="${esc(c.image)}" alt="" style="display:block;width:100%;height:190px;object-fit:cover;background:var(--om-track)">`
+          : `<div class="om-pc">
+              <div class="om-pc-sh">${esc(printedShopName())}</div>
+              <div class="om-pc-n">${esc(c.name)}</div>
+              ${c.unit ? `<div class="om-pc-s">per ${esc(c.unit)}</div>` : ''}
+
+              <!-- NO STRUCK-THROUGH OLD PRICE, and that is not an
+                   omission. What the picker knows fell is the SUPPLIER
+                   COST -- "costs the shop 8% less than last time" -- and
+                   the shop's own rule, which the mutation suite enforces,
+                   is that nothing carrying a supplier cost leaves the
+                   building. There is no previous SELL price on file to
+                   strike through, so the card says the news in words, as
+                   waCaption has always done, rather than printing a
+                   figure that would be the wrong one. -->
+              <div class="om-pc-p">
+                <span class="om-fig om-n" style="font-size:26px;color:var(--om-on-navy);line-height:1">${esc(Number(c.price).toLocaleString('en-UG'))}</span>
+                <span class="om-pc-s" style="margin:0 0 3px">UGX${c.unit ? ' / ' + esc(c.unit) : ''}</span>
+              </div>
+              ${c.dropped ? `<div style="margin-top:7px;font-size:12px;font-weight:600;color:var(--om-on-navy-2)">New lower price</div>` : ''}
+              <div class="om-pc-f">
+                ${cover != null ? `<span class="om-chip" style="background:var(--om-age-1);color:var(--om-on-navy)">${cover} days of stock</span>` : ''}
+                <span style="font-size:11px;color:var(--om-on-navy-3)">${esc([data.presetWaPhone || '', (data.presetLocations||[])[0] || ''].filter(Boolean).join(' · '))}</span>
+              </div>
+            </div>`}
+        <div style="background:var(--om-sunken);padding:8px 11px;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" style="flex:none;color:var(--om-ink-3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+          <span style="flex:1;min-width:0;font-size:11.5px;color:var(--om-ink-3)">${c.image
+            ? 'This product&rsquo;s own photo goes out with the words below.'
+            : 'No photo on this product &mdash; a price card is used instead.'}</span>
+          <button type="button" class="om-btn om-btn-s" id="post_photo" style="height:26px;padding:0 8px;font-size:11.5px">${c.image ? 'Change it' : 'Add one'}</button>
+        </div>
+      </div>
+      <textarea class="om-box" id="post_box" rows="9" style="margin-top:9px">${esc(caption)}</textarea>
+      <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <span class="om-chip om-fig om-n" id="post_wide" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
+        <span class="om-chip" id="post_fits" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
+        <span style="flex:1"></span>
+        <button type="button" class="om-btn om-btn-s" id="post_shorter" style="height:28px;padding:0 10px;font-size:12px">Shorter</button>
+        <button type="button" class="om-btn om-btn-s" id="post_swap" style="height:28px;padding:0 10px;font-size:12px">Swap product</button>
+      </div>
+    </div>
+    <div style="padding:0 14px 12px">
+      <button type="button" class="om-btn om-btn-w" id="post_open" style="height:40px;width:100%">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Open WhatsApp with this
+      </button>
+    </div>
+    <div class="om-blk">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none;margin-top:1px"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.6 6.6A18.5 18.5 0 0 0 2 12s3 8 10 8a9.1 9.1 0 0 0 5.4-1.6"/><path d="M1 1l22 22"/></svg>
+        <span style="font-size:12px;line-height:1.55;color:var(--om-ink-2)">The app cannot see what you post. Stamping it is what lets the next ${WA_LIFT_DAYS} days of sales be read against it &mdash; and what stops the same thing going out twice.</span>
+      </div>
+      <div style="margin-top:9px;display:flex;gap:8px">
+        <button type="button" class="om-btn om-btn-s" id="post_was" style="height:34px;flex:1;color:var(--om-good-ink)">It was posted</button>
+        <button type="button" class="om-btn om-btn-s" id="post_not" style="height:34px;flex:1;color:var(--om-bad-ink)">It was not</button>
+      </div>
+    </div>
+  </div>
+
+  ${postSignalsCardHTML()}
+  ${postSlotsCardHTML(view, cap, postedToday)}`;
+
+  const box = el.querySelector('#post_box');
+  const measure = ()=> postMeasure(el, box);
+  if(box) box.addEventListener('input', ()=>{ postDrafts[c.key] = box.value; measure(); });
+  measure();
+  const open = el.querySelector('#post_open');
+  if(open) open.onclick = ()=>{
+    /* The BOX, never the template. An edited caption that ships as the
+       original is the one thing this screen must never do. */
+    window.open(waComposeUrl('', box ? box.value : caption), '_blank');
+  };
+  const shorter = el.querySelector('#post_shorter');
+  if(shorter && box) shorter.onclick = ()=>{ box.value = msgShorter(box.value); postDrafts[c.key] = box.value; measure(); };
+  const swap = el.querySelector('#post_swap');
+  if(swap) swap.onclick = ()=>{
+    /* Session-only, and it is a SKIP rather than a veto: the product is
+       back tomorrow. "Never post this one" is the veto, and it lives
+       behind Why this order with the rest of the argument. */
+    waSkipKeys.push(c.key);
+    postPickedKey = null;
+    renderMessages();
+    toast('Skipped for today — it is back in the queue tomorrow');
+  };
+  const photo = el.querySelector('#post_photo');
+  if(photo) photo.onclick = ()=>{
+    /* The photo belongs to the PRODUCT, so it is added on the product's
+       own record rather than invented here for one post. */
+    goToTab('products');
+    setTimeout(()=>{ if(typeof editProduct === 'function') editProduct(c.productId); }, 60);
+  };
+  const was = el.querySelector('#post_was');
+  if(was) was.onclick = ()=>{
+    if(postedAlready){ toast('That one has already gone out today — it is at the top of the list'); return; }
+    if(postedToday.length >= cap){
+      toast(`That is ${cap} today already — the cap is in Setup, and past it the posts compete with each other`);
+      return;
+    }
+    data.waPosts.push({
+      id: allocRowId('waPost'), date: today,
+      productId: c.productId, variantIdx: c.variantIdx==null ? null : c.variantIdx,
+      name: c.name, reason: c.reasons.map(r=> r.text).join(' · '),
+      /* The kinds, not just the sentence: lift is filed under these, and
+         a row without them can count towards the pooled figure but
+         cannot speak for any one reason. */
+      kinds: c.reasons.map(r=> r.kind),
+      createdAt: new Date().toISOString(),
+    });
+    saveData();
+    delete postDrafts[c.key];
+    /* The picker rests a product for a fortnight once it has gone out, so
+       this one is no longer a nomination. The panel moves on to what is
+       next rather than to whatever happens to be first, and the row it
+       just left is at the top of the list under Posted today. */
+    postPickedKey = null;
+    renderMessages();
+    toast(`Stamped — the next ${WA_LIFT_DAYS} days of its sales are read against it`);
+  };
+  const not = el.querySelector('#post_not');
+  if(not) not.onclick = ()=> toast('Nothing recorded — it stays in the queue exactly as it was');
+}
+
+/* WHAT GOES OUT WITH THE PICTURE. waCaption is the one builder, and it
+   is the same one the status image uses, so the card and the words can
+   never come to describe different prices. */
+const postDrafts = Object.create(null);
+function postDraftFor(c){
+  if(postDrafts[c.key] != null) return postDrafts[c.key];
+  try { return waCaption(c, printedShopName(), data.presetWaPhone || ''); }
+  catch(_){ return `${c.name}\n`; }
+}
+function postMeasure(el, box){
+  if(!el) return;
+  const text = box ? box.value : '';
+  const wide = text.split('\n').reduce((m,l)=> Math.max(m, l.length), 0);
+  const w = el.querySelector('#post_wide');
+  if(w) w.textContent = `${wide} wide`;
+  const f = el.querySelector('#post_fits');
+  if(!f) return;
+  const fits = wide <= MSG_BUBBLE;
+  f.textContent = fits ? 'fits a phone bubble' : `folds — a bubble wraps at ${MSG_BUBBLE}`;
+  f.style.background = fits ? 'var(--om-neutral)' : 'var(--om-caution)';
+  f.style.color = fits ? 'var(--om-neutral-ink)' : 'var(--om-caution-ink)';
+}
+
+/* WHICH SIGNALS ACTUALLY SELL. Not the median lift -- that answers "how
+   much" -- but how OFTEN a post carrying a reason was followed by more
+   units than the week before it. One post that moved forty and five that
+   moved none has a healthy median and a terrible record. */
+function postSignalsCardHTML(){
+  const outcomes = waPostOutcomes(data.waPosts, data.savedQuotes, todayISO());
+  const board = waSignalScoreboard(outcomes).slice(0, 5);
+  if(!board.length){
+    return `<div class="om-card" style="padding:12px 14px">
+      <div class="om-card-t">Which signals actually sell</div>
+      <div class="om-read" style="margin-top:8px">Nothing stamped has come of age yet. A post is read ${WA_LIFT_DAYS} days after the stamp, against the ${WA_LIFT_DAYS} before it, and until about ${WA_LIFT_MIN_POSTS} of them have there is nothing here worth saying &mdash; which is the answer, not an empty panel.</div>
+    </div>`;
+  }
+  const nameOf = (k)=> (POST_SIGNALS[k] || {label:k}).label;
+  const rows = board.map(r=>{
+    const pct = Math.round(100 * r.moved / r.n);
+    const tone = pct >= 60 ? '--om-good-ink' : pct >= 40 ? '--om-track-flat' : '--om-late';
+    const ink = pct >= 60 ? '--om-good-ink' : pct >= 40 ? '--om-ink-3' : '--om-caution-ink';
+    return `<div${r.thin ? ' style="opacity:.62"' : ''}>
+      <div class="om-sig-h"><span>${esc(nameOf(r.kind))}${r.thin ? ' <span style="font-size:11px;color:var(--om-ink-3)">too few to say</span>' : ''}</span><span class="om-fig om-n" style="margin-left:auto;color:var(${r.thin ? '--om-ink-3' : ink})">${r.moved} of ${r.n}</span></div>
+      <div class="om-sig-t"><span class="om-sig-b" style="width:${pct}%;background:var(${r.thin ? '--om-track-flat' : tone})"></span></div>
+    </div>`;
+  }).join('');
+  const speaking = board.filter(r=> !r.thin);
+  const best = speaking[0] || null, worst = speaking.length > 1 ? speaking[speaking.length-1] : null;
+  const ripe = outcomes.filter(o=> o.ripe).length;
+  return `<div class="om-card" style="padding:12px 14px">
+    <div class="om-card-t">Which signals actually sell</div>
+    <div class="om-sig">${rows}</div>
+    <div class="om-read" style="margin-top:10px">${best
+      ? `Of ${ripe} post${ripe===1?'':'s'} old enough to read, ${esc(nameOf(best.kind))} moved the line ${best.moved} time${best.moved===1?'':'s'} out of ${best.n}${
+          worst ? `, and ${esc(nameOf(worst.kind))} ${worst.moved} out of ${worst.n}` : ''}. ${
+          ripe < WA_LIFT_MIN_POSTS ? `That is fewer than ${WA_LIFT_MIN_POSTS} posts behind the whole reading, so it is a hint rather than a finding.` : 'That is enough posting behind it to act on.'}`
+      : `${ripe} post${ripe===1?'':'s'} ${ripe===1?'is':'are'} old enough to read, but no single reason has ${WA_LIFT_MIN_KIND} of them behind it. One post that happened to be followed by a sale is not evidence about the reason it carried, so nothing here is ranked yet.`}</div>
+  </div>`;
+}
+
+/* TODAY'S PICKS. The slots, spent and open, and the cap they are against
+   -- because "why can I only post three" is the question this screen
+   raises and it should not have to be asked twice. */
+function postSlotsCardHTML(view, cap, postedToday){
+  const slots = Array.from({length: cap}, (_,i)=>{
+    const w = postedToday[i];
+    if(!w) return `<div class="om-slot" style="opacity:.6">
+      <span class="om-slot-i om-slot-open">${i+1}</span>
+      <span class="om-t" style="flex:1;min-width:0;font-size:12.5px;color:var(--om-ink-3)">one slot open</span>
+    </div>`;
+    const first = String(w.reason||'').split(' · ')[0];
+    return `<div class="om-slot">
+      <span class="om-slot-i${i===0?' om-slot-on':''}">${i+1}</span>
+      <span class="om-t" style="flex:1;min-width:0;font-size:12.5px;font-weight:${i===0?'600':'400'}">${esc(w.name||'')}</span>
+      ${first ? `<span class="om-chip" style="background:var(--om-neutral);color:var(--om-neutral-ink);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(first)}">${esc(first)}</span>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="om-card" style="padding:12px 14px">
+    <div class="om-lbl" style="font-size:10.5px">Today&rsquo;s picks</div>
+    <div style="margin-top:9px;display:flex;flex-direction:column;gap:8px">${slots}</div>
+    <div class="om-read" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--om-rule-inner)">${cap} a day is the cap, and it is yours to change in Setup. More than that and the replies fall off &mdash; the posts start competing with each other for the same reader.</div>
+  </div>`;
 }
 
 /* WHAT THE MESSAGE QUOTES, on the card the send button is on.

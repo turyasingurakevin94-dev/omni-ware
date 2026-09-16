@@ -537,3 +537,71 @@ five screens at once:
 - **A `<textarea>` is 20 columns wide until something says otherwise**, so the
   draft drew as a 180px ribbon in a 300px card and every message looked folded
   whether it was or not.
+
+### 8.13 The Posting lens (frame 1c), and what the books could not supply
+
+The lens is built. What the frame draws and the app now draws with it: the
+title that follows the lens (*What to post today*, with the nominated count, the
+cap and how many roll over), the four tiles (*Picked for today* with one pip per
+slot, *Sold after a post*, *Signal that sells best*, *Held back*), the queue
+(rank, thumbnail, product, the signal it is here for, cover, what you keep, the
+pick), the *Held back* group, the panel (the navy price card, the mono caption
+box, the width chips, *Shorter*, *Swap product*, *Open WhatsApp with this*, and
+*It was posted* / *It was not*), *Which signals actually sell*, and
+*Today's picks*.
+
+Everything on it comes from machinery that was already there —
+`waPostCandidates` nominates and gives each survivor a list of reasons that are
+sentences the owner can check; `waPostOutcomes` and `waLiftTable` read what
+posting has actually done. Three things were added because the frame asks
+questions the code could not answer:
+
+- **`waMoneyAfterPosts`** — the frame's *Sold after a post* is money and the
+  record only knew units. It is the same before/after comparison over the same
+  window, valued at the SELL price on each line, so a product whose price has
+  moved since is counted at what it actually fetched.
+- **`waSignalScoreboard`** — the lift table keeps a median per reason, which
+  answers *how much*. The frame asks *how often*, and those are different
+  questions: one post that moved forty units and five that moved none has a
+  healthy median and a terrible record.
+- **A daily cap that is a setting.** The frame's panel says *"Three a day is
+  the cap, set in Setup"* — there was no such setting, so `WA_PICK_COUNT` (six,
+  and about the swap pool, not the day) would have had to stand in and the copy
+  would have been a lie. `presetWaPostsPerDay` exists now and persists with the
+  other presets. **It still needs a field on the Setup screen**; until it has
+  one, the sentence is true but the door it names is not there.
+
+Knowing deviations, each for a reason:
+
+- **No struck-through old price on the card.** The frame shows `34,500` beside a
+  struck `37,000`. What the picker knows fell is the SUPPLIER COST — its own
+  reason reads *"costs the shop 8% less than last time"* — and this shop's rule,
+  which the mutation suite enforces, is that nothing carrying a supplier cost
+  leaves the building. There is no previous SELL price on file to strike
+  through. The card says **New lower price** in words instead, which is what
+  `waCaption` has always done. **To draw the frame honestly, the price book
+  needs to keep a customer-price history.** That is the single most valuable
+  thing this frame asks for.
+- **No product strapline.** The frame's card reads *"30 gauge · 3 metre · per
+  piece"* under the name. A product has a name and a unit; the middle of that
+  sentence has nowhere to come from.
+- **Two signals in the frame have no source**: *goes together* (bought with iron
+  sheets on 18 of last 21 orders) and *season starting* (rains start late Sep,
+  sold 3× as much last October). Both are real and both are computable — the
+  first from co-occurrence in `savedQuotes`, the second from the same sales
+  history by month — but neither exists today, so no row can wear them.
+- **A reason with fewer than four ripe posts behind it does not get to be the
+  best one.** Sorted on ratio alone a signal tried once, and followed once by a
+  sale, beats one that is three of four. The tile reads **Too early** and names
+  what is missing; the panel still lists the thin ones, greyed, saying *too few
+  to say*, because hiding them would be a different lie.
+- **What went out today stays on the list.** The picker rests a product for a
+  fortnight once it is stamped, which is right for tomorrow's nomination and
+  wrong for the next thirty seconds: a row that vanishes the moment you stamp it
+  reads as *that did not work*. Today's posts are drawn at the top, out of the
+  record rather than the picker, under **Posted today**.
+- **The inbox and the record are behind a door**, as the queue's hub is: people
+  waiting and answered today, what the system is answering on its own, the words
+  it has learned, the whole argument behind the order (*Why this order* scrolls
+  to it), the paid broadcast and its arithmetic, and the channel's health. None
+  is in the frame; all are live.
