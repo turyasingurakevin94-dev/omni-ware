@@ -761,9 +761,20 @@ const stockMove = (before, after, whenDays) => {
      guarantee than two call sites agreeing, because there is only one. */
   t.check(/const rows = followUpHubRows\(now, chase\);/.test(screen),
     'the hub rows are computed once per render');
+  /* TELLING LEFT THE HUB, and the claim is unchanged for the lens this
+     section is about. The Money lens's cards and list are still handed
+     the one array. Telling ranks on the opposite of what Money ranks on
+     -- soonest to stop being true, never an amount -- so it has an
+     engine of its own, and that engine is walked ONCE per render too,
+     feeding its chip, its badge share, its sweep and its view. Two
+     readings of one question is the fault; one reading each of two
+     different questions is not. */
   t.check(/renderMessageKpis\(rows, money, telling, held\)/.test(screen)
-       && /const money = rows\.filter\(/.test(screen) && /const telling = rows\.filter\(/.test(screen),
+       && /const money = rows\.filter\(/.test(screen),
     'and the cards and the list are handed that same array — the figure on a card counts the rows the list is drawn from, because it is the same rows');
+  t.check(/const tellAll = msgTellRows\(now\);/.test(screen)
+       && /const telling = tellAll\.filter\(r=> r\.route === 'tell'\);/.test(screen),
+    'and the telling lens is walked once per render too, so its chip cannot say 3 over a list of 4');
   t.check(/rows\.filter\(r=> r\.kinds\.has\('promised'\)\)/.test(kpis),
     'and the composition is counted from the hub’s own kinds, so a card can never name work the queue is not showing');
 
@@ -838,10 +849,21 @@ const stockMove = (before, after, whenDays) => {
 {
   /* The badge read followUpClientsToContact; it reads the hub now, which
      wraps that and adds the other engines' clients. Still CLIENTS: the
-     hub keys its rows on the customer, which the hub test proves. */
+     hub keys its rows on the customer, which the hub test proves, and
+     the telling engine keeps one row a person by the same law.
+
+     WHAT IT NO LONGER COUNTS is anything that is not a word owed: a
+     posting nomination is the algorithm's suggestion about a product, a
+     held-back row is somebody deliberately not being asked today, and a
+     better-posted row is a fact that reaches more people as a post. A
+     badge that rises because a suggestion queue grew teaches people to
+     ignore badges. */
   const badge = extractFunction(src, 'renderFollowUpBadge', 'index.html');
-  t.check(/followUpHubRows\(Date\.now\(\)\)\.length/.test(badge),
+  t.check(/rows\.filter\(r=> r\.kinds\.has\('money'\)\)\.length/.test(badge)
+    && /msgTellRows\(now\)\.filter\(r=> r\.route === 'tell'\)\.length/.test(badge),
     'the badge counts CLIENTS to contact — one client owed three updates is one message, and counting rows would promise three');
+  t.check(/setNavBadge\('navBadgeFollowUps', money \+ telling/.test(badge),
+    'and it is obligations only: money plus telling, and nothing that is merely worth considering');
   t.check(/renderFollowUpBadge\(\);/.test(extractFunction(src, 'refreshNavBadges', 'index.html')),
     'and it refreshes with every other badge — it used to start hidden until the tab was opened');
 }

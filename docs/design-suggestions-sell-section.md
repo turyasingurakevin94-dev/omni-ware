@@ -954,3 +954,88 @@ line then says in words.
   *The inbox & the record* door opened onto a single line saying the number was
   not linked — the same fault, in miniature. The door is not drawn at all until
   there is something behind it.
+
+### 8.19 The Telling lens, and the ranking that runs the other way
+
+The fourth handoff (`design_handoff_messages_telling/`) specifies **Telling** as
+its own view. It existed as a chip on the lens row and a group inside the
+register, and it borrowed the register's everything — title, cards, row template
+— which put an `AT STAKE` column and a debt chip over a list where nothing is
+owed, and left the ranking column blank on every row.
+
+**The finding it forced.** Telling ranks on the *opposite* of what Money ranks
+on. On Money a message left unsent gets **more** urgent every day, because the
+debt is still there tomorrow. Here it gets **less** worth sending, because the
+reason expires: goods somebody asked for are news for a day, a delivery is news
+until the van arrives, a price cut is news only while the price holds. So the
+column that ranks this list is **Good until**, the sort is soonest-to-go-stale
+first, and **there is no value column at all**.
+
+That last one is a decision, not an omission, and it is the one most likely to
+be undone by somebody who thinks a list of messages ought to say what each is
+worth. One of the three kinds — *a delivery is on today's run* — **earns no
+order whatever**. It prevents a phone call. Ranked by what it might sell it
+comes last for ever, which is exactly wrong: its entire worth is that it is true
+today and worthless tomorrow, and that is what Good until measures and an amount
+cannot. The test file pins the absence of the column against the grid itself
+rather than against a comment.
+
+**Built:** 4a and 4b in full — the three cards (the third carrying no figure,
+because the best reason to speak is a phrase), the five-track list with the
+message in miniature under each name, the evidence pill that answers *why me*,
+the **Better posted** band, the seven-day **No longer worth saying** group, and
+the two readings below the list rather than in a right rail. On the phone it is
+one card per reason with a thumb-sized act, emitted from the same call as the
+desktop row.
+
+**The three kinds, each derived from its own condition** — nobody adds a row here
+by hand: a follow-up the client took out themselves for something that has since
+landed; an order on the board with status `pending_delivery`; a line the customer
+book's own queue says they are due, which becomes *back in stock* when the shelf
+shows a crossing inside the last fortnight.
+
+**The routing rule is computed.** A fact about a **product** goes to Posting; a
+fact about a **person** stays a word. A price cut is a product fact however few
+people it suits, so it appears under Better posted, dimmed, with its place in the
+posting queue where the action would be. That is what sets Telling to three and
+the badge to money-plus-telling.
+
+**The debtor rule, reconciled rather than overridden.** The handoff says a person
+with money owed is *flagged, not excluded*. The app's own picture queue holds a
+debtor back, and is right to: somebody being asked for money does not also get a
+picture of cement, they get the statement. Both survive, because the case the
+handoff draws is a **product-level** fact — which is never sent to that person at
+all. So a held-back client appears here **only** for a reason that routes away
+from them, with what they owe in the caution ink; their person-level reasons stay
+held and are not drawn.
+
+**The sweep needs a stamp, and that is the one thing on this lens that is not
+read from the books.** Every other figure is derived when somebody looks. This
+one cannot be: the condition that made a reason true is precisely what has gone.
+So `presetTellSeen` stamps each live row as the screen draws it, pruned on read
+at seven days — the same shape and the same rules as the chase stamps.
+
+**Deviations, each for a reason:**
+
+- **Two tracks are wider than the frame**, for the reason every other register
+  here is wider. The frame's 96px *Next* holds a button; this column also holds
+  "1st in the queue", a pill of words that is cut at 96 with nothing to say it
+  was. And the frame's 168px *Why them* holds "they owe 2,410,000"; every figure
+  in this app carries UGX, and `they owe 3,330,000 U…` is not a shortened figure,
+  it is a wrong one.
+- **The row carries two forms of one truth.** `fact` is the message in miniature
+  for a column that has the name above it and a header over each part; `say` is
+  the sentence the draft uses, for somebody holding a phone with neither. Same
+  split a follow-up reason makes between `short` and `text`.
+- **"Asked twice, 16d ago" is counted from two ledgers** — the client's own
+  follow-up list and the requests on a sourcing lead — because an ask taken at
+  the counter and an ask taken in a chat are the same ask to the person who made
+  it.
+
+**Found on the way through:** the Money lens's **To message** card counted every
+hub row, which was right while Telling was a lens over those same rows and wrong
+the moment it stopped being one — it read 3 over a list of 1. A figure and the
+rows beneath it disagreeing about the same thing is the Debtors bug this app was
+rebuilt to remove. It counts the money queue now, and the card beside it names
+the words the Telling lens holds, so *everything else is clear* is never said
+over three unsent messages.

@@ -16372,9 +16372,9 @@
 
   /* THE LIST ROWS. One grid per screen, because the columns are the
      screen's argument about what matters and they are not shared. */
-  .om-lrow,.om-crow,.om-arow,.om-mrow,.om-prow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
-  .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover,.om-prow:hover{background:var(--om-hover)}
-  .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on,.om-prow.om-on{background:var(--om-selected)}
+  .om-lrow,.om-crow,.om-arow,.om-mrow,.om-prow,.om-trow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
+  .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover,.om-prow:hover,.om-trow:hover{background:var(--om-hover)}
+  .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on,.om-prow.om-on,.om-trow.om-on{background:var(--om-selected)}
   .om-lrow,.om-cols-l{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
   .om-crow,.om-cols-c{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
   /* WIDER MONEY TRACKS THAN THE FRAME. The handoff sizes these for bare
@@ -16385,6 +16385,25 @@
   /* Wider money and last-word tracks than the frame, for the same
      reason as the other registers: the figures here carry UGX. */
   .om-mrow,.om-cols-m{grid-template-columns:30px minmax(150px,1fr) 118px 108px 74px}
+  /* THE TELLING LENS, and the tracks are its argument. Avatar, the
+     person and the message in miniature, the evidence that picked them,
+     how long it stays true, and what to do. There is no money track and
+     there is not going to be one: a delivery on today's run earns no
+     order at all, and a column of amounts would bury it for ever. */
+  .om-trow,.om-cols-t{grid-template-columns:30px minmax(150px,1fr) 190px 104px 116px}
+  /* WIDER THAN THE FRAME IN TWO TRACKS, for the reason every other
+     register here is wider. The frame's 96px Next holds a button; this
+     column also holds "1st in the queue", a pill of words that is cut at
+     96 with nothing on screen to say it was. And the frame's 168px Why
+     holds "they owe 2,410,000"; every figure in this app carries UGX,
+     and "they owe 3,330,000 U..." is not a shortened figure, it is a
+     wrong one -- the one thing the house rules say may never be cut. */
+  .om-tell-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:14px 22px 22px;min-width:0}
+  .om-tell-body .om-list{flex:none}
+  .om-tell-panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;min-width:0}
+  /* The evidence pill is a sentence in a 168px cell, so it truncates
+     rather than pushing the columns out of the card. */
+  .om-trow .om-chip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;line-height:22px}
   /* The post queue. Rank, thumbnail, product, the signal it is here for,
      how many days the shelf covers, what the shop keeps, and the pick.
      Wider than the frame in the last two tracks for the usual reason --
@@ -17135,6 +17154,9 @@
      --om-ink-3, which would drop under 4.5:1 on it. */
   .om-kpi-bad{background:var(--om-bad-card);border-color:var(--om-bad-card-rule)}
   .om-kpi-good{background:var(--om-good-card);border-color:var(--om-good-card-rule)}
+  /* Telling's own card. Studied rather than bad, because "say it today"
+     is a window closing, not a debt going bad. */
+  .om-kpi-studied{background:var(--om-studied);border-color:var(--om-studied-card)}
   .om-kpi-warn{background:var(--om-caution-card);border-color:var(--om-caution-card-rule)}
 
   /* The detail column scrolls; every card in it is flex:none so the
@@ -17204,6 +17226,9 @@
   .om-av.om-studied{background:var(--om-studied);color:var(--om-studied-ink)}
   /* The roll-up's "+5", and a row that is history rather than work. */
   .om-av.om-neutral-av{background:var(--om-neutral);color:var(--om-neutral-ink)}
+  /* A line the client takes every week is a GOOD reason, and the avatar
+     says which reason picked them before the pill does. */
+  .om-av.om-good-av{background:var(--om-good);color:var(--om-good-ink)}
   .om-av-onnavy{background:var(--om-coral-text);color:var(--om-on-navy)}
   .om-av-lg{width:32px;height:32px;font-size:12px}
   /* A segment of a bar. Widths are always computed from ONE denominator
@@ -17216,6 +17241,8 @@
   .om-note-warn{background:var(--om-caution-card);border:1px solid var(--om-caution-card-rule);color:var(--om-caution-card-ink)}
   .om-note-bad{background:var(--om-bad-card);border:1px solid var(--om-bad-card-rule);color:var(--om-bad-card-ink)}
   .om-note-good{background:var(--om-good-card);border:1px solid var(--om-good-card-rule);color:var(--om-good-card-ink)}
+  /* The note that says a fact belongs on the posting queue instead. */
+  .om-note-agent{background:var(--om-agent);color:var(--om-agent-ink)}
   /* The green square that hands a chase to WhatsApp, on the phone only
      and only on the three to ask first. 36px, inside a 44px row. */
   .om-wa{width:36px;height:36px;flex:none;border:0;border-radius:9px;background:var(--om-good-ink);color:var(--om-on-navy);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
@@ -17273,8 +17300,21 @@
        can ask for later. */
     .om-wf{grid-template-columns:62px minmax(0,1fr) 84px}
   }
-  .om-mrow-ph,.om-prow-ph{display:none}
+  .om-mrow-ph,.om-prow-ph,.om-trow-ph{display:none}
   @media (max-width: 820px){
+    /* TELLING ON A PHONE: one card per reason, in the frame's own order
+       -- who and when it stops being true, why them, the fact, the act.
+       Not the five columns narrower: at 390 the evidence pill and the
+       message in miniature cannot share a line with a name. */
+    .om-trow{display:block;padding:10px 16px}
+    .om-trow > :not(.om-trow-ph){display:none}
+    .om-trow-ph{display:grid;grid-template-columns:30px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-trow-ph-n{font-size:13.5px;font-weight:600}
+    .om-trow-ph-w{margin-top:2px;font-size:11px;color:var(--om-ink-3)}
+    .om-trow-ph-g{justify-self:end;flex:none}
+    .om-trow-ph-f{grid-column:1/-1;margin-top:6px;font-size:12.5px;color:var(--om-ink);line-height:1.45}
+    .om-trow-ph-note{grid-column:1/-1;margin-top:5px;font-size:11.5px;color:var(--om-agent-ink);line-height:1.45}
+    .om-trow-ph-a{grid-column:1/-1;margin-top:8px;width:100%;height:44px;justify-content:center;font-size:13px}
     .om-mrow{display:block;padding:10px 16px;min-height:44px}
     .om-mrow > :not(.om-mrow-ph){display:none}
     .om-mrow-ph{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
@@ -17464,6 +17504,10 @@
     .om-ph-stake{margin-top:9px;display:flex;align-items:baseline;gap:8px;padding:8px 11px;border-radius:10px;background:color-mix(in srgb, var(--om-coral) 18%, var(--om-navy))}
     .om-ph-stake-l{font-size:9.5px;font-weight:600;letter-spacing:0.03em;color:var(--om-on-navy-3)}
     .om-ph-stake-v{font-size:17px;color:var(--om-on-navy);margin-left:auto}
+    /* What the strip's figure is NOT: what else is waiting, what lapsed,
+       what is better posted. On the navy, so it takes the navy's own
+       meta ink rather than inheriting the body's. */
+    .om-ph-sub{margin-top:6px;font-size:10.5px;color:var(--om-on-navy-3);line-height:1.45}
     /* THUMB-SIZED, in the frame's own heights: the three tone buttons at
        40 and equal width, the send at 48, the two stamps at 44. */
     .om-ph-detail .om-side{padding:0}
@@ -17476,6 +17520,8 @@
        chrome where the frame has none. */
     .om-ph-detail #msg_wide,.om-ph-detail #msg_fits{display:none}
     .om-holdline,.om-sentline{padding:12px 16px}
+    .om-tell-body{padding:0;gap:0}
+    .om-tell-panels{grid-template-columns:1fr;gap:0}
     .om-linkline{flex-wrap:wrap;padding:12px 16px}
     .om-linkline .om-btn{min-height:44px;flex:1 1 100%;justify-content:center}
     .om-nameline{padding:10px 16px;white-space:normal}
@@ -19304,6 +19350,55 @@
              that the posts compete with each other for the same reader.
              What is not picked is not lost -- it rolls to tomorrow, and
              the screen says how many. -->
+        <!-- ================= THE TELLING LENS =================
+
+             Its own view rather than a group inside the register,
+             because it ranks on the OPPOSITE of what Money ranks on. A
+             money message left unsent gets more urgent every day, since
+             the debt is still there; a telling message gets LESS worth
+             sending, because the reason expires. So the column that
+             ranks this list is GOOD UNTIL, and there is no value column
+             on it at all -- one of its three kinds, a delivery on
+             today's run, earns no order whatever: it prevents a phone
+             call, and ranking it by what it might sell would bury it for
+             ever. Its whole worth is that it is true today. -->
+        <div id="msg_telling_body" style="display:none;">
+
+          <div class="om-kpis" id="tell_kpis"></div>
+          <div class="om-ph-only om-ph-head" id="tell_ph_head"></div>
+
+          <!-- NOT A RIGHT RAIL. The register and the posting queue put
+               the picked row in a 304px column beside the list, because
+               on those screens the panel is where the WORK happens --
+               the box you edit and the button you press. Here it is an
+               explanation: the draft for the top row, and the argument
+               for the order the list is in. Five columns need the width,
+               and an explanation reads better wide and short than narrow
+               and tall, so the list takes the whole width and the two
+               readings sit under it, half and half. -->
+          <div class="om-tell-body">
+            <div class="om-card om-list">
+              <div class="om-card-h">
+                <span class="om-card-t" id="tell_card_t" style="flex:none">Worth telling</span>
+                <span class="om-t om-card-s" id="tell_card_s">each one is a fact from the books, not a greeting</span>
+                <span class="om-fig om-n" id="tell_card_n" style="font-size:11.5px;color:var(--om-ink-3);flex:none"></span>
+              </div>
+              <!-- THE HEADER IS THE ARGUMENT. Who, what you would say,
+                   why them, and how long it stays true. No amount, and
+                   there is no column for one. -->
+              <div class="om-cols om-cols-t">
+                <span></span>
+                <span class="om-col">Who, and what you would say</span>
+                <span class="om-col">Why them</span>
+                <span class="om-col" style="text-align:right">Good until</span>
+                <span class="om-col" style="text-align:right">Next</span>
+              </div>
+              <div id="tell_list"></div>
+            </div>
+            <div class="om-tell-panels" id="tell_side"></div>
+          </div>
+        </div>
+
         <div id="msg_posting_body" style="display:none;">
 
           <div class="om-kpis" id="post_kpis"></div>
@@ -25076,6 +25171,11 @@ async function loadData(shopId){
        until, at}}. A decision rather than a rule, which is why it is
        stored and the three engine holds are derived. */
     presetMsgHolds: (presets.msgHolds && typeof presets.msgHolds === 'object') ? presets.msgHolds : {},
+    /* THE TELLING SWEEP'S STAMPS. Every other figure on that lens is
+       read from the books when somebody looks; this one cannot be,
+       because the condition that made a reason true is precisely what
+       has gone. Pruned on read at seven days, so it never grows. */
+    presetTellSeen: (presets.tellSeen && typeof presets.tellSeen === 'object') ? presets.tellSeen : {},
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
     /* Who the shop is, on paper. printedShopName() has been the entire
@@ -25433,7 +25533,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, quoteWaitDays:d.presetQuoteWaitDays != null ? d.presetQuoteWaitDays : null, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, msgHolds:d.presetMsgHolds||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waPostsPerDay:d.presetWaPostsPerDay, waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, quoteWaitDays:d.presetQuoteWaitDays != null ? d.presetQuoteWaitDays : null, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, msgHolds:d.presetMsgHolds||{}, tellSeen:d.presetTellSeen||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waPostsPerDay:d.presetWaPostsPerDay, waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -98851,13 +98951,715 @@ function followUpLastContactAt(customerId){
   return best;
 }
 
+/* ================= THE TELLING LENS =================
+
+   Messages where nothing is owed and the shop simply has something worth
+   saying. It lived as a group inside the register and a chip on the lens
+   row; it is its own view, because it ranks on the OPPOSITE of what
+   Money ranks on.
+
+   On Money, a message left unsent gets MORE urgent every day: the debt
+   is still there tomorrow. Here it gets LESS worth sending, because the
+   reason expires. Goods somebody asked for are news for a day; a
+   delivery is news until the van arrives; a price cut is news only while
+   the price holds. So the column that ranks this list is GOOD UNTIL,
+   never an amount, and the sort is soonest-to-go-stale first.
+
+   THERE IS NO VALUE COLUMN ON THIS LENS, and that is a decision rather
+   than an omission. One of the three kinds -- a delivery on today's run
+   -- earns no order at all: it prevents a phone call. Ranked by what it
+   might sell it would come last for ever, which is exactly wrong, since
+   it is the one whose entire worth is that it is true today and
+   worthless tomorrow. That is what Good until measures and an amount
+   cannot.
+
+   NOBODY ADDS A ROW HERE BY HAND. Each one becomes true when its own
+   condition does and vanishes when it stops: a follow-up whose goods
+   landed, an order on today's run, a line somebody takes every week
+   that is back on the shelf. */
+
+/* IS OR ARE. The row and the draft both name a product and then a verb,
+   and "the gutters you asked for is in" is the kind of sentence that
+   tells a customer a machine wrote it. This trade's plurals are all
+   regular -- sheets, nails, gutters, bags -- and everything else it
+   sells is a mass noun: cement, wire, paint, timber. A trailing s is
+   therefore right every time in this catalogue, and where it is ever
+   wrong it is wrong in a sentence, not in a figure. */
+function tellBe(name){ return /s\s*$/i.test(String(name||'').replace(/\s*[({].*$/, '')) ? 'are' : 'is'; }
+const TELL_GONE_DAYS = 7;    // a reason that lapsed stays visible this long
+const TELL_BACK_DAYS = 14;   // a crossing this recent still reads as "back"
+/* How long each kind stays worth saying. 0 is today and today only;
+   null is "while it holds" -- a price has no day, it has a condition. */
+const TELL_HOLD = {asked: 0, delivery: 0, back: 3, rhythm: 3, price: null};
+
+/* WHICH ROUTE IS BETTER, computed rather than configured.
+
+   Both lenses live on this screen, so the overlap is real and the screen
+   has to say which way to send a fact rather than leave the owner to
+   guess. The rule is about what the fact is ABOUT:
+
+     a product            post it   -- one picture and one price, to
+                                       whoever is looking
+     a person's own ask,
+     order or weekly line tell them -- named, ranked by how soon it
+                                       stops being true, and it can say
+                                       "you asked, so I remembered",
+                                       which a post cannot
+
+   A price cut is a fact about a product however few people it is meant
+   for, so it routes to Posting and shows its place in that queue instead
+   of an action. Nothing is duplicated: the posting queue already holds
+   the row. */
+function msgTellRoute(kind){ return kind === 'price' ? 'post' : 'tell'; }
+
+/* Where this product already stands in the posting queue, so a row that
+   routes there can say so rather than just refusing to act. */
+function msgPostQueuePos(productId, variantIdx){
+  try{
+    const picks = waPickView(todayISO());
+    const list = (picks && (picks.candidates || picks.ranked)) || [];
+    const key = stockKey(productId, variantIdx == null ? null : variantIdx);
+    const i = list.findIndex(c=> String(c.key) === String(key));
+    return i >= 0 ? i + 1 : null;
+  }catch(_e){ return null; }
+}
+
+/* How many times this customer is on record asking for this product, and
+   when they first did. Two places keep that record -- their own
+   follow-up list, and the requests on a sourcing lead -- and the row has
+   to answer "why me" from both, because an ask taken at the counter and
+   an ask taken in a chat are the same ask to the person who made it. */
+function msgAskedTimes(customerId, productId){
+  let n = 0, firstMs = 0;
+  const bump = (iso)=>{ const t = Date.parse(iso); if(t && (!firstMs || t < firstMs)) firstMs = t; };
+  followUpsForCustomer(customerId).forEach(f=>{
+    const s = followUpSubject(f);
+    if(!s.product || String(s.product.id) !== String(productId)) return;
+    n++; bump(f.createdAt);
+  });
+  (data.sourcingLeads||[]).forEach(l=>{
+    if(l.voided || String(l.productId||'') !== String(productId)) return;
+    (l.requests||[]).forEach(r=>{
+      if(String(r.customerId||'') !== String(customerId)) return;
+      n++; bump(r.at);
+    });
+  });
+  return {n, firstMs};
+}
+
+/* The words for it. "asked twice, 16d ago" is the evidence that picked
+   this person, and every row on this lens has to be able to answer why
+   it is about them. */
+function msgAskedWords(a, now){
+  if(!a.n) return 'asked to be told';
+  const days = a.firstMs ? Math.max(0, Math.floor((now - a.firstMs) / 86400000)) : null;
+  const times = a.n === 1 ? 'asked' : a.n === 2 ? 'asked twice' : `asked ${a.n} times`;
+  return days == null ? times : `${times}, ${days}d ago`;
+}
+
+/* ---- THE ROWS, each derived from its own condition ------------------ */
+function msgTellRows(nowMs){
+  const now = nowMs || Date.now();
+  const out = [];
+  const seen = new Set();
+  const cust = (cid)=> (data.customers||[]).find(x=> String(x.id) === String(cid)) || null;
+  const push = (r)=>{
+    if(!r || seen.has(r.key)) return;
+    /* ONE ROW A PERSON. The register's own law: a client with three
+       things worth saying gets one message, not three, so the first
+       reason to reach them -- which is the soonest to go stale, because
+       the kinds are walked in that order -- is the one this list
+       carries. */
+    if(out.some(x=> String(x.customerId) === String(r.customerId))) return;
+    seen.add(r.key);
+    out.push(r);
+  };
+  const f0 = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+
+  /* 1. WHAT YOU ASKED FOR IS IN. The strongest reason there is, because
+        the customer requested it: the draft can say "you asked, so I
+        kept you in mind", which no broadcast can. It is a follow-up they
+        took out themselves, for something that has since landed. */
+  const ctx = {crossings: stockCrossingsByKey()};
+  openFollowUps().forEach(f=>{
+    const c = cust(f.customerId);
+    if(!c) return;
+    const r = followUpReasons(f, now, ctx)
+      .find(x=> x.kind === 'back_in_stock' || x.kind === 'companion_in' || x.kind === 'sourcing_progress');
+    if(!r) return;
+    const s = followUpSubject(f);
+    const pid = s.product ? s.product.id : null;
+    /* THE PLAIN NAME, never productDisplayLabel. That one carries the
+       SKU -- "P006 — Barbed Wire" -- which is the shop's own filing
+       reference, and this line is read by the customer. */
+    const label = s.product ? productVariantLabel(s.product, s.variantIdx) : String(s.label || 'what they asked for');
+    const asked = pid ? msgAskedTimes(c.id, pid) : {n: 1, firstMs: Date.parse(f.createdAt) || 0};
+    const qty = pid ? getStockQty(pid, s.variantIdx) : 0;
+    const price = pid ? briefPriceNow(pid, s.variantIdx, 1) : null;
+    const tail = `${qty > 0 ? `${f0(qty)} in the yard` : 'in'}${price != null ? `, at ${f0(price)}` : ''}`;
+    push({
+      key: `asked:${c.id}:${pid || f.id}`, kind: 'asked',
+      customerId: c.id, customer: c, name: c.name, phone: contactPhones(c)[0] || '',
+      productId: pid, variantIdx: s.variantIdx,
+      /* TWO FORMS OF ONE TRUTH, the same split a follow-up reason makes
+         between short and text: `fact` is the message in miniature for
+         the row, `say` is the sentence the draft uses. The row has the
+         name above it and the draft does not, and a line that reads
+         well in a column is not a sentence. */
+      fact: `the ${esc(label.toLowerCase())} you asked for ${tellBe(label)} in &middot; ${tail}`,
+      say: `The ${label.toLowerCase()} you asked about ${tellBe(label)} now in stock \u2014 ${tail}.`,
+      why: {words: msgAskedWords(asked, now), tone: 'studied'},
+      worth: price != null && qty > 0 ? price : 0,
+      followUp: f,
+    });
+  });
+
+  /* 2. A DELIVERY IS ON TODAY'S RUN. This one earns no order: it
+        prevents a phone call, which is why it must never be ranked by
+        what it might sell. Its worth is that it is true today. */
+  pendingDeliveryOrders().forEach(q=>{
+    const cid = (q.client && q.client.customerId) || q.customerId;
+    const c = cust(cid);
+    if(!c) return;
+    const who = deliveryAssigneeLabel ? deliveryAssigneeLabel(q) : '';
+    push({
+      key: `run:${c.id}:${q.id}`, kind: 'delivery',
+      customerId: c.id, customer: c, name: c.name, phone: contactPhones(c)[0] || '',
+      productId: null, variantIdx: null,
+      fact: `order ${esc(String(q.no || q.id))} is on today&rsquo;s run${
+        who ? ` &middot; with ${esc(who)}` : ''} &middot; arriving today`,
+      say: `Order ${String(q.no || q.id)} is on today\u2019s run${who ? `, with ${who}` : ''} \u2014 it should reach you today.`,
+      why: {words: 'saves them ringing', tone: 'neutral'},
+      /* NO FIGURE, deliberately: an order already placed is not an order
+         this message wins, and putting its total here would make the
+         lens look like it earns the most from the kind that earns
+         nothing. */
+      worth: 0,
+      order: q,
+    });
+  });
+
+  /* 3. WHAT THEY TAKE, AND WHY THEY WOULD WANT IT NOW. The customer
+        book's own queue, which already knows each client's strongest
+        reason. Two of its kinds belong here and one does not: a price
+        that fell is a fact about a PRODUCT, so it routes to Posting
+        rather than being written to one buyer. */
+  /* AND THE ONES THE PICTURE QUEUE HOLDS BACK, for the one case where
+     the hold does not apply.
+
+     briefHeldBack keeps somebody past their terms out of the marketing
+     queue, and it is right to: a person being asked for money does not
+     also get a picture of cement, they get the statement. But a
+     PRODUCT-level fact is not sent to them at all -- it goes on the
+     posting queue, to whoever is looking -- so the rule it protects
+     against is not in play, and hiding the row would leave the owner
+     wondering where a real price cut went. It appears under Better
+     posted, flagged with what they owe, and its Next cell is a queue
+     position rather than a button: there is nothing here to write.
+
+     A held client's PERSON-level reason stays held and is not drawn.
+     That rule is untouched. */
+  const held = briefHeldList().filter(b=> b.reason && msgTellRoute(b.reason.key) === 'post');
+  briefQueue().concat(held).forEach(b=>{
+    const c = b.customer;
+    if(!c) return;
+    const k = b.reason.key;
+    if(!['rhythm', 'price', 'asked'].includes(k)) return;
+    const pid = b.reason.productId;
+    const p = pid ? productById(pid) : null;
+    const label = p ? productVariantLabel(p, b.reason.variantIdx) : '';
+    const low = label.toLowerCase();
+    const be = tellBe(label);
+    const qty = pid ? getStockQty(pid, b.reason.variantIdx) : 0;
+    const price = pid ? briefPriceNow(pid, b.reason.variantIdx, b.reason.qty || 1) : null;
+    const unit = esc(productUnitLabel(pid, b.reason.variantIdx) || 'unit');
+    const habit = (b.habits||[]).find(x=> x.productId === pid
+      && (x.variantIdx == null ? null : x.variantIdx) === (b.reason.variantIdx == null ? null : b.reason.variantIdx)) || null;
+    const every = habit && habit.everyDays ? `every ${habit.everyDays} day${habit.everyDays === 1 ? '' : 's'}` : '';
+
+    /* A PRICE IS A FACT ABOUT A PRODUCT however few people it suits, so
+       it routes to the posting queue rather than being written to one
+       buyer. The row is still drawn -- the owner would otherwise wonder
+       where it went -- but outside the three, and outside the badge. */
+    if(k === 'price'){
+      const drop = habit && habit.lastPrice && price != null
+        ? Math.round((habit.lastPrice - price) / habit.lastPrice * 100) : 0;
+      push({
+        key: `price:${c.id}:${pid}`, kind: 'price',
+        customerId: c.id, customer: c, name: c.name, phone: contactPhones(c)[0] || '',
+        productId: pid, variantIdx: b.reason.variantIdx,
+        fact: `${esc(low)} ${be} ${drop > 0 ? `${drop}% cheaper` : 'cheaper'}${
+          price != null ? ` &middot; ${f0(price)} a ${unit}` : ''}`,
+        say: `${label} ${be} ${drop > 0 ? `${drop}% cheaper` : 'cheaper'} than you last paid${price != null ? ` \u2014 ${f0(price)} a ${productUnitLabel(pid, b.reason.variantIdx) || 'unit'}` : ''}.`,
+        why: {words: 'a price on a product', tone: 'neutral'},
+        worth: price != null && b.reason.qty ? price * b.reason.qty : 0,
+      });
+      return;
+    }
+
+    /* THEY ASKED, AND THE SHOP CAN GET IT. The same kind as the
+       follow-up walk above found, reached the other way round -- the
+       customer book asks "what is this client's strongest reason" and
+       an open ask is always it. The dedupe keeps whichever came first. */
+    if(k === 'asked'){
+      const asked = pid ? msgAskedTimes(c.id, pid) : {n: 0, firstMs: 0};
+      const tail = `${qty > 0 ? `${f0(qty)} in the yard` : 'in'}${price != null ? `, at ${f0(price)}` : ''}`;
+      push({
+        key: `asked:${c.id}:${pid}`, kind: 'asked',
+        customerId: c.id, customer: c, name: c.name, phone: contactPhones(c)[0] || '',
+        productId: pid, variantIdx: b.reason.variantIdx,
+        fact: `the ${esc(low)} you asked for ${be} in &middot; ${tail}`,
+        say: `The ${low} you asked about ${be} now in stock \u2014 ${tail}.`,
+        why: {words: msgAskedWords(asked, now), tone: 'studied'},
+        worth: price != null && qty > 0 ? price : 0,
+      });
+      return;
+    }
+
+    /* A LINE THEY TAKE EVERY WEEK, and the shelf decides which of two
+       true sentences it is. Where the goods only just came back, the
+       fact is that they are back -- that is news, and it holds a few
+       days. Where they never went, the fact is that the client is due,
+       and that holds until they buy. */
+    const crossed = pid ? stockCrossedInSince(stockKey(pid, b.reason.variantIdx),
+      now - TELL_BACK_DAYS * 86400000, ctx.crossings) : null;
+    const back = !!crossed && qty > 0;
+    push({
+      key: `${back ? 'back' : 'rhythm'}:${c.id}:${pid}`, kind: back ? 'back' : 'rhythm',
+      customerId: c.id, customer: c, name: c.name, phone: contactPhones(c)[0] || '',
+      productId: pid, variantIdx: b.reason.variantIdx,
+      fact: back
+        ? `${esc(low)} ${be} back${qty > 0 ? ` &middot; ${f0(qty)} on the shelf` : ''}`
+        : `${esc(low)} ${be} due${habit ? ` &middot; they take ${f0(habit.typicalQty)}${every ? ` about ${every}` : ''}` : ''}`,
+      say: back
+        ? `${label} ${be} back in stock${qty > 0 ? ` \u2014 ${f0(qty)} on the shelf` : ''}.`
+        : `You are about due for ${low}${habit ? ` \u2014 you take ${f0(habit.typicalQty)}${every ? ` about ${every}` : ''}` : ''}.`,
+      why: {words: every ? `takes it ${every}` : 'their own rhythm', tone: 'good'},
+      worth: price != null && b.reason.qty ? price * b.reason.qty : 0,
+      holdOverride: back ? null : (habit && habit.dueIn != null ? Math.max(0, habit.dueIn) : null),
+    });
+  });
+
+  /* GOOD UNTIL, and the owed flag, on every row. */
+  out.forEach(r=>{
+    r.route = msgTellRoute(r.kind);
+    r.hold = r.holdOverride != null ? r.holdOverride
+      : (TELL_HOLD[r.kind] === undefined ? 3 : TELL_HOLD[r.kind]);
+    r.goodWords = r.route === 'post' ? 'while it holds'
+      : r.hold === 0 ? 'today'
+      : r.hold === 1 ? '1 day'
+      : `${r.hold} days`;
+    /* A PERSON WHO OWES IS FLAGGED, NOT EXCLUDED. The shop is about to
+       offer this one goods, or a better price, and it should know it is
+       doing that to somebody who has not paid. */
+    r.owes = Math.max(0, Number(r.customer && r.customer.debt) || 0);
+    if(r.route === 'post') r.queuePos = msgPostQueuePos(r.productId, r.variantIdx);
+  });
+
+  /* SOONEST TO GO STALE FIRST, and never by value. "While it holds" has
+     no day, so it sorts last among the live rows; a tie is broken by the
+     strength of the evidence, because a fulfilled ask beats a weekly
+     pattern when both expire tonight. */
+  const rank = {asked: 3, delivery: 2, back: 1, rhythm: 0, price: -1};
+  out.sort((a,b)=> ((a.hold == null ? 9999 : a.hold) - (b.hold == null ? 9999 : b.hold))
+    || ((rank[b.kind] || 0) - (rank[a.kind] || 0))
+    || String(a.name).localeCompare(String(b.name)));
+  return out;
+}
+
+/* ---- THE SWEEP, and what it is for ---------------------------------
+
+   A reason stops being true on its own: the price goes back up, the
+   goods are bought by somebody else, the van arrives. A queue that
+   silently drops what it failed to do teaches the shop nothing, so each
+   live row is stamped as it is drawn, and a row stamped inside the last
+   week that is no longer live is reported as having lapsed -- with what
+   it was worth.
+
+   YOU CANNOT DERIVE "THIS WAS TRUE LAST WEEK". Every other figure on
+   this lens is read from the books at the moment somebody looks; this
+   one needs a record, because the condition that made it true is exactly
+   what is gone. So it is a stamp ledger, the same shape and the same
+   rules as the chase stamps: written as the screen draws, pruned on
+   read, and carrying nothing that cannot be rebuilt from it. */
+function msgTellSeen(){ return data.presetTellSeen || (data.presetTellSeen = {}); }
+function msgTellSweep(live, nowMs){
+  const now = nowMs || Date.now();
+  const today = todayISO();
+  const seen = msgTellSeen();
+  let dirty = false;
+  const liveKeys = new Set(live.map(r=> r.key));
+  live.forEach(r=>{
+    const prev = seen[r.key];
+    if(!prev || prev.at !== today || prev.words !== r.fact){
+      seen[r.key] = {at: today, words: r.fact, who: r.name, worth: Math.round(r.worth || 0),
+        first: (prev && prev.first) || today};
+      dirty = true;
+    }
+  });
+  const gone = [];
+  Object.keys(seen).forEach(k=>{
+    if(liveKeys.has(k)) return;
+    const s = seen[k];
+    const age = daysBetweenISO(String(s.at || ''), today);
+    if(!(age >= 0) || age > TELL_GONE_DAYS){ delete seen[k]; dirty = true; return; }
+    gone.push({key: k, words: s.words, who: s.who, worth: Number(s.worth) || 0, at: s.at, days: age});
+  });
+  gone.sort((a,b)=> String(b.at).localeCompare(String(a.at)));
+  if(dirty) saveData();
+  return gone;
+}
+
+
+/* ---- THE VIEW ------------------------------------------------------- */
+
+/* Small counts read as words in a sentence and as figures in a column.
+   "3 reasons quietly stopped being true" is a statistic; "three reasons"
+   is a sentence, and the panel below is a sentence. */
+const TELL_WORDS = ['no','one','two','three','four','five','six','seven','eight','nine','ten'];
+function tellCount(n){ return TELL_WORDS[n] || String(n); }
+
+/* The pill that answers "why me". Every row on this lens must be able to,
+   or it is a greeting with a name on it. */
+function tellWhyPill(r){
+  const tone = r.owes > 0 ? 'caution' : (r.why.tone || 'neutral');
+  const words = r.owes > 0 ? `they owe ${esc(fmtUGX(Math.round(r.owes)))}` : esc(r.why.words);
+  const bg = tone === 'studied' ? 'var(--om-studied)' : tone === 'good' ? 'var(--om-good)'
+    : tone === 'caution' ? 'var(--om-caution)' : 'var(--om-neutral)';
+  const ink = tone === 'studied' ? 'var(--om-studied-ink)' : tone === 'good' ? 'var(--om-good-ink)'
+    : tone === 'caution' ? 'var(--om-caution-ink)' : 'var(--om-neutral-ink)';
+  return `<span class="om-chip om-t" style="background:${bg};color:${ink};max-width:100%">${words}</span>`;
+}
+
+/* Named Next rather than "Write it", because not every row's next step
+   is writing: a fact about a product routes to the posting queue and
+   says where it already stands there. */
+function tellNextHTML(r, first){
+  if(r.route === 'post'){
+    return `<span class="om-chip" style="background:var(--om-agent);color:var(--om-agent-ink)">${
+      r.queuePos ? `${r.queuePos}${r.queuePos===1?'st':r.queuePos===2?'nd':r.queuePos===3?'rd':'th'} in the queue` : 'in the queue'}</span>`;
+  }
+  return `<button type="button" class="om-btn ${first ? 'om-btn-p' : 'om-btn-s'}" data-tellwrite="${esc(r.key)}" style="height:28px;padding:0 10px;font-size:11.5px">Write it</button>`;
+}
+
+function tellRowHTML(r, first){
+  const on = String(tellPickedKey||'') === String(r.key) ? ' om-on' : '';
+  const dim = r.route === 'post' ? ';opacity:.82' : '';
+  const good = r.hold === 0 && r.route !== 'post';
+  return `<div class="om-trow${on}" data-tellrow="${esc(r.key)}" tabindex="0" role="button" style="min-width:0${dim}">
+    <span class="om-av ${r.route === 'post' ? 'om-neutral-av' : r.why.tone === 'good' ? 'om-good-av' : 'om-studied'}">${esc(nameInitials(r.name))}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(r.name)}</div>
+      <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${r.fact}</div>
+    </div>
+    <div style="min-width:0">${tellWhyPill(r)}</div>
+    <div style="text-align:right"><span class="om-fig om-n" style="font-size:12.5px;color:${good ? 'var(--om-studied-ink)' : 'var(--om-ink-3)'}">${esc(r.goodWords)}</span></div>
+    <div style="text-align:right">${tellNextHTML(r, first)}</div>
+    <!-- THE PHONE IS A CARD PER REASON, not five columns narrower. Name
+         and the day it stops being true on the first line, the evidence
+         under the name, the fact itself on its own line where it can be
+         read whole, and the act a thumb's height. Emitted from this same
+         call, so the two designs can never say different things. -->
+    <div class="om-trow-ph">
+      <span class="om-av ${r.route === 'post' ? 'om-neutral-av' : r.why.tone === 'good' ? 'om-good-av' : 'om-studied'}">${esc(nameInitials(r.name))}</span>
+      <div style="min-width:0">
+        <div class="om-t om-trow-ph-n">${esc(r.name)}</div>
+        <div class="om-t om-trow-ph-w"${r.owes > 0 ? ' style="color:var(--om-caution-ink)"' : ''}>${
+          r.owes > 0 ? `they owe ${esc(fmtUGX(Math.round(r.owes)))}` : esc(r.why.words)}</div>
+      </div>
+      <span class="om-chip om-trow-ph-g" style="background:${good ? 'var(--om-studied)' : 'var(--om-neutral)'};color:${good ? 'var(--om-studied-ink)' : 'var(--om-neutral-ink)'}">${esc(r.goodWords)}</span>
+      <div class="om-trow-ph-f">${r.fact}</div>
+      ${r.route === 'post'
+        ? `<div class="om-trow-ph-note">Already ${r.queuePos === 1 ? 'first' : r.queuePos ? 'number ' + r.queuePos : ''} in the posting queue &mdash; post it rather than write to one buyer</div>`
+        : `<button type="button" class="om-btn ${first ? 'om-btn-p' : 'om-btn-s'} om-trow-ph-a" data-tellwrite="${esc(r.key)}">Write it</button>`}
+    </div>
+  </div>`;
+}
+
+/* The lapsed group. Three lines at most on the desk, because the point
+   is that the shop can see what it missed, not that it can read a log. */
+function tellGoneHTML(gone){
+  const worth = gone.reduce((s,g)=> s + (Number(g.worth)||0), 0);
+  /* AT MOST THREE ON SCREEN. The point of this group is that the shop
+     can see what it missed, not that it can read a log -- and the rest
+     are counted rather than dropped. */
+  const some = gone.slice(0, 3);
+  const tail = gone.length > some.length
+    ? `and ${gone.length - some.length} more, all inside the last ${TELL_GONE_DAYS} days` : '';
+  /* ON THE DESK these truncate, because the row is one line tall beside
+     four other columns; on the phone they wrap, because the whole point
+     of the group is that the shop can read what it missed and there is
+     nothing beside them competing for the width. */
+  const lines = some.map(g=> `<div class="om-t" style="font-size:12.5px;color:var(--om-ink-2)">${esc(String(g.who||''))} &middot; ${g.words}</div>`).join('')
+    + (tail ? `<div class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">${tail}</div>` : '');
+  const phLines = some.map(g=> `<div style="font-size:12.5px;color:var(--om-ink-2);line-height:1.45">${esc(String(g.who||''))} &middot; ${g.words}</div>`).join('')
+    + (tail ? `<div style="font-size:11.5px;color:var(--om-ink-3);line-height:1.45">${tail}</div>` : '');
+  return msgGroupHTML('No longer worth saying', String(gone.length), 'dropped on their own &middot; no message was sent', 'neutral')
+    + `<div class="om-trow" style="opacity:.6;cursor:default">
+      <span></span>
+      <div style="min-width:0">${lines}</div>
+      <div></div>
+      <div style="text-align:right"><span class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">expired</span></div>
+      <div></div>
+      <div class="om-trow-ph"><div class="om-trow-ph-f" style="margin-top:0">${phLines}</div></div>
+    </div>`
+    + (worth > 0 ? `<div class="om-sentline"><span style="flex:1;min-width:0">Worth <b>${esc(fmtUGX(Math.round(worth)))}</b> between them, on what the books say those clients take.</span></div>` : '');
+}
+
+/* THE THREE CARDS. The first is the one decision on this lens -- what
+   goes today or not at all -- and the third deliberately carries no
+   figure: the best reason to speak is a phrase, and a percentage in its
+   place would be a fourth number nobody asked for. */
+function renderTellKpis(live, gone){
+  const el = document.getElementById('tell_kpis');
+  if(!el) return;
+  const todayRows = live.filter(r=> r.route === 'tell' && r.hold === 0);
+  /* WHAT THE COUNT IS MADE OF, in words, because "2" on its own does not
+     say whether today is two deliveries or two people waiting on goods
+     -- and those are different afternoons. */
+  const words = (()=>{
+    const bits = [];
+    const d = todayRows.filter(r=> r.kind === 'delivery').length;
+    const a = todayRows.filter(r=> r.kind === 'asked').length;
+    const o = todayRows.length - d - a;
+    if(d) bits.push(d === 1 ? 'a delivery on today&rsquo;s run' : `${tellCount(d)} deliveries on today&rsquo;s run`);
+    if(a) bits.push(a === 1 ? 'goods somebody asked for' : `goods ${tellCount(a)} people asked for`);
+    if(o) bits.push(o === 1 ? 'a line somebody takes regularly' : `${tellCount(o)} lines people take regularly`);
+    return bits.length
+      ? bits.length === 1 ? bits[0] : `${bits.slice(0,-1).join(', ')}, and ${bits[bits.length-1]}`
+      : 'nothing has to go out today';
+  })();
+  const sb = briefScoreboard();
+  /* THE BEST REASON, and it is a phrase because it answers "what should
+     I say" rather than "how many". Read off the same stamps the rate
+     above it is read from, so the two cannot disagree. */
+  const kinds = Object.entries(sb.byReason || {})
+    .filter(([,v])=> v.told >= 2)
+    .sort((a,b)=> (b[1].worked / b[1].told) - (a[1].worked / a[1].told));
+  const say = {asked:'What you asked for is in', rhythm:'What you take is due', price:'The price came down',
+    needs:'What goes with what you take', stage:'What your site needs next', swap:'Something that stands in for it'};
+  const best = kinds[0] || null;
+  const next = kinds[1] || null;
+  el.innerHTML = `
+  <div class="om-kpi${todayRows.length ? ' om-kpi-studied' : ''}">
+    <div class="om-lbl" style="font-size:10.5px${todayRows.length ? ';color:var(--om-studied-ink)' : ''}">Say today, or not at all</div>
+    <div class="om-fig om-kpi-f om-n"${todayRows.length ? ' style="color:var(--om-studied-ink)"' : ''}>${todayRows.length}</div>
+    <div class="om-kpi-s"${todayRows.length ? ' style="color:var(--om-studied-ink)"' : ''}>${words}</div>
+  </div>
+  <div class="om-kpi${sb.worked ? ' om-kpi-good' : ''}">
+    <div class="om-lbl" style="font-size:10.5px${sb.worked ? ';color:var(--om-good-card-ink)' : ''}">Telling led to an order</div>
+    <div class="om-fig om-kpi-f om-n"${sb.worked ? ' style="color:var(--om-good-ink)"' : ''}>${sb.told ? `${sb.worked} of ${sb.told}` : '&mdash;'}</div>
+    <div class="om-kpi-s"${sb.worked ? ' style="color:var(--om-good-card-ink)"' : ''}>${sb.told
+      ? `${esc(fmtUGX(Math.round(sb.worth)))} bought within ${TELL_WORKED_DAYS} days of being told`
+      : 'nothing has been stamped as told yet, so there is nothing to divide'}</div>
+  </div>
+  <!-- NO FIGURE ON THIS ONE. It answers "what should I say", which is a
+       phrase; a percentage in its place would be a fourth number on a
+       lens whose whole argument is that it does not rank by numbers. -->
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Best reason to speak</div>
+    <div class="om-kpi-w" style="font-size:14px;font-weight:700;color:var(--om-ink);margin-top:4px">${
+      best ? esc(say[best[0]] || best[0]) : 'Not yet &mdash; too few have been stamped'}</div>
+    <div class="om-kpi-s">${best
+      ? `${best[1].worked} of ${best[1].told} bought${next ? ` &middot; ${esc((say[next[0]]||next[0]).toLowerCase())}, ${next[1].worked} of ${next[1].told}` : ''}`
+      : `a reason needs two sends behind it before this can rank one${gone.length ? ` &middot; ${gone.length} lapsed in the last ${TELL_GONE_DAYS} days` : ''}`}</div>
+  </div>`;
+}
+
+/* THE PHONE'S OWN HEAD. One strip, because at 390 the three cards are
+   three screens of scrolling before the first row. */
+function renderTellPhoneHead(live, gone, money, nominated){
+  const el = document.getElementById('tell_ph_head');
+  if(!el) return;
+  const todayRows = live.filter(r=> r.route === 'tell' && r.hold === 0);
+  const later = live.filter(r=> r.route === 'tell' && r.hold !== 0);
+  const posted = live.filter(r=> r.route === 'post');
+  const bits = [
+    later.length ? `${later.length} more hold${later.length===1?'s':''} ${later.length===1 && later[0].hold ? later[0].hold + ' days' : 'a few days'}` : '',
+    gone.length ? `${gone.length} expired` : '',
+    posted.length ? `${posted.length} better posted` : '',
+  ].filter(Boolean);
+  const tab = (key,label,n)=>`<button type="button" class="om-ph-tab${msgLens===key?' om-on':''}" data-msglens="${key}">${esc(label)}${n?' '+n:''}</button>`;
+  el.innerHTML = `<div class="om-ph-t">Worth telling</div>
+    <div class="om-ph-stake" style="background:rgba(255,255,255,.07)">
+      <span class="om-ph-stake-l">SAY TODAY, OR NOT AT ALL</span>
+      <span class="om-fig om-n om-ph-stake-v">${todayRows.length}</span>
+    </div>
+    <div class="om-ph-sub">${bits.length ? esc(bits.join(' · ')) : 'nothing else is waiting'}</div>
+    <div class="om-ph-tabs">${tab('money','Money',money)}${tab('telling','Telling',live.filter(r=>r.route==='tell').length)}${tab('posting','Posting',nominated)}</div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens)));
+}
+
+/* THE PANEL. The draft for the picked row, and the argument for the
+   order this list is in -- which is the one thing a reader cannot work
+   out from the columns. The composer, the hand-off and the stamp are the
+   register's; there is no second one here. */
+function renderTellSide(r, live, gone){
+  const el = document.getElementById('tell_side');
+  if(!el) return;
+  const why = `
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">Why this order, and not by amount</span></div>
+    <div style="padding:0 14px 12px">
+      <div class="om-read">On the <b>Money</b> lens a message left unsent gets more urgent every day &mdash; the debt is still there. Here it gets <b>less</b> worth sending: goods somebody asked for are news for a day, a delivery is news until the van arrives, and a price cut is news only while the price holds.</div>
+      <div class="om-read" style="margin-top:9px">So the column that ranks this list is <b>Good until</b>, not an amount, and the bottom group is not a backlog &mdash; it is ${gone.length ? `${tellCount(gone.length)} reason${gone.length===1?'':'s'} that quietly stopped being true` : 'where reasons go when they quietly stop being true'}, kept visible for ${TELL_GONE_DAYS} days so the shop can see what it missed.${
+        gone.length ? ` ${gone.filter(g=> g.worth>0).length ? `${tellCount(gone.filter(g=> g.worth>0).length).replace(/^./,c=>c.toUpperCase())} of them ${gone.filter(g=> g.worth>0).length===1?'was':'were'} worth <b>${esc(fmtUGX(Math.round(gone.reduce((s,g)=>s+(Number(g.worth)||0),0))))}</b>.` : ''}` : ''}</div>
+    </div>
+  </div>`;
+  if(!r){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick somebody to read what would be sent. Nothing here is owed &mdash; these are facts from the books that are worth a word while they are still true.</div>` + why;
+    return;
+  }
+  const draft = tellDraftFor(r);
+  const rate = tellKindRate(r.kind);
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">The draft for ${esc(String(r.name).split(/\s+/)[0] || r.name)}</span></div>
+    <div style="padding:0 14px 12px">
+      <textarea class="om-box" id="tell_box" rows="10">${esc(draft)}</textarea>
+      <div class="om-read" style="margin-top:9px">It names what the message is actually about, the price where there is one, and that they were remembered.${
+        rate ? ` <b>${rate.worked} of the last ${rate.told}</b> messages like this ended in an order.` : ''}</div>
+      ${r.route === 'post' ? `<div class="om-note om-note-agent" style="margin-top:10px"><b>This one is better posted.</b> It is a fact about a product, so it reaches more people as one picture and one price than as a note to a single buyer &mdash; and the posting queue already holds it${r.queuePos ? `, ranked ${r.queuePos}${r.queuePos===1?'st':r.queuePos===2?'nd':r.queuePos===3?'rd':'th'}` : ''}.</div>` : ''}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        ${r.route === 'post'
+          ? `<button type="button" class="om-btn om-btn-s" id="tell_to_post" style="height:32px;padding:0 11px;font-size:12.5px">Open the posting queue</button>`
+          : `<button type="button" class="om-btn om-btn-p" id="tell_write" style="height:32px;padding:0 11px;font-size:12.5px">Write it on the register</button>`}
+      </div>
+      <!-- THE COMPOSER IS THE REGISTER'S, and this is the door to it.
+           A second box that sends is a second thing to keep in step with
+           the stamp, and the stamp is what every figure on this lens is
+           counted from. -->
+    </div>
+  </div>` + why;
+  const go = el.querySelector('#tell_write');
+  if(go) go.onclick = ()=> tellWriteIt(r.key);
+  const post = el.querySelector('#tell_to_post');
+  if(post) post.onclick = ()=> msgSetLens('posting');
+}
+
+/* How often this kind has ended in an order. Read from the same stamps
+   the card above is read from. */
+function tellKindRate(kind){
+  const key = {asked:'asked', rhythm:'rhythm', back:'rhythm', price:'price'}[kind];
+  if(!key) return null;
+  const v = (briefScoreboard().byReason || {})[key];
+  return v && v.told ? v : null;
+}
+
+/* The words themselves, built from the books: what it is about, the
+   price where there is one, how many there are, that they were
+   remembered, and one question. */
+function tellDraftFor(r){
+  const ident = shopIdentity ? shopIdentity() : null;
+  const first = String(r.name || '').split(/\s+/)[0] || r.name;
+  /* THE SENTENCE, not the column. `fact` is written for a row that has
+     the client's name on the line above it and a header over each of its
+     parts; `say` is written for somebody holding a phone with none of
+     that. Falling back keeps a row that predates the split readable
+     rather than blank. */
+  const said = String(r.say || String(r.fact || '').replace(/<[^>]*>/g, '').replace(/&middot;/g, '·'))
+    .replace(/&rsquo;/g, '’').replace(/&mdash;/g, '—').replace(/&amp;/g, '&');
+  const close = {
+    /* THE ONE LINE NO BROADCAST CAN SAY. It is why this kind converts:
+       the customer requested it, and the message proves the shop kept
+       its word. */
+    asked: 'You asked to be told, so I kept you in mind. Shall I put some aside?',
+    delivery: 'No need to ring — somebody will be with you today.',
+    back: 'You take it regularly, so I thought you would want to know.',
+    rhythm: 'Let me know if you want any kept for you.',
+    price: 'Let me know if you want any at that price.',
+  }[r.kind] || 'Let me know if you want any kept for you.';
+  return [`Hello ${first},`, '', said, '', close, '', (ident && ident.name) || 'The shop'].join('\n');
+}
+
+/* WRITE IT hands the row to the register, which owns the composer, the
+   WhatsApp hand-off and the stamp. Nothing is sent from this lens and
+   nothing is recorded by it. */
+function tellWriteIt(key){
+  const r = msgTellRows(Date.now()).find(x=> String(x.key) === String(key));
+  if(!r) return;
+  fupDrafts[String(r.customerId)] = tellDraftFor(r);
+  msgLens = 'money';
+  msgPickedId = String(r.customerId);
+  msgPanelForm = null;
+  renderMessages();
+  const side = document.getElementById('msg_side');
+  if(side) side.scrollIntoView({behavior:'smooth', block:'nearest'});
+  toast('The draft is on the register — it is editable, and the box is what ships');
+}
+
+let tellPickedKey = null;
+
+function renderTelling(all, gone, money, nominated){
+  const list = document.getElementById('tell_list');
+  if(!list) return;
+  const tokens = searchTokens(document.getElementById('msg_search') ? document.getElementById('msg_search').value : '');
+  const hay = (r)=> [r.name, r.phone, String(r.fact||'').replace(/<[^>]*>/g,''), r.why.words].join(' ').toLowerCase();
+  const narrow = (xs)=> tokens.length ? xs.filter(r=> matchesAllTokens(hay(r), tokens)) : xs;
+
+  const tell = narrow(all.filter(r=> r.route === 'tell'));
+  const posted = narrow(all.filter(r=> r.route === 'post'));
+
+  const n = document.getElementById('tell_card_n');
+  if(n) n.textContent = tokens.length ? `${tell.length + posted.length} match what you typed` : '';
+  const t = document.getElementById('tell_card_t');
+  if(t) t.textContent = tell.length
+    ? `${tellCount(tell.length).replace(/^./, c=> c.toUpperCase())} ${tell.length === 1 ? 'person' : 'people'}, ${tellCount(tell.length)} reason${tell.length===1?'':'s'}`
+    : 'Worth telling';
+
+  let html = '';
+  if(tell.length){
+    html += tell.map((r,i)=> tellRowHTML(r, i === 0)).join('');
+  } else {
+    html += `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">${tokens.length
+      ? 'Nothing here matches what you typed.'
+      : 'Nobody has news worth a word today. A row appears when something a client asked about comes in, when an order goes on the run, or when a line they take every week is back on the shelf.'}</div>`;
+  }
+  /* OUTSIDE THE THREE, and said so. A product-level fact is visible here
+     because the owner would otherwise wonder where it went, but it is
+     not one of the reasons they owe a word on, and it is not in the
+     badge. */
+  if(posted.length){
+    html += msgGroupHTML('Better posted', String(posted.length),
+      'outside the three &middot; a price on a product is the posting queue&rsquo;s job', 'agent')
+      + posted.map(r=> tellRowHTML(r, false)).join('');
+  }
+  if(gone.length) html += tellGoneHTML(gone);
+
+  list.innerHTML = html;
+  list.querySelectorAll('[data-tellrow]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-tellwrite]')) return;
+      tellPickedKey = row.dataset.tellrow;
+      renderTelling(all, gone, money, nominated);
+    });
+  });
+  list.querySelectorAll('[data-tellwrite]').forEach(b=> b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    tellWriteIt(b.dataset.tellwrite);
+  }));
+
+  const picked = all.find(r=> String(r.key) === String(tellPickedKey)) || tell[0] || posted[0] || null;
+  renderTellKpis(all, gone);
+  renderTellPhoneHead(all, gone, money, nominated);
+  renderTellSide(picked, all, gone);
+}
+
 function renderMessages(){
   const queue = document.getElementById('msg_queue_body');
   const posting = document.getElementById('msg_posting_body');
-  if(!queue || !posting) return;
+  const tellBody = document.getElementById('msg_telling_body');
+  if(!queue || !posting || !tellBody) return;
   const onPost = msgLens === 'posting';
-  queue.style.display = onPost ? 'none' : '';
+  /* THREE LENSES, THREE VIEWS. Telling used to borrow the register's --
+     its title, its cards and its row template -- which put AT STAKE and
+     a debt chip above a list where nothing is owed, and left the ranking
+     column blank on every row. It ranks on the opposite of what Money
+     ranks on, so it gets its own. */
+  const onTell = msgLens === 'telling';
+  queue.style.display = (onPost || onTell) ? 'none' : '';
   posting.style.display = onPost ? '' : 'none';
+  tellBody.style.display = onTell ? '' : 'none';
   /* Posting has a door of its own, onto the inbox and the record. */
   /* NO DOOR WITHOUT A ROOM. Everything behind this one -- who is
      waiting, who was answered, what the system answered by itself, the
@@ -98881,18 +99683,18 @@ function renderMessages(){
      the screen's, not the list's -- so switching the body alone left the
      queue's cards stacked above Posting's. */
   const qkpi = document.getElementById('msg_kpis');
-  if(qkpi) qkpi.style.display = onPost ? 'none' : '';
+  if(qkpi) qkpi.style.display = (onPost || onTell) ? 'none' : '';
   const qhead = document.getElementById('msg_ph_head');
-  if(qhead) qhead.style.display = onPost ? 'none' : '';
+  if(qhead) qhead.style.display = (onPost || onTell) ? 'none' : '';
   const qfoot = document.getElementById('msg_queue_footrow');
-  if(qfoot) qfoot.style.display = onPost ? 'none' : '';
+  if(qfoot) qfoot.style.display = (onPost || onTell) ? 'none' : '';
   /* The whole-book pointer belongs to the money lens alone: under
      Telling there is no book of debt to point at. */
   const book = document.getElementById('msg_note_book');
   if(book) book.hidden = msgLens !== 'money';
   const t = document.getElementById('msg_title_t');
   const sub = document.getElementById('msg_title_s');
-  if(t) t.textContent = onPost ? 'What to post today' : 'Messages';
+  if(t) t.textContent = onPost ? 'What to post today' : onTell ? 'Worth telling someone' : 'Messages';
   document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
     const on = b.dataset.msglens === msgLens;
     b.classList.toggle('om-on', on);
@@ -98907,7 +99709,15 @@ function renderMessages(){
   const chase = debtChaseRows();
   const rows = followUpHubRows(now, chase);
   const money = rows.filter(r=> r.kinds.has('money'));
-  const telling = rows.filter(r=> r.kinds.has('telling') || r.kinds.has('news'));
+  /* TELLING IS ITS OWN ENGINE NOW. The hub reads every client's reason
+     to hear from the shop; this reads the three that are worth a word
+     when nothing is owed, and it decides for each whether a word is even
+     the right route. Walked once here, because the chip, the badge, the
+     sweep and the view all have to be answering the same question -- a
+     chip that says 3 over a list of 4 is the Debtors bug in miniature. */
+  const tellAll = msgTellRows(now);
+  const tellGone = msgTellSweep(tellAll, now);
+  const telling = tellAll.filter(r=> r.route === 'tell');
   const held = msgHeldRows(now, rows);
   const waiting = msgWaitingRows(now, rows);
   const sentLog = msgSentLog();
@@ -98939,6 +99749,11 @@ function renderMessages(){
     renderPosting();
     return;
   }
+  if(onTell){
+    if(sub) sub.textContent = 'Nothing is owed on these · soonest to stop being true at the top';
+    renderTelling(tellAll, tellGone, money.length, nominated);
+    return;
+  }
   if(sub) sub.textContent = 'One message a person, most at stake first · held back and sent are groups in this list';
   msgRenderRules();
   renderMessageKpis(rows, money, telling, held);
@@ -98951,10 +99766,11 @@ function renderMessages(){
   const narrow = (xs)=> tokens.length ? xs.filter(r=> matchesAllTokens(hay(r), tokens)) : xs;
 
   /* MOST AT STAKE FIRST, which is the order the frame names and the one
-     a person collecting money works in. Under Telling there is no stake,
-     so it falls back to the hub's own ranking. */
-  const lensRows = narrow(msgLens === 'money' ? money : telling).slice();
-  if(msgLens === 'money') lensRows.sort((a,b)=> msgStakeOf(b) - msgStakeOf(a));
+     a person collecting money works in. This body only ever draws the
+     money queue now -- Telling has a body of its own, ranked the other
+     way up -- so there is no second ordering to fall back to. */
+  const lensRows = narrow(money).slice();
+  lensRows.sort((a,b)=> msgStakeOf(b) - msgStakeOf(a));
 
   /* THE SUB ONLY SPEAKS WHEN IT HAS SOMETHING TO SAY. The lens above
      already says what this list is about, so a header that repeats it
@@ -99176,7 +99992,10 @@ function msgScrollToGroup(word){
    is about. */
 function msgGroupHTML(word, count, right, tone){
   const t = {bad:['--om-bad','--om-bad-ink'], studied:['--om-studied','--om-studied-ink'],
-    good:['--om-good','--om-good-ink'], neutral:['--om-neutral','--om-neutral-ink']}[tone] || ['--om-neutral','--om-neutral-ink'];
+    good:['--om-good','--om-good-ink'], neutral:['--om-neutral','--om-neutral-ink'],
+    /* The posting queue's own colour, so "Better posted" is visibly the
+       same thing as the lens it is pointing at. */
+    agent:['--om-agent','--om-agent-ink']}[tone] || ['--om-neutral','--om-neutral-ink'];
   return `<div class="om-grow">
     <span class="om-chip" style="background:var(${t[0]});color:var(${t[1]})">${esc(word)}</span>
     <span style="font-size:12.5px;font-weight:700">${esc(count)}</span>
@@ -99471,6 +100290,16 @@ function renderMessageHistorySide(lens, rows, now){
    would read 0 is replaced by the reading that makes it good news --
    "everything else is clear" is the same fact as three noughts and it is
    the one worth putting on a screen. */
+/* THE CARD COUNTS WHAT THE LIST BENEATH IT DRAWS.
+
+   "To message" was every hub row, which was right while Telling was a
+   lens over those same rows: whichever of the two you opened, the whole
+   count was in front of you. Telling has its own engine now, so the
+   card was reporting a number no list on this screen shows -- 3 over a
+   list of 1 -- and a figure and the rows under it disagreeing about the
+   same thing is the Debtors bug this app was rebuilt to remove. It is
+   the money queue's own count, and the card beside it names what else
+   is waiting, including the words the Telling lens holds. */
 function renderMessageKpis(rows, money, telling, held){
   const el = document.getElementById('msg_kpis');
   if(!el) return;
@@ -99489,8 +100318,11 @@ function renderMessageKpis(rows, money, telling, held){
   const promised = rows.filter(r=> r.kinds.has('promised')).length;
   const news = rows.filter(r=> r.kinds.has('news')).length;
   const quiet = rows.filter(r=> r.kinds.has('quiet')).length;
+  /* And the Telling lens's own count, because "everything else is clear"
+     must not be said over a lens that has three words owed on it. */
   const alsoBits = [
     promised ? `${promised} promised a day that falls today` : '',
+    telling.length ? `${telling.length} worth telling, on the Telling lens` : '',
     news ? `${news} waiting on goods or price news` : '',
     quiet ? `${quiet} gone quiet` : '',
   ].filter(Boolean);
@@ -99507,13 +100339,13 @@ function renderMessageKpis(rows, money, telling, held){
     + (alsoBits.length ? '' : '');
   const worked = msgChaseWorked();
   el.innerHTML = `
-  <div class="om-kpi${rows.length ? ' om-kpi-bad' : ''}">
-    <div class="om-lbl" style="font-size:10.5px${rows.length ? ';color:var(--om-bad-card-ink)' : ''}">To message</div>
-    <div class="om-fig om-kpi-f om-n">${rows.length}</div>
-    <div class="om-kpi-s"${rows.length ? ' style="color:var(--om-bad-card-ink)"' : ''}>${rows.length
-      ? `${stake > 0 ? `${esc(fmtUGX(Math.round(stake)))} riding on ${rows.length===1?'it':'them'}` : 'no money at stake'}${
+  <div class="om-kpi${money.length ? ' om-kpi-bad' : ''}">
+    <div class="om-lbl" style="font-size:10.5px${money.length ? ';color:var(--om-bad-card-ink)' : ''}">To message</div>
+    <div class="om-fig om-kpi-f om-n">${money.length}</div>
+    <div class="om-kpi-s"${money.length ? ' style="color:var(--om-bad-card-ink)"' : ''}>${money.length
+      ? `${stake > 0 ? `${esc(fmtUGX(Math.round(stake)))} riding on ${money.length===1?'it':'them'}` : 'no money at stake'}${
           ageWords ? ` &middot; ${ageWords}` : ''}`
-      : 'nobody is owed a word today'}</div>
+      : 'nobody is owed money today'}</div>
   </div>
   <!-- NO FIGURE ON THIS ONE, on purpose. It is the card that exists so
        the other counts do not have to be printed as noughts, and a 0 on
@@ -100807,9 +101639,25 @@ function renderFollowUps(){
 /* Clients, not follow-ups: the badge is a count of messages to send, and
    one client owed three updates -- or owed an update and a chase -- is
    one message. */
+/* OBLIGATIONS ONLY, which is a narrower claim than the hub makes.
+
+   The badge used to be every hub row, which counted a client the shop
+   might like to speak to beside one it owes a word. Three kinds are now
+   excluded and each for the same reason -- none of them is a word owed:
+
+     a posting nomination   the algorithm's suggestion about a product
+     a held-back row        deliberately not being asked today
+     a better-posted row    a fact that reaches more people as a post
+
+   A badge that rises because a suggestion queue grew teaches people to
+   ignore badges, and once they do the badge cannot report the thing it
+   exists for. So it is money plus telling, and nothing else. */
 function renderFollowUpBadge(){
-  const n = fupPass ? fupPass.rows.length : followUpHubRows(Date.now()).length;
-  setNavBadge('navBadgeFollowUps', n, 'client(s) to update');
+  const now = Date.now();
+  const rows = fupPass ? fupPass.rows : followUpHubRows(now);
+  const money = rows.filter(r=> r.kinds.has('money')).length;
+  const telling = msgTellRows(now).filter(r=> r.route === 'tell').length;
+  setNavBadge('navBadgeFollowUps', money + telling, 'client(s) to update');
 }
 
 /* The undo. It pops the LAST contact off each follow-up rather than
