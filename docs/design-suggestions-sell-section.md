@@ -724,3 +724,76 @@ in the app's top bar. That bar is shared by all 41 screens and is not a screen's
 to furnish — the Quote screen set the precedent — and it is what makes these
 headers tight. If the top bar is ever made per-screen, all four card screens get
 a line of width back.
+
+### 8.16 The second tab, deleted — and the lens question settled
+
+The second Messages handoff (`design_handoff_messages_held_back/`) covers the
+tab turn 1 never touched, and its finding is that **the tab is not a screen**: it
+held a group, a setting and an archive, and each belongs somewhere already on
+the register. Building it meant deleting the tab bar, not restyling it.
+
+**It also settles §8.14's open question, the other way round.** Turn 1 drew the
+lens group as states (*To send · Waiting on a reply · Sent*) in 1a and as reasons
+(*Money · Telling · Posting*) in 1c; this one says plainly that *"held back and
+sent are groups in this list"*. So the lenses are the reasons again and the
+states are groups under them — and that is the right way round for a reason
+worth writing down: **Money, Telling and Posting are three different jobs**
+(collecting, telling, selling) and a person opens the screen already knowing
+which one they are doing, whereas *held back* and *sent* are not jobs, they are
+what has happened to a message, and that is readable on the row it is on. The
+lens answers the question you bring; the grouping answers the one the screen
+raises.
+
+What was built:
+
+- **Held back is a group above the list, and only when it has rows.** Empty, it
+  is one line offering the action — never a titled band with a count of nought
+  announcing that it is empty.
+- **An owner-driven hold is new machinery.** Three engines already held people
+  back for their own reasons (a debtor who named a day, one asked recently, one
+  whose balance does not agree with its own history); those are *rules*. This is
+  a fourth and a different kind of thing: a *decision*, which the books cannot
+  know. It takes a reason and a day it lifts, because a hold with neither is how
+  a client is quietly never chased again. It is filtered inside
+  `followUpHubRows`, not in the screen, so the queue and the **rail badge**
+  cannot disagree about the same person.
+- **Three figure cards with the zero rule.** Five tiles of which four read `0`
+  became three, one of which deliberately carries **no figure at all** — a `0`
+  on *Everything else is clear* would put back exactly what it was made to
+  remove. And an obligation is counted **once**: the old *To message 1* and
+  *Money 1* were the same message.
+- **Quiet after moved to the list card's header**, beside the list it changes.
+- **The register is the Sent group**, behind a *Show sent* link, with the closing
+  line that says where the record is.
+
+Deviations, each for a reason:
+
+- **The two chase rules ride in Quiet after's menu.** The handoff names only
+  Quiet after and says nothing about *Chase after* and *Rest between*; once the
+  tab is gone those two have no other home, and they are the same class of thing
+  — the numbers that decide who is in this list. Each now carries the sentence
+  that says what it does, which the old bare fields did not: *"Quiet after"* with
+  a number and no explanation is a setting nobody can change with any confidence.
+  **A frame for this menu is the smallest thing this handoff still needs.**
+- **"Chases that got paid — 31%, 57 of 184 sent"** is still not derivable, for
+  the reason §8.14 gives: one chase stamp per debtor, pruned on payment. The card
+  asks the same question of the people standing chased now.
+- **The measurement followed the record, not the tab.** *Did it work* — the reply
+  and conversion rates, the "money is not counted and here is why" row, the
+  missing-table warning — was the register's own rail. The register is a group
+  now and a group has no rail, so it takes the panel while the Sent group is open
+  and nothing is picked, which is the moment somebody is asking *did any of this
+  work* rather than *what do I write to this person*. **It is console markup
+  inside a card column and wants a frame.**
+- **Two small things the deleted pane held have no home and are not rebuilt:**
+  the per-item **tick lines** (which optional lines go into a combined message —
+  the frame's draft is fixed, so the frame does not need them) and the **in-app
+  preview of a telling's picture**. The two picture *acts* — share it, save it —
+  are on the Telling panel, so the owner still gets the image; what they cannot
+  do is look at it first.
+- **`renderFollowUpsContact`, `renderFollowUpsAll` and `renderFollowUpSummary`
+  are now unreachable** — nothing on any screen calls them. They are left in
+  place in this pass rather than deleted in the same commit as a large
+  redesign; deleting them is a pass of its own, because a dozen assertions
+  across five test files pin behaviour that has moved and each needs
+  re-verifying at its new address.

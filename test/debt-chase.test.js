@@ -231,7 +231,7 @@ if (scope) {
      to send, waiting on a reply, sent -- and the outbox is grouped by
      reason inside them. Chase debts WAS one of those groups, so its door
      opens the outbox focused on it. Same address, same slice. */
-  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'send'; msgFocus = 'money'; return 'messages'; \}/.test(alias),
+  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'money'; return 'messages'; \}/.test(alias),
     'but the old door still opens it, on the money lens it meant — resolved once at the top of goToTab, '
     + 'so a saved last-tab cannot boot into a section that is gone');
   t.check(!/function renderChaseScreen/.test(src) && !/renderChaseBadge/.test(src),
@@ -362,53 +362,67 @@ if (scope) {
   /* And it is the MONEY lens's alone. Under Telling there is no book of
      news for it to point at, so a note that stayed up would be a
      pointer to nothing. */
-  t.check(/book\.hidden = !\(msgLens === 'send' && msgFocus !== 'telling'\)/.test(extractFunction(src, 'renderMessages', 'index.html')),
+  t.check(/book\.hidden = msgLens !== 'money'/.test(extractFunction(src, 'renderMessages', 'index.html')),
     'and only under the lens it is about');
 
-  /* 5. THE TWO RULES. They were a sentence and a fold-out form in the
-        old header. They are fields in THIS screen's header now, beside
-        Quiet after, which is where this screen has always kept the one
-        rule it turns on -- so being fields is one tap fewer than the
-        fold-out was, and the three rules of the screen are one group.
-        On screen only under the lens they decide: they settle nothing
-        under any other, and three rule fields do not fit a phone header.
-        Read on Did it work whatever lens is open, so choosing the lens
-        is never the only way to find out what the rule is. */
-  /* STILL ONE GROUP, at the address the merge gave it. The header those
-     fields sat in was the console header of a screen that no longer
-     exists; Messages wears the card system's title block, which has no
-     room for three rule fields and no "i" to fold them behind. So the
-     group moved down into #msg_fup_body -- the hub's own pane, which
-     also carries the held-back reasons and the register -- and the
-     screen grew a door to it, because three live features behind a
-     permanently hidden div is three features nobody can reach. What is
-     asserted is what was always asserted: the two rules are FIELDS, not
-     a fold-out form, and they are grouped with the rule that was
-     already there rather than scattered. */
-  const sec = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-  t.check(/id="fup_chase_after"/.test(sec) && /id="fup_chase_rest"/.test(sec)
-    && /class="fup-rules"/.test(sec),
-    'the two rules the queue obeys are fields, grouped with the rule that was already there');
-  /* The door. Without it the group, the reasons and the register are in
-     the file and on no screen. */
-  t.check(/id="msg_hub_btn"[^>]*aria-controls="msg_fup_body"/.test(sec),
-    'and the pane holding them has a door, so the rules can actually be changed');
-  t.check(/hub\.hidden = onPost \|\| !msgHubOpen/.test(extractFunction(src, 'renderMessages', 'index.html')),
-    'which opens and shuts it, and shuts it under Posting — there is no queue there for a rule to govern');
-  const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(/fupTab === 'contact' && fupWhy === 'money'/.test(render) && /field\.hidden = !moneyLens/.test(render),
-    'and they are on screen only while the lens they decide is the one being read');
-  /* The layer's own field paints, so [hidden] alone could not hide it --
-     the trap css-class-hooks exists for, and the companion it demands. */
-  t.check(src.indexOf('.ow-f[hidden]{display:none;}') > src.indexOf('.ow-f{display:flex'),
-    'with the [hidden] companion that lets a field actually hide, written after the rule it outranks');
+  /* 5. THE THREE RULES, AND WHERE THEY ENDED UP.
+
+        They began as a sentence and a fold-out form in a console header.
+        They became three fields in that header. The second handoff
+        deletes the tab that header belonged to, and puts the one rule it
+        names -- Quiet after -- on a button in the list card's own header,
+        "beside the list it changes", because as a page-level field it
+        read as the first question the screen asked.
+
+        The other two ride with it. The handoff names only Quiet after
+        and says nothing about Chase after and Rest between; once the tab
+        is gone those two have no other home, and they are the same class
+        of thing -- the numbers that decide who is in this list -- so
+        scattering them would be worse than grouping them. That is a
+        deviation and it is recorded in the paper.
+
+        What is asserted is what was always asserted: three NUMBERS the
+        owner can change, in one place, beside the work they govern --
+        and now, additionally, each with the sentence that says what it
+        does, because a bare field labelled "Quiet after" is a number
+        nobody can set with any confidence. */
+  t.check(/id="msg_rules_btn"/.test(sect) && /id="msg_rules_menu"/.test(sect)
+    && /id="msg_quiet_n"/.test(sect),
+    'Quiet after is a control in the list card header, beside the list it changes');
+  const rules = extractDeclaration(src, 'MSG_RULES', 'index.html');
+  t.check(/'fup_quiet'/.test(rules) && /'fup_chase_after'/.test(rules) && /'fup_chase_rest'/.test(rules),
+    'and the two rules the money queue obeys are in the same menu, which is the only home left them');
+  t.check(/presetFollowUp\.quietDays/.test(rules) && /presetChaseAfterDays/.test(rules)
+    && /presetChaseRestDays/.test(rules),
+    'each writing the number it has always written');
+  /* THE SENTENCE BESIDE EACH. The old fields had a label and a unit and
+     nothing else, so what a number DID was knowable only by changing it
+     and watching the list. */
+  t.check((rules.match(/How long|How far/g) || []).length >= 3,
+    'and each says what it does, so it can be set without experimenting on the queue');
+  /* NOT BOUND ONE BY ONE ANY MORE, and that is forced rather than
+     chosen: the fields are drawn by a menu, so they do not exist at
+     parse time. One delegated listener on the section hears all three,
+     and the section is the thing that is always there. */
+  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+  t.check(/const RULE_KEYS = \{/.test(wire) && /RULE_KEYS\[e\.target\.id\]/.test(wire),
+    'bound by one delegated listener, because a field a menu draws is not there at parse time to bind');
+  t.check(/v >= rule\.min \? v : rule\.fallback/.test(wire),
+    'and a figure below its floor falls back to what the app shipped with, never to a silent zero');
+  /* Still written down in full where every other rule of this screen is. */
   t.check(/Money is asked for after/.test(extractFunction(src, 'renderFollowUpScore', 'index.html'))
     && /And nobody is asked twice inside/.test(extractFunction(src, 'renderFollowUpScore', 'index.html')),
     'and both are written down where every other rule of this screen is');
-  t.check(/\['fup_chase_after', 'presetChaseAfterDays', 7\], \['fup_chase_rest', 'presetChaseRestDays', 3\]/.test(
-      extractFunction(src, 'wireFollowUpsScreen', 'index.html')),
-    'bound once at parse time, as the rule beside them is — they sit in the static header, not in the '
-    + 'region that redraws, so there is nothing for a delegated listener to survive');
+
+  /* 6. AND THE TAB THEY SAT ON IS GONE. Not hidden -- gone: a tab bar
+        directly above the lens row asked twice what you were looking at,
+        and the register in its other half drew the same people this list
+        draws. Two renderings of one queue is the Debtors bug in
+        miniature, and this app has made that cut once already. */
+  t.check(!/data-fuptab/.test(src) && !/id="fup_tabs"/.test(src),
+    'the second tab is deleted, not restyled — the lens row is the only navigation on this screen');
+  t.check(!/id="fup_contact_pane"/.test(src) && !/id="fup_all_pane"/.test(src),
+    'and its two panes with it');
 
   /* THE SPARE PARTS ARE GONE. Four screens wore them because they were
      there. A dead rule in the stylesheet is how a fifth ends up in one. */

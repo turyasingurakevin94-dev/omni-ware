@@ -330,13 +330,24 @@ const INDEX = railIndex();
        claim is exactly what it was: the old address still lands on the
        slice it meant, resolved once at the top of goToTab so a saved
        last-tab cannot boot into a section that is gone. */
-    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'send'; msgFocus = 'telling'; return 'messages'; \}/.test(alias),
+    /* THE LENSES ARE THE REASONS AGAIN, and the states are groups in the
+       list under them. The first handoff drew the lens group both ways
+       and the second settles it -- "held back and sent are groups in this
+       list" -- so Worth telling's door opens its own lens outright,
+       which is where this assertion started. What it has always claimed
+       is unchanged: the old address lands on the slice it meant,
+       resolved once at the top of goToTab so a saved last-tab cannot
+       boot into a section that is gone. */
+    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'telling'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
-    /* And the slice says it is one. A filtered list with nothing saying
-       it is filtered is how a shop comes to believe half its work does
-       not exist. */
-    t.check(/data-msgclear="1"/.test(src) && /Show the whole outbox/.test(src),
-      'and says it is showing one group, with the way back to all of it');
+    /* AND THE SECOND TAB'S OWN THREE DOORS. It held a group, a setting
+       and an archive; each has an address on this one list now, so an old
+       link lands on the thing it named rather than on a pane that is
+       gone. This is the check that the deletion was a MOVE. */
+    t.check(/if\(tab === 'followups-record' \|\| tab === 'register' \|\| tab === 'sent'\)\{[\s\S]{0,120}?msgShowSent = true;/.test(alias)
+      && /if\(tab === 'held-back' \|\| tab === 'hold'\)\{[\s\S]{0,120}?msgPanelForm = 'hold';/.test(alias)
+      && /if\(tab === 'quiet'\)\{[\s\S]{0,120}?msgRulesOpen = true;/.test(alias),
+      'and the deleted tab\'s own three — the register, the hold and the quiet rule — each land on where that thing went');
     const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
     const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
     t.check(/Worth telling/.test(why) || /Worth telling/.test(sec),
@@ -359,7 +370,7 @@ const INDEX = railIndex();
       'and not "owing", which belongs to the screen that owns the whole book — Customers, since Debtors folded into it');
     t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
       'Chase debts is not a destination any more, and has no section left behind');
-    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'send'; msgFocus = 'money'; return 'messages'; \}/.test(alias),
+    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'money'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the money lens it meant — same resolve, same reason');
     /* And so do the two doors the merge itself closed. A saved last-tab
        is the case this is really about: a shop that shut the app on

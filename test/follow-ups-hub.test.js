@@ -51,7 +51,13 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpHubRows', 'followUpHubDigest', 'fupHubRowsNow', 'recordFollowUpClient',
   'unrecordFollowUpClient', 'briefPlainLine', 'debtChaseMessage',
   'followUpBoughtSince', 'followUpAlreadyBought', 'hubScoreboard', 'hubScoreLabels', 'moneyWhy',
-  'followUpHeldBack', 'fupChasedWords'];
+  'followUpHeldBack', 'fupChasedWords',
+  /* THE OWNER'S OWN HOLD, which followUpHubRows now reads. It is in this
+     list rather than stubbed because the queue and the rail badge are the
+     same walk, and a hold that took somebody out of one and not the other
+     would be the Debtors bug again -- so the real function is the one
+     under test here, not a stand-in that always says no. */
+  'msgHolds', 'msgHoldOf', 'msgHoldPut', 'msgHoldLift', 'msgPruneHolds', 'msgHeldRows'];
 
 let nextId = 1;
 let scope = null, err = null;
@@ -472,10 +478,24 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   const sec = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
-  const all0 = extractFunction(src, 'renderFollowUpsAll', 'index.html');
-  t.check(/ow-side/.test(all0) && /renderFollowUpScore\(\)/.test(all0),
-    'and it is the register’s rail, drawn beside the history it measures rather than in a tab of its own');
+  /* ONE VIEW. The second handoff deletes the tab bar outright: it sat
+     directly above the lens row, so the screen asked twice what you were
+     looking at, and the register in its other half drew the same people
+     the queue draws. Two renderings of one queue is the Debtors bug in
+     miniature and this app has made that cut once already. What the
+     register was is a GROUP in this one list now, and the assertion
+     inverts with it: there are no view tabs at all. */
+  t.check(!/class="ow-seg-b/.test(sec) && !/data-fuptab/.test(sec),
+    'one view — the register is a group in the queue, not a tab beside it');
+  /* And the measurement followed the record rather than the tab. It was
+     the register's own rail, drawn beside the history it measures; the
+     register is the Sent group now, which has no rail, so it takes the
+     panel while that group is open and nothing is picked -- which is the
+     moment somebody is asking "did any of this work" rather than "what
+     do I write to this person". */
+  const msgs = extractFunction(src, 'renderMessages', 'index.html');
+  t.check(/msgShowSent && msgPickedId == null/.test(msgs) && /renderFollowUpScore\(\)/.test(msgs),
+    'and it is drawn beside the history it measures rather than in a tab of its own');
   const score = extractFunction(src, 'renderFollowUpScore', 'index.html');
   t.check(/briefsSentTable/.test(score) && /0091_briefs_sent\.sql/.test(score),
     'the record-keeping table is named when it is missing — that warning had no other home once Worth telling went, and without it recordBriefSent fails into a toast nobody keeps');
@@ -491,9 +511,21 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      what stays beside the other rates is the row. */
   t.check(/Money<\/span><span class="ow-sr-v ow-warn">not counted/.test(score),
     'money is named as not counted, in the list of rates, rather than left out of it');
-  const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(!/fupTab==='score'/.test(render) && /renderFollowUpSummary\(\);/.test(render),
-    'and the strip is drawn on every render rather than hidden on one view');
+  /* THE FIVE-TILE STRIP IS GONE, and that is the second handoff's own
+     finding rather than a loss: four of its five figures read 0, and two
+     of the five -- "To message 1" and "Money 1" -- were the same single
+     obligation counted twice. Five figures of which four are nought
+     teach a person to stop reading figures. Three cards replace it, and
+     the rule they obey is the thing to hold: a count that would read 0
+     is replaced by the reading that makes it good news, and an
+     obligation is counted ONCE. */
+  const kpis = extractFunction(src, 'renderMessageKpis', 'index.html');
+  t.check(/Everything else is clear/.test(kpis) && /Also waiting/.test(kpis),
+    'the counts that would read 0 are folded into one sentence, and named only when they are not 0');
+  t.check(/om-kpi-w/.test(kpis) && !/om-kpi-f[\s\S]{0,400}Everything else is clear/.test(kpis),
+    'and that card carries a reading rather than a figure — a 0 on it would put back what it was made to remove');
+  t.check(/>\$\{rows\.length\}</.test(kpis),
+    'the obligation is counted once, as people rather than as reasons — the lens above says which kind it is');
   t.check(/Worth telling/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
     'the absorbed screen’s name is still spoken, on the lens that narrows the queue by why');
 }
