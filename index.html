@@ -16731,6 +16731,91 @@
     .om-idiv{display:none}
   }
 
+
+  /* ---- THE SHELL, identical on all four Sell screens ----
+
+     The handoff draws the same chrome around Invoices, Customers,
+     Messages and Sales agents: a 58px top bar, the title block with its
+     lens group, a four-card KPI strip, and a content row of one flexing
+     list beside a fixed 390px detail column. The quote built the title
+     block already (.om-qtitle) and it is reused rather than copied --
+     the `q` in that name is a wart from being built first, not a claim
+     that the block is the quote's.
+
+     What is NOT here is the rail or the phone tab bar. Both are app
+     chrome that exists once, above; a screen never draws its own. */
+  .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground)}
+  .om-top{flex:none;height:58px;background:var(--om-surface);border-bottom:1px solid var(--om-rule);display:flex;align-items:center;gap:16px;padding:0 22px}
+  .om-crumb{display:flex;align-items:center;gap:8px;flex:none;min-width:0}
+  .om-crumb-p{font-size:12.5px;color:var(--om-ink-3)}
+  .om-crumb-n{font-size:14px;font-weight:600;color:var(--om-ink)}
+  /* The placeholder names what can be searched INCLUDING a natural
+     language example, which is the handoff's rule and the reason the
+     field is 400px rather than the 240 it would otherwise need. */
+  .om-find{display:flex;align-items:center;gap:8px;flex:1;max-width:400px;height:36px;padding:0 12px;border-radius:10px;background:var(--om-field);border:1px solid var(--om-rule)}
+  .om-find:focus-within{border-color:var(--om-navy)}
+  .om-find-i{flex:1;min-width:0;border:0;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--om-ink)}
+  .om-find-i::placeholder{color:var(--om-ink-3)}
+  .om-top-sp{flex:1}
+  .om-face{width:34px;height:34px;flex:none;border-radius:999px;background:var(--om-navy);color:var(--om-on-navy);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+
+  /* At most one card tinted bad and one tinted good. A strip where every
+     card is coloured says nothing, which is the same argument the
+     console's metric strip carries against per-tile borders. */
+  .om-kpis{flex:none;padding:14px 22px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .om-kpi{background:var(--om-surface);border:1px solid var(--om-rule);border-radius:14px;padding:12px 14px;min-width:0}
+  .om-kpi-f{margin-top:3px;font-size:20px}
+  .om-kpi-s{margin-top:1px;font-size:11.5px;color:var(--om-ink-3)}
+
+  /* The detail column scrolls; every card in it is flex:none so the
+     column scrolls instead of squashing the cards flat. */
+  .om-body{flex:1;min-height:0;display:flex;gap:16px;padding:14px 22px 22px;align-items:stretch}
+  .om-list{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  .om-side{width:390px;flex:none;overflow-y:auto;display:flex;flex-direction:column;gap:12px;align-items:stretch}
+  .om-side > *{flex:none}
+  .om-scroll{flex:1;min-height:0;overflow-y:auto}
+
+  .om-card-h{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .om-card-t{font-size:13.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-cols{flex:none;display:grid;align-items:center;column-gap:10px;padding:7px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner)}
+  .om-col{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-ink-3)}
+
+  /* Navy header, figures, evidence, actions -- the panel's rhythm is the
+     same on all four screens so the eye learns it once. */
+  .om-pan{background:var(--om-navy);padding:12px 14px}
+  .om-pan-t{font-size:15px;font-weight:600;color:var(--om-on-navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-pan-m{font-size:11.5px;color:var(--om-on-navy-3)}
+  .om-figs{display:flex;gap:12px;padding:12px 14px}
+  .om-figs > div{flex:1;min-width:0}
+  .om-figs-f{font-size:17px}
+  .om-blk{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:11px 14px}
+  .om-acts{padding:11px 14px;border-top:1px solid var(--om-rule-inner);display:flex;gap:8px;flex-wrap:wrap}
+  .om-read{font-size:12px;line-height:1.55;color:var(--om-ink-2);text-wrap:pretty}
+  /* Settled work is dimmed, never hidden: it is still the answer to
+     "did that one get paid". */
+  .om-done{opacity:.62}
+
+  /* ---- the phone, which is a separate design and not a reflow ---- */
+  @media (max-width: 820px){
+    .om-top,.om-kpis{display:none}
+    .om-body{display:block;padding:0}
+    .om-list{overflow:visible}
+    .om-side{width:auto;overflow:visible;padding:12px 16px 16px}
+    .om-ph-head{background:var(--om-navy);padding:12px 16px 0}
+    .om-ph-t{font-size:19px;font-weight:700;color:var(--om-on-navy);letter-spacing:-0.02em}
+    .om-ph-figs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+    .om-ph-fig{background:var(--om-rail-hover);border-radius:10px;padding:8px 10px;min-width:0}
+    .om-ph-fig-l{font-size:9.5px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-on-navy-4)}
+    .om-ph-fig-v{margin-top:2px;font-size:14px;color:var(--om-on-navy)}
+    .om-ph-tabs{display:flex;gap:2px;margin-top:10px}
+    .om-ph-tab{flex:1;min-width:0;height:34px;background:none;border:0;border-bottom:2px solid transparent;color:var(--om-on-navy-3);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer}
+    .om-ph-tab.om-on{color:var(--om-on-navy);font-weight:700;border-bottom-color:var(--om-coral)}
+    /* Two-line grids with a 44px floor, and never a horizontal
+       scroller. The figure keeps a column of its own. */
+    .om-ph-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--om-rule-inner);background:var(--om-surface)}
+    .om-ph-foot{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:10px 16px}
+  }
+
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
 
 </style>
