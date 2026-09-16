@@ -118,9 +118,20 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
   eq(s.savedQuoteTotal(neg), GOODS,
     'and a negative one adds nothing either — a discount is a decision about the price of the goods, not a charge');
 
-  /* It is also refused at the door on the way in. */
-  const guard = (/ch\.value = Math\.max\(0, Number\(inp\.value\)\|\|0\);/).test(src);
+  /* It is also refused at the door on the way in.
+
+     WAS: the literal `Math.max(0, Number(inp.value)||0)`. The box is a
+     text field now -- it carries thousands separators, which type=number
+     rejects -- so the read goes through qFigParse. That matters to THIS
+     assertion in particular: type=number also gave the browser a min="0"
+     to enforce, and a text box has none, so this clamp is the only thing
+     standing between a typed "-50000" and a negative charge. Assert the
+     clamp and the parser together, because the clamp alone on a Number()
+     that returns NaN would let NaN through as NaN||0 -> 0 only by luck. */
+  const guard = (/ch\.value = Math\.max\(0, qFigParse\(inp\.value\)\|\|0\);/).test(src);
   t.check(guard, 'the field that sets it cannot be typed below nothing');
+  t.check(/data-chg-val="\$\{i\}"/.test(src) && !/type="number" [^>]*data-chg-val/.test(src),
+    'and the browser is no longer the thing enforcing it, so the clamp is not decoration');
 }
 
 /* ---------- 4. the goods pipeline never sees a charge ------------------- *

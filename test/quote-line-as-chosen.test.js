@@ -174,7 +174,12 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   const rows = extractFunction(src, 'renderQuoteItems', 'index.html');
   t.check(/const asPack = !!\(packView && packView\.whole\);\s*const per = asPack \? packView\.packQty : 1;/.test(rows),
     'the row is drawn in packs exactly when the line is counted in packs');
-  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qtyShown\}"/.test(rows),
+  /* WAS: value="${qtyShown}" raw. The four editable boxes carry
+     thousands separators now, so what goes IN is qFigShow(qtyShown) and
+     what comes out is read back through qFigParse. The assertion is
+     unchanged in substance -- the box shows the count in the unit the
+     line is counted in -- and qtyShown is still the value it shows. */
+  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qFigShow\(qtyShown\)\}"/.test(rows),
     'the quantity box shows the count in that unit — 1, not 100');
   t.check(/<span class="q-qty-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
     'with the unit beside it, so "1" reads as "1 Ctn"');
@@ -182,18 +187,26 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the unit under the product name is the one the line is counted in — "Ctn" under a carton line, not "Pair"');
   t.check(!/value="\$\{it\.qty\}"/.test(rows),
     'the base count is no longer what the box shows');
-  t.check(/q-sell[^>]*value="\$\{Math\.round\(sell \* per\)\}"/.test(rows),
+  t.check(/q-sell[^>]*value="\$\{qFigShow\(Math\.round\(sell \* per\)\)\}"/.test(rows),
     'Price each is per that unit — the carton price beside a carton count');
-  t.check(/q-price"[^>]*value="\$\{Math\.round\(it\.price \* per\)\}"/.test(rows),
+  t.check(/q-price"[^>]*value="\$\{qFigShow\(Math\.round\(it\.price \* per\)\)\}"/.test(rows),
     'and so is Buy @');
   t.check(/const per = quoteLineCountPer\(item\);/.test(rows),
     'the edit handlers read the same factor off the line');
-  t.check(/item\.price = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
-    && /item\.sellPrice = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
+  /* Through qFigParse, not Number. This is the load-bearing half of the
+     separator change: Number("100,000") is NaN and `NaN || 0` is 0, so a
+     price typed exactly the way the box displays it would have been
+     saved as nothing. Every read of these four boxes goes through the
+     parser, and a slice that used Number would be testing code that does
+     not ship. */
+  t.check(/item\.price = \(qFigParse\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
+    && /item\.sellPrice = \(qFigParse\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
     'a price typed per carton is kept per base unit');
+  t.check(!/Number\(e\.target\.value\)/.test(rows),
+    'and no box on the row is still read with a bare Number(), which a separated figure reads as NaN');
   t.check(/item\.qtyIn = per > 1 \? 'pack' : 'unit';/.test(rows),
     'an edited count makes the choice explicit on the line');
-  t.check(/const typed = Number\(e\.target\.value\) \|\| 1;\s*const newQty = Math\.max\(1, Math\.round\(typed \* per \* 1e6\) \/ 1e6\);/.test(rows),
+  t.check(/const typed = qFigParse\(e\.target\.value\) \|\| 1;\s*const newQty = Math\.max\(1, Math\.round\(typed \* per \* 1e6\) \/ 1e6\);/.test(rows),
     'and a count typed in cartons is multiplied back to the base unit before it is kept');
   /* No caption under a carton count. "2 Ctn" with "= 200 Pair" under
      it is the sum the rep did not ask for; the pack size lives in the
