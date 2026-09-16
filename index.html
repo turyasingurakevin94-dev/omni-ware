@@ -17185,6 +17185,11 @@
   .om-nameline:hover{opacity:1;background:var(--om-hover)}
   /* The line that closes the list and says where the record is. */
   .om-sentline{display:flex;align-items:center;gap:9px;padding:11px 14px;font-size:12px;color:var(--om-ink-3)}
+  /* The connection's one line. On the sunken ground, below the last
+     group, because it is not one of the groups: it is an offer, and an
+     offer at the foot of a list of work is read after the work. */
+  .om-linkline{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);font-size:12.5px;color:var(--om-ink-2);text-wrap:pretty}
+  .om-linkline svg{color:var(--om-ink-3)}
   /* THE RULES MENU. Three numbers that decide who is in this list, each
      with the sentence that says what it does -- a bare field labelled
      "Quiet after" is a number nobody can set with any confidence. */
@@ -17271,6 +17276,8 @@
        chrome where the frame has none. */
     .om-ph-detail #msg_wide,.om-ph-detail #msg_fits{display:none}
     .om-holdline,.om-sentline{padding:12px 16px}
+    .om-linkline{flex-wrap:wrap;padding:12px 16px}
+    .om-linkline .om-btn{min-height:44px;flex:1 1 100%;justify-content:center}
     .om-nameline{padding:10px 16px;white-space:normal}
     .om-rules{min-width:0;left:0;right:0}
     .om-rule{grid-template-columns:1fr 70px auto}
@@ -17297,7 +17304,81 @@
        scroller. The figure keeps a column of its own. */
     .om-ph-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--om-rule-inner);background:var(--om-surface)}
     .om-ph-foot{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:10px 16px}
+    /* THE CONNECTION CARD ON A PHONE (3b). The frame draws it as a
+       full-screen detail with a navy head and a fixed footer; here it is
+       a section of the setup page, so what carries over is the part that
+       is about the hand rather than about the page: each intention line
+       a thumb tall, and the two acts full width at the frame's own
+       heights -- the link at 48, the hand-off at 44 -- with the cost
+       line centred between them instead of beside the button. */
+    .om-wa-line{min-height:44px}
+    .om-wa-f{flex-direction:column;align-items:stretch;gap:8px}
+    .om-wa-f .om-btn{width:100%;justify-content:center}
+    .om-wa-f #wa_link_go{height:48px !important;font-size:14px}
+    .om-wa-f #wa_link_hand{height:44px !important;font-size:13px;order:3}
+    .om-wa-cost{order:2;text-align:center;font-size:11px}
+    .om-wa-f > span[style]{display:none}
   }
+
+  /* ================= THE WHATSAPP CONNECTION =================
+
+     One card on the setup page, and everything about it is a
+     consequence of one finding: an unbuilt feature does not get a place
+     in a working screen. It used to be a quarter of the Messages desk
+     saying "nothing to show" three times and tabulating three absences
+     as none / none / not available, with a primary action that offered
+     to CHECK a connection nobody had made.
+
+     The tile in the header is filled and green because WhatsApp is a
+     real thing that exists; the three tiles below it are DASHED and
+     unfilled because those three capabilities do not yet. A filled tile
+     with a grey glyph would read as broken rather than as available,
+     which is the opposite of what this card is for. */
+  /* It is a card among console panels -- the setup page has not been
+     redesigned yet -- so it gets the air a card needs on either side of
+     it, or it butts straight into the next panel's white and the two
+     read as one region. */
+  .om-walink{margin-bottom:14px}
+  .om-wa-h{display:flex;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid var(--om-rule-inner)}
+  .om-wa-tile{width:34px;height:34px;border-radius:9px;background:var(--om-good);display:flex;align-items:center;justify-content:center;flex:none;color:var(--om-good-ink)}
+  .om-wa-hr{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .om-wa-t{font-size:15px;font-weight:700;color:var(--om-ink)}
+  /* 72ch, because this is the sentence that answers the actual fear --
+     that linking breaks the number the business runs on -- and a
+     sentence that answers a fear has to be readable at one pass. */
+  .om-wa-p{margin:5px 0 0;font-size:13px;line-height:1.55;color:var(--om-ink-2);max-width:72ch;text-wrap:pretty}
+  .om-wa-b{padding:14px}
+  .om-wa-lines{margin-top:11px;display:flex;flex-direction:column;gap:11px}
+  .om-wa-line{display:flex;align-items:flex-start;gap:11px}
+  .om-wa-slot{width:28px;height:28px;border-radius:8px;border:1px dashed var(--om-dashed);display:flex;align-items:center;justify-content:center;flex:none;color:var(--om-on-navy-4)}
+  .om-wa-slot.om-on{border:0;background:var(--om-good);color:var(--om-good-ink)}
+  .om-wa-line-t{font-size:13px;font-weight:600;color:var(--om-ink)}
+  .om-wa-line-s{margin-top:2px;font-size:12px;color:var(--om-ink-2)}
+  .om-wa-f{padding:14px;border-top:1px solid var(--om-rule-inner);background:var(--om-sunken);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .om-wa-cost{font-size:12px;color:var(--om-ink-2)}
+  /* BELOW THE CARD, NOT INSIDE IT. It is the app's oldest law rather
+     than a note about this feature, so it does not sit in a box that
+     could be shut. */
+  .om-wa-promise{margin-top:12px;display:flex;align-items:flex-start;gap:9px;padding:0 2px}
+  .om-wa-promise svg{flex:none;margin-top:2px;color:var(--om-ink-3)}
+  .om-wa-promise span{flex:1;min-width:0;font-size:12.5px;color:var(--om-ink-2);line-height:1.55;text-wrap:pretty}
+  /* THE FLOW, which is what "Link the number" opens rather than what the
+     card wears. The steps and the four fields are genuinely somebody
+     else's job and genuinely cannot be done from a web form alone -- but
+     the phone number id has to be typed at THIS computer, so they are
+     reachable here and sent from here, never printed at a hardware
+     trader who only wanted to know why the inbox was empty. */
+  .om-wa-flow{padding:14px;border-top:1px solid var(--om-rule-inner)}
+  .om-wa-step{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--om-rule-inner);font-size:12.5px;line-height:1.55;color:var(--om-ink-2)}
+  .om-wa-step:first-of-type{border-top:0}
+  .om-wa-step-n{width:20px;height:20px;border-radius:999px;background:var(--om-neutral);color:var(--om-neutral-ink);display:flex;align-items:center;justify-content:center;flex:none;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600}
+  .om-wa-step code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11.5px;overflow-wrap:anywhere;color:var(--om-ink)}
+  .om-wa-fields{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end;margin-top:4px}
+  .om-wa-field{flex:1 1 220px;min-width:0}
+  .om-wa-field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.03em;color:var(--om-ink-3);margin-bottom:4px}
+  .om-wa-field input{box-sizing:border-box;width:100%;height:34px;padding:0 10px;border:1px solid var(--om-rule-input);border-radius:9px;background:var(--om-field);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:var(--om-ink)}
+  .om-wa-check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--om-ink-2);cursor:pointer}
+  .om-wa-check input{width:auto;margin-top:2px;flex:none}
 
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
 
@@ -19099,10 +19180,6 @@
         </div>
       </div>
 
-      <div class="ow-pan" id="wa_connect_pan" style="display:none;">
-        <div class="ow-pan-h"><span class="ow-pan-t">Not connected</span></div>
-        <div id="wa_connect"></div>
-      </div>
           </div>
 
           <!-- THE APP'S OLDEST LAW, stated on the screen it matters most.
@@ -20822,7 +20899,72 @@
           <div class="pset-rgn" data-rgn="shop">
             <div class="pset-rg">
               <h2 class="pset-rg-t">The shop itself</h2>
-              <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, and what is signed in to it.</span>
+              <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, how it is reached on WhatsApp, and what is signed in to it.</span>
+            </div>
+
+            <!-- THE WHATSAPP CONNECTION, WHICH USED TO BE A QUARTER OF
+                 THE MESSAGES DESK.
+
+                 Linking a number is done once, with the phone in your
+                 hand, often by somebody other than the owner. It is a
+                 setup job, and a setup job does not get a standing place
+                 in a screen that is worked every day -- least of all one
+                 whose entire content, until it is done, is the fact that
+                 it has not been done.
+
+                 What the old area did, and none of it survives: it said
+                 "nothing to show" three times (a line above the band, the
+                 band's own NOT CONNECTED heading, and the sentence inside
+                 it); it tabulated three absences as none / none / not
+                 available, in a house style that elsewhere refuses to
+                 print a 0; and it offered "Check the connection" as the
+                 primary act, for a connection nobody had made.
+
+                 THE ONE SENTENCE THAT IS KEPT is the first one. The real
+                 reason a shop does not link is the fear that it breaks
+                 the number the business runs on, and that sentence is the
+                 only thing anywhere on the screen that answers it -- so
+                 it is read BEFORE the decision rather than after it.
+                 "this screen" became "Omni-Ware" because the screen in
+                 front of you here is not the one that would start seeing
+                 the chats. -->
+            <div class="om-walink" data-find="whatsapp link number chats inbox catalogue browse broadcast connect webhook meta phone number id token catalog waba auto quote register sync">
+              <div class="om-card">
+                <div class="om-wa-h">
+                  <span class="om-wa-tile" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </span>
+                  <div style="flex:1;min-width:0">
+                    <div class="om-wa-hr">
+                      <span class="om-wa-t">WhatsApp</span>
+                      <span class="om-chip" id="wa_link_chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">not linked</span>
+                    </div>
+                    <p class="om-wa-p" id="wa_link_say"><b>Linking changes nothing on your phone.</b> The same number keeps working there, chats keep arriving as they do now, and Omni&#8209;Ware starts seeing them too.</p>
+                  </div>
+                </div>
+
+                <div class="om-wa-b">
+                  <div class="om-lbl" id="wa_link_lbl" style="font-size:10.5px">What linking would turn on</div>
+                  <div class="om-wa-lines" id="wa_link_lines"></div>
+                </div>
+
+                <div class="om-wa-f">
+                  <button type="button" class="om-btn om-btn-p" id="wa_link_go" aria-expanded="false" aria-controls="wa_link_flow" style="height:38px;padding:0 15px;font-size:13.5px">Link the number</button>
+                  <span class="om-wa-cost">About ten minutes &middot; you will need the phone in your hand</span>
+                  <span style="flex:1"></span>
+                  <button type="button" class="om-btn om-btn-s" id="wa_link_hand" style="height:34px;padding:0 12px;font-size:12.5px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.2L4 20z"/></svg>
+                    Send the steps to someone
+                  </button>
+                </div>
+
+                <div class="om-wa-flow" id="wa_link_flow" hidden></div>
+              </div>
+
+              <div class="om-wa-promise">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <span>Nothing leaves the shop until you press send, and linking does not change that. Every figure on the Messages desk is counted from the shop&rsquo;s own records either way.</span>
+              </div>
             </div>
 
             <div class="ow-pan pset-fold" data-fold="on-paper" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
@@ -28250,7 +28392,12 @@ document.getElementById('wp_posted').addEventListener('click', ()=>{
    directly is last_read_at, its own read marker. */
 
 const WA_WINDOW_MS = 24*60*60*1000;
-const WA_INBOX_POLL_MS = 12000;
+/* WA_INBOX_POLL_MS STOOD HERE. It timed a 12-second refresh of the
+   inbox, guarded by a tab name that stopped existing when WhatsApp and
+   Follow-ups became Messages -- so it cleared itself on its first tick
+   and had not refreshed anything since. The register is not the place to
+   poll a connection, and a dead interval is worse than none: it reads
+   like a live one to the next person. */
 
 // The 24-hour reply window, as the UI states it. The SERVER re-checks
 // this on every send (wa-send refuses a closed window); this copy only
@@ -28296,7 +28443,7 @@ function waTimeShort(ts){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
-let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+let waInbox = { configured: null, convs: [], msgs: [], active: null, sending: false,
   priceDoc: {},       // conversation id -> {wamid, doc} — the PRICE LIST the row
                       // drew, so Send can post the same rows as a picture
   narrow: {},         // conversation id -> {wamid, productId} — the KIND the owner
@@ -29906,24 +30053,33 @@ async function waFetchThread(convId){
   waInbox.msgs = rows || [];
 }
 
+/* THE REGISTER DOES NOT CHECK A CONNECTION IT DOES NOT NEED.
+
+   This used to draw the connection panel when the answer came back no,
+   which is how a screen worked every day came to be a quarter occupied
+   by a setup job. It asks the status ONCE a session, because the Waiting
+   figure and the reply rates are read off the inbox and there is no
+   other way to know whether there is one; when the answer is no it draws
+   nothing at all and the register carries a single line offering the
+   link. Nothing here polls: the 12-second interval that used to sit at
+   the foot of this function belonged to a tab that no longer exists. */
 async function waInboxEnter(){
   if(waInbox.configured == null) waInbox.configured = await waInboxStatus();
   const deskEl = document.getElementById('wa_console');
-  const connEl = document.getElementById('wa_connect_pan');
   const stripEl = document.getElementById('wa_strip');
+  if(!deskEl || !stripEl) return;
   if(!waInbox.configured){
     deskEl.style.display = 'none';
     stripEl.style.display = 'none';
-    connEl.style.display = '';
-    document.getElementById('wa_ph_sub').textContent = 'Not connected yet — this desk has nothing to show.';
+    const sub = document.getElementById('wa_ph_sub');
+    if(sub) sub.textContent = '';
     // Nothing to search: there are no chats until the number is linked.
-    document.getElementById('wa_find_btn').style.display = 'none';
-    waRenderConnect();
+    const find = document.getElementById('wa_find_btn');
+    if(find) find.style.display = 'none';
     return;
   }
   deskEl.style.display = '';
   stripEl.style.display = '';
-  connEl.style.display = 'none';
   document.getElementById('wa_find_btn').style.display = '';
   await waFetchConvs();
   await waFetchInsightMsgs();
@@ -29939,115 +30095,169 @@ async function waInboxEnter(){
   waRenderWords();
   waRenderChannel();
   waRenderBroadcasts();
-  // One poller, self-terminating when the user leaves the tab -- the
-  // interval checks where it is instead of trusting a cleanup hook to run.
-  if(!waInbox.timer){
-    waInbox.timer = setInterval(async ()=>{
-      if(currentActiveTab !== 'whatsapp' || !waInbox.configured){
-        clearInterval(waInbox.timer); waInbox.timer = null; return;
-      }
-      await waFetchConvs();
-      await waFetchInsightMsgs();
-      if(waInbox.active) await waFetchThread(waInbox.active);
-      waRenderInbox();
-      renderWaInsights();
-      waRenderHeadline();
-    }, WA_INBOX_POLL_MS);
-  }
 }
 
-function waRenderConnect(){
-  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
-  const target = document.getElementById('wa_connect');
-  if(!target) return;
-  /* A STATE, NOT A MANUAL.
-     This panel used to open with `npx supabase secrets set …`, a
-     system-user token walkthrough and a webhook URL, printed at a
-     hardware trader who wanted to know why their inbox was empty. The
-     shop owner is told what is missing and what it costs; the terminal
-     work is folded away for whoever set up the computer, because it is
-     genuinely their job and it genuinely cannot be done from a web
-     form. */
-  target.innerHTML = `<div class="wa-conn">
-    <p class="wa-conn-p"><b>Your WhatsApp number is not linked yet</b>, so this desk has nothing to
-      show. Linking changes nothing on your phone — the same number keeps working there, chats keep
-      arriving as they do now, and this screen simply starts seeing them too.</p>
-    <div class="wa-kv" style="border-top:1px solid var(--ow-rule-soft);"><span class="wa-kv-l">Chats readable here</span><span class="wa-kv-v wa-words">none</span></div>
-    <div class="wa-kv"><span class="wa-kv-l">Products customers can browse</span><span class="wa-kv-v wa-words">none</span></div>
-    <div class="wa-kv"><span class="wa-kv-l">Broadcasts</span><span class="wa-kv-v wa-words">not available</span></div>
-    <div class="wa-ra">
-      <button type="button" class="btn btn-ghost ow-sm" id="wa_check">Check the connection</button>
-      ${waInbox.configured ? '<button type="button" class="btn btn-ghost ow-sm" id="wa_conn_back">Back to the desk</button>' : ''}
-    </div>
-    <details class="wa-steps-wrap">
-      <summary class="wa-mh-t" style="cursor:pointer;padding:8px 0;">The technical steps — for whoever set up this computer</summary>
-      <ol class="wa-steps">
-        <li>Create a (free) Meta developer app with the <b>WhatsApp</b> product at
-          developers.facebook.com, under the shop's Meta Business account.</li>
-        <li>In WhatsApp &rarr; API setup, add the existing business number and choose to keep using it
-          in the WhatsApp Business app — Meta walks through scanning a QR from the phone. The app must
-          be opened at least every 14 days or Meta cuts the link.</li>
-        <li>Set the three secrets <b>from your own terminal</b> — never paste a token into a chat or a
-          web form:<br><code>npx supabase secrets set WHATSAPP_ACCESS_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…</code>
-          <br>The token is a permanent System User token with <i>whatsapp_business_messaging</i>; the app
-          secret is on the app's Basic Settings page; the verify token is any phrase you invent.</li>
-        <li>In the app's WhatsApp &rarr; Configuration, set the webhook to
-          <br><code>${esc(hook)}</code><br>with that verify token, and subscribe to <b>messages</b>.</li>
-        <li>Paste the <b>Phone number ID</b> (shown in API setup, next to the number) here:</li>
-      </ol>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_pnid">Phone number ID</label><input id="wa_pnid" placeholder="e.g. 106540352242922"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_pnid_save">Save</button>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_register">Register the number</button>
-      </div>
-      <p class="wa-note" style="border-top:0;padding-left:0;">Registering does what Meta's own dashboard
-        button does, but shows Meta's real answer when it fails. The number must already be verified by
-        SMS code, and must not be running on any WhatsApp app.</p>
-      <ol class="wa-steps">
-        <li>For the catalogue customers browse inside WhatsApp: create one at
-          <b>business.facebook.com/commerce</b> (type: E-commerce), then connect it to the number in
-          <b>WhatsApp Manager &rarr; Catalog</b>.</li>
-        <li>The system-user token needs <i>catalog_management</i> and the catalogue assigned as an asset.
-          If it was generated without them, assign the catalogue to the system user, generate a fresh
-          token ticking <i>catalog_management</i>, and re-set <code>WHATSAPP_ACCESS_TOKEN</code>.</li>
-      </ol>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_catid">Catalog ID</label><input id="wa_catid" placeholder="e.g. 1234567890"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_catid_save">Save</button>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_cat_sync">Sync products to the catalogue</button>
-      </div>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_wabaid">WhatsApp Business Account ID</label><input id="wa_wabaid" placeholder="from WhatsApp Manager's URL (asset_id)"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_wabaid_save">Save</button>
-      </div>
-      <div class="wa-fields">
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:var(--ow-t-12);line-height:1.45;cursor:pointer;max-width:var(--ow-measure);">
-          <input type="checkbox" id="wa_auto_quote" style="margin-top:2px;">
-          <span>Answer price questions automatically &mdash; only when a customer names a product
-          outright, at the price this app holds for it. That is <b>anything you can sell</b>, photo
-          or no photo, not just what is in the browsable catalogue. Partial matches and ties still
-          wait for you, and every automatic reply is marked <b>auto</b> in the thread and on this
-          screen.</span>
-        </label>
-      </div>
-      <p class="wa-note" style="border-top:0;padding-left:0;">Sync pushes every product that has a photo
-        and a retail price, at retail prices, and removes anything the shop no longer offers. Customers
-        browse it inside WhatsApp and send carts; carts land in Order tracking automatically.</p>
-    </details>
-  </div>`;
-  const back = document.getElementById('wa_conn_back');
-  if(back) back.addEventListener('click', ()=>{
-    if(!waInbox.configured) return;
-    document.getElementById('wa_connect_pan').style.display = 'none';
-    document.getElementById('wa_console').style.display = '';
+/* ================= THE CONNECTION, AS ONE CARD =================
+
+   waRenderConnect drew a panel inside the Messages desk whose whole
+   content was the fact that nothing was connected. This draws the same
+   decision where it belongs -- Setup, beside the other things configured
+   once -- and says it the other way up: not what is missing, but what
+   linking would turn on.
+
+   THE LINK STATUS IS THE ONLY STORED FACT. Whether the Inbox lens
+   exists, whether the Messages register carries its one line, and how
+   many products a customer could browse are all derived from it and from
+   the books. Nothing about this card is remembered twice. */
+function waLinked(){ return waInbox.configured === true; }
+
+/* HOW MANY PRODUCTS A CUSTOMER COULD ACTUALLY BROWSE, counted from the
+   same function the sync itself uses -- so the number on this card and
+   the number that would be pushed can never differ. */
+function waBrowsableCount(){
+  try{ return waCatalogItems().items.length; }catch(_e){ return 0; }
+}
+
+/* THE BIGGEST LIST ONE MESSAGE COULD GO TO, and it is read off the
+   shop's own invoices rather than off the chat list. There IS no chat
+   list until the number is linked, so a figure that needs the thing
+   being argued for cannot appear in the argument -- which is the same
+   fault as tabulating an absence, wearing a number instead of a word.
+
+   Distinct customers per product, largest wins. Returns null when the
+   books cannot answer, and the line says so rather than printing a 0. */
+function waBiggestBuyerList(){
+  const byProduct = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced) return;
+    const cid = String(q.customerId||'').trim();
+    if(!cid) return;
+    (q.items||[]).forEach(it=>{
+      const pid = String(it.productId||'').trim();
+      if(!pid) return;
+      if(!byProduct.has(pid)) byProduct.set(pid, {set:new Set(), name: it.productName || ''});
+      byProduct.get(pid).set.add(cid);
+    });
   });
+  let best = null;
+  byProduct.forEach((v)=>{ if(!best || v.set.size > best.set.size) best = v; });
+  if(!best || best.set.size < 2) return null;
+  return {n: best.set.size, name: best.name};
+}
+
+/* The three capabilities, in the future tense while they are off and in
+   the present once they are on. A dashed, unfilled tile is the "not yet"
+   state; a FILLED tile with a grey glyph would read as broken rather
+   than as available, which is the opposite of what this card says. */
+function waLinkLinesHTML(){
+  const on = waLinked();
+  const n = waBrowsableCount();
+  const big = waBiggestBuyerList();
+  const rows = [
+    ['<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+     on ? 'Chats are read and answered here' : 'Read and answer chats here',
+     'With the customer&rsquo;s account, debt and last order beside the conversation'],
+    ['<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+     on ? 'Customers browse what you sell' : 'Let customers browse what you sell',
+     n ? `Your catalogue, with the ${n} product${n===1?'':'s'} that ${n===1?'has':'have'} a photo and a price`
+       : 'Your catalogue &mdash; no product has both a photo and a price yet, so there would be nothing to browse'],
+    ['<path d="m3 11 18-5v12L3 13z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+     on ? 'One message goes to a picked list' : 'Send one message to a picked list',
+     big ? `A price change to the ${big.n} people who buy ${big.name ? esc(big.name) : 'that line'}, in one send`
+         : 'A price change to everyone who buys one line, in one send &mdash; the books do not yet show a line two people have both bought'],
+  ];
+  return rows.map(([path, t, sub])=> `<div class="om-wa-line">
+    <span class="om-wa-slot${on ? ' om-on' : ''}" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
+    </span>
+    <div style="flex:1;min-width:0">
+      <div class="om-wa-line-t">${t}</div>
+      <div class="om-wa-line-s">${sub}</div>
+    </div>
+  </div>`).join('');
+}
+
+/* THE WORDS THAT GET HANDED OVER. Written once and read twice -- by the
+   flow on this card and by "Send the steps to someone" -- so the person
+   doing the work and the person reading about it cannot be given two
+   different instructions. */
+function waStepsText(){
+  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
+  return [
+    'Linking Omni-Ware to the shop’s WhatsApp number. About ten minutes, and you need the phone.',
+    '',
+    '1. At developers.facebook.com, under the shop’s Meta Business account, create a (free) developer app and add the WhatsApp product.',
+    '2. In WhatsApp → API setup, add the existing business number and choose to keep using it in the WhatsApp Business app. Meta walks through scanning a QR from the phone. That app must be opened at least every 14 days or Meta cuts the link.',
+    '3. From your own terminal — never paste a token into a chat or a web form — set the three secrets:',
+    '   npx supabase secrets set WHATSAPP_ACCESS_TOKEN=... WHATSAPP_APP_SECRET=... WHATSAPP_VERIFY_TOKEN=...',
+    '   The token is a permanent System User token with whatsapp_business_messaging; the app secret is on the app’s Basic Settings page; the verify token is any phrase you invent.',
+    `4. In the app’s WhatsApp → Configuration, set the webhook to ${hook} with that verify token, and subscribe to "messages".`,
+    '5. Open Omni-Ware → Setup → The shop → WhatsApp, press "Link the number", and paste the Phone number ID (shown in API setup, next to the number).',
+    '',
+    'For the catalogue customers browse inside WhatsApp: create one at business.facebook.com/commerce (type: E-commerce), then connect it to the number in WhatsApp Manager → Catalog. The system-user token needs catalog_management and the catalogue assigned as an asset.',
+  ].join('\n');
+}
+
+/* WHAT "LINK THE NUMBER" OPENS. The frame's card has no fields on it,
+   and it is right not to: the card is the decision. But somebody still
+   has to type a Phone number ID at this computer, so the flow is here,
+   shut until the decision is taken, and every field saves as it is
+   filled -- which is what makes it resumable by whoever comes back to
+   it, who may not be whoever started. */
+function waRenderLinkFlow(){
+  const flow = document.getElementById('wa_link_flow');
+  if(!flow) return;
+  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
+  const step = (n, html)=> `<div class="om-wa-step"><span class="om-wa-step-n">${n}</span><div style="flex:1;min-width:0">${html}</div></div>`;
+  flow.innerHTML = `
+    <div class="om-lbl" style="font-size:10.5px">The steps, for whoever does them</div>
+    <div style="margin-top:9px">
+      ${step(1, 'At <b>developers.facebook.com</b>, under the shop&rsquo;s Meta Business account, create a (free) developer app and add the <b>WhatsApp</b> product.')}
+      ${step(2, 'In WhatsApp &rarr; API setup, add the existing business number and choose to keep using it in the WhatsApp Business app &mdash; Meta walks through scanning a QR from the phone. That app must be opened at least every 14 days or Meta cuts the link.')}
+      ${step(3, 'Set the three secrets <b>from your own terminal</b>, never by pasting a token into a chat or a web form:<br><code>npx supabase secrets set WHATSAPP_ACCESS_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…</code>')}
+      ${step(4, `In the app&rsquo;s WhatsApp &rarr; Configuration, set the webhook to <code>${esc(hook)}</code> with that verify token, and subscribe to <b>messages</b>.`)}
+      ${step(5, `Paste the <b>Phone number ID</b> &mdash; it is in API setup, next to the number.
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_pnid">Phone number ID</label><input id="wa_pnid" placeholder="e.g. 106540352242922"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_pnid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+          <button type="button" class="om-btn om-btn-s" id="wa_register" style="height:34px;padding:0 12px;font-size:12.5px">Register the number</button>
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--om-ink-2)">Registering does what Meta&rsquo;s own dashboard button does, but shows Meta&rsquo;s real answer when it fails. The number must already be verified by SMS code, and must not be running on any WhatsApp app.</p>`)}
+      ${step(6, `For the catalogue customers browse inside WhatsApp: create one at <b>business.facebook.com/commerce</b> (type: E&#8209;commerce), connect it to the number in <b>WhatsApp Manager &rarr; Catalog</b>, and give the system-user token <i>catalog_management</i> with the catalogue assigned as an asset.
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_catid">Catalog ID</label><input id="wa_catid" placeholder="e.g. 1234567890"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_catid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+          <button type="button" class="om-btn om-btn-s" id="wa_cat_sync" style="height:34px;padding:0 12px;font-size:12.5px">Sync products</button>
+        </div>
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_wabaid">WhatsApp Business Account ID</label><input id="wa_wabaid" placeholder="from WhatsApp Manager&rsquo;s URL (asset_id)"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_wabaid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--om-ink-2)">Sync pushes every product that has a photo and a retail price, at retail prices, and removes anything the shop no longer offers. Carts land in Order tracking automatically.</p>`)}
+    </div>
+    <label class="om-wa-check">
+      <input type="checkbox" id="wa_auto_quote">
+      <span><b>Answer price questions automatically</b> &mdash; only when a customer names a product outright, at the price this app holds for it. That is <b>anything you can sell</b>, photo or no photo, not just what is in the browsable catalogue. Partial matches and ties still wait for you, and every automatic reply is marked <b>auto</b> in the thread.</span>
+    </label>
+    <!-- CHECK LIVES HERE, AND ONLY HERE. It was the primary action on a
+         screen where nothing had been attempted; it is a secondary one
+         inside the flow, where something has. -->
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <button type="button" class="om-btn om-btn-s" id="wa_check" style="height:34px;padding:0 12px;font-size:12.5px">Check the connection</button>
+      <span style="font-size:12px;color:var(--om-ink-2)">Nothing is linked until Meta answers &mdash; this asks it.</span>
+    </div>`;
+
   sb.from('wa_numbers').select('phone_number_id, catalog_id, auto_quote, waba_id').eq('shop_id', currentShopId).maybeSingle()
     .then(({ data: row })=>{
-      if(row) document.getElementById('wa_pnid').value = row.phone_number_id || '';
-      if(row && row.catalog_id) document.getElementById('wa_catid').value = row.catalog_id;
-      if(row) document.getElementById('wa_auto_quote').checked = !!row.auto_quote;
-      if(row && row.waba_id) document.getElementById('wa_wabaid').value = row.waba_id;
+      if(!row) return;
+      const set = (id, v)=>{ const el = document.getElementById(id); if(el && v) el.value = v; };
+      set('wa_pnid', row.phone_number_id);
+      set('wa_catid', row.catalog_id);
+      set('wa_wabaid', row.waba_id);
+      const aq = document.getElementById('wa_auto_quote');
+      if(aq) aq.checked = !!row.auto_quote;
     });
+
   document.getElementById('wa_wabaid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_wabaid').value.trim();
     if(!v){ toast('Paste the WhatsApp Business Account ID first'); return; }
@@ -30055,13 +30265,13 @@ function waRenderConnect(){
       .update({ waba_id: v }).eq('shop_id', currentShopId);
     if(error){ toast('Could not save: ' + error.message); return; }
     toast('Account ID saved');
-    });
+  });
   document.getElementById('wa_auto_quote').addEventListener('change', async e=>{
     const on = e.target.checked;
     const { error } = await sb.from('wa_numbers')
       .update({ auto_quote: on }).eq('shop_id', currentShopId);
     if(error){ toast('Could not save: ' + error.message); e.target.checked = !on; return; }
-    toast(on ? 'Auto-answers ON — exact matches only' : 'Auto-answers off');
+    toast(on ? 'Clear price questions will be answered automatically' : 'Every question waits for you again');
   });
   document.getElementById('wa_pnid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_pnid').value.trim();
@@ -30069,11 +30279,14 @@ function waRenderConnect(){
     const { error } = await sb.from('wa_numbers').upsert(
       { shop_id: currentShopId, phone_number_id: v }, { onConflict: 'phone_number_id' });
     if(error){ toast('Could not save: ' + error.message); return; }
+    /* A SECOND ROW IS WORSE THAN NO ROW: every lookup in this file is a
+       maybeSingle(), which fails outright when a shop has two numbers on
+       file. Saving a different number REPLACES the mapping. */
     const { error: cleanErr } = await sb.from('wa_numbers')
       .delete().eq('shop_id', currentShopId).neq('phone_number_id', v);
     if(cleanErr) console.error('old number cleanup failed', cleanErr);
     waInbox.configured = null;
-    toast('Number saved');
+    toast('Number saved — now press Check the connection');
   });
   document.getElementById('wa_catid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_catid').value.trim();
@@ -30100,9 +30313,10 @@ function waRenderConnect(){
         toast(msg, 6000);
         return;
       }
-      const gapNote = (gaps.noPhoto.length + gaps.noPrice.length)
-        ? ` (${gaps.noPhoto.length + gaps.noPrice.length} left out — photos or prices missing)` : '';
-      toast(`Catalog synced — ${res.pushed} pushed, ${res.removed} removed${gapNote}`, 6000);
+      const skipped = gaps.noPhoto.length + gaps.noPrice.length;
+      toast(`${items.length} sent to the catalogue`
+        + (skipped ? ` — ${skipped} left out: ${gaps.noPhoto.length} with no photo, ${gaps.noPrice.length} with no price` : ''), 6000);
+      renderWaLink();
     } finally { btn.disabled = false; }
   });
   document.getElementById('wa_register').addEventListener('click', async ()=>{
@@ -30125,8 +30339,85 @@ function waRenderConnect(){
     const ok = await waInboxStatus();
     waInbox.configured = ok;
     toast(ok ? 'Connected — the inbox is live' : 'Not yet — the token or the number is still missing');
-    if(ok) waInboxEnter();
+    renderWaLink();
+    if(ok && currentActiveTab === 'messages') renderMessages();
   });
+}
+
+/* THE STEPS BECOME A THING YOU HAND OVER, not a disclosure somebody has
+   to be sitting here to expand. The person who does this work is
+   usually not the person reading the card, and the old panel's fold
+   required them to be. Same hand-off pattern as every other send in
+   this app: the words are composed here, the app opens the chat, and it
+   cannot see whether it went -- so it says so rather than stamping. */
+function waSendTheSteps(){
+  const text = waStepsText();
+  /* NO RECIPIENT ON PURPOSE. Everywhere else in this app a bare wa.me
+     link is a fault -- it opens WhatsApp with nothing in the To field
+     and fails there, where the app cannot see it. Here it is the whole
+     point: the shop's own number is not the person who does this work,
+     and who does is a choice only the owner can make, so WhatsApp's own
+     contact picker is the right next screen. */
+  window.open(waComposeUrl('', text), '_blank');
+  toast('The steps are in a chat — pick whoever does this. Nothing is recorded: the app cannot see the send.', 6000);
+}
+
+/* The door from anywhere else: go where the decision lives, open the
+   flow, and put it in front of the eye. */
+function waOpenLinkSetup(){
+  goToTab('presets');
+  setTimeout(()=>{
+    const card = document.querySelector('.om-walink');
+    const go = document.getElementById('wa_link_go');
+    if(go && document.getElementById('wa_link_flow').hidden) go.click();
+    if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 60);
+}
+
+/* The card's face. Called on entering Setup and after anything that
+   could change the answer. */
+function renderWaLink(){
+  const lines = document.getElementById('wa_link_lines');
+  if(!lines) return;
+  const on = waLinked();
+  lines.innerHTML = waLinkLinesHTML();
+  const chip = document.getElementById('wa_link_chip');
+  const num = String(data.presetWaPhone||'').trim();
+  if(chip){
+    chip.textContent = on ? (num ? `linked · ${num}` : 'linked') : 'not linked';
+    chip.style.background = on ? 'var(--om-good)' : 'var(--om-neutral)';
+    chip.style.color = on ? 'var(--om-good-ink)' : 'var(--om-neutral-ink)';
+  }
+  const lbl = document.getElementById('wa_link_lbl');
+  if(lbl) lbl.textContent = on ? 'What linking turned on' : 'What linking would turn on';
+  const say = document.getElementById('wa_link_say');
+  if(say && on) say.innerHTML = '<b>Nothing on your phone changed.</b> The same number keeps working there, chats keep arriving as they do now, and Omni&#8209;Ware sees them too.';
+  const go = document.getElementById('wa_link_go');
+  if(go) go.textContent = on ? 'Change the connection' : 'Link the number';
+  const cost = document.querySelector('.om-wa-cost');
+  if(cost) cost.textContent = on
+    ? 'Open this only to change the number or the catalogue'
+    : 'About ten minutes · you will need the phone in your hand';
+}
+
+/* Bound once, at parse time, against markup that is in the document from
+   the start -- the card's face is static and only its figures are
+   written, so there is no handler to rebind on every render. */
+{
+  const go = document.getElementById('wa_link_go');
+  if(go) go.addEventListener('click', ()=>{
+    const flow = document.getElementById('wa_link_flow');
+    if(!flow) return;
+    const open = flow.hidden;
+    flow.hidden = !open;
+    go.setAttribute('aria-expanded', open ? 'true' : 'false');
+    /* Drawn on first opening rather than on every render: it reads four
+       values off the server, and a setup panel nobody has opened should
+       not be asking the database anything. */
+    if(open && !flow.dataset.drawn){ flow.dataset.drawn = '1'; waRenderLinkFlow(); }
+  });
+  const hand = document.getElementById('wa_link_hand');
+  if(hand) hand.addEventListener('click', waSendTheSteps);
 }
 
 /* The furniture of a real messaging app, all pure and all held by the
@@ -31199,7 +31490,7 @@ function waRenderChannel(){
       </div>
     </div>
     <div class="wa-ra" style="padding-top:0;">
-      <button type="button" class="btn btn-ghost ow-sm" id="wa_conn_open">Connection</button>
+      <button type="button" class="btn btn-ghost ow-sm" id="wa_conn_open">The connection, in Setup</button>
     </div>
     ${gapRows.join('')}
     ${pack.error ? `<p class="wa-note wa-note-warn"><b>The list the system answers from did not refresh.</b>
@@ -31220,12 +31511,11 @@ function waRenderChannel(){
     waRenderChannel();
     renderWhatsApp();
   });
+  /* THE CONNECTION IS NOT ON THIS SCREEN ANY MORE, so this is a door
+     rather than a pane: it goes where the decision lives and opens the
+     flow there, instead of unfolding a setup job inside a desk. */
   const conn = document.getElementById('wa_conn_open');
-  if(conn) conn.addEventListener('click', ()=>{
-    document.getElementById('wa_console').style.display = 'none';
-    document.getElementById('wa_connect_pan').style.display = '';
-    waRenderConnect();
-  });
+  if(conn) conn.addEventListener('click', ()=> waOpenLinkSetup());
 }
 
 
@@ -31462,7 +31752,15 @@ function goToTab(tab){
   // boot. It mattered little when the panes were the whole screen, and
   // it matters now the rail carries counts -- a count is a claim about
   // current data, so it has to be made against current data.
-  if(tab==='presets') renderPresets();
+  if(tab==='presets'){
+    renderPresets();
+    /* The card's figures are read off the books on entry -- how many
+       products could be browsed, and the biggest list one message could
+       go to -- because both change with every photo and every sale, and
+       a card arguing for a feature with a stale figure is arguing with
+       the wrong number. */
+    renderWaLink();
+  }
   /* The sticky totals bar is fixed to the viewport, so it must exist
      only while this tab does -- gated by a body class the bar's CSS
      reads, set here where every tab switch already passes. */
@@ -97101,12 +97399,22 @@ function renderMessages(){
   queue.style.display = onPost ? 'none' : '';
   posting.style.display = onPost ? '' : 'none';
   /* Posting has a door of its own, onto the inbox and the record. */
+  /* NO DOOR WITHOUT A ROOM. Everything behind this one -- who is
+     waiting, who was answered, what the system answered by itself, the
+     broadcast arithmetic, the channel's health -- is read off an inbox,
+     and there is no inbox until the number is linked. The door used to
+     open onto one grey sentence saying so, which is the same fault the
+     old connection panel had, in miniature: a place in a working screen
+     held by something that is not there. The register's own line at the
+     foot of the list is where the offer to link belongs. */
+  const linked = waLinked();
   const phub = document.getElementById('post_hub_body');
-  if(phub) phub.hidden = !onPost || !postHubOpen;
+  if(phub) phub.hidden = !onPost || !postHubOpen || !linked;
   const phubBtn = document.getElementById('post_hub_btn');
   if(phubBtn){
-    phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen) ? 'true' : 'false');
-    phubBtn.classList.toggle('om-on', onPost && postHubOpen);
+    phubBtn.hidden = !linked;
+    phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen && linked) ? 'true' : 'false');
+    phubBtn.classList.toggle('om-on', onPost && postHubOpen && linked);
   }
   /* THE QUEUE'S OWN CHROME goes with the queue. The figure cards, the
      phone head and the note row sit OUTSIDE #msg_queue_body -- they are
@@ -97256,12 +97564,34 @@ function renderMessages(){
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${msgShowSent ? 'm18 15-6-6-6 6' : 'M5 12h14'}"/>${msgShowSent ? '' : '<path d="m12 5 7 7-7 7"/>'}</svg></button>` : ''}
   </div>`;
 
+  /* 6. THE ONE LINE THE CONNECTION LEAVES BEHIND.
+
+        A quarter of this screen used to be a panel saying the number is
+        not linked, three times over, with a table of three absences and
+        an offer to CHECK a connection nobody had made. The decision went
+        to Setup, where a thing done once belongs. What stays is this:
+        one line, at the FOOT of a list that has real work in it, so it
+        is read after the work rather than instead of it.
+
+        Not a lens, not a tab, and not a band announcing a void. And it
+        is not drawn at all once the number is linked -- at that point
+        the chats have somewhere of their own to arrive. */
+  if(!waLinked()){
+    html += `<div class="om-linkline">
+      <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>
+      <span style="flex:1;min-width:0">Chats could be answered here too. Link your number and the replies to these messages arrive on this screen.</span>
+      <button type="button" class="om-btn om-btn-s" data-msglink="1" style="height:30px;padding:0 11px;font-size:12px;flex:none">Link WhatsApp</button>
+    </div>`;
+  }
+
   list.innerHTML = html;
   list.querySelectorAll('[data-msgrow]').forEach(row=>{
     row.addEventListener('click', ()=>{ msgPickedId = row.dataset.msgrow; msgPanelForm = null; renderMessages(); });
   });
   const wait = list.querySelector('[data-msgwaiting]');
   if(wait) wait.addEventListener('click', ()=>{ msgWaitingOpen = true; renderMessages(); });
+  const link = list.querySelector('[data-msglink]');
+  if(link) link.addEventListener('click', ()=> waOpenLinkSetup());
   const showSent = list.querySelector('[data-msgsent]');
   if(showSent) showSent.addEventListener('click', ()=>{
     msgShowSent = !msgShowSent;

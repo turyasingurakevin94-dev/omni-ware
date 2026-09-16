@@ -242,9 +242,18 @@ if (!hook) process.exit(1);
      a bearer token is not. */
   t.check(!/graph\.facebook\.com|Bearer \$\{/.test(src),
     'the browser never calls Meta directly and holds no bearer token');
+  /* THE CHECKLIST IS TWO FUNCTIONS NOW, and that is the point of the
+     change rather than an accident of it. waRenderConnect drew one blob
+     of markup on the Messages desk; the instructions are written once in
+     waStepsText() -- so they can be SENT to whoever does the work -- and
+     rendered by waRenderLinkFlow() for whoever is at this computer. The
+     claim is unchanged and is the one that matters: every mention of the
+     secret is inside those two, which are prose and a form, and none of
+     it is anywhere a token could be read or used. */
   const secretMentions = (src.match(/WHATSAPP_ACCESS_TOKEN/g) || []).length;
-  const checklist = (/waRenderConnect[\s\S]*?<\/div>`;/.exec(src) || [''])[0];
-  t.check(secretMentions > 0 && (checklist.match(/WHATSAPP_ACCESS_TOKEN/g) || []).length === secretMentions,
+  const instructions = extractFunction(src, 'waStepsText', 'index.html')
+    + extractFunction(src, 'waRenderLinkFlow', 'index.html');
+  t.check(secretMentions > 0 && (instructions.match(/WHATSAPP_ACCESS_TOKEN/g) || []).length === secretMentions,
     'the token is mentioned only in the setup instructions, nowhere executable');
   t.check(!/from\('wa_messages'\)\s*\.\s*(insert|upsert|update|delete)/.test(src),
     'the client never writes a message row');
@@ -272,8 +281,27 @@ if (!hook) process.exit(1);
      one screen, and the inbox is still where the shop hears back. */
   t.check(/if\(tab==='messages'\)\{ waInboxEnter\(\); renderMessages\(\); \}/.test(src),
     'entering the tab starts the desk, which draws the rest once it knows the number is linked');
-  t.check(/if\(currentActiveTab !== 'whatsapp' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
-    'the poller stops itself when the user leaves the tab');
+  /* THERE IS NO POLLER TO STOP. This asserted that the 12-second inbox
+     refresh cleared itself when the user left the tab — guarded by
+     `currentActiveTab !== 'whatsapp'`, which stopped being reachable the
+     moment WhatsApp and Follow-ups became one screen called Messages.
+     The guard was then TRUE on every tick, so the interval cleared
+     itself immediately and had refreshed nothing since; the assertion
+     went on passing because it read the guard rather than the effect.
+     The handoff settles it from the other side: the register must not
+     poll a connection it does not need. So the interval is deleted, and
+     what is checked now is its absence — a dead poller reads to the next
+     person like a live one, which is worse than none. */
+  t.check(!/setInterval/.test(extractFunction(src, 'waInboxEnter', 'index.html')),
+    'entering the register starts no poller — it reads the inbox once and does not sit asking');
+  /* Read with the comments stripped: the note that records WHY the
+     interval went names it, and a headstone is not a body. What must be
+     gone is anything that RUNS — the constant it was timed by and the
+     handle it was held in. */
+  const live = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  t.check(!/WA_INBOX_POLL_MS/.test(live) && !/waInbox\.timer/.test(live),
+    'and neither the interval nor the handle it was held by is left behind');
   t.check(/action: 'send', conversationId: waInbox\.active, text/.test(src),
     'a reply goes through the edge function, with the conversation named');
   t.check(/<textarea id="wa_reply" data-conv="\$\{c\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
@@ -307,18 +335,27 @@ if (!hook) process.exit(1);
      shop that HAS connected must still be able to get back in. */
   /* Outside the checklist means outside waRenderConnect's own markup:
      a door drawn only by the room it opens is not a door. */
+  /* IT IS A DOOR TO ANOTHER SCREEN NOW, not a pane that replaces this
+     one. The connection moved to Setup › The shop, because linking a
+     number is done once, with a phone in your hand, often by somebody
+     other than the owner — and a setup job does not get a standing
+     quarter of a screen that is worked every day. The claim survives
+     intact: a shop that HAS connected must still be able to get back in,
+     and the way in is beside the facts it governs. */
   const chanFn = extractFunction(src, 'waRenderChannel', 'index.html');
-  const connFn = extractFunction(src, 'waRenderConnect', 'index.html');
-  t.check(/id="wa_conn_open">Connection<\/button>/.test(chanFn)
-    && !/id="wa_conn_open"/.test(connFn),
-    'connection settings are reachable outside the checklist');
-  t.check(/conn\.addEventListener\('click', \(\)=>\{[\s\S]{0,240}?waRenderConnect\(\);/.test(src),
+  t.check(/id="wa_conn_open">The connection, in Setup<\/button>/.test(chanFn),
+    'connection settings are reachable from the desk they govern');
+  t.check(/conn\.addEventListener\('click', \(\)=> waOpenLinkSetup\(\)\);/.test(src),
     'and the button actually opens them');
+  const door = extractFunction(src, 'waOpenLinkSetup', 'index.html');
+  t.check(/goToTab\('presets'\)/.test(door) && /wa_link_go/.test(door) && /scrollIntoView/.test(door),
+    'by going to the page the card is on, opening the flow, and putting it in front of the eye');
   /* And back out again. The old checklist was a dead end you left by
-     switching tabs; a shop that opened it to check one number could not
-     return to the desk it came from. */
-  t.check(/id="wa_conn_back">Back to the desk<\/button>/.test(src),
-    'with a way back to the desk for a shop that is already connected');
+     switching tabs; "Back to the desk" was its way out. It is a separate
+     screen now, so the way back is the rail — which is every screen's
+     way back, and one this app does not have to build or keep in step. */
+  t.check(!/id="wa_conn_back"/.test(src),
+    'and needs no private way back, because leaving a screen is what the rail is for');
   t.check(/\.delete\(\)\.eq\('shop_id', currentShopId\)\.neq\('phone_number_id', v\);/.test(src),
     'saving a new number replaces the old mapping instead of standing beside it');
 }
