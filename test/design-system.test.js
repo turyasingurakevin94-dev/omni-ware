@@ -926,6 +926,57 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        rows two different heights -- and a register whose rows are not
        the same height cannot be scanned, which is the only thing it is
        for. */
+    /* INVOICES HAS CHANGED SYSTEMS, and this entry is the argument for
+       it rather than a patch that made two checks go quiet.
+
+       WHAT THE OLD ASSERTION MEANT. Invoices was the console's: .ow-ph
+       for the header, .ow-strip for the position, .ow-pan around an
+       .ow-tbl that renderInvoices filled. Listing those here is what
+       stopped a later session hand-rolling a seventeenth table onto a
+       screen that already had the layer's.
+
+       WHY IT STOPPED BEING TRUE. The owner commissioned a design pass
+       from outside this repo, chose to adopt it rather than translate it,
+       and Invoices is one of the four screens it clothes. The screen is
+       on the .om- card system now: a 58px top bar, the title block with
+       its lens group, a four-card KPI strip, and the register as
+       .om-lrow rows grouped by what needs attention. So the old list is
+       not a weaker claim about this screen, it is a claim about a screen
+       that no longer exists.
+
+       WHAT THE NEW ASSERTION MEANS. The same guarantee, one system over:
+       the sales register may not be hand-rolled back onto the console's
+       families, and it must be built out of the card system's named
+       components. 'retired' is UNCHANGED and still enforced -- every one
+       of those families is still forbidden here, and moving systems is
+       not an amnesty for the ones the console retired.
+
+       WHAT IS DELIBERATELY NOT RETIRED, and this is the part to read
+       before assuming this screen is finished. The section still wears
+       ow-grid, ow-side, ow-strip, ow-seg, ow-seg-b, ow-seg-n, ow-tb and
+       ow-on, for two reasons, both recorded in
+       docs/design-suggestions-sell-section.md:
+
+         1. THE PURCHASES PANE IS STILL THE CONSOLE SCREEN. The handoff
+            does not draw it. Its frame replaces the Sales/Purchases lens
+            pair with Needs attention / All / Voided and shows purchases
+            only as PINV pills, which would take the buying side's four
+            checks with it -- the same delivery billed twice, a line
+            priced above anything ever paid that supplier, a bill with no
+            delivery behind it, money paid beyond what was billed. Those
+            checks are real and are not being deleted on the strength of
+            a frame that does not mention them. The pills open the bill
+            in that pane, so it is reachable rather than orphaned.
+
+         2. FOUR CONTROLS HAVE NO HOME IN THE NEW DESIGN and are kept
+            hidden rather than removed, because their handlers are live:
+            the seven date presets, the select-all and its bulk
+            operations, Hide voided (the Voided lens does that job, and
+            the hidden checkbox is kept in step with it), and Print list.
+            A hidden control is a debt; that file is the ledger of it.
+
+       So this screen is HALF converted on purpose, and the half that is
+       converted is held to the card system here. */
     invoices: {
       retired: ['panel', 'qp-panel', 'an-toolbar', 'field', 'panel-head-row', 'btn-row',
                 'sq-select-all-label', 'empty',
@@ -934,13 +985,38 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sc-stats', 'sc-stat', 'an-rank', 'sortable', 'sort-arrow',
                 'pc-icon-btn', 'inv-row-actions', 'inv-doc-link', 'inv-status',
                 'inv-status-cell', 'inv-row-voided', 'inv-total-row', 'inv-total-label',
-                'deb-card-prog'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
-      renders: 'renderInvoices',
-      rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
-                    'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
-                    'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+                'deb-card-prog',
+                /* And the console families the SALES side has now left.
+                   ow-tbl in particular: the register is .om-lrow, and a
+                   second table idiom appearing here would be the exact
+                   fault the console's own entry was written to stop. */
+                'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-tbl', 'ow-tbl-h',
+                'ow-tbl-r', 'ow-tbl-g', 'ow-mt', 'ow-cp'],
+      uses: ['om-screen', 'om-top', 'om-crumb', 'om-find', 'om-find-i', 'om-keycap', 'om-face',
+             'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens', 'om-lenschip',
+             'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-l', 'om-col', 'om-scroll', 'om-side', 'om-ph-head', 'om-ph-only'],
+      /* Seven builders, because the register, its rows, the strip, the
+         phone's own header and the panel are five different questions and
+         one function answering all of them is how a row and its subtotal
+         come to disagree. */
+      renders: ['renderInvoices', 'invRegisterRowHTML', 'renderInvoiceKpis',
+                'renderInvoicePhoneHead', 'renderInvoiceSide', 'invChipHTML', 'invPinvPillsHTML'],
+      /* om-done and om-on are NOT listed, and the reason is the
+         tokeniser rather than the screen: both are applied through a
+         template expression (class="om-lrow${dim}${on}"), and this check
+         reads only the literal head of a class attribute -- by design,
+         since that is what stopped a renamed band passing on the strength
+         of its own cells. Listing them would assert something this
+         mechanism cannot see. The dimming of settled rows is real and is
+         pinned by the register's own test instead. */
+      rendersUses: ['om-lrow', 'om-grow', 'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n',
+                    'om-pill', 'om-p-paid', 'om-p-owed', 'om-p-void',
+                    'om-kpi', 'om-kpi-f', 'om-kpi-s',
+                    'om-pan', 'om-pan-t', 'om-pan-m', 'om-figs', 'om-figs-f', 'om-blk', 'om-acts',
+                    'om-drow', 'om-read', 'om-btn', 'om-btn-p', 'om-btn-s', 'om-btn-g',
+                    'om-ph-t', 'om-ph-figs', 'om-ph-fig', 'om-ph-fig-l', 'om-ph-fig-v',
+                    'om-ph-tabs', 'om-ph-tab'],
     },
     /* Customers. The screen was a second debt book -- a grid of cards
        whose largest figure was a debt balance, on a question Debtors

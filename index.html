@@ -16461,7 +16461,7 @@
   .om-lrow,.om-crow,.om-arow,.om-mrow{align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer;display:grid}
   .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover{background:var(--om-hover)}
   .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on{background:var(--om-selected)}
-  .om-lrow{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
+  .om-lrow,.om-cols-l{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
   .om-crow{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
   .om-arow{grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px}
   .om-mrow{grid-template-columns:30px minmax(160px,1fr) 96px 96px 74px}
@@ -16845,6 +16845,10 @@
 
      What is NOT here is the rail or the phone tab bar. Both are app
      chrome that exists once, above; a screen never draws its own. */
+  /* The two designs, and which parts belong to only one of them. The
+     phone header replaces the top bar, the KPI strip and the title block
+     wholesale rather than reflowing them. */
+  .om-ph-only{display:none}
   .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground)}
   .om-top{flex:none;height:58px;background:var(--om-surface);border-bottom:1px solid var(--om-rule);display:flex;align-items:center;gap:16px;padding:0 22px}
   .om-crumb{display:flex;align-items:center;gap:8px;flex:none;min-width:0}
@@ -16867,6 +16871,12 @@
   .om-kpi{background:var(--om-surface);border:1px solid var(--om-rule);border-radius:14px;padding:12px 14px;min-width:0}
   .om-kpi-f{margin-top:3px;font-size:20px}
   .om-kpi-s{margin-top:1px;font-size:11.5px;color:var(--om-ink-3)}
+  /* One bad and one good at most, which is the handoff's rule. The tint
+     is the card's ground, so the sub-line takes the card ink rather than
+     --om-ink-3, which would drop under 4.5:1 on it. */
+  .om-kpi-bad{background:var(--om-bad-card);border-color:var(--om-bad-card-rule)}
+  .om-kpi-good{background:var(--om-good-card);border-color:var(--om-good-card-rule)}
+  .om-kpi-warn{background:var(--om-caution-card);border-color:var(--om-caution-card-rule)}
 
   /* The detail column scrolls; every card in it is flex:none so the
      column scrolls instead of squashing the cards flat. */
@@ -16899,6 +16909,10 @@
   /* ---- the phone, which is a separate design and not a reflow ---- */
   @media (max-width: 820px){
     .om-top,.om-kpis{display:none}
+    .om-ph-only{display:block}
+    .om-qtitle{display:none}
+    .om-card.om-list{border:0;border-radius:0;box-shadow:none}
+    .om-card-h,.om-cols{display:none}
     .om-body{display:block;padding:0}
     .om-list{overflow:visible}
     .om-side{width:auto;overflow:visible;padding:12px 16px 16px}
@@ -16906,6 +16920,7 @@
     .om-ph-t{font-size:19px;font-weight:700;color:var(--om-on-navy);letter-spacing:-0.02em}
     .om-ph-figs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
     .om-ph-fig{background:var(--om-rail-hover);border-radius:10px;padding:8px 10px;min-width:0}
+    .om-ph-fig-bad{background:var(--om-bad-card)}
     .om-ph-fig-l{font-size:9.5px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-on-navy-4)}
     .om-ph-fig-v{margin-top:2px;font-size:14px;color:var(--om-on-navy)}
     .om-ph-tabs{display:flex;gap:2px;margin-top:10px}
@@ -17956,135 +17971,61 @@
          where the shop actually reads this. They are rows of their own
          now, in words. -->
     <section id="tab-invoices" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Invoices</h1>
-        <p class="ow-ph-sub">Every invoice the shop has raised, open money first.</p>
-        <p class="ow-ph-help">Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it &mdash; it stays visible on the Order tracking board for 24 hours, then moves here only. This is the register of documents: find one, print it, take a payment against it, and read what the range was billed. What each customer owes in total, and how old it is, is a different question and has its own screen &mdash; Debtors; asking them for it is Follow-ups, under <b>Money</b>, where the words are already written. A voided invoice is kept, never deleted, because a cancelled document that vanishes cannot be explained to anybody later. Two different things can be done to a document that is wrong, and they are not interchangeable: <b>void</b> cancels the paper &mdash; the goods went, money already received stays in the Cash Book, and the customer stops owing for it; <b>undo invoice</b> says it should never have been raised &mdash; the stock goes back on the shelf, the payments and their Cash Book entries are reversed, the purchase invoices it raised are removed, and the order returns to Order tracking where a wrong quantity can be corrected and the invoice raised again. Both ask first and name what they are about to remove.</p>
-        <!-- WHAT A SUPPLIER BILLED YOU, the other half of the same
-             transaction. It was its own screen; the words are unchanged
-             because the argument is. -->
-        <p class="ow-ph-help inv-help-buys" hidden>A bill is raised when an order is marked invoiced &mdash; one per supplier used on it &mdash; or when a delivery you were waiting for is received against your own purchase order. Nothing here is typed in from scratch. Every bill in the range is checked as the screen draws: the same delivery billed twice, a line priced above anything you have ever paid that supplier, a bill with no delivery behind it on the stock record, and money paid out beyond what was billed. What is not checked is said too, because a checking screen whose silence you cannot read is worse than none: nothing here knows whether the goods that came were the ones ordered, or whether a price you have never paid before is a fair one. Opening a bill shows its lines against what the same goods last cost you from that same supplier, so a price can be argued before it is paid rather than after. Who to pay first is Creditors, not this screen. A voided bill is kept and struck through, never deleted, and voiding one raised from your own purchase order takes the goods back off the shelf &mdash; the button says so before it acts.</p>
-        <!-- TWO REGISTERS, ONE TRANSACTION, ONE AT A TIME.
+      <!-- INVOICES, in the 2026 card system.
 
-             Invoicing a customer's order RAISES a supplier bill for every
-             supplier used on it: purchaseInvoicesForOrder() has always
-             known it, and the sales row has always carried its "Raised"
-             links. What it could not do was land anywhere useful --
-             revealPurchaseInvoice had to change tab, type the number into
-             the OTHER screen's search box, widen its date range and drop
-             its voided filter, and getting back meant undoing all four by
-             hand because the list you left was gone.
+           The decision this screen keeps: a sale and the purchase
+           invoices raised to fill it are ONE PIECE OF MONEY, so they
+           share one register. The sale is the row; what was bought for it
+           rides on the row's second line as PINV pills, and the panel
+           closes with what the shop kept on the pair.
 
-             A LENS, NOT A SPLIT. Side by side was drawn: at 1440, with
-             the rail off, each register gets 578px, which costs the sales
-             side four of its eight columns including the select-all the
-             bulk-void depends on, and the buying side its 304px rail and
-             the whole checks band. This app has a law against it already
-             -- Movements was pulled OUT of Inventory for being a whole
-             second console stacked under the first. -->
-        <span class="ow-ph-sp"></span>
+           The lenses changed meaning, which is the substantive part.
+           They used to order the same list three ways (Open first /
+           Newest / Biggest); they now SELECT which list, because the
+           order is settled by the groups underneath -- overdue oldest
+           first, then open, then what settled today, dimmed. An order you
+           can choose is a question about the screen; a group you can read
+           is a question about the money.
+
+           WHAT HAS NO HOME IN THIS DESIGN, and is kept below rather than
+           deleted, because the handlers are live and the functions are
+           real: the seven date presets, the select-all and its bulk
+           operations, the Hide voided checkbox (the Voided lens does that
+           job now), and Print list (the panel's overflow carries print
+           for one document). Each is named in
+           docs/design-suggestions-sell-section.md so a designer can give
+           it one. A control that is hidden rather than removed is a debt,
+           and that file is the ledger of it. -->
+      <div id="inv_legacy_controls" hidden aria-hidden="true">
+        <!-- Range: 'all' rather than the old 'Last 30 days'. The design
+             draws no date control, and 30 days would hide the oldest
+             overdue invoice on the screen -- which is the one row the
+             whole layout is built to put first. -->
+        <select id="inv_doc_range_preset">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="month">This month</option>
+          <option value="all" selected>All time</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="date" id="inv_doc_from">
+        <input type="date" id="inv_doc_to">
+        <input type="checkbox" id="inv_doc_hide_voided">
         <div class="ow-seg inv-side" id="iv_side" role="tablist" aria-label="Which register">
           <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-side="sales">Sales<span class="ow-seg-n" id="ivSideSales"></span></button>
           <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-side="buys">Purchases<span class="ow-seg-n" id="ivSideBuys"></span></button>
         </div>
-        <!-- THE ACCENT, and the only one on this screen -- ON SALES. On a
-             register that exists to be searched and read, carrying it away
-             on paper is the one thing there is to do next: the sheet a
-             person walks the yard with. Every row action is a quiet ghost
-             so that this reads as the one.
-
-             On PURCHASES the same button goes ghost, because the accent
-             there belongs to whatever the bill you have opened needs --
-             which is the reasoning that screen already carried when the
-             two were separate. The oxide is spent once either way; the
-             lens decides where. -->
-        <button type="button" class="btn btn-accent ow-sm" id="inv_doc_print_list_btn">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-          Print list
-        </button>
-        <!-- SEARCH IS THE FIRST CONTROL, not the last. At this volume the
-             list is never read whole: it is narrowed to a question and
-             then read. Doc number, customer, or anything on the lines.
-
-             ONE BAR FOR BOTH LENSES, because it already was one: the two
-             screens carried the same search-first placement, the same
-             seven date presets and the same Hide voided, and the second
-             one's own comment said "as on Invoices". Two copies of one
-             bar is precisely what made the cross-screen link expensive.
-
-             AND ONE GROUP, so it wraps as one. The lens added a control
-             to a header row that was already full, and left to itself the
-             bar broke apart -- Search stranded on the right of row one
-             with Date range and Hide voided on the left of row two, one
-             bar at two alignments. Given the whole width it is the row
-             under the name it always read as, and it stays INSIDE the
-             sticky header, so it is still there when the register is
-             scrolled. -->
-        <div class="inv-find">
-          <div class="ow-f ow-ph-f inv-f inv-f-search">
-            <label class="ow-f-l" for="inv_doc_search">Search</label>
-            <input id="inv_doc_search" class="ow-f-in an-sel" placeholder="Doc No. / customer / item...">
-          </div>
-          <div class="ow-f ow-ph-f inv-f">
-            <label class="ow-f-l" for="inv_doc_range_preset">Date range</label>
-            <select id="inv_doc_range_preset" class="ow-f-in an-sel">
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="7">Last 7 days</option>
-              <option value="30" selected>Last 30 days</option>
-              <option value="90">Last 90 days</option>
-              <option value="month">This month</option>
-              <option value="all">All time</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="ow-f ow-ph-f inv-f" id="inv_doc_from_field" style="display:none;">
-            <label class="ow-f-l" for="inv_doc_from">From</label>
-            <input type="date" id="inv_doc_from" class="ow-f-in an-sel">
-          </div>
-          <div class="ow-f ow-ph-f inv-f" id="inv_doc_to_field" style="display:none;">
-            <label class="ow-f-l" for="inv_doc_to">To</label>
-            <input type="date" id="inv_doc_to" class="ow-f-in an-sel">
-          </div>
-          <label class="inv-ck inv-f" for="inv_doc_hide_voided">
-            <input type="checkbox" id="inv_doc_hide_voided" checked>
-            <span>Hide voided</span>
-          </label>
-        </div>
-      </div>
-
-      <div id="inv_sales_pane">
-      <!-- WHAT THE RANGE WAS BILLED, before anybody searches. Four
-           figures over every invoice the filters matched, never over the
-           page being shown. The fourth is the one this screen can say
-           and Debtors cannot: the oldest document still open, and whose
-           it is. -->
-      <div class="ow-strip" id="inv_strip"></div>
-
-      <div class="ow-pan inv-pan">
-        <div class="ow-pan-h an-tbh">
-          <span class="ow-pan-t">The register</span>
-          <!-- The order, named so it can be argued with -- and one
-               mechanism for it, working the same on both designs.
-               Clickable column headings were a second mechanism that
-               disappeared entirely on the phone, where the headings do. -->
-          <div class="ow-seg" id="inv_lens" role="tablist" aria-label="How the register is ordered">
-            <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-lens="open">Open first</button>
-            <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-lens="date">Newest</button>
-            <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-lens="big">Biggest</button>
-          </div>
-          <span class="ow-pan-n" id="inv_pan_n"></span>
-        </div>
+        <button type="button" id="inv_doc_print_list_btn">Print list</button>
         <div class="ow-tb inv-tb">
           <label class="inv-ck" for="inv_doc_select_all_th">
             <input type="checkbox" id="inv_doc_select_all_th">
             <span id="inv_select_all_label">Select all</span>
           </label>
           <div class="inv-bulk-dd" id="inv_bulk_dd">
-            <button type="button" class="btn btn-ghost ow-sm" id="inv_bulk_dd_btn">
-              Bulk operation
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
+            <button type="button" id="inv_bulk_dd_btn">Bulk operation</button>
             <div class="inv-bulk-dd-menu" id="inv_bulk_dd_menu">
               <button type="button" id="inv_doc_print_selected_btn">Print selected (A5)</button>
               <button type="button" id="inv_doc_void_selected_btn">Void selected</button>
@@ -18092,9 +18033,73 @@
             </div>
           </div>
         </div>
-
-        <div id="invoicesWrap"></div>
+        <div id="inv_strip"></div>
+        <span id="inv_pan_n"></span>
       </div>
+
+      <div class="om-screen">
+
+        <div class="om-top">
+          <div class="om-crumb">
+            <span class="om-crumb-p">Sell</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-quiet);flex:none"><path d="m9 18 6-6-6-6"/></svg>
+            <span class="om-crumb-n">Invoices</span>
+          </div>
+          <!-- The placeholder names what can be searched, and the app's
+               one search box is this one -- not a second bar. -->
+          <div class="om-find">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="inv_doc_search" class="om-find-i an-sel" placeholder="Invoice no., customer, supplier or amount" aria-label="Search invoices">
+            <span class="om-keycap">Ctrl K</span>
+          </div>
+          <div class="om-top-sp"></div>
+          <!-- Where the orders behind these invoices have got to. Read
+               off the board rather than reckoned again here. -->
+          <div id="inv_stages" style="display:flex;align-items:center;gap:7px;flex:none"></div>
+          <div class="om-face" id="inv_face" aria-hidden="true"></div>
+        </div>
+
+        <div class="om-qtitle">
+          <div style="flex:1;min-width:0">
+            <h1 class="om-qtitle-t">Invoices</h1>
+            <p class="om-qtitle-s">What was billed and what was bought to fill it &middot; ordered by the money that needs attention</p>
+          </div>
+          <div class="om-lensgroup" id="inv_lens" role="tablist" aria-label="Which invoices">
+            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-lens="attention">Needs attention <span class="om-chip om-lenschip" id="invLensN_attention"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-lens="all">All <span class="om-chip om-lenschip" id="invLensN_all"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-lens="voided">Voided <span class="om-chip om-lenschip" id="invLensN_voided"></span></button>
+          </div>
+        </div>
+
+        <div class="om-kpis" id="inv_kpis"></div>
+
+        <!-- THE PHONE'S OWN HEADER. Not the desktop's reflowed: the navy
+             block carries the title, three figures and the lenses as
+             underlined tabs, and the top bar, KPI strip and title block
+             above are all switched off at 820px. -->
+        <div class="om-ph-only om-ph-head" id="inv_ph_head"></div>
+
+        <div class="om-body">
+          <div class="om-card om-list">
+            <div class="om-card-h">
+              <span class="om-card-t">Money in and money out</span>
+              <span style="font-size:11.5px;color:var(--om-ink-3)">bought for it:</span>
+              <span class="om-pill om-p-paid">paid</span>
+              <span class="om-pill om-p-owed">owed</span>
+              <span style="flex:1"></span>
+              <span style="font-size:11.5px;color:var(--om-ink-3)" id="inv_showing"></span>
+            </div>
+            <div class="om-cols om-cols-l">
+              <span class="om-col">Date</span>
+              <span class="om-col">Customer &middot; bought for it</span>
+              <span class="om-col" style="text-align:right">Invoiced</span>
+              <span class="om-col" style="text-align:right">Still due</span>
+              <span class="om-col" style="text-align:right">State</span>
+            </div>
+            <div class="om-scroll" id="invoicesWrap"></div>
+          </div>
+          <div class="om-side" id="inv_side"></div>
+        </div>
       </div>
 
       <!-- THE OTHER REGISTER. The unit here is ONE BILL: what a supplier
@@ -43930,377 +43935,497 @@ function invoiceOpenDays(q){
   const days = Math.floor((Date.parse(todayISO()) - Date.parse(d)) / 86400000);
   return days >= 0 ? days : 0;
 }
-const INV_LENS_STATE = {key:'open'};
-let invLastRows = [];
+/* THE REGISTER'S LENSES SELECT A LIST, they no longer order one.
 
-// Shows only quotes that reached Step 4 (Completed) AND were explicitly
-// converted to an invoice via the "Make invoice" button on Saved Quotes.
+   They used to be Open first / Newest / Biggest -- three orderings of the
+   same rows. The order is settled now by the groups underneath (overdue
+   oldest first, then open, then what settled today, dimmed), so the
+   lenses answer the question above that: which of these documents am I
+   looking at. An order you can choose is a question about the screen; a
+   group you can read is a question about the money. */
+const INV_LENS_STATE = {key:'attention'};
+let invLastRows = [];
+/* Which row fills the panel. It survives a lens switch while the row is
+   still on screen and is dropped when it is not: a panel describing a
+   document the list no longer shows is the screen disagreeing with
+   itself. */
+let invPickedId = null;
+
+/* WHEN THE MONEY WAS DUE -- and the honest answer when nobody agreed a
+   date. Terms live on the CUSTOMER, not the invoice, so an invoice to a
+   customer with no terms agreed has no due date and this app does not
+   invent one. Such a document is Open, never Overdue, and the panel says
+   "no terms agreed" where a date would otherwise go. Inventing 30 days
+   here would manufacture an overdue figure out of nothing, which is the
+   one thing a debt screen may never do. */
+function invCustomerOf(q){
+  const id = (q && q.client && q.client.customerId != null) ? q.client.customerId
+           : (q && q.customerId != null) ? q.customerId : null;
+  if(id == null) return null;
+  return data.customers.find(c=>c.id===id) || null;
+}
+function invoiceDueISO(q){
+  const raised = q.invoicedAt || q.date;
+  if(!raised) return null;
+  const c = invCustomerOf(q);
+  if(!c || c.termsDays == null) return null;
+  return anShiftDate(raised, Number(c.termsDays)||0);
+}
+function invoiceDaysOverdue(q){
+  const due = invoiceDueISO(q);
+  if(!due) return null;
+  const d = Math.floor((Date.parse(todayISO()) - Date.parse(due)) / 86400000);
+  return d > 0 ? d : 0;
+}
+function invBalanceOf(q){ return Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0)); }
+/* Four states. The difference between the middle two is a date somebody
+   agreed, not a judgement this screen makes. */
+function invStateOf(q){
+  if(q.voided) return 'voided';
+  if(invGroupOf(q) === 'settled') return 'settled';
+  const od = invoiceDaysOverdue(q);
+  return (od && od > 0) ? 'overdue' : 'open';
+}
+const INV_STATE_CHIP = {
+  overdue: ['unpaid', '--om-bad', '--om-bad-ink'],
+  open:    ['open',   '--om-neutral', '--om-neutral-ink'],
+  settled: ['paid',   '--om-good', '--om-good-ink'],
+  voided:  ['void',   '--om-neutral', '--om-neutral-ink'],
+};
+function invChipHTML(q){
+  const st = invStateOf(q);
+  let [word, bg, ink] = INV_STATE_CHIP[st];
+  /* Part paid is a state of its own on the row even though it groups with
+     Open: the figure beside it is smaller than the invoice, and a chip
+     reading "open" next to a reduced balance reads as a wrong figure. */
+  if(st !== 'voided' && st !== 'settled' && (Number(q.amountPaid)||0) > 0.5){
+    word = 'part'; bg = '--om-caution'; ink = '--om-caution-ink';
+  }
+  return `<span class="om-chip" style="height:19px;padding:0 7px;background:var(${bg});color:var(${ink})">${word}</span>`;
+}
+/* What was bought to fill this sale, as pills on the row's second line.
+   Green when the bill is settled, amber with what is still owed when it
+   is not, struck through when it was cancelled. */
+function invPinvPillsHTML(q){
+  const pis = purchaseInvoicesForOrder(q);
+  if(!pis.length) return '';
+  return `<div style="margin-top:3px;display:flex;gap:6px;overflow:hidden">` + pis.map(pi=>{
+    const label = purchaseInvoiceNumberLabel(pi).replace('-', '‑');
+    if(pi.voided) return `<span class="om-pill om-p-void">${esc(label)}</span>`;
+    const owed = purchaseInvoiceBalanceDue(pi);
+    return owed > 0.5
+      ? `<span class="om-pill om-p-owed" data-pinv="${pi.id}">${esc(label)} &middot; ${esc(fmtUGX(Math.round(owed)))}</span>`
+      : `<span class="om-pill om-p-paid" data-pinv="${pi.id}">${esc(label)}</span>`;
+  }).join('') + `</div>`;
+}
+
 function renderInvoices(filter=''){
   const wrap = document.getElementById('invoicesWrap');
+  if(!wrap) return;
   const tokens = searchTokens(filter);
   const {from, to} = invDocGetDateRange();
-  const hideVoided = document.getElementById('inv_doc_hide_voided').checked;
-  let invoices = data.savedQuotes.filter(q=>q.status==='completed' && q.invoiced);
-  invoices = invoices.filter(q=>{
+  let all = data.savedQuotes.filter(q=>q.status==='completed' && q.invoiced);
+  all = all.filter(q=>{
     const d = q.invoicedAt || q.date || '';
     if(from && d < from) return false;
     if(to && d > to) return false;
     return true;
   });
-  if(hideVoided) invoices = invoices.filter(q=>!q.voided);
+  /* The search reaches the bills too, because the placeholder promises a
+     supplier -- and a supplier's name is on the purchase invoice, never
+     on the sale. */
   if(tokens.length){
-    invoices = invoices.filter(q=>{
-      const haystack = [q.client.name||'', invoiceNumberLabel(q), ...(q.items||[]).map(it=>it.productName||'')].join(' ').toLowerCase();
-      return matchesAllTokens(haystack, tokens);
+    all = all.filter(q=>{
+      const pis = purchaseInvoicesForOrder(q);
+      const hay = [q.client && q.client.name || '', invoiceNumberLabel(q),
+        String(Math.round(savedQuoteTotal(q))),
+        ...(q.items||[]).map(it=>it.productName||''),
+        ...pis.map(pi=>purchaseInvoiceNumberLabel(pi)),
+        ...pis.map(pi=>pi.supplierName||'')].join(' ').toLowerCase();
+      return matchesAllTokens(hay, tokens);
     });
   }
-  /* THE ORDER, and it is the screen's argument.
 
-     Open first is the default because at this shop's volume a settled
-     invoice is finished business: it is looked up, not read. So the
-     open ones lead, OLDEST FIRST -- the order somebody collecting money
-     would work in, and the same order the debt ledger settles in -- and
-     the finished ones follow newest first, which is how you find one
-     you already have in mind. Voided sit last, because a cancelled
-     document is neither.
+  const byState = {overdue:[], open:[], settled:[], voided:[]};
+  all.forEach(q=>byState[invStateOf(q)].push(q));
+  /* Oldest money first among the overdue -- the order somebody collecting
+     actually works in. Open by when it falls due, settled newest first,
+     which is how a finished document is looked up. */
+  byState.overdue.sort((a,b)=>(invoiceDaysOverdue(b)||0)-(invoiceDaysOverdue(a)||0));
+  byState.open.sort((a,b)=>String(invoiceDueISO(a)||'9999').localeCompare(String(invoiceDueISO(b)||'9999')));
+  byState.settled.sort((a,b)=>String(b.invoicedAt||b.date||'').localeCompare(String(a.invoicedAt||a.date||'')));
+  byState.voided.sort((a,b)=>String(b.invoicedAt||b.date||'').localeCompare(String(a.invoicedAt||a.date||'')));
 
-     The other two lenses are flat orders on purpose: the lens IS the
-     order, and grouping underneath it would fight it. */
+  /* THE BADGE COUNTS WHAT NEEDS YOU: overdue plus open. Settled rows ride
+     along in the attention lens as the day's context, dimmed, and are not
+     counted -- a badge that rises because business went well trains
+     people to ignore badges. */
+  const attentionN = byState.overdue.length + byState.open.length;
+  const setChip = (key, n, bad)=>{
+    const el = document.getElementById('invLensN_'+key);
+    if(!el) return;
+    el.textContent = n;
+    el.style.background = bad && n ? 'var(--om-bad)' : 'var(--om-neutral)';
+    el.style.color = bad && n ? 'var(--om-bad-ink)' : 'var(--om-neutral-ink)';
+  };
+  setChip('attention', attentionN, true);
+  setChip('all', all.length, false);
+  setChip('voided', byState.voided.length, false);
+
   const lens = INV_LENS_STATE.key;
-  const dateOf = (q)=> q.invoicedAt || q.date || '';
-  const GROUP_RANK = {open:0, settled:1, voided:2};
-  invoices = invoices.slice().sort((a,b)=>{
-    if(lens==='big') return savedQuoteTotal(b) - savedQuoteTotal(a) || dateOf(b).localeCompare(dateOf(a));
-    if(lens==='date') return dateOf(b).localeCompare(dateOf(a)) || b.id - a.id;
-    const ga = invGroupOf(a), gb = invGroupOf(b);
-    if(ga !== gb) return GROUP_RANK[ga] - GROUP_RANK[gb];
-    if(ga === 'open') return dateOf(a).localeCompare(dateOf(b)) || a.id - b.id;
-    return dateOf(b).localeCompare(dateOf(a)) || b.id - a.id;
-  });
-  invLastRows = invoices;
+  /* Settled-in-the-attention-lens is TODAY's settlements only. The whole
+     month would bury the four rows the screen exists to put first. */
+  const settledToday = byState.settled.filter(q=>(q.invoicedAt||q.date||'')===todayISO());
+  let groups;
+  if(lens === 'voided'){
+    groups = [{key:'voided', rows:byState.voided}];
+  } else if(lens === 'all'){
+    groups = [{key:'overdue', rows:byState.overdue}, {key:'open', rows:byState.open},
+              {key:'settled', rows:byState.settled}, {key:'voided', rows:byState.voided}];
+  } else {
+    groups = [{key:'overdue', rows:byState.overdue}, {key:'open', rows:byState.open},
+              {key:'settled', rows:settledToday}];
+  }
+  groups = groups.filter(g=>g.rows.length);
+  const shown = groups.flatMap(g=>g.rows);
+  invLastRows = shown;
 
-  if(invoices.length===0){
-    document.getElementById('inv_strip').innerHTML = '';
-    document.getElementById('inv_pan_n').textContent = '';
-    /* Nothing to select and nothing to act on in bulk. A "Select all 24
-       shown" left over from the last render is a label about a list that
-       is no longer there, and a Bulk operation menu above an empty
-       region offers to void documents that do not exist. */
-    document.querySelector('.inv-tb').style.display = 'none';
-    document.getElementById('inv_doc_select_all_th').checked = false;
-    document.getElementById('inv_select_all_label').textContent = 'Select all';
+  const showing = document.getElementById('inv_showing');
+  if(showing) showing.textContent = shown.length ? `Showing ${shown.length} of ${all.length}` : '';
+
+  renderInvoiceKpis(byState, all);
+  renderInvoicePhoneHead(byState, attentionN, all);
+
+  if(!shown.length){
     /* Not enough is an answer, and it names the next action. */
-    wrap.innerHTML = data.savedQuotes.some(q=>q.status==='completed')
-      ? '<div class="ow-empty">No invoices matched. Widen the date range, or clear the search.<br>Completed orders show a &ldquo;Make invoice&rdquo; button in Order tracking.</div>'
-      : '<div class="ow-empty">No invoices yet. Move a saved quote to Step 4. Completed, then click &ldquo;Make invoice&rdquo;.</div>';
+    wrap.innerHTML = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
+      + (lens === 'voided'
+          ? `Nothing has been voided. A cancelled invoice is kept here, never deleted.`
+        : all.length
+          ? `Nothing needs you here &mdash; every invoice in the range is settled.<br>Press <b>All</b> to read the whole register.`
+        : data.savedQuotes.some(q=>q.status==='completed')
+          ? `No invoices matched. Clear the search.<br>Completed orders carry a &ldquo;Make invoice&rdquo; button on the Order tracking board.`
+          : `No invoices yet. Move a saved quote to Step&nbsp;4. Completed, then press &ldquo;Make invoice&rdquo;.`)
+      + `</div>`;
+    invPickedId = null;
+    renderInvoiceSide(null);
     return;
   }
 
-  /* The same bar the debtors and creditors lists use, deliberately: this
-     is the same question at a different level, and a second bar that
-     looked slightly different would read as a different measure. */
-  const progressCell = (q)=>{
-    const p = invoicePaymentProgress(q);
-    if(p.pct === null){
-      const why = p.reason === 'voided'
-        ? (p.paid > 0
-          ? `This invoice is voided, so there is nothing left to pay off — but ${fmtUGX(Math.round(p.paid))} is still recorded against it and still in the Cash Book. Unvoid it, or remove the payment.`
-          : 'This invoice is voided, so there is nothing to be part way through paying.')
-        : 'This invoice totals nothing — its items carry no price — so there is nothing to measure against. Price the items to see progress.';
-      return `<span class="deb-prog-none" title="${esc(why)}">—</span>`;
-    }
-    const pct = p.total > 0 ? Math.round(p.paid/p.total*100) : 0;
-    const title = p.over > 0
-      ? `${fmtUGX(Math.round(p.paid))} received on an invoice of ${fmtUGX(Math.round(p.total))} — ${fmtUGX(Math.round(p.over))} more than it asks for. This app does not track customer credit, so it needs refunding or carrying to their next order.`
-      : `${fmtUGX(Math.round(p.paid))} received of ${fmtUGX(Math.round(p.total))}`;
-    return `<div class="deb-prog${p.over > 0 ? ' inv-prog-over' : ''}" title="${esc(title)}">
-      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${Math.round(p.pct*100)}%"></div></div>
-      <span class="deb-prog-pct">${pct}%</span>
-    </div>`;
-  };
-  /* THE THREE WAYS A DOCUMENT DISAGREES WITH ITSELF, in words on the
-     row rather than in a title nobody on a phone can reach. Each one is
-     real and each one was found on the running app: an overpayment this
-     app cannot carry as credit, an invoice whose items were never
-     priced, and a cancelled document still holding money in the Cash
-     Book. A row that needs saying gets ONE note; nothing else does. */
-  const noteRow = (q)=>{
-    const total = savedQuoteTotal(q);
-    const paid = Number(q.amountPaid)||0;
-    let say = '';
-    if(q.voided && paid > 0.5){
-      say = `Voided, but ${fmtUGX(Math.round(paid))} is still recorded against it and still sitting in the Cash Book. Unvoid it, or remove the payment.`;
-    } else if(!q.voided && paid - total > 0.5){
-      say = `Paid ${fmtUGX(Math.round(paid))} against an invoice of ${fmtUGX(Math.round(total))} — ${fmtUGX(Math.round(paid-total))} more than it asks for. The app does not carry customer credit, so refund it or put it on their next order.`;
-    } else if(!q.voided && total <= 0){
-      say = 'This invoice totals nothing — its items carry no price. Price them before it goes out, or nobody can be asked for anything.';
-    }
-    if(!say) return '';
-    return `<div class="ow-tbl-note">${ICON_WARN}<span>${esc(say)}</span></div>`;
-  };
-  /* THE TOTALS ARE OF THE RANGE, NOT OF THE PAGE.
-
-     Computed here, over every invoice the filters matched, and before a
-     single row is drawn. They used to accumulate inside the row loop,
-     which was harmless only while the loop drew everything -- the moment
-     it draws two dozen, a footer reading "Total 45,408,740" would
-     quietly become the total of what happens to be on screen. That is
-     the exact fault this app's paging rule exists to prevent.
-
-     Same rule as the Purchase Invoices totals: a voided invoice shows
-     its own figures but isn't money anyone owes, and the Debtors list
-     already leaves it out. The group tallies are counted in the same
-     pass, so a heading can never say a different number from the strip. */
-  /* HOW MANY OF EACH KIND, over the whole range. Counted apart from the
-     money below because a voided document IS one of the documents --
-     the heading over it has to say how many there are -- while being
-     none of the money, and one pass trying to say both is how a guard
-     that means "not money" quietly starts meaning "not there". */
-  const tally = {open:{n:0, sum:0}, settled:{n:0, sum:0}, voided:{n:0, sum:0}};
-  invoices.forEach(q=>{
-    const g = invGroupOf(q);
-    tally[g].n++;
-    if(g === 'voided') tally.voided.sum += savedQuoteTotal(q);
-  });
-  /* THE BALANCE IS SUMMED CLAMPED, and this is not fussiness. An
-     overpayment is not negative debt -- the app carries no customer
-     credit, and one invoice paid 50,000 over does not cancel 50,000
-     another customer owes. Unclamped, a single overpaid document drove
-     the whole range's "Still open" below zero on screen: the same fault
-     invoiceBalanceDue() was clamped for. It also has to agree with
-     Debtors, which clamps per invoice; two screens disagreeing about
-     one pile of money is what syncInvoiceDebtCharge exists to prevent. */
-  let totalAmt=0, totalPaid=0, totalDue=0;
-  let oldest = null;
-  invoices.forEach(q=>{
-    if(q.voided) return;
-    const g = invGroupOf(q);
-    const total = savedQuoteTotal(q);
-    const paid = Number(q.amountPaid)||0;
-    totalAmt += total; totalPaid += paid; totalDue += Math.max(0, total - paid);
-    tally[g].sum += g==='open' ? Math.max(0, total-paid) : total;
-    if(g==='open'){
-      const age = invoiceOpenDays(q);
-      if(age != null && (!oldest || age > oldest.age)) oldest = {age, q};
-    }
-  });
-  /* WHAT THE RANGE WAS BILLED. Four tiles, and the fourth earns its
-     place: the oldest document still open is a fact about the paper
-     that the customer-level Debtors screen cannot state, and it names
-     where to look next. Past the shop's own terms it is genuinely bad
-     and wears the one tone that says so; inside them it is a size. */
-  const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
-  const pctIn = totalAmt > 0 ? Math.round(totalPaid/totalAmt*100) : null;
-  const overIn = totalPaid - totalAmt;
-  const mt = (label, value, basis, tone)=> `<div class="ow-mt${tone?' '+tone:''}">
-    <p class="ow-mt-l">${esc(label)}</p>
-    <p class="ow-mt-v">${value}</p>
-    <p class="ow-mt-s">${basis}</p></div>`;
-  const money = (n)=> `${Number(Math.round(n)).toLocaleString('en-UG')}<span class="ow-u">UGX</span>`;
-  const fig = (n)=> `<span class="ow-fig">${fmtUGX(Math.round(n))}</span>`;
-  document.getElementById('inv_strip').innerHTML =
-    mt('Invoiced', money(totalAmt), `${tally.open.n + tally.settled.n} invoice${tally.open.n+tally.settled.n===1?'':'s'} in this range`)
-    + mt('Received', money(totalPaid), pctIn===null ? 'nothing to take a share of'
-        : overIn > 0.5 ? `${fmtUGX(Math.round(overIn))} more than was invoiced`
-        : `${pctIn}% of what was invoiced`)
-    + mt('Still open', money(totalDue), tally.open.n ? `on ${tally.open.n} invoice${tally.open.n===1?'':'s'}` : 'everything here is settled')
-    + (oldest
-      ? mt('Oldest open', oldest.age === 0 ? 'today' : `${oldest.age}<span class="ow-u">days</span>`,
-          `${esc(invoiceNumberLabel(oldest.q))} · ${esc(oldest.q.client.name || 'Unnamed client')}`,
-          (terms > 0 && oldest.age > terms) ? 'ow-bad' : '')
-      : mt('Oldest open', '<span class="ow-fig-none">—</span>', 'nothing in this range is still open'));
-
-  const shown = listPageSlice('invoices', invoices);
-  /* A page is being shown, so both of these have to say so. A "Total"
-     beside two dozen rows reads as their total, and a "Select all" that
-     can only reach what is drawn must not imply the other forty-six --
-     the bulk actions behind it include voiding. */
-  const cut = shown.length < invoices.length;
-  const totalLabel = cut ? `Total (all ${invoices.length})` : 'Total';
-  const selectAllLabel = cut ? `Select all ${shown.length} shown` : 'Select all';
-  document.querySelector('.inv-tb').style.display = '';
-  document.getElementById('inv_select_all_label').textContent = selectAllLabel;
-  document.getElementById('inv_pan_n').textContent = cut
-    ? `${shown.length} of ${invoices.length}`
-    : `${invoices.length} invoice${invoices.length===1?'':'s'}`;
-
-  const grouped = lens === 'open';
+  /* A group's subtotal must equal the rows beneath it. Every figure here
+     is summed from those exact rows rather than recomputed from the book,
+     so the two can never disagree. */
   const GROUP_HEAD = {
-    open: (t)=> [`Still open`, `${t.n} invoice${t.n===1?'':'s'} · ${fmtUGX(Math.round(t.sum))} due · oldest first`],
-    settled: (t)=> [`Settled`, `${t.n} invoice${t.n===1?'':'s'} · newest first`],
-    voided: (t)=> [`Voided`, `${t.n} cancelled document${t.n===1?'':'s'} · kept, never deleted`],
+    overdue: (rows)=>{
+      const oldest = Math.max(...rows.map(q=>invoiceDaysOverdue(q)||0));
+      return ['Overdue', '--om-bad', '--om-bad-ink',
+        `${rows.length} invoice${rows.length===1?'':'s'}`,
+        `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invBalanceOf(q),0)))} · oldest ${oldest} day${oldest===1?'':'s'}`];
+    },
+    open: (rows)=>['Open', '--om-neutral', '--om-neutral-ink',
+      `${rows.length} invoice${rows.length===1?'':'s'}`,
+      `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invBalanceOf(q),0)))} · nothing overdue`],
+    settled: (rows)=>['Settled', '--om-good', '--om-good-ink',
+      `${rows.length} invoice${rows.length===1?'':'s'}`,
+      `${fmtUGX(Math.round(rows.reduce((s,q)=>s+(Number(q.amountPaid)||0),0)))} collected`],
+    voided: (rows)=>['Voided', '--om-neutral', '--om-neutral-ink',
+      `${rows.length} cancelled`, `kept, never deleted`],
   };
-  let lastGroup = null;
-  const icon = (cls, id, title, path)=>
-    `<button type="button" class="btn btn-ghost ow-sm inv-ib ${cls}" data-id="${id}" title="${esc(title)}" aria-label="${esc(title)}"><svg class="icon" viewBox="0 0 24 24">${path}</svg></button>`;
-  const rowsHtml = shown.map((q)=>{
-    const total = savedQuoteTotal(q);
-    const paid = Number(q.amountPaid)||0;
-    const due = total - paid;
-    const g = invGroupOf(q);
-    const status = invoicePaymentStatusLabel(q);
-    let head = '';
-    if(grouped && g !== lastGroup){
-      lastGroup = g;
-      const [name, sub] = GROUP_HEAD[g](tally[g]);
-      head = `<div class="ow-tbl-g">${esc(name)} <span class="ow-tbl-gs">${esc(sub)}</span></div>`;
-    }
-    const age = invoiceOpenDays(q);
-    /* The secondary line under the customer is the one fact the row
-       cannot say twice: how long this document has been open. On a
-       finished one there is nothing to say, so nothing is said. */
-    const sub = q.voided ? 'cancelled'
-      : total <= 0 ? 'never priced'
-      : (g==='open' && age != null) ? `open ${age} day${age===1?'':'s'}`
-      : (q.payments && q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}`
-      : '';
-    /* The bar measures PROGRESS through paying a document off. An
-       untouched invoice has made none, and an empty track beside a chip
-       already reading "Open" is a mark that says nothing -- forty of
-       them say less than nothing. So it is drawn where there is
-       something to be part way through, and on the two that cannot be
-       measured at all, where the dash is what carries the reason. */
-    /* A bar is drawn where the document is PART of the way through: a
-       full green track on every settled row would mark the ordinary
-       case, and the chip beside it already says Settled. The one
-       settled row that keeps its bar is the overpaid one, where the
-       track running past its own end in crimson is the whole point. */
-    const showBar = !q.voided && total > 0 && paid > 0.5 && Math.abs(paid - total) > 0.5;
-    const chip = q.voided ? '<span class="ow-cp ow-bad"><i class="ow-cp-d"></i>Voided</span>'
-      : total <= 0 ? '<span class="ow-cp ow-warn"><i class="ow-cp-d"></i>Unpriced</span>'
-      : status.cls === 'settled' ? '<span class="ow-cp">Settled</span>'
-      : status.cls === 'partial' ? '<span class="ow-cp">Part paid</span>'
-      : '<span class="ow-cp">Open</span>';
-    const acts = (due > 0.5 && !q.voided
-        ? `<button type="button" class="btn btn-ghost ow-sm inv-doc-receive" data-id="${q.id}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>Receive</button>`
-        : '')
-      + icon('inv-doc-print', q.id, 'Print invoice (A5)', '<path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/>')
-      + icon('inv-doc-receipt', q.id, 'Print 80mm receipt', '<path d="M6 2h12v18l-2.5-1.6L13 20l-2.5-1.6L8 20l-2-1.3V2Z"/><path d="M9 7h6M9 11h6M9 15h3"/>')
-      /* THE TWO WAYS TO UNMAKE A DOCUMENT, held off from the printing
-         beside them because both are destructive and neither is what
-         the hand came here for.
 
-         They are not the same act and the shop should not have to guess
-         which is which. VOID cancels the paper: the goods went, the
-         money that came in stays in the Cash Book, and the customer
-         simply stops owing for it. UNDO INVOICE says the invoice should
-         never have existed -- stock goes back on the shelf, payments
-         and their Cash Book entries are reversed, the purchase invoices
-         it raised are removed, and the order returns to Order tracking
-         where its quantities can be edited.
-
-         Undo is here because it had nowhere else to be. It lives on the
-         Order tracking board, and an invoiced order LEAVES that board a
-         day after invoicing -- so a shop that noticed a wrong quantity
-         on the third day had no way in at all, and the only thing left
-         on this screen was Void, which cancels the sale rather than
-         correcting it. A cancelled-and-rewritten sale is not the same
-         document to anyone reading the books later.
-
-         Not offered on a voided row: that document is already cancelled,
-         and Unvoid is the act that belongs to it. */
-      + `<span class="inv-act-gap"></span>`
-      + (q.voided ? '' : icon('inv-doc-unbill', q.id, 'Undo invoice — puts the stock, the payments and their Cash Book entries back, and returns the order to Order tracking so its quantities can be edited', '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12H9"/>'))
-      + icon('inv-doc-void danger', q.id, q.voided ? 'Unvoid invoice' : 'Void invoice', '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>');
-    /* NOBODY OWES A CANCELLED DOCUMENT. Its total stands as the record
-       of what was once asked for; its balance is not a debt and must
-       not be printed in the column the shop reads as one. Where money
-       is nonetheless sitting on it, the note row below says so. */
-    const dueCell = q.voided
-      ? '<span class="ow-fig ow-fig-none" title="A voided invoice is not money anybody owes.">—</span>'
-      : fig(Math.max(0, due)) + (paid > 0.5 && due > 0.5
-        ? `<span class="ow-fig-b">${fmtUGX(Math.round(paid))} received</span>` : '');
-    const links = orderPurchaseInvoiceLinksHTML(q);
-    return head + `<div class="ow-tbl-r inv-r${q.voided?' inv-r-voided':''}" data-id="${q.id}">
-      <div class="ow-tbl-c inv-c-ck"><input type="checkbox" class="sq-card-check inv-doc-check" data-id="${q.id}" aria-label="Select ${esc(invoiceNumberLabel(q))}"></div>
-      <div class="ow-tbl-c inv-c-doc" data-l="Doc No."><button type="button" class="ow-link inv-doc-view" data-id="${q.id}">${esc(invoiceNumberLabel(q))}</button></div>
-      <div class="ow-tbl-n inv-c-date" data-l="Date">${esc(q.invoicedAt || q.date || '—')}</div>
-      <div class="ow-tbl-c inv-c-who">
-        <span class="ow-tbl-p" title="${esc(q.client.name || 'Unnamed client')}">${esc(q.client.name || 'Unnamed client')}</span>
-        <div class="inv-meta">${sub ? `<span class="inv-meta-t" title="${esc(sub)}">${esc(sub)}</span>` : ''}${links}</div>
-      </div>
-      <div class="ow-tbl-n" data-l="Invoiced">${fig(total)}</div>
-      <div class="ow-tbl-n" data-l="Still due">${dueCell}</div>
-      <div class="ow-tbl-c inv-c-st" data-l="Status">${chip}${showBar ? progressCell(q) : ''}</div>
-      <div class="ow-tbl-a">${acts}</div>
-    </div>` + noteRow(q);
+  wrap.innerHTML = groups.map(g=>{
+    const [word, bg, ink, count, sub] = GROUP_HEAD[g.key](g.rows);
+    const head = `<div class="om-grow">
+      <span class="om-chip" style="background:var(${bg});color:var(${ink})">${word}</span>
+      <span style="font-size:12.5px;font-weight:700">${esc(count)}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">${esc(sub)}</span>
+    </div>`;
+    return head + g.rows.map(q=>invRegisterRowHTML(q, g.key)).join('');
   }).join('');
 
-  wrap.innerHTML = `<div class="ow-tbl inv-tbl">
-    <div class="ow-tbl-h">
-      <div class="ow-tbl-c"></div>
-      <div class="ow-tbl-c">Doc No.</div>
-      <div class="ow-tbl-n">Date</div>
-      <div class="ow-tbl-c">Customer</div>
-      <div class="ow-tbl-n">Invoiced</div>
-      <div class="ow-tbl-n">Still due</div>
-      <div class="ow-tbl-c">Status</div>
-      <div class="ow-tbl-c"></div>
+  wrap.querySelectorAll('[data-inv-row]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      /* A pill opens its bill; the rest of the row opens the sale. Two
+         documents on one row, and the one you pressed is the one you
+         get. */
+      const pill = e.target.closest('[data-pinv]');
+      if(pill){
+        e.stopPropagation();
+        revealPurchaseInvoice(Number(pill.dataset.pinv));
+        return;
+      }
+      invPickedId = Number(row.dataset.invRow);
+      renderInvoices(document.getElementById('inv_doc_search').value || '');
+    });
+  });
+
+  if(invPickedId != null && !shown.some(q=>q.id===invPickedId)) invPickedId = null;
+  renderInvoiceSide(invPickedId != null ? shown.find(q=>q.id===invPickedId) : null);
+}
+
+function invRegisterRowHTML(q, groupKey){
+  const total = savedQuoteTotal(q);
+  const due = invBalanceOf(q);
+  const st = invStateOf(q);
+  const od = invoiceDaysOverdue(q);
+  const d = q.invoicedAt || q.date || '';
+  const date = d ? new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+  /* The one fact the row cannot say twice: how long this money has been
+     waiting. On a finished document there is nothing to say, so nothing
+     is said -- and where no terms were agreed it says THAT, because a
+     blank there reads as "not overdue" when the truth is "nobody knows". */
+  const age = st === 'overdue' ? `<span style="font-size:11.5px;color:var(--om-bad-ink);font-weight:600">&middot; ${od} days open</span>`
+    : st === 'voided' ? `<span style="font-size:11.5px;color:var(--om-ink-3)">&middot; cancelled</span>`
+    : st === 'settled' ? `<span style="font-size:11.5px;color:var(--om-ink-3)">&middot; settled</span>`
+    : invoiceDueISO(q) ? `<span style="font-size:11.5px;color:var(--om-ink-3)">&middot; due ${esc(new Date(invoiceDueISO(q)+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span>`
+    : `<span style="font-size:11.5px;color:var(--om-caution-ink)">&middot; no terms agreed</span>`;
+  const dim = (groupKey === 'settled' || groupKey === 'voided') ? ' om-done' : '';
+  const on = invPickedId === q.id ? ' om-on' : '';
+  return `<div class="om-lrow${dim}${on}" data-inv-row="${q.id}" tabindex="0">
+    <span class="om-fig" style="font-size:11.5px;font-weight:500;color:var(--om-ink-3)">${esc(date)}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px"><span style="font-weight:600">${esc(q.client && q.client.name || 'No name')}</span> ${age}</div>
+      ${invPinvPillsHTML(q)}
     </div>
-    ${rowsHtml}
-    <div class="ow-tbl-f">
-      <div class="ow-tbl-c"></div>
-      <div class="ow-tbl-c inv-foot-l">${esc(totalLabel)}</div>
-      <div class="ow-tbl-n"></div>
-      <div class="ow-tbl-c"></div>
-      <div class="ow-tbl-n" data-l="${esc(totalLabel)}">${fig(totalAmt)}</div>
-      <div class="ow-tbl-n" data-l="Still due">${fig(totalDue)} <span class="ow-fig-b">${fmtUGX(Math.round(totalPaid))} received</span></div>
-      <div class="ow-tbl-c"></div>
-      <div class="ow-tbl-c"></div>
+    <div class="om-fig" style="font-size:13.5px;text-align:right">${esc(fmtUGX(Math.round(total)))}</div>
+    <div class="om-fig" style="font-size:13.5px;text-align:right;color:var(${due > 0.5 ? '--om-bad-ink' : '--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</div>
+    <div style="text-align:right">${invChipHTML(q)}</div>
+  </div>`;
+}
+
+/* Four cards, and at most one tinted bad and one tinted good. The
+   sub-line adds a second fact rather than restating the figure. */
+function renderInvoiceKpis(byState, all){
+  const el = document.getElementById('inv_kpis');
+  if(!el) return;
+  const sum = (rows, f)=>rows.reduce((s,q)=>s+f(q),0);
+  const overdueSum = sum(byState.overdue, invBalanceOf);
+  const oldest = byState.overdue.length ? Math.max(...byState.overdue.map(q=>invoiceDaysOverdue(q)||0)) : 0;
+  const openSum = sum(byState.open, invBalanceOf);
+  const owedAll = overdueSum + openSum;
+
+  /* What the shop owes on bills raised to fill these sales -- the other
+     direction of the same money, which is why it is on this strip and not
+     a screen of its own. */
+  const bills = data.purchaseInvoices.filter(pi=>!pi.voided && purchaseInvoiceBalanceDue(pi) > 0.5);
+  const billsSum = bills.reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0);
+  const weekEnd = anShiftDate(todayISO(), 7);
+  const billsWeek = bills.filter(pi=>pi.dueDate && pi.dueDate <= weekEnd)
+    .reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0);
+
+  const monthStart = todayISO().slice(0,8) + '01';
+  const settledMonth = byState.settled.filter(q=>(q.invoicedAt||q.date||'') >= monthStart);
+  const settledSum = sum(settledMonth, q=>Number(q.amountPaid)||0);
+  const days = settledMonth.map(q=>invoiceOpenDays(q)).filter(n=>n!=null);
+  const avg = days.length ? (days.reduce((a,b)=>a+b,0)/days.length) : null;
+
+  const card = (cls, label, fig, sub, figTint)=>`<div class="om-kpi${cls}">
+    <div class="om-lbl" style="font-size:10.5px${cls===' om-kpi-good'?';color:var(--om-good-card-ink)':''}">${esc(label)}</div>
+    <div class="om-fig om-kpi-f"${figTint?` style="color:var(${figTint})"`:''}>${esc(fig)}</div>
+    <div class="om-kpi-s"${cls?` style="color:var(${cls===' om-kpi-good'?'--om-good-card-ink':'--om-bad-card-ink'})"`:''}>${sub}</div>
+  </div>`;
+
+  el.innerHTML =
+    card(' om-kpi-bad', 'Overdue', fmtUGX(Math.round(overdueSum)),
+      byState.overdue.length
+        ? `${byState.overdue.length} invoice${byState.overdue.length===1?'':'s'} &middot; oldest ${oldest} day${oldest===1?'':'s'}`
+        : 'nothing overdue')
+    + card('', 'Open, not yet due', fmtUGX(Math.round(openSum)),
+      `${byState.open.length} invoice${byState.open.length===1?'':'s'} &middot; ${esc(fmtUGX(Math.round(owedAll)))} owed in all`)
+    + card('', 'You owe on bills', fmtUGX(Math.round(billsSum)),
+      `${bills.length} bill${bills.length===1?'':'s'} &middot; ${esc(fmtUGX(Math.round(billsWeek)))} due this week`)
+    + card(' om-kpi-good', 'Settled this month', fmtUGX(Math.round(settledSum)),
+      `${settledMonth.length} invoice${settledMonth.length===1?'':'s'}`
+      + (avg == null ? '' : ` &middot; ${avg.toFixed(1)} days to settle on average`), '--om-good-ink');
+}
+
+/* THE PHONE'S HEADER, which is its own design: the three figures that
+   decide whether to open the screen at all, then the lenses as underlined
+   tabs. The desktop's top bar, KPI strip and title block are switched off
+   at 820px rather than reflowed. */
+function renderInvoicePhoneHead(byState, attentionN, all){
+  const el = document.getElementById('inv_ph_head');
+  if(!el) return;
+  const sum = (rows)=>rows.reduce((s,q)=>s+invBalanceOf(q),0);
+  const bills = data.purchaseInvoices.filter(pi=>!pi.voided && purchaseInvoiceBalanceDue(pi) > 0.5);
+  const cell = (label, val, bad)=>`<div class="om-ph-fig${bad?' om-ph-fig-bad':''}">
+    <div class="om-ph-fig-l"${bad?' style="color:var(--om-bad-ink)"':''}>${esc(label)}</div>
+    <div class="om-fig om-ph-fig-v"${bad?' style="color:var(--om-bad-ink)"':''}>${esc(val)}</div>
+  </div>`;
+  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.00$/,'') + 'm' : fmtUGX(Math.round(n));
+  const tab = (key, label, n)=>`<button type="button" class="om-ph-tab${INV_LENS_STATE.key===key?' om-on':''}" data-lens="${key}">${esc(label)} ${n}</button>`;
+  el.innerHTML = `<div class="om-ph-t">Invoices</div>
+    <div class="om-ph-figs">
+      ${cell('Overdue', short(sum(byState.overdue)), true)}
+      ${cell('Open', short(sum(byState.open)), false)}
+      ${cell('You owe', short(bills.reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0)), false)}
+    </div>
+    <div class="om-ph-tabs">
+      ${tab('attention','Needs you',attentionN)}${tab('all','All',all.length)}${tab('voided','Voided',byState.voided.length)}
+    </div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>invSetLens(b.dataset.lens)));
+}
+
+/* THE PANEL: navy header, then the figures, then the evidence, then what
+   can be done. The same rhythm on all four Sell screens. */
+function renderInvoiceSide(q){
+  const el = document.getElementById('inv_side');
+  if(!el) return;
+  if(!q){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick an invoice to read what it billed, what was bought to fill it, and what the shop kept on the pair.</div>`;
+    return;
+  }
+  const total = savedQuoteTotal(q), paid = Number(q.amountPaid)||0, due = invBalanceOf(q);
+  const st = invStateOf(q), od = invoiceDaysOverdue(q);
+  const cust = invCustomerOf(q);
+  const raised = q.invoicedAt || q.date || '';
+  const dueISO = invoiceDueISO(q);
+  const fmtD = (iso)=> iso ? new Date(iso+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+  const chip = st === 'overdue' ? `Overdue ${od} days` : st === 'voided' ? 'Voided' : st === 'settled' ? 'Settled' : 'Open';
+
+  const pis = purchaseInvoicesForOrder(q);
+  const cost = pis.filter(pi=>!pi.voided).reduce((s,pi)=>s+purchaseInvoiceTotal(pi),0);
+  const owedOnBills = pis.filter(pi=>!pi.voided).reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0);
+  const kept = total - cost;
+  const keptPct = total > 0 ? Math.round(kept/total*100) : null;
+
+  const lines = (q.items||[]).map(it=>{
+    const qty = it.qty != null ? it.qty : it.quantity;
+    const amt = (Number(it.price)||0) * (Number(qty)||0);
+    return `<div class="om-drow">
+      <span class="om-t" style="flex:1;font-size:12.5px">${esc(it.productName||'Item')}${qty!=null?` &middot; ${esc(String(qty))} ${esc(it.unit||'')}`:''}</span>
+      <span class="om-fig" style="font-size:12.5px">${esc(fmtUGX(Math.round(amt)))}</span>
+    </div>`;
+  }).join('');
+
+  const billRows = pis.length ? pis.map(pi=>{
+    const owed = pi.voided ? 0 : purchaseInvoiceBalanceDue(pi);
+    const label = purchaseInvoiceNumberLabel(pi).replace('-', '‑');
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <span class="om-pill ${pi.voided?'om-p-void':owed>0.5?'om-p-owed':'om-p-paid'}" data-pinv="${pi.id}" style="cursor:pointer">${esc(label)}</span>
+      <span class="om-t" style="flex:1;font-size:12.5px">${esc(pi.supplierName||'No supplier')}</span>
+      <span class="om-fig" style="font-size:12.5px;color:var(${owed>0.5?'--om-caution-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(owed>0.5?owed:purchaseInvoiceTotal(pi))))}${owed>0.5?' owed':''}</span>
+    </div>`;
+  }).join('') : `<div class="om-read">No bill has been raised against this sale, so what it cost cannot be read from the books &mdash; and the margin below is not shown rather than guessed.</div>`;
+
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-pan">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span class="om-fig" style="font-size:13.5px;color:var(--om-on-navy)">${esc(invoiceNumberLabel(q).replace('-','‑'))}</span>
+        <span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-rail-on);color:var(--om-on-navy)">${esc(chip)}</span>
+        <span style="flex:1"></span>
+        <button type="button" class="om-btn om-btn-g" id="inv_pan_print" title="Print this invoice (A5)" style="height:26px;padding:0 7px;color:var(--om-on-navy-2)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4v-6h16v6h-2"/><path d="M8 14h8v8H8z"/></svg>
+        </button>
+      </div>
+      <div style="margin-top:6px;display:flex;align-items:baseline;gap:9px">
+        <span class="om-pan-t">${esc(q.client && q.client.name || 'No name')}</span>
+        <span class="om-pan-m om-n">raised ${esc(fmtD(raised))}${dueISO?` &middot; due ${esc(fmtD(dueISO))}`:' &middot; no terms agreed'}</span>
+      </div>
+    </div>
+    <div class="om-figs">
+      <div><div class="om-lbl" style="font-size:10.5px">Invoiced</div><div class="om-fig om-figs-f">${esc(fmtUGX(Math.round(total)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Paid</div><div class="om-fig om-figs-f" style="color:var(--om-ink-3)">${esc(fmtUGX(Math.round(paid)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Still due</div><div class="om-fig om-figs-f" style="color:var(${due>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</div></div>
+    </div>
+    <div style="padding:0 14px 12px">${lines || '<div class="om-read">This invoice carries no priced lines.</div>'}</div>
+    <div class="om-blk">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="om-lbl" style="font-size:10.5px">Bought to fill it</span>
+        <span style="font-size:11.5px;color:var(--om-ink-3);margin-left:auto">${pis.length} bill${pis.length===1?'':'s'}${owedOnBills>0.5?` &middot; ${esc(fmtUGX(Math.round(owedOnBills)))} still owed`:''}</span>
+      </div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">${billRows}</div>
+      ${pis.length ? `<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--om-rule-inner);display:flex;align-items:baseline;gap:9px">
+        <span class="om-lbl" style="font-size:10.5px">You kept</span>
+        <span class="om-fig" style="font-size:14px;color:var(--om-good-ink);margin-left:auto">${esc(fmtUGX(Math.round(kept)))}</span>
+        ${keptPct!=null?`<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-good);color:var(--om-good-ink)">${keptPct}%</span>`:''}
+      </div>` : ''}
+    </div>
+    <div class="om-acts">
+      <button type="button" class="om-btn om-btn-p" id="inv_pan_chase" style="height:34px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Draft the chase
+      </button>
+      <button type="button" class="om-btn om-btn-s" id="inv_pan_pay" style="height:34px">Record a payment</button>
+      <button type="button" class="om-btn om-btn-g" id="inv_pan_more" style="height:34px;padding:0 9px" title="Print the receipt, or undo this invoice">&middot;&middot;&middot;</button>
     </div>
   </div>
-  ${listMoreButtonHTML('invoices', invoices.length, 'invoices')}`;
 
-  /* Follow this order forward to the bills it raised. The order is what
-     is asked for, not the one number pressed: an order that raised three
-     bills is one question with three answers, so all three are shown --
-     with the one pressed open on arrival, and a crumb saying whose they
-     are. */
-  wrap.querySelectorAll('[data-pi]').forEach(btn=>btn.addEventListener('click', (ev)=>{
-    ev.stopPropagation();
-    const pi = (data.purchaseInvoices||[]).find(x=>x.id===Number(btn.dataset.pi));
-    const order = orderForPurchaseInvoice(pi);
-    if(!order){ revealPurchaseInvoice(Number(btn.dataset.pi)); return; }
-    piOpenId = pi.id;
-    revealBillsForOrder(order.id);
-  }));
-  wrap.querySelectorAll('.inv-doc-print').forEach(btn=>btn.addEventListener('click', ()=>{
-    const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
-    if(q) printQuotesA5([q]);
-  }));
-  wrap.querySelectorAll('.inv-doc-view').forEach(btn=>btn.addEventListener('click', ()=>{
-    const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
-    if(q) printQuotesA5([q]);
-  }));
-  wrap.querySelectorAll('.inv-doc-receive').forEach(btn=>btn.addEventListener('click', ()=>{
-    openInvoicePaymentModal(Number(btn.dataset.id));
-  }));
-  /* No payment argument: the whole sale, listing every payment on it --
-     what somebody asks for when they want "the receipt" rather than the
-     receipt for one particular instalment. */
-  wrap.querySelectorAll('.inv-doc-receipt').forEach(btn=>btn.addEventListener('click', ()=>{
-    const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
-    if(q) printReceipt(q, null, null);
-  }));
-  wrap.querySelectorAll('.inv-doc-void').forEach(btn=>btn.addEventListener('click', ()=>{
-    toggleInvoiceVoided(Number(btn.dataset.id));
-  }));
-  /* The same call the Order tracking board makes, and deliberately so:
-     one function reverses stock, payments, Cash Book entries and the
-     purchase invoices together, and it already asks for confirmation
-     naming every one of them. A second way of undoing an invoice is how
-     two paths come to reverse different things. */
-  wrap.querySelectorAll('.inv-doc-unbill').forEach(btn=>btn.addEventListener('click', ()=>{
-    toggleQuoteInvoiced(Number(btn.dataset.id));
-  }));
-  invSyncStickyOffset();
-  const selectAllTh = document.getElementById('inv_doc_select_all_th');
-  if(selectAllTh){
-    selectAllTh.checked = false;
-    selectAllTh.onchange = (e)=>{
-      document.querySelectorAll('.inv-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
-    };
-  }
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">This customer&rsquo;s account</span></div>
+    <div style="padding:0 14px 12px">
+      <div class="om-drow" style="border-top:0;padding-top:0">
+        <span style="flex:1;font-size:12.5px;color:var(--om-ink-2)">Owes in all</span>
+        <span class="om-fig" style="font-size:12.5px">${esc(fmtUGX(Math.round(invCustomerOwes(q))))}</span>
+      </div>
+      <div class="om-drow">
+        <span style="flex:1;font-size:12.5px;color:var(--om-ink-2)">Credit limit</span>
+        <span class="om-fig" style="font-size:12.5px;color:var(--om-ink-3)">${cust && cust.creditLimit!=null?esc(fmtUGX(Math.round(cust.creditLimit))):'none set'}</span>
+      </div>
+      <div style="margin-top:9px" class="om-read">${esc(invCustomerHistorySentence(q))}</div>
+      <div style="margin-top:8px"><a href="#" class="om-read" id="inv_pan_statement" style="color:var(--om-link);font-weight:600;text-decoration:none">Send statement</a></div>
+    </div>
+  </div>`;
+
+  const byId = (id)=>el.querySelector('#'+id);
+  const p = byId('inv_pan_print'); if(p) p.onclick = ()=>printQuotesA5([q]);
+  const pay = byId('inv_pan_pay'); if(pay) pay.onclick = ()=>openInvoicePaymentModal(q.id);
+  const more = byId('inv_pan_more'); if(more) more.onclick = ()=>printReceipt(q, null, null);
+  const chase = byId('inv_pan_chase');
+  if(chase) chase.onclick = ()=>{
+    /* The box is what ships, so this opens WhatsApp with the message
+       already written rather than sending anything itself. Nothing is
+       recorded until the owner says it went. */
+    const name = (q.client && q.client.name) || 'there';
+    const msg = `Hello ${name},\n\n${invoiceNumberLabel(q)} raised ${fmtD(raised)} is ${fmtUGX(Math.round(due))} outstanding`
+      + (st==='overdue' ? ` and is ${od} days past due` : '')
+      + `.\n\nCould you let me know which day you can settle it?\n\nThank you.`;
+    window.open(waComposeUrl(q.client && q.client.phone, msg), '_blank');
+  };
+  const stm = byId('inv_pan_statement');
+  if(stm) stm.onclick = (e)=>{ e.preventDefault(); const c = invCustomerOf(q); if(c) openCustomerStats(c.id); else toast('This sale is not linked to a customer record, so there is no statement to send.'); };
+  el.querySelectorAll('[data-pinv]').forEach(b=>b.addEventListener('click', ()=>revealPurchaseInvoice(Number(b.dataset.pinv))));
+}
+
+/* What this customer owes across every invoice, from the same rows the
+   register drew -- never a second tally that could disagree with it. */
+function invCustomerOwes(q){
+  const c = invCustomerOf(q);
+  if(!c) return invBalanceOf(q);
+  return data.savedQuotes.filter(x=>x.status==='completed' && x.invoiced && !x.voided
+      && invCustomerOf(x) && invCustomerOf(x).id === c.id)
+    .reduce((s,x)=>s+invBalanceOf(x),0);
+}
+/* One sentence of payment history, or the honest absence of one. */
+function invCustomerHistorySentence(q){
+  const c = invCustomerOf(q);
+  if(!c) return 'This sale is not linked to a customer record, so there is no history to read.';
+  const mine = data.savedQuotes.filter(x=>x.status==='completed' && x.invoiced && !x.voided
+    && invCustomerOf(x) && invCustomerOf(x).id === c.id);
+  const settled = mine.filter(x=>invGroupOf(x)==='settled');
+  if(!settled.length) return 'Nothing has been settled on this account yet, so there is no payment history to read.';
+  const days = settled.map(x=>invoiceOpenDays(x)).filter(n=>n!=null);
+  const avg = days.length ? (days.reduce((a,b)=>a+b,0)/days.length) : null;
+  const late = settled.filter(x=>(invoiceDaysOverdue(x)||0) > 0).length;
+  return `${settled.length} of ${mine.length} invoice${mine.length===1?'':'s'} settled`
+    + (avg!=null?`, averaging ${avg.toFixed(1)} days`:'')
+    + (late?`, and ${late} went past the agreed date.`:', every one inside the agreed date.');
+}
+
+function invSetLens(key){
+  INV_LENS_STATE.key = key;
+  document.querySelectorAll('#inv_lens .om-lens').forEach(b=>{
+    const on = b.dataset.lens === key;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  /* Hide voided is the Voided lens's job now, and the hidden checkbox is
+     kept in step so the functions that still read it agree with what is
+     on screen. */
+  const hv = document.getElementById('inv_doc_hide_voided');
+  if(hv) hv.checked = (key !== 'voided' && key !== 'all');
+  renderInvoices(document.getElementById('inv_doc_search').value || '');
 }
 
 /* Where the column names come to rest: under the fixed top bar and under
@@ -44826,20 +44951,8 @@ document.querySelectorAll('#iv_side .ow-seg-b').forEach(btn=>{
    were a second mechanism that vanished on the phone along with the
    headings themselves, so the shop's own screen could not be reordered
    at all. */
-document.querySelectorAll('#inv_lens .ow-seg-b').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    INV_LENS_STATE.key = btn.dataset.lens;
-    /* #inv_lens, not #iv_lens. The two were one id until Inventory's
-       lens was renamed off this one, and this line kept the old spelling
-       -- so pressing Newest reordered the register but lit nothing, and
-       the segment sat there claiming Open first was still on. */
-    document.querySelectorAll('#inv_lens .ow-seg-b').forEach(b=>{
-      const on = b === btn;
-      b.classList.toggle('ow-on', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-    renderInvoices(document.getElementById('inv_doc_search').value);
-  });
+document.querySelectorAll('#inv_lens .om-lens').forEach(btn=>{
+  btn.addEventListener('click', ()=>invSetLens(btn.dataset.lens));
 });
 
 // Note: the "select all" checkbox lives in the toolbar above the
