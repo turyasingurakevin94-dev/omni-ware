@@ -76,7 +76,7 @@
     --danger: var(--ow-crimson);
     --navy: var(--ow-steel-950);
     --sidebar-w: 236px;
-    --topbar-h: 54px;
+    --topbar-h: 58px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -16524,6 +16524,65 @@
   .om-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .om-n{white-space:nowrap}
 
+  /* ---- THE TOP BAR -------------------------------------------------
+     White, not navy, and that is the whole change: the rail is the navy
+     now, and two navy bands meeting at a corner made the app look like
+     chrome with a page inside it. The bar carries where you are, a way
+     to get anywhere by name, whatever the open screen has to say for
+     itself, and the account. The brand left it -- it is at the top of
+     the rail, where the artboards put it, and drawing it in both places
+     said the shop's name twice above every screen.
+     ------------------------------------------------------------------ */
+  /* THE RAIL RUNS THE FULL HEIGHT AND THE BAR SITS BESIDE IT. The
+     console had one band across the top and the rail beginning under
+     it, which made the rail a panel on a page. In the card system the
+     rail is the app's edge: it starts at the top of the window and the
+     bar starts where the rail stops, so the navy is one shape rather
+     than an L. */
+  .om-topbar{background:var(--om-surface);color:var(--om-ink);border-bottom:1px solid var(--om-rule);
+    box-shadow:none;gap:16px;padding:0 22px;left:var(--sidebar-w)}
+  .om-rail{top:0;height:100vh}
+  .om-topbar .tb-where{font-size:14px;font-weight:600;color:var(--om-ink);align-items:center;gap:8px}
+  .om-topbar .tb-where .tbw-group{font-size:12.5px;font-weight:400;color:var(--om-ink-3)}
+  /* A chevron, not a slash: the breadcrumb is a path and the mark that
+     says so is the one pointing the way you came. */
+  .om-topbar .tb-where .tbw-sep{color:var(--om-ink-quiet);font-weight:400}
+
+  /* The search is a field on the bar rather than a well cut into it. */
+  .om-topbar .tb-search{flex:1 1 400px;max-width:400px;margin-left:0}
+  .om-topbar .tb-search input{background:var(--om-field);border:1px solid var(--om-rule);
+    border-radius:10px;height:36px;padding:0 64px 0 34px;color:var(--om-ink);font-size:13px}
+  .om-topbar .tb-search input::placeholder{color:var(--om-ink-3)}
+  .om-topbar .tb-search input:focus{border-color:var(--om-navy);background:var(--om-surface)}
+  .om-topbar .tb-search-icon{stroke:var(--om-ink-3)}
+  .om-topbar .tb-kbd{font-size:10.5px;font-weight:600;color:var(--om-ink-3);
+    background:var(--om-surface);border:1px solid var(--om-rule-input);border-radius:6px;padding:2px 6px}
+
+  /* Whatever the open screen has to say for itself sits here, inline,
+     rather than floating over the bar on a shadow of its own. */
+  .om-topbar .order-status-bar{position:static;background:none;border:0;box-shadow:none;
+    padding:0;gap:7px;flex:none}
+  /* Each stage as its own chip, which is what makes the count readable:
+     on one shared ground they ran together into a sentence. The stage's
+     own colour stays on its dot -- the chips are neutral because five
+     tinted chips in a row is a row of five warnings, and nothing here
+     is one. A stage with nothing in it is not drawn at all. */
+  .om-topbar .order-status-bar > *{border:0;padding:0 9px;height:22px;border-radius:999px;
+    background:var(--om-neutral);color:var(--om-neutral-ink);font-size:11px;font-weight:600;gap:5px}
+  .om-topbar .order-status-bar .osb-count{font-family:'IBM Plex Mono',monospace;font-size:11px;
+    font-weight:600;color:var(--om-ink);font-variant-numeric:tabular-nums}
+  .om-topbar .order-status-bar .osb-label{color:var(--om-ink-3)}
+
+  .om-topbar .tb-top{color:var(--om-ink-3)}
+  .om-topbar .tb-top:hover{color:var(--om-ink);background:var(--om-ghost-hover)}
+  /* THE ACCOUNT, as a mark rather than a cog. What is behind it is what
+     was behind the cog -- backup, restore, signing out -- and none of
+     those is a destination, which is why the rail does not hold them. */
+  .om-topbar .om-avatar{width:34px;height:34px;flex:none;border-radius:999px;background:var(--om-navy);
+    color:var(--om-on-navy);display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.02em;border:0;cursor:pointer}
+  .om-topbar .om-avatar:hover{background:var(--om-navy-hover)}
+
   /* ---- THE RAIL ---------------------------------------------------
      The complete map, in one navy column, with nothing behind a hover.
 
@@ -17491,14 +17550,7 @@
      price book, then what only gets looked at now and again. Each heading
      stays on screen whether its menu is open or not, so nothing has to be
      remembered to be found. -->
-<header class="topbar" id="topbar">
-  <div class="brand">
-    <div class="brand-mark">OW</div>
-    <div class="brand-text">
-      <div class="tag">OMNI-WARE</div>
-    </div>
-  </div>
-
+<header class="topbar om-topbar" id="topbar">
   <!-- The bar stopped being a second navigation. It carries the three
        things that are not a destination: where you are, a way to get
        anywhere by name, and the actions that act on the whole shop.
@@ -17545,10 +17597,8 @@
        the rail; what is left here acts on the shop as a whole, which is
        why it is one icon rather than a heading in a row of headings. -->
   <div class="tb-group tb-right" data-group="setup">
-    <button type="button" class="tb-top tb-iconbtn" data-menu="setup"
-      title="Backup and account" aria-label="Backup and account" aria-haspopup="menu" aria-expanded="false">
-      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
+    <button type="button" class="tb-top om-avatar" data-menu="setup" id="tbAccount"
+      title="Backup and account" aria-label="Backup and account" aria-haspopup="menu" aria-expanded="false"><span id="tbAccountInitials">OW</span></button>
     <div class="tb-menu" role="menu">
       <button type="button" id="exportBtn">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -25372,6 +25422,37 @@ function printedShopName(){ return currentShopName || 'Omni-Ware'; }
 
    Every field below the name is optional and renders only when filled:
    an unset TIN must cost a blank line, not print one. */
+/* The account mark's letters, off the shop's own name. Two letters
+   from two words, one from one -- and "OW" only when the shop has not
+   been named yet, which is the one case where there is nothing to
+   derive from. Derived, never invented. */
+function shopInitials(){
+  const n = ((data && (data.presetShopLegalName || data.presetShopName)) || '').trim()
+    || (typeof printedShopName === 'function' ? (printedShopName() || '').trim() : '');
+  const words = n.split(/\s+/).filter(Boolean);
+  if(!words.length) return 'OW';
+  return (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0,2)).toUpperCase();
+}
+/* The shop's own name, wherever the chrome says it: the rail's brand
+   and the account mark. Both were literals -- one a demo shop's name
+   baked into the markup -- and a chrome that names somebody else's shop
+   above every screen is worse than one that names none. */
+function paintShopIdentity(){
+  const nm = document.getElementById('railShopName');
+  if(nm){
+    const n = (typeof printedShopName === 'function' ? printedShopName() : '') || '';
+    /* Only when it is the SHOP's name. With none recorded,
+       printedShopName falls back to the product's own name, and the
+       rail would then read "Omni-Ware" over "Omni-Ware". */
+    const brand = 'Omni\u2011Ware';
+    const same = !n || n.replace(/\u2011/g,'-') === brand.replace(/\u2011/g,'-');
+    nm.textContent = same ? '' : n;
+    nm.title = same ? '' : n;
+    nm.hidden = same;
+  }
+  const av = document.getElementById('tbAccountInitials');
+  if(av) av.textContent = shopInitials();
+}
 function shopIdentity(){
   const d = data || {};
   return {
@@ -32517,7 +32598,7 @@ function updateTopbarWhere(tab){
   const hit = NAV_INDEX.find(x=> x.tab === tab);
   if(!hit){ el.textContent = ''; return; }
   el.innerHTML = hit.group
-    ? `<span class="tbw-group">${esc(hit.group)}</span><span class="tbw-sep">/</span><span>${esc(hit.label)}</span>`
+    ? `<span class="tbw-group">${esc(hit.group)}</span><span class="tbw-sep">\u203a</span><span>${esc(hit.label)}</span>`
     : `<span>${esc(hit.label)}</span>`;
 }
 
@@ -42707,6 +42788,9 @@ function updateOrderStatusBar(){
     // and four coloured dots with no way to find out what they mean would
     // be a worse answer than the widget simply not being there.
     const name = esc(ORDER_STATUS_SHORT_LABELS[status]);
+    /* A chip reading 0 is a chip you learn to skip, and then so is the
+       one reading 3. Five stages, only the ones with orders in them. */
+    if(!count) return '';
     return `<div class="osb-item" title="${name}: ${count}">
       <span class="osb-dot" style="background:${SQ_STATUSES[status].color};"></span>
       <span class="osb-label">${name}</span>
@@ -104054,6 +104138,7 @@ function refreshNavBadges(){
   renderFollowUpBadge();
 }
 function renderAll(){
+  paintShopIdentity();
   renderPresets();
   renderQuoteAll();
   renderSuppliers(document.getElementById('s_search').value);

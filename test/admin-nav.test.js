@@ -45,7 +45,7 @@ const src = read('index.html');
 // file. There are several, and one is a literal `<nav>` written inside a
 // CSS comment -- the same prose-matching-as-code trap that has caught
 // other checks in this suite.
-const topbar = (/<header class="topbar"[\s\S]*?<\/header>/.exec(src) || [''])[0];
+const topbar = (/<header class="topbar[^"]*"[\s\S]*?<\/header>/.exec(src) || [''])[0];
 const sidebar = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
 const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(sidebar) || ['', ''])[1];
 const sheet = (/<div class="mms-body">[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
