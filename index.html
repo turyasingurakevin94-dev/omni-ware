@@ -17255,6 +17255,38 @@
     /* Stacked, and the door is a thumb-sized target rather than a 32px
        chip beside a paragraph. */
     .om-hub{padding:0 16px 16px}
+    /* ---- THE PHONE'S SECOND SCREEN: one recipient ---- */
+    /* Picked, the list stands aside. Both on one screen is a scroll down
+       a queue to find the box and then a scroll back up to find out who
+       it is for. */
+    .om-ph-detail .om-list{display:none}
+    .om-ph-detail .om-ph-hide{display:none !important}
+    .om-ph-who{display:flex;align-items:center;gap:9px}
+    .om-ph-back{flex:none;width:32px;height:32px;margin-left:-6px;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:9px;color:var(--om-on-navy-2);cursor:pointer}
+    .om-ph-back:active{background:var(--om-rail-on)}
+    .om-ph-who-n{font-size:13.5px;font-weight:700;color:var(--om-on-navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .om-ph-who-s{font-size:10.5px;color:var(--om-on-navy-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* The one figure this message is about, on the navy where the head
+       is -- so the amount and the name are read together and neither is
+       scrolled away from the other. */
+    /* NO NEW COLOUR. The frame paints this strip rgba(239,75,57,.18) on
+       the navy, which is the coral at 18% over the navy and nothing
+       else -- so it is mixed from the two tokens it is made of rather
+       than added to a palette that is closed at 73. */
+    .om-ph-stake{margin-top:9px;display:flex;align-items:baseline;gap:8px;padding:8px 11px;border-radius:10px;background:color-mix(in srgb, var(--om-coral) 18%, var(--om-navy))}
+    .om-ph-stake-l{font-size:9.5px;font-weight:600;letter-spacing:0.03em;color:var(--om-on-navy-3)}
+    .om-ph-stake-v{font-size:17px;color:var(--om-on-navy);margin-left:auto}
+    /* THUMB-SIZED, in the frame's own heights: the three tone buttons at
+       40 and equal width, the send at 48, the two stamps at 44. */
+    .om-ph-detail .om-side{padding:0}
+    .om-ph-detail .om-side .om-card{border-radius:0;border-left:0;border-right:0;box-shadow:none}
+    .om-ph-detail .om-btn-w{height:48px !important;font-size:14px}
+    .om-ph-detail #msg_shorter,.om-ph-detail #msg_firmer,.om-ph-detail #msg_ring{flex:1;height:40px !important;justify-content:center;font-size:12.5px}
+    .om-ph-detail #msg_was_sent,.om-ph-detail #msg_not_sent{height:44px !important;font-size:13px}
+    /* The width chips are a desktop reading: at 390 the box itself is
+       the width, and two mono pills above three 40px buttons is a row of
+       chrome where the frame has none. */
+    .om-ph-detail #msg_wide,.om-ph-detail #msg_fits{display:none}
     .om-holdline,.om-sentline{padding:12px 16px}
     .om-nameline{padding:10px 16px;white-space:normal}
     .om-rules{min-width:0;left:0;right:0}
@@ -97513,7 +97545,6 @@ function renderMessages(){
   if(sub) sub.textContent = 'One message a person, most at stake first · held back and sent are groups in this list';
   msgRenderRules();
   renderMessageKpis(rows, money, telling, held);
-  renderMessagePhoneHead(rows, money, telling, nominated);
 
   const list = document.getElementById('msg_list');
   if(!list) return;
@@ -97618,6 +97649,13 @@ function renderMessages(){
   }));
 
   if(msgPickedId != null && !lensRows.some(r=> String(r.customerId) === String(msgPickedId))) msgPickedId = null;
+  const picked = msgPickedId == null ? null : lensRows.find(r=> String(r.customerId) === String(msgPickedId)) || null;
+  renderMessagePhoneHead(rows, money, telling, nominated, picked, lensRows);
+  /* AT 390 THE LIST STANDS ASIDE for the person you picked. Both on one
+     screen is a scroll down a queue to find the box, and then a scroll
+     back up to find out who it is for. */
+  const body = document.getElementById('msg_queue_body');
+  if(body) body.classList.toggle('om-ph-detail', !!picked);
   /* THE MEASUREMENT BELONGS TO THE RECORD, and follows it. It used to be
      the register's own rail -- drawn beside the history it measures --
      and the register is the Sent group now, which has no rail. So it
@@ -97634,7 +97672,7 @@ function renderMessages(){
     }
     return;
   }
-  renderMessageSide(msgPickedId == null ? null : lensRows.find(r=> String(r.customerId) === String(msgPickedId)) || null);
+  renderMessageSide(picked);
 }
 
 /* A DATE IN A NARROW COLUMN. fmtShortDate always carries the year, which
@@ -97989,20 +98027,55 @@ function renderMessageKpis(rows, money, telling, held){
   </div>`;
 }
 
-function renderMessagePhoneHead(rows, money, telling, nominated){
+/* THE PHONE HEAD, WHICH IS TWO HEADS.
+
+   With nothing picked it is the LIST's: what is at stake, how many words
+   are owed, and the three lenses. Pick somebody and it becomes THEIRS --
+   a back chevron, who they are, which of the queue they are, and the one
+   figure this message is about -- because at 390px a recipient and a
+   list cannot both be on screen, and the frame is unambiguous about
+   which wins once you have chosen a person.
+
+   This is the two-designs law doing its actual job: the desktop shows
+   the list and the recipient side by side because it has the width, the
+   phone shows one at a time because it does not, and neither is a
+   reflow of the other. */
+function renderMessagePhoneHead(rows, money, telling, nominated, picked, lensRows){
   const el = document.getElementById('msg_ph_head');
   if(!el) return;
   const stake = money.reduce((s,r)=> s + msgStakeOf(r), 0);
   const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.?0+$/,'') + 'm'
     : n >= 1000 ? Math.round(n/1000) + 'k' : String(Math.round(n));
   const tab = (key,label,n)=>`<button type="button" class="om-ph-tab${msgLens===key?' om-on':''}" data-msglens="${key}">${esc(label)}${n?' '+n:''}</button>`;
-  el.innerHTML = `<div class="om-ph-t">Messages</div>
-    <div class="om-ph-figs">
-      <div class="om-ph-fig om-ph-fig-bad"><div class="om-ph-fig-l" style="color:var(--om-bad-ink)">At stake</div><div class="om-fig om-ph-fig-v" style="color:var(--om-bad-ink)">${esc(short(stake))}</div></div>
-      <div class="om-ph-fig"><div class="om-ph-fig-l">To message</div><div class="om-fig om-ph-fig-v">${rows.length}</div></div>
-      <div class="om-ph-fig"><div class="om-ph-fig-l">Nominated</div><div class="om-fig om-ph-fig-v">${nominated}</div></div>
+  const tabs = `<div class="om-ph-tabs">${tab('money','Money',money.length)}${tab('telling','Telling',telling.length)}${tab('posting','Posting',nominated)}</div>`;
+  if(picked){
+    const i = (lensRows||[]).findIndex(x=> String(x.customerId) === String(picked.customerId));
+    const mine = msgStakeOf(picked);
+    const ask = msgAskWords(picked, msgLastWord(picked));
+    el.innerHTML = `<div class="om-ph-who">
+      <button type="button" class="om-ph-back" id="msg_ph_back" aria-label="Back to the list">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <span class="om-av om-av-onnavy" style="width:26px;height:26px;font-size:10.5px">${esc(nameInitials(picked.name))}</span>
+      <div style="flex:1;min-width:0">
+        <div class="om-ph-who-n">${esc(picked.name)}</div>
+        <div class="om-ph-who-s">${picked.phone ? esc(picked.phone) : 'no number on file'}${ask ? ' &middot; ' + ask : ''}</div>
+      </div>
+      ${i >= 0 ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy);flex:none">${i+1} of ${lensRows.length}</span>` : ''}
     </div>
-    <div class="om-ph-tabs">${tab('money','Money',money.length)}${tab('telling','Telling',telling.length)}${tab('posting','Posting',nominated)}</div>`;
+    ${mine > 0 ? `<div class="om-ph-stake"><span class="om-ph-stake-l">AT STAKE</span><span class="om-fig om-n om-ph-stake-v">${esc(fmtUGX(Math.round(mine)))}</span></div>` : ''}
+    ${tabs}`;
+    const back = el.querySelector('#msg_ph_back');
+    if(back) back.addEventListener('click', ()=>{ msgPickedId = null; msgPanelForm = null; renderMessages(); });
+  } else {
+    el.innerHTML = `<div class="om-ph-t">Messages</div>
+      <div class="om-ph-figs">
+        <div class="om-ph-fig om-ph-fig-bad"><div class="om-ph-fig-l" style="color:var(--om-bad-ink)">At stake</div><div class="om-fig om-ph-fig-v" style="color:var(--om-bad-ink)">${esc(short(stake))}</div></div>
+        <div class="om-ph-fig"><div class="om-ph-fig-l">To message</div><div class="om-fig om-ph-fig-v">${rows.length}</div></div>
+        <div class="om-ph-fig"><div class="om-ph-fig-l">Nominated</div><div class="om-fig om-ph-fig-v">${nominated}</div></div>
+      </div>
+      ${tabs}`;
+  }
   el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens)));
 }
 
@@ -98032,7 +98105,11 @@ function renderMessageSide(r){
   const carried = !!ch && !(ch.invoices||[]).length;
   el.innerHTML = `
   <div class="om-card">
-    <div class="om-pan">
+    <!-- ON THE PHONE THIS HEADER IS THE SECOND ONE: the screen's own
+         head has already said who this is, with a way back to the list.
+         Two navy blocks carrying one name is the fault the second tab
+         was cut for, at a smaller size. -->
+    <div class="om-pan om-ph-hide">
       <div style="display:flex;align-items:center;gap:10px">
         <span class="om-av om-av-onnavy om-av-lg">${esc(nameInitials(r.name))}</span>
         <div style="min-width:0;flex:1">
@@ -98048,7 +98125,10 @@ function renderMessageSide(r){
       </div>
     </div>
     ${ch ? `<div style="padding:12px 14px">
-      <div style="display:flex;align-items:baseline;gap:10px">
+      <!-- The figure is in the phone's own head, on the navy, where it
+           is read with the name. Printing it again four lines down is
+           the same number twice on a 390px screen. -->
+      <div class="om-ph-hide" style="display:flex;align-items:baseline;gap:10px">
         <span class="om-lbl" style="font-size:10.5px">Owes</span>
         <span class="om-fig om-n" style="font-size:17px;color:var(--om-bad-ink);margin-left:auto">${esc(fmtUGX(Math.round(stake)))}</span>
       </div>
