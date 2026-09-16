@@ -510,15 +510,32 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
              'om-lenschip', 'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
              'om-cols', 'om-cols-m', 'om-col', 'om-scroll', 'om-side', 'om-find', 'om-find-i',
              'om-ph-head', 'om-ph-only'],
-      renders: ['renderMessages', 'msgRowHTML', 'renderMessageKpis', 'renderMessagePhoneHead',
-                'renderMessageSide', 'msgDraftFor', 'msgLastWord',
-                'renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
-                'renderWhatsApp'],
+      /* The three the second handoff added -- the held-back row, the
+         rules menu and the two small forms -- and the three the deleted
+         tab took with it. renderFollowUpsContact, renderFollowUpSummary
+         and renderFollowUpsAll drew the panes of a tab that no longer
+         exists; they are off this list because nothing on this screen
+         calls them any more. */
+      renders: ['renderMessages', 'msgRowHTML', 'msgHeldRowHTML', 'renderMessageKpis',
+                'renderMessagePhoneHead', 'renderMessageSide', 'msgPanelFormHTML',
+                'msgRenderRules', 'msgAnsweredHTML', 'msgDraftFor', 'msgLastWord',
+                /* The measurement follows the record: it was the
+                   register's own rail and the register is this list's
+                   Sent group now, so it takes the panel while that group
+                   is open and nothing is picked. */
+                'renderFollowUpScore', 'renderWhatsApp'],
       rendersUses: [
                     /* the queue, on the card system */
+                    /* om-blk is gone from this screen and that is the
+                       second handoff: the panel's footer -- the send, the
+                       honesty line and the two stamps -- is drawn on the
+                       surface with a rule above it, not on the sunken
+                       ground. A tint there made the one act on the panel
+                       read as an aside. */
                     'om-mrow', 'om-mrow-ph', 'om-av', 'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n',
-                    'om-kpi', 'om-kpi-f', 'om-kpi-s', 'om-pan', 'om-pan-t', 'om-pan-m', 'om-blk',
-                    'om-read', 'om-box', 'om-btn', 'om-btn-s', 'om-btn-w',
+                    'om-kpi', 'om-kpi-f', 'om-kpi-s', 'om-kpi-w', 'om-pan', 'om-pan-t', 'om-pan-m',
+                    'om-read', 'om-box', 'om-btn', 'om-btn-s', 'om-btn-w', 'om-btn-g', 'om-btn-p',
+                    'om-held', 'om-note', 'om-note-warn', 'om-inline', 'om-rule-l',
                     'om-ph-t', 'om-ph-figs', 'om-ph-fig', 'om-ph-fig-l', 'om-ph-fig-v',
                     'om-ph-tabs', 'om-ph-tab',
                     /* the hub and the post desk, still the console's */
@@ -526,8 +543,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                        queue's card list: the queue is .om-mrow now and the
                        hub's remaining panes are the strip, the register and
                        the held-back reasons. */
-                    'ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-cp', 'ow-empty', 'ow-mini', 'ow-pan',
+                    /* ow-strip and the four .ow-mt tiles went with the
+                       five-tile summary the second handoff cut: four of
+                       its five figures read 0, and three cards obeying
+                       the zero rule replace it. ow-cp went with the
+                       contact pane. */
+                    'ow-empty', 'ow-mini', 'ow-pan', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
                     'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
     },
     /* Consignment. A card per consignor, each one always fully open --
