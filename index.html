@@ -698,7 +698,7 @@
     position:fixed;left:var(--sidebar-w);right:0;bottom:0;z-index:40;
     display:none;align-items:center;gap:0;flex-wrap:nowrap;min-height:64px;
     padding:0 24px env(safe-area-inset-bottom, 0px);
-    background:var(--panel);border-top:1px solid var(--line);
+    background:var(--panel);border-top:1px solid var(--ow-steel-100);
   }
   body.on-quote-tab .q-stickybar{display:flex;}
   /* The document must end above the bar, not under it. */
@@ -6402,8 +6402,12 @@
   .q-doc .q-side-l.q-side-shop{color:var(--ow-ink-600);}
   .q-doc .ow-tbl-h.q-sides + .ow-tbl-h{padding-top:var(--ow-sp-4);}
   /* The header is a band, not a row of words floating over the first
-     line: its own quiet ground and a hairline under it. */
-  .q-doc .ow-tbl-h{background:var(--ow-paper-2);}
+     line: its own quiet ground and a hairline under it.
+     --ow-paper-2 is 1.05:1 against the card's white, which is a band you
+     cannot see. The page ground is what the sheet is cut down TO, so
+     every region recessed into this card -- this band, the foot, a
+     figure's slot -- wears it, and the white is left meaning the sheet. */
+  .q-doc .ow-tbl-h{background:var(--ow-steel-050);}
   .q-doc .ow-tbl-r:hover{background:var(--ow-paper-2);}
   /* A charge and the credit terms are part of what the client pays but
      they are not goods, and the document says so with a ground rather
@@ -6748,7 +6752,7 @@
   /* THE GOODS, BEFORE THE THINGS THAT ARE NOT GOODS.
      Drawn only when a charge or the terms follow it: with nothing after
      it the subtotal IS what the client pays, and the dock says that. */
-  .q-doc .ow-tbl-r.q-goods-sub{background:var(--ow-paper-2);min-height:34px;}
+  .q-doc .ow-tbl-r.q-goods-sub{background:var(--ow-steel-050);min-height:34px;}
   .q-doc .q-goods-sub .q-sub-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
 
   /* WHEN THESE FIGURES WERE TRUE.
@@ -6758,7 +6762,7 @@
      is older than the shop's own price-watch window. */
   .q-doc .q-doc-foot{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:32px;
     padding:var(--ow-sp-6) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
-    background:var(--ow-paper-2);font-size:var(--ow-t-11);color:var(--ow-ink-600);flex-wrap:wrap;}
+    background:var(--ow-steel-050);font-size:var(--ow-t-11);color:var(--ow-ink-600);flex-wrap:wrap;}
   .q-doc .q-doc-foot .ow-fig{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .q-doc .q-doc-foot .q-stale{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
   .q-doc .q-doc-foot .q-stale .ow-fig{color:var(--ow-amber-ink);}
@@ -12702,7 +12706,29 @@
   }
 
   /* ---- the bordered region: hairlines, not shadows ---- */
-  .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+  /* A CARD'S EDGE IS A BORDER; THE LINES INSIDE IT ARE HAIRLINES.
+     These four surfaces took --ow-rule-soft, which §2 names "hairlines",
+     for their OUTER edge -- and measured, that edge was doing nothing:
+     #EFECE6 against the #F7F5F2 ground is 1.08:1, and the white card
+     against the same ground is 1.09:1. Three nested surfaces within a
+     hundredth of each other, so the document read as a flat continuation
+     of the page rather than as a sheet lying on it. The owner saw it
+     before any test did.
+     Moving them to --ow-rule was not enough on its own: that is the same
+     value the header band's own bottom border already uses, so the edge
+     was no stronger than the strongest line INSIDE the card and still
+     did not read as its boundary. A card's anatomy wants three steps,
+     and the palette already holds them:
+
+       --ow-steel-100 #E0DCD4   the card's EDGE
+       --ow-rule      #E6E3DD   structural rules within it
+       --ow-rule-soft #EFECE6   hairlines between rows
+
+     Read `steel` as the neutrals, per §2's note that the token names are
+     historical: this is the darkest of the three warm lines, and the
+     outermost line is the one that should be darkest. No new colour, and
+     no shadow: depth in this app is still hairlines. */
+  .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-steel-100);
     border-radius:var(--ow-r-lg);overflow:hidden;}
   .ow-pan-h{display:flex;align-items:center;gap:var(--ow-sp-8);height:34px;
     padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);
@@ -12840,7 +12866,7 @@
 
   /* ---- the metric strip: one row, hairline dividers, no cards ---- */
   .ow-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--ow-paper);
-    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);overflow:hidden;}
   .ow-mt{padding:var(--ow-sp-10) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);}
   .ow-mt:first-child{border-left:0;}
   .ow-mt-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
@@ -13382,7 +13408,7 @@
      box, and focus draws a line under the cell rather than around the
      field. */
   .ow-cb{display:flex;align-items:stretch;background:var(--ow-paper);
-    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);margin-bottom:var(--ow-sp-16);}
+    border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);margin-bottom:var(--ow-sp-16);}
   .ow-cb-f{position:relative;min-width:0;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-6);
     border-bottom:2px solid transparent;}
   .ow-cb-f + .ow-cb-f,.ow-cb-k{border-left:1px solid var(--ow-rule-soft);}
@@ -13427,7 +13453,7 @@
      idioms as everywhere else: a head, a hairline-topped row, the money
      in its fixed relationship, a foot of acts. */
   .ow-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--ow-sp-12);}
-  .ow-card{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+  .ow-card{background:var(--ow-paper);border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);
     display:flex;flex-direction:column;min-width:0;}
   .ow-card:hover{border-color:var(--ow-rule);}
   .ow-card-h{display:flex;align-items:flex-start;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);}

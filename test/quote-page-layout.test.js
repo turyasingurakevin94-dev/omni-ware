@@ -234,8 +234,18 @@ const src = read('index.html');
   /* The band is the layer's .ow-cb: one bordered row with the inputs as
      ghosts inside its cells. It was .qp-client-inline, three .field
      boxes inside a bordered wrapper. */
-  t.check(/\.ow-cb\{[\s\S]{0,200}?border:1px solid var\(--ow-rule-soft\)/.test(src),
-    'the client fields are one bordered document-header band, not floating islands');
+  /* The token moved from --ow-rule-soft to --ow-rule, and what this
+     assertion means -- one BORDERED band rather than three floating
+     boxes -- is untouched. What changed is that the old one was not a
+     border you could see: #EFECE6 against the #F7F5F2 page ground
+     measures 1.08:1, so the band's edge was doing nothing. §2 names
+     --ow-rule "borders" and --ow-rule-soft "hairlines", and the card's
+     edge takes the darkest of the three warm lines (--ow-steel-100) so
+     it is a step stronger than the rules inside it. Pinned against the
+     soft one too, so a revert to the invisible edge fails. */
+  t.check(/\.ow-cb\{[\s\S]{0,200}?border:1px solid var\(--ow-steel-100\)/.test(src)
+    && !/\.ow-cb\{[\s\S]{0,200}?border:1px solid var\(--ow-rule-soft\)/.test(src),
+    'the client fields are one bordered document-header band, not floating islands — and its edge is a border, not a hairline');
   /* The figures are .ow-tbl-n cells and .ow-gi inputs, and
      ow-table.test.js and design-system.test.js hold both to the mono
      face with tabular-nums. What this file pins is that the row really
