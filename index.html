@@ -16777,6 +16777,25 @@
      the question a saved quote asks is "which of these is worth a
      phone call this morning", and that is not the newest one. */
   .om-qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid var(--om-rule-inner)}
+  .om-qrow-n{font-size:13.5px;font-weight:600}
+  .om-qrow-s{font-size:11.5px;color:var(--om-ink-3)}
+  .om-qrow-v{font-size:14px;text-align:right}
+  .om-qrow-k{font-size:13px;text-align:right;color:var(--om-good-ink)}
+  .om-qrow-act{height:32px;padding:0 11px;font-size:12.5px}
+  .om-saved-card{overflow:hidden}
+  .om-saved-ask{margin-bottom:12px}
+  /* The tail row: what is not drawn, counted, with the way to draw it. */
+  .om-qfoot-more{height:30px;padding:0 10px;font-size:12.5px;margin-left:auto}
+  @media (max-width:820px){
+    .om-qrow{grid-template-columns:minmax(0,1fr) auto;row-gap:7px}
+    .om-qrow-h{display:none}
+    .om-qrow-v{grid-column:2}
+    .om-qrow-k{grid-column:2}
+    .om-qrow > div:nth-child(3){grid-column:1}
+    .om-qrow > div:last-child{grid-column:1 / -1;text-align:left !important}
+    .om-qrow-act{width:100%;justify-content:center;height:36px}
+    .om-qfoot{flex-wrap:wrap;row-gap:6px}
+  }
   .om-qrow:hover{background:var(--om-hover)}
   .om-qrow-h{background:var(--om-sunken);border-top:0}
   .om-qrow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
@@ -39994,57 +40013,179 @@ function quoteSentPaneHTML(){
     ${tailRow}
   </div>` + why;
 }
-function quoteLensPaneHTML(){
-  if(quoteLens === 'sent') return quoteSentPaneHTML();
+/* ==================================================================
+ * 1B * THE SAVED LENS
+ *
+ * SAVED IS WRITTEN AND NOBODY HAS SEEN IT. It waits on YOU, not on the
+ * client, and its act is therefore SEND -- which is why the Next column
+ * here never says "chase". 1b was drawn before 2a forced that
+ * distinction and offers "Chase it" on one of its rows; bundle 14's own
+ * correction rules that out, so the act in that slot is Send.
+ *
+ * WAITING CARRIES A STATE, NOT A DATE. A chip saying "3 days" and a chip
+ * saying "19 days, price stale" are two different jobs, and the second
+ * is the whole reason to look at this list before sending anything.
+ * ================================================================== */
+function quoteSavedRanked(){
+  const stale = priceReviewStaleDays();
+  return quoteSavedRows().map(q=>{
+    const nameLower = ((q.client && q.client.name) || '').trim().toLowerCase();
+    const customer = (data.customers || []).find(c=> String(c.id) === String(q.customerId))
+      || (nameLower ? (data.customers || []).find(c=> (c.name||'').trim().toLowerCase() === nameLower) : null);
+    const st = customer ? customerDebtStanding(customer) : null;
+    /* The clock on Saved is how long it has sat UNSENT. Not how long the
+       client has had it -- they have not had it, which is the whole
+       difference between this lens and the next one. */
+    const age = stateAge(quoteSavedAtMs(q), stale * 86400000);
+    return {
+      q, customer,
+      owed: st ? st.owed : 0,
+      days: age.days, stale: age.past,
+      who: ((q.client && q.client.name) || '').trim() || 'No name on it',
+      value: savedQuoteTotal(q),
+      kept: quoteSavedKept(q)
+    };
+  /* Ranked by what is at stake, not by date: the question a saved quote
+     asks is which of these is worth finishing this morning, and that is
+     not the newest one. */
+  }).sort((a,b)=> b.value - a.value)
+    .map(r=> Object.assign(r, { wait: quoteSavedWait(r), next: quoteSavedNext(r) }));
+}
+/* savedAt is an ISO string on some records and a stamp on others, and a
+   clock cannot take both. One reader, so no caller has to know. */
+function quoteSavedAtMs(q){
+  const v = q.savedAt || q.date || '';
+  if(!v) return 0;
+  const n = Number(v);
+  if(n > 0 && String(v).length > 8 && !String(v).includes('-')) return n;
+  const t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+}
+/* THE WAITING CHIP, which is a state and not a date. A quote held behind
+   a debt is not merely old -- it is not going out at all until the money
+   is dealt with, and the chip says which of the two it is. */
+function quoteSavedWait(r){
+  const label = r.days == null ? 'just written'
+    : r.days === 0 ? 'today' : `${r.days} day${r.days===1?'':'s'}`;
+  if(r.owed > 0) return { text:'held &middot; debt first', cls:'om-chip-bad' };
+  if(r.stale) return { text:`${label} &middot; price stale`, cls:'om-chip-bad' };
+  /* Amber from three quarters of the way to the limit: a quote about to
+     go stale is worth sending today rather than re-pricing tomorrow. */
+  if(r.days != null && r.days >= priceReviewStaleDays() * 0.75) return { text:label, cls:'om-chip-caution' };
+  return { text:label, cls:'om-chip-neutral' };
+}
+/* ONE ACT PER ROW, and on this lens the default act is SEND -- the thing
+   standing between a written quote and a quote the client has seen. */
+function quoteSavedNext(r){
+  /* The money first. A second quote to somebody already behind is a
+     bigger hole, not a bigger sale. */
+  if(r.owed > 0) return { act:'debt', label:'Open debt', cls:'om-btn-s om-sent-bad' };
+  /* Its figures are older than the window this shop trusts its own
+     prices for, so it is re-priced on the way out rather than sent at
+     numbers the shop can no longer hold. Coral, because on a list of
+     quotes waiting to go this is the one to deal with. */
+  if(r.stale) return { act:'reprice', label:'Re-price &amp; send', cls:'om-btn-p' };
+  if(!(r.q.items || []).length) return { act:'open', label:'Open', cls:'om-btn-s' };
+  return { act:'send', label:'Send', cls:'om-btn-s' };
+}
+/* How many rows are drawn before the rest are counted. The list is
+   ranked by what is at stake, so the tail is the small money -- countable
+   rather than drawable, and openable because a list that permanently
+   hides four records is a list with four records missing. */
+const QUOTE_SAVED_HEAD = 4;
+let quoteSavedShowAll = false;
+function quoteSavedPaneHTML(){
   const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
-  const rows = quoteSavedRows();
-  if(!rows.length){
+  const ranked = quoteSavedRanked();
+  if(!ranked.length){
     return `<div class="om-card"><div class="om-qempty">
       <b>Nothing is written down and waiting to go.</b><br>
       A quote you save and have not yet sent sits here until it goes out,
       ranked by what is at stake.
     </div></div>`;
   }
-  /* Ranked by what is at stake, not by date: the question a saved quote
-     asks is which one is worth finishing this morning, and that is not
-     the newest one. Saved is waiting on YOU -- which is why the act is
-     Open, not chase. */
-  const ranked = rows.map(q=>({ q, value: savedQuoteTotal(q), kept: quoteSavedKept(q),
-      owed: (function(){ const c = (data.customers||[]).find(c=> String(c.id)===String(q.customerId));
-        const st = c ? customerDebtStanding(c) : null; return st ? st.owed : 0; })() }))
-    .sort((a,b)=> b.value - a.value);
-  const body = ranked.map(r=>{
-    const who = ((r.q.client && r.q.client.name) || '').trim() || 'No name on it';
+  const shown = quoteSavedShowAll ? ranked : ranked.slice(0, QUOTE_SAVED_HEAD);
+  const rest = ranked.slice(shown.length);
+  const body = shown.map(r=>{
     const lines = (r.q.items || []).length;
     const what = (r.q.items || []).slice(0,3).map(i=> i.productName).join(', ');
-    const waited = savedAgoLabel(r.q.savedAt || r.q.date || '');
-    const next = r.owed > 0
-      ? { label:'Open debt', cls:'om-btn-s', tone:`background:var(--om-bad);color:var(--om-bad-ink)` }
-      : { label:'Open', cls:'om-btn-s', tone:'' };
     return `<div class="om-qrow" data-saved="${esc(String(r.q.id))}">
       <div class="om-t">
-        <div style="font-size:13.5px;font-weight:600" class="om-t">${esc(who)}</div>
-        <div style="font-size:11.5px;color:var(--om-ink-3)" class="om-t">${lines} line${lines===1?'':'s'}${what ? ' &middot; ' + esc(what) : ''}${
-          r.owed > 0 ? ` &middot; <span style="color:var(--om-bad-ink);font-weight:600">owes ${n(r.owed)}</span>` : ''}</div>
+        <div class="om-qrow-n om-t">${esc(r.who)}</div>
+        <div class="om-qrow-s om-t">${lines} line${lines===1?'':'s'}${what ? ' &middot; ' + esc(what) : ''}${
+          r.owed > 0 ? ` &middot; <span class="om-sent-owes">owes ${n(r.owed)}</span>` : ''}</div>
       </div>
-      <div class="om-fig om-n" style="font-size:13.5px;text-align:right">${n(r.value)}</div>
-      <div><span class="om-chip" style="${r.tone||''}background:var(--om-neutral);color:var(--om-neutral-ink)">${esc(waited)}</span></div>
-      <div class="om-fig om-n" style="font-size:13.5px;text-align:right;color:var(--om-good-ink)">${n(r.kept)}</div>
-      <div style="text-align:right"><button type="button" class="om-btn ${next.cls}" style="height:30px;padding:0 12px;font-size:12.5px;${next.tone}" data-open-saved="${esc(String(r.q.id))}">${next.label}</button></div>
+      <div class="om-fig om-n om-qrow-v">${n(r.value)}</div>
+      <div><span class="om-chip ${r.wait.cls}">${r.wait.text}</span></div>
+      <div class="om-fig om-n om-qrow-k">${n(r.kept)}</div>
+      <div style="text-align:right"><button type="button" class="om-btn ${r.next.cls} om-qrow-act"
+        data-saved-act="${r.next.act}" data-saved-id="${esc(String(r.q.id))}">${r.next.label}</button></div>
     </div>`;
   }).join('');
   const total = ranked.reduce((t,r)=> t + r.value, 0);
-  return `<div class="om-card" style="overflow:hidden">
+  const tail = rest.length ? `<div class="om-qfoot">
+      <span>${rest.length} more saved quote${rest.length===1?'':'s'} &middot; <span class="om-fig">${n(rest.reduce((t,r)=>t+r.value,0))}</span> between them</span>
+      <button type="button" class="om-btn om-btn-g om-qfoot-more" id="q_saved_more">Show all ${ranked.length}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>` : (quoteSavedShowAll && ranked.length > QUOTE_SAVED_HEAD ? `<div class="om-qfoot">
+      <span>All ${ranked.length} shown</span>
+      <button type="button" class="om-btn om-btn-g om-qfoot-more" id="q_saved_more">Show fewer</button>
+    </div>` : '');
+  /* THE SAME PROMISE THE DOCUMENT MAKES. A send started from this list
+     asks the same question in the same words, because it is the same
+     send -- the app still cannot see WhatsApp. */
+  const stamp = quotePendingStamp ? `<div class="om-card om-sent-ask om-saved-ask">
+    <div class="om-stamp-row" style="padding:12px 14px 0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg>
+      <div class="om-stamp-t">The app cannot see WhatsApp. Say whether it went &mdash; nothing is recorded until you do, and it stays on this list until you say it did.</div>
+    </div>
+    <div class="om-stamp-acts" style="padding:0 14px 12px;max-width:340px">
+      <button type="button" class="om-btn om-btn-s" data-stamp="sent">It was sent</button>
+      <button type="button" class="om-btn om-btn-s" data-stamp="not">It was not</button>
+    </div>
+  </div>` : '';
+  return stamp + `<div class="om-card om-saved-card">
     <div class="om-qrow om-qrow-h">
       <span class="om-lbl">Client</span>
       <span class="om-lbl" style="text-align:right">Value</span>
-      <span class="om-lbl">Written</span>
+      <span class="om-lbl">Waiting</span>
       <span class="om-lbl" style="text-align:right">You keep</span>
       <span class="om-lbl" style="text-align:right">Next</span>
-    </div>${body}
+    </div>${body}${tail}
     <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} written and not yet sent
       &middot; <span class="om-fig">${n(total)}</span> the client has not seen</div>
   </div>`;
+}
+/* THE ACTS A SAVED ROW CAN EARN. Send is the whole journey in one press:
+   the document is reopened, the hand-off is composed from it, and the
+   same question follows -- because four steps between a list of quotes
+   waiting to go and a quote going out is how a list stops being worked. */
+function quoteSavedAct(act, id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return;
+  if(act === 'debt'){ goToTab('chase'); return; }
+  if(act === 'open'){ loadSavedQuote(q.id); return; }
+  if(act === 'reprice'){
+    /* Not "send it again" -- the figures are older than the window this
+       shop trusts its own prices for, so the document is opened to be
+       priced afresh and sent from there. */
+    loadSavedQuote(q.id);
+    toast(`Opened to be priced again — it has waited longer than the ${priceReviewStaleDays()} days you trust a price for`);
+    return;
+  }
+  /* Send. Load it, hand it off, and arm the question -- in that order,
+     because the hand-off leaves the page and the record has to exist for
+     the answer to be written onto. */
+  loadSavedQuote(q.id);
+  const btn = document.getElementById('q_whatsapp_btn');
+  if(!btn){ toast('Could not open the hand-off — the quote is open, send it from the bar below'); return; }
+  /* Back to the list, so the answer is asked where the send was started
+     and the row it belongs to is on screen behind it. */
+  btn.click();
+  setTimeout(()=>{ setQuoteLens('saved'); }, 0);
+}
+function quoteLensPaneHTML(){
+  return quoteLens === 'sent' ? quoteSentPaneHTML() : quoteSavedPaneHTML();
 }
 function renderQuoteLensPane(){
   const pane = document.getElementById('q_lens_pane');
@@ -40062,6 +40203,14 @@ function renderQuoteLensPane(){
   pane.querySelectorAll('[data-open-saved]').forEach(btn=> btn.addEventListener('click', ()=>{
     loadSavedQuote(btn.dataset.openSaved);
   }));
+  pane.querySelectorAll('[data-saved-act]').forEach(btn=> btn.addEventListener('click', ()=>
+    quoteSavedAct(btn.dataset.savedAct, btn.dataset.savedId)));
+  /* The send started from this list is answered on this list. Same
+     handler as the document's, because it is the same send. */
+  pane.querySelectorAll('[data-stamp]').forEach(btn=> btn.addEventListener('click', ()=>
+    quoteStampSent(btn.dataset.stamp === 'sent')));
+  const smore = pane.querySelector('#q_saved_more');
+  if(smore) smore.addEventListener('click', ()=>{ quoteSavedShowAll = !quoteSavedShowAll; renderQuoteLensPane(); });
   pane.querySelectorAll('[data-sent-act]').forEach(btn=> btn.addEventListener('click', ()=>
     quoteSentAct(btn.dataset.sentAct, btn.dataset.savedId)));
   /* THE COMPOSER'S OWN WIRING. The box is what ships, so the send reads
@@ -41580,6 +41729,10 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
   quoteEnsureSaved().then((id)=>{
     quotePendingStamp = id || null;
     renderQuoteRail();
+    /* A send started from the Saved list is answered there, so the pane
+       has to learn about the question too -- the rail is the document's
+       place to ask and the list needs its own. */
+    if(typeof renderQuoteLensPane === 'function') renderQuoteLensPane();
   });
 });
 
