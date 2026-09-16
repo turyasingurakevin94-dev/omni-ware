@@ -741,4 +741,79 @@ const src = read('index.html');
     'the tab bar is restored after the lens it sets is declared — a `let` read early is a ReferenceError that takes the whole boot with it');
 }
 
+/* ---------- 1B · the Saved lens --------------------------------------
+ *
+ * SAVED WAITS ON YOU. Bundle 14 corrected the conflation this lens was
+ * built on: a quote nobody has seen is not waiting on a yes, and its act
+ * is therefore SEND. 1b was drawn before that correction and offers
+ * "Chase it" on one of its rows; that one thing is deliberately not
+ * built, because the bundle that ships 1b also rules it out.
+ */
+{
+  const pane = extractFunction(src, 'quoteSavedPaneHTML', 'index.html');
+  const nextFn = extractFunction(src, 'quoteSavedNext', 'index.html');
+  const waitFn = extractFunction(src, 'quoteSavedWait', 'index.html');
+
+  t.check(/Client<\/span>[\s\S]{0,200}Value<\/span>[\s\S]{0,200}Waiting<\/span>[\s\S]{0,200}You keep<\/span>[\s\S]{0,200}Next<\/span>/.test(pane),
+    '1b’s five columns, in 1b’s order');
+  t.check(/written and not yet sent/.test(pane) && /the client has not seen/.test(pane)
+    && !/waiting on a yes/.test(pane),
+    'and the correction bundle 14 makes — "waiting on a yes" is the Sent lens’s job, not this one’s');
+
+  /* THE WAITING CHIP IS A STATE, NOT A DATE. "3 days" and "19 days,
+     price stale" are two different jobs, and the second is the whole
+     reason to read this list before sending anything off it. */
+  const waits = compileScope([waitFn], {
+    data: { presetPriceReview: { staleDays: 20 } },
+    priceReviewStaleDays: ()=> 20,
+  }, ['quoteSavedWait']);
+  t.check(waits.quoteSavedWait({ owed: 250000, days: 5, stale: false }).cls === 'om-chip-bad'
+    && /debt first/.test(waits.quoteSavedWait({ owed: 250000, days: 5, stale: false }).text),
+    'a quote held behind a debt says so, rather than saying how old it is');
+  t.check(/price stale/.test(waits.quoteSavedWait({ owed: 0, days: 40, stale: true }).text),
+    'a quote past the shop’s own price-trust window says THAT');
+  t.check(waits.quoteSavedWait({ owed: 0, days: 16, stale: false }).cls === 'om-chip-caution',
+    'and one three quarters of the way there goes amber before it goes stale');
+  t.check(waits.quoteSavedWait({ owed: 0, days: 3, stale: false }).cls === 'om-chip-neutral',
+    'while a fresh one is plain — a list where every chip is coloured has no colour left to spend');
+
+  /* ONE ACT PER ROW, and the default act on this lens is SEND. */
+  const acts = compileScope([nextFn], {}, ['quoteSavedNext']);
+  t.check(acts.quoteSavedNext({ owed: 0, stale: false, q: { items: [1] } }).act === 'send',
+    'the default act on Saved is send — the thing standing between a written quote and a quote the client has seen');
+  t.check(acts.quoteSavedNext({ owed: 250000, stale: true, q: { items: [1] } }).act === 'debt',
+    'a client who owes is asked about the money first, whatever else the row says');
+  const rep = acts.quoteSavedNext({ owed: 0, stale: true, q: { items: [1] } });
+  t.check(rep.act === 'reprice' && /om-btn-p/.test(rep.cls),
+    'a quote whose figures are older than the shop trusts them is re-priced on the way out, in coral');
+  t.check(acts.quoteSavedNext({ owed: 0, stale: false, q: { items: [] } }).act === 'open',
+    'and a quote with nothing on it offers Open, because there is nothing to send');
+  t.check(!/Chase it/.test(pane),
+    'nothing on this lens offers to chase — you cannot chase somebody who has not seen it');
+
+  /* SEND IS THE WHOLE JOURNEY IN ONE PRESS, and it is answered where it
+     was started. Four steps between a list of quotes waiting to go and a
+     quote going out is how a list stops being worked. */
+  const act = extractFunction(src, 'quoteSavedAct', 'index.html');
+  t.check(/loadSavedQuote\(q\.id\)/.test(act) && /q_whatsapp_btn/.test(act)
+    && /setQuoteLens\('saved'\)/.test(act),
+    'Send reopens the document, presses the one hand-off this app has, and comes back to the list');
+  t.check(/data-stamp="sent"/.test(pane) && /data-stamp="not"/.test(pane)
+    && /cannot see WhatsApp/.test(pane),
+    'and the same question is asked on the list, in the same words — the app still cannot see WhatsApp');
+  t.check(/quotePendingStamp \?/.test(pane),
+    'only while an answer is actually outstanding');
+  t.check(/quotePendingStamp = id \|\| null;[\s\S]{0,400}renderQuoteLensPane\(\)/.test(src),
+    'the send tells the list about the question, not only the document’s rail');
+
+  /* THE TAIL. Ranked by what is at stake means the small money piles up
+     at the bottom -- countable rather than drawable, and openable,
+     because a list that permanently hides four records is a list with
+     four records missing. */
+  t.check(/QUOTE_SAVED_HEAD/.test(pane) && /more saved quote/.test(pane) && /Show all \$\{ranked\.length\}/.test(pane),
+    'the tail counts what it does not draw, and offers to draw it');
+  t.check(/q_saved_more/.test(extractFunction(src, 'renderQuoteLensPane', 'index.html')),
+    'and the offer is wired');
+}
+
 process.exit(t.done() ? 1 : 0);

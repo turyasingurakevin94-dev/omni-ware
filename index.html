@@ -13509,6 +13509,17 @@
   .ow-dlg-w800{--ow-dlg-w:800px;}
   .ow-dlg-w900{--ow-dlg-w:900px;}
   .ow-dlg-w980{--ow-dlg-w:980px;}
+  .ow-dlg-w720{--ow-dlg-w:720px;}
+  /* A DIALOG DRAWN IN THE CARD SYSTEM. Order tracking is the last screen
+     still in the console's palette and its two order sheets are the
+     first piece being converted, so the shell has to get out of the way:
+     the .om-od inside the body IS the dialog, and the console's own
+     chrome around it would be a second frame around the first. Lives
+     here rather than in the OM layer because it names .ow- classes, and
+     a rule that reaches outside that namespace belongs beside the code
+     it couples to. */
+  .ow-dlg-card{background:none;box-shadow:none;border-radius:0;overflow:visible;}
+  .ow-dlg-card > .ow-dlg-h,.ow-dlg-card > .ow-dlg-f{display:none;}
   .ow-dlg-h{flex:none;height:44px;display:flex;align-items:center;gap:var(--ow-sp-10);
     padding:0 14px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
   .ow-dlg-t{flex:none;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);white-space:nowrap;}
@@ -16262,6 +16273,17 @@
        hairline's shadow, not a lift. ---- */
     --om-shadow:0 1px 2px rgba(23,34,60,.05);
     --om-shadow-lens:0 1px 2px rgba(23,34,60,.08);
+    /* A DIALOG IS THE ONE THING THAT REALLY FLOATS. The rule above is
+       about cards, which sit ON the ground and are drawn with a
+       hairline's worth of shadow; a dialog sits OVER a screen that is
+       still there behind it, and a card's shadow at that job reads as a
+       rectangle that failed to load. One value, used by the order
+       dialog and nothing else. */
+    --om-shadow-dialog:0 18px 44px rgba(23,34,60,.22);
+    /* Alpha over navy, because a tint would have to be mixed against
+       whatever the header is and these sit only on it. */
+    --om-on-navy-chip:rgba(255,255,255,.14);
+    --om-on-navy-fill:rgba(255,255,255,.1);
     /* ---- rail states, which are alpha over navy rather than tints ---- */
     /* ---- the rail's six group tiles ----
        The one place colour identifies rather than states. Six of the
@@ -16796,6 +16818,25 @@
      the question a saved quote asks is "which of these is worth a
      phone call this morning", and that is not the newest one. */
   .om-qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid var(--om-rule-inner)}
+  .om-qrow-n{font-size:13.5px;font-weight:600}
+  .om-qrow-s{font-size:11.5px;color:var(--om-ink-3)}
+  .om-qrow-v{font-size:14px;text-align:right}
+  .om-qrow-k{font-size:13px;text-align:right;color:var(--om-good-ink)}
+  .om-qrow-act{height:32px;padding:0 11px;font-size:12.5px}
+  .om-saved-card{overflow:hidden}
+  .om-saved-ask{margin-bottom:12px}
+  /* The tail row: what is not drawn, counted, with the way to draw it. */
+  .om-qfoot-more{height:30px;padding:0 10px;font-size:12.5px;margin-left:auto}
+  @media (max-width:820px){
+    .om-qrow{grid-template-columns:minmax(0,1fr) auto;row-gap:7px}
+    .om-qrow-h{display:none}
+    .om-qrow-v{grid-column:2}
+    .om-qrow-k{grid-column:2}
+    .om-qrow > div:nth-child(3){grid-column:1}
+    .om-qrow > div:last-child{grid-column:1 / -1;text-align:left !important}
+    .om-qrow-act{width:100%;justify-content:center;height:36px}
+    .om-qfoot{flex-wrap:wrap;row-gap:6px}
+  }
   .om-qrow:hover{background:var(--om-hover)}
   .om-qrow-h{background:var(--om-sunken);border-top:0}
   .om-qrow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
@@ -17606,6 +17647,218 @@
   .om-wa-field input{box-sizing:border-box;width:100%;height:34px;padding:0 10px;border:1px solid var(--om-rule-input);border-radius:9px;background:var(--om-field);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:var(--om-ink)}
   .om-wa-check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--om-ink-2);cursor:pointer}
   .om-wa-check input{width:auto;margin-top:2px;flex:none}
+
+  /* ---- THE ORDER DIALOG --------------------------------------------
+
+     The order preview, and the sheet that moves an order back a stage.
+
+     The preview was eleven blocks and a scrollbar on a one-line order
+     worth 12,000: header, track, picker note, what to tell the client,
+     a paragraph explaining Loaded, the carrier form, its button, the
+     lines, a How-it-got-here log, Money with a five-sentence method
+     paragraph, Not invoiced, and a footer sentence. Two of them drew
+     the same timeline and three explained how the app works. It is six
+     blocks now, and the rule underneath is that THE DIALOG IS THE SIZE
+     OF THE ORDER: a block is drawn only when it has content, so a
+     one-item order in the yard stops looking as heavy as a forty-line
+     delivery in dispute.
+
+     Drawn in the card system rather than the console's, because this is
+     where Order tracking starts being converted and a dialog is the
+     smallest piece to convert first. */
+  .om-od{background:var(--om-surface);border-radius:14px;box-shadow:var(--om-shadow-dialog);
+    overflow:hidden;font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--om-ink)}
+  .om-od-h{background:var(--om-navy);padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .om-od-h-m{flex:1;min-width:0}
+  .om-od-h-t{font-size:15px;font-weight:600;color:var(--om-on-navy)}
+  .om-od-h-s{margin-top:1px;font-size:11.5px;color:var(--om-on-navy-3)}
+  .om-od-h-c{background:var(--om-on-navy-chip);color:var(--om-on-navy);flex:none}
+  .om-od-h-b{width:30px;height:30px;flex:none;border:0;border-radius:8px;background:none;
+    color:var(--om-on-navy-2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .om-od-h-b.om-on{background:var(--om-on-navy-fill)}
+  .om-od-h-b:hover{color:var(--om-on-navy)}
+
+  .om-od-sec{padding:13px 16px}
+  .om-od-sec-t{padding-top:16px;padding-bottom:14px}
+  .om-od-l{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-ink-3)}
+
+  /* THE TRACK. Five columns, and FILLED VERSUS HOLLOW carries "where it
+     is" rather than colour: the current step is a solid navy dot with a
+     ring, a step behind it is a solid green one, a step ahead is an
+     outline. A step the order went to and came BACK from keeps its time
+     and gains a return arrow in caution ink -- one dot carrying both
+     facts, so the order reads as in Preparing while the track still
+     shows it has been out. */
+  .om-od-trk{margin-top:11px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:start}
+  .om-od-trk-s{min-width:0;text-align:left;border:0;background:none;padding:0;font:inherit;color:inherit;display:block}
+  .om-od-trk-s.om-off{opacity:.5}
+  .om-od-trk-s.om-pick{cursor:pointer}
+  .om-od-trk-l{display:flex;align-items:center}
+  .om-od-trk-d{width:12px;height:12px;border-radius:999px;box-sizing:border-box;flex:none;
+    border:1px solid var(--om-dashed)}
+  .om-od-trk-d.om-done{background:var(--om-good-ink);border-color:var(--om-good-ink)}
+  .om-od-trk-d.om-now{background:var(--om-navy);border-color:var(--om-navy);box-shadow:0 0 0 3px var(--om-rule-btn)}
+  .om-od-trk-d.om-at{background:var(--om-coral-text);border-color:var(--om-coral-text);box-shadow:0 0 0 3px var(--om-bad)}
+  .om-od-trk-d.om-back{background:var(--om-surface);border:2px solid var(--om-late)}
+  .om-od-trk-b{flex:1;height:2px;background:var(--om-track)}
+  .om-od-trk-b.om-done{background:var(--om-good-ink)}
+  .om-od-trk-n{margin-top:7px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .om-od-trk-n.om-quiet{font-weight:500;color:var(--om-ink-3)}
+  .om-od-trk-n.om-now{font-weight:700}
+  .om-od-trk-n.om-at{font-weight:700;color:var(--om-bad-ink)}
+  .om-od-trk-n.om-back{color:var(--om-caution-ink)}
+  .om-od-trk-t{margin-top:1px;font-size:11px;color:var(--om-ink-2)}
+  .om-od-trk-t.om-quiet{color:var(--om-ink-quiet)}
+  .om-od-trk-t.om-at{font-weight:600;color:var(--om-bad-ink)}
+  .om-od-trk-t.om-back{color:var(--om-caution-ink)}
+  .om-od-trk-w{margin-top:10px;font-size:12px;color:var(--om-ink-2)}
+  .om-od-trk-2{background:var(--om-caution);color:var(--om-caution-ink);height:17px;padding:0 6px;font-size:10px}
+
+  /* WHAT TO TELL THE CLIENT. One client-ready line beside its button --
+     it was four sentences, three of which repeated the header and the
+     track. The button opens the composer that already stamps. */
+  .om-od-say{padding:11px 16px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);
+    border-bottom:1px solid var(--om-rule-inner);display:flex;align-items:center;gap:12px}
+  .om-od-say-m{flex:1;min-width:0}
+  .om-od-say-t{margin-top:3px;font-size:12.5px;color:var(--om-ink)}
+
+  /* THE LINE, and MONEY beside it in a fixed column. */
+  .om-od-cols{display:flex;align-items:stretch}
+  .om-od-col{flex:1;min-width:0;padding:14px 16px}
+  .om-od-money{width:268px;flex:none;padding:14px 16px;background:var(--om-sunken);border-left:1px solid var(--om-rule-inner)}
+  .om-od-ln{margin-top:9px;display:grid;grid-template-columns:minmax(0,1fr) 56px 76px;align-items:baseline;column-gap:10px}
+  .om-od-ln + .om-od-ln{margin-top:8px}
+  /* min-width:0 so the name can truncate, and NOT .om-t: that would put
+     nowrap on the basis line underneath, which is a sentence and wants
+     to wrap rather than be cut at "none was on t". */
+  .om-od-ln-m{min-width:0}
+  .om-od-ln-n{font-size:13.5px;font-weight:600}
+  .om-od-ln-s{margin-top:2px;font-size:11px;color:var(--om-ink-2)}
+  .om-od-ln-q,.om-od-ln-v{font-size:13px;text-align:right}
+  .om-od-kv{margin-top:5px;display:flex;align-items:baseline;gap:9px}
+  .om-od-kv:first-of-type{margin-top:9px}
+  .om-od-kv-k{font-size:12.5px;color:var(--om-ink-2)}
+  .om-od-kv-v{font-size:13px;margin-left:auto}
+  .om-od-keep{margin-top:8px;padding-top:8px;border-top:1px solid var(--om-rule-input);
+    display:flex;align-items:baseline;gap:9px}
+  .om-od-keep-k{font-size:12.5px;font-weight:700}
+  .om-od-keep-v{font-size:14px;margin-left:auto}
+  .om-od-basis{margin-top:6px;font-size:11.5px;color:var(--om-ink-2)}
+  /* The suppliers still to answer, one row each: who, where the asking
+     has got to, and the two taps. */
+  .om-od-sup-b{border-top:1px solid var(--om-rule-inner)}
+  .om-od-sups{margin-top:9px;display:flex;flex-direction:column;gap:8px}
+  .om-od-sup{display:flex;align-items:center;gap:9px;min-width:0}
+  .om-od-sup-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+  .om-od-sup-s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--om-ink-2)}
+  .om-od-sup-a{flex:none;display:flex;gap:7px}
+  .om-od-sup-a .om-btn{height:30px;padding:0 11px;font-size:12.5px}
+
+  /* THE PACK SURPLUS. The point of the redesign: it was sentence four of
+     a five-sentence grey paragraph, and it is eighteen times the value
+     of the order it was buried under. What leaves the till goes on top,
+     and what happens to the rest of it is said underneath. */
+  .om-od-sur{margin-top:11px;background:var(--om-caution-card);border:1px solid var(--om-caution-card-rule);
+    border-radius:10px;padding:9px 10px;color:var(--om-caution-card-ink)}
+  .om-od-sur-h{display:flex;align-items:baseline;gap:8px}
+  .om-od-sur-k{font-size:11.5px;font-weight:700}
+  .om-od-sur-v{font-size:13.5px;margin-left:auto}
+  .om-od-sur-s{margin-top:4px;font-size:11.5px;line-height:1.5}
+
+  /* THE ACTION FOOTER, grouped as do · tell · stop, with one primary. */
+  .om-od-f{padding:11px 16px;border-top:1px solid var(--om-rule-inner);display:flex;
+    align-items:center;gap:10px;flex-wrap:wrap;background:var(--om-surface)}
+  .om-od-f-s{flex:1;min-width:200px;font-size:11.5px;color:var(--om-ink-2);line-height:1.5}
+  .om-od-sel{flex:1;min-width:200px;box-sizing:border-box;height:38px;padding:0 11px;
+    border:1px solid var(--om-rule-input);border-radius:9px;background:var(--om-surface);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:13px;color:var(--om-ink)}
+  .om-od-div{width:1px;height:24px;background:var(--om-rule-inner);flex:none}
+  .om-od-f .om-btn{height:34px;padding:0 12px;font-size:12.5px}
+  .om-od-f .om-btn-p{height:38px;padding:0 14px;font-size:13.5px}
+  .om-od-f .om-btn-p[disabled]{background:var(--om-neutral);color:var(--om-ink-quiet);cursor:not-allowed}
+  .om-od-say .om-btn{flex:none;height:34px;padding:0 12px;font-size:12.5px}
+  /* The carrier form, in the card system's clothes. Same call, same
+     data-car contract, same reader -- carrierFormHTML is parameterised
+     by its class names precisely so a second form never has to exist. */
+  .om-od-load{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;flex:1;min-width:200px}
+  .om-od-field{display:flex;flex-direction:column;gap:4px;flex:1 1 180px;min-width:0}
+  .om-od-flabel{display:none}
+  .om-od-in{box-sizing:border-box;width:100%;height:38px;padding:0 11px;border:1px solid var(--om-rule-input);
+    border-radius:9px;background:var(--om-surface);font-family:'IBM Plex Sans',system-ui,sans-serif;
+    font-size:13px;color:var(--om-ink)}
+
+  /* ---- GOING BACK: the reasons, what it changes, and the client -----
+     Backwards is not a drag. It is an explicit act with a reason,
+     reached by clicking the step on the track that already shows where
+     the order has been -- and the reason is asked because it decides
+     what else happens, not to make the owner answer twice. */
+  .om-od-why{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .om-od-r{display:flex;align-items:center;gap:9px;cursor:pointer;border:0;background:none;
+    padding:0;font:inherit;color:inherit;text-align:left;width:100%}
+  .om-od-rd{width:16px;height:16px;border-radius:999px;border:1px solid var(--om-dashed);
+    background:var(--om-surface);box-sizing:border-box;flex:none}
+  .om-od-r.om-on .om-od-rd{border:5px solid var(--om-coral-text)}
+  .om-od-r-t{font-size:13px}
+  .om-od-r.om-on .om-od-r-t{font-weight:600}
+  .om-od-r-s{font-size:12px;color:var(--om-ink-2)}
+  .om-od-chgs{margin-top:10px;display:flex;flex-direction:column;gap:9px}
+  .om-od-chg{display:flex;align-items:flex-start;gap:9px}
+  .om-od-chg-i{flex:none;margin-top:2px;color:var(--om-good-ink)}
+  .om-od-chg-i.om-quiet{color:var(--om-ink-3)}
+  .om-od-chg-i.om-warn{color:var(--om-caution-ink)}
+  .om-od-chg-t{flex:1;min-width:0;font-size:12.5px;color:var(--om-note-ink)}
+  .om-od-tell{margin-top:12px;background:var(--om-caution-card);border:1px solid var(--om-caution-card-rule);
+    border-radius:10px;padding:10px 11px;display:flex;align-items:flex-start;gap:9px;
+    width:100%;box-sizing:border-box;text-align:left;font:inherit;color:var(--om-caution-card-ink);cursor:pointer}
+  .om-od-tick{width:17px;height:17px;border-radius:6px;border:1px solid var(--om-dashed);
+    background:var(--om-surface);box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    flex:none;margin-top:1px;color:var(--om-surface)}
+  .om-od-tell.om-on .om-od-tick{background:var(--om-coral-text);border-color:var(--om-coral-text)}
+  .om-od-tell-m{flex:1;min-width:0;display:flex;flex-direction:column}
+  .om-od-tell-t{font-size:12.5px;font-weight:700}
+  .om-od-tell-s{margin-top:3px;font-size:12px;line-height:1.5}
+  /* The reasons band is the client band's ground with its content
+     stacked rather than in a row. */
+  .om-od-stack{display:block}
+
+  /* ---- THE ORDER DIALOG, IN ONE HAND -------------------------------
+     820px is a switch, not a reflow. The 720px sheet is a desk object:
+     its two columns are a line list beside a 268px money column, and at
+     390px that column takes two thirds of the width and leaves the
+     goods as a column of nothing. So the phone stacks them, the money
+     block keeps its own ground with a rule above it instead of beside
+     it, and every control in the footer is a thumb's width. */
+  @media (max-width:820px){
+    /* No radius against the screen edge, and no min-height: the sheet is
+       as tall as its own content and the shell scrolls it. Stretching it
+       to the viewport is what put "Hold or cancel" a few pixels below
+       the fold with nothing able to scroll to it. */
+    .om-od{border-radius:0;overflow:visible;align-self:flex-start;width:100%}
+    .om-od-h{padding:10px 12px;flex-wrap:wrap}
+    .om-od-h-m{flex:1 1 100%;order:-1}
+    .om-od-sec{padding:12px}
+    .om-od-sec-t{padding-top:14px;padding-bottom:12px}
+    /* The five steps keep their order and lose their one line: a label
+       that wraps is readable, a label clipped at "Prepari" is not. */
+    .om-od-trk{column-gap:6px}
+    .om-od-trk-n{font-size:11.5px;flex-wrap:wrap;gap:4px}
+    .om-od-trk-t{font-size:10.5px;overflow-wrap:anywhere}
+    .om-od-say{padding:12px;display:block}
+    .om-od-say .om-btn{margin-top:10px;width:100%;justify-content:center;height:44px}
+    .om-od-cols{display:block}
+    .om-od-col{padding:12px}
+    .om-od-money{width:auto;padding:12px;border-left:0;border-top:1px solid var(--om-rule-inner)}
+    .om-od-f{padding:12px;gap:8px}
+    .om-od-f-s{flex:1 1 100%;min-width:0}
+    .om-od-load{flex:1 1 100%}
+    .om-od-sel,.om-od-in{height:44px;font-size:14px}
+    .om-od-f .om-btn{flex:1 1 100%;justify-content:center;height:44px;font-size:14px}
+    .om-od-f .om-btn-p{height:44px;font-size:14px}
+    /* A hairline drawn between two full-width buttons is a hairline
+       across the sheet. The grouping is the stacking order instead. */
+    .om-od-div{display:none}
+    .om-od-r-s{flex:1 1 100%}
+  }
 
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
 
@@ -40094,57 +40347,179 @@ function quoteSentPaneHTML(){
     ${tailRow}
   </div>` + why;
 }
-function quoteLensPaneHTML(){
-  if(quoteLens === 'sent') return quoteSentPaneHTML();
+/* ==================================================================
+ * 1B * THE SAVED LENS
+ *
+ * SAVED IS WRITTEN AND NOBODY HAS SEEN IT. It waits on YOU, not on the
+ * client, and its act is therefore SEND -- which is why the Next column
+ * here never says "chase". 1b was drawn before 2a forced that
+ * distinction and offers "Chase it" on one of its rows; bundle 14's own
+ * correction rules that out, so the act in that slot is Send.
+ *
+ * WAITING CARRIES A STATE, NOT A DATE. A chip saying "3 days" and a chip
+ * saying "19 days, price stale" are two different jobs, and the second
+ * is the whole reason to look at this list before sending anything.
+ * ================================================================== */
+function quoteSavedRanked(){
+  const stale = priceReviewStaleDays();
+  return quoteSavedRows().map(q=>{
+    const nameLower = ((q.client && q.client.name) || '').trim().toLowerCase();
+    const customer = (data.customers || []).find(c=> String(c.id) === String(q.customerId))
+      || (nameLower ? (data.customers || []).find(c=> (c.name||'').trim().toLowerCase() === nameLower) : null);
+    const st = customer ? customerDebtStanding(customer) : null;
+    /* The clock on Saved is how long it has sat UNSENT. Not how long the
+       client has had it -- they have not had it, which is the whole
+       difference between this lens and the next one. */
+    const age = stateAge(quoteSavedAtMs(q), stale * 86400000);
+    return {
+      q, customer,
+      owed: st ? st.owed : 0,
+      days: age.days, stale: age.past,
+      who: ((q.client && q.client.name) || '').trim() || 'No name on it',
+      value: savedQuoteTotal(q),
+      kept: quoteSavedKept(q)
+    };
+  /* Ranked by what is at stake, not by date: the question a saved quote
+     asks is which of these is worth finishing this morning, and that is
+     not the newest one. */
+  }).sort((a,b)=> b.value - a.value)
+    .map(r=> Object.assign(r, { wait: quoteSavedWait(r), next: quoteSavedNext(r) }));
+}
+/* savedAt is an ISO string on some records and a stamp on others, and a
+   clock cannot take both. One reader, so no caller has to know. */
+function quoteSavedAtMs(q){
+  const v = q.savedAt || q.date || '';
+  if(!v) return 0;
+  const n = Number(v);
+  if(n > 0 && String(v).length > 8 && !String(v).includes('-')) return n;
+  const t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+}
+/* THE WAITING CHIP, which is a state and not a date. A quote held behind
+   a debt is not merely old -- it is not going out at all until the money
+   is dealt with, and the chip says which of the two it is. */
+function quoteSavedWait(r){
+  const label = r.days == null ? 'just written'
+    : r.days === 0 ? 'today' : `${r.days} day${r.days===1?'':'s'}`;
+  if(r.owed > 0) return { text:'held &middot; debt first', cls:'om-chip-bad' };
+  if(r.stale) return { text:`${label} &middot; price stale`, cls:'om-chip-bad' };
+  /* Amber from three quarters of the way to the limit: a quote about to
+     go stale is worth sending today rather than re-pricing tomorrow. */
+  if(r.days != null && r.days >= priceReviewStaleDays() * 0.75) return { text:label, cls:'om-chip-caution' };
+  return { text:label, cls:'om-chip-neutral' };
+}
+/* ONE ACT PER ROW, and on this lens the default act is SEND -- the thing
+   standing between a written quote and a quote the client has seen. */
+function quoteSavedNext(r){
+  /* The money first. A second quote to somebody already behind is a
+     bigger hole, not a bigger sale. */
+  if(r.owed > 0) return { act:'debt', label:'Open debt', cls:'om-btn-s om-sent-bad' };
+  /* Its figures are older than the window this shop trusts its own
+     prices for, so it is re-priced on the way out rather than sent at
+     numbers the shop can no longer hold. Coral, because on a list of
+     quotes waiting to go this is the one to deal with. */
+  if(r.stale) return { act:'reprice', label:'Re-price &amp; send', cls:'om-btn-p' };
+  if(!(r.q.items || []).length) return { act:'open', label:'Open', cls:'om-btn-s' };
+  return { act:'send', label:'Send', cls:'om-btn-s' };
+}
+/* How many rows are drawn before the rest are counted. The list is
+   ranked by what is at stake, so the tail is the small money -- countable
+   rather than drawable, and openable because a list that permanently
+   hides four records is a list with four records missing. */
+const QUOTE_SAVED_HEAD = 4;
+let quoteSavedShowAll = false;
+function quoteSavedPaneHTML(){
   const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
-  const rows = quoteSavedRows();
-  if(!rows.length){
+  const ranked = quoteSavedRanked();
+  if(!ranked.length){
     return `<div class="om-card"><div class="om-qempty">
       <b>Nothing is written down and waiting to go.</b><br>
       A quote you save and have not yet sent sits here until it goes out,
       ranked by what is at stake.
     </div></div>`;
   }
-  /* Ranked by what is at stake, not by date: the question a saved quote
-     asks is which one is worth finishing this morning, and that is not
-     the newest one. Saved is waiting on YOU -- which is why the act is
-     Open, not chase. */
-  const ranked = rows.map(q=>({ q, value: savedQuoteTotal(q), kept: quoteSavedKept(q),
-      owed: (function(){ const c = (data.customers||[]).find(c=> String(c.id)===String(q.customerId));
-        const st = c ? customerDebtStanding(c) : null; return st ? st.owed : 0; })() }))
-    .sort((a,b)=> b.value - a.value);
-  const body = ranked.map(r=>{
-    const who = ((r.q.client && r.q.client.name) || '').trim() || 'No name on it';
+  const shown = quoteSavedShowAll ? ranked : ranked.slice(0, QUOTE_SAVED_HEAD);
+  const rest = ranked.slice(shown.length);
+  const body = shown.map(r=>{
     const lines = (r.q.items || []).length;
     const what = (r.q.items || []).slice(0,3).map(i=> i.productName).join(', ');
-    const waited = savedAgoLabel(r.q.savedAt || r.q.date || '');
-    const next = r.owed > 0
-      ? { label:'Open debt', cls:'om-btn-s', tone:`background:var(--om-bad);color:var(--om-bad-ink)` }
-      : { label:'Open', cls:'om-btn-s', tone:'' };
     return `<div class="om-qrow" data-saved="${esc(String(r.q.id))}">
       <div class="om-t">
-        <div style="font-size:13.5px;font-weight:600" class="om-t">${esc(who)}</div>
-        <div style="font-size:11.5px;color:var(--om-ink-3)" class="om-t">${lines} line${lines===1?'':'s'}${what ? ' &middot; ' + esc(what) : ''}${
-          r.owed > 0 ? ` &middot; <span style="color:var(--om-bad-ink);font-weight:600">owes ${n(r.owed)}</span>` : ''}</div>
+        <div class="om-qrow-n om-t">${esc(r.who)}</div>
+        <div class="om-qrow-s om-t">${lines} line${lines===1?'':'s'}${what ? ' &middot; ' + esc(what) : ''}${
+          r.owed > 0 ? ` &middot; <span class="om-sent-owes">owes ${n(r.owed)}</span>` : ''}</div>
       </div>
-      <div class="om-fig om-n" style="font-size:13.5px;text-align:right">${n(r.value)}</div>
-      <div><span class="om-chip" style="${r.tone||''}background:var(--om-neutral);color:var(--om-neutral-ink)">${esc(waited)}</span></div>
-      <div class="om-fig om-n" style="font-size:13.5px;text-align:right;color:var(--om-good-ink)">${n(r.kept)}</div>
-      <div style="text-align:right"><button type="button" class="om-btn ${next.cls}" style="height:30px;padding:0 12px;font-size:12.5px;${next.tone}" data-open-saved="${esc(String(r.q.id))}">${next.label}</button></div>
+      <div class="om-fig om-n om-qrow-v">${n(r.value)}</div>
+      <div><span class="om-chip ${r.wait.cls}">${r.wait.text}</span></div>
+      <div class="om-fig om-n om-qrow-k">${n(r.kept)}</div>
+      <div style="text-align:right"><button type="button" class="om-btn ${r.next.cls} om-qrow-act"
+        data-saved-act="${r.next.act}" data-saved-id="${esc(String(r.q.id))}">${r.next.label}</button></div>
     </div>`;
   }).join('');
   const total = ranked.reduce((t,r)=> t + r.value, 0);
-  return `<div class="om-card" style="overflow:hidden">
+  const tail = rest.length ? `<div class="om-qfoot">
+      <span>${rest.length} more saved quote${rest.length===1?'':'s'} &middot; <span class="om-fig">${n(rest.reduce((t,r)=>t+r.value,0))}</span> between them</span>
+      <button type="button" class="om-btn om-btn-g om-qfoot-more" id="q_saved_more">Show all ${ranked.length}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>` : (quoteSavedShowAll && ranked.length > QUOTE_SAVED_HEAD ? `<div class="om-qfoot">
+      <span>All ${ranked.length} shown</span>
+      <button type="button" class="om-btn om-btn-g om-qfoot-more" id="q_saved_more">Show fewer</button>
+    </div>` : '');
+  /* THE SAME PROMISE THE DOCUMENT MAKES. A send started from this list
+     asks the same question in the same words, because it is the same
+     send -- the app still cannot see WhatsApp. */
+  const stamp = quotePendingStamp ? `<div class="om-card om-sent-ask om-saved-ask">
+    <div class="om-stamp-row" style="padding:12px 14px 0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg>
+      <div class="om-stamp-t">The app cannot see WhatsApp. Say whether it went &mdash; nothing is recorded until you do, and it stays on this list until you say it did.</div>
+    </div>
+    <div class="om-stamp-acts" style="padding:0 14px 12px;max-width:340px">
+      <button type="button" class="om-btn om-btn-s" data-stamp="sent">It was sent</button>
+      <button type="button" class="om-btn om-btn-s" data-stamp="not">It was not</button>
+    </div>
+  </div>` : '';
+  return stamp + `<div class="om-card om-saved-card">
     <div class="om-qrow om-qrow-h">
       <span class="om-lbl">Client</span>
       <span class="om-lbl" style="text-align:right">Value</span>
-      <span class="om-lbl">Written</span>
+      <span class="om-lbl">Waiting</span>
       <span class="om-lbl" style="text-align:right">You keep</span>
       <span class="om-lbl" style="text-align:right">Next</span>
-    </div>${body}
+    </div>${body}${tail}
     <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} written and not yet sent
       &middot; <span class="om-fig">${n(total)}</span> the client has not seen</div>
   </div>`;
+}
+/* THE ACTS A SAVED ROW CAN EARN. Send is the whole journey in one press:
+   the document is reopened, the hand-off is composed from it, and the
+   same question follows -- because four steps between a list of quotes
+   waiting to go and a quote going out is how a list stops being worked. */
+function quoteSavedAct(act, id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return;
+  if(act === 'debt'){ goToTab('chase'); return; }
+  if(act === 'open'){ loadSavedQuote(q.id); return; }
+  if(act === 'reprice'){
+    /* Not "send it again" -- the figures are older than the window this
+       shop trusts its own prices for, so the document is opened to be
+       priced afresh and sent from there. */
+    loadSavedQuote(q.id);
+    toast(`Opened to be priced again — it has waited longer than the ${priceReviewStaleDays()} days you trust a price for`);
+    return;
+  }
+  /* Send. Load it, hand it off, and arm the question -- in that order,
+     because the hand-off leaves the page and the record has to exist for
+     the answer to be written onto. */
+  loadSavedQuote(q.id);
+  const btn = document.getElementById('q_whatsapp_btn');
+  if(!btn){ toast('Could not open the hand-off — the quote is open, send it from the bar below'); return; }
+  /* Back to the list, so the answer is asked where the send was started
+     and the row it belongs to is on screen behind it. */
+  btn.click();
+  setTimeout(()=>{ setQuoteLens('saved'); }, 0);
+}
+function quoteLensPaneHTML(){
+  return quoteLens === 'sent' ? quoteSentPaneHTML() : quoteSavedPaneHTML();
 }
 function renderQuoteLensPane(){
   const pane = document.getElementById('q_lens_pane');
@@ -40162,6 +40537,14 @@ function renderQuoteLensPane(){
   pane.querySelectorAll('[data-open-saved]').forEach(btn=> btn.addEventListener('click', ()=>{
     loadSavedQuote(btn.dataset.openSaved);
   }));
+  pane.querySelectorAll('[data-saved-act]').forEach(btn=> btn.addEventListener('click', ()=>
+    quoteSavedAct(btn.dataset.savedAct, btn.dataset.savedId)));
+  /* The send started from this list is answered on this list. Same
+     handler as the document's, because it is the same send. */
+  pane.querySelectorAll('[data-stamp]').forEach(btn=> btn.addEventListener('click', ()=>
+    quoteStampSent(btn.dataset.stamp === 'sent')));
+  const smore = pane.querySelector('#q_saved_more');
+  if(smore) smore.addEventListener('click', ()=>{ quoteSavedShowAll = !quoteSavedShowAll; renderQuoteLensPane(); });
   pane.querySelectorAll('[data-sent-act]').forEach(btn=> btn.addEventListener('click', ()=>
     quoteSentAct(btn.dataset.sentAct, btn.dataset.savedId)));
   /* THE COMPOSER'S OWN WIRING. The box is what ships, so the send reads
@@ -41680,6 +42063,10 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
   quoteEnsureSaved().then((id)=>{
     quotePendingStamp = id || null;
     renderQuoteRail();
+    /* A send started from the Saved list is answered there, so the pane
+       has to learn about the question too -- the rail is the document's
+       place to ask and the list needs its own. */
+    if(typeof renderQuoteLensPane === 'function') renderQuoteLensPane();
   });
 });
 
@@ -42353,12 +42740,25 @@ function setSavedQuoteStatus(id, status, opts){
   }
   const moved = q.status!==status;
   if(moved){
-    q.stageEnteredAt = Date.now();
+    const at = Date.now();
+    const from = q.status;
+    q.stageEnteredAt = at;
     /* How it got here. Kept on the record from this build on, so the
        open row can show the moves rather than only the toasts nobody
-       re-reads; `auto` marks a step the app took itself. */
+       re-reads; `auto` marks a step the app took itself.
+
+       A MOVE BACK IS AN EVENT, NOT AN ERASURE. It appends like any
+       other move and carries where it came FROM, why, and who -- it
+       never edits the entry for the stage being left. Overwriting that
+       timestamp would make the record say the goods never went out, and
+       the hour they spent on the road would vanish, which is exactly
+       the hour somebody rings up about. The stage a step was first
+       entered and the stage it is currently in are two different facts,
+       and orderStageFirstAt / orderStageLeftBack read them apart. */
     if(!Array.isArray(q.stageLog)) q.stageLog = [];
-    q.stageLog.push({ status, at: Date.now(), auto: !!(opts && opts.auto) });
+    const back = SQ_STATUS_ORDER.indexOf(status) < SQ_STATUS_ORDER.indexOf(from);
+    q.stageLog.push(Object.assign({ status, at, auto: !!(opts && opts.auto) },
+      back ? { from, back:true, reason: (opts && opts.reason) || '', who: (opts && opts.who) || '' } : {}));
   }
   q.status = status;
   saveData();
@@ -43065,7 +43465,7 @@ function orderNeedsDelivery(q){
   return !(data.staff||[]).some(s=>s.id===q.assignedDeliveryId);
 }
 
-function stepSavedQuoteStatus(id, dir){
+function stepSavedQuoteStatus(id, dir, opts){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
   const idx = SQ_STATUS_ORDER.indexOf(q.status);
@@ -43189,7 +43589,209 @@ function stepSavedQuoteStatus(id, dir){
       }
     }
   }
-  setSavedQuoteStatus(id, toStatus);
+  setSavedQuoteStatus(id, toStatus, opts);
+}
+
+/* ---- THE STAGE LOG, READ AS A HISTORY ------------------------------
+
+   The log is a list of ARRIVALS, one per move, and it is appended to and
+   never edited. Everything below is derived from it, so a step that was
+   left and returned to can be drawn without storing that fact twice. */
+function orderStageEvents(q){ return Array.isArray(q && q.stageLog) ? q.stageLog : []; }
+/* How many times a stage has been entered. Taken counts the arrival the
+   log does not hold: an order is in Taken by being written down, and
+   nothing moved it there. */
+function orderStageVisits(q, status){
+  const n = orderStageEvents(q).filter(e=> e && e.status === status).length;
+  return status === 'draft' ? n + 1 : n;
+}
+/* When a stage was FIRST entered -- never the return. */
+function orderStageFirstAt(q, status){
+  const e = orderStageEvents(q).find(x=> x && x.status === status);
+  if(e) return e.at;
+  return status === 'draft' ? orderTakenAt(q) : null;
+}
+/* The move that took the order BACK out of this stage, if one did: the
+   trip that was made and undone. Latest wins, because a step can be
+   reached and left more than twice. */
+function orderStageLeftBack(q, status){
+  const evs = orderStageEvents(q).filter(e=> e && e.back && e.from === status);
+  return evs.length ? evs[evs.length - 1] : null;
+}
+/* Every backward move on the order, newest last. */
+function orderBackMoves(q){ return orderStageEvents(q).filter(e=> e && e.back); }
+
+/* ---- GOING BACKWARDS ------------------------------------------------
+
+   There was no backward move anywhere in the app. The board had Hold or
+   cancel, forward buttons, and a back arrow that walked the needs-you
+   queue. But a van comes back, a picker marks the wrong order packed,
+   and a supplier's confirmation turns out to be wrong -- and none of
+   those is a cancellation. Hold or cancel stops an order where it
+   stands; this puts it back a step and keeps it live. The sheet never
+   offers cancelling as a way of going back.
+
+   WHY IT IS COMING BACK is asked because the answer changes what else
+   happens, not to make the owner confirm twice. Three reasons for an
+   order coming back from Out, and they differ: the van coming back and
+   the client refusing both free the stop on the run, and marked-by-
+   mistake never took one, because the van never carried it. */
+const OT_BACK_REASONS = {
+  pending_delivery: [
+    { id:'came_back', label:'The van came back with it', note:'nobody was there to receive it', freesStop:true },
+    { id:'refused', label:'The client refused it', freesStop:true, note:'' },
+    { id:'mistake', label:'It was marked out by mistake', note:'it never left the yard', freesStop:false },
+  ],
+  /* The two origins the handoff does not draw, written to the same rule:
+     a reason is offered only where it changes what happens, and each one
+     is a sentence somebody in the yard would actually say. */
+  preparing: [
+    { id:'not_packed', label:'It is not packed after all', note:'the pick has to be done again' },
+    { id:'line_wrong', label:'A line on it is wrong', note:'the wrong goods were bought in' },
+  ],
+  completed: [
+    { id:'came_back', label:'The goods came back', note:'the delivery did not stand' },
+    { id:'mistake', label:'It was marked delivered by mistake' },
+  ],
+};
+function otBackReasons(status){ return OT_BACK_REASONS[status] || []; }
+function otBackReason(status, id){ return otBackReasons(status).find(r=> r.id === id) || null; }
+
+/* WHERE IT CAN GO BACK TO, with the one line each target needs.
+
+   TAKEN IS NEVER A TARGET. Going back past Buying would unbuy goods that
+   are in the yard and paid for -- that is not a stage change but a
+   return to a supplier, and it belongs to the buying side. It is drawn,
+   greyed, saying so, rather than left off: a step missing from a track
+   is a track somebody mistrusts.
+
+   Awaiting Goods is skipped for an order with nothing to buy in, by the
+   same rule the forward stepper skips it: a stage that exists for goods
+   coming in should not detain an order filled off our own shelf. */
+function orderBackTargets(q){
+  if(!q) return [];
+  const here = SQ_STATUS_ORDER.indexOf(q.status);
+  if(here < 1) return [];
+  return SQ_STATUS_ORDER.slice(0, here).map(status=>{
+    const why = status === 'draft' ? 'too far back'
+      : status === 'awaiting_goods' ? (orderAwaitsGoods(q) ? 'if a line was wrong' : 'nothing on it is bought in')
+      : status === 'preparing' ? 'back to here'
+      : status === 'pending_delivery' ? 'out again, on a run' : '';
+    const can = status !== 'draft'
+      && !(status === 'awaiting_goods' && !orderAwaitsGoods(q));
+    return { status, why, can };
+  });
+}
+function orderCanGoBack(q){ return orderBackTargets(q).some(t=> t.can); }
+
+/* WHAT THIS CHANGES, derived from the order and the reason -- never a
+   bare "are you sure". A line that cannot be worked out from the books
+   is not drawn at all, which is why this returns a list rather than a
+   template with blanks in it. */
+function orderBackChanges(q, toStatus, reasonId){
+  if(!q) return [];
+  const reason = otBackReason(q.status, reasonId);
+  const out = [];
+  if(toStatus === 'preparing'){
+    out.push({ tone:'good', say: q.pickingStatus === 'done'
+      ? 'Goes back on the packing queue, at the top — it is already packed'
+      : 'Goes back on the packing queue — the pick starts again' });
+  } else if(toStatus === 'awaiting_goods'){
+    const n = orderIncomingLines(q).length;
+    out.push({ tone:'good', say: `Goes back on the buying list${n ? ` — ${n} line${n === 1 ? '' : 's'} to check in again` : ''}` });
+  }
+  /* THE RUN LOSES A STOP, and only when the order was really on one.
+     The round's LENGTH is not on this line on purpose: the shop keeps no
+     drive times, so a duration here would be a figure the books cannot
+     answer for. The count they can. */
+  if(q.status === 'pending_delivery' && (!reason || reason.freesStop !== false)){
+    const d = deliveryRuns(pendingDeliveryOrders());
+    const at = d.runs.findIndex(r=> r.orders.some(o=> o.id === q.id));
+    if(at > -1){
+      const left = d.runs[at].orders.length - 1;
+      out.push({ tone:'good', strong:`Run ${at + 1} loses this stop`,
+        say: left ? `the round drops to ${left} order${left === 1 ? '' : 's'}` : 'nothing else is on that round' });
+    }
+  } else if(q.status === 'pending_delivery' && reason && reason.freesStop === false){
+    out.push({ tone:'note', say: 'No run changes — the van never carried it' });
+  }
+  /* MONEY, which is the one that stops the move rather than describing
+     it. An invoiced order coming back is a document to void, and that
+     has its own guarded path. */
+  if(q.invoiced){
+    out.push({ tone:'warn', strong:'The invoice has to be voided first',
+      say: `${esc(invoiceNumberLabel(q))} was drawn against it — bringing the goods back is an invoice operation, not a stage change` });
+  } else {
+    out.push({ tone:'lock', say: 'No money moves · nothing was invoiced, and nothing is owed before delivery' });
+  }
+  return out;
+}
+
+/* THE CLIENT'S OWN WHATSAPP, with the sentence the dialog just showed
+   already in it. Opened, never sent -- the owner presses send there, as
+   they do everywhere else in this app -- and stamped on the way, exactly
+   as announcing to the group is stamped. The stamp is what makes "they
+   were told at 14:02 that it was on its way" a fact the app can stand
+   behind rather than an assumption drawn from the stage. */
+function otTellClient(q){
+  if(!q) return;
+  window.open(waComposeUrl(q.client && q.client.phone,
+    `${quoteClientName(q)} — order #${q.id}. ${otSayToClient(q)}`), '_blank');
+  q.clientTold = { at: Date.now(), status: q.status, say: otSayToClient(q) };
+  saveData();
+  renderSavedQuotes();
+}
+
+/* MOVING AN ORDER BACK A STAGE, which is an event and never an erasure.
+   The stamp on the stage it is leaving stays exactly where it is; this
+   appends. See setSavedQuoteStatus for the shape that is written. */
+function moveOrderBack(id, toStatus, reasonId, tell){
+  const q = (data.savedQuotes || []).find(x=> x.id === id);
+  if(!q){ toast('That order is no longer on the board — reopen it and try again'); return false; }
+  const target = orderBackTargets(q).find(t=> t.status === toStatus);
+  if(!target || !target.can){ toast('That is not a step this order can go back to'); return false; }
+  /* THE ONE MOVE WITH MONEY IN IT. A drawn invoice means the goods
+     coming back is a document to void, and voiding is guarded on
+     Invoices with its own question about what stops being owed. Routed
+     there rather than quietly moving a dot. */
+  if(q.invoiced){
+    toast(`${invoiceNumberLabel(q)} is drawn against this order — undo the invoice on Invoices first, then move it back`, 7000);
+    return false;
+  }
+  const from = q.status;
+  const who = (typeof myStaff !== 'undefined' && myStaff && myStaff.name) || '';
+  /* One hop at a time, through the stepper that already retires the
+     picker, the driver and the carrier on the way out of each stage.
+     Bounded, because a status the sequence does not know would otherwise
+     spin here rather than fail. */
+  for(let guard = 0; guard < SQ_STATUS_ORDER.length && q.status !== toStatus; guard++){
+    stepSavedQuoteStatus(id, -1, { reason: reasonId || '', who });
+  }
+  if(q.status !== toStatus){ toast('That move did not go through — reopen the order and try again'); return false; }
+  const r = otBackReason(from, reasonId);
+  toast(`${quoteClientName(q)}'s order is back in ${otStageShort(toStatus)}${r ? ` — ${r.label.toLowerCase()}` : ''}`, 5000);
+  /* The client is told second, so the move is already on the record when
+     the message opens and the sentence it drafts is the true one. */
+  if(tell) otTellClient(q);
+  return true;
+}
+
+/* WHETHER THE CLIENT HAS BEEN TOLD SOMETHING THIS CONTRADICTS.
+
+   Stamped when the owner opens an update from the order (otTellClient),
+   the same way announcing to the group is stamped: the app cannot see
+   WhatsApp, so what it can honestly record is that the message was
+   drafted and opened. If nothing has been stamped there is no promise to
+   contradict, and the block does not render -- rather than assuming one
+   from the stage, which would put words in the shop's mouth. */
+function orderClientPromise(q){
+  const t = q && q.clientTold;
+  if(!t || !t.at) return null;
+  /* Only a promise made ABOUT the stage being left. Told while it was
+     being packed, then sent out and brought back, is not a contradiction
+     anybody has to be rung about. */
+  if(t.status !== q.status) return null;
+  return t;
 }
 
 /* The assign-staff modal used to gate the two forward steps above on
@@ -44257,7 +44859,14 @@ function orderSupplierActsHTML(q, opts){
      carries the pair for exactly the same reason. A block that carried
      only one of them worked in one home and was dead in the other --
      which is what left the console with no way to ask a supplier. */
-  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-dlg="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
+  /* AND TWO SETS OF CLOTHES, for the same reason carrierFormHTML takes
+     its class names as an argument: the phone's row is the console's
+     vocabulary and the order's dialog is the card system's, and one
+     block wearing both is what stops a second block existing. */
+  const c = o.om
+    ? { row:'om-od-sup', name:'om-od-sup-n', say:'om-od-sup-s', acts:'om-od-sup-a', btn:'om-btn om-btn-s' }
+    : { row:'ow-ot-sup', name:'ow-ot-sup-n', say:'ow-ot-sup-s', acts:'ow-ot-sup-a', btn:'btn btn-ghost ow-sm' };
+  const btn = (sid, act, label)=> `<button type="button" class="${c.btn}" data-act="${act}" data-dlg="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
   const rows = orderSupplierGroups(q).map(g=>{
     const sid = String(g.supplierId);
     const st = orderSupplierConfirmState(q, sid);
@@ -44268,11 +44877,11 @@ function orderSupplierActsHTML(q, opts){
     else if(st.state === 'stale'){ words = 'the quote changed since they confirmed'; acts = btn(sid, 'ask', 'Ask again') + btn(sid, 'confirmed', 'Confirmed'); }
     else if(st.askedAt){ words = `asked ${otDuration(Date.now() - st.askedAt)} ago · no reply yet`; acts = btn(sid, 'ask', 'Ask again') + btn(sid, 'confirmed', 'Confirmed'); }
     else { words = 'not asked yet'; acts = btn(sid, 'ask', 'Ask') + btn(sid, 'confirmed', 'Confirmed'); }
-    return `<div class="ow-ot-sup"><span class="ow-ot-sup-n" title="${esc(supplierName(sid))}">${esc(supplierName(sid))}</span><span class="ow-ot-sup-s">${words}</span><span class="ow-ot-sup-a">${acts}</span></div>`;
+    return `<div class="${c.row}"><span class="${c.name}" title="${esc(supplierName(sid))}">${esc(supplierName(sid))}</span><span class="${c.say}">${words}</span><span class="${c.acts}">${acts}</span></div>`;
   }).filter(Boolean);
   const cut = o.max && rows.length > o.max ? rows.length - o.max : 0;
   return rows.slice(0, cut ? o.max : rows.length).join('') + (cut
-    ? `<div class="ow-ot-sup"><span class="ow-ot-sup-s">and ${cut} more</span><span class="ow-ot-sup-a"><button type="button" class="btn btn-ghost ow-sm" data-act="open" data-id="${q.id}">Suppliers</button></span></div>` : '');
+    ? `<div class="${c.row}"><span class="${c.say}">and ${cut} more</span><span class="${c.acts}"><button type="button" class="${c.btn}" data-act="open" data-id="${q.id}">Suppliers</button></span></div>` : '');
 }
 /* Ask opens their WhatsApp with the lines written, inside the same
    gesture so the popup blocker lets it through, and only then stamps
@@ -44622,6 +45231,98 @@ function orderRowBodyHTML(q){
    order out with nobody named; an order out with a carrier shows the
    carrier instead, with the phone as a link. What was typed and not yet
    sent survives a redraw through otLoadDrafts. */
+/* The carrier form in the card system's clothes. Same call, same
+   data-car contract, same reader: carrierFormHTML is parameterised by
+   its class names precisely so a second form never has to exist. */
+const OM_LOAD_CLS = { form:'om-od-load', field:'om-od-field', label:'om-od-flabel', wrap:'',
+  input:'om-od-in', select:'om-od-sel', staffField:'om-od-staff', hiredField:'om-od-hired', phoneField:'om-od-phone' };
+
+const OM_ICON = {
+  close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  print: '<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
+  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  truck: '<path d="M3 6h13v9H3z"/><path d="M16 9h4l1 3v3h-5"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>',
+  tick: '<path d="M20 6 9 17l-5-5"/>',
+  lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/>',
+  warn: '<path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/>',
+};
+/* Lucide geometry at the handoff's weights: 2 for everything, 2.4 for
+   the checks and crosses, which read thin at 15px otherwise. */
+function omIcon(name, px, w){
+  return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="${w || 2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${OM_ICON[name] || ''}</svg>`;
+}
+function omFig(v, cls){ return `<span class="om-fig${cls ? ' ' + cls : ''}">${esc(String(v))}</span>`; }
+
+/* ---- THE STAGE TRACK ------------------------------------------------
+
+   One component, three drawings: the preview's read-only track, the
+   move-back sheet's pickable one, and the same track afterwards with a
+   step the order went to and came back from.
+
+   FILLED VERSUS HOLLOW CARRIES "WHERE IT IS", not colour: the current
+   step is a solid navy dot with a ring, a step behind it is solid
+   green, a step ahead is an outline. That is what keeps the track
+   readable when the caution ink arrives on a returned step.
+
+   A RETURNED STEP KEEPS ITS TIME and gains a return arrow, so one dot
+   carries both facts -- the order is in Preparing, and the track still
+   says it has been out. The "2nd time" chip on the current step is what
+   tells somebody this is not an ordinary order without reading a log. */
+function otTrackHTML(q, opts){
+  const o = opts || {};
+  const here = SQ_STATUS_ORDER.indexOf(q.status);
+  const at = otStageTimes(q);
+  return `<div class="om-od-trk">${SQ_STATUS_ORDER.map((st, i)=>{
+    const target = o.targets ? o.targets.find(t=> t.status === st) : null;
+    const picked = o.pick === st;
+    const ret = i !== here ? orderStageLeftBack(q, st) : null;
+    const done = i < here && !ret;
+    const now = i === here;
+    const twice = now && orderStageVisits(q, st) > 1;
+    const dot = picked ? 'om-at' : now ? 'om-now' : ret ? 'om-back' : done ? 'om-done' : '';
+    const tone = picked ? 'om-at' : ret ? 'om-back' : '';
+    /* The time, and which of the three facts it is: when the step was
+       first entered, how long the order has been in it, or the trip it
+       made and came back from. */
+    const when = ret ? `${otWhen(orderStageFirstAt(q, st) || ret.at)} → back ${otWhen(ret.at)}`
+      : now ? `since ${otWhen(at[st])}`
+      : done ? otWhen(at[st]) : '';
+    /* THE TRACK SAYS A DIFFERENT THING IN THE TWO SHEETS, and only the
+       sheet that is CHOOSING says it. On the order's own preview every
+       step reports its time, and the earlier ones are pressable
+       because that is the way backwards. On the move-back sheet the
+       line under each step is what that step would MEAN -- "too far
+       back", "if a line was wrong", "back to here" -- and a step that
+       cannot be a target is greyed rather than dropped, because a step
+       missing from a track is a track nobody trusts. Told apart by
+       whether a destination has been picked, which only the sheet
+       does. */
+    const picking = !!o.pick;
+    const say = picking && target ? target.why : (when || '—');
+    const quiet = !when && !(picking && target) ? ' om-quiet' : '';
+    const nameCls = picked ? ' om-at' : now ? ' om-now' : ret ? ' om-back' : (i > here ? ' om-quiet' : '');
+    const tag = target && target.can ? 'button' : 'div';
+    return `<${tag} class="om-od-trk-s${picking && target && !target.can ? ' om-off' : ''}${target && target.can ? ' om-pick' : ''}"
+      ${tag === 'button' ? `type="button" data-dlg="backpick" data-back="${esc(st)}" data-id="${q.id}"` : ''}>
+      <span class="om-od-trk-l"><span class="om-od-trk-d ${dot}"></span>${
+        i < SQ_STATUS_ORDER.length - 1 ? `<span class="om-od-trk-b${i < here && !picked ? ' om-done' : ''}"></span>` : ''}</span>
+      <span class="om-od-trk-n${nameCls}">${ret ? omIcon('back', 12, 2.4) : ''}${esc(OT_LANE_NAME[st])}${
+        twice ? `<span class="om-chip om-od-trk-2">${esc(otOrdinal(orderStageVisits(q, st)))} time</span>` : ''}</span>
+      <span class="om-od-trk-t${tone ? ' ' + tone : ''}${quiet}">${
+        picking && target ? esc(say) : `<span class="om-fig">${esc(say)}</span>`}</span>
+    </${tag}>`;
+  }).join('')}</div>`;
+}
+/* "2nd", "3rd" — an order can come back more than once, and a chip that
+   said "2nd time" the fourth time round would be a chip nobody trusts. */
+function otOrdinal(n){
+  const v = Number(n) || 0;
+  const s = ['th', 'st', 'nd', 'rd'][(v % 100 - v % 10 !== 10) && v % 10 < 4 ? v % 10 : 0];
+  return `${v}${s}`;
+}
+
 const OT_LOAD_CLS = { form:'ow-ot-load', field:'ow-f', label:'ow-f-l', wrap:'ow-f-in', input:'ow-f-v ow-f-t', select:'ow-f-v ow-f-sel',
   staffField:'ow-ot-load-staff', hiredField:'ow-ot-load-hired', phoneField:'ow-ot-load-phone' };
 const otLoadDrafts = new Map();
@@ -44680,7 +45381,7 @@ function otRestoreFocus(snap){
 function otLoadGo(id, el){
   /* The row on the phone, the order's dialog on the console: one form,
      two homes, and the reader finds whichever it is in. */
-  const form = el && el.closest ? el.closest('.ow-tbl-x, .ow-dlg-load') : null;
+  const form = el && el.closest ? el.closest('.ow-tbl-x, .ow-dlg-load, .om-od-f') : null;
   const car = readCarrierForm(form ? form.querySelector('[data-load]') : null);
   car.by = '';
   if(loadOrder(id, car)) otLoadDrafts.delete(id);
@@ -45014,8 +45715,14 @@ function otDlgDraw(){
   const spec = OT_DIALOGS[otDlgNow.kind] ? OT_DIALOGS[otDlgNow.kind](otDlgNow.id) : null;
   if(!spec){ otDlgClose(); return; }
   const paper = el.querySelector('.ow-dlg');
-  paper.className = `ow-dlg ow-dlg-w${spec.w || 760}`;
-  el.querySelector('#ot_dlg_t').innerHTML = spec.title;
+  /* A CARD-SYSTEM DIALOG CARRIES ITS OWN CHROME. Order tracking is the
+     last screen in the console's palette and its two order sheets are
+     the first piece being converted, so those specs return one .om-od
+     that is header, blocks and footer together -- and the shell's own
+     head and foot are taken out of the way rather than drawn empty
+     above and below it. */
+  paper.className = `ow-dlg ow-dlg-w${spec.w || 760}${spec.card ? ' ow-dlg-card' : ''}`;
+  el.querySelector('#ot_dlg_t').innerHTML = spec.title || '';
   el.querySelector('#ot_dlg_s').innerHTML = spec.sub || '';
   el.querySelector('#ot_dlg_c').innerHTML = spec.chip || '';
   el.querySelector('#ot_dlg_a').innerHTML = spec.act || '';
@@ -45038,7 +45745,11 @@ function otDlgDraw(){
 function otDlgOpen(kind, id){
   otDlgNow = { kind, id: id == null ? 0 : id };
   otDlgDraw();
-  const x = document.getElementById('ot_dlg_x');
+  /* The card-system dialogs draw their own close, and the shell's is
+     display:none behind them -- focusing a hidden button puts the caret
+     nowhere and the first Tab starts at the top of the page. */
+  const el = otDlgEl();
+  const x = (el && el.querySelector('.om-od-h-b[data-dlg="close"]')) || document.getElementById('ot_dlg_x');
   if(x) x.focus();
 }
 
@@ -45072,9 +45783,7 @@ function otStageTimes(q){
   return at;
 }
 
-/* ================= 2a · THE ORDER =================
-   Opened from any card, and the answer when a client rings: where it has
-   reached, what to tell them, and what it is worth. */
+/* What the shop tells the client, in one client-ready line. */
 function otSayToClient(q){
   const place = orderCustomerLocation(q);
   const items = (q.items || []).length;
@@ -45095,225 +45804,239 @@ function otSayToClient(q){
     : q.status === 'completed' ? 'The invoice has not been raised yet.' : 'Nothing is owed before delivery.');
   return bits.join(' ');
 }
+
+/* ================= 2a · THE ORDER ===================================
+
+   Opened from any card: where it has reached, what to tell the client,
+   what it is worth, and the one thing to do next.
+
+   IT WAS ELEVEN BLOCKS AND A SCROLLBAR on a one-line order worth 12,000
+   -- header, track, picker note, what to tell the client, a paragraph
+   explaining Loaded, the carrier form, its button, the lines, a
+   How-it-got-here log, Money with a five-sentence method paragraph, Not
+   invoiced, and a footer sentence. Two of them drew the same timeline
+   and three explained how the app works. Six now:
+
+     GONE  How it got here      the track already carries 09:55, 12:23,
+                                12:25; the list beneath it was those
+                                three moments again in prose. The full
+                                log stays on the order's own record for
+                                the day somebody disputes one.
+     GONE  Goods, as checked in two dashed photo wells on every order,
+                                for an order that never left the yard. A
+                                photograph earns its place in a dispute;
+                                it does not earn a permanent block.
+     GONE  the Loaded paragraph the rule survives in the SHAPE instead --
+                                the primary is disabled until somebody is
+                                chosen, so the form teaches itself.
+     GONE  Not invoiced         a standing policy, not a fact about this
+                                order. One clause in the money column.
+     GONE  the footer sentence  a third explanation of one mechanic. The
+                                button's own words carry it.
+     GONE  the margin method    five sentences of method on a margin of
+                                500. What a person needs is whether the
+                                figure can be trusted: nine words.
+
+   AND ONE THING GOT BIGGER. The pack surplus was sentence four of that
+   grey paragraph -- 218,500 on an order worth 12,000, eighteen times
+   its value and the largest figure in the dialog. It is its own block
+   now, with what actually leaves the till on top.
+
+   THE RULE UNDERNEATH: the dialog is the size of the order. Every one
+   of those eleven was fixed furniture that drew whether or not the
+   order had anything to say through it, so a one-item order in the yard
+   looked exactly as heavy as a forty-line delivery in dispute. A block
+   appears only when it has content. */
 function otPreviewSpec(id){
   const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
   if(!q) return null;
   const s = orderPreviewSummary(q);
-  const at = otStageTimes(q);
-  const i = SQ_STATUS_ORDER.indexOf(q.status);
   const place = orderCustomerLocation(q);
-  const trail = orderTrail(q);
-  /* WHAT IT COST, and only where the books can say. orderPurchaseLines
-     covers the lines bought in for this order: what was actually paid
-     where one has come in, today's cheapest supplier where it has not.
-     A line off our own shelf cost something too, but that figure lives
-     with the stock lot rather than with the order — so an order with
-     any stock line on it cannot have its margin worked out here, and
-     says so rather than reporting the whole price as profit. */
   const buys = orderPurchaseLines(q);
-  /* WHAT THIS ORDER COST, which is not what left the till.
-
-     orderPurchaseLines reports the quantity that has to be COLLECTED,
-     and that is a whole pack wherever the supplier breaks none: one kilo
-     of hinges from a man who sells the twenty-kilo box is twenty kilos
-     of cash. Right for the buying list, which is a man walking to market
-     with money. Wrong here, because the other nineteen kilos go on the
-     shelf -- they are stock, not this sale. Charging them to the order
-     read "Cost, as bought 230,000" against "Client pays 12,000" and
-     called an ordinary sale a 1,816% loss, which is not a stale figure
-     but a wrong one, on the screen an owner opens to decide whether an
-     order is worth doing.
-
-     So the order is costed at the quantity the ORDER takes, per unit, at
-     what the buyer actually paid where a line has come in and today's
-     cheapest where it has not. What the pack forced on top is real money
-     and is named below rather than dropped -- it is simply not this
-     order's. */
+  /* WHAT THIS ORDER COST, which is not what leaves the till -- see
+     orderOwnCost. The two figures are both drawn, and the difference
+     between them is the surplus block. */
   const cost = orderOwnCost(buys);
   const overPack = buys.filter(l=> (Number(l.surplus) || 0) > 0);
   const overPackCash = orderPackSurplusCash(buys);
-  const overPackNote = overPack.length
-    ? `${overPack.length} line${overPack.length === 1 ? ' comes' : 's come'} in a pack bigger than the order, so ${esc(fmtUGX(Math.round(overPackCash)))} more leaves the till than is costed here — that surplus goes on the shelf as stock. `
-    : '';
   const total = savedQuoteTotal(q);
   const margin = total - cost;
   const wholeCost = s.fromStock === 0 && !s.unpriced;
+  const pct = total > 0 ? margin / total * 100 : 0;
   const act = orderActSpec(q);
-  /* SAYING WHO IS CARRYING IT IS A FORM, NOT A BUTTON — so it cannot be
-     a footer act. On the phone it opens inside the order's own row; the
-     console has no rows any more, so it opens here, in the order's own
-     dialog, and the form's own button is the move.
-
-     And when it does, the accent moves with it. The one thing to do next
-     on an order waiting for transport is to load it out, not to tell the
-     client something they already know — so "Send the client an update"
-     steps down to a ghost and the dialog still spends its oxide once. */
-  /* ASKED WHEREVER THE PHONE ASKS IT. The form used to appear only when
-     the stage's own act was "loaded", which needs pickingStatus 'done'
-     -- a picker on the worker app. A shop with nobody on that app packs
-     at the desk, and orderLoadFormHTML says so in its own words ("Not
-     packed yet. Loading it from here counts it as picked and packed"),
-     but the console never showed the form that says it: an order that no
-     phone had touched reached Preparing and stopped there for ever, with
-     a lane head reading "You pack it, then you mark it out" and nothing
-     on the screen to mark it out with. So the dialog now carries exactly
-     what the phone's row carries, and the block decides for itself what
-     to say. */
-  const loadHtml = orderLoadFormHTML(q);
-  /* THE FORM IS THE MOVE while it is still asking who is carrying it --
-     that is when the dialog's one oxide belongs to its button and "Send
-     the client an update" steps down to a ghost. An order already out
-     with somebody named gets the same block as a statement of fact, and
-     its move is Delivered, in the footer where it has always been. */
-  const loading = !!loadHtml && (q.status === 'preparing' || orderNeedsDelivery(q));
-  /* What the footer offers, and it is NOT simply "whatever the form is
-     not". Two acts are dropped and only two:
-
-       'loaded'  the form's own button IS that act, and two of them
-                 would be two ways to do one thing, one with no form
-                 attached;
-       'open'    it means "go to where the suppliers are", which on the
-                 console is this dialog -- a button that reopens what
-                 you are already looking at.
-
-     Everything else stays, whether or not the form is drawn. Dropping
-     the act whenever the form appeared took "Decide" off an order whose
-     pick came up short -- the one decision that has to be made before
-     that order can ever be invoiced -- and left the screen offering
-     only to load it out. */
-  const footAct = act && act.act !== 'loaded' && act.act !== 'open' ? act : null;
-  const track = SQ_STATUS_ORDER.map((st, j)=>{
-    const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
-    const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
-    return `<div class="ow-dlg-trk-s ${cls}">
-      <div class="ow-dlg-trk-l"><span class="ow-dlg-trk-d"></span><span class="ow-dlg-trk-b"></span></div>
-      <div class="ow-dlg-trk-n">${esc(OT_LANE_NAME[st])}</div>
-      <div class="ow-dlg-trk-t">${esc(when || 'not recorded')}</div>
-    </div>`;
-  }).join('');
-  /* Placeholders until the check-in upload path writes real ones: the
-     frame, what it would be, and whether that moment has happened yet. */
-  const shots = [
-    { cap: `Check-in photo<br>${s.toBuy ? 'none taken yet' : 'nothing was bought in'}` },
-    { cap: q.status === 'pending_delivery' || q.status === 'completed' ? 'Packed load<br>gone out' : 'Packed load<br>not taken yet' },
-  ];
+  /* The carrier form is the footer's control wherever the phone's row
+     would ask the same question: Preparing always -- a shop with nobody
+     on the worker app packs at the desk -- and Out while nobody is
+     named. Its own button is the move, so the stage's act steps aside. */
+  const loading = q.status === 'preparing' || (q.status === 'pending_delivery' && orderNeedsDelivery(q));
+  const footAct = act && !loading && act.act !== 'loaded' && act.act !== 'open' ? act : null;
+  const say = otSayToClient(q);
+  const chip = `${otStageShort(q.status)} · ${otStageSince(q)}`;
+  const meta = [`<span class="om-fig">#${q.id}</span>`, esc(place), `${s.lines.length} line${s.lines.length === 1 ? '' : 's'}`,
+    q.date ? `promised ${esc(otWhen(Date.parse(q.date + 'T08:00:00')) || q.date)}` : ''].filter(Boolean).join(' · ');
+  const keepTone = pct <= 0 ? 'om-p-void' : pct < 15 ? 'om-p-owed' : 'om-p-paid';
   return {
-    w: 900,
-    title: esc(quoteClientName(q)),
-    sub: esc([`#${q.id}`, place, `${s.lines.length} line${s.lines.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')),
-    chip: `<span class="ow-cp">${esc(otStageShort(q.status))} · ${esc(otStageSince(q))} in this stage</span>`,
-    /* Offered wherever there is anything to pick, not only in Preparing:
-       a phone dies when it dies, and an owner checking goods against a
-       list at any stage wants the same piece of paper. */
-    act: s.lines.length ? `<button type="button" class="btn btn-ghost ow-sm" id="opChitBtn" data-dlg="chit" data-id="${q.id}"
-      title="Print this order on 80mm roll — for picking without a phone">Print packing list</button>` : '',
-    body: `
-      <div class="ow-dlg-k">
-        <div class="ow-dlg-trk">${track}</div>
-        <div class="ow-dlg-p">${esc(orderWhoText(q) || 'Nobody is named on it yet')}.${
-          q.date ? ` Promised ${esc(otWhen(Date.parse(q.date + 'T08:00:00')) || q.date)}.` : ''}${
-          q.client && q.client.phone ? ` ${esc(q.client.phone)}.` : ''}</div>
-        ${/* WHOSE NAME THIS IS. An agent order carries the agent's name,
-             not the end client's, and a portal order was placed by
-             somebody who has already seen every price on it — both
-             change what you say when you pick up the telephone. */''}
-        ${q.originAgentId ? `<div class="ow-dlg-p">Agent order — the name is the agent's, not the end client's.</div>` : ''}
-        ${q.originPortal ? `<div class="ow-dlg-p">Placed by the customer on the portal, so they have already seen every price on it.</div>` : ''}
-        ${s.shortLines ? `<div class="ow-dlg-p">The picker found less than asked for on ${s.shortLines} line${s.shortLines === 1 ? '' : 's'}. Until that is settled the order cannot be invoiced — the total and the stock deduction are both built from the ordered quantity.</div>` : ''}
-      </div>
-      <div class="ow-dlg-say">
-        <div class="ow-dlg-say-l">
-          <div class="ow-dlg-say-h">What to tell the client</div>
-          <div class="ow-dlg-say-t">${esc(otSayToClient(q))}</div>
+    card: true,
+    w: 720,
+    body: `<div class="om-od">
+      <div class="om-od-h">
+        <div class="om-od-h-m">
+          <div class="om-od-h-t om-t" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))}</div>
+          <div class="om-od-h-s om-t">${meta}</div>
         </div>
-        ${loading ? otDlgGhost('tellclient', 'Send the client an update', ` data-id="${q.id}"`)
-          : otDlgPrimary('tellclient', 'Send the client an update', ` data-id="${q.id}"`)}
+        <span class="om-chip om-od-h-c">${esc(chip)}</span>
+        ${s.lines.length ? `<button type="button" class="om-od-h-b om-on" id="opChitBtn" data-dlg="chit" data-id="${q.id}"
+          title="Print this order on 80mm roll — for picking without a phone" aria-label="Print packing list">${omIcon('print', 16)}</button>` : ''}
+        <button type="button" class="om-od-h-b" data-dlg="close" aria-label="Close">${omIcon('close', 17, 2.4)}</button>
       </div>
-      <div class="ow-dlg-cols">
-        <div class="ow-dlg-col">
-          ${loadHtml ? `<div class="ow-dlg-sect ow-dlg-load">${loadHtml}</div>` : ''}
-          ${/* THE SUPPLIERS, WHERE THE CONSOLE CAN REACH THEM. One line
-               per supplier still to come back, with the two taps: Ask,
-               which opens their WhatsApp with this order's lines already
-               written, and Confirmed, which is the answer. The phone has
-               had these inside the order's row from the start; the
-               console had them nowhere, so a Taken order could not be
-               moved on from a desk at all. Same call, same buttons. */''}
-          ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="ow-dlg-sect">
-            <div class="ow-dlg-l">Suppliers</div>
-            <div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>
-            ${/* THE WAY TO THE PANEL, which is where a supplier's answer
-                 can be TYPED. Ask and Confirmed are the two taps; "no
-                 stock until Friday" is not a tap, and the panel is the
-                 only place in the app that takes it. The phone's row has
-                 carried this button from the start and the console had
-                 nothing, so a supplier who rang back with a problem
-                 could not be recorded from a desk at all -- while the
-                 board goes on reporting a Problem state that nothing
-                 there could ever reach. */''}
-            <div class="ow-dlg-sup-go"><button type="button" class="btn btn-ghost ow-sm" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button></div>
-            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there. Open Every supplier to write down what one of them actually said.</div>
+
+      ${/* THE TRACK, and it is also the way BACKWARDS. Clicking a step
+           the order has already been through opens the move-back sheet:
+           forward stays a button, backwards is a decision with a reason,
+           and it is reached on the track that already shows where the
+           order has been rather than by dragging a card. */''}
+      <div class="om-od-sec om-od-sec-t">
+        ${otTrackHTML(q, { targets: orderBackTargets(q) })}
+        ${otTrackLine(q) ? `<div class="om-od-trk-w">${esc(otTrackLine(q))}</div>` : ''}
+        ${/* WHOSE NAME THIS IS. An agent order carries the agent's name
+             and not the end client's, and a portal order was placed by
+             somebody who has already seen every price on it -- both
+             change what you say when you pick up the telephone, and
+             both draw only when they are true, which is the same rule
+             as every other block here. */''}
+        ${q.originAgentId ? `<div class="om-od-trk-w">Agent order — the name is the agent's, not the end client's.</div>` : ''}
+        ${q.originPortal ? `<div class="om-od-trk-w">Placed by the customer on the portal, so they have already seen every price on it.</div>` : ''}
+      </div>
+
+      ${say ? `<div class="om-od-say">
+        <div class="om-od-say-m">
+          <div class="om-od-l">What to tell the client</div>
+          <div class="om-od-say-t">${esc(say)}</div>
+        </div>
+        <button type="button" class="om-btn om-btn-s" data-dlg="tellclient" data-id="${q.id}">
+          <span class="om-od-wa">${omIcon('chat', 15)}</span>Send an update</button>
+      </div>` : ''}
+
+      ${/* THE SUPPLIERS, and only while there are answers still to come.
+
+           This is the block that proves the rule the whole redesign
+           rests on: it is content, not furniture. A Taken order has
+           three suppliers to chase and every one of them is a decision;
+           the same order in Preparing has none, and drawing an empty
+           Suppliers heading there is exactly the fixed furniture the
+           eleven blocks were.
+
+           It is also the console's ONLY way to ask a supplier or mark
+           one confirmed -- the phone has it inside the row, and the row
+           is display:none on a desk. Dropping it here would leave an
+           order unable to leave Taken from a desk at all. */''}
+      ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="om-od-sec om-od-sup-b">
+        <div class="om-od-l">Suppliers</div>
+        <div class="om-od-sups">${orderSupplierActsHTML(q, { all:true, om:true })}</div>
+        <div class="om-od-basis">It moves itself to Buying the moment the last one is confirmed. Nothing is sent from this list — Ask opens WhatsApp and you press send there.</div>
+      </div>` : ''}
+
+      <div class="om-od-cols">
+        <div class="om-od-col">
+          <div class="om-od-l">${s.lines.length === 1 ? 'The line' : 'The lines'}</div>
+          ${s.lines.map(l=> `<div class="om-od-ln">
+            <div class="om-od-ln-m">
+              <div class="om-od-ln-n om-t" title="${esc(l.name)}">${esc(l.name)}</div>
+              ${otLineBasis(l) ? `<div class="om-od-ln-s">${esc(otLineBasis(l))}</div>` : ''}
+            </div>
+            <div class="om-fig om-n om-od-ln-q">${esc(String(l.qty))}${l.unit ? ' ' + esc(l.unit) : ''}</div>
+            <div class="om-fig om-n om-od-ln-v">${esc(otFig(Math.round(l.lineTotal)))}</div>
+          </div>`).join('')}
+        </div>
+
+        <div class="om-od-money">
+          <div class="om-od-l">Money</div>
+          <div class="om-od-kv"><span class="om-od-kv-k">Client pays</span><span class="om-fig om-n om-od-kv-v">${esc(otFig(total))}</span></div>
+          <div class="om-od-kv"><span class="om-od-kv-k">Cost, as bought</span><span class="om-fig om-n om-od-kv-v">${buys.length ? esc(otFig(Math.round(cost))) : '—'}</span></div>
+          ${wholeCost
+            ? `<div class="om-od-keep">
+                 <span class="om-od-keep-k">You keep</span>
+                 <span class="om-pill ${keepTone}">${esc(pct.toFixed(1))}%</span>
+                 <span class="om-fig om-n om-od-keep-v">${esc(otFig(Math.round(margin)))}</span>
+               </div>
+               <div class="om-od-basis">Cost is what the buyer paid, not the list price.</div>`
+            : `<div class="om-od-keep"><span class="om-od-keep-k">You keep</span><span class="om-od-keep-v om-od-basis">not from here</span></div>
+               <div class="om-od-basis">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot. ` : ''}${
+                 s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}It cannot be worked out from what is here, so it is not stated.</div>`}
+          ${/* THE PACK SURPLUS. Only when a pack is actually bigger than
+               the order -- there is nothing to say when it matches. */''}
+          ${overPack.length ? `<div class="om-od-sur">
+            <div class="om-od-sur-h">
+              <span class="om-od-sur-k">Leaves the till today</span>
+              <span class="om-fig om-n om-od-sur-v">${esc(otFig(Math.round(cost + overPackCash)))}</span>
+            </div>
+            <div class="om-od-sur-s">${esc(otPackWord(overPack))} come${overPack.length === 1 && otPackWord(overPack).indexOf(' ') === -1 ? 's' : ''} in a pack far bigger than this order. <b>${esc(fmtUGX(Math.round(overPackCash)))}</b> of it goes on the shelf as stock, not into this sale.</div>
           </div>` : ''}
-          <div class="ow-dlg-sect">
-            <div class="ow-dlg-l">The lines</div>
-            ${s.lines.map(l=> `<div class="ow-dlg-ln">
-              ${otDlgTick(l.fromStock || !l.unpriced && l.source && l.picked != null || !!l.receivedAt)}
-              <span class="ow-dlg-ln-n" title="${esc(l.name)}">${esc(l.name)}</span>
-              <span class="ow-dlg-ln-q">${esc(String(l.qty))}${l.unit ? ' ' + esc(l.unit) : ''}</span>
-              <span class="ow-dlg-ln-v">${esc(otFig(Math.round(l.lineTotal)))}</span>
-            </div>`).join('')}
-            <div class="ow-dlg-ln-s">${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} bought in` : ''}${
-              s.unpriced ? ` · ${s.unpriced} with no price on file` : ''}${
-              s.shortLines ? ` · ${s.shortLines} came up short` : ''}</div>
-          </div>
-          <div class="ow-dlg-sect">
-            <div class="ow-dlg-l">How it got here</div>
-            ${trail.length ? trail.map((e, j)=> `<div class="ow-dlg-ev${j === trail.length - 1 ? ' ow-now' : ''}">
-              <span class="ow-dlg-ev-t">${esc(otWhen(e.at))}</span>
-              <span class="ow-dlg-ev-s">${esc(e.what)}</span>
-            </div>`).join('') : '<div class="ow-dlg-ln-s">This order pre-dates the stage log, so how it got here was never written down.</div>'}
-          </div>
-          <div class="ow-dlg-sect">
-            <div class="ow-dlg-l">Goods, as checked in</div>
-            <div class="ow-dlg-shots">${shots.map(sh=> `<div class="ow-dlg-shot">
-              <svg class="icon ow-i20" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
-              <div class="ow-dlg-shot-c">${sh.cap}</div>
-            </div>`).join('')}</div>
-            <div class="ow-dlg-ln-s">No photograph has been taken against this order yet.</div>
-          </div>
+          ${q.invoiced ? `<div class="om-od-basis">${esc(invoiceNumberLabel(q))} · ${invoiceBalanceDue(q) > 0 ? esc(fmtUGX(invoiceBalanceDue(q))) + ' still owed' : 'settled'}.</div>`
+            : `<div class="om-od-basis">Nothing is owed until it is delivered.</div>`}
         </div>
-        <div class="ow-dlg-side">
-          <div class="ow-dlg-l">Money</div>
-          <div class="ow-dlg-sect">
-            <div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Client pays</span><span class="ow-dlg-kv-v">${esc(otFig(total))}</span></div>
-            <div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Cost, as bought</span><span class="ow-dlg-kv-v">${buys.length ? esc(otFig(Math.round(cost))) : '—'}</span></div>
-            <div class="ow-dlg-hr"></div>
-            ${wholeCost
-              ? `<div class="ow-dlg-kv ${margin < 0 ? 'ow-bad' : 'ow-good'}"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">${esc(otFig(Math.round(margin)))}</span></div>
-                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price. ${overPackNote}</div>`
-              : `<div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">not from here</span></div>
-                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated. ${overPackNote}</div>`}
-          </div>
-          <div class="ow-dlg-hr"></div>
-          <div class="ow-dlg-sect">
-            <div class="ow-dlg-l">${q.invoiced ? 'Invoiced' : 'Not invoiced'}</div>
-            <div class="ow-dlg-p">${q.invoiced
-              ? `${esc(invoiceNumberLabel(q))}. ${invoiceBalanceDue(q) > 0 ? esc(fmtUGX(invoiceBalanceDue(q))) + ' still owed.' : 'Settled.'}`
-              : 'Nothing is owed until it is delivered. The invoice is drawn from these lines.'}</div>
-          </div>
-        </div>
-      </div>`,
-    foot: `<div class="ow-dlg-n">${esc([`Nothing here sends itself.`,
-      loading ? otMoveNote(q, { act:'loaded' }) : '',
-      footAct ? otMoveNote(q, footAct) : ''].filter(Boolean).join(' '))}</div>
-      ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
-      ${/* Announce steps back into the footer as a ghost whenever the
-           move itself has gone to the form above -- it used to be
-           suppressed BOTH ways at once on an order in Preparing, so the
-           only way to tell the group about it disappeared. */''}
-      ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
-      ${footAct ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>` : ''}`,
+      </div>
+
+      <div class="om-od-f">
+        ${loading
+          ? `${carrierFormHTML(q, OM_LOAD_CLS, otLoadDrafts.get(q.id))}
+             <button type="button" class="om-btn om-btn-p" data-act="loadgo" data-dlg="loadgo" data-id="${q.id}"
+               ${orderCarrierChosen(q) ? '' : 'disabled aria-disabled="true" title="Say who is carrying it first"'}>${
+               omIcon('truck', 16)}${q.status === 'pending_delivery' ? 'That is who has it' : 'Loaded, it has gone'}</button>`
+          : footAct
+            ? `<span class="om-od-f-s">${esc(otMoveNote(q, footAct) || '')}</span>
+               <button type="button" class="om-btn om-btn-p" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>`
+            : '<span class="om-od-f-s"></span>'}
+        <span class="om-od-div"></span>
+        ${q.status === 'draft' && orderSupplierGroups(q).length
+          ? `<button type="button" class="om-btn om-btn-s" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button>` : ''}
+        ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? ''
+          : `<button type="button" class="om-btn om-btn-s" data-dlg="announce" data-id="${q.id}">Announce</button>`}
+        <button type="button" class="om-btn om-btn-g" data-dlg="cancel" data-id="${q.id}">Hold or cancel</button>
+      </div>
+    </div>`,
   };
+}
+/* ONE LINE UNDER THE TRACK, and it is the only fact there that is not
+   a time. Ordinarily that is who has the order; once it has come back
+   it is the trip it made and did not finish, because that is the thing
+   somebody opening this order needs before anything else -- and saying
+   it in words is what stops the amber dot above being a puzzle. */
+function otTrackLine(q){
+  const who = orderWhoText(q) || '';
+  const ret = orderBackMoves(q);
+  if(!ret.length) return who;
+  const last = ret[ret.length - 1];
+  const went = orderStageFirstAt(q, last.from);
+  const why = otBackReason(last.from, last.reason);
+  const told = q.clientTold && q.clientTold.at >= last.at ? `${' · the client was told at ' + otWhen(q.clientTold.at)}` : '';
+  return `Went out at ${otWhen(went || last.at)}, came back at ${otWhen(last.at)}${
+    why ? ` — ${(why.note || why.label).toLowerCase()}` : ''}.${who ? ` ${who}` : ''}${told}`;
+}
+/* One line under a line, and only when it has one to give. */
+function otLineBasis(l){
+  if(!l) return '';
+  if(l.fromStock) return 'off our own shelf';
+  if(l.unpriced) return 'no supplier price on file';
+  return 'bought in for this order · none was on the shelf';
+}
+/* The goods a pack was bought whole for, named rather than counted:
+   "The hinges" reads, "1 line" does not. */
+function otPackWord(lines){
+  const names = [...new Set((lines || []).map(l=> (l.it && l.it.productName) || 'an item'))];
+  if(names.length === 1) return names[0];
+  return `${names.length} of the lines`;
+}
+/* WHETHER THERE IS ANYBODY TO LOAD IT OUT WITH. The paragraph that used
+   to explain that loading counts as packing is gone; the rule lives in
+   the shape instead -- the primary cannot be pressed until this is true,
+   so the form teaches itself. */
+function orderCarrierChosen(q){
+  if(!q) return false;
+  if(q.deliveryMode === 'agent_pickup') return true;
+  const f = document.querySelector(`.om-od-load[data-load="${q.id}"], [data-load="${q.id}"]`);
+  const el = f && f.querySelector('[data-car="kind"]');
+  return !!(el && el.value);
 }
 /* What the footer's move will actually do, said before it is pressed. */
 function otMoveNote(q, act){
@@ -45329,6 +46052,114 @@ function otMoveNote(q, act){
      footer act's -- and "Everything on this screen is a tap of yours"
      beside "Nothing here sends itself." is the same remark twice. */
   return '';
+}
+
+/* ================= 2g · MOVING AN ORDER BACK ========================
+
+   There was no backward move anywhere in the app: the board had Hold or
+   cancel, forward buttons, and a back arrow that only walked the
+   needs-you queue. But a van comes back, a picker marks the wrong order
+   packed, and a supplier's confirmation turns out to be wrong.
+
+   WHAT THIS IS NOT: Hold or cancel stops an order where it stands. This
+   puts it back a step and keeps it live. Both exist, and this sheet
+   never offers cancelling as a way of going backwards.
+
+   It is reached by pressing a step on the track -- never by dragging a
+   card, which is as cheap a gesture as reordering one and this alters
+   the record. Forward stays a button; backwards is a decision, and the
+   decision is the REASON, because the reason is what decides what else
+   changes. */
+let otBackTo = '';            // the step picked on the track
+let otBackWhy = '';           // which of the reasons
+let otBackTell = null;        // null = follow the derived default
+function openMoveBack(orderId, toStatus){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(orderId));
+  if(!q) return;
+  const target = orderBackTargets(q).find(t=> t.status === toStatus && t.can);
+  if(!target){ toast('That is not a step this order can go back to'); return; }
+  otBackTo = target.status;
+  otBackWhy = (otBackReasons(q.status)[0] || {}).id || '';
+  otBackTell = null;
+  otDlgOpen('moveback', Number(orderId));
+}
+function otMoveBackSpec(id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return null;
+  const targets = orderBackTargets(q);
+  if(!targets.some(t=> t.status === otBackTo && t.can)) otBackTo = (targets.find(t=> t.can) || {}).status || '';
+  if(!otBackTo) return null;
+  const reasons = otBackReasons(q.status);
+  if(!reasons.some(r=> r.id === otBackWhy)) otBackWhy = (reasons[0] || {}).id || '';
+  const changes = orderBackChanges(q, otBackTo, otBackWhy);
+  const promise = orderClientPromise(q);
+  /* THE TICK IS ON BY DEFAULT wherever a promise this move contradicts
+     has been sent, and the block says why in those words. Until the
+     owner touches it, it follows that; after, it is theirs. */
+  const tell = otBackTell == null ? !!promise : !!otBackTell;
+  const went = otWhen(orderStageFirstAt(q, q.status) || q.stageEnteredAt);
+  const place = orderCustomerLocation(q);
+  const meta = [esc(quoteClientName(q)), `<span class="om-fig">#${q.id}</span>`, esc(place),
+    `${(q.items || []).length} line${(q.items || []).length === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
+  return {
+    card: true,
+    w: 720,
+    body: `<div class="om-od">
+      <div class="om-od-h">
+        <div class="om-od-h-m">
+          <div class="om-od-h-t">Move it back</div>
+          <div class="om-od-h-s om-t">${meta}</div>
+        </div>
+        <span class="om-chip om-od-h-c">${esc(OT_LANE_NAME[q.status] || otStageShort(q.status))} · ${esc(otStageSince(q))}</span>
+        <button type="button" class="om-od-h-b" data-dlg="close" aria-label="Close">${omIcon('close', 17, 2.4)}</button>
+      </div>
+
+      <div class="om-od-sec">
+        <div class="om-od-l">Where it goes back to · pick a step</div>
+        ${otTrackHTML(q, { targets, pick: otBackTo })}
+      </div>
+
+      ${reasons.length ? `<div class="om-od-say om-od-stack">
+        <div class="om-od-l">Why it is coming back</div>
+        <div class="om-od-why">${reasons.map(r=> `<button type="button" class="om-od-r${r.id === otBackWhy ? ' om-on' : ''}"
+          data-dlg="backwhy" data-why="${esc(r.id)}" data-id="${q.id}" aria-pressed="${r.id === otBackWhy}">
+          <span class="om-od-rd"></span>
+          <span class="om-od-r-t">${esc(r.label)}</span>
+          ${r.note ? `<span class="om-od-r-s">· ${esc(r.note)}</span>` : ''}
+        </button>`).join('')}</div>
+      </div>` : ''}
+
+      <div class="om-od-sec">
+        <div class="om-od-l">What this changes</div>
+        ${/* DERIVED, never a bare "are you sure". Each line is worked
+             out from the order and the reason, and a line that cannot
+             be worked out is not drawn. */''}
+        <div class="om-od-chgs">${changes.map(c=> `<div class="om-od-chg">
+          <span class="om-od-chg-i${c.tone === 'lock' || c.tone === 'note' ? ' om-quiet' : c.tone === 'warn' ? ' om-warn' : ''}">${
+            omIcon(c.tone === 'lock' ? 'lock' : c.tone === 'warn' ? 'warn' : 'tick', 15, c.tone === 'good' ? 2.4 : 2)}</span>
+          <span class="om-od-chg-t">${c.strong ? `<b>${esc(c.strong)}</b> · ` : ''}${esc(c.say)}</span>
+        </div>`).join('')}</div>
+
+        ${promise ? `<button type="button" class="om-od-tell${tell ? ' om-on' : ''}" data-dlg="backtell" data-id="${q.id}" aria-pressed="${tell}">
+          <span class="om-od-tick">${tell ? omIcon('tick', 12, 3) : ''}</span>
+          <span class="om-od-tell-m">
+            <span class="om-od-tell-t">Tell the client it did not arrive</span>
+            <span class="om-od-tell-s">They were told at <span class="om-fig">${esc(otWhen(promise.at))}</span> that it was on its way today. Leaving this unticked means the last thing they heard from you is untrue.</span>
+          </span>
+        </button>` : ''}
+      </div>
+
+      <div class="om-od-f">
+        <span class="om-od-f-s">The <span class="om-fig">${esc(went)}</span> stays on the record. It will read <i>out at ${esc(went)}, back at ${esc(otWhen(Date.now()))}</i>.</span>
+        ${/* The primary NAMES THE DESTINATION, so it is readable without
+             the track above it -- and the ghost names where the order
+             stays, in the lane's own word, so the pair reads as a
+             choice rather than as do-it/don't. */''}
+        <button type="button" class="om-btn om-btn-p" data-dlg="backgo" data-id="${q.id}">Move it back to ${esc(OT_LANE_NAME[otBackTo] || otStageShort(otBackTo))}</button>
+        <button type="button" class="om-btn om-btn-g" data-dlg="close">Leave it ${esc((OT_LANE_NAME[q.status] || otStageShort(q.status)).toLowerCase())}</button>
+      </div>
+    </div>`,
+  };
 }
 
 /* ================= 2b · THE BUYING LIST =================
@@ -45675,6 +46506,7 @@ function otTermsLabel(q){
 
 const OT_DIALOGS = {
   preview: otPreviewSpec,
+  moveback: otMoveBackSpec,
   buying: otBuyingSpec,
   trip: otTripSpec,
   runs: otRunsSpec,
@@ -45733,6 +46565,28 @@ function otDlgAct(act, el){
        are redrawn: confirming the last supplier MOVES the order, and a
        lane behind an open dialog must never still say Taken. */
     case 'ask': case 'confirmed': case 'undoconfirm': otAct(act, id, el); after(); break;
+    /* NOT BY DRAGGING. A step the order has already been through is
+       pressable on the track that already shows where it has been, and
+       pressing it opens the sheet that asks why -- it never moves the
+       order on its own. Forward stays a button; backwards is a
+       decision. */
+    case 'backpick':
+      /* Already on the sheet: this is changing your mind about the
+         destination, not starting again -- so the reason you have
+         already given survives the change. */
+      if(otDlgNow && otDlgNow.kind === 'moveback'){ otBackTo = el.dataset.back || otBackTo; otDlgDraw(); }
+      else openMoveBack(id, el.dataset.back);
+      break;
+    /* The sheet's own three: which step, which reason, and whether the
+       client hears about it. None of them moves the order -- only
+       backgo does, and it says where it is going in its own words. */
+    case 'backwhy': otBackWhy = el.dataset.why || ''; otDlgDraw(); break;
+    case 'backtell': otBackTell = !(otBackTell == null ? !!orderClientPromise(q) : otBackTell); otDlgDraw(); break;
+    case 'backgo': {
+      const to = otBackTo, tell = otBackTell == null ? !!orderClientPromise(q) : !!otBackTell;
+      if(moveOrderBack(id, to, otBackWhy, tell)) otDlgClose(); else otDlgDraw();
+      break;
+    }
     case 'cancel': {
       cancelSavedQuote(id);
       /* Off the board, so off the screen. Leaving the dialog up over a
@@ -45744,14 +46598,7 @@ function otDlgAct(act, el){
       break;
     }
     case 'announce': openAnnounceDialog(id); break;
-    case 'tellclient': {
-      if(!q) break;
-      /* The client's own WhatsApp, with the sentence the dialog just
-         showed already in it. Opened, never sent: the owner presses
-         send in WhatsApp, as they do everywhere else in this app. */
-      window.open(waComposeUrl(q.client && q.client.phone, `${quoteClientName(q)} — order #${q.id}. ${otSayToClient(q)}`), '_blank');
-      break;
-    }
+    case 'tellclient': { if(q) otTellClient(q); otDlgDraw(); break; }
     case 'copydraft': {
       const box = document.getElementById('ot_dlg_draft');
       const text = box ? box.value : '';
@@ -45859,7 +46706,20 @@ document.getElementById('otDlg').addEventListener('mousedown', (e)=>{
    same one question the row asks on the phone. */
 document.getElementById('otDlg').addEventListener('change', (e)=>{
   const sel = e.target && e.target.closest ? e.target.closest('[data-car="kind"]') : null;
-  if(sel) syncCarrierForm(sel.closest('[data-load]'));
+  if(!sel) return;
+  syncCarrierForm(sel.closest('[data-load]'));
+  /* THE PARAGRAPH THAT EXPLAINED THIS IS GONE, and the rule lives in
+     the shape instead: the primary cannot be pressed until somebody is
+     chosen, so the form teaches itself. Which means it has to come
+     alive on this change rather than on the next redraw -- a redraw
+     here would take the half-filled form with it. */
+  const go = document.querySelector('#otDlg .om-btn-p[data-dlg="loadgo"]');
+  if(go){
+    const on = !!sel.value;
+    go.disabled = !on;
+    go.setAttribute('aria-disabled', String(!on));
+    if(on) go.removeAttribute('title');
+  }
 });
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && otDlgNow){ e.preventDefault(); otDlgClose(); }

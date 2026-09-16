@@ -224,8 +224,18 @@ const shared = read('shared-worker.js');
      question a second way. */
   t.check(/case 'loaded': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else \{ otOpenRow\(id\); otFocusLoad\(id\); \} break;/.test(admin),
     'wired to the form — the row on the phone, the order’s own dialog on the console — rather than to a pop-up over it');
-  t.check(/const loadHtml = orderLoadFormHTML\(q\);/.test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
+  /* THE SAME FORM, and the same one the picker's phone draws.
+     carrierFormHTML is parameterised by its class names precisely so the
+     card system can wear it without a second form existing -- same
+     data-car contract, same readCarrierForm, same loadOrder. What the
+     dialog stopped drawing is the PARAGRAPH that used to explain that
+     loading from here counts as packing: that rule lives in the shape
+     now, because the primary cannot be pressed until somebody is
+     chosen. A form that teaches itself needs no paragraph. */
+  t.check(/carrierFormHTML\(q, OM_LOAD_CLS, otLoadDrafts\.get\(q\.id\)\)/.test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
     'and that dialog draws the same form, rather than a second way of asking');
+  t.check(/orderCarrierChosen\(q\) \? '' : 'disabled/.test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
+    'with its move disabled until somebody is named, which is where the paragraph went');
   // A third carrier that is not a person of ours: hired transport, named
   // on the note. Without it, every hired lorry had to be recorded as
   // somebody on the payroll or as nobody at all.
