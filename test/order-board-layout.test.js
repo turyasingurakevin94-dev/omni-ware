@@ -720,6 +720,26 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   const act = extractFunction(src, 'otDlgAct', 'index.html');
   t.check(/window\.open\(waComposeUrl/.test(act),
     'telling a client or a buyer opens WhatsApp rather than sending anything');
+  /* A MODAL OPENED FROM THIS DIALOG WOULD OPEN BEHIND IT. Every
+     .modal-overlay is z-index 100 and the dialog scrim is 120, so an act
+     with a window of its own has to stand this one down first -- "Decide"
+     on a short pick opened its modal underneath the dialog and its scrim,
+     and the press read as doing nothing at all. */
+  t.check(/\.ow-dlg-sc\{position:fixed;inset:0;z-index:120;/.test(src)
+    && /\.modal-overlay\{[\s\S]{0,200}?z-index:100;/.test(src),
+    'the dialog scrim really does outrank the modal overlays');
+  t.check(/if\(OT_ACTS_WITH_A_WINDOW\.includes\(a2\)\)\{ otDlgClose\(\); otAct\(a2, id, el\); break; \}/.test(act)
+    && /const OT_ACTS_WITH_A_WINDOW = \['shortpick', 'prepay', 'confirm', 'edit'\];/.test(src),
+    'so an act that answers in its own window closes the dialog first');
+  /* AND THE FOOTER KEEPS EVERY OTHER ACT. Dropping it whenever the
+     carrier form appeared took "Decide" off a short-picked order --
+     the one decision that has to be made before it can be invoiced --
+     and left the screen offering only to load it out. Two acts are
+     dropped and only two, each because the dialog already carries it:
+     'loaded' is the form's own button, 'open' is this dialog. */
+  t.check(/const footAct = act && act\.act !== 'loaded' && act\.act !== 'open' \? act : null;/
+    .test(extractFunction(src, 'otPreviewSpec', 'index.html')),
+    'and the footer drops only the two acts the dialog is already carrying');
   t.check(/nothing is sent until you press send/.test(extractFunction(src, 'otAnnounceSpec', 'index.html')),
     'and the announcement says so on the dialog that drafts it');
 }

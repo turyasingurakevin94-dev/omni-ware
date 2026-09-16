@@ -515,6 +515,15 @@ const draft = (items) => {
   t.check(/case 'loaded': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else \{ otOpenRow\(id\); otFocusLoad\(id\); \} break;/.test(src)
     && /case 'open': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else otOpenRow\(id\); break;/.test(src),
     'and it reaches that place on either screen');
+  /* AND THE PANEL, which is the only place a supplier's answer can be
+     TYPED. Ask and Confirmed are the two taps; "no stock until Friday"
+     is not a tap. The phone's row has carried the way in from the start;
+     the console had none, so a supplier who rang back with a problem
+     could not be recorded from a desk at all -- while orderNeedsYou goes
+     on reporting a Problem state nothing there could reach. */
+  t.check(/data-dlg="act" data-act2="confirm"/.test(extractFunction(src, 'otPreviewSpec', 'index.html')),
+    'and the order dialog carries the way to the panel where a problem is written down');
+
   /* BOTH ROUTING KEYS. The board's listener reads data-act; the dialog
      sits outside #tab-quote-saved and reads data-dlg, so a tap carrying
      only one of them is dead in the other home -- which is exactly how

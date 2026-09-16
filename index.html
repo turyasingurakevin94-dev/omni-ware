@@ -13732,6 +13732,11 @@
     padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);
     background:var(--ow-paper-2);}
   .ow-dlg-sect{display:flex;flex-direction:column;gap:7px;min-width:0;}
+  /* A secondary way in, sized to its own words. The section is a
+     stretching column, so a bare button in it spans the whole width and
+     reads as the section's main act -- which this is not: the taps on
+     the rows above are. Same shape as the load form's own go row. */
+  .ow-dlg-sup-go{display:flex;}
   .ow-dlg-ln{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
   .ow-dlg-ln-n{flex:1;min-width:0;font-size:var(--ow-t-13);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -42089,14 +42094,22 @@ function otPreviewSpec(id){
      with somebody named gets the same block as a statement of fact, and
      its move is Delivered, in the footer where it has always been. */
   const loading = !!loadHtml && (q.status === 'preparing' || orderNeedsDelivery(q));
-  /* What the footer offers. Never the form's own act -- the form's
-     button IS that act, and two of them would be two ways to do one
-     thing, one of which has no form attached. And never 'open', which
-     means "go to where the suppliers are": on the phone that is the
-     row and on the console it is this dialog, so in here it is a button
-     that reopens what you are already looking at. The suppliers are
-     below; the footer says nothing about them. */
-  const footAct = act && !loading && act.act !== 'open' ? act : null;
+  /* What the footer offers, and it is NOT simply "whatever the form is
+     not". Two acts are dropped and only two:
+
+       'loaded'  the form's own button IS that act, and two of them
+                 would be two ways to do one thing, one with no form
+                 attached;
+       'open'    it means "go to where the suppliers are", which on the
+                 console is this dialog -- a button that reopens what
+                 you are already looking at.
+
+     Everything else stays, whether or not the form is drawn. Dropping
+     the act whenever the form appeared took "Decide" off an order whose
+     pick came up short -- the one decision that has to be made before
+     that order can ever be invoiced -- and left the screen offering
+     only to load it out. */
+  const footAct = act && act.act !== 'loaded' && act.act !== 'open' ? act : null;
   const track = SQ_STATUS_ORDER.map((st, j)=>{
     const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
     const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
@@ -42157,7 +42170,17 @@ function otPreviewSpec(id){
           ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="ow-dlg-sect">
             <div class="ow-dlg-l">Suppliers</div>
             <div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>
-            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there.</div>
+            ${/* THE WAY TO THE PANEL, which is where a supplier's answer
+                 can be TYPED. Ask and Confirmed are the two taps; "no
+                 stock until Friday" is not a tap, and the panel is the
+                 only place in the app that takes it. The phone's row has
+                 carried this button from the start and the console had
+                 nothing, so a supplier who rang back with a problem
+                 could not be recorded from a desk at all -- while the
+                 board goes on reporting a Problem state that nothing
+                 there could ever reach. */''}
+            <div class="ow-dlg-sup-go"><button type="button" class="btn btn-ghost ow-sm" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button></div>
+            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there. Open Every supplier to write down what one of them actually said.</div>
           </div>` : ''}
           <div class="ow-dlg-sect">
             <div class="ow-dlg-l">The lines</div>
@@ -42208,8 +42231,9 @@ function otPreviewSpec(id){
           </div>
         </div>
       </div>`,
-    foot: `<div class="ow-dlg-n">Nothing here sends itself.${
-      loading ? ` ${esc(otMoveNote(q, { act:'loaded' }))}` : footAct ? ` ${esc(otMoveNote(q, footAct))}` : ''}</div>
+    foot: `<div class="ow-dlg-n">${esc([`Nothing here sends itself.`,
+      loading ? otMoveNote(q, { act:'loaded' }) : '',
+      footAct ? otMoveNote(q, footAct) : ''].filter(Boolean).join(' '))}</div>
       ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
       ${/* Announce steps back into the footer as a ghost whenever the
            move itself has gone to the form above -- it used to be
@@ -42226,7 +42250,13 @@ function otMoveNote(q, act){
   if(act.act === 'invoice') return 'Invoicing takes the goods off the shelf, raises each supplier bill and books what is unpaid to the client.';
   if(act.act === 'buying') return 'The buying list is where a line is checked in; the order moves itself when the last one is.';
   if(act.act === 'loaded') return 'Say who is carrying it in the form above; that is what puts it on the run.';
-  return 'Everything on this screen is a tap of yours.';
+  if(act.act === 'shortpick') return 'Deciding the short pick is what lets it be invoiced — amend the order to what was found, or bill it as ordered.';
+  if(act.act === 'release') return 'Putting it back in the queue drops the pick with it; the next free picker takes it.';
+  /* Nothing specific to say. Empty rather than a sentence, because the
+     footer can now carry two of these at once -- the form's and the
+     footer act's -- and "Everything on this screen is a tap of yours"
+     beside "Nothing here sends itself." is the same remark twice. */
+  return '';
 }
 
 /* ================= 2b · THE BUYING LIST =================
@@ -42589,6 +42619,10 @@ function openDeliveryRuns(){ otDlgOpen('runs', 0); }
 function openInvoiceDelivered(){ otDlgOpen('invoice', 0); }
 function openAnnounceDialog(id){ otAnnounceDraft = null; otDlgOpen('announce', Number(id)); }
 
+/* The acts that answer in a window of their own rather than on the
+   board. Listed because the dialog has to stand down for them; see the
+   'act' case below for why. */
+const OT_ACTS_WITH_A_WINDOW = ['shortpick', 'prepay', 'confirm', 'edit'];
 /* Everything a dialog can do, from one listener bound once. Each act
    redraws both the dialog and the board, because both are written from
    the same books and neither may be left saying what was true before. */
@@ -42600,7 +42634,27 @@ function otDlgAct(act, el){
     case 'close': otDlgClose(); break;
     case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
-    case 'act': otAct(el.dataset.act2, id, el); otDlgDraw(); break;
+    /* AN ACT WITH A WINDOW OF ITS OWN CLOSES THIS ONE FIRST.
+
+       Every .modal-overlay in this file sits at z-index 100 and this
+       dialog sits at 120, so a modal opened from in here renders BEHIND
+       the dialog and its scrim: the press looks like it did nothing at
+       all. That is how "Decide" on a short pick behaved -- the one
+       decision that has to be made before the order can ever be
+       invoiced.
+
+       Closing rather than restacking, because it is also the right
+       screen: a decision taken in its own window belongs over the
+       board, not over an order dialog that will be stale by the time it
+       is answered. The same move 'whohas' already makes, one case
+       below. */
+    case 'act': {
+      const a2 = el.dataset.act2;
+      if(OT_ACTS_WITH_A_WINDOW.includes(a2)){ otDlgClose(); otAct(a2, id, el); break; }
+      otAct(a2, id, el);
+      otDlgDraw();
+      break;
+    }
     /* THE SUPPLIER ACTS, in the dialog. The phone asks and confirms
        inside the order's row; the console has no rows, so the order's
        own dialog is where they are, and they come through here. Both
