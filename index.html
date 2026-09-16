@@ -16743,6 +16743,20 @@
   .om-lensgroup{display:flex;align-items:center;gap:6px;background:var(--om-lens-track);border-radius:10px;padding:4px;flex:none}
   .om-lenschip{height:18px;padding:0 6px}
 
+  /* ---- the Saved lens ----------------------------------------------
+     The same screen, the same header, the same search; only the lens
+     changes. Ranked by what is at stake rather than by date, because
+     the question a saved quote asks is "which of these is worth a
+     phone call this morning", and that is not the newest one. */
+  .om-qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid var(--om-rule-inner)}
+  .om-qrow:hover{background:var(--om-hover)}
+  .om-qrow-h{background:var(--om-sunken);border-top:0}
+  .om-qrow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
+  .om-qfoot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--om-rule-inner);font-size:12.5px;color:var(--om-ink-3)}
+  /* An empty lens says what would fill it. "Not enough yet" is an
+     answer; a blank panel is not. */
+  .om-qempty{padding:26px 22px;text-align:center;color:var(--om-ink-3);font-size:13px;line-height:1.55}
+
   /* ---- the client strip --------------------------------------------
      Who it is for and what the books already hold on them, as cells of
      one card split by rules. Each is a label over a figure, so the
@@ -16758,6 +16772,13 @@
   .om-qclient-cell{padding:11px 14px;min-width:0;border-left:1px solid var(--om-rule-inner)}
   .om-qclient-cell:first-child{border-left:0}
   .om-qclient-v{margin-top:2px;display:flex;align-items:baseline;gap:7px}
+  /* WHAT THE BOOKS ALREADY HOLD ON WHOEVER WAS JUST NAMED -- orders,
+     what they owe, their last order -- as cells of this card rather
+     than a box tacked on the end of it. They are facts of the same
+     weight as the two fields beside them and the artboard gives them
+     the same rule between each. */
+  .om-qclient-facts{display:flex;align-items:stretch;padding:0;min-width:0;flex:1}
+  .om-qclient-fact{padding:11px 14px;border-left:1px solid var(--om-rule-inner);min-width:0;display:flex;flex-direction:column;justify-content:center}
 
   /* ---- the document card and its front door ------------------------ */
   .om-qdoc{overflow:visible}
@@ -17958,7 +17979,7 @@
       <div class="om-qtitle">
         <div style="flex:1;min-width:0">
           <div class="om-qtitle-t">Quote</div>
-          <div class="om-qtitle-s">Build the order live, on the call &middot; say the price, move to the next item</div>
+          <div class="om-qtitle-s" id="q_subtitle">Build the order live, on the call &middot; say the price, move to the next item</div>
         </div>
         <div class="om-lensgroup" id="q_lenses" role="tablist" aria-label="Quote lens">
           <button type="button" class="om-lens om-on" data-qlens="building" role="tab" aria-selected="true">Building
@@ -17981,6 +18002,10 @@
            fills the facts the moment a known name is typed. Out of the
            header on purpose: who the quote is for is the first thing you
            fill in, not a caption on the screen's name. -->
+      <!-- BUILDING is one of three lenses over one screen, so the
+           document it draws is a pane rather than the screen itself.
+           Saved and Sent replace it in place; the lens never navigates. -->
+      <div id="q_building">
       <div class="ow-cb q-band om-card om-qclient" id="q_client_band">
         <!-- THE PHONE FOLDS THE BAND TO ONE LINE. Who it is for, their
              number, and the one fact that says how established they are
@@ -18013,7 +18038,7 @@
         <!-- What the books hold on whoever was just named: orders, what
              they owe, the last order -- cells of the same band, after the
              date. renderClientHistoryBox writes them. -->
-        <div class="ow-cb-k" id="q_client_history"></div>
+        <div class="ow-cb-k om-qclient-facts" id="q_client_history"></div>
       </div>
 
       <div class="ow-grid om-qpage">
@@ -18078,6 +18103,12 @@
           <div class="q-rail-sec om-card om-qr" id="q_rail_last"></div>
         </div>
       </div>
+
+      </div><!-- /#q_building -->
+      <!-- Saved and Sent render here. Empty and hidden while Building
+           is the lens, so a screen showing the document carries no
+           second list under it. -->
+      <div id="q_lens_pane" hidden></div>
 
       <!-- The money and the actions, fused and always at hand. The total
            used to sit above the items pushing them down; the actions were
@@ -37451,20 +37482,20 @@ function renderClientHistoryBox(){
   renderClientFold();
   const last = orders.reduce((best,q)=> (!best || String(q.savedAt||'') > String(best.savedAt||'')) ? q : best, null);
   const cells = [];
-  cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Orders</span><span class="ow-cb-kv ow-fig">${priorOrders}</span></div>`);
+  cells.push(`<div class="ow-cb-kn om-qclient-fact"><span class="ow-cb-l">Orders</span><span class="ow-cb-kv ow-fig">${priorOrders}</span></div>`);
   /* "Owed now": the same words the rail and the customer book use for
      the same figure. A known client owing nothing reads 0 -- that is a
      fact from the books, not a blank. */
   if(standing){
     const age = standing.oldestDays == null ? '' : ` · ${standing.oldestDays} day${standing.oldestDays===1?'':'s'} old`;
     const tone = band==='severe' ? ' ow-bad' : band==='late' ? ' ow-warn' : '';
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now${esc(age)}</span><span class="ow-cb-kv ow-fig${tone}">${esc(fmtUGX(standing.owed))}</span></div>`);
+    cells.push(`<div class="ow-cb-kn om-qclient-fact"><span class="ow-cb-l">Owed now${esc(age)}</span><span class="ow-cb-kv ow-fig${tone}">${esc(fmtUGX(standing.owed))}</span></div>`);
   } else if(customer){
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now</span><span class="ow-cb-kv ow-fig">${esc(fmtUGX(0))}</span></div>`);
+    cells.push(`<div class="ow-cb-kn om-qclient-fact"><span class="ow-cb-l">Owed now</span><span class="ow-cb-kv ow-fig">${esc(fmtUGX(0))}</span></div>`);
   }
   if(last){
     const when = savedAgoLabel(last.savedAt || last.date || '');
-    cells.push(`<div class="ow-cb-kn q-kn-last"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
+    cells.push(`<div class="ow-cb-kn om-qclient-fact q-kn-last"><span class="ow-cb-l">Last order</span><span class="ow-cb-kv"><span class="ow-fig">${esc(fmtUGX(savedQuoteTotal(last)))}</span> <span class="ow-cb-ks">· ${esc(when)}</span></span></div>`);
   }
   box.innerHTML = cells.join('');
   /* The same facts, as the phone's Details pane opens: orders, owed,
@@ -38784,6 +38815,152 @@ document.addEventListener('click', (e)=>{
   document.querySelectorAll('#q_itemsWrap .q-line.q-open').forEach(r=> r.classList.remove('q-open'));
   quoteOpenLine = null;
 });
+/* ================= THE THREE LENSES OVER ONE QUOTE =================
+ * A quote being built and a quote saved are one document at two
+ * moments -- the same lines, the same client, the same arithmetic, the
+ * same file. So Saved is a LENS on this screen rather than a second
+ * screen with its own list, and switching never navigates: the header,
+ * the search and the lens row stay where they are and only what is
+ * under them changes.
+ *
+ * SENT HAS NOTHING BEHIND IT IN THIS APP, and that is stated rather
+ * than papered over. Nothing records that a quote was sent: the
+ * WhatsApp hand-off is a deep link the app cannot see, so a count here
+ * would be a guess and a list would be fiction. The lens opens and
+ * says what would fill it, which is this app's rule -- not enough is
+ * an answer, and a screen that cannot derive a figure says so instead
+ * of showing one.
+ * ================================================================== */
+let quoteLens = 'building';
+function quoteSavedRows(){
+  /* Saved is every quote written down and not yet turned into money:
+     saved, not invoiced, not voided. In this app saving a quote makes
+     it a Taken order on the board, so "not yet ordered" is read as
+     "has not moved past the stage saving put it in". */
+  return (data.savedQuotes || []).filter(q=> !q.voided && !q.invoiced);
+}
+function quoteSavedKept(q){
+  /* Derived from the rows, never stored: what the client pays for the
+     goods less what those goods cost the shop. Charges are left out
+     for the same reason the dock leaves them out -- a delivery nobody
+     has costed is not profit. */
+  return (q.items || []).reduce((n, it)=>{
+    const qty = Number(it.qty) || 0;
+    return n + qty * (quoteItemSellPrice(it) - (Number(it.price) || 0));
+  }, 0);
+}
+function quoteLensPaneHTML(){
+  const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
+  if(quoteLens === 'sent'){
+    return `<div class="om-card"><div class="om-qempty">
+      <b>Nothing records that a quote was sent.</b><br>
+      Sending opens WhatsApp with the quote in it, and the app cannot see
+      what happens there &mdash; so a count here would be a guess. Stamping a
+      send, the way Messages does, is what would fill this.
+    </div></div>`;
+  }
+  const rows = quoteSavedRows();
+  if(!rows.length){
+    return `<div class="om-card"><div class="om-qempty">
+      <b>No quotes waiting on a yes.</b><br>
+      A quote you save and have not yet invoiced sits here, ranked by what is at stake.
+    </div></div>`;
+  }
+  /* Ranked by what is at stake, not by date: the question a saved quote
+     asks is which one is worth a call this morning, and that is not the
+     newest one. */
+  const ranked = rows.map(q=>({ q, value: savedQuoteTotal(q), kept: quoteSavedKept(q),
+      owed: (function(){ const c = (data.customers||[]).find(c=> String(c.id)===String(q.customerId));
+        const st = c ? customerDebtStanding(c) : null; return st ? st.owed : 0; })() }))
+    .sort((a,b)=> b.value - a.value);
+  const body = ranked.map(r=>{
+    const who = ((r.q.client && r.q.client.name) || '').trim() || 'No name on it';
+    const lines = (r.q.items || []).length;
+    const what = (r.q.items || []).slice(0,3).map(i=> i.productName).join(', ');
+    const waited = savedAgoLabel(r.q.savedAt || r.q.date || '');
+    /* The action the row has earned. A client who owes you money is
+       asked about the money first -- a second quote to somebody already
+       behind is a bigger hole, not a bigger sale. */
+    const next = r.owed > 0
+      ? { label:'Open debt', cls:'om-btn-s', tone:`background:var(--om-bad);color:var(--om-bad-ink)` }
+      : { label:'Open', cls:'om-btn-s', tone:'' };
+    return `<div class="om-qrow" data-saved="${esc(String(r.q.id))}">
+      <div class="om-t">
+        <div style="font-size:13.5px;font-weight:600" class="om-t">${esc(who)}</div>
+        <div style="font-size:11.5px;color:var(--om-ink-3)" class="om-t">${lines} line${lines===1?'':'s'}${what ? ' &middot; ' + esc(what) : ''}${
+          r.owed > 0 ? ` &middot; <span style="color:var(--om-bad-ink);font-weight:600">owes ${n(r.owed)}</span>` : ''}</div>
+      </div>
+      <div class="om-fig om-n" style="font-size:13.5px;text-align:right">${n(r.value)}</div>
+      <div><span class="om-chip" style="${r.tone||''}background:var(--om-neutral);color:var(--om-neutral-ink)">${esc(waited)}</span></div>
+      <div class="om-fig om-n" style="font-size:13.5px;text-align:right;color:var(--om-good-ink)">${n(r.kept)}</div>
+      <div style="text-align:right"><button type="button" class="om-btn ${next.cls}" style="height:30px;padding:0 12px;font-size:12.5px;${next.tone}" data-open-saved="${esc(String(r.q.id))}">${next.label}</button></div>
+    </div>`;
+  }).join('');
+  const total = ranked.reduce((t,r)=> t + r.value, 0);
+  return `<div class="om-card" style="overflow:hidden">
+    <div class="om-qrow om-qrow-h">
+      <span class="om-lbl">Client</span>
+      <span class="om-lbl" style="text-align:right">Value</span>
+      <span class="om-lbl">Waiting</span>
+      <span class="om-lbl" style="text-align:right">You keep</span>
+      <span class="om-lbl" style="text-align:right">Next</span>
+    </div>${body}
+    <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} saved and not yet ordered
+      &middot; <span class="om-fig">${n(total)}</span> waiting on a yes</div>
+  </div>`;
+}
+function renderQuoteLensPane(){
+  const pane = document.getElementById('q_lens_pane');
+  const building = document.getElementById('q_building');
+  const dock = document.getElementById('q_stickybar');
+  if(!pane || !building) return;
+  const isBuilding = quoteLens === 'building';
+  building.hidden = !isBuilding;
+  pane.hidden = isBuilding;
+  /* The dock is the DOCUMENT's arithmetic, so it belongs to the lens
+     that draws a document. A saved list has no one total to read out. */
+  if(dock) dock.style.display = isBuilding ? '' : 'none';
+  pane.innerHTML = isBuilding ? '' : quoteLensPaneHTML();
+  if(!isBuilding){
+    pane.querySelectorAll('[data-open-saved]').forEach(btn=> btn.addEventListener('click', ()=>{
+      loadSavedQuote(btn.dataset.openSaved);
+    }));
+  }
+}
+function setQuoteLens(lens){
+  quoteLens = lens;
+  /* The subtitle says where you are, because the lens row says WHICH and
+     the line under the name says WHAT OF IT -- on Saved that is the
+     position, which is the whole reason to open the lens. */
+  const sub = document.getElementById('q_subtitle');
+  if(sub){
+    if(lens === 'building'){
+      sub.textContent = 'Build the order live, on the call \u00b7 say the price, move to the next item';
+    } else if(lens === 'saved'){
+      const rows = quoteSavedRows();
+      const total = rows.reduce((t,q)=> t + savedQuoteTotal(q), 0);
+      sub.textContent = rows.length
+        ? `${rows.length} quote${rows.length===1?'':'s'} saved and not yet ordered \u00b7 ${Number(Math.round(total)).toLocaleString('en-UG')} waiting on a yes`
+        : 'Nothing saved and waiting on a yes';
+    } else {
+      sub.textContent = 'What was sent, once a send is something the app is told about';
+    }
+  }
+  document.querySelectorAll('[data-qlens]').forEach(b=>{
+    const on = b.dataset.qlens === lens;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderQuoteLensPane();
+}
+{
+  const host = document.getElementById('q_lenses');
+  if(host) host.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-qlens]');
+    if(b) setQuoteLens(b.dataset.qlens);
+  });
+}
+
 /* A REDRAW THAT WAITS FOR THE EVENT THAT ASKED FOR IT.
  *
  * Every box on a quote line redraws the table when it is committed, and
@@ -38832,10 +39009,12 @@ function renderQuoteItems(){
     if(bn) bn.textContent = `${items.length} line${items.length===1?'':'s'}`;
     const sn = document.getElementById('q_lens_n_saved');
     if(sn){
-      const saved = (data.savedQuotes||[]).filter(q=> !q.voided && (!q.status || q.status==='draft')).length;
+      const saved = quoteSavedRows().length;
       sn.textContent = String(saved);
       sn.hidden = !saved;
     }
+    const sp = document.getElementById('q_tab_n_saved_ph');
+    if(sp) sp.textContent = String(quoteSavedRows().length);
     const tn = document.getElementById('q_lens_n_sent');
     if(tn){
       tn.textContent = '—';
@@ -40166,6 +40345,10 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
 }));
 
 function loadSavedQuote(id){
+  /* Opening one returns to Building: the row you pressed IS the
+     document, and leaving the lens on Saved would draw the list over
+     the quote it just loaded. */
+  if(typeof setQuoteLens === 'function' && quoteLens !== 'building') setQuoteLens('building');
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
   // An invoiced order has already moved stock, and each line remembers how
