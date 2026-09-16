@@ -42212,10 +42212,23 @@ function otBuyingSpec(){
   const unpriced = [];
   orders.forEach(q=> orderUnpricedLines(q).forEach(line=> unpriced.push({ order:q, line })));
   const waiting = orders.length;
-  /* Lines nobody has been sent for. Nothing buys them until they are on
-     a stop, so they are the first thing in the dialog, not a footnote. */
+  /* LINES NOBODY IS OUT FOR. They are on the round below -- a stop was
+     planned for them the moment a price put them there -- and the thing
+     that has not happened is that somebody has been SENT to it. Saying
+     "on no stop" put this block in flat contradiction with the stop it
+     was drawn directly above, which listed the same line and said, in
+     its own words, "nobody sent yet". One fact, one answer.
+
+     A line with no price on file is a different fault with a different
+     remedy, and has its own block below ("Not on any stop"), so it is
+     taken out here rather than counted twice under a sentence that is
+     not true of it: there is no stop to send anybody to. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   const toCheck = stops.reduce((n, r)=> n + r.lines.filter(l=> !l.settled && !l.received).length, 0);
   /* THE ONE OXIDE. When somebody is out, the thing to do next is check in
      what they brought back — the whole trip at once, which is the act
@@ -42271,10 +42284,9 @@ function otBuyingSpec(){
     body: `<div class="ow-dlg-k">${cashPositionHTML(orders)}</div>
       ${stranded.length ? `<div class="ow-dlg-warn">
         <svg class="icon ow-i16" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/></svg>
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no trip</span> — ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}</span> — ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 4).join(', '))}${
-          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. Nobody buys them until they are on a stop.</div>
-        ${otDlgGhost('pickups', 'Add them to a stop')}
+          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. They are on the round below and nothing is bought until somebody goes: send someone at the stop, or mark the supplier as delivering.</div>
       </div>` : ''}
       ${stops.length ? `<div class="ow-dlg-rows">
         <div class="ow-dlg-hd ow-bl-r">
@@ -42360,8 +42372,16 @@ function otTripSpec(){
   const stops = p.runs.concat(p.noLocation);
   const cash = stops.reduce((s, r)=> s + r.total, 0);
   const lines = stops.reduce((s, r)=> s + r.lines.length, 0);
+  /* Same distinction the buying list draws: on the round, but with
+     nobody sent to it. The unpriced ones are on no stop at all and are
+     reported as such there, so they are not swept in here under a
+     sentence about stops that do not exist for them. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   return {
     w: 760,
     title: "Plan today's trip",
@@ -42381,9 +42401,9 @@ function otTripSpec(){
         ? `Nowhere to go — all ${p.settled} bought-in line${p.settled === 1 ? '' : 's'} on this board ${p.settled === 1 ? 'has' : 'have'} already arrived.`
         : orders.length ? 'Nothing on the board has to be bought in.' : 'No order is waiting on goods.'}</div>`}
       ${stranded.length ? `<div class="ow-dlg-gap">
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no stop.</span> ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}.</span> ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 3).join(', '))}${
-          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — they will not be bought today unless a price puts them on one.</div>
+          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — the stops above are the plan, not somebody walking it. Send a buyer from the buying list.</div>
         ${otDlgGhost('buying', 'Open the buying list')}
       </div>` : ''}
     </div>`,
