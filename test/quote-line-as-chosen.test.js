@@ -174,7 +174,14 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   const rows = extractFunction(src, 'renderQuoteItems', 'index.html');
   t.check(/const asPack = !!\(packView && packView\.whole\);\s*const per = asPack \? packView\.packQty : 1;/.test(rows),
     'the row is drawn in packs exactly when the line is counted in packs');
-  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qtyShown\}"/.test(rows),
+  /* Matched on the HOOK and the VALUE rather than the whole class list:
+     the claim is that the box counting the line carries qtyShown, not
+     that it wears a particular set of style classes. The row gained
+     .om-gi when the table moved to the card system, and a test that
+     fails on a restyle while the arithmetic is untouched is a test that
+     will be edited without being read. q-qty is the class the row's
+     own wiring finds the box by, so it is the one worth pinning. */
+  t.check(/class="[^"]*\bq-qty\b[^"]*"[^>]*value="\$\{qtyShown\}"/.test(rows),
     'the quantity box shows the count in that unit — 1, not 100');
   t.check(/<span class="q-qty-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
     'with the unit beside it, so "1" reads as "1 Ctn"');
@@ -182,14 +189,23 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the unit under the product name is the one the line is counted in — "Ctn" under a carton line, not "Pair"');
   t.check(!/value="\$\{it\.qty\}"/.test(rows),
     'the base count is no longer what the box shows');
-  t.check(/q-sell[^>]*value="\$\{Math\.round\(sell \* per\)\}"/.test(rows),
+  /* qFig IS Math.round WITH SEPARATORS. The money boxes show the figure
+     the way the document prints it and the way it is said on a call --
+     265,000, not 265000 -- which a type="number" input cannot hold, so
+     they are text boxes. `* per` is untouched: the box still carries
+     the price of whatever the line is counted in. */
+  t.check(/q-sell[^>]*value="\$\{qFig\(sell \* per\)\}"/.test(rows),
     'Price each is per that unit — the carton price beside a carton count');
-  t.check(/q-price"[^>]*value="\$\{Math\.round\(it\.price \* per\)\}"/.test(rows),
+  t.check(/q-price"[^>]*value="\$\{qFig\(it\.price \* per\)\}"/.test(rows),
     'and so is Buy @');
   t.check(/const per = quoteLineCountPer\(item\);/.test(rows),
     'the edit handlers read the same factor off the line');
-  t.check(/item\.price = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
-    && /item\.sellPrice = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
+  /* qNum is what undoes qFig: it strips the separators the box wrote and
+     the spaces a person adds, and returns 0 for anything else -- the
+     same floor `|| 0` gave. The division by the line's own factor is
+     unchanged, which is the claim this check exists for. */
+  t.check(/item\.price = qNum\(e\.target\.value\) \/ quoteLineCountPer\(item\);/.test(rows)
+    && /item\.sellPrice = qNum\(e\.target\.value\) \/ quoteLineCountPer\(item\);/.test(rows),
     'a price typed per carton is kept per base unit');
   t.check(/item\.qtyIn = per > 1 \? 'pack' : 'unit';/.test(rows),
     'an edited count makes the choice explicit on the line');

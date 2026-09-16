@@ -94,7 +94,7 @@ const src = read('index.html');
 
 /* ---------- 2. the heading is a real control ---------- */
 {
-  const rail = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+  const rail = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
   const heads = rail.match(/<button type="button" class="nav-section-label"[^>]*>/g) || [];
   t.check(heads.length === 6, `all six headings are buttons (${heads.length})`);
   t.check(heads.every(h => /aria-expanded="true"/.test(h)),
@@ -127,11 +127,15 @@ const src = read('index.html');
   const build = extractFunction(src, 'buildNavIndex', 'index.html');
   t.check(/group = el\.textContent\.trim\(\)/.test(build),
     'the section name is still read as the heading\'s text');
-  const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src)[0]) || ['', ''])[1];
+  const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src)[0]) || ['', ''])[1];
   const heads = [...rail.matchAll(/<button type="button" class="nav-section-label"[^>]*>([\s\S]*?)<\/button>/g)];
   t.check(heads.length === 6, 'six headings to read');
   heads.forEach(h => {
-    const text = h[1].replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<\/?span>/g, '').trim();
+    /* Tags come out, TEXT stays in -- including any text inside the
+       two-letter tile, which is the fault this is here to catch. A
+       strip that only matched bare <span> would skip the tile because
+       it carries a class, and the check would pass on "SeSell". */
+    const text = h[1].replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<\/?span[^>]*>/g, '').trim();
     t.check(/^[A-Z][a-z]+$/.test(text), `"${text}" is the whole of the heading's text — nothing decorative is written into it`);
   });
   t.check(/content:attr\(data-n\)/.test(src),

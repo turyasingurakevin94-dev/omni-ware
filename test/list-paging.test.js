@@ -140,9 +140,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the held-stock note is worked out before the slice, so it describes the search');
 
   const customers = (/function renderCustomers\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* Customers takes a page the same way and draws its own affordance,
+     for the reason recorded on OWN_CONTROL below: its register is grouped
+     and every group header carries that group's subtotal, so a shared
+     button at the foot would leave a header disagreeing with the rows
+     under it. */
   t.check(/listPageSlice\('customers', rows\)/.test(customers)
-    && /listMoreButtonHTML\('customers', rows\.length,/.test(customers),
-    'customers likewise');
+    && /data-list-more="customers"/.test(customers),
+    'customers likewise, with the overflow row as its control');
 
   const suppliers = (/function renderSuppliers\([\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/listPageSlice\('suppliers', rows\)/.test(suppliers)
@@ -170,13 +175,47 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const sized = [...new Set([...(/const LIST_PAGE_SIZES = \{([^}]*)\}/.exec(code) || ['', ''])[1]
     .matchAll(/(\w+):/g)].map((m) => m[1]))].sort();
 
+  /* ONE LIST DRAWS ITS OWN CONTROL, and it is named here rather than
+     excused. Invoices is on the card system, whose register is grouped --
+     Overdue, then Open, then what settled today -- and every group header
+     carries that group's subtotal. A shared "Show all 159 invoices"
+     button at the foot cannot work there: cut a group and its header
+     stops agreeing with the rows under it, which is the one thing a
+     grouped register may never do.
+
+     So Invoices draws the handoff's OVERFLOW ROW instead: the tail of each
+     cut group collapses into one row carrying the count and subtotal of
+     what is not shown, so the visible rows plus that row still add up to
+     the header above them. Pressing it expands the register through the
+     very same delegated [data-list-more] listener every other list uses,
+     and it still takes its page from listPageSlice and its size and
+     re-render from the same registry.
+
+     What is checked is therefore narrower for this one list and NOT
+     weaker: it must still slice, still be sized, still be wired, and it
+     must draw an affordance -- just not that button. A list that slices
+     and offers no way out of the page is the fault this section exists to
+     catch, and the last check below is what holds Invoices to it. */
+  /* Customers joined it for the same reason: its register is grouped
+     too -- Past due, then Owing still in time -- and each header carries
+     that group's subtotal. */
+  const OWN_CONTROL = ['customers', 'invoices'];
+  const usedOrOwn = [...new Set([...used, ...OWN_CONTROL])].sort();
+
   t.check(used.length >= 4, `at least the four long pages are paged (${used.join(', ')})`);
-  eq(JSON.stringify(used), JSON.stringify(sliced),
-    'every list that draws a button also takes a page, and the other way round');
-  eq(JSON.stringify(used), JSON.stringify(wired),
-    'and every one of them has a re-render registered, so no button is inert');
-  eq(JSON.stringify(used), JSON.stringify(sized),
+  eq(JSON.stringify(usedOrOwn), JSON.stringify(sliced),
+    'every list that draws a control also takes a page, and the other way round');
+  eq(JSON.stringify(usedOrOwn), JSON.stringify(wired),
+    'and every one of them has a re-render registered, so no control is inert');
+  eq(JSON.stringify(usedOrOwn), JSON.stringify(sized),
     'and a page size of its own rather than the fallback');
+  /* The one that draws its own: it must carry the same data-list-more
+     hook, or expanding it would need a second mechanism. */
+  OWN_CONTROL.forEach((id) => {
+    const r = new RegExp(`data-list-more="${id}"`);
+    t.check(r.test(code),
+      `${id} draws its own affordance on the same [data-list-more] hook`);
+  });
 
   // The listener itself.
   t.check(/e\.target\.closest\('\[data-list-more\]'\)/.test(code),
@@ -206,8 +245,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  */
 {
   const code = stripComments(src);
+  /* ONE OF THE TWO LEFT THIS LOOP, and the hazard it guards against is
+     checked for it separately below rather than dropped.
+
+     renderInvoices is the card system's now and no longer has the shape
+     this loop reads: there is no invoices.forEach() totalling pass, no
+     rowsHtml, and no Total footer row. The register is grouped, and each
+     group header carries its own subtotal. So the same hazard exists in a
+     new place -- a group header that sums the visible rows instead of the
+     whole group -- and the checks below are written against that shape.
+
+     The rule is unchanged and is the only thing that matters: no figure on
+     this screen is ever summed from what happens to be on the page. */
   const renderers = [
-    { fn: 'renderInvoices', id: 'invoices', totalOf: 'savedQuoteTotal' },
     { fn: 'renderPurchaseInvoices', id: 'purchaseInvoices', totalOf: 'purchaseInvoiceTotal' },
   ];
   renderers.forEach(({ fn, id, totalOf }) => {
@@ -255,8 +305,22 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   });
 
   // Printing the list is not paging: it still covers the whole range.
-  t.check(/piLastRows = invoices;/.test(code) && /invLastRows = invoices;/.test(code),
-    'the print list keeps every row the filters matched, page or no page');
+  t.check(/piLastRows = invoices;/.test(code),
+    'the purchase print list keeps every row the filters matched, page or no page');
+  /* Invoices keeps the same promise from its own variable. `shown` is the
+     flat list of every row the lens and the search matched, assigned
+     BEFORE listPageSlice is called -- so a printed sheet is the whole
+     filtered register and never the two dozen rows that happen to be on
+     screen. The lens is one of the filters now, which is why this reads
+     `shown` rather than the unpartitioned list: printing the Voided lens
+     should not hand somebody the live invoices too. */
+  t.check(/invLastRows = shown;/.test(code),
+    'and Invoices prints the whole filtered register rather than the page');
+  {
+    const body = stripComments(extractFunction(src, 'renderInvoices', 'index.html'));
+    t.check(body.indexOf('invLastRows = shown;') < body.indexOf("listPageSlice('invoices', shown)"),
+      'which is only true because it is taken before the page is cut');
+  }
 }
 
 /* ---------- 5. it shares the stock log's control, not a copy of it ---- */
@@ -265,6 +329,47 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'one style for the control, wherever it appears');
   const uses = (src.match(/class="log-more-row"/g) || []).length;
   t.check(uses >= 2, `used by both the stock log and the shared helper (${uses} places)`);
+}
+
+/* ---------- 5. the same hazard, on the grouped register --------------- */
+/*
+ * Invoices draws Overdue / Open / Settled, each with its own subtotal in
+ * its header, and pages across the whole thing. The fault to prevent is
+ * exactly the old one wearing a different shape: a header that adds up the
+ * rows on screen rather than the rows in the group.
+ */
+{
+  const body = stripComments(extractFunction(src, 'renderInvoices', 'index.html'));
+
+  // The page is taken from the flat list AFTER every document has been
+  // partitioned and sorted, and the partition is what the figures read.
+  const sliceAt = body.indexOf("listPageSlice('invoices', shown)");
+  const partitionAt = body.indexOf('byState[invStateOf(q)].push(q)');
+  const kpisAt = body.indexOf('renderInvoiceKpis(byState, all)');
+  t.check(partitionAt > 0 && sliceAt > partitionAt,
+    'renderInvoices: every document is partitioned BEFORE the page is cut');
+  t.check(kpisAt > 0 && kpisAt < sliceAt,
+    'and the strip is summed from that partition, not from the page');
+
+  // The group header sums g.rows -- the whole group -- and the visible
+  // rows are a filter of it. Summing vis would be the bug.
+  t.check(/GROUP_HEAD\[g\.key\]\(g\.rows\)/.test(body),
+    'each group header is summed from the whole group');
+  t.check(/const vis = g\.rows\.filter\(q=>pagedIds\.has\(q\.id\)\)/.test(body),
+    'and the rows drawn are a filter of that group, so the two cannot drift');
+  t.check(!/vis\.reduce\(|vis\.forEach\(/.test(body),
+    'nothing is summed from the visible rows — that is the whole hazard');
+
+  // And what is NOT shown is stated, with its own subtotal, so the header
+  // still agrees with what is on screen.
+  t.check(/const hidden = g\.rows\.filter\(q=>!pagedIds\.has\(q\.id\)\)/.test(body)
+       && /hidden\.reduce\(/.test(body),
+    'the cut tail carries its own subtotal, so the header still adds up on screen');
+  t.check(/\${hidden\.length} more/.test(body),
+    'and says how many were cut rather than simply ending');
+  // The footer names which total it is showing, as the old Total row had to.
+  t.check(/Showing \${shown\.length} of \${all\.length}/.test(body),
+    'and the card header says which of the two counts is on screen');
 }
 
 process.exit(t.done() ? 1 : 0);

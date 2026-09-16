@@ -170,7 +170,7 @@ const buttons = (html) => (html.match(/<button /g) || []).length;
 
 /* ---------- 6. the box says what it is for ---------- */
 {
-  const topbar = (/<header class="topbar"[\s\S]*?<\/header>/.exec(src) || [''])[0];
+  const topbar = (/<header class="topbar[^"]*"[\s\S]*?<\/header>/.exec(src) || [''])[0];
   t.check(/placeholder="Search screens, or ask the Manager"/.test(topbar),
     'the placeholder names both jobs — a box that quietly gained a second one nobody would find');
   t.check(/aria-label="Search screens, or ask the Manager"/.test(topbar),

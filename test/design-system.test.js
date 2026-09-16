@@ -39,11 +39,38 @@ const src = read('index.html');
 
 const styleStart = src.indexOf('<style>');
 const styleEnd = src.indexOf('\n</style>\n');
-const cssRaw = src.slice(styleStart, styleEnd);
+
+/* THE FILE IS TWO SYSTEMS NOW, and the split has to happen before a
+ * single thing is counted.
+ *
+ * The .om- layer at the end of the stylesheet is the 2026 card system
+ * from the design handoffs: IBM Plex, navy, coral, warm ground. It
+ * shares not one hex value with the console above it — that is what
+ * makes it a replacement rather than a revision — so counting its 66
+ * colours against a ceiling measured on the old palette would say
+ * "something new was introduced" about a system that was introduced
+ * deliberately, and say nothing at all about the old file rotting.
+ *
+ * So the ceilings and the .ow- checks below run on the stylesheet WITH
+ * THE OM LAYER REMOVED. They keep measuring exactly what they always
+ * measured: the legacy CSS and the console layer, both of which still
+ * dress the screens the redesign has not reached. Their numbers can
+ * now only fall, and every one that falls gets locked in here.
+ *
+ * The OM layer answers to its own gate at the foot of this file, which
+ * is stricter than this one has ever been: not a hex literal anywhere
+ * in a component rule.
+ */
+const omMarkAt = src.indexOf('THE OM LAYER');
+const omStart = omMarkAt === -1 ? styleEnd : src.lastIndexOf('/*', omMarkAt);
+const omRaw = src.slice(omStart, styleEnd);
+const om = omRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+const cssRaw = src.slice(styleStart, omStart);
 const css = cssRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 const markAt = src.indexOf('THE OW LAYER');
-const layerRaw = src.slice(src.lastIndexOf('/*', markAt), styleEnd);
+const layerRaw = src.slice(src.lastIndexOf('/*', markAt), omStart);
 const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 /* ---------- the ceilings ---------- */
@@ -123,7 +150,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .bl-send's filled button, each of which carried an elevation of
        its own. Depth on this app is hairlines; two fewer shadows is the
        gain, and this is where it is locked in. */
-    'shadows': [54, /box-shadow:\s*([^;}]+)/g],
+    /* 53, not 54: the follow-up pane's own card floated. It was the one
+       surface on that screen with an elevation, and it went with the
+       pane when the second Messages tab was deleted. Depth on this app
+       is hairlines; the gain is locked in here. */
+    'shadows': [53, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -455,51 +486,74 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .fup-link stay in the FILE -- the follow-up list MODAL still wears
        them, and it is a list to edit rather than a queue to work -- but
        this screen may not emit the card families again. */
-    followups: {
-      /* AND CHASE DEBTS' RETIRED FAMILIES. Its own entry stood below
-         this one and named .chase-card, .chase-list, .chase-acts,
-         .chase-facts and the private .sum-strip -- the card-per-debtor
-         and the hand-rolled strip its console replaced. That screen is
-         this one's Money lens now, so the families it may never wear
-         again are this screen's to refuse: the ratchet follows the
-         markup, and the markup is here. Its own .ch-* vocabulary is NOT
-         added to the list, because nothing in the app wears it at all
-         any more -- a name belongs here when a screen could plausibly
-         reach for it again, and css-class-hooks is what catches a class
-         with no rule behind it. */
+    /* FOLLOW-UPS IS MESSAGES NOW, and WhatsApp came with it.
+
+       Neither was usable alone. Follow-ups is the list of people the shop
+       owes a word, already tagged with a reason, and its only action was
+       to open the box; WhatsApp is the box, and its only content came
+       from the list. The nav index had already recorded the confusion:
+       the obvious search for Follow-ups is "broadcast", which belonged
+       to WhatsApp. One screen, one rail row, one badge.
+
+       The queue above is the card system's -- Money and Telling are one
+       list read two ways, and Posting is the daily product post, which
+       already lived here as the WhatsApp screen's post desk. What stays
+       on the console, and is why the console families are still in
+       rendersUses below: the chase timing, the held-back reasons, the
+       register, the inbox, and the post desk itself. None of those is in
+       the frame, and every one of them is live.
+
+       The retired list is UNCHANGED and still enforced -- moving systems
+       is not an amnesty for the families the console retired. */
+    messages: {
       retired: ['panel', 'dir-summary-row', 'dir-summary-card', 'st-bar', 'st-tabs', 'st-tab', 'search-bar',
                 'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
                 'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill',
                 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
-             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
-      /* AND WORTH TELLING'S BUILDERS, which outlived its screen.
-         That entry said the same brief was drawn three times -- a row in
-         the fortnight's queue, the reasoning under that row, and a panel
-         on the client's own account -- and that a second copy of
-         briefStripHTML would be free to show the owner a filmstrip the
-         picture does not match. It is drawn TWICE now, here and on the
-         account, and that is exactly why this screen opens
-         customerBriefPanelHTML rather than laying the frames out again.
-         The ratchet follows the builders, and the builders are this
-         screen's now. */
-      renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
-                'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
-                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
-                'briefNoteBody', 'briefLeftOffHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid-l', 'ow-grid', 'ow-side', 'ow-stack',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-lr', 'ow-msg',
-                    'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
-                    'ow-empty', 'ow-mini',
-                    /* The reasoning under a picture makes three different
-                       demands on the owner -- go and fix, weigh before
-                       sending, simply know -- and they arrived in one grey.
-                       Three blocks under their own heading, plus the
-                       picture's own measure under a rule. */
-                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
-                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
+      uses: ['om-screen', 'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens',
+             'om-lenschip', 'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-m', 'om-col', 'om-scroll', 'om-side', 'om-find', 'om-find-i',
+             'om-ph-head', 'om-ph-only'],
+      /* The three the second handoff added -- the held-back row, the
+         rules menu and the two small forms -- and the three the deleted
+         tab took with it. renderFollowUpsContact, renderFollowUpSummary
+         and renderFollowUpsAll drew the panes of a tab that no longer
+         exists; they are off this list because nothing on this screen
+         calls them any more. */
+      renders: ['renderMessages', 'msgRowHTML', 'msgHeldRowHTML', 'renderMessageKpis',
+                'renderMessagePhoneHead', 'renderMessageSide', 'msgPanelFormHTML',
+                'msgRenderRules', 'msgAnsweredHTML', 'msgDraftFor', 'msgLastWord',
+                /* The measurement follows the record: it was the
+                   register's own rail and the register is this list's
+                   Sent group now, so it takes the panel while that group
+                   is open and nothing is picked. */
+                'renderFollowUpScore', 'renderWhatsApp'],
+      rendersUses: [
+                    /* the queue, on the card system */
+                    /* om-blk is gone from this screen and that is the
+                       second handoff: the panel's footer -- the send, the
+                       honesty line and the two stamps -- is drawn on the
+                       surface with a rule above it, not on the sunken
+                       ground. A tint there made the one act on the panel
+                       read as an aside. */
+                    'om-mrow', 'om-mrow-ph', 'om-av', 'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n',
+                    'om-kpi', 'om-kpi-f', 'om-kpi-s', 'om-kpi-w', 'om-pan', 'om-pan-t', 'om-pan-m',
+                    'om-read', 'om-box', 'om-btn', 'om-btn-s', 'om-btn-w', 'om-btn-g', 'om-btn-p',
+                    'om-held', 'om-note', 'om-note-warn', 'om-inline', 'om-rule-l',
+                    'om-ph-t', 'om-ph-figs', 'om-ph-fig', 'om-ph-fig-l', 'om-ph-fig-v',
+                    'om-ph-tabs', 'om-ph-tab',
+                    /* the hub and the post desk, still the console's */
+                    /* ow-u, ow-q, ow-q-r and ow-q-x went with the contact
+                       queue's card list: the queue is .om-mrow now and the
+                       hub's remaining panes are the strip, the register and
+                       the held-back reasons. */
+                    /* ow-strip and the four .ow-mt tiles went with the
+                       five-tile summary the second handoff cut: four of
+                       its five figures read 0, and three cards obeying
+                       the zero rule replace it. ow-cp went with the
+                       contact pane. */
+                    'ow-empty', 'ow-mini', 'ow-pan', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
+                    'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
     },
     /* Consignment. A card per consignor, each one always fully open --
        an avatar, a title, a private four-tile stat strip and their whole
@@ -581,44 +635,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
                     'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
     },
-    /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
-       named the word the shop already uses. Two stacked .panel blocks
-       became a strip, one age bar with a legend where there had been a
-       bar AND five bordered cards saying the same five figures, and a
-       six-column <table> with a phone card-wall beside it became .ow-q
-       rows that open in place and emit their own cards.
-
-       .age-* is no longer worn by either ledger screen: the creditors
-       list, which was this screen's last wearer, has since been drawn
-       as a console of its own. Both entries retire the same families,
-       and each is pinned separately so neither conversion can be
-       mistaken for the other's. */
-    'analytics-debtors': {
-      retired: ['page-head', 'panel', 'panel-head-row', 'an-toolbar', 'btn-row', 'field',
-                'sq-select-all-label', 'empty',
-                'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-aside', 'age-bar', 'age-seg',
-                'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
-                'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
-                'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db'],
-      renders: ['renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail', 'renderDebFilterNote'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    /* No ow-q-why: an open debtor opens straight onto its
-                       invoices. The sentence that used to stand there
-                       repeated the row it had just opened -- the
-                       balance, the age and the paid-off share are all
-                       already on that row -- and the paragraph under it
-                       said the same thing about every debtor in the
-                       book. The reasoning a screen genuinely owes the
-                       reader is in the rail; what is left in an open
-                       row is the evidence. */
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
-    },
+    /* DEBTORS IS GONE, and its entry with it. The screen was a second
+       list over the same people: every one of its ten call sites already
+       called renderCustomers on the line directly above, so the two could
+       only ever disagree about the same money. It is the Customers
+       screen's Owing lens now -- ranked by age then amount rather than by
+       amount alone, with the aging bar on the strip and the drift check
+       on the customer's panel -- and resolveTab('debtors') opens it with
+       that lens armed. Nothing this entry guarded is unguarded: the
+       customers entry above now carries it. */
     /* CREDITORS -- "Who you owe" until it was drawn as a console, and
        now named the word the shop already uses, like its twin.
 
@@ -899,6 +924,57 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        rows two different heights -- and a register whose rows are not
        the same height cannot be scanned, which is the only thing it is
        for. */
+    /* INVOICES HAS CHANGED SYSTEMS, and this entry is the argument for
+       it rather than a patch that made two checks go quiet.
+
+       WHAT THE OLD ASSERTION MEANT. Invoices was the console's: .ow-ph
+       for the header, .ow-strip for the position, .ow-pan around an
+       .ow-tbl that renderInvoices filled. Listing those here is what
+       stopped a later session hand-rolling a seventeenth table onto a
+       screen that already had the layer's.
+
+       WHY IT STOPPED BEING TRUE. The owner commissioned a design pass
+       from outside this repo, chose to adopt it rather than translate it,
+       and Invoices is one of the four screens it clothes. The screen is
+       on the .om- card system now: a 58px top bar, the title block with
+       its lens group, a four-card KPI strip, and the register as
+       .om-lrow rows grouped by what needs attention. So the old list is
+       not a weaker claim about this screen, it is a claim about a screen
+       that no longer exists.
+
+       WHAT THE NEW ASSERTION MEANS. The same guarantee, one system over:
+       the sales register may not be hand-rolled back onto the console's
+       families, and it must be built out of the card system's named
+       components. 'retired' is UNCHANGED and still enforced -- every one
+       of those families is still forbidden here, and moving systems is
+       not an amnesty for the ones the console retired.
+
+       WHAT IS DELIBERATELY NOT RETIRED, and this is the part to read
+       before assuming this screen is finished. The section still wears
+       ow-grid, ow-side, ow-strip, ow-seg, ow-seg-b, ow-seg-n, ow-tb and
+       ow-on, for two reasons, both recorded in
+       docs/design-suggestions-sell-section.md:
+
+         1. THE PURCHASES PANE IS STILL THE CONSOLE SCREEN. The handoff
+            does not draw it. Its frame replaces the Sales/Purchases lens
+            pair with Needs attention / All / Voided and shows purchases
+            only as PINV pills, which would take the buying side's four
+            checks with it -- the same delivery billed twice, a line
+            priced above anything ever paid that supplier, a bill with no
+            delivery behind it, money paid beyond what was billed. Those
+            checks are real and are not being deleted on the strength of
+            a frame that does not mention them. The pills open the bill
+            in that pane, so it is reachable rather than orphaned.
+
+         2. FOUR CONTROLS HAVE NO HOME IN THE NEW DESIGN and are kept
+            hidden rather than removed, because their handlers are live:
+            the seven date presets, the select-all and its bulk
+            operations, Hide voided (the Voided lens does that job, and
+            the hidden checkbox is kept in step with it), and Print list.
+            A hidden control is a debt; that file is the ledger of it.
+
+       So this screen is HALF converted on purpose, and the half that is
+       converted is held to the card system here. */
     invoices: {
       retired: ['panel', 'qp-panel', 'an-toolbar', 'field', 'panel-head-row', 'btn-row',
                 'sq-select-all-label', 'empty',
@@ -907,13 +983,44 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sc-stats', 'sc-stat', 'an-rank', 'sortable', 'sort-arrow',
                 'pc-icon-btn', 'inv-row-actions', 'inv-doc-link', 'inv-status',
                 'inv-status-cell', 'inv-row-voided', 'inv-total-row', 'inv-total-label',
-                'deb-card-prog'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
-      renders: 'renderInvoices',
-      rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
-                    'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
-                    'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+                'deb-card-prog',
+                /* And the console families the SALES side has now left.
+                   ow-tbl in particular: the register is .om-lrow, and a
+                   second table idiom appearing here would be the exact
+                   fault the console's own entry was written to stop. */
+                'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-tbl', 'ow-tbl-h',
+                'ow-tbl-r', 'ow-tbl-g', 'ow-mt', 'ow-cp'],
+      /* No om-top here, and that is deliberate rather than unfinished: the
+         handoff draws its 58px bar as part of the screen, but the app
+         already draws one above every screen, and a second stacks two
+         breadcrumbs and two search boxes. Converting the global bar is
+         shared chrome for all four Sell screens at once. The screen's own
+         search sits in the register's header instead, on .om-find. */
+      uses: ['om-screen', 'om-find', 'om-find-i',
+             'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens', 'om-lenschip',
+             'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-l', 'om-col', 'om-scroll', 'om-side', 'om-ph-head', 'om-ph-only'],
+      /* Seven builders, because the register, its rows, the strip, the
+         phone's own header and the panel are five different questions and
+         one function answering all of them is how a row and its subtotal
+         come to disagree. */
+      renders: ['renderInvoices', 'invRegisterRowHTML', 'renderInvoiceKpis',
+                'renderInvoicePhoneHead', 'renderInvoiceSide', 'invChipHTML', 'invPinvPillsHTML'],
+      /* om-done and om-on are NOT listed, and the reason is the
+         tokeniser rather than the screen: both are applied through a
+         template expression (class="om-lrow${dim}${on}"), and this check
+         reads only the literal head of a class attribute -- by design,
+         since that is what stopped a renamed band passing on the strength
+         of its own cells. Listing them would assert something this
+         mechanism cannot see. The dimming of settled rows is real and is
+         pinned by the register's own test instead. */
+      rendersUses: ['om-lrow', 'om-grow', 'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n',
+                    'om-pill', 'om-p-paid', 'om-p-owed', 'om-p-void',
+                    'om-kpi', 'om-kpi-f', 'om-kpi-s',
+                    'om-pan', 'om-pan-t', 'om-pan-m', 'om-figs', 'om-figs-f', 'om-blk', 'om-acts',
+                    'om-drow', 'om-read', 'om-btn', 'om-btn-p', 'om-btn-s', 'om-btn-g',
+                    'om-ph-t', 'om-ph-figs', 'om-ph-fig', 'om-ph-fig-l', 'om-ph-fig-v',
+                    'om-ph-tabs', 'om-ph-tab'],
     },
     /* Customers. The screen was a second debt book -- a grid of cards
        whose largest figure was a debt balance, on a question Debtors
@@ -947,13 +1054,51 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
                 'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
-                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
-                'customerAccountRailHTML', 'customerStatsHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
-                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+      /* THE BOOK IS THE CARD SYSTEM'S; THE ACCOUNT IS STILL THE CONSOLE'S,
+         and that split is deliberate, the same shape as Invoices' two
+         registers.
+
+         What changed and why: Debtors was deleted into this screen's
+         Owing lens. It was a second renderer over the same people, and
+         the evidence is stronger than the argument -- every one of its
+         ten call sites already called renderCustomers on the line
+         directly above it, so the two lists could only ever disagree,
+         never add anything. The lens ranks by age THEN amount (the order
+         a shop asks in, where Debtors ranked by amount alone), keeps the
+         aging bar on the strip, and carries the drift check onto the
+         customer's panel where it can be seen rather than onto a screen
+         of its own.
+
+         The account view -- the full record with the statement of
+         account the counter hands across -- is NOT converted. It steps in
+         place of the book as it always did, and it is reached from the
+         panel now rather than from the row, because the row fills the
+         panel. Its builders still draw the console, which is why the
+         console families stay in rendersUses below. */
+      uses: ['om-screen', 'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens',
+             'om-lenschip', 'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-c', 'om-col', 'om-scroll', 'om-side', 'om-find', 'om-find-i',
+             'om-ph-head', 'om-ph-only'],
+      renders: ['renderCustomers', 'custRegisterRowHTML', 'renderCustomerKpis',
+                'renderCustomerPhoneHead', 'renderCustomerSide', 'custAvatarHTML',
+                'custPayBarHTML', 'custAskChipHTML',
+                'customerAttentionHTML', 'customerAccountHTML', 'customerFiguresHTML',
+                'renderCustomerAccount', 'customerAccountRailHTML', 'customerStatsHTML'],
+      rendersUses: [
+                    /* the book, on the card system */
+                    'om-crow', 'om-crow-ph', 'om-grow', 'om-orow', 'om-av', 'om-bar', 'om-bar-s',
+                    'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n', 'om-kpi', 'om-kpi-f', 'om-kpi-s',
+                    'om-pan', 'om-pan-t', 'om-pan-m', 'om-figs', 'om-figs-f', 'om-blk', 'om-acts',
+                    'om-drow', 'om-read', 'om-note', 'om-btn', 'om-btn-p', 'om-btn-s', 'om-wa',
+                    'om-ph-t', 'om-ph-tabs', 'om-ph-tab',
+                    /* the account, still on the console */
+                    'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-n', 'ow-tbl-a',
+                    /* ow-tbl-s went with customerRegisterRowHTML, the console row
+                       builder this screen's book replaced. It was the register's
+                       truncating second line; the card row carries that as its own
+                       element, and the function is deleted rather than left to be
+                       found and called by mistake. */
                     'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
                     'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
                     'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
@@ -1121,6 +1266,325 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const form = extractFunction(shared, 'carrierFormHTML', 'shared-worker.js');
   t.check(/const tag = inner\.indexOf\('<select'\) >= 0 \? 'div' : 'label';/.test(form),
     'and a rendered field holding a dropdown is built as a div, keeping the label for boxes that are typed into');
+}
+
+/* ==========================================================================
+   THE OM GATE — the 2026 system holds to itself.
+
+   The ceilings above exist because the old stylesheet grew for a year
+   before anyone counted it, and the best that could be done was to stop
+   it growing. This layer is being written from a specification, so it
+   gets the gate that one should have had from line one: every colour in
+   a component rule is a token, and the token block is the whole palette.
+
+   A 67th colour does not fail on a count here. It fails because it is a
+   hex literal where a var() belongs, and it is named.
+   ========================================================================== */
+{
+  /* The token block and the component rules are judged differently: the
+     first is the only place a hex value may appear, the second may only
+     refer to it. Splitting them is the whole mechanism. */
+  const tokenBlock = (/:root\{([\s\S]*?)\}/.exec(om) || [])[1] || '';
+  const rules = [...om.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map((m) => ({ sel: m[1].trim(), body: m[2] }))
+    .filter((r) => r.sel !== ':root');
+
+  t.check(tokenBlock.length > 0, 'the OM layer declares its tokens on :root');
+  /* And :root earns its exemption from the namespace rule by painting
+     nothing. The moment it carries one ordinary declaration it is a rule
+     on every element in 34 screens, which is the thing the rule forbids. */
+  t.check(tokenBlock.split(';').map((d) => d.trim()).filter(Boolean)
+    .every((d) => d.startsWith('--om-')),
+    'and that block declares custom properties and nothing else, so it paints nothing');
+
+  const tokens = new Map([...tokenBlock.matchAll(/(--om-[a-z0-9-]+):\s*([^;]+);/g)]
+    .map((m) => [m[1], m[2].trim()]));
+  const colours = [...tokens].filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
+
+  /* ---- law 3: not one hex literal outside the token block ---- */
+  {
+    const offenders = rules
+      .filter((r) => /#[0-9A-Fa-f]{3,8}\b/.test(r.body))
+      .map((r) => r.sel);
+    t.check(offenders.length === 0,
+      offenders.length
+        ? `a colour is written as a hex literal instead of a token: ${offenders.slice(0, 6).join(', ')}`
+        : `every colour in the ${rules.length} OM component rules comes from a token`);
+  }
+
+  /* ---- and every token a rule reaches for is one that exists.
+     A var(--om-typo) silently renders as nothing, which on a background
+     means transparent and on ink means inherited — both of which look
+     plausible enough to ship. ---- */
+  {
+    const used = new Set([...om.matchAll(/var\((--om-[a-z0-9-]+)/g)].map((m) => m[1]));
+    const missing = [...used].filter((n) => !tokens.has(n));
+    t.check(missing.length === 0,
+      missing.length ? `undeclared token(s): ${missing.join(', ')}`
+                     : `all ${used.size} tokens referenced are declared`);
+    /* The other direction is a warning about dead weight, not a fault:
+       a token declared for a screen not yet built is legitimate. */
+  }
+
+  /* ---- the palette is closed ----
+     66 values, taken from the handoff's token table. The number is a
+     CEILING, exactly like the ones above, and it may only fall. */
+  /* 67, not 66, and this goes UP — so it is argued rather than nudged.
+     The rail's six group tiles are the one place in this system where
+     colour identifies rather than states: the heading beside a tile is
+     four grey letters, and the tile is what the eye actually lands on
+     when the map is twenty-three rows long. Half the twelve values it
+     needs were already here — Buy wears the agent tint, Catalogue's ink
+     is the pressed green, Money's fill the studied card, Setup the track
+     over ink-3 — so six are new, and they are a closed set: there are
+     six groups and there is no seventh. */
+  /* 70, not 67: the quote table brings three, and each is a surface
+     rather than a state. #fbfaf8 is the ground a charge row sits on --
+     charges and credit terms are document rows inside the same table as
+     the goods, and the tint is what says "this one is not a good"
+     without moving it out of the money column. The other two are the
+     suggestion chip's border at rest and under the pointer; a chip that
+     adds a line in one press is not a button and should not wear one's
+     weight. */
+  /* 73, not 70: the quote's Cheaper-elsewhere card is the one place the
+     caution TINT is the card's own ground rather than a chip on white.
+     That needs three values the tinted-chip pair cannot supply -- a
+     border that reads against the tint, a tile one step deeper for the
+     icon, and an ink that clears 4.5:1 on the tint itself rather than
+     on the softer card fill. It is the only card in the system that
+     asks for a decision instead of stating a fact, which is why it is
+     the only one that wears its state. */
+  t.check(colours.length <= 73,
+    `the palette holds ${colours.length} colours (ceiling 73)`);
+
+  /* ---- THE CORAL RULE, which is the one a reviewer cannot see ----
+     #ef4b39 under white is 3.1:1 and fails at every size this app uses.
+     It is a FILL: the logo tile, the active tab's underline, an aging
+     bar. Anything carrying a word uses --om-coral-text at 5.3:1. The two
+     are one hue apart and the wrong one is invisible in review, which is
+     precisely why it is arithmetic here. */
+  {
+    const asText = rules.filter((r) => /(?:^|[;{\s])color:\s*var\(--om-coral\)/.test(r.body))
+      .map((r) => r.sel);
+    t.check(asText.length === 0,
+      asText.length ? `--om-coral is carrying text in ${asText.join(', ')} — use --om-coral-text`
+                    : '--om-coral is fill and icon only; nothing writes text in it');
+  }
+
+  /* ---- contrast, on the pairings the system actually asserts ---- */
+  {
+    const lum = (h) => {
+      const c = [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255)
+        .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const ratio = (a, b) => {
+      const la = lum(a), lb = lum(b);
+      return Math.round(((Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)) * 100) / 100;
+    };
+    const v = (n) => tokens.get(n);
+
+    /* Every ground this system paints, against every ink it puts on it.
+       The handoff's claim is "every ink clears 4.5:1 on its ground";
+       this is that claim, enumerated. */
+    const GROUNDS = ['--om-surface', '--om-ground', '--om-sunken', '--om-inset'];
+    const INKS = ['--om-ink', '--om-ink-2', '--om-ink-3'];
+    GROUNDS.forEach((g) => INKS.forEach((i) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — ${i} on ${g} (needs 4.5)`);
+    }));
+
+    /* The tinted pairs. Each is a state chip: a fill and the one ink
+       that is allowed on it. */
+    [['--om-good-ink', '--om-good'], ['--om-caution-ink', '--om-caution'],
+     ['--om-bad-ink', '--om-bad'], ['--om-studied-ink', '--om-studied'],
+     ['--om-agent-ink', '--om-agent'], ['--om-neutral-ink', '--om-neutral'],
+     ['--om-good-card-ink', '--om-good-card'],
+     ['--om-caution-card-ink', '--om-caution-card'],
+     ['--om-bad-card-ink', '--om-bad-card'],
+    ].forEach(([i, g]) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — ${i} on ${g} (needs 4.5)`);
+    });
+
+    /* The rail's six group tiles: two letters at 9.5px/700, which is the
+       smallest type in the system, on a tint. Small and bold is exactly
+       where a pairing that "looks fine" is 3:1, so all six are counted. */
+    [['--om-tile-se-ink', '--om-tile-se'], ['--om-agent-ink', '--om-agent'],
+     ['--om-good-pressed', '--om-tile-ca'], ['--om-tile-mo-ink', '--om-studied-card'],
+     ['--om-tile-in-ink', '--om-tile-in'], ['--om-ink-3', '--om-track'],
+     /* and the quote's caution card, where the tint is the ground */
+     ['--om-caution-tint-ink', '--om-caution'], ['--om-caution-ink', '--om-caution-tile'],
+    ].forEach(([i, g]) => {
+      const r = ratio(v(i), v(g));
+      t.check(r >= 4.5, `${r}:1 — rail tile ${i} on ${g} (needs 4.5)`);
+    });
+
+    /* White on the fills that carry white. */
+    [['--om-coral-text', 'the primary button and every avatar'],
+     ['--om-navy', 'the rail, the panel headers and the price card'],
+     ['--om-good-ink', 'the WhatsApp hand-off'],
+    ].forEach(([fill, why]) => {
+      const r = ratio(v('--om-on-navy'), v(fill));
+      t.check(r >= 4.5, `${r}:1 — white on ${fill} · ${why}`);
+    });
+
+    /* And on navy, the two quieter greys, which carry meta rather than
+       body text and are held to the same floor because a phone in a
+       yard in daylight does not care what we called the text. */
+    ['--om-on-navy-2', '--om-on-navy-3', '--om-on-navy-4'].forEach((i) => {
+      const r = ratio(v(i), v('--om-navy'));
+      t.check(r >= 4.5, `${r}:1 — ${i} on --om-navy (needs 4.5)`);
+    });
+
+    /* THE PAIRING THAT MUST NEVER SHIP, asserted as arithmetic so it
+       cannot be argued back in: the coral fill cannot carry white. */
+    t.check(ratio(v('--om-on-navy'), v('--om-coral')) < 4.5,
+      `white on --om-coral really is ${ratio(v('--om-on-navy'), v('--om-coral'))}:1 — which is why --om-coral-text exists`);
+  }
+
+  /* ---- type: two families, and only the two the @import loads ---- */
+  {
+    const fams = [...om.matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1]);
+    const bad = fams.filter((f) => !/IBM Plex (Sans|Mono)/.test(f));
+    t.check(bad.length === 0,
+      bad.length ? `the OM layer loads only IBM Plex; found ${bad.join(' | ')}`
+                 : 'every family in the OM layer is IBM Plex Sans or IBM Plex Mono');
+    t.check(!/Inter|Archivo/.test(om),
+      'and it never reaches back into the console layer’s faces');
+    const imported = /@import url\('([^']+)'\)/.exec(src)[1];
+    t.check(/IBM\+Plex\+Sans:wght@400;500;600;700/.test(imported),
+      'IBM Plex Sans is loaded at all four weights the system uses');
+    t.check(/IBM\+Plex\+Mono:wght@400;500;600/.test(imported),
+      'and Mono at 400 too — the message boxes are the one place weight 400 mono appears');
+  }
+
+  /* ---- weights: four, as everywhere else in this app ---- */
+  {
+    const w = new Set([...om.matchAll(/font-weight:\s*(\d+)/g)].map((m) => m[1]));
+    const bad = [...w].filter((x) => !['400', '500', '600', '700'].includes(x));
+    t.check(bad.length === 0, bad.length ? `unloaded weight(s) ${bad.join(', ')} — the browser fakes them` : 'four weights, all loaded');
+  }
+
+  /* ---- the ramp ----
+     It carries half-pixel steps, which the console layer's ramp forbids.
+     That is deliberate and it is the difference between a ramp and a
+     habit: these sixteen are specified in the handoff to the value, and
+     a seventeenth fails here. 9.5 is the floor and it belongs to two
+     things only — the tab-bar label and the price card's eyebrow. */
+    /* 14.5 is the seventeenth, and it belongs to one element: the shop's
+       own name in the rail's brand block, which the rail artboards set
+       to the half-step between the 14px of a list row and the 15px of a
+       panel figure. It is a name rather than a heading — it wants to sit
+       above the rows without reading as one — and it appears once. */
+    /* 22 is the eighteenth, and it is the quote dock's total -- the one
+       figure on that screen a shop says out loud on a call. It is
+       larger than a panel figure (15-17) and smaller than a screen
+       title (24) on purpose: it is a number, not a heading, and it is
+       the only thing in the dock anyone reads first. 20px on the phone,
+       which is already on the ramp. */
+    const RAMP = new Set([9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 17, 19, 20, 22, 24, 26]);
+  {
+    const sizes = [...om.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
+    const off = [...new Set(sizes)].filter((s) => !RAMP.has(s));
+    t.check(off.length === 0, off.length ? `off the ramp: ${off.join(', ')}px` : `${new Set(sizes).size} sizes, every one on the ramp`);
+    const tiny = [...new Set(sizes)].filter((s) => s < 9.5);
+    t.check(tiny.length === 0, tiny.length ? `below the 9.5px floor: ${tiny.join(', ')}px` : 'nothing is set below 9.5px');
+  }
+
+  /* ---- radii and elevation ---- */
+  {
+    /* 7px joins for the quote's typed figures and its steppers: a box
+       that appears under the pointer around a number inside a table
+       row, which wants a softer corner than the 9px of a button that
+       is always drawn. Specified as "steppers 7" in the quote handoff. */
+    /* 0 belongs in the set. On a 390px screen the document card runs to
+       both edges -- there is no ground beside it to round against -- so
+       the phone takes the corners off rather than drawing a 14px radius
+       against the screen edge. "No radius" is a decision the system
+       makes, and a set that cannot express it pushes the rule outside
+       the layer where nothing checks it. */
+    const RADII = new Set(['0', '2px', '3px', '6px', '7px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
+    /* A per-corner radius is FOUR radii, and each has to be on the
+       system -- `0 0 14px 14px` is a card whose bottom corners are
+       rounded and whose top ones are not, which is one declaration
+       making two decisions the system already allows. Reading the
+       whole value as one string failed it as if 14px had been
+       invented. Split, then judge each part. */
+    const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)]
+      .flatMap((m) => m[1].trim().split(/\s+/)));
+    const bad = [...r].filter((x) => !RADII.has(x));
+    t.check(bad.length === 0, bad.length ? `radii off the system: ${bad.join(' | ')}` : `${r.size} radii, all from the system`);
+
+    /* ONE elevation, and it is the hairline's shadow rather than a lift:
+       a card in this system does not float. The lens pill's is the same
+       geometry at a higher alpha because it sits on a tinted track. */
+    const sh = new Set([...om.matchAll(/box-shadow:\s*([^;}]+)/g)].map((m) => m[1].trim()));
+    const allowed = new Set(['var(--om-shadow)', 'var(--om-shadow-lens)', 'none']);
+    const badSh = [...sh].filter((x) => !allowed.has(x));
+    t.check(badSh.length === 0, badSh.length ? `depth is one elevation: ${badSh.join(' | ')}` : 'one elevation, referenced as a token');
+  }
+
+  /* ---- money is a component ---- */
+  {
+    const fig = (/\.om-fig\{([^}]*)\}/.exec(om) || [])[1] || '';
+    t.check(/font-variant-numeric:\s*tabular-nums/.test(fig),
+      'figures are tabular — a column of money that does not line up is unreadable at the only speed it is read');
+    t.check(/letter-spacing:\s*-0\.02em/.test(fig), 'and tracked in, as specified');
+    t.check(/IBM Plex Mono/.test(fig), 'and mono');
+  }
+
+  /* ---- truncation is three declarations and a min-width, never two ----
+     `nowrap` with `hidden` and no `ellipsis` is a hard cut with no sign
+     that anything was removed, and a truncating cell in a grid without
+     min-width:0 pushes its neighbours out of the box instead of
+     shrinking. Both faults look fine until the data is real. */
+  {
+    const trunc = (/\.om-t\{([^}]*)\}/.exec(om) || [])[1] || '';
+    ['overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap', 'min-width:0']
+      .forEach((d) => t.check(trunc.includes(d), `.om-t declares ${d}`));
+    /* And the figures never truncate: "1,240,00" is a tenth of
+       "1,240,000" and entirely plausible. */
+    const n = (/\.om-n\{([^}]*)\}/.exec(om) || [])[1] || '';
+    t.check(/white-space:nowrap/.test(n) && !/text-overflow/.test(n),
+      '.om-n holds a figure on one line and never puts an ellipsis in it');
+  }
+
+  /* ---- law 1: the layer never reaches outside its own namespace ----
+     The app sets no base font-size, so every unstyled element in 34
+     screens inherits the UA default. One bare element selector here
+     restyles all of them in a commit. */
+  {
+    const escapees = rules.map((r) => r.sel)
+      .filter((sel) => sel.split(',').some((s) => !/^\s*\.om-/.test(s)));
+    t.check(escapees.length === 0,
+      escapees.length ? `a selector starts outside the namespace: ${escapees.slice(0, 5).join(' | ')}`
+                      : 'every selector in the layer starts .om- and stays there');
+  }
+
+  /* ---- 820px is a switch, and the rail is on one side of it ----
+     The rail is a desktop object: 236px of navy on a 390px screen covers
+     three fifths of it. The app already hides .sidebar inside the
+     breakpoint, but a media query adds NO specificity -- so the OM
+     layer's own display declaration, being later in the file, won, and
+     the rail sat on top of the day's figures at phone width. A layer
+     that sets display on the rail has to re-state the hiding. */
+  {
+    /* The layer has more than one phone block now -- the quote brought
+       its own -- so the rule is looked for across all of them rather
+       than in whichever one happens to come first. */
+    const phone = [...om.matchAll(/@media\s*\(max-width:\s*820px\)\s*\{([\s\S]*?)\n  \}/g)]
+      .map((m) => m[1]).join('\n');
+    t.check(/\.om-rail\{[^}]*display:\s*none/.test(phone),
+      'the OM layer hides the rail at the 820px switch, where the phone has its own chrome');
+  }
+
+  /* ---- and the two systems do not touch ----
+     The whole point of a replacement is that it replaces. A rule that
+     reaches for an --ow- token is a screen being improved rather than
+     redrawn, which is the one thing this pass is not. */
+  t.check(!/--ow-/.test(om), 'no OM rule borrows a token from the console layer');
+  t.check(!/\.ow-/.test(om), 'and none of them styles a console component');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -307,27 +307,46 @@ const reset = () => {
    all. */
 {
   const sup = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
-  const cus = extractFunction(src, 'customerRegisterRowHTML', 'index.html');
+  /* THE TWO SIDES ARE ON TWO SYSTEMS NOW, and this section is where that
+     shows. Suppliers is still the console's register; Customers is the
+     card system's, so its row is built by custRegisterRowHTML and wears
+     none of the console's table classes.
+
+     What the section is FOR is unchanged and is the only thing that
+     matters here: somebody on both books is said to be on both, on the
+     row, without opening anything -- because a person who owes the shop
+     and is owed by it is one negotiation, not two, and a register that
+     stays quiet about it invites the owner to chase money they are about
+     to pay back out. Each side is checked in its own vocabulary. */
+  const cus = extractFunction(src, 'custRegisterRowHTML', 'index.html');
 
   t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">\$\{esc\(r\.name\)\}<\/span>/.test(sup),
     'the supplier name is the whole of its own element');
-  t.check(/<span class="ow-tbl-p" title="\$\{esc\(r\.name\)\}">\$\{esc\(r\.name\)\}<\/span>/.test(cus),
-    'and so is the customer name');
+  t.check(/class="om-t" style="font-size:13.5px;font-weight:600">\$\{esc\(r\.name\)\}</.test(cus),
+    'and so is the customer name, in its own truncating element');
 
   t.check(/const meta = \[r\.place, r\.id, r\.shopNo \? 'Shop ' \+ r\.shopNo : '',/.test(sup)
     && /r\.linked \? 'Also a customer' : '',/.test(sup),
     'the tag follows the supplier code on the register\'s own meta line');
-  t.check(/const meta = \[r\.place, r\.id, r\.both \? 'Also a supplier' : ''/.test(cus),
-    'and the customer code carries it on the same line, in the same order');
+  /* The card row has no single meta string: its second line is a row of
+     chips, so the tag is a chip beside the place rather than an item in a
+     joined list. Same fact, same place on the row. */
+  t.check(/r\.both \? `<span class="om-chip"[^`]*Also a supplier<\/span>` : ''/.test(cus),
+    'and the customer row carries it on its second line, beside the place');
 
   /* One truncating block, not a wrapping row of chips: three
      declarations or none, and min-width:0 so it shrinks instead of
      pushing the figure columns out of the box. */
   t.check(/\.ow-tbl-s\{[\s\S]{0,220}?overflow:hidden;text-overflow:ellipsis;white-space:nowrap;/.test(src),
     'the meta line truncates properly rather than clipping mid-glyph');
-  t.check(/<span class="ow-tbl-s" title="\$\{esc\(meta\)\}">/.test(sup)
-    && /<span class="ow-tbl-s" title="\$\{esc\(meta\)\}">/.test(cus),
-    'with the whole of it in a title on both sides, so a truncated one can still be read');
+  t.check(/<span class="ow-tbl-s" title="\$\{esc\(meta\)\}">/.test(sup),
+    'with the whole of it in a title on the supplier side, so a truncated one can still be read');
+  /* The card row truncates with .om-t, which is the same three
+     declarations plus min-width:0 -- and its second line is chips, which
+     have their own width and do not need a title to be readable. */
+  t.check(/\.om-t\{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\}/.test(src)
+    && /class="om-t"/.test(cus),
+    'and the customer row truncates on the card system\'s own rule');
 
   /* .both-tag carried margin-left for when it trailed text inline. It
      has no caller on either register -- the tag is a word in a

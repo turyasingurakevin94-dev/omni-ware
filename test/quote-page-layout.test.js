@@ -126,9 +126,17 @@ const src = read('index.html');
 
 /* ---------- 2. the inline search is the front door ------------------- */
 {
-  t.check(/<div class="q-item-search-wrap">[\s\S]{0,400}?id="q_item_search"/.test(src),
+  t.check(/<div class="[^"]*\bq-item-search-wrap\b[^"]*">[\s\S]{0,400}?id="q_item_search"/.test(src),
     'a permanent search field sits at the top of the items panel');
-  const panel = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+/* THE SLICES MATCH ON THE HOOK, NOT THE WHOLE CLASS ATTRIBUTE.
+   The quote was rebuilt on the card system, so the document card, the
+   dock and their controls each carry a .om- class beside the one the
+   render and the wiring find them by. Three region slices keyed on the
+   exact attribute text and matched nothing the moment a class was
+   added -- which failed nineteen checks at once and said nothing true
+   about any of them. What this file actually claims is WHERE things
+   are and WHICH words they carry, and none of that moved. */
+  const panel = (/<div class="[^"]*\bq-doc\b[^"]*">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
   t.check(/q_item_search/.test(panel),
     'above the items, inside the document');
   const wiring = extractFunction(src, 'renderQuoteItemSearchDd', 'index.html');
@@ -162,14 +170,14 @@ const src = read('index.html');
 
 /* ---------- 3. the sticky bar is the money and the actions ----------- */
 {
-  const bar = (/<div class="q-stickybar" id="q_stickybar">[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  const bar = (/<div class="[^"]*\bq-stickybar\b[^"]*" id="q_stickybar">[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="q_finbar"/.test(bar) && /id="q_save_btn"/.test(bar),
     'totals and Save share the bar — the figure read aloud sits beside the act that follows it');
   t.check(/id="q_print_quote_btn"/.test(bar) && /id="q_whatsapp_btn"/.test(bar),
     'with the frequent outputs one press away');
   t.check(/id="q_more_menu"[\s\S]*?id="q_print_btn"[\s\S]*?id="q_clear_btn"/.test(bar),
     'and the occasional ones — supplier copy, clear — behind the ⋯ menu');
-  t.check(/class="qbar-save" id="q_save_btn"/.test(bar),
+  t.check(/class="[^"]*\bqbar-save\b[^"]*" id="q_save_btn"/.test(bar),
     'Save is the one filled button; everything else is quiet');
   /* Clear is destructive mid-call: it gets distance (the menu) AND keeps
      its question. */
@@ -203,7 +211,7 @@ const src = read('index.html');
   t.check(!/q_more_menu/.test(barRow), 'the ⋯ menu is cut out before the row is measured');
   t.check(!/>\s*Client copy\s*<\/button>/.test(barRow),
     'and Client copy has no words on the bar itself — it is not drawn there');
-  t.check(/class="qbar-btn q-print-owner" id="q_print_quote_btn"/.test(bar) && /\.q-print-owner\{display:none;\}/.test(src),
+  t.check(/class="[^"]*\bq-print-owner\b[^"]*" id="q_print_quote_btn"/.test(bar) && /\.q-print-owner\{display:none;\}/.test(src),
     'the print button owns its behaviour and is never drawn');
 
   const btnRule = (/\.qbar-btn\{[^}]*\}/.exec(src) || [''])[0];
@@ -240,8 +248,8 @@ const src = read('index.html');
      ow-table.test.js and design-system.test.js hold both to the mono
      face with tabular-nums. What this file pins is that the row really
      uses them. */
-  t.check(/class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(src)
-    && /class="ow-gi qty-input q-qty"/.test(src) && /class="ow-gi price-input q-price"/.test(src),
+  t.check(/class="[^"]*\bq-line-total\b[^"]*">\$\{fmtUGX\(lineSell\)\}/.test(src)
+    && /class="[^"]*\bq-qty\b[^"]*"/.test(src) && /class="[^"]*\bq-price\b[^"]*"/.test(src),
     'every figure in the grid sits in tabular digits — the cells and the inputs are the layer’s');
   t.check(/\.ow-gi\{[^}]*border:1px solid transparent[^}]*background:transparent/.test(src),
     'inputs rest quiet on the row — an editable document, not a form grid');
@@ -277,24 +285,39 @@ const src = read('index.html');
      cells after the date: the date's cell closes, the known-facts cell
      follows, and only then does the band close. The client and their
      number share the first cell -- one client, one cell. */
-  t.check(/id="q_date">\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="ow-cb-k" id="q_client_history"><\/div>\s*<\/div>/.test(src),
+  t.check(/id="q_date">\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="[^"]*\bow-cb-k\b[^"]*" id="q_client_history"><\/div>\s*<\/div>/.test(src),
     'what the books know is the band’s own last cell, not an island under it');
   t.check(/<div class="q-client-cell">\s*<input[^>]*id="q_client_name"[^>]*>\s*<input[^>]*id="q_client_phone"/.test(src),
     'and the number sits in the client’s own cell beside the name');
   /* The usual-buys chips are INSIDE the document now, under the search:
      tapping one puts a line on it, so it belongs where the lines are.
      The cut is counted on the last chip rather than scrolled off. */
-  const doc = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
-  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
+  const doc = (/<div class="[^"]*\bq-doc\b[^"]*">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+  t.check(/id="q_item_search_dd"[\s\S]*?<div class="[^"]*\bq-client-usual\b[^"]*" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
     'the usual-buys chips sit inside the document, between the search and the lines');
   /* THE PHONE'S TWO TABS sit between them: the quote, and the details the
      console keeps in its rail. The chips are still above the lines; the
      tab bar is not drawn at all on the console. */
-  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-tabbar" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
-    'with the phone’s Quote / Details tabs between the chips and the lines');
-  const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>/.exec(src) || [''])[0];
-  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 2 && /data-qtab="quote"/.test(tabs) && /data-qtab="details"/.test(tabs),
-    'two cells, one per pane');
+  /* THE TABS MOVED INTO THE NAVY HEADER, and there are three of them.
+     
+     They used to sit inside the document, between the usual-buys chips
+     and the lines, because the header above was 48px of name and two
+     icons with no room for anything else. The card system's phone
+     header carries the screen's name, who the quote is for, those two
+     icons AND the lenses -- which is what lets the console's title
+     block and its pill row be dropped on the phone entirely rather
+     than drawn a second time under the bar.
+     
+     Three cells, not two: Building and Saved are the same two lenses
+     the console shows as pills, and Details is where the rail's cards
+     go on a screen with no room beside the list for them. The pane
+     switch is unchanged -- data-qtab is still what setQuoteTab reads. */
+  const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>\s*<\/div>/.exec(src) || [''])[0];
+  t.check(/<div class="q-phbar"[\s\S]*?id="q_tabbar"/.test(src),
+    'the phone’s lenses sit in its own header, not inside the document');
+  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 3
+    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs) && /data-qtab="details"/.test(tabs),
+    'three cells — the two lenses the console shows as pills, and Details');
   t.check(/id="q_tab_n_quote"/.test(tabs) && /id="q_tab_n_details"/.test(tabs) && /id="q_tab_dot"/.test(tabs),
     'each carrying its count, and Details a dot for a section that is warning');
   t.check(/\.q-tabbar\{display:none;\}/.test(src) || /,\s*\n?\s*\.q-tabbar,/.test(src),
@@ -347,6 +370,35 @@ const src = read('index.html');
   t.check(/#ip_list \.ip-item-main, #cmp_suggestions \.ip-item-main, \.q-item-search-dd \.ip-item-main\{flex:1/.test(src)
     && /, \.q-item-search-dd \.ip-item-price\{flex-shrink:0/.test(src),
     'name and price cells included, so the row lays out like every other suggestion row');
+}
+
+/* ---------- 7b. a card may not clip the picker it hosts -------------- *
+ *
+ * THE FAULT THIS CATCHES SHIPPED, and it looked like a dead screen:
+ * neither the client nor the product could be chosen. Both dropdowns
+ * were built, populated and positioned correctly -- the JS was never
+ * wrong -- and the CARD around them was `overflow:hidden`, so a 116px
+ * client list rendered inside a 62px strip and 104px of the product
+ * list fell outside the document card. Nothing threw. Nothing logged.
+ * The rows were in the DOM the whole time.
+ *
+ * overflow:hidden was there for a good reason -- to clip the table
+ * inside the card's 14px corners -- which is why it needs a test rather
+ * than a memory: the next person to want rounded corners on a card will
+ * reach for exactly the same declaration. Corners are clipped on the
+ * child that paints to the edge instead.
+ */
+{
+  const rule = (name) => (new RegExp('\\.' + name + '\\{([^}]*)\\}').exec(src) || ['', ''])[1];
+  [['om-qclient', 'the client autocomplete'],
+   ['om-qdoc', 'the product search results'],
+  ].forEach(([cls, what]) => {
+    t.check(!/overflow:\s*hidden/.test(rule(cls)),
+      `.${cls} does not clip ${what} it hosts`);
+  });
+  /* And the corner is still clipped, on the one child that paints to it. */
+  t.check(/\.om-qdoc \.om-addrow\{[^}]*border-radius:\s*0 0 14px 14px/.test(src),
+    'the card keeps its bottom corners, clipped on the row that reaches them');
 }
 
 /* ---------- 8. the phone bar respects the bottom nav ----------------- */
@@ -426,7 +478,7 @@ const src = read('index.html');
      also what lets the phone drop the pill: at 390px the bar has about
      150 pixels for the money, and the two together need closer to 180. */
   const bar2 = extractFunction(src, 'renderQuoteFinbar', 'index.html');
-  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b><span class="qp-margin-pill-lg \$\{pillClass\}">/.test(bar2),
+  t.check(/<div class="[^"]*\bqp-keep-v\b[^"]*"[^>]*><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>[\s\S]{0,200}?class="[^"]*\bqp-margin-pill-lg\b[^"]*\$\{pillClass\}">/.test(bar2),
     'the keep figure carries the same reading as the pill, not just the sign of the profit');
   t.check(!/style="color:/.test(bar2),
     'and takes it from a class rather than an inline colour, so a rule can reach it');
@@ -443,7 +495,11 @@ const src = read('index.html');
     'the two-cell box is not drawn on the phone; the strip carries the figures');
   t.check(/figs\.innerHTML = `· costs you <b class="qp-sf-c">/.test(bar2) && /you keep <b class="qp-sf-k">/.test(bar2),
     'and the strip is written by the same render as the bar, from the same figures');
-  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src)
+  /* "Keep", not "Margin". The column was renamed with the table, and
+     this selector is what takes the shop's three cells off the phone
+     card -- it went on naming the old word for one commit, and the
+     Keep cell landed on top of the line's own second row. */
+  t.check(/\.q-doc \.q-line > \.q-shop-first,\s*\.q-doc \.q-line > \[data-l="Buy @"\],\s*\.q-doc \.q-line > \[data-l="Keep"\]\{display:none;\}/.test(src)
     && /body\.q-shop-open \.q-doc \.q-line > \.q-ph-shop\{display:flex;/.test(src),
     'a line’s shop side is not drawn until the strip opens it');
   const toggle = extractFunction(src, 'setShopSideOpen', 'index.html');

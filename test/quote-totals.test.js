@@ -106,7 +106,12 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * mistakable for the price.
  */
 {
-  t.check(/Costs you<\/div>\s*<div class="qp-cost-v">\$\{fmtUGX\(grandBuy\)\}/.test(bar),
+  /* Matched on the hook class and the figure rather than the exact
+     class attribute: the dock moved onto the card system and every cell
+     gained a .om- class beside the one the render finds it by. What
+     these checks claim is which figure is where and how it is worked
+     out, and none of that changed. */
+  t.check(/Costs you<\/div>\s*<div class="[^"]*\bqp-cost-v\b[^"]*"[^>]*>\$\{fmtUGX\(grandBuy\)\}/.test(bar),
     'the cost is still on the page, on the bar, named as the shop’s');
   /* The label gained a qualifier once charges existed -- "You keep on the
      items" -- because what a delivery costs the shop is not known until
@@ -119,11 +124,23 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
      divider is the same rule on the same class, carried through the
      header, every row and the foot. */
-  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
-    'the shop’s columns start behind a divider');
+  /* THE COLUMN IS CALLED "BUY FROM" NOW, and the divider is a grid
+     track rather than only a border.
+     
+     What the old assertion meant: no cost figure may sit in the run of
+     client figures, and the first shop column is where that boundary is
+     drawn. That is unchanged and still checked below -- q-shop-first
+     still carries the rule. Two things moved. The column asks "buy
+     from" rather than naming a record type, which is the question a
+     person building a quote is actually answering; and the boundary is
+     now also an explicit 1px track in the grid, so it lands in the same
+     place on the header, every line, every charge and the credit row
+     instead of depending on each cell drawing its own left border. */
+  t.check(/<span class="om-idiv" aria-hidden="true"><\/span>\s*<div class="ow-tbl-c q-shop-first">Buy from<\/div>/.test(items),
+    'the shop’s columns start behind a divider, which is its own grid track');
   t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
     'which is a real rule, not just a class name');
-  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
+  t.check(/<span class="om-idiv" aria-hidden="true"><\/span>\s*<div class="ow-tbl-c q-shop-first" data-l="Buy from">\$\{supplierPickerHTML\}<\/div>/.test(items),
     'and every row honours it');
   /* The divider runs the length of the document: the header, every
      line, every charge, and the credit row all carry the class. The
@@ -144,7 +161,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   t.check(/Client pays<span class="qp-says-n">/.test(bar), 'the summary opens with the client’s figure');
   /* pays = grandSell + charges. The bar is read out mid-call, so it is
      the one place the figure must be the whole bill. */
-  t.check(/qp-says-value\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
+  t.check(/\bqp-says-value\b[^"]*\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
     'and that figure is the whole bill — goods, charges and the price of waiting');
   /* It used to be one of four equal cells labelled "Total sell" -- the
      jargon on a screen whose whole job is a sentence somebody speaks. */
@@ -158,14 +175,14 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      the client across the counter cannot read. */
   t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\}<\/div>/.test(bar),
     'with what the shop keeps beside it, quieter, and said to be about the items when a charge is uncosted beside it');
-  t.check(/<div class="qp-cost">[\s\S]{0,200}?Costs you<\/div>/.test(bar),
+  t.check(/<div class="[^"]*\bqp-cost\b[^"]*"[^>]*>[\s\S]{0,200}?Costs you<\/div>/.test(bar),
     'and the cost, as its own figure — the bar is the account now, not a glance at half of one');
   /* The finbar used to sit ABOVE the items so the total stayed on
      screen; the real fix is stronger — the whole summary now rides a
      bar fixed to the viewport bottom (#q_stickybar), fused with the
      quote's actions, so it can NEVER scroll away however long the quote
      grows. The items panel therefore no longer contains it. */
-  t.check(/<div class="q-stickybar" id="q_stickybar">\s*<div class="qp-finbar" id="q_finbar">/.test(src),
+  t.check(/<div class="[^"]*\bq-stickybar\b[^"]*" id="q_stickybar">\s*<div class="qp-finbar" id="q_finbar">/.test(src),
     'the summary rides the sticky bar at the viewport bottom');
   const panel = (/<div class="panel qp-panel qp-items-panel">[\s\S]*?<\/div>\n        <\/div>/.exec(src) || [''])[0];
   t.check(!/id="q_finbar"/.test(panel),
@@ -202,7 +219,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      figure. The figure now takes the pill's own class, so grey on an
      empty quote is the SAME decision as the grey pill rather than a
      second one that happens to match. */
-  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>/.test(bar),
+  t.check(/<div class="[^"]*\bqp-keep-v\b[^"]*"[^>]*><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>/.test(bar),
     'and the keep figure takes the pill’s reading rather than working out a second one');
   t.check(/\.qp-shopline b\.quiet\{color:var\(--ink-soft\);\}/.test(src),
     'so "You keep 0" goes grey with it rather than reporting zero in profit-green');
@@ -223,7 +240,13 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'there is no second template for the phone');
   t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
     'the one row carries the client’s line total under its column name, which is the phone’s label');
-  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
+  /* data-l IS THE PHONE'S LABEL, so renaming a column renames what the
+     card says. Supplier became "Buy from" and Margin became "Keep" --
+     the first asks the question the person is answering, the second
+     names the money rather than the ratio, and a shop reads "keep"
+     without translating it. The card follows the column by
+     construction, which is the point of there being one template. */
+  ['Qty', 'Price each', 'Buy from', 'Buy @', 'Keep'].forEach((l) => {
     t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
   });
   t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');

@@ -121,7 +121,9 @@ const NOW = Date.parse('2026-08-06T12:00:00Z');
    section now pins that the two demoted rooms are still DRAWN and
    still reachable, which is the thing that would actually be lost. */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
+  /* The desk starts when MESSAGES is entered: WhatsApp and Follow-ups are
+     one screen, and the inbox is still where the shop hears back. */
+  t.check(/if\(tab==='messages'\)\{ waInboxEnter\(\); renderMessages\(\); \}/.test(src),
     'entering the tab starts the desk');
   t.check(/waFetchInsightMsgs\(\);/.test(src) && /order\('sent_at', \{ ascending: false \}\)\.limit\(500\)/.test(src),
     'one aggregate read feeds the strip — the per-thread fetches only know the open thread');

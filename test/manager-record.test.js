@@ -197,6 +197,12 @@ const src = read('index.html');
     'the phone\'s title bar knows the console\'s page header — the idiom Today was rebuilt with');
   t.check(/page-head/.test(sel),
     'and still knows the old one, because thirty-nine screens still use it');
+  /* And the card system's, which is the third shape in the file while
+     the redesign lands screen by screen. A converted header whose class
+     is not listed here leaves the phone's title bar EMPTY, and nothing
+     else in the app says so. */
+  t.check(/om-qtitle-t/.test(sel),
+    'and the card system\'s, so a converted screen still names itself on the phone');
 
   /* Every selector the function offers, reduced to what has to be
      PRESENT in a section for it to match. Derived from the function
@@ -220,7 +226,20 @@ const src = read('index.html');
      stopped matching, every check below would pass by checking nothing.
      37 -> 35 when What's coming, What to buy and The day became the
      three lenses of Forecasts. */
-  t.check(starts.length > 33, `every screen in the app is checked (${starts.length})`);
+   /* And 33 -> 32 when Debtors left: it was a second list over the same
+      people, and every one of its ten call sites already called
+      renderCustomers on the line above. It is the Customers screen's
+      Owing lens now, and resolveTab('debtors') opens it with that lens
+      armed, so the destination is still reachable -- it is just not a
+      separate destination any more. */
+  /* And 32 -> 31 when WhatsApp and Follow-ups became Messages. Neither
+   was usable alone: Follow-ups is the list of people you owe a word,
+   already tagged with a reason, and its only action was to open the box;
+   WhatsApp is the box, and its only content came from the list. The nav
+   index had already recorded the confusion -- the obvious search for
+   Follow-ups is "broadcast", which belonged to WhatsApp. One screen, one
+   rail row, one badge. */
+t.check(starts.length > 31, `every screen in the app is checked (${starts.length})`);
   const blank = [];
   starts.forEach((m, i) => {
     const body = src.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : src.length);

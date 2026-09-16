@@ -334,10 +334,17 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
      one to), so the class is gone while the guarantee is not: a receipt
      for the whole sale, with no payment argument, is reachable from the
      row. That is what .inv-doc-receipt names and what the row binds. */
-  t.check(/class="btn btn-ghost ow-sm inv-ib \$\{cls\}"/.test(src),
-    'the row\'s icon acts are the existing button family, sized — not a new one');
-  t.check(/'inv-doc-receipt'/.test(src) && /printReceipt\(q, null, null\)/.test(src),
-    'and the whole sale can be printed from the Invoices row');
+  /* The Invoices row carried four icon buttons; the card register carries
+     none. The picked invoice gets a panel, and printing the receipt is an
+     item on its overflow menu -- which is the same act, reached in one
+     more press, on a screen where the row is now a document rather than a
+     toolbar. What matters here is unchanged: it is the shared button
+     family rather than a fourteenth, and it prints the WHOLE sale (no
+     payment argument), which is what somebody means by "the receipt". */
+  t.check(/class="om-menu-i" id="inv_m_receipt"/.test(src),
+    'printing the receipt is on the picked invoice, in the card system\'s own menu family');
+  t.check(/mRec\.onclick = \(\)=>printReceipt\(q, null, null\)/.test(src),
+    'and the whole sale can be printed from it — no payment argument, so every payment is listed');
 }
 
 process.exit(t.done() ? 1 : 0);

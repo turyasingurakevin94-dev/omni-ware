@@ -268,7 +268,9 @@ if (!hook) process.exit(1);
      the number is linked; the old order drew the picks and the strip
      first, so a shop that had never connected saw its daily post and
      six zeroes above a desk that did not exist. */
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
+  /* The desk starts when MESSAGES is entered: WhatsApp and Follow-ups are
+     one screen, and the inbox is still where the shop hears back. */
+  t.check(/if\(tab==='messages'\)\{ waInboxEnter\(\); renderMessages\(\); \}/.test(src),
     'entering the tab starts the desk, which draws the rest once it knows the number is linked');
   t.check(/if\(currentActiveTab !== 'whatsapp' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
     'the poller stops itself when the user leaves the tab');

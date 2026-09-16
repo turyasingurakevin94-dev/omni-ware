@@ -45,8 +45,8 @@ const src = read('index.html');
 // file. There are several, and one is a literal `<nav>` written inside a
 // CSS comment -- the same prose-matching-as-code trap that has caught
 // other checks in this suite.
-const topbar = (/<header class="topbar"[\s\S]*?<\/header>/.exec(src) || [''])[0];
-const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+const topbar = (/<header class="topbar[^"]*"[\s\S]*?<\/header>/.exec(src) || [''])[0];
+const sidebar = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
 const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(sidebar) || ['', ''])[1];
 const sheet = (/<div class="mms-body">[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
 const bottomNav = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [''])[0];
@@ -65,7 +65,7 @@ const tabsIn = (s) => [...s.matchAll(/data-tab="([a-z-]+)"/g)].map((m) => m[1]);
 function railIndex() {
   const out = [];
   let group = '';
-  const re = /<button type="button" class="nav-section-label"[^>]*><span>([^<]+)<\/span>[\s\S]*?<\/button>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
+  const re = /<button type="button" class="nav-section-label"[^>]*>(?:<span class="om-tile[^"]*"[^>]*><\/span>)?<span>([^<]+)<\/span>[\s\S]*?<\/button>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
   let m;
   while ((m = re.exec(rail))) {
     if (m[1]) { group = m[1].trim(); continue; }
@@ -86,7 +86,15 @@ const INDEX = railIndex();
 /* ---------- 1. nothing was lost ------------------------------------- */
 {
   const EVERY_TAB = [
-    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
+    /* 'whatsapp' leaves this list because the ROW left the rail, and
+       what replaced it is on the line below. WhatsApp and Follow-ups
+       were never usable apart -- Follow-ups is the list of people the
+       shop owes a word and its only action was to open the box;
+       WhatsApp is the box, and its only content came from that list.
+       One screen, one row, one badge, and both old doors still open it
+       (checked below). This list is the rail's complete map, so a
+       merged row is named once, not twice. */
+    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'messages',
     'compare', 'sourcing', 'suppliers',
     /* Purchase invoices is NOT in this list, and that is deliberate. An
        order, the invoice it becomes and the bills it raises against its
@@ -117,7 +125,7 @@ const INDEX = railIndex();
        matters (what a thing is worth against what is still owed on it)
        could not be asked on either. The check below holds the merge to
        the thing a merge can quietly lose: the words people search by. */
-    'cashbook', 'analytics-debtors', 'analytics-creditors', 'statements', 'payroll', 'assets',
+    'cashbook', 'analytics-creditors', 'statements', 'payroll', 'assets',
     'analytics-sales', 'analytics-purchase', 'map',
     'staff', 'worker', 'presets',
   ];
@@ -219,6 +227,17 @@ const INDEX = railIndex();
 
 /* ---------- 3. grouped by job, headings always visible --------------- */
 {
+  /* THE TILE MUST CARRY NO TEXT. Each heading wears a two-letter tile,
+     and buildNavIndex() takes the group's name from the heading's
+     textContent -- so a literal "Se" in the markup renames Sell to
+     "SeSell" for the search index and the phone's More sheet at once,
+     and the only symptom is that searching "sell" stops working. The
+     letters live in CSS ::before, where the shut-door count already is. */
+  const tiles = [...rail.matchAll(/<span class="om-tile[^"]*"[^>]*>([\s\S]*?)<\/span>/g)];
+  t.check(tiles.length === 6, `six group tiles, one per heading (${tiles.length})`);
+  t.check(tiles.every((m) => m[1].trim() === ''),
+    'and not one of them puts a letter in the markup, where it would become part of the group name');
+
   const groups = [...new Set(INDEX.map((x) => x.group))];
   ['Sell', 'Buy', 'Catalogue', 'Money', 'Insight', 'Setup'].forEach((g) => {
     t.check(groups.includes(g), `"${g}" is a heading on the rail itself`);
@@ -229,8 +248,21 @@ const INDEX = railIndex();
     'the dashboard sits above every section -- it is where a day starts, not part of a job');
 
   // The groupings that carry meaning rather than tidiness.
-  t.check(groupOf['analytics-debtors'] === 'Money' && groupOf['analytics-creditors'] === 'Money',
-    'who owes you and who you owe are money, not analytics -- they are acted on, not studied');
+  /* WHO YOU OWE is still money. WHO OWES YOU is the Customers screen's
+     Owing lens: a debtor is a customer with a balance, and the two lists
+     could only ever disagree -- every one of Debtors' ten call sites
+     already called renderCustomers on the line above it. So the claim
+     splits: Creditors stays in Money, and the other half is checked at
+     its new address below.
+
+     Note the asymmetry this leaves, and it is deliberate rather than
+     overlooked: renderCreditorsList sits beside Suppliers exactly as
+     renderDebtorsList sat beside Customers. If this cut is right, that
+     one is too -- it is written up in the rail brief as an observation. */
+  t.check(groupOf['analytics-creditors'] === 'Money',
+    'who you owe is money, not analytics -- it is acted on, not studied');
+  t.check(groupOf['customers'] === 'Sell',
+    'and who owes you is a lens on the people who buy from you, in Sell');
   t.check(groupOf['cashbook'] === 'Money' && groupOf['statements'] === 'Money'
     && groupOf['assets'] === 'Money' && groupOf['payroll'] === 'Money',
     'and they sit with the cash book, the statements, what the shop owns and owes, and what it pays');
@@ -261,24 +293,61 @@ const INDEX = railIndex();
      two things a merge can actually lose -- the words people search by,
      and the name still being spoken at the destination. */
   {
-    const fu = INDEX.find((x) => x.tab === 'followups') || { label: '', keywords: '' };
+    /* The row is 'messages' now, and this lookup found NOTHING once it
+       was -- which is the failure mode this whole block exists to
+       catch, arriving from the other direction. The claim is unchanged:
+       whatever row survives a merge carries the absorbed screen's
+       search words, or the absorbed screen is unreachable for the words
+       people actually type. */
+    const fu = INDEX.find((x) => x.tab === 'messages') || { label: '', keywords: '' };
     const carried = ['worth', 'telling', 'marketing', 'recommend', 'brief',
       'picture', 'gif', 'promote', 'campaign', 'offer', 'suggest'];
     const lost = carried.filter((w) => !fu.keywords.includes(w));
     t.check(lost.length === 0,
       `Follow-ups carries the search words of the screen it absorbed${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
-    /* NOT "broadcast". WhatsApp is the real answer for it, and the note
-       above the Follow-ups button already records this law for the word
-       "stock": claiming a word another screen owns buries that screen
-       for its own most obvious search. */
-    const wa = INDEX.find((x) => x.tab === 'whatsapp') || { keywords: '' };
-    t.check(!/broadcast/.test(fu.keywords) && /broadcast/.test(wa.keywords),
-      'and not "broadcast", which is WhatsApp\'s own most obvious search, and still its');
+    /* "BROADCAST" INVERTS, and the inversion is the point of the merge.
+       The old rule was: Follow-ups may not claim "broadcast", because
+       WhatsApp owns it and claiming another screen's most obvious
+       search buries that screen. That rule was right, and it was the
+       app recording a confusion it could not resolve -- the obvious
+       search for the follow-up queue WAS "broadcast", and it landed on
+       a different screen. There is one screen now, so the word has one
+       home and no screen to bury. What survives is the law, not the
+       verdict: exactly one row may carry it. */
+    const owners = INDEX.filter((x) => /broadcast/.test(x.keywords));
+    t.check(/broadcast/.test(fu.keywords) && owners.length === 1,
+      'and "broadcast" is Messages\' now — one screen, so the word has one owner and buries nothing');
     t.check(!INDEX.some((x) => x.tab === 'telling') && !/id="tab-telling"/.test(src),
       'Worth telling is not a destination any more, and has no section left behind');
     const alias = extractFunction(src, 'resolveTab', 'index.html');
-    t.check(/if\(tab === 'telling'\)\{[^}]*fupWhy = 'telling'[^}]*return 'followups'; \}/.test(alias),
+    /* THE LENSES ARE STATES NOW and the outbox is grouped by reason
+       inside them, because the handoff draws a lens group both ways and
+       only one of them can be the control: a lens that repeated the
+       grouping would do nothing, and a screen that cannot say "twenty-one
+       people have not come back" cannot tell a queue that is working from
+       one that is being ignored. So Worth telling's door opens the outbox
+       FOCUSED on the group that screen was -- msgFocus, not msgLens. The
+       claim is exactly what it was: the old address still lands on the
+       slice it meant, resolved once at the top of goToTab so a saved
+       last-tab cannot boot into a section that is gone. */
+    /* THE LENSES ARE THE REASONS AGAIN, and the states are groups in the
+       list under them. The first handoff drew the lens group both ways
+       and the second settles it -- "held back and sent are groups in this
+       list" -- so Worth telling's door opens its own lens outright,
+       which is where this assertion started. What it has always claimed
+       is unchanged: the old address lands on the slice it meant,
+       resolved once at the top of goToTab so a saved last-tab cannot
+       boot into a section that is gone. */
+    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'telling'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
+    /* AND THE SECOND TAB'S OWN THREE DOORS. It held a group, a setting
+       and an archive; each has an address on this one list now, so an old
+       link lands on the thing it named rather than on a pane that is
+       gone. This is the check that the deletion was a MOVE. */
+    t.check(/if\(tab === 'followups-record' \|\| tab === 'register' \|\| tab === 'sent'\)\{[\s\S]{0,120}?msgShowSent = true;/.test(alias)
+      && /if\(tab === 'held-back' \|\| tab === 'hold'\)\{[\s\S]{0,120}?msgPanelForm = 'hold';/.test(alias)
+      && /if\(tab === 'quiet'\)\{[\s\S]{0,120}?msgRulesOpen = true;/.test(alias),
+      'and the deleted tab\'s own three — the register, the hold and the quiet rule — each land on where that thing went');
     const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
     const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
     t.check(/Worth telling/.test(why) || /Worth telling/.test(sec),
@@ -296,13 +365,19 @@ const INDEX = railIndex();
     /* NOT "owing", "who owes" or "aging". Debtors owns the whole book
        and those are its most obvious searches; this row owns the ASKING.
        Same law as "broadcast" above, applied to the other side of it. */
-    const deb = INDEX.find((x) => x.tab === 'analytics-debtors') || { keywords: '' };
+    const deb = INDEX.find((x) => x.tab === 'customers') || { keywords: '' };
     t.check(!/owing/.test(fu.keywords) && /owing/.test(deb.keywords),
-      'and not "owing", which is the Debtors list\'s own most obvious search, and still its');
+      'and not "owing", which belongs to the screen that owns the whole book — Customers, since Debtors folded into it');
     t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
       'Chase debts is not a destination any more, and has no section left behind');
-    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'money'; return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the money lens it meant — same resolve, same reason');
+    /* And so do the two doors the merge itself closed. A saved last-tab
+       is the case this is really about: a shop that shut the app on
+       WhatsApp must not boot into a section that is gone. */
+    t.check(/if\(tab === 'whatsapp'\)\{[^}]*msgLens = 'posting'[^}]*return 'messages'; \}/.test(alias)
+      && /if\(tab === 'followups'\)\{[^}]*return 'messages'; \}/.test(alias),
+      'and so do WhatsApp\'s and Follow-ups\' own — WhatsApp on the lens that was its desk');
     t.check(/'money','Money'/.test(why),
       'and the queue it brought is a named lens at the destination, not a filter somebody has to build');
     /* The badge did not go dark with the row. A debtor the money lens
@@ -425,16 +500,38 @@ const INDEX = railIndex();
 
 /* ---------- 5. the column that squeezed the logo --------------------- */
 {
-  t.check(/<header class="topbar"[\s\S]*?class="brand"/.test(topbar),
-    'the brand sits in the top bar');
-  t.check(!/class="brand"/.test(sidebar),
-    'and no longer in the flex column that crushed it');
+  /* THE BRAND IS BACK IN THE RAIL, and this block is rewritten rather
+     than deleted, because what it was protecting is still true.
+     
+     It used to assert the brand was in the TOP BAR and nowhere near the
+     rail. That was never the real requirement — it was the cheapest way
+     to be sure of the requirement, which is that the mark cannot be
+     squeezed. .sidebar-scroll is a column flex container, and a list
+     taller than the viewport squeezed every child carrying the default
+     flex-shrink:1: the 34px mark was crushed to 18px inside an
+     overflow:hidden and clipped in half. Banning the brand from the
+     column avoided that. Giving it `flex:none` fixes it.
+     
+     The rail artboards put the brand at the top of the rail, so the
+     avoidance had to go and the fix had to be real. What is checked now
+     is the fix itself, on whichever brand block is in the column. A
+     regression here is the same clipped logo as before; it just can no
+     longer be caused by moving an element, only by removing a
+     declaration. */
+  t.check(/class="om-rail-brand"/.test(sidebar),
+    'the brand sits at the top of the rail, where the artboards draw it');
 
-  const brandRule = (/\.topbar \.brand\{([^}]*)\}/.exec(src) || ['', ''])[1];
-  t.check(/flex-shrink:\s*0/.test(brandRule),
-    'the brand cannot be shrunk by its container -- the exact failure that clipped it before');
-  t.check(!/overflow:\s*hidden/.test(brandRule),
+  const railBrand = (/\.om-rail-brand\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/flex:\s*none/.test(railBrand),
+    'and it cannot be shrunk by the column -- the exact failure that clipped it before');
+  t.check(!/overflow:\s*hidden/.test(railBrand),
     'and nothing clips it even if something does squeeze it');
+
+  /* The other half of the same fix: the scroll box must be able to
+     shrink instead, or the two of them fight and the brand loses. */
+  const railScroll = (/\.om-rail-scroll\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/min-height:\s*0/.test(railScroll),
+    'and the scroll box takes the squeeze instead, which is what makes flex:none hold');
 
   /* Signing out is now OUTSIDE the scroll box rather than at the end of
      it. With six items that made no difference; with twenty-seven it is
@@ -549,8 +646,11 @@ const INDEX = railIndex();
      HEAD still opens the screen: "who owes you" was this screen's name
      until it was redrawn, and renaming a door must never make it harder
      to open. It is a keyword now. */
-  t.check(first('debtors') === 'Debtors', `the table-shaped word finds it (${first('debtors')})`);
-  t.check(first('who owes you') === 'Debtors',
+  /* Both words still find the work; what they find is the screen that
+     took it. Renaming a door must never make it harder to open, and
+     removing one must not either. */
+  t.check(first('debtors') === 'Customers', `the table-shaped word finds it (${first('debtors')})`);
+  t.check(first('who owes you') === 'Customers',
     `and the name it used to carry still finds it (${first('who owes you')})`);
   /* And now the same on the buy side: the creditors list was "Who you
      owe" until it was drawn as a console, so the question-shaped name
@@ -750,7 +850,12 @@ const INDEX = railIndex();
  * screen.
  */
 {
-  t.check(/nav-label">Debtors</.test(rail), 'the debtors list is named the word the shop already uses');
+  /* The row is gone and its words are on Customers, which is what makes
+     this a merge rather than a deletion. resolveTab('debtors') opens that
+     screen with the Owing lens armed, so the old door still works. */
+  t.check(!/nav-label">Debtors</.test(rail), 'the debtors row has left the rail');
+  t.check(/if\(tab === 'debtors' \|\| tab === 'analytics-debtors'\)\{ custLens = 'owing'; return 'customers'; \}/.test(src),
+    'and the old door opens Customers with the Owing lens armed');
   t.check(/data-keywords="[^"]*who owes you/.test(rail),
     'and the name it used to carry is kept as a keyword rather than dropped');
   t.check(/nav-label">Creditors</.test(rail), 'and the creditors list is named the same way, for the same reason');

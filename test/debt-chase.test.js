@@ -223,11 +223,15 @@ if (scope) {
      the alias below rather than something to stamp out: every goToTab
      call already written goes on working. What must not exist is a
      second home for this work in the map. */
-  const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+  const sidebar = (/<aside class="sidebar[^"]*"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
   t.check(!/id="tab-chase"/.test(src) && !/data-tab="chase"/.test(sidebar),
     'Chase debts is not a destination of its own any more');
   const alias = extractFunction(src, 'resolveTab', 'index.html');
-  t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+  /* msgFocus, not msgLens: the lenses are the STATES of a message now --
+     to send, waiting on a reply, sent -- and the outbox is grouped by
+     reason inside them. Chase debts WAS one of those groups, so its door
+     opens the outbox focused on it. Same address, same slice. */
+  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'money'; return 'messages'; \}/.test(alias),
     'but the old door still opens it, on the money lens it meant — resolved once at the top of goToTab, '
     + 'so a saved last-tab cannot boot into a section that is gone');
   t.check(!/function renderChaseScreen/.test(src) && !/renderChaseBadge/.test(src),
@@ -236,14 +240,23 @@ if (scope) {
   /* THE FOUR ACTS THAT MADE IT A SCREEN, each still performed, each on
      the hub. These were checked against renderChaseScreen; they are
      checked against the functions that do the same work now. */
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  /* THE PANE IS DELETED, so these are checked against the panel that
+     does the same work: renderMessageSide. It is not a rename -- the
+     pane was a queue and a work column inside a second tab, and this is
+     the recipient column of the one list -- but the four acts are the
+     same four acts and this is where they are performed. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
   const digest = extractFunction(src, 'followUpHubDigest', 'index.html');
   const record = extractFunction(src, 'recordFollowUpClient', 'index.html');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
   t.check(/debtChaseMessage\(row\.chase, shopIdentity\(\), \{bare:true\}\)/.test(digest),
     'the demand is still written from the customer’s own invoices — the same builder, dropping only the '
     + 'greeting and sign-off the hub’s message already has');
-  t.check(/followUpWaUrl\(row, draftOf\(cid\)/.test(wire),
+  /* The send is on the panel now and builds from the box's CURRENT
+     contents, which is the same claim the pane's followUpWaUrl made and
+     one line shorter: there is one box on this screen, so there is
+     nothing to look up. */
+  t.check(/waComposeUrl\(r\.phone \|\| '', box \? box\.value : body\)/.test(side),
     'sending opens WhatsApp with the message written — the same door the quote sender uses');
   t.check(/if\(row\.chase\)\{ markDebtChased\(String\(customerId\)\); told\.chased = true; \}/.test(record),
     'and saying it went records the chase');
@@ -251,9 +264,14 @@ if (scope) {
     && /if\(told\.chased\) unmarkDebtChased\(told\.customerId\);/.test(extractFunction(src, 'unrecordFollowUpClient', 'index.html')),
     'while "It did not go" takes that stamp back — the undo the old footer offered, now covering every '
     + 'engine the one message spoke for');
-  t.check(/fup-pay/.test(contact) && /openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire),
+  t.check(/fup-pay/.test(side) && /openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire),
     'a customer who pays is received through the same door as the Debtors list');
-  t.check(/class="ow-msg fup-msg"/.test(contact) && /draftOf\(cid\) \|\| followUpHubDigest/.test(wire),
+  /* ONE BOX, and it is what ships. The pane had a second one and the two
+     shared fupDrafts so they could not disagree; there is one now, and
+     the send reads it rather than the builder. */
+  t.check(/<textarea class="om-box" id="msg_box"/.test(side)
+    && /fupDrafts\[cid\] = box\.value/.test(side)
+    && /fupDrafts\[cid\] != null\) return fupDrafts\[cid\]/.test(extractFunction(src, 'msgDraftFor', 'index.html')),
     'the message is editable, and what SENDS is what the owner sees — not a copy of it');
 
   /* The badge did not go dark, it went to the row that now owns the
@@ -286,10 +304,16 @@ if (scope) {
  * not, each with a home.
  */
 {
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  const held = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  /* THE FOUR THINGS THE OLD SCREEN COULD SAY, at the addresses the
+     second handoff gave them. The pane and the five-tile summary are
+     deleted; the held-back panel is a group on the list, drawn by
+     msgHeldRowHTML off msgHeldRows, and the client's work is the
+     recipient panel. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  const heldRow = extractFunction(src, 'msgHeldRowHTML', 'index.html');
   const heldRows = extractFunction(src, 'followUpHeldBack', 'index.html');
-  const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+  const msgHeld = extractFunction(src, 'msgHeldRows', 'index.html');
+  const kpis = extractFunction(src, 'renderMessageKpis', 'index.html');
 
   /* 1. THE LENS ITSELF. 'money' is one of the six reasons the queue
         narrows by, and it is the one the retired door lands on. */
@@ -301,13 +325,23 @@ if (scope) {
         checks the lines add to the balance BEFORE the demand goes. It is
         drawn from row.chase.invoices -- debtChaseInvoices, the same
         reading the message itself is written from. */
-  t.check(/What the message quotes/.test(contact)
-    && /ch\.invoices\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(contact),
+  /* It has its own builder now -- msgQuotedHTML, a card on the panel --
+     because the pane it was a block inside is deleted. Same reading,
+     same source, and it is on the card the send button is on, which is
+     the whole point of it. */
+  const quoted = extractFunction(src, 'msgQuotedHTML', 'index.html');
+  t.check(/What the message quotes/.test(quoted)
+    && /\(ch\.invoices\|\|\[\]\)\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(quoted),
     'the invoices behind the demand are on the client’s card, so the arithmetic can be read before it is sent');
-  t.check(/class="ow-tbl-f"><div class="ow-tbl-c">Balance/.test(contact),
+  t.check(/om-qline-f[\s\S]{0,160}Balance/.test(quoted),
     'ending with the balance they add to, which is what makes it a check rather than a list');
-  t.check(/The invoices on file add up to more than this balance/.test(contact)
-    && /No invoice stands behind this balance/.test(contact),
+  /* The two reasons a breakdown cannot be quoted. One of them -- the
+     carried balance -- is the case the second handoff draws, and it is
+     said twice on purpose: on the panel's amber block where the decision
+     is made, and here where the table would otherwise be. */
+  t.check(/The invoices on file add up to more than this balance/.test(quoted)
+    && /No invoice stands behind this balance/.test(quoted)
+    && /No invoice stands behind this balance/.test(side),
     'and where they do NOT stand behind the balance it says which of the two reasons it is — the same two '
     + 'the message itself distinguishes, rather than printing a breakdown the shop cannot stand behind');
 
@@ -319,8 +353,36 @@ if (scope) {
   t.check(/chase\.promised\.forEach/.test(heldRows) && /chase\.resting\.forEach/.test(heldRows)
     && /chase\.blocked\.forEach/.test(heldRows),
     'the promised, resting and held-back accounts are all still named rather than dropped');
-  t.check(/fup-held-promise/.test(held) && /fup-held-unpromise/.test(held) && /fup-held-again/.test(held),
-    'with the acts they need: a different day, a day they never named, and a chase that can be repeated');
+  /* THE HELD-BACK BAND'S THREE PROMPTS went with it, and what replaced
+     them is not a smaller version of the same thing -- it is the other
+     way up. Those prompts acted on somebody who was NOT on screen: a
+     name in a band, a browser prompt, a date typed blind. The panel acts
+     on the person in front of you, so "They promised a date" is a field
+     on their own card and the reasons they are held are read on their
+     row above the list.
+
+     What must survive is that a hold is READABLE and REVERSIBLE, and
+     both are checked here rather than assumed. */
+  t.check(/esc\(h\.reason\)/.test(heldRow) && /lifts \$\{esc\(msgDay\(h\.until\)\)\}/.test(heldRow),
+    'every held row carries the reason and the day it lifts, which is the whole of what a hold is');
+  /* The act moved off the row's own template and into msgHeldActHTML,
+     because a held row has THREE possible acts and only one of them is
+     Lift: an owner's hold lifts, a promise can be given a different day,
+     a rested account can be asked again today, and an engine's hold has
+     no act at all. Four branches inline in the row was the row's markup
+     arguing with itself. The claim is the same claim -- an owner's hold
+     is reversible from the row, an engine's names whose it is -- and it
+     is checked at both addresses so neither half can quietly go. */
+  const heldAct = extractFunction(src, 'msgHeldActHTML', 'index.html');
+  t.check(/h\.own/.test(heldAct) && /data-msglift=/.test(heldAct),
+    'the owner\'s own holds can be lifted from the row');
+  t.check(/the engine, not you/.test(heldRow),
+    'and an engine\'s says whose it is — the rule is the thing to change');
+  t.check(/\$\{msgHeldActHTML\(h\)\}/.test(heldRow),
+    'with the act drawn on the row itself rather than behind a tap, because a hold argues with a row and is read beside it');
+  t.check(/addPaymentPromise\(r\.customerId, on, amt/.test(side)
+    && /msg_prom_set/.test(extractFunction(src, 'msgPanelFormHTML', 'index.html')),
+    'and a day they named is written down on their own card, where the conversation just happened');
   t.check(/promiseId: r\.promise\.id/.test(heldRows),
     'the promise carries its own id, so "They did not say that" removes the row it is standing on');
 
@@ -339,41 +401,90 @@ if (scope) {
         short label the approved canvas gives all five; and the help says
         where the book is, so the division the app states in three other
         places is readable and not merely true. */
-  t.check(/tile\('Money', 'money', n\('money'\) \? 'past your terms'/.test(summary),
-    'the Money tile keeps the canvas’s own sub, in the shape the other four wear');
-  t.check(!/moneyOwed|moneyNote/.test(contact) && !/moneyOwed/.test(summary),
+  /* The five-tile strip is gone with the pane; three cards replace it,
+     and the Money reading is the first of them. It says what is riding
+     on the queue and how far past terms the worst of it is -- both
+     readings OF THIS QUEUE -- and nothing about the book. */
+  t.check(/past your terms/.test(kpis) && /riding on/.test(kpis),
+    'the Money card says what is at stake in this queue and how late it is, and nothing wider');
+  t.check(!/moneyOwed|moneyNote/.test(side) && !/moneyOwed/.test(kpis),
     'and no total is worked out over this queue — a position over a subset is a position nobody can trust');
-  const sect = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-  t.check(/what the whole book comes to, and how much of it is old, is <b>Debtors<\/b>/.test(sect),
+  /* THE SAME CLAIM AT TWO NEW ADDRESSES, and both moved for a reason.
+     The SECTION is tab-messages: Follow-ups and WhatsApp were merged, so
+     there is no tab-followups to look in and this lookup found nothing
+     rather than finding a line that had gone. And the reading it points
+     at is no longer called Debtors -- Debtors was cut and is the Owing
+     lens on Customers now, so a note still sending the owner to Debtors
+     would name a screen the rail does not have. What the assertion
+     means is unchanged and is the only thing that matters: this queue is
+     a SUBSET, it says so, and it says where the whole book is read. */
+  const sect = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing<\/b>/.test(sect),
     'the money lens names where that reading does live, rather than leaving the owner to wonder why it is not here');
+  /* And it is the MONEY lens's alone. Under Telling there is no book of
+     news for it to point at, so a note that stayed up would be a
+     pointer to nothing. */
+  t.check(/book\.hidden = msgLens !== 'money'/.test(extractFunction(src, 'renderMessages', 'index.html')),
+    'and only under the lens it is about');
 
-  /* 5. THE TWO RULES. They were a sentence and a fold-out form in the
-        old header. They are fields in THIS screen's header now, beside
-        Quiet after, which is where this screen has always kept the one
-        rule it turns on -- so being fields is one tap fewer than the
-        fold-out was, and the three rules of the screen are one group.
-        On screen only under the lens they decide: they settle nothing
-        under any other, and three rule fields do not fit a phone header.
-        Read on Did it work whatever lens is open, so choosing the lens
-        is never the only way to find out what the rule is. */
-  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-  t.check(/id="fup_chase_after"/.test(sec) && /id="fup_chase_rest"/.test(sec)
-    && /class="fup-rules"/.test(sec),
-    'the two rules the queue obeys are fields in the header, grouped with the rule that was already there');
-  const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(/fupTab === 'contact' && fupWhy === 'money'/.test(render) && /field\.hidden = !moneyLens/.test(render),
-    'and they are on screen only while the lens they decide is the one being read');
-  /* The layer's own field paints, so [hidden] alone could not hide it --
-     the trap css-class-hooks exists for, and the companion it demands. */
-  t.check(src.indexOf('.ow-f[hidden]{display:none;}') > src.indexOf('.ow-f{display:flex'),
-    'with the [hidden] companion that lets a field actually hide, written after the rule it outranks');
+  /* 5. THE THREE RULES, AND WHERE THEY ENDED UP.
+
+        They began as a sentence and a fold-out form in a console header.
+        They became three fields in that header. The second handoff
+        deletes the tab that header belonged to, and puts the one rule it
+        names -- Quiet after -- on a button in the list card's own header,
+        "beside the list it changes", because as a page-level field it
+        read as the first question the screen asked.
+
+        The other two ride with it. The handoff names only Quiet after
+        and says nothing about Chase after and Rest between; once the tab
+        is gone those two have no other home, and they are the same class
+        of thing -- the numbers that decide who is in this list -- so
+        scattering them would be worse than grouping them. That is a
+        deviation and it is recorded in the paper.
+
+        What is asserted is what was always asserted: three NUMBERS the
+        owner can change, in one place, beside the work they govern --
+        and now, additionally, each with the sentence that says what it
+        does, because a bare field labelled "Quiet after" is a number
+        nobody can set with any confidence. */
+  t.check(/id="msg_rules_btn"/.test(sect) && /id="msg_rules_menu"/.test(sect)
+    && /id="msg_quiet_n"/.test(sect),
+    'Quiet after is a control in the list card header, beside the list it changes');
+  const rules = extractDeclaration(src, 'MSG_RULES', 'index.html');
+  t.check(/'fup_quiet'/.test(rules) && /'fup_chase_after'/.test(rules) && /'fup_chase_rest'/.test(rules),
+    'and the two rules the money queue obeys are in the same menu, which is the only home left them');
+  t.check(/presetFollowUp\.quietDays/.test(rules) && /presetChaseAfterDays/.test(rules)
+    && /presetChaseRestDays/.test(rules),
+    'each writing the number it has always written');
+  /* THE SENTENCE BESIDE EACH. The old fields had a label and a unit and
+     nothing else, so what a number DID was knowable only by changing it
+     and watching the list. */
+  t.check((rules.match(/How long|How far/g) || []).length >= 3,
+    'and each says what it does, so it can be set without experimenting on the queue');
+  /* NOT BOUND ONE BY ONE ANY MORE, and that is forced rather than
+     chosen: the fields are drawn by a menu, so they do not exist at
+     parse time. One delegated listener on the section hears all three,
+     and the section is the thing that is always there. */
+  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+  t.check(/const RULE_KEYS = \{/.test(wire) && /RULE_KEYS\[e\.target\.id\]/.test(wire),
+    'bound by one delegated listener, because a field a menu draws is not there at parse time to bind');
+  t.check(/v >= rule\.min \? v : rule\.fallback/.test(wire),
+    'and a figure below its floor falls back to what the app shipped with, never to a silent zero');
+  /* Still written down in full where every other rule of this screen is. */
   t.check(/Money is asked for after/.test(extractFunction(src, 'renderFollowUpScore', 'index.html'))
     && /And nobody is asked twice inside/.test(extractFunction(src, 'renderFollowUpScore', 'index.html')),
     'and both are written down where every other rule of this screen is');
-  t.check(/\['fup_chase_after', 'presetChaseAfterDays', 7\], \['fup_chase_rest', 'presetChaseRestDays', 3\]/.test(
-      extractFunction(src, 'wireFollowUpsScreen', 'index.html')),
-    'bound once at parse time, as the rule beside them is — they sit in the static header, not in the '
-    + 'region that redraws, so there is nothing for a delegated listener to survive');
+
+  /* 6. AND THE TAB THEY SAT ON IS GONE. Not hidden -- gone: a tab bar
+        directly above the lens row asked twice what you were looking at,
+        and the register in its other half drew the same people this list
+        draws. Two renderings of one queue is the Debtors bug in
+        miniature, and this app has made that cut once already. */
+  t.check(!/data-fuptab/.test(src) && !/id="fup_tabs"/.test(src),
+    'the second tab is deleted, not restyled — the lens row is the only navigation on this screen');
+  t.check(!/id="fup_contact_pane"/.test(src) && !/id="fup_all_pane"/.test(src),
+    'and its two panes with it');
 
   /* THE SPARE PARTS ARE GONE. Four screens wore them because they were
      there. A dead rule in the stylesheet is how a fifth ends up in one. */

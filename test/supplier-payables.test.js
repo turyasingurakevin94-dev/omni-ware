@@ -357,8 +357,24 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
      document is drawn, struck through, and counted towards nothing. */
   t.check(totalsBlock('renderPurchaseInvoices', 'invoices\\.forEach\\(pi=>\\{\\s*\\n\\s*if\\(pi\\.voided\\) return;'),
     'the Purchase Invoices totals row skips voided invoices');
-  t.check(totalsBlock('renderInvoices', 'invoices\\.forEach\\(q=>\\{\\s*\\n\\s*if\\(q\\.voided\\) return;'),
-    'the Invoices totals row skips voided invoices');
+  /* Invoices moved to the card system, and with it the WAY this rule is
+     kept -- which is why this assertion changed shape while the rule did
+     not. There is no longer a row loop with an if(q.voided) return guard
+     in it: renderInvoices partitions every document into overdue / open /
+     settled / voided up front, and renderInvoiceKpis is handed that
+     partition and never reads the voided bucket.
+
+     That is a STRONGER guarantee than the guard it replaces. A guard is
+     one line somebody can delete and the totals keep summing; a bucket
+     the totals function never mentions cannot be added back by accident.
+     So what is checked here is the absence: the strip builder does not
+     touch byState.voided. The rule is unchanged -- a voided document is
+     drawn, struck through, and counted towards nothing. */
+  const kpis = extractFunction(adminSrc, 'renderInvoiceKpis', 'index.html');
+  t.check(!/byState\.voided/.test(kpis),
+    'the Invoices totals are built without ever reading the voided bucket');
+  t.check(/byState\.overdue/.test(kpis) && /byState\.open/.test(kpis) && /byState\.settled/.test(kpis),
+    'and are summed from the other three, so the exclusion is structural rather than a guard');
 }
 {
   // Run the real builder rather than matching source, so the marking has to

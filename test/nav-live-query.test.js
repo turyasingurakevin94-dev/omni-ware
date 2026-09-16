@@ -97,7 +97,7 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const navs = [...src.matchAll(/<nav[^>]*>/g)].map(m => m[0]);
   t.check(navs.some(n => /mobile-bottomnav/.test(n)),
     'the phone\'s bottom bar is a <nav>, which is why the one selector covers it');
-  const sidebar = src.slice(src.indexOf('<aside class="sidebar"'), src.indexOf('</aside>', src.indexOf('<aside class="sidebar"')));
+  const sidebar = src.slice(src.indexOf('<aside class="sidebar'), src.indexOf('</aside>', src.indexOf('<aside class="sidebar')));
   t.check(/<nav>/.test(sidebar), 'and the sidebar\'s rows live in a <nav> too');
   /* A FLOOR, so that a rail which quietly lost half its rows to a bad
      edit fails here. It is not a promise that no row ever moves: rows
@@ -108,7 +108,20 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
      Forecasts, so the rail went 37 -> 35 and the floor 35 -> 33. What
      the check still means is that every destination is ON the rail
      rather than behind a menu, which is the claim that matters. */
-  t.check((sidebar.match(/data-tab=/g) || []).length > 33,
+   /* And 33 -> 32 when Debtors left: it was a second list over the same
+      people, and every one of its ten call sites already called
+      renderCustomers on the line above. It is the Customers screen's
+      Owing lens now, and resolveTab('debtors') opens it with that lens
+      armed, so the destination is still reachable -- it is just not a
+      separate destination any more. */
+  /* And 32 -> 31 when WhatsApp and Follow-ups became Messages. Neither
+   was usable alone: Follow-ups is the list of people you owe a word,
+   already tagged with a reason, and its only action was to open the box;
+   WhatsApp is the box, and its only content came from the list. The nav
+   index had already recorded the confusion -- the obvious search for
+   Follow-ups is "broadcast", which belonged to WhatsApp. One screen, one
+   rail row, one badge. */
+t.check((sidebar.match(/data-tab=/g) || []).length > 31,
     `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — none of them behind a menu`);
 }
 

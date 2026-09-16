@@ -51,7 +51,13 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpHubRows', 'followUpHubDigest', 'fupHubRowsNow', 'recordFollowUpClient',
   'unrecordFollowUpClient', 'briefPlainLine', 'debtChaseMessage',
   'followUpBoughtSince', 'followUpAlreadyBought', 'hubScoreboard', 'hubScoreLabels', 'moneyWhy',
-  'followUpHeldBack', 'fupChasedWords'];
+  'followUpHeldBack', 'fupChasedWords',
+  /* THE OWNER'S OWN HOLD, which followUpHubRows now reads. It is in this
+     list rather than stubbed because the queue and the rail badge are the
+     same walk, and a hold that took somebody out of one and not the other
+     would be the Debtors bug again -- so the real function is the one
+     under test here, not a stand-in that always says no. */
+  'msgHolds', 'msgHoldOf', 'msgHoldPut', 'msgHoldLift', 'msgPruneHolds', 'msgHeldRows'];
 
 let nextId = 1;
 let scope = null, err = null;
@@ -366,39 +372,38 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   t.check(/promisedOn: \(r\.payload && r\.payload\.promisedOn\) \|\| null/.test(code)
     && /payload: \{contacts: f\.contacts\|\|\[\], promisedOn: f\.promisedOn\|\|null\}/.test(code),
     'the promised day rides in the payload column — no migration, and a shop without it reads null');
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  t.check(/class="btn btn-ghost ow-sm fup-tel" href="tel:/.test(contact),
+  /* THE PANE IS DELETED. These six acts were on its card and are on the
+     recipient panel; each is checked there, and the two that are not
+     rebuilt are named rather than quietly dropped. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  /* RING IS STILL THE OWNER'S OWN THUMB. It was a tel: anchor on the
+     card; it is a button that records the attempt first and then opens
+     the dialler, because the dialler leaves the page and may not come
+     back -- and the frame asks for the attempt to be on the record, so
+     the history reads as attempts rather than as messages only. Nothing
+     is sent either way. */
+  t.check(/window\.open\('tel:' \+ String\(r\.phone\|\|''\)/.test(side),
     'Ring is a tel: link — the owner’s own thumb, the only kind of sending allowed');
-  /* THE PICTURE IS LOOKED AT BEFORE IT IS SENT. This used to pin
-     `fup-picture`, a bare "Send the picture" button whose whole job was
-     to call shareBrief -- a price list built from the client's own
-     dealings, leaving the shop, that the owner had never seen. The claim
-     the old assertion made is unchanged (the picture is reachable from
-     the card); what changed is that reaching it now shows it. */
-  t.check(/fup-pay/.test(contact) && /fup-promise/.test(contact) && /fup-when/.test(contact)
-    && /fup-edit/.test(contact) && /fup-lead/.test(contact) && /fup-see-picture/.test(contact),
-    'a payment, a promise, a day, the qty, the lead and the picture are all reachable from the card');
-  /* ONE BUILDER, TWO DISPOSITIONS. The panel is still the account
-     screen's -- that is the whole point, and a second copy of
-     briefStripHTML would be free to show a filmstrip the picture does
-     not match. What is new is the argument: an account is a place to
-     READ and keeps the reasoning open, while this is a place to ACT and
-     folds it behind a link, because eight lines of argument between the
-     picture and Send are read once and scrolled past every morning
-     after. Asserted as the option rather than the bare call, so the fold
-     cannot quietly become a second panel. */
-  t.check(/customerBriefPanelHTML\(cid, \{fold: true/.test(contact) && !/fup-picture"/.test(contact),
-    'and the picture is the SAME panel the client’s account draws — one builder, so the filmstrip approved here and the one there can never say different things');
-  const why0 = extractFunction(src, 'briefWhyHTML', 'index.html');
-  t.check(/opts && opts\.fold/.test(why0) && /ow-bn-watch/.test(why0) && /fup-see-why/.test(why0),
-    'and the folded form still leaves the amber weigh-before-you-send block on the surface — a warning behind a link is a warning nobody reads');
+  t.check(/recordFollowUpClient\(r\.customerId[\s\S]{0,120}window\.open\('tel:/.test(side),
+    'and it records the attempt BEFORE it dials, since the dialler may never hand the page back');
+  /* WHAT IS REACHABLE FROM THE CARD. A payment and a promise are on it;
+     Their follow-up list is where a day, a quantity and a note are set
+     now that the inline editors went with the pane; the two picture acts
+     are on a telling row. The lead door and the in-app picture PREVIEW
+     are not rebuilt and are recorded in the paper -- named here so the
+     next reader does not have to find that out by looking. */
+  t.check(/fup-pay/.test(side) && /data-msgform="promise"/.test(side)
+    && /fup-record/.test(side) && /data-tell="share"/.test(side) && /data-tell="save"/.test(side),
+    'a payment, a promise, their follow-up list and the two picture acts are all reachable from the card');
+  t.check(!/fup-see-picture/.test(src) && !/fup-picture"/.test(src),
+    'and the in-app preview is GONE rather than half-wired — the acts produce the image, and the paper says the preview wants a frame');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
-  t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire) && /addPaymentPromise\(/.test(wire)
-    && /openSourcingLead\(/.test(wire) && /shareBrief\(/.test(wire),
+  t.check(/openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire)
+    && /addPaymentPromise\(/.test(side) && /shareBrief\(/.test(wire),
     'each through the door that page already uses, never a copy of it');
-  t.check(/unrecordFollowUpClient\(fupLastTold\)/.test(wire), 'and "it did not go" undoes every stamp, not only ours');
-  t.check(/data-tell/.test(wire) && /saveBriefGif\(/.test(wire) && /undoBriefSent\(/.test(wire),
-    'the picture panel’s own Share, Save and Undo are wired on the ids it already uses, rather than a second vocabulary for one panel');
+  t.check(/unrecordFollowUpClient/.test(src), 'and "it did not go" undoes every stamp, not only ours');
+  t.check(/data-tell/.test(wire) && /saveBriefGif\(/.test(wire),
+    'the picture panel’s own Share and Save are wired on the ids it already uses, rather than a second vocabulary for one panel');
   t.check(/fupLeave\(\)/.test(extractFunction(src, 'goToTab', 'index.html')),
     'leaving the tab forgets an open chat — a stale "WhatsApp is open with these words" was greeting people a day later');
   /* THE LENS MOVED FROM A CHIP ROW TO THE STRIP. It was six .ow-seg-b
@@ -407,9 +412,13 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      unchanged (the queue can be narrowed by why) and now points at the
      five tiles, which were already saying those words with those
      figures. */
-  const summary0 = extractFunction(src, 'renderFollowUpSummary', 'index.html');
-  t.check(!/data-fupwhy/.test(contact) && /data-fupwhy=/.test(summary0),
-    'the queue can be narrowed by why, from the strip rather than a chip row beneath it');
+  /* AND THE LENS MOVED AGAIN, from the strip to the screen's own lens
+     row. The strip is gone with the pane -- four of its five figures
+     read 0 -- so the narrowing is where the second handoff puts it: the
+     three lenses above the list, which are the only navigation on this
+     screen. */
+  t.check(!/data-fupwhy/.test(src) && /data-msglens="money"/.test(src) && /data-msglens="telling"/.test(src),
+    'the queue can be narrowed by why, from the lens row rather than a strip or a chip row beneath it');
   t.check(/\$\{waiting\}/.test(extractFunction(src, 'productLineHTML', 'index.html'))
     && /pgAskers = waAskersByProduct\(\);/.test(extractFunction(src, 'renderProducts', 'index.html')),
     'the products register says who is waiting, read once per render');
@@ -466,13 +475,30 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      one view: the grouped table, and these panels in the 304px rail.
      renderFollowUpScore still exists and still owns every claim below --
      it returns the rail rather than writing a pane of its own. */
-  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  /* The hub is the Messages screen's queue now: WhatsApp and Follow-ups
+     were never usable apart, and its panes, its two views and its chase
+     timing all moved into that section intact. */
+  const sec = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
-  const all0 = extractFunction(src, 'renderFollowUpsAll', 'index.html');
-  t.check(/ow-side/.test(all0) && /renderFollowUpScore\(\)/.test(all0),
-    'and it is the register’s rail, drawn beside the history it measures rather than in a tab of its own');
+  /* ONE VIEW. The second handoff deletes the tab bar outright: it sat
+     directly above the lens row, so the screen asked twice what you were
+     looking at, and the register in its other half drew the same people
+     the queue draws. Two renderings of one queue is the Debtors bug in
+     miniature and this app has made that cut once already. What the
+     register was is a GROUP in this one list now, and the assertion
+     inverts with it: there are no view tabs at all. */
+  t.check(!/class="ow-seg-b/.test(sec) && !/data-fuptab/.test(sec),
+    'one view — the register is a group in the queue, not a tab beside it');
+  /* And the measurement followed the record rather than the tab. It was
+     the register's own rail, drawn beside the history it measures; the
+     register is the Sent group now, which has no rail, so it takes the
+     panel while that group is open and nothing is picked -- which is the
+     moment somebody is asking "did any of this work" rather than "what
+     do I write to this person". */
+  const msgs = extractFunction(src, 'renderMessages', 'index.html');
+  t.check(/msgShowSent && msgPickedId == null/.test(msgs) && /renderFollowUpScore\(\)/.test(msgs),
+    'and it is drawn beside the history it measures rather than in a tab of its own');
   const score = extractFunction(src, 'renderFollowUpScore', 'index.html');
   t.check(/briefsSentTable/.test(score) && /0091_briefs_sent\.sql/.test(score),
     'the record-keeping table is named when it is missing — that warning had no other home once Worth telling went, and without it recordBriefSent fails into a toast nobody keeps');
@@ -488,9 +514,21 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      what stays beside the other rates is the row. */
   t.check(/Money<\/span><span class="ow-sr-v ow-warn">not counted/.test(score),
     'money is named as not counted, in the list of rates, rather than left out of it');
-  const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(!/fupTab==='score'/.test(render) && /renderFollowUpSummary\(\);/.test(render),
-    'and the strip is drawn on every render rather than hidden on one view');
+  /* THE FIVE-TILE STRIP IS GONE, and that is the second handoff's own
+     finding rather than a loss: four of its five figures read 0, and two
+     of the five -- "To message 1" and "Money 1" -- were the same single
+     obligation counted twice. Five figures of which four are nought
+     teach a person to stop reading figures. Three cards replace it, and
+     the rule they obey is the thing to hold: a count that would read 0
+     is replaced by the reading that makes it good news, and an
+     obligation is counted ONCE. */
+  const kpis = extractFunction(src, 'renderMessageKpis', 'index.html');
+  t.check(/Everything else is clear/.test(kpis) && /Also waiting/.test(kpis),
+    'the counts that would read 0 are folded into one sentence, and named only when they are not 0');
+  t.check(/om-kpi-w/.test(kpis) && !/om-kpi-f[\s\S]{0,400}Everything else is clear/.test(kpis),
+    'and that card carries a reading rather than a figure — a 0 on it would put back what it was made to remove');
+  t.check(/>\$\{rows\.length\}</.test(kpis),
+    'the obligation is counted once, as people rather than as reasons — the lens above says which kind it is');
   t.check(/Worth telling/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
     'the absorbed screen’s name is still spoken, on the lens that narrows the queue by why');
 }

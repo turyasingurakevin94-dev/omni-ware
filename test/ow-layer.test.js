@@ -44,11 +44,25 @@ const MARK = 'THE OW LAYER';
 const markAt = src.indexOf(MARK);
 const start = src.lastIndexOf('/*', markAt);   /* the banner's own opener, so the strip below terminates */
 const styleEnd = src.indexOf('\n</style>\n');
+/* THE OM LAYER ENDS THIS ONE.
+ *
+ * The 2026 card system was appended after the console layer, so "to the
+ * end of the stylesheet" stopped meaning "the console layer" the day it
+ * landed and started meaning both systems at once. Every check in this
+ * file — the namespace, the palette, the ramp — would then be asked
+ * whether the console's rules hold of a layer that was written to
+ * replace them, and would answer no about work that is correct.
+ *
+ * So the layer ends where the next one begins. The OM layer has its own
+ * gate, at the foot of design-system.test.js, and it is the stricter of
+ * the two. */
+const omAt = src.indexOf('THE OM LAYER');
+const layerEnd = omAt > 0 ? src.lastIndexOf('/*', omAt) : styleEnd;
 t.check(markAt > 0 && start > 0, 'the layer is in the stylesheet, under its own banner');
-t.check(styleEnd > start,
-  'and it sits at the END of it — so adding it moved no line number above');
+t.check(layerEnd > start,
+  'and it runs from its banner to wherever the next system starts');
 
-const layer = src.slice(start, styleEnd);
+const layer = src.slice(start, layerEnd);
 const before = src.slice(0, start);
 /* Comments carry prose about selectors; stripping them first keeps the
    scan honest rather than matching an example in a sentence. */

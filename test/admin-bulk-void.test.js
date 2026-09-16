@@ -123,8 +123,17 @@ if (fns) {
     rendered = [];
     setInvoicesVoided(store.savedQuotes, true);
     t.check(rendered.includes('invoices'), 'the Invoices list is redrawn');
-    t.check(rendered.includes('customers') && rendered.includes('debtors'),
-      `and so are the two screens that show the balance (${rendered.join(', ')})`);
+    /* ONE screen shows the balance now, not two. Debtors was a second
+       list over the same people and every one of its ten call sites
+       already called renderCustomers on the line above -- this test's own
+       setup stubbed both, which is the shape of the bug: two renderers
+       that had to be remembered together. The merge makes it one call,
+       so what is checked is that it happens and that the second one is
+       gone rather than merely unstubbed. */
+    t.check(rendered.includes('customers'),
+      `and so is the screen that shows the balance (${rendered.join(', ')})`);
+    t.check(!rendered.includes('debtors'),
+      'and there is no second list left to forget');
   }
 
   /* ---------- 5. an invoice with no customer does not throw -------- */

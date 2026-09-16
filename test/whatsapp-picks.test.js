@@ -693,15 +693,26 @@ const THU = '2026-08-06', MON = '2026-08-03';
   /* waInboxEnter draws every panel once it knows whether the number is
      linked. Drawing the rail before that answer arrives showed a shop
      its daily post above a desk it had not connected. */
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src), 'the tab renders on entry')
+  /* THE TAB IS 'messages'. WhatsApp and Follow-ups merged -- neither
+     was usable alone, and the desk this file tests is the Posting lens
+     of the merged screen now. The claim is untouched: entry must go
+     through waInboxEnter, because drawing the rail before the app knows
+     whether the number is linked showed a shop its daily post above a
+     desk it had not connected. The old door still opens it and lands on
+     this lens, which admin-nav checks. */
+  t.check(/if\(tab==='messages'\)\{ waInboxEnter\(\); renderMessages\(\); \}/.test(src), 'the tab renders on entry')
   /* The inbox grew an intelligence of its own -- the autonomy ledger
      and the vocabulary -- so entry now draws five panels, not three. */
   t.check(/waRenderInbox\(\);\n  renderWaInsights\(\);\n  waRenderHeadline\(\);\n  renderWhatsApp\(\);\n  waRenderAnswering\(\);\n  waRenderWords\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
     'and entry draws the queue, the strip, the headline and every panel on both sides');
   /* One rail entry is enough now: the phone sheet is generated from the
      rail, so a screen listed once is reachable on both. Counting two
-     copies was counting the duplicate that has since been removed. */
-  t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 1,
+     copies was counting the duplicate that has since been removed.
+     The row is Messages', since this desk is its Posting lens -- and
+     the row is where its search words went, so nobody typing
+     "broadcast" or "post" loses the desk. */
+  const rail = (src.match(/data-tab="messages"/g) || []).length;
+  t.check(rail >= 1 && /data-tab="messages"[^>]*data-keywords="[^"]*\bposting\b/.test(src),
     'on the rail, which is what the phone sheet is built from');
 
   const posted = (/wp_posted'\)\.addEventListener\('click', \(\)=>\{[\s\S]*?\n\}\);/.exec(src) || [''])[0];
