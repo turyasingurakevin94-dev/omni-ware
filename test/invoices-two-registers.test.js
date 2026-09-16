@@ -103,8 +103,24 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
   t.check(/classList\.toggle\('btn-accent', sales\)/.test(side)
     && /classList\.toggle\('btn-ghost', !sales\)/.test(side),
     'the one accent follows the lens: the printed sheet on Sales, quiet on Purchases');
-  t.check((sec.match(/btn-accent/g) || []).length === 1,
-    'and the screen carries exactly one of them in its markup');
+  /* THE ONE ACCENT IS STILL ONE, and it is still spent on the lens that
+     has something to do next -- but it is no longer in the markup to be
+     counted there. The sales side is the card system's: its accent is the
+     coral .om-btn-p on the picked invoice's panel ("Draft the chase"),
+     drawn by renderInvoiceSide, and the section's own markup carries no
+     accent at all. Print list, which used to wear it, has no home in the
+     card design and is kept hidden; printing one document is on the
+     panel's overflow menu.
+
+     So the claim is unchanged and checked in two halves: nothing in the
+     markup wears the console accent, and the panel spends exactly one. */
+  t.check((sec.match(/btn-accent/g) || []).length === 0,
+    'the sales side carries no console accent in its markup — it is on the card system');
+  {
+    const side = extractFunction(src, 'renderInvoiceSide', 'index.html');
+    t.check((side.match(/om-btn-p/g) || []).length === 1,
+      'and the panel spends exactly one, on the one thing there is to do next');
+  }
 }
 
 /* ---------- 4. following the link, and getting back ----------------- */

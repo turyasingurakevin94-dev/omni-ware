@@ -992,7 +992,13 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    fault the console's own entry was written to stop. */
                 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-tbl', 'ow-tbl-h',
                 'ow-tbl-r', 'ow-tbl-g', 'ow-mt', 'ow-cp'],
-      uses: ['om-screen', 'om-top', 'om-crumb', 'om-find', 'om-find-i', 'om-keycap', 'om-face',
+      /* No om-top here, and that is deliberate rather than unfinished: the
+         handoff draws its 58px bar as part of the screen, but the app
+         already draws one above every screen, and a second stacks two
+         breadcrumbs and two search boxes. Converting the global bar is
+         shared chrome for all four Sell screens at once. The screen's own
+         search sits in the register's header instead, on .om-find. */
+      uses: ['om-screen', 'om-find', 'om-find-i',
              'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens', 'om-lenschip',
              'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
              'om-cols', 'om-cols-l', 'om-col', 'om-scroll', 'om-side', 'om-ph-head', 'om-ph-only'],

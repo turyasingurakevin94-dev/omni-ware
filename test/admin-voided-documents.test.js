@@ -120,19 +120,33 @@ const INV = (over = {}) => ({
     'and is not one of a customer\'s outstanding invoices');
   // Summed in its own pass since the table was paged, so that the total
   // describes the range and not the page. Same rule, different place.
-  /* The guard is what this checks and it is unchanged. The tail moved:
-     the balance is summed CLAMPED now, because an overpaid invoice is
-     not negative debt and one of them used to drive the whole range's
-     "Still open" below zero -- the same fault invoiceBalanceDue() was
-     clamped for, and the reason Debtors and this screen agree. */
-  t.check(/if\(q\.voided\) return;[\s\S]{0,200}totalAmt \+= total; totalPaid \+= paid; totalDue \+= Math\.max\(0, total - paid\);/.test(code),
-    'the Invoices tab leaves a voided invoice out of its totals');
+  /* Same rule, kept a different way since Invoices became a card
+     screen. The clamp has not gone anywhere -- it is inside
+     invoiceBalanceDue(), which every figure on the screen now goes
+     through, so an overpaid invoice still cannot drag a range's open
+     balance below zero. What has gone is the local accumulator that
+     restated the same arithmetic; there is one copy of it in the file and
+     admin-agent-prepay.test.js is the test that holds it to one. */
+  t.check(/function invoiceBalanceDue\(q\)\{\s*\n\s*return Math\.max\(0, savedQuoteTotal\(q\) - \(Number\(q\.amountPaid\)\|\|0\)\);/.test(code),
+    'the balance every Invoices figure is summed from is clamped at zero');
+  t.check(/byState\[invStateOf\(q\)\]\.push\(q\)/.test(code)
+       && /voided:\s*\[\]/.test(code),
+    'and a voided invoice goes to a bucket of its own, so the totals leave it out');
   /* Both ledgers, because the supplier side carried the identical
      fault and Creditors clamps the same way Debtors does. */
   t.check(!/totalDue \+= total - paid;/.test(code),
     'and neither ledger sums a balance unclamped — an overpaid document is not negative debt');
-  t.check(/if\(hideVoided\) invoices = invoices\.filter\(q=>!q\.voided\);/.test(code),
-    'while still being able to LIST it, which is why that list is not a bug');
+  /* Still listable, and now more plainly so. The old mechanism was a Hide
+     voided checkbox, on by default, which meant a cancelled document was
+     reachable only by remembering the checkbox existed. The card screen
+     gives it a lens of its own with its own count in the tab, so the
+     register says how many there are before you go looking. Kept, never
+     deleted, remains the rule; what changed is that the screen now
+     volunteers them. */
+  t.check(/data-lens="voided"/.test(code),
+    'while still being able to LIST it — voided has a lens of its own, with its count in the tab');
+  t.check(/groups = \[\{key:'voided', rows:byState\.voided\}\]/.test(code),
+    'and that lens draws the voided bucket, which is why that list is not a bug');
 }
 
 process.exit(t.done() ? 1 : 0);

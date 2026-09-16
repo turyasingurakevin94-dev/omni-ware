@@ -168,10 +168,18 @@ if (s) {
      naming the order -- with the one pressed open. revealPurchaseInvoice
      is still the fallback for a bill with no order behind it, which is
      every restock (generatePurchaseInvoiceForRestock sets quoteId: null). */
-  t.check(/wrap\.querySelectorAll\('\[data-pi\]'\)[\s\S]{0,460}revealBillsForOrder/.test(code),
+  /* The binding moved from each pill to the row that holds them: the card
+     register listens once per row and asks what was pressed, because a row
+     is now a document you can open as well as a set of links. Both paths
+     are unchanged and both are still here -- the order's bills when there
+     is an order, the single bill when there is not. */
+  t.check(/pill\.dataset\.pi[\s\S]{0,460}revealBillsForOrder\(order\.id\)/.test(code),
     'the order card wires its forward links to the order they belong to');
-  t.check(/wrap\.querySelectorAll\('\[data-pi\]'\)[\s\S]{0,460}revealPurchaseInvoice/.test(code),
+  t.check(/revealBillsForOrder\(order\.id\); \}\s*\n\s*else revealPurchaseInvoice\(piId\)/.test(code),
     'and falls back to the single bill when there is no order behind it');
+  /* And the pressed bill is the one that opens, not merely the order. */
+  t.check(/piOpenId = piId; revealBillsForOrder\(order\.id\)/.test(code),
+    'with the bill that was pressed already open under the crumb');
   const focus = (/function revealBillsForOrder\([\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/invFocusOrderId = q\.id/.test(focus) && !/inv_doc_search/.test(focus),
     'it sets a focus rather than typing into the shared bar, so the Sales list it left is untouched');

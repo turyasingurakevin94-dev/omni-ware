@@ -293,3 +293,79 @@ drift into the other.
 
 What should **not** happen is a partial conversion inside one screen. A screen is
 on one system or the other.
+
+---
+
+## 8. Where the built screens knowingly differ from the frames
+
+Found while building, not guessed at. Each is a decision with a reason; any of
+them can be overruled, and the first two are the ones most worth a designer's
+opinion.
+
+### 8.1 The 58px top bar is the app's, not the screen's
+
+The frames draw a white 58px bar carrying `Sell › Invoices`, the search field
+with its `Ctrl K` cap, the stage chips and the avatar — and they draw it inside
+the screen. **The app already draws a top bar above every screen.** Building the
+frame's bar as part of Invoices produced two stacked bars with two breadcrumbs
+and two search boxes; it was removed the moment it was looked at.
+
+So the screen's own search sits in the register's card header, beside what it
+filters, which is where this screen kept it before. **What is actually needed is
+one conversion of the app's global bar to the card system, covering all four
+Sell screens at once** — it is shared chrome, not screen work, and it needs to
+keep the global search and the Manager door that the current bar carries and the
+frame does not mention.
+
+### 8.2 Money keeps its unit; the frames' figures are bare
+
+Every figure in the frames is bare — `6,900,000`. Every figure in this app
+carries `UGX`, the Quote screen included, and the house rule is figure, then
+unit, then basis. Changing that is a decision about the whole app rather than
+about these four screens, so the built screens keep the unit.
+
+It costs layout: three figures carrying `UGX` do not fit a 390px detail panel at
+the frame's 17px, so that row is 14px. **If the bare figure is wanted, it is a
+one-line change here and the same change on Quote** — but it should be decided
+once, for both.
+
+The one place the unit is dropped is the phone's three-up header strip, where
+three cells at 390px cannot each carry it. It is dropped for all three or none,
+because a strip where one cell has a unit and two do not reads as three
+different measures.
+
+### 8.3 The register has no progress bar, so an overpayment has to be spoken
+
+The console's row drew a payment bar from the clamped figure with the *true*
+percentage printed beside it, so an invoice paid 150% read 150%. The card row
+carries Invoiced and Still due instead — and **Still due reads `0` on an overpaid
+invoice**, which is the screen hiding money.
+
+The saying moved to a tinted note row under the row it belongs to, which also
+carries the other two documents-that-disagree-with-themselves: a voided invoice
+still holding money in the Cash Book, and an invoice whose items were never
+priced. The frames draw none of the three. They are the app's *a failure must
+name itself* law and they are not optional.
+
+### 8.4 Four controls still have no home
+
+Kept, hidden, because their handlers are live and the functions are real:
+
+- **The seven date presets.** The frames draw no date control. The default moved
+  from "Last 30 days" to all-time, because 30 days hides the 74-day overdue
+  invoice the whole layout is built to put first.
+- **Select-all and the bulk operations** (print selected, void selected, unvoid
+  selected). Nothing in the card design selects rows.
+- **Hide voided** — superseded by the Voided lens, which is better: the count is
+  in the tab, so the register volunteers how many there are.
+- **Print list.** Printing one document is on the panel's overflow menu; printing
+  the filtered register has nowhere.
+
+### 8.5 The phone register is a second layout from one call
+
+The desktop grid is 344px of fixed columns before gaps and cannot be made to fit
+390. The row builder emits both — five cells and a two-line block — from one
+call off the same document, because the last time this screen hand-wrote two
+templates they drifted and the phone card carried a rank the table numbered
+differently. The phone drops the Invoiced column; on a phone the question is what
+is still owed.

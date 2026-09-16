@@ -16850,19 +16850,21 @@
      wholesale rather than reflowing them. */
   .om-ph-only{display:none}
   .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground)}
-  .om-top{flex:none;height:58px;background:var(--om-surface);border-bottom:1px solid var(--om-rule);display:flex;align-items:center;gap:16px;padding:0 22px}
-  .om-crumb{display:flex;align-items:center;gap:8px;flex:none;min-width:0}
-  .om-crumb-p{font-size:12.5px;color:var(--om-ink-3)}
-  .om-crumb-n{font-size:14px;font-weight:600;color:var(--om-ink)}
-  /* The placeholder names what can be searched INCLUDING a natural
-     language example, which is the handoff's rule and the reason the
-     field is 400px rather than the 240 it would otherwise need. */
-  .om-find{display:flex;align-items:center;gap:8px;flex:1;max-width:400px;height:36px;padding:0 12px;border-radius:10px;background:var(--om-field);border:1px solid var(--om-rule)}
+  /* THE SCREEN'S OWN SEARCH. The handoff draws this inside a 58px top bar
+     with the breadcrumb and the avatar -- but that bar is the APP's, not
+     this screen's, and the app already draws one above every screen. A
+     second stacks two breadcrumbs and two search boxes, which is exactly
+     what the first build of this screen did.
+
+     So the field sits in the register's own header, beside the thing it
+     filters, where this screen kept it before. Converting the app's global
+     bar to the card system is shared chrome for all four Sell screens at
+     once; it is written up in docs/design-suggestions-sell-section.md
+     rather than half-done here. */
+  .om-find{display:flex;align-items:center;gap:8px;flex:1;min-width:0;height:36px;padding:0 12px;border-radius:10px;background:var(--om-field);border:1px solid var(--om-rule)}
   .om-find:focus-within{border-color:var(--om-navy)}
   .om-find-i{flex:1;min-width:0;border:0;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--om-ink)}
   .om-find-i::placeholder{color:var(--om-ink-3)}
-  .om-top-sp{flex:1}
-  .om-face{width:34px;height:34px;flex:none;border-radius:999px;background:var(--om-navy);color:var(--om-on-navy);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 
   /* At most one card tinted bad and one tinted good. A strip where every
      card is coloured says nothing, which is the same argument the
@@ -16886,6 +16888,71 @@
   .om-side > *{flex:none}
   .om-scroll{flex:1;min-height:0;overflow-y:auto}
 
+  /* A DOCUMENT THAT DISAGREES WITH ITSELF gets a row of its own, in
+     words, under the row it belongs to. Three of them are real and all
+     three were found on the running app: money received beyond what the
+     invoice asks for (this app cannot carry customer credit), an invoice
+     whose items were never priced, and a cancelled document still holding
+     money in the Cash Book.
+
+     The console said these in a table cell, beside a bar drawn from the
+     clamped figure with the true percentage printed next to it. The card
+     system has no bar on the row -- the handoff's register carries
+     Invoiced and Still due instead -- so the saying moves here, and the
+     true percentage is stated in the sentence. It has to be stated
+     somewhere: a row reading "0 still due" on an invoice that was overpaid
+     is the screen hiding money.
+
+     A row that needs saying gets ONE note. Nothing else gets one. */
+  /* THE OVERFLOW MENU. The handoff draws a third control on the panel's
+     action row as an ellipsis and does not say what is behind it. What is
+     behind it is everything that acts on the document and is not the two
+     things you do every day: printing it, printing its receipt, voiding
+     it, and undoing it.
+
+     Void and undo are NOT interchangeable and the wording is the only
+     place the difference is spelled out: void cancels the paper and the
+     money already received stays in the Cash Book; undo says it should
+     never have been raised, puts the stock and the payments back, and
+     returns the order to Order tracking. Both call the SAME functions the
+     Order tracking board calls -- a second way of undoing an invoice is
+     how two paths come to reverse different things. */
+  /* THE REGISTER'S TWO LAYOUTS, FROM ONE CALL. The desktop cells and the
+     phone's two-line block are emitted by the same function off the same
+     document, and the breakpoint chooses. That is not a detail: the last
+     time this screen hand-wrote two templates they drifted, and the phone
+     card ended up carrying a rank the table numbered differently.
+
+     The phone is its own design rather than the desktop reflowed -- the
+     grid above is 344px of fixed columns before gaps and cannot be made to
+     fit 390. It carries what the handoff's phone frame carries: who, what
+     is still due, the invoice number with its bills, the age, and the
+     state. Invoiced is the one figure it drops, because on a phone the
+     question is what is still owed. */
+  .om-lrow-ph{display:none}
+  @media (max-width: 820px){
+    .om-lrow{display:block;padding:10px 16px;min-height:44px}
+    .om-lrow > :not(.om-lrow-ph){display:none}
+    .om-lrow-ph{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-lrow-ph-p{font-size:14px;font-weight:600}
+    .om-lrow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
+    .om-lrow-ph-f{font-size:14px;text-align:right}
+  }
+  .om-menu-w{position:relative}
+  .om-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:var(--om-surface);border:1px solid var(--om-rule);border-radius:11px;box-shadow:var(--om-shadow);padding:4px;display:none}
+  .om-menu.om-on{display:block}
+  .om-menu-i{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;color:var(--om-ink);cursor:pointer}
+  .om-menu-i:hover{background:var(--om-hover)}
+  .om-menu-i-bad{color:var(--om-bad-ink)}
+  .om-nrow{display:flex;align-items:flex-start;gap:8px;padding:8px 14px;border-bottom:1px solid var(--om-rule-inner);font-size:11.5px;line-height:1.5}
+  .om-nrow-bad{background:var(--om-bad-card);color:var(--om-bad-card-ink)}
+  .om-nrow-warn{background:var(--om-caution-card);color:var(--om-caution-card-ink)}
+  /* THE OVERFLOW ROW, which is how a page and a subtotal can both be
+     honest: the tail of a group collapses into one row carrying its count
+     and its own subtotal, so what is on screen still adds up to the
+     group's figure in the header above it. */
+  .om-orow{display:flex;align-items:center;gap:9px;padding:8px 14px;border-bottom:1px solid var(--om-rule-inner);background:var(--om-sunken);font-size:12px;color:var(--om-ink-3);cursor:pointer}
+  .om-orow:hover{background:var(--om-hover)}
   .om-card-h{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px}
   .om-card-t{font-size:13.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .om-cols{flex:none;display:grid;align-items:center;column-gap:10px;padding:7px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner)}
@@ -16898,7 +16965,11 @@
   .om-pan-m{font-size:11.5px;color:var(--om-on-navy-3)}
   .om-figs{display:flex;gap:12px;padding:12px 14px}
   .om-figs > div{flex:1;min-width:0}
-  .om-figs-f{font-size:17px}
+  /* 14, not the handoff's 17: its figures are bare and three of them fit
+     at 17px. Ours carry UGX, as every figure in this app does, and three
+     of those at 17px wrap inside a 390px column -- and a wrapped figure in
+     a row of three is read as the wrong number. */
+  .om-figs-f{font-size:14px}
   .om-blk{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:11px 14px}
   .om-acts{padding:11px 14px;border-top:1px solid var(--om-rule-inner);display:flex;gap:8px;flex-wrap:wrap}
   .om-read{font-size:12px;line-height:1.55;color:var(--om-ink-2);text-wrap:pretty}
@@ -16908,7 +16979,7 @@
 
   /* ---- the phone, which is a separate design and not a reflow ---- */
   @media (max-width: 820px){
-    .om-top,.om-kpis{display:none}
+    .om-kpis{display:none}
     .om-ph-only{display:block}
     .om-qtitle{display:none}
     .om-card.om-list{border:0;border-radius:0;box-shadow:none}
@@ -18037,27 +18108,10 @@
         <span id="inv_pan_n"></span>
       </div>
 
-      <div class="om-screen">
-
-        <div class="om-top">
-          <div class="om-crumb">
-            <span class="om-crumb-p">Sell</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-quiet);flex:none"><path d="m9 18 6-6-6-6"/></svg>
-            <span class="om-crumb-n">Invoices</span>
-          </div>
-          <!-- The placeholder names what can be searched, and the app's
-               one search box is this one -- not a second bar. -->
-          <div class="om-find">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input id="inv_doc_search" class="om-find-i an-sel" placeholder="Invoice no., customer, supplier or amount" aria-label="Search invoices">
-            <span class="om-keycap">Ctrl K</span>
-          </div>
-          <div class="om-top-sp"></div>
-          <!-- Where the orders behind these invoices have got to. Read
-               off the board rather than reckoned again here. -->
-          <div id="inv_stages" style="display:flex;align-items:center;gap:7px;flex:none"></div>
-          <div class="om-face" id="inv_face" aria-hidden="true"></div>
-        </div>
+      <!-- id kept: invApplySide hides this whole side when a bill is
+           opened from a PINV pill, and without it both registers would
+           stack on one screen. -->
+      <div class="om-screen" id="inv_sales_pane">
 
         <div class="om-qtitle">
           <div style="flex:1;min-width:0">
@@ -18087,7 +18141,11 @@
               <span class="om-pill om-p-paid">paid</span>
               <span class="om-pill om-p-owed">owed</span>
               <span style="flex:1"></span>
-              <span style="font-size:11.5px;color:var(--om-ink-3)" id="inv_showing"></span>
+              <div class="om-find" style="max-width:260px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="inv_doc_search" class="om-find-i an-sel" placeholder="Invoice no., customer, supplier or amount" aria-label="Search invoices">
+              </div>
+              <span class="om-n" style="font-size:11.5px;color:var(--om-ink-3)" id="inv_showing"></span>
             </div>
             <div class="om-cols om-cols-l">
               <span class="om-col">Date</span>
@@ -43977,7 +44035,6 @@ function invoiceDaysOverdue(q){
   const d = Math.floor((Date.parse(todayISO()) - Date.parse(due)) / 86400000);
   return d > 0 ? d : 0;
 }
-function invBalanceOf(q){ return Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0)); }
 /* Four states. The difference between the middle two is a date somebody
    agreed, not a judgement this screen makes. */
 function invStateOf(q){
@@ -44014,8 +44071,8 @@ function invPinvPillsHTML(q){
     if(pi.voided) return `<span class="om-pill om-p-void">${esc(label)}</span>`;
     const owed = purchaseInvoiceBalanceDue(pi);
     return owed > 0.5
-      ? `<span class="om-pill om-p-owed" data-pinv="${pi.id}">${esc(label)} &middot; ${esc(fmtUGX(Math.round(owed)))}</span>`
-      : `<span class="om-pill om-p-paid" data-pinv="${pi.id}">${esc(label)}</span>`;
+      ? `<span class="om-pill om-p-owed" data-pi="${pi.id}">${esc(label)} &middot; ${esc(fmtUGX(Math.round(owed)))}</span>`
+      : `<span class="om-pill om-p-paid" data-pi="${pi.id}">${esc(label)}</span>`;
   }).join('') + `</div>`;
 }
 
@@ -44105,7 +44162,7 @@ function renderInvoices(filter=''){
           ? `Nothing needs you here &mdash; every invoice in the range is settled.<br>Press <b>All</b> to read the whole register.`
         : data.savedQuotes.some(q=>q.status==='completed')
           ? `No invoices matched. Clear the search.<br>Completed orders carry a &ldquo;Make invoice&rdquo; button on the Order tracking board.`
-          : `No invoices yet. Move a saved quote to Step&nbsp;4. Completed, then press &ldquo;Make invoice&rdquo;.`)
+          : `No invoices yet. Move a saved quote to Step&nbsp;4. Completed, then press &ldquo;Make invoice&rdquo;. It stays visible on the Order tracking board for 24 hours, then moves here only.`)
       + `</div>`;
     invPickedId = null;
     renderInvoiceSide(null);
@@ -44120,11 +44177,11 @@ function renderInvoices(filter=''){
       const oldest = Math.max(...rows.map(q=>invoiceDaysOverdue(q)||0));
       return ['Overdue', '--om-bad', '--om-bad-ink',
         `${rows.length} invoice${rows.length===1?'':'s'}`,
-        `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invBalanceOf(q),0)))} · oldest ${oldest} day${oldest===1?'':'s'}`];
+        `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invoiceBalanceDue(q),0)))} · oldest ${oldest} day${oldest===1?'':'s'}`];
     },
     open: (rows)=>['Open', '--om-neutral', '--om-neutral-ink',
       `${rows.length} invoice${rows.length===1?'':'s'}`,
-      `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invBalanceOf(q),0)))} · nothing overdue`],
+      `${fmtUGX(Math.round(rows.reduce((s,q)=>s+invoiceBalanceDue(q),0)))} · nothing overdue`],
     settled: (rows)=>['Settled', '--om-good', '--om-good-ink',
       `${rows.length} invoice${rows.length===1?'':'s'}`,
       `${fmtUGX(Math.round(rows.reduce((s,q)=>s+(Number(q.amountPaid)||0),0)))} collected`],
@@ -44132,6 +44189,21 @@ function renderInvoices(filter=''){
       `${rows.length} cancelled`, `kept, never deleted`],
   };
 
+  /* THE PAGE IS CUT AFTER THE TOTALS ARE SUMMED, never before. Every
+     figure on the strip and in the group headers is over the whole range,
+     so a position can never shrink because somebody has not yet asked to
+     see everything -- a position that moves when a control is touched is
+     a position nobody can trust.
+
+     Where a group is cut, its tail collapses into ONE overflow row
+     carrying the count and the subtotal of what is not shown. That is
+     what lets a page and a subtotal both be honest: the rows on screen
+     plus the overflow row still add up to the figure in the header above
+     them. Pressing it expands the register, through the same delegated
+     [data-list-more] listener every other paged list uses. */
+  const paged = listPageSlice('invoices', shown);
+  const pagedIds = new Set(paged.map(q=>q.id));
+  const OVERFLOW_NOUN = {overdue:'still overdue', open:'still open', settled:'settled', voided:'cancelled'};
   wrap.innerHTML = groups.map(g=>{
     const [word, bg, ink, count, sub] = GROUP_HEAD[g.key](g.rows);
     const head = `<div class="om-grow">
@@ -44140,18 +44212,39 @@ function renderInvoices(filter=''){
       <span style="flex:1"></span>
       <span class="om-fig" style="font-size:12px;color:var(--om-ink-3)">${esc(sub)}</span>
     </div>`;
-    return head + g.rows.map(q=>invRegisterRowHTML(q, g.key)).join('');
+    const vis = g.rows.filter(q=>pagedIds.has(q.id));
+    const hidden = g.rows.filter(q=>!pagedIds.has(q.id));
+    /* The note rides directly under the row it is about, so the sentence
+       and the figures it contradicts are read together. */
+    const body = vis.map(q=>invRegisterRowHTML(q, g.key) + invNoteRowHTML(q)).join('');
+    const tailSum = hidden.reduce((acc,q)=>acc + (g.key==='settled' ? (Number(q.amountPaid)||0) : invoiceBalanceDue(q)), 0);
+    const tail = hidden.length ? `<div class="om-orow" data-list-more="invoices" role="button" tabindex="0">
+      <span>${hidden.length} more ${OVERFLOW_NOUN[g.key]}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig" style="font-size:12px">${esc(fmtUGX(Math.round(tailSum)))}</span>
+    </div>` : '';
+    return head + body + tail;
   }).join('');
 
   wrap.querySelectorAll('[data-inv-row]').forEach(row=>{
-    row.addEventListener('click', (e)=>{
-      /* A pill opens its bill; the rest of the row opens the sale. Two
+    row.addEventListener('click', (ev)=>{
+      /* A pill opens its bills; the rest of the row opens the sale. Two
          documents on one row, and the one you pressed is the one you
          get. */
-      const pill = e.target.closest('[data-pinv]');
+      const pill = ev.target.closest('[data-pi]');
       if(pill){
-        e.stopPropagation();
-        revealPurchaseInvoice(Number(pill.dataset.pinv));
+        ev.stopPropagation();
+        /* THE ORDER'S BILLS, not only the one pressed. A sale usually
+           raised more than one and all of them answer the same question,
+           so they open together under a crumb naming the order, with the
+           pressed one already expanded. revealPurchaseInvoice is the
+           fallback for a bill with no order behind it -- every restock is
+           one, since generatePurchaseInvoiceForRestock sets quoteId: null. */
+        const piId = Number(pill.dataset.pi);
+        const pi = data.purchaseInvoices.find(x=>x.id===piId);
+        const order = pi ? orderForPurchaseInvoice(pi) : null;
+        if(order){ piOpenId = piId; revealBillsForOrder(order.id); }
+        else revealPurchaseInvoice(piId);
         return;
       }
       invPickedId = Number(row.dataset.invRow);
@@ -44163,9 +44256,41 @@ function renderInvoices(filter=''){
   renderInvoiceSide(invPickedId != null ? shown.find(q=>q.id===invPickedId) : null);
 }
 
+/* THE THREE WAYS A DOCUMENT DISAGREES WITH ITSELF, in words on the
+   register rather than in a title nobody on a phone can reach. Each one is
+   real and each was found on the running app. The card system's row shows
+   Invoiced and Still due and has no progress bar, so the TRUE percentage
+   is stated here in the sentence -- an invoice paid 150% reads 0 still due
+   in that column, and a screen that leaves it there is hiding money.
+
+   A row that needs saying gets one note; nothing else gets one. */
+function invNoteRowHTML(q){
+  /* MEASURED ONCE, by the helper every figure on this screen shares, so a
+     sentence here and a figure elsewhere can never disagree about the same
+     document. */
+  const p = invoicePaymentProgress(q);
+  if(q.voided && p.paid > 0.5){
+    return `<div class="om-nrow om-nrow-warn"><span>Voided, but ${esc(fmtUGX(Math.round(p.paid)))} is still recorded against it and still sitting in the Cash Book. Unvoid it, or remove the payment.</span></div>`;
+  }
+  if(p.reason === null && p.over > 0.5){
+    /* THE TRUE PERCENTAGE, never the clamped one. p.pct is clamped to 1 so
+       a bar could not overflow its track; taking the label from it would
+       turn 150% into a serene 100%, which is exactly what the state chip
+       already wrongly says when it reads "paid". There is no bar on this
+       row at all -- the card register carries Invoiced and Still due -- so
+       the percentage has to be spoken, and Still due reading 0 on an
+       overpaid invoice is the reason it must be. */
+    const pct = p.total > 0 ? Math.round(p.paid/p.total*100) : 0;
+    return `<div class="om-nrow om-nrow-bad"><span>${esc(fmtUGX(Math.round(p.paid)))} received on an invoice of ${esc(fmtUGX(Math.round(p.total)))} — ${pct}% of what it asks for, which is ${esc(fmtUGX(Math.round(p.over)))} more than it asks for. This app does not track customer credit, so it needs refunding or carrying to their next order.</span></div>`;
+  }
+  if(!q.voided && p.reason === 'no-total'){
+    return `<div class="om-nrow om-nrow-warn"><span>This invoice totals nothing — its items carry no price — so nobody has been asked for anything. Price the items, or undo the invoice.</span></div>`;
+  }
+  return '';
+}
 function invRegisterRowHTML(q, groupKey){
   const total = savedQuoteTotal(q);
-  const due = invBalanceOf(q);
+  const due = invoiceBalanceDue(q);
   const st = invStateOf(q);
   const od = invoiceDaysOverdue(q);
   const d = q.invoicedAt || q.date || '';
@@ -44179,6 +44304,18 @@ function invRegisterRowHTML(q, groupKey){
     : st === 'settled' ? `<span style="font-size:11.5px;color:var(--om-ink-3)">&middot; settled</span>`
     : invoiceDueISO(q) ? `<span style="font-size:11.5px;color:var(--om-ink-3)">&middot; due ${esc(new Date(invoiceDueISO(q)+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span>`
     : `<span style="font-size:11.5px;color:var(--om-caution-ink)">&middot; no terms agreed</span>`;
+  /* The phone line-two text, off the same values the cells above use --
+     one document, one reading, whichever layout is on screen. */
+  const pis = purchaseInvoicesForOrder(q).filter(pi=>!pi.voided);
+  const owedPis = pis.filter(pi=>purchaseInvoiceBalanceDue(pi) > 0.5).length;
+  const pinvPhone = pis.length
+    ? ' \u00b7 ' + pis.length + ' bill' + (pis.length===1?'':'s') + (owedPis ? ', ' + owedPis + ' owed' : '')
+    : '';
+  const agePhone = st === 'overdue' ? ' \u00b7 ' + od + ' days open'
+    : st === 'settled' ? ' \u00b7 settled'
+    : st === 'voided' ? ' \u00b7 cancelled'
+    : invoiceDueISO(q) ? ' \u00b7 due ' + new Date(invoiceDueISO(q)+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})
+    : ' \u00b7 no terms agreed';
   const dim = (groupKey === 'settled' || groupKey === 'voided') ? ' om-done' : '';
   const on = invPickedId === q.id ? ' om-on' : '';
   return `<div class="om-lrow${dim}${on}" data-inv-row="${q.id}" tabindex="0">
@@ -44190,6 +44327,12 @@ function invRegisterRowHTML(q, groupKey){
     <div class="om-fig" style="font-size:13.5px;text-align:right">${esc(fmtUGX(Math.round(total)))}</div>
     <div class="om-fig" style="font-size:13.5px;text-align:right;color:var(${due > 0.5 ? '--om-bad-ink' : '--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</div>
     <div style="text-align:right">${invChipHTML(q)}</div>
+    <div class="om-lrow-ph">
+      <span class="om-t om-lrow-ph-p">${esc(q.client && q.client.name || 'No name')}</span>
+      <span class="om-fig om-lrow-ph-f" style="color:var(${due > 0.5 ? '--om-bad-ink' : '--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</span>
+      <span class="om-t om-lrow-ph-s">${esc(invoiceNumberLabel(q).replace('-','\u2011'))}${pinvPhone}${agePhone}</span>
+      <span style="text-align:right">${invChipHTML(q)}</span>
+    </div>
   </div>`;
 }
 
@@ -44199,9 +44342,9 @@ function renderInvoiceKpis(byState, all){
   const el = document.getElementById('inv_kpis');
   if(!el) return;
   const sum = (rows, f)=>rows.reduce((s,q)=>s+f(q),0);
-  const overdueSum = sum(byState.overdue, invBalanceOf);
+  const overdueSum = sum(byState.overdue, invoiceBalanceDue);
   const oldest = byState.overdue.length ? Math.max(...byState.overdue.map(q=>invoiceDaysOverdue(q)||0)) : 0;
-  const openSum = sum(byState.open, invBalanceOf);
+  const openSum = sum(byState.open, invoiceBalanceDue);
   const owedAll = overdueSum + openSum;
 
   /* What the shop owes on bills raised to fill these sales -- the other
@@ -44246,13 +44389,20 @@ function renderInvoiceKpis(byState, all){
 function renderInvoicePhoneHead(byState, attentionN, all){
   const el = document.getElementById('inv_ph_head');
   if(!el) return;
-  const sum = (rows)=>rows.reduce((s,q)=>s+invBalanceOf(q),0);
+  const sum = (rows)=>rows.reduce((s,q)=>s+invoiceBalanceDue(q),0);
   const bills = data.purchaseInvoices.filter(pi=>!pi.voided && purchaseInvoiceBalanceDue(pi) > 0.5);
   const cell = (label, val, bad)=>`<div class="om-ph-fig${bad?' om-ph-fig-bad':''}">
     <div class="om-ph-fig-l"${bad?' style="color:var(--om-bad-ink)"':''}>${esc(label)}</div>
     <div class="om-fig om-ph-fig-v"${bad?' style="color:var(--om-bad-ink)"':''}>${esc(val)}</div>
   </div>`;
-  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.00$/,'') + 'm' : fmtUGX(Math.round(n));
+  /* THE PHONE STRIP IS THE ONE PLACE THE UNIT IS DROPPED, and it is
+     dropped for every cell or not at all -- three figures at 390px cannot
+     each carry 'UGX', and a strip where one cell does and two do not reads
+     as three different measures. Everywhere else on this screen money
+     keeps its unit, as the quote's does. */
+  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.?0+$/,'') + 'm'
+    : n >= 1000 ? Math.round(n/1000) + 'k'
+    : String(Math.round(n));
   const tab = (key, label, n)=>`<button type="button" class="om-ph-tab${INV_LENS_STATE.key===key?' om-on':''}" data-lens="${key}">${esc(label)} ${n}</button>`;
   el.innerHTML = `<div class="om-ph-t">Invoices</div>
     <div class="om-ph-figs">
@@ -44275,7 +44425,7 @@ function renderInvoiceSide(q){
     el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick an invoice to read what it billed, what was bought to fill it, and what the shop kept on the pair.</div>`;
     return;
   }
-  const total = savedQuoteTotal(q), paid = Number(q.amountPaid)||0, due = invBalanceOf(q);
+  const total = savedQuoteTotal(q), paid = Number(q.amountPaid)||0, due = invoiceBalanceDue(q);
   const st = invStateOf(q), od = invoiceDaysOverdue(q);
   const cust = invCustomerOf(q);
   const raised = q.invoicedAt || q.date || '';
@@ -44291,7 +44441,7 @@ function renderInvoiceSide(q){
 
   const lines = (q.items||[]).map(it=>{
     const qty = it.qty != null ? it.qty : it.quantity;
-    const amt = (Number(it.price)||0) * (Number(qty)||0);
+    const amt = quoteItemSellPrice(it) * (Number(qty)||0);
     return `<div class="om-drow">
       <span class="om-t" style="flex:1;font-size:12.5px">${esc(it.productName||'Item')}${qty!=null?` &middot; ${esc(String(qty))} ${esc(it.unit||'')}`:''}</span>
       <span class="om-fig" style="font-size:12.5px">${esc(fmtUGX(Math.round(amt)))}</span>
@@ -44302,7 +44452,7 @@ function renderInvoiceSide(q){
     const owed = pi.voided ? 0 : purchaseInvoiceBalanceDue(pi);
     const label = purchaseInvoiceNumberLabel(pi).replace('-', '‑');
     return `<div style="display:flex;align-items:center;gap:8px">
-      <span class="om-pill ${pi.voided?'om-p-void':owed>0.5?'om-p-owed':'om-p-paid'}" data-pinv="${pi.id}" style="cursor:pointer">${esc(label)}</span>
+      <span class="om-pill ${pi.voided?'om-p-void':owed>0.5?'om-p-owed':'om-p-paid'}" data-pi="${pi.id}" style="cursor:pointer">${esc(label)}</span>
       <span class="om-t" style="flex:1;font-size:12.5px">${esc(pi.supplierName||'No supplier')}</span>
       <span class="om-fig" style="font-size:12.5px;color:var(${owed>0.5?'--om-caution-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(owed>0.5?owed:purchaseInvoiceTotal(pi))))}${owed>0.5?' owed':''}</span>
     </div>`;
@@ -44325,9 +44475,9 @@ function renderInvoiceSide(q){
       </div>
     </div>
     <div class="om-figs">
-      <div><div class="om-lbl" style="font-size:10.5px">Invoiced</div><div class="om-fig om-figs-f">${esc(fmtUGX(Math.round(total)))}</div></div>
-      <div><div class="om-lbl" style="font-size:10.5px">Paid</div><div class="om-fig om-figs-f" style="color:var(--om-ink-3)">${esc(fmtUGX(Math.round(paid)))}</div></div>
-      <div><div class="om-lbl" style="font-size:10.5px">Still due</div><div class="om-fig om-figs-f" style="color:var(${due>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Invoiced</div><div class="om-fig om-figs-f om-n">${esc(fmtUGX(Math.round(total)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Paid</div><div class="om-fig om-figs-f om-n" style="color:var(--om-ink-3)">${esc(fmtUGX(Math.round(paid)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Still due</div><div class="om-fig om-figs-f om-n" style="color:var(${due>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(due)))}</div></div>
     </div>
     <div style="padding:0 14px 12px">${lines || '<div class="om-read">This invoice carries no priced lines.</div>'}</div>
     <div class="om-blk">
@@ -44348,7 +44498,15 @@ function renderInvoiceSide(q){
         Draft the chase
       </button>
       <button type="button" class="om-btn om-btn-s" id="inv_pan_pay" style="height:34px">Record a payment</button>
-      <button type="button" class="om-btn om-btn-g" id="inv_pan_more" style="height:34px;padding:0 9px" title="Print the receipt, or undo this invoice">&middot;&middot;&middot;</button>
+      <div class="om-menu-w">
+        <button type="button" class="om-btn om-btn-g" id="inv_pan_more" style="height:34px;padding:0 9px" aria-haspopup="true" aria-expanded="false" title="Print, void, or undo this invoice">&middot;&middot;&middot;</button>
+        <div class="om-menu" id="inv_pan_menu" role="menu">
+          <button type="button" class="om-menu-i" id="inv_m_print" role="menuitem">Print invoice (A5)</button>
+          <button type="button" class="om-menu-i" id="inv_m_receipt" role="menuitem">Print the receipt</button>
+          <button type="button" class="om-menu-i om-menu-i-bad" id="inv_m_void" role="menuitem" title="${q.voided ? 'Unvoid invoice — the customer owes for it again' : 'Void invoice — cancels the paper; the goods went, and money already received stays in the Cash Book'}">${q.voided ? 'Unvoid invoice' : 'Void invoice'}</button>
+          ${q.voided ? '' : `<button type="button" class="om-menu-i om-menu-i-bad" id="inv_m_undo" role="menuitem" title="Undo invoice — puts the stock, the payments and their Cash Book entries back, and returns the order to Order tracking so its quantities can be edited">Undo invoice</button>`}
+        </div>
+      </div>
     </div>
   </div>
 
@@ -44371,7 +44529,29 @@ function renderInvoiceSide(q){
   const byId = (id)=>el.querySelector('#'+id);
   const p = byId('inv_pan_print'); if(p) p.onclick = ()=>printQuotesA5([q]);
   const pay = byId('inv_pan_pay'); if(pay) pay.onclick = ()=>openInvoicePaymentModal(q.id);
-  const more = byId('inv_pan_more'); if(more) more.onclick = ()=>printReceipt(q, null, null);
+  const more = byId('inv_pan_more'), menu = byId('inv_pan_menu');
+  if(more && menu){
+    more.onclick = (e)=>{
+      e.stopPropagation();
+      const on = menu.classList.toggle('om-on');
+      more.setAttribute('aria-expanded', on ? 'true' : 'false');
+    };
+    /* One press outside closes it. Without this the menu stays open over
+       whatever the next press was meant to reach. */
+    document.addEventListener('click', ()=>{
+      menu.classList.remove('om-on');
+      more.setAttribute('aria-expanded','false');
+    }, {once:true});
+  }
+  const mPrint = byId('inv_m_print'); if(mPrint) mPrint.onclick = ()=>printQuotesA5([q]);
+  const mRec = byId('inv_m_receipt'); if(mRec) mRec.onclick = ()=>printReceipt(q, null, null);
+  /* THE SAME TWO FUNCTIONS THE ORDER TRACKING BOARD CALLS. Each already
+     asks for confirmation naming everything it is about to reverse, and a
+     private reversal beside the shared one is how two paths come to undo
+     different things -- which is the fault the voiding tests were written
+     for. */
+  const mVoid = byId('inv_m_void'); if(mVoid) mVoid.onclick = ()=>toggleInvoiceVoided(q.id);
+  const mUndo = byId('inv_m_undo'); if(mUndo) mUndo.onclick = ()=>toggleQuoteInvoiced(q.id);
   const chase = byId('inv_pan_chase');
   if(chase) chase.onclick = ()=>{
     /* The box is what ships, so this opens WhatsApp with the message
@@ -44385,17 +44565,24 @@ function renderInvoiceSide(q){
   };
   const stm = byId('inv_pan_statement');
   if(stm) stm.onclick = (e)=>{ e.preventDefault(); const c = invCustomerOf(q); if(c) openCustomerStats(c.id); else toast('This sale is not linked to a customer record, so there is no statement to send.'); };
-  el.querySelectorAll('[data-pinv]').forEach(b=>b.addEventListener('click', ()=>revealPurchaseInvoice(Number(b.dataset.pinv))));
+  el.querySelectorAll('[data-pi]').forEach(b=>b.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const piId = Number(b.dataset.pi);
+    const pi = data.purchaseInvoices.find(x=>x.id===piId);
+    const order = pi ? orderForPurchaseInvoice(pi) : null;
+    if(order){ piOpenId = piId; revealBillsForOrder(order.id); }
+    else revealPurchaseInvoice(piId);
+  }));
 }
 
 /* What this customer owes across every invoice, from the same rows the
    register drew -- never a second tally that could disagree with it. */
 function invCustomerOwes(q){
   const c = invCustomerOf(q);
-  if(!c) return invBalanceOf(q);
+  if(!c) return invoiceBalanceDue(q);
   return data.savedQuotes.filter(x=>x.status==='completed' && x.invoiced && !x.voided
       && invCustomerOf(x) && invCustomerOf(x).id === c.id)
-    .reduce((s,x)=>s+invBalanceOf(x),0);
+    .reduce((s,x)=>s+invoiceBalanceDue(x),0);
 }
 /* One sentence of payment history, or the honest absence of one. */
 function invCustomerHistorySentence(q){

@@ -48,8 +48,20 @@ const src = read('index.html');
    A screen may be on one system or the other, never half of each, so
    quote leaves this list and joins the check below it. The rest of Sell
    is still the console's and is still held to it. */
-const SELL = ['quote-saved', 'invoices', 'customers', 'followups', 'agents', 'whatsapp'];
-const CARD_SYSTEM = ['quote'];
+/* INVOICES LEAVES THIS LIST TOO, for the same reason quote did and on the
+   same terms. Its register is the card system's now -- a 58px top bar, the
+   24px name over one 13px line, the lens group beside it -- so it cannot
+   carry .ow-ph as well. A screen is on one system or the other, never half
+   of each.
+
+   What the folded paragraph explained is not simply gone. Void and undo
+   invoice are two different acts and the difference is spelled out where
+   the acts are, on the overflow menu's items. How an invoice gets here,
+   including the 24 hours it lingers on the Order tracking board, is said
+   by the empty state -- which is the moment somebody is actually asking.
+   That is checked below rather than taken on trust. */
+const SELL = ['quote-saved', 'customers', 'followups', 'agents', 'whatsapp'];
+const CARD_SYSTEM = ['quote', 'invoices'];
 const sectionOf = (tab) => {
   const i = src.indexOf(`<section id="tab-${tab}"`);
   const next = src.slice(i + 10).search(/<section id="tab-/);
@@ -119,8 +131,8 @@ const sectionOf = (tab) => {
   CARD_SYSTEM.forEach((tab) => {
     const sec = sectionOf(tab);
     t.check(/<div class="om-qtitle">/.test(sec), `${tab} has the card system's title block`);
-    t.check(/<div class="om-qtitle-t">/.test(sec), `${tab} names itself in it`);
-    t.check(/<div class="om-qtitle-s">/.test(sec), `${tab} says in one line what it is`);
+    t.check(/<(?:h1|div) class="om-qtitle-t">/.test(sec), `${tab} names itself in it`);
+    t.check(/<(?:p|div) class="om-qtitle-s">/.test(sec), `${tab} says in one line what it is`);
     /* And it is NOT wearing both. A screen carrying the console header
        and the card title block would draw two names, one above the
        other, which is what a half-finished conversion looks like. */
@@ -131,11 +143,22 @@ const sectionOf = (tab) => {
   });
 }
 
+/* Invoices' two facts, checked at their new addresses rather than in a
+   paragraph the card system does not have. */
+{
+  const inv = extractFunction(src, 'renderInvoices', 'index.html');
+  t.check(/stays visible on the Order tracking board for 24 hours/.test(inv),
+    'invoices keeps how a quote becomes an invoice, and how long it lingers — in the empty state, where it is asked');
+  const side = extractFunction(src, 'renderInvoiceSide', 'index.html');
+  t.check(/cancels the paper; the goods went, and money already received stays in the Cash Book/.test(side)
+       && /puts the stock, the payments and their Cash Book entries back/.test(side),
+    'and keeps void and undo as two different acts, said where the acts are');
+}
+
 /* ---------- 3. the rules in the old prose survived ---------- */
 {
   const kept = [
-    ['invoices', 'stays visible on the Order tracking board for 24 hours',
-      'how a quote becomes an invoice, and how long it lingers'],
+
     ['agents', "clients' identities stay private to them",
       "the agent privacy rule"],
     ['whatsapp', "counted live from the shop's own records",

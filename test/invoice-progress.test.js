@@ -43,7 +43,17 @@ const inv = (total, paid, extra) => Object.assign({
 }, extra || {});
 
 const render = (/function renderInvoices[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const cell = (/const progressCell = \(q\)=>\{[\s\S]*?\n  \};/.exec(render) || [''])[0];
+/* WHERE THE SAYING MOVED. Invoices is the card system's now and its row
+   carries Invoiced and Still due instead of a progress bar, so there is no
+   progressCell to read. Everything the bar and its label used to say is
+   said in words by invNoteRowHTML, which rides directly under the row it
+   is about. The measurement itself has not moved at all: both read
+   invoicePaymentProgress(), which is what the sections above exercise
+   directly and what makes this the same rule rather than a new one. */
+const cell = (/function invNoteRowHTML\(q\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+t.check(cell.length > 0, 'the note that speaks for the bar is found');
+t.check(/const p = invoicePaymentProgress\(q\);/.test(cell),
+  'and it measures through the shared helper rather than restating the arithmetic');
 
 /* ---------- 1. the ordinary sum -------------------------------------- */
 if (scope) {
@@ -75,12 +85,20 @@ if (scope) {
      so this is where a mutation hides: taking the true percentage from
      the clamped value turns 150% into a serene 100%, which is precisely
      what the status pill already wrongly says. */
-  t.check(/style="width:\$\{Math\.round\(p\.pct\*100\)\}%"/.test(cell),
-    'the bar is drawn from the clamped figure');
+  /* p.pct is still clamped -- that is the helper's job and section 2
+     above proves it -- but nothing on the card row is drawn from it, so
+     the danger the clamp used to create has moved rather than gone. It
+     used to be a full-looking bar; it is now a Still due column reading 0.
+     Either way the TRUE percentage is the thing that must be spoken, and
+     taking it from the clamped value would turn 150% into a serene 100%.
+     That is exactly what the state chip already wrongly says when it reads
+     "paid", which is why the sentence has to contradict it. */
   t.check(/const pct = p\.total > 0 \? Math\.round\(p\.paid\/p\.total\*100\) : 0;/.test(cell),
-    'and the number beside it from the true one, so 150% reads 150%');
-  t.check(/inv-prog-over/.test(cell) && /\.deb-prog\.inv-prog-over \.deb-prog-fill\{background:var\(--danger\)\}?/.test(src.replace(/;\s*\}/g, '}')),
-    'marked in the colour that says something is wrong, since the clamped bar looks settled');
+    'the percentage is taken from the true figure, so 150% reads 150%');
+  t.check(/\${pct}% of what it asks for/.test(cell),
+    'and it is said on the row, because Still due reads 0 on an overpaid invoice');
+  t.check(/om-nrow-bad/.test(cell),
+    'marked in the colour that says something is wrong, since the row above it looks settled');
   t.check(/more than it asks for/.test(cell) && /refunding or carrying to their next order/.test(cell),
     'and named as money that needs handling, not merely as a wrong number');
 }
@@ -95,8 +113,13 @@ if (scope) {
   const p = scope.invoicePaymentProgress(zero);
   eq(p.pct, null, 'so it reports no measurement rather than NaN');
   eq(p.reason, 'no-total', 'saying which of the two silences it is');
+  /* "Price the items to see progress" was written for a bar. There is no
+     bar, and the thing to do about an unpriced invoice is not to watch it
+     fill -- it is to price it, or to undo a document nobody was ever asked
+     to pay. The fact is unchanged; the instruction is now the one that
+     applies. */
   t.check(/totals nothing — its items carry no price/.test(cell)
-    && /Price the items to see progress/.test(cell),
+    && /Price the items, or undo the invoice/.test(cell),
   'and the screen says what to do about it');
 }
 
@@ -120,58 +143,54 @@ if (scope) {
 
   /* Two different things to say, and only one of them is a loose end. */
   t.check(/p\.paid > 0/.test(cell), 'the wording turns on whether money is actually sitting on it');
-  t.check(/still recorded against it and still in the Cash Book/.test(cell),
+  t.check(/still recorded against it and still sitting in the Cash Book/.test(cell),
     'a voided invoice holding money names it as unfinished business');
   t.check(/Unvoid it, or remove the payment/.test(cell), 'with both ways out');
-  t.check(/nothing to be part way through paying/.test(cell),
-    'while an empty voided one is simply not measurable');
+  /* An empty voided invoice gets NOTHING, and that is the right answer
+     rather than a missing one. The bar had to say something in the space
+     it occupied, so it said "nothing to be part way through paying". A
+     note row occupies no space until there is something wrong, and a
+     cancelled document with no money on it is not wrong -- it is finished.
+     A screen that marks everything marks nothing. */
+  t.check(/return '';/.test(cell),
+    'while an empty voided one says nothing, because there is nothing unfinished about it');
 }
 
-/* ---------- 5. it is the same bar, in both layouts ------------------- */
+/* ---------- 5. it reaches both layouts, from one call ---------------- */
 {
-  /* Reusing .deb-prog rather than building a lookalike: this is the same
-     question the debtors and creditors lists ask, and a second bar that
-     looked slightly different would read as a different measure. */
-  t.check(/<div class="deb-prog\$\{p\.over > 0 \? ' inv-prog-over' : ''\}"/.test(cell),
-    'the invoice bar is the component the debtors and creditors lists already use');
-  /* Nothing to measure is a dash, not an empty bar: an empty bar reads as
-     "has paid nothing", which is a claim about somebody's conduct. */
-  t.check(/return `<span class="deb-prog-none" title="\$\{esc\(why\)\}">—<\/span>`;/.test(cell),
-    'and an unmeasurable one is a dash rather than an empty bar');
+  /* WHAT THIS SECTION USED TO PROTECT, and still does. It named two
+     places -- a <td class="inv-status-cell"> and a <div
+     class="deb-card-prog"> in the phone card beside it -- because the
+     measure had to reach BOTH layouts. A figure that exists only on the
+     console is missing from the screen the shop actually reads, and the
+     two hand-written templates had already drifted once.
 
-  /* THESE TWO USED TO NAME TWO PLACES: a <td class="inv-status-cell">
-     and a <div class="deb-card-prog"> in the phone card beside it. What
-     they were protecting was that the bar reached BOTH layouts -- a
-     measure that existed only on the console would be missing from the
-     screen the shop actually reads. That was a real hazard while the
-     renderer hand-wrote two templates that could drift, and they had
-     already drifted: the card carried a rank the table numbered
-     differently.
-
-     The screen is one .ow-tbl now, and the layer turns each row into a
-     card below 820px from the SAME call. So "it reaches both layouts"
-     is no longer something this renderer can get wrong -- there is one
-     status cell, and the phone shows it because the phone shows the
-     row. The assertion moves to what can still go wrong: that the bar
-     is emitted once, from the status cell, and that the cell is
-     labelled so the card it becomes says what the figure is. */
-  t.check(/<div class="ow-tbl-c inv-c-st" data-l="Status">[\s\S]{0,120}?progressCell\(q\)/.test(render),
-    'the bar lives in the status cell of the one row template, labelled so the phone card names it');
-  t.check((render.match(/progressCell\(q\)/g) || []).length === 1,
-    'and is emitted exactly once — there is no second template to drift from');
-  /* And the three reasons it can give were hover-only titles, which is
-     to say invisible on the phone. They are rows of the register now,
-     in the same words. */
-  t.check(/const noteRow = \(q\)=>\{/.test(render), 'a document that disagrees with itself gets a row of its own');
-  ['still recorded against it and still sitting in the Cash Book',
-   'more than it asks for',
-   'its items carry no price'].forEach((phrase) => {
-    t.check(render.includes(phrase), `and it says so in words: "${phrase}"`);
-  });
-  /* Every reachable branch of the cell is a `title`, so the reason is
-     always available -- including on the two that render a bare dash. */
-  eq((cell.match(/title="/g) || []).length, 2,
-    'with both the bar and the dash explaining themselves on hover');
+     The bar itself is gone: Invoices is the card system's and its row
+     carries Invoiced and Still due. But the hazard came back the moment
+     that row needed a phone layout, because the desktop grid is 344px of
+     fixed columns before gaps and cannot be made to fit 390. So the row
+     builder emits BOTH -- five cells for the console, one two-line block
+     for the phone -- from ONE call, off the same document. That is what
+     is checked now: one function, both layouts, and the phone's figures
+     read from the same variables the cells do. */
+  const row = (/function invRegisterRowHTML\(q, groupKey\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(row.length > 0, 'the register has one row builder');
+  t.check(/class="om-lrow-ph"/.test(row),
+    'and it emits the phone block from the same call, so the two cannot drift');
+  t.check((row.match(/class="om-lrow-ph"/g) || []).length === 1,
+    'exactly once — there is no second template to drift from');
+  /* Both layouts read `due`, the one balance the row computed, so the
+     console and the phone can never disagree about what is owed. */
+  t.check((row.match(/fmtUGX\(Math\.round\(due\)\)/g) || []).length === 2,
+    'and both layouts print the same still-due figure, from the same variable');
+  /* The state chip is the one component drawn twice, and it is a call
+     rather than a copy for the same reason. */
+  t.check((row.match(/invChipHTML\(q\)/g) || []).length === 2,
+    'the state is the same component in both, called rather than copied');
+  /* And the phone says what the console says with a column heading it
+     cannot show: which bills were raised, and how old the money is. */
+  t.check(/const pinvPhone =/.test(row) && /const agePhone =/.test(row),
+    'the phone names the bills and the age, which it has no column headers to carry');
 }
 
 process.exit(t.done() ? 1 : 0);

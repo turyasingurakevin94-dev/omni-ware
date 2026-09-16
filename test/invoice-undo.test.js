@@ -45,14 +45,26 @@ const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('invoice undo');
 const src = read('index.html');
-const render = extractFunction(src, 'renderInvoices', 'index.html');
+/* WHERE THE ACT MOVED. Invoices is the card system's now. The console put
+   four icon buttons on every row; the card register puts none there and
+   gives the picked document a detail panel instead, with the two everyday
+   acts on its action row and the rest behind an overflow menu. So undo
+   lives in renderInvoiceSide, not renderInvoices.
+
+   That is a change of ADDRESS, not of rule, and the rules below are
+   unchanged: it is the same toggleQuoteInvoiced the board calls, a voided
+   document is never offered undo, the void control still says which of the
+   two it will do, and the wording still names the consequence rather than
+   the verb. If anything the wording matters more here -- a menu item has
+   no icon to soften it. */
+const render = extractFunction(src, 'renderInvoiceSide', 'index.html');
 const toggle = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
 
 /* ---------- 1. the act is on the row, and it is the same act ---------- */
 {
-  t.check(/inv-doc-unbill/.test(render),
-    'the register\'s row carries an undo-invoice control');
-  t.check(/\.inv-doc-unbill'\)[\s\S]{0,200}toggleQuoteInvoiced\(Number\(btn\.dataset\.id\)\)/.test(render),
+  t.check(/id="inv_m_undo"/.test(render),
+    'the picked invoice carries an undo-invoice control');
+  t.check(/mUndo\.onclick = \(\)=>toggleQuoteInvoiced\(q\.id\)/.test(render),
     'and it calls the same toggleQuoteInvoiced the Order tracking board calls');
   /* Not a private reversal beside the shared one. If this screen ever
      starts putting stock back or removing payments itself, these two
@@ -70,9 +82,9 @@ const toggle = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
      at the end of the row, so the one case where offering both would be
      incoherent has to be closed: a voided invoice is already cancelled,
      and Unvoid is the act that belongs to it. */
-  t.check(/q\.voided \? '' : icon\('inv-doc-unbill'/.test(render),
-    'a voided row is offered Unvoid, never Undo invoice');
-  t.check(/icon\('inv-doc-void danger'[\s\S]{0,80}q\.voided \? 'Unvoid invoice' : 'Void invoice'/.test(render),
+  t.check(/\$\{q\.voided \? '' : `<button[^`]*id="inv_m_undo"/.test(render),
+    'a voided document is offered Unvoid, never Undo invoice');
+  t.check(/\$\{q\.voided \? 'Unvoid invoice' : 'Void invoice'\}/.test(render),
     'and the void control still says which of the two it is about to do');
   /* The tooltip is the only place the difference is spelled out on the
      row itself, so it must name the consequence rather than the verb. */
