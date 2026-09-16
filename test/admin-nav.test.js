@@ -117,7 +117,7 @@ const INDEX = railIndex();
        matters (what a thing is worth against what is still owed on it)
        could not be asked on either. The check below holds the merge to
        the thing a merge can quietly lose: the words people search by. */
-    'cashbook', 'analytics-debtors', 'analytics-creditors', 'statements', 'payroll', 'assets',
+    'cashbook', 'analytics-creditors', 'statements', 'payroll', 'assets',
     'analytics-sales', 'analytics-purchase', 'map',
     'staff', 'worker', 'presets',
   ];
@@ -240,8 +240,21 @@ const INDEX = railIndex();
     'the dashboard sits above every section -- it is where a day starts, not part of a job');
 
   // The groupings that carry meaning rather than tidiness.
-  t.check(groupOf['analytics-debtors'] === 'Money' && groupOf['analytics-creditors'] === 'Money',
-    'who owes you and who you owe are money, not analytics -- they are acted on, not studied');
+  /* WHO YOU OWE is still money. WHO OWES YOU is the Customers screen's
+     Owing lens: a debtor is a customer with a balance, and the two lists
+     could only ever disagree -- every one of Debtors' ten call sites
+     already called renderCustomers on the line above it. So the claim
+     splits: Creditors stays in Money, and the other half is checked at
+     its new address below.
+
+     Note the asymmetry this leaves, and it is deliberate rather than
+     overlooked: renderCreditorsList sits beside Suppliers exactly as
+     renderDebtorsList sat beside Customers. If this cut is right, that
+     one is too -- it is written up in the rail brief as an observation. */
+  t.check(groupOf['analytics-creditors'] === 'Money',
+    'who you owe is money, not analytics -- it is acted on, not studied');
+  t.check(groupOf['customers'] === 'Sell',
+    'and who owes you is a lens on the people who buy from you, in Sell');
   t.check(groupOf['cashbook'] === 'Money' && groupOf['statements'] === 'Money'
     && groupOf['assets'] === 'Money' && groupOf['payroll'] === 'Money',
     'and they sit with the cash book, the statements, what the shop owns and owes, and what it pays');
@@ -307,9 +320,9 @@ const INDEX = railIndex();
     /* NOT "owing", "who owes" or "aging". Debtors owns the whole book
        and those are its most obvious searches; this row owns the ASKING.
        Same law as "broadcast" above, applied to the other side of it. */
-    const deb = INDEX.find((x) => x.tab === 'analytics-debtors') || { keywords: '' };
+    const deb = INDEX.find((x) => x.tab === 'customers') || { keywords: '' };
     t.check(!/owing/.test(fu.keywords) && /owing/.test(deb.keywords),
-      'and not "owing", which is the Debtors list\'s own most obvious search, and still its');
+      'and not "owing", which belongs to the screen that owns the whole book — Customers, since Debtors folded into it');
     t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
       'Chase debts is not a destination any more, and has no section left behind');
     t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
@@ -582,8 +595,11 @@ const INDEX = railIndex();
      HEAD still opens the screen: "who owes you" was this screen's name
      until it was redrawn, and renaming a door must never make it harder
      to open. It is a keyword now. */
-  t.check(first('debtors') === 'Debtors', `the table-shaped word finds it (${first('debtors')})`);
-  t.check(first('who owes you') === 'Debtors',
+  /* Both words still find the work; what they find is the screen that
+     took it. Renaming a door must never make it harder to open, and
+     removing one must not either. */
+  t.check(first('debtors') === 'Customers', `the table-shaped word finds it (${first('debtors')})`);
+  t.check(first('who owes you') === 'Customers',
     `and the name it used to carry still finds it (${first('who owes you')})`);
   /* And now the same on the buy side: the creditors list was "Who you
      owe" until it was drawn as a console, so the question-shaped name
@@ -783,7 +799,12 @@ const INDEX = railIndex();
  * screen.
  */
 {
-  t.check(/nav-label">Debtors</.test(rail), 'the debtors list is named the word the shop already uses');
+  /* The row is gone and its words are on Customers, which is what makes
+     this a merge rather than a deletion. resolveTab('debtors') opens that
+     screen with the Owing lens armed, so the old door still works. */
+  t.check(!/nav-label">Debtors</.test(rail), 'the debtors row has left the rail');
+  t.check(/if\(tab === 'debtors' \|\| tab === 'analytics-debtors'\)\{ custLens = 'owing'; return 'customers'; \}/.test(src),
+    'and the old door opens Customers with the Owing lens armed');
   t.check(/data-keywords="[^"]*who owes you/.test(rail),
     'and the name it used to carry is kept as a keyword rather than dropped');
   t.check(/nav-label">Creditors</.test(rail), 'and the creditors list is named the same way, for the same reason');

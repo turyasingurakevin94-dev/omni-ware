@@ -16462,7 +16462,7 @@
   .om-lrow:hover,.om-crow:hover,.om-arow:hover,.om-mrow:hover{background:var(--om-hover)}
   .om-lrow.om-on,.om-crow.om-on,.om-arow.om-on,.om-mrow.om-on{background:var(--om-selected)}
   .om-lrow,.om-cols-l{grid-template-columns:58px minmax(190px,1fr) 108px 112px 76px}
-  .om-crow{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
+  .om-crow,.om-cols-c{grid-template-columns:30px minmax(180px,1fr) 104px 88px 132px 66px}
   .om-arow{grid-template-columns:30px minmax(160px,1fr) 100px 92px 92px 104px 58px}
   .om-mrow{grid-template-columns:30px minmax(160px,1fr) 96px 96px 74px}
 
@@ -16938,6 +16938,40 @@
     .om-lrow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
     .om-lrow-ph-f{font-size:14px;text-align:right}
   }
+  /* The avatar's tint pair is the row's own state, so the circle is a
+     second reading of the same fact rather than decoration. On a navy
+     header it goes coral-text and white, which is the one pair that
+     clears on both grounds. */
+  .om-av.om-bad{background:var(--om-bad);color:var(--om-bad-ink)}
+  .om-av.om-warn{background:var(--om-caution);color:var(--om-caution-ink)}
+  .om-av.om-studied{background:var(--om-studied);color:var(--om-studied-ink)}
+  .om-av-onnavy{background:var(--om-coral-text);color:var(--om-on-navy)}
+  .om-av-lg{width:32px;height:32px;font-size:12px}
+  /* A segment of a bar. Widths are always computed from ONE denominator
+     so two segments of equal length always mean equal money. */
+  .om-bar-s{height:100%;flex:none}
+  /* A rule stated in words, tinted by what kind of rule it is. The
+     caution one is a RULE rather than a warning to dismiss -- it says
+     what is blocked and the figure that unblocks it. */
+  .om-note{border-radius:11px;padding:10px 12px;font-size:12px;line-height:1.55}
+  .om-note-warn{background:var(--om-caution-card);border:1px solid var(--om-caution-card-rule);color:var(--om-caution-card-ink)}
+  .om-note-bad{background:var(--om-bad-card);border:1px solid var(--om-bad-card-rule);color:var(--om-bad-card-ink)}
+  .om-note-good{background:var(--om-good-card);border:1px solid var(--om-good-card-rule);color:var(--om-good-card-ink)}
+  /* The green square that hands a chase to WhatsApp, on the phone only
+     and only on the three to ask first. 36px, inside a 44px row. */
+  .om-wa{width:36px;height:36px;flex:none;border:0;border-radius:9px;background:var(--om-good-ink);color:var(--om-on-navy);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .om-wa:hover{background:var(--om-good-pressed)}
+  .om-crow-ph{display:none}
+  @media (max-width: 820px){
+    /* The book's desktop grid is six columns and cannot be made to fit
+       390. Both layouts come from one call, off the same row. */
+    .om-crow{display:block;padding:10px 16px;min-height:44px}
+    .om-crow > :not(.om-crow-ph){display:none}
+    .om-crow-ph{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-crow-ph-p{font-size:14px;font-weight:600}
+    .om-crow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
+    .om-crow-ph-f{font-size:14px;text-align:right}
+  }
   .om-menu-w{position:relative}
   .om-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:var(--om-surface);border:1px solid var(--om-rule);border-radius:11px;box-shadow:var(--om-shadow);padding:4px;display:none}
   .om-menu.om-on{display:block}
@@ -17299,7 +17333,7 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg>
           <span class="nav-label">Invoices</span>
         </button>
-        <button class="om-nav" data-tab="customers" title="Customers" data-keywords="clients buyers contacts">
+        <button class="om-nav" data-tab="customers" title="Customers" data-keywords="clients buyers contacts debtors receivables credit owing who owes me who owes you debtors list aging ageing statement">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span class="nav-label">Customers</span>
         </button>
@@ -17424,11 +17458,6 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 20V11"/><path d="M12 20V6"/><path d="M17 20v-6"/><path d="M6.2 8.4l6-4.4 5.6 4.6"/></svg>
           <span class="nav-label">Pricing</span>
           <b class="nav-badge" id="navBadgePricing" hidden></b>
-        </button>
-        <button class="om-nav" data-tab="analytics-debtors" title="Debtors" data-keywords="debtors receivables credit owing who owes you debtors list aging ageing chase">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span class="nav-label">Debtors</span>
-          <b class="nav-badge" id="navBadgeDebtors" hidden></b>
         </button>
         <button class="om-nav" data-tab="analytics-creditors" title="Creditors" data-keywords="creditors payables owed suppliers who you owe creditors list pay bills aging ageing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
@@ -18428,34 +18457,6 @@
          a read-only reading of the age split instead, and its bands
          open this screen filtered. One age filter, on the screen that
          owns the whole book. -->
-    <section id="tab-analytics-debtors" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Debtors</h1>
-        <p class="ow-ph-sub">Everyone who owes you, oldest money first</p>
-        <p class="ow-ph-help">Every customer carrying a balance, with the age of the money beside it. A balance is the charges not yet paid, walked oldest first the way a ledger settles &mdash; so the age here is the age of the money still open, not the date the customer last came in. The bands split the whole book by age and narrow the list when you tap one; the search box narrows it further; the printed sheet always carries the whole book's profile and says which customers it is listing. Receiving a payment clears their oldest invoice first and posts straight to the cash book. Asking for the money is a different screen: Follow-ups has everyone past your terms under <b>Money</b>, with the words already written, and nothing sends itself.</p>
-        <span class="ow-ph-sp"></span>
-      </div>
-
-      <div class="ow-db">
-        <!-- What you are owed. Always the whole book: the search box and
-             the band filter act on the list further down, never on this.
-             A position that shrinks because somebody left a filter on is
-             a position nobody can trust. -->
-        <div id="debPositionWrap"></div>
-
-        <div class="ow-grid">
-          <!-- The register, its toolbar, and the drift banner that has to
-               sit above the rows whose credibility it is about. -->
-          <div id="deb_tableWrap"></div>
-          <div class="ow-side" id="debRailWrap"></div>
-        </div>
-
-        <!-- The band filter is echoed down here where the rows it removed
-             would have been, with the way out beside it. A filter you
-             cannot see is a filter you forget you set. -->
-        <div id="debFilterNote"></div>
-      </div>
-    </section>
 
     <!-- CREDITORS LIST -->
     <!-- CONSIGNMENT. Goods the shop holds but does not own, and the part
@@ -18689,41 +18690,77 @@
          says who needs you today, and the register is the whole book
          with each row opening on its own account. -->
     <section id="tab-customers" style="display:none;">
-      <div class="ow-ph" id="custBookHead">
-        <h1 class="ow-ph-t">Customers</h1>
-        <p class="ow-ph-sub">What each one is worth to you, and who has gone quiet.</p>
-        <p class="ow-ph-help">Everyone you sell to, ranked by what they have paid you in the last ninety days, with what you kept on them beside it and the age of anything they still owe. The band at the top is the short list of people something has changed about &mdash; money past your terms, a customer who has gone quiet past twice their OWN buying gap, an account whose spend has fallen by a third, somebody who bought once and never came back &mdash; worst first, ranked by what it costs to do nothing. Every figure is read from invoiced orders and the debt book, so a quote still on the board counts for nothing here and a customer the app cannot value yet shows a dash rather than a zero. A row opens on that customer&rsquo;s account: what they have spent, what you kept, how often they come, what they buy and their last orders. The statement of account &mdash; every charge and every payment with the balance running down &mdash; is the sheet you hand across the counter and opens from inside the row. Asking for the money is a different screen: Follow-ups has everyone past your terms under <b>Money</b>, with the words already written, and nothing sends itself.</p>
-        <span class="ow-ph-sp"></span>
-        <div class="ow-f cu-find">
-          <label class="ow-f-l" for="c_search">Find</label>
-          <div class="ow-f-in"><input class="ow-f-v" type="search" id="c_search" placeholder="Name, either number, place or ID" autocomplete="off"></div>
-        </div>
-        <button type="button" class="btn btn-accent ow-sm" id="c_add_btn">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Add customer
-        </button>
+      <!-- CUSTOMERS, and the book of debt is this screen now.
+
+           Debtors was a second list over the same people: renderCustomers
+           and renderDebtorsList had to be called together after every void
+           and every payment, and when one was missed the two screens
+           disagreed about the same money. A debtor is a customer with a
+           balance -- one list, two renderers, and a synchronisation bug
+           waiting. So the Owing lens is the debt book now, ranked by age
+           then amount, which is the order a shop actually asks in.
+
+           WHAT HAS NO HOME in this design and is kept below rather than
+           deleted, because the handlers are live: the Buying and Also
+           suppliers lenses, the book's four-tile strip, and the attention
+           band. Each is named in docs/design-suggestions-sell-section.md. -->
+      <div id="cust_legacy_controls" hidden aria-hidden="true">
+        <div id="custStripWrap"></div>
+        <div id="custAttentionWrap"></div>
+        <span id="custBookCount"></span>
+        <span id="custSegBuying"></span><span id="custSegBoth"></span>
       </div>
-      <div id="custStripWrap"></div>
-      <div id="custAttentionWrap"></div>
-      <div class="ow-pan" id="custBookPan">
-        <div class="ow-pan-h">
-          <span class="ow-pan-t">The book</span>
-          <span class="ow-pan-n" id="custBookCount"></span>
-        </div>
-        <div class="ow-tb">
-          <div class="ow-seg" id="cust_lens">
-            <button type="button" class="ow-seg-b ow-on" data-clens="all">All<span class="ow-seg-n" id="custSegAll"></span></button>
-            <button type="button" class="ow-seg-b" data-clens="buying">Buying<span class="ow-seg-n" id="custSegBuying"></span></button>
-            <button type="button" class="ow-seg-b" data-clens="quiet">Quiet<span class="ow-seg-n" id="custSegQuiet"></span></button>
-            <button type="button" class="ow-seg-b" data-clens="owing">Owing<span class="ow-seg-n" id="custSegOwing"></span></button>
-            <button type="button" class="ow-seg-b" data-clens="both">Also suppliers<span class="ow-seg-n" id="custSegBoth"></span></button>
+
+      <div class="om-screen" id="cust_book_pane">
+        <div class="om-qtitle">
+          <div style="flex:1;min-width:0">
+            <h1 class="om-qtitle-t">Customers</h1>
+            <p class="om-qtitle-s">One list of the people who buy from you &middot; ranked by what they owe and how long they have owed it</p>
           </div>
-          <span class="ow-tb-n">Ranked by what they paid you in 90 days</span>
+          <div class="om-lensgroup" id="cust_lens" role="tablist" aria-label="Which customers">
+            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-clens="owing">Owing <span class="om-chip om-lenschip" id="custSegOwing"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-clens="all">All <span class="om-chip om-lenschip" id="custSegAll"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-clens="best">Best <span class="om-chip om-lenschip" id="custSegBest"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-clens="quiet">Gone quiet <span class="om-chip om-lenschip" id="custSegQuiet"></span></button>
+          </div>
         </div>
-        <div id="customersTableWrap"></div>
+
+        <div class="om-kpis" id="cust_kpis"></div>
+
+        <div class="om-ph-only om-ph-head" id="cust_ph_head"></div>
+
+        <div class="om-body">
+          <div class="om-card om-list">
+            <div class="om-card-h">
+              <span class="om-card-t" id="cust_card_t">Who to ask first &mdash; oldest money, largest first</span>
+              <span style="flex:1"></span>
+              <div class="om-find" style="max-width:240px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="c_search" class="om-find-i" type="search" placeholder='Name, phone, or "owes over 1m"' aria-label="Search customers" autocomplete="off">
+              </div>
+              <button type="button" class="om-btn om-btn-s" id="c_add_btn" style="height:32px;padding:0 11px;font-size:12.5px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                New customer
+              </button>
+            </div>
+            <div class="om-cols om-cols-c">
+              <span></span>
+              <span class="om-col">Customer</span>
+              <span class="om-col" style="text-align:right">Owes</span>
+              <span class="om-col" style="text-align:right">Oldest</span>
+              <span class="om-col">How they pay</span>
+              <span class="om-col" style="text-align:right">Ask</span>
+            </div>
+            <div class="om-scroll" id="customersTableWrap"></div>
+          </div>
+          <div class="om-side" id="cust_side"></div>
+        </div>
       </div>
-      <!-- One customer's account. Drawn in place of everything above
-           it, never over it. -->
+
+      <!-- One customer's full account, with the statement of account the
+           counter hands across. Drawn in place of the book, never over
+           it, and reached from the panel rather than from the row -- the
+           row fills the panel now. -->
       <div id="custAccountWrap" style="display:none;"></div>
     </section>
 
@@ -30661,6 +30698,19 @@ function resolveTab(tab){
      Loans boots into getElementById('tab-loans').style and throws before
      anything renders. */
   if(tab === 'loans') return 'assets';
+  /* DEBTORS IS THE CUSTOMERS SCREEN'S OWING LENS. It was a second list
+     over the same people: renderCustomers and renderDebtorsList had to be
+     called together after every void and every payment, and every one of
+     the ten call sites did exactly that -- which is the evidence rather
+     than the argument. Miss one and the two screens disagree about the
+     same money.
+
+     Nothing is lost. Debtors ranked by amount alone; the Owing lens ranks
+     by age then amount, which is the order a shop actually asks in, and
+     it keeps the aging bar at the top. The drift check moved onto the
+     customer's panel where it can be seen. Anyone arriving through the
+     old door lands on the list with that lens already armed. */
+  if(tab === 'debtors' || tab === 'analytics-debtors'){ custLens = 'owing'; return 'customers'; }
   /* AND WORTH TELLING. It was its own page: a fortnight's queue of
      clients with one true reason each, and the rules and the score in
      its rail. Every one of those reasons is one of the six this hub
@@ -30829,7 +30879,6 @@ function goToTab(tab){
   if(tab==='worker') renderWorkerView();
   if(tab==='analytics-sales') renderSalesAnalytics();
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
-  if(tab==='analytics-debtors') renderDebtorsList();
   if(tab==='analytics-creditors') renderCreditorsList();
 }
 
@@ -39561,7 +39610,6 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
   saveData();
   renderQuoteAll();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
 }));
 
 function loadSavedQuote(id){
@@ -39631,7 +39679,6 @@ function deleteSavedQuote(id){
   renderSavedQuotes();
   renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -41652,7 +41699,6 @@ async function toggleQuoteInvoiced(id){
   renderInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -41818,7 +41864,6 @@ document.getElementById('pickShortAmend').addEventListener('click', ()=>{
   saveData();
   renderSavedQuotes();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   toast(`Order amended to what was picked — now ${fmtUGX(savedQuoteTotal(q))}. Invoice it when you're ready.`, 6000);
 });
 document.getElementById('pickShortKeep').addEventListener('click', ()=>{
@@ -44705,7 +44750,6 @@ function setInvoicesVoided(quotes, voided){
   saveData();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   return true;
 }
 function toggleInvoiceVoided(id){
@@ -44805,7 +44849,6 @@ function removeInvoicePayment(id, idx){
   document.getElementById('ip_amount').value = (total-paid)>0 ? (total-paid) : '';
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -45047,7 +45090,6 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   resetInvoicePaymentForm();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   toast('Payment recorded' + paymentDatedSuffix(paidOn));
   /* Money in, paper out -- the supermarket moment, and the only one that
      prints without being asked. Last, so a printer that is off or a
@@ -54381,42 +54423,6 @@ function custActionHTML(r, act){
    A dash is not a zero. A customer who has never been invoiced cannot
    be said to have earned the shop nothing -- the app does not know what
    they are worth yet, and saying 0 would be a claim it cannot make. */
-function customerRegisterRowHTML(r){
-  const open = r.id === custOpenId;
-  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const dash = '<span class="cu-dash">&mdash;</span>';
-  const terms = custTermsDays();
-  const late = r.debt > 0 && r.ageDays >= 0 && r.ageDays > terms;
-  const reason = custAttentionReason(r);
-  const chip = reason
-    ? `<span class="ow-cp ${reason.tone}"><span class="ow-cp-d"></span>${esc(reason.chip)}</span>`
-    : r.orderCount > 1
-      ? '<span class="ow-cp ow-good"><span class="ow-cp-d"></span>Regular</span>'
-      : r.everInvoiced
-        ? '<span class="ow-cp"><span class="ow-cp-d"></span>First order</span>'
-        : '<span class="ow-cp"><span class="ow-cp-d"></span>Never invoiced</span>';
-  const meta = [r.place, r.id, r.both ? 'Also a supplier' : '', r.phones.length ? '' : 'no number on file']
-    .filter(Boolean).join(' · ');
-  return `<div class="ow-tbl-r ow-tbl-k${open ? ' cu-on' : ''}" role="button" tabindex="0"
-      data-copen="${esc(r.id)}" aria-expanded="${open}">
-    <div class="ow-tbl-c">
-      <span class="ow-tbl-p" title="${esc(r.name)}">${esc(r.name)}</span>
-      <span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>
-    </div>
-    <span class="cu-c-st">${chip}</span>
-    <span class="ow-tbl-n cu-c-when" data-l="Last bought">${r.last ? esc(fmtShortDate(r.last)) : dash}</span>
-    <span class="ow-tbl-n cu-c-ev" data-l="Every">${r.everyDays !== null ? r.everyDays + ' days' : dash}</span>
-    <span class="ow-tbl-n" data-l="Paid you, 90 days">${r.everInvoiced ? `<span class="ow-fig">${f(r.spend)}</span>` : dash}</span>
-    <span class="ow-tbl-n cu-c-kept" data-l="You kept">${r.everInvoiced
-      ? `<span class="ow-fig">${f(r.kept)}</span><span class="ow-fig-b">${r.keptPct === null ? 'nothing sold in 90 days' : r.keptPct.toFixed(1) + '%'}</span>`
-      : dash}</span>
-    <span class="ow-tbl-n" data-l="Owed now">${r.debt > 0
-      ? `<span class="ow-fig${late ? ' ow-bad' : ''}">${f(r.debt)}</span>${r.ageDays >= 0 ? `<span class="ow-fig-b">${r.ageDays} days old</span>` : '<span class="ow-fig-b">no dated charge</span>'}`
-      : dash}</span>
-    <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-  </div>
-  ${open ? customerAccountHTML(r) : ''}`;
-}
 
 /* THE WORKING ACCOUNT, IN PLACE. What used to be a modal, minus the
    statement of account -- that is a document you hand across a counter,
@@ -54504,119 +54510,467 @@ function customerAccountActionsHTML(r){
    book, never over the page or the search, so "Owing 11" means eleven
    customers owe you and not eleven of the ones you happen to be
    looking at. */
+/* THE LENSES SELECT A LIST, and Owing is the debt book.
+
+   Debtors was a second renderer over the same people. It is gone; this
+   lens is what it did, ranked by age THEN amount -- the order a shop
+   actually asks in, rather than by amount alone. */
+let custPickedId = null;
+
+/* Their terms, theirs first. The shop has a chase-after setting for
+   everyone; a customer who agreed their own number is held to that
+   instead, and a customer who agreed nothing has no due date at all --
+   this app does not invent one. */
+function custTermsFor(c){
+  if(c && c.termsDays != null) return Math.max(0, Number(c.termsDays)||0);
+  return custTermsDays();
+}
+/* HOW THEY PAY, from their own settled invoices rather than a stored
+   score. On time, late, or very late -- and no history is said as no
+   history rather than drawn as a flat bar at zero, which would be a
+   claim about somebody's conduct the records do not support. */
+function custPayHistory(r){
+  const terms = custTermsFor(r.c);
+  const mine = data.savedQuotes.filter(q=>q.customerId===r.id && q.invoiced && !q.voided
+    && invoiceBalanceDue(q) <= 0.5);
+  let onTime=0, late=0, veryLate=0;
+  mine.forEach(q=>{
+    const days = invoiceOpenDays(q);
+    if(days == null) return;
+    if(days <= terms) onTime++;
+    else if(days <= terms + 30) late++;
+    else veryLate++;
+  });
+  const n = onTime + late + veryLate;
+  return {onTime, late, veryLate, n, terms};
+}
+function custPayBarHTML(r){
+  const p = custPayHistory(r);
+  if(!p.n){
+    return `<div><div class="om-bar" style="background:var(--om-track-flat)"></div>
+      <div style="margin-top:3px;font-size:10.5px;color:var(--om-ink-3)">no history yet</div></div>`;
+  }
+  const pc = (n)=> (n/p.n*100).toFixed(1);
+  const caption = p.veryLate > 0 ? `very late on ${p.veryLate} of ${p.n}`
+    : p.late > 0 ? `late on ${p.late} of ${p.n}`
+    : `on time, every one of ${p.n}`;
+  return `<div><div class="om-bar">
+      <span class="om-bar-s" style="width:${pc(p.onTime)}%;background:var(--om-good-ink)"></span>
+      <span class="om-bar-s" style="width:${pc(p.late)}%;background:var(--om-late)"></span>
+      <span class="om-bar-s" style="width:${pc(p.veryLate)}%;background:var(--om-coral-text)"></span>
+    </div>
+    <div style="margin-top:3px;font-size:10.5px;color:var(--om-ink-3)">${esc(caption)}</div></div>`;
+}
+/* The avatar is a second reading of the row's state, not decoration, so
+   its tint pair is the one the row already wears. */
+function custAvatarHTML(r, tone, big){
+  /* nameInitials, never character zero of each word: "Reagan - Stuart"
+     letters as R- that way, which is the bug the one shared function
+     exists to prevent. */
+  const initials = nameInitials(r.name);
+  return `<span class="om-av${tone?' '+tone:''}${big?' om-av-lg':''}">${esc(initials)}</span>`;
+}
+const CUST_ASK = ['1st','2nd','3rd','4th'];
+function custAskChipHTML(rank){
+  if(rank == null) return `<span style="font-size:12px;color:var(--om-ink-quiet)">&mdash;</span>`;
+  const style = rank === 0 ? 'background:var(--om-coral-text);color:var(--om-on-navy)'
+    : rank === 1 ? 'background:var(--om-bad);color:var(--om-bad-ink)'
+    : 'background:var(--om-neutral);color:var(--om-neutral-ink)';
+  return `<span class="om-chip" style="height:19px;padding:0 7px;${style}">${CUST_ASK[rank]}</span>`;
+}
+/* The four aging buckets, by the age of each account's oldest charge.
+   Labelled by the boundary rather than by an example, because a bucket
+   labelled "74d" is read as "these are 74 days old" when it means "60 or
+   more". */
+const CUST_AGE_BANDS = [
+  {min:60, label:'60+ days', tok:'--om-age-1'},
+  {min:45, label:'45–59', tok:'--om-age-2'},
+  {min:30, label:'30–44', tok:'--om-age-3'},
+  {min:0,  label:'under 30', tok:'--om-age-4'},
+];
+function custAgingBuckets(owing){
+  const out = CUST_AGE_BANDS.map(b=>({...b, sum:0}));
+  owing.forEach(r=>{
+    const age = r.ageDays >= 0 ? r.ageDays : 0;
+    const i = out.findIndex(b=> age >= b.min);
+    out[i < 0 ? out.length-1 : i].sum += r.debt;
+  });
+  return out;
+}
+
 function renderCustomers(filter=''){
   const wrap = document.getElementById('customersTableWrap');
   if(!wrap) return;
-  /* ONE SCREEN, TWO VIEWS. The register steps aside for an account
-     rather than a dialog opening over it, so the account gets the
-     page's header, the browser's print, and a back control instead of
-     an X in a corner. Everything the register drew is left in the DOM
-     and hidden, so coming back does not rebuild it. */
-  const book = ['custBookHead', 'custStripWrap', 'custAttentionWrap', 'custBookPan'];
+  /* ONE SCREEN, TWO VIEWS still: the full account with its statement of
+     account steps in place of the book rather than opening over it. What
+     changed is the door -- the row fills the panel now, and the panel
+     opens the account. */
   const acct = document.getElementById('custAccountWrap');
+  const bookPane = document.getElementById('cust_book_pane');
   if(custViewId){
-    book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+    if(bookPane) bookPane.style.display = 'none';
     if(acct){ acct.style.display = 'block'; renderCustomerAccount(custViewId); }
     return;
   }
-  book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = ''; });
+  if(bookPane) bookPane.style.display = '';
   if(acct){ acct.style.display = 'none'; acct.innerHTML = ''; }
+
   const all = customerBookRows();
-  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const terms = custTermsDays();
+  const owing = all.filter(r=> r.debt > 0.5);
+  /* Oldest money first, largest first within an age -- the order the
+     screen's own header promises. */
+  const byAsk = owing.slice().sort((a,b)=> (b.ageDays - a.ageDays) || (b.debt - a.debt));
+  const askRank = new Map(byAsk.slice(0,4).map((r,i)=>[r.id, i]));
+  /* Best is ranked on what the shop KEPT, not on turnover: the biggest
+     buyer is usually not the best one, and a list that says otherwise
+     sends the owner to thank the wrong person. */
+  const best = all.filter(r=> r.kept > 0).sort((a,b)=> b.kept - a.kept).slice(0,20);
+  const quiet = all.filter(r=> r.quiet);
+  const lenses = {owing: byAsk, all: all, best: best, quiet: quiet};
 
-  /* ---- the strip: is the book healthy ---- */
-  const bought = all.filter(r=> r.orders90 > 0);
-  const paid = all.reduce((s, r)=> s + r.spend, 0);
-  const kept = all.reduce((s, r)=> s + r.kept, 0);
-  const owed = all.reduce((s, r)=> s + r.debt, 0);
-  const owing = all.filter(r=> r.debt > 0);
-  const late = owing.filter(r=> r.ageDays >= 0 && r.ageDays > terms);
-  const fresh = bought.filter(r=> r.orderCount === 1);
-  const strip = document.getElementById('custStripWrap');
-  if(strip && !all.length){ strip.innerHTML = ''; }
-  else if(strip) strip.innerHTML = `<div class="ow-strip">
-    <div class="ow-mt"><p class="ow-mt-l">Bought in 90 days</p><span class="ow-mt-v">${bought.length}</span>
-      <p class="ow-mt-s">of ${all.length} on the book${fresh.length ? ` &middot; ${fresh.length} for the first time` : ''}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">They paid you</p><span class="ow-mt-v">${f(paid)}</span>
-      <p class="ow-mt-s">UGX, on ${bought.reduce((s, r)=> s + r.orders90, 0)} invoiced orders</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">You kept</p><span class="ow-mt-v">${f(kept)}</span>
-      <p class="ow-mt-s">UGX${paid > 0 ? ` &middot; ${(kept / paid * 100).toFixed(1)}% of what they paid` : ' &middot; nothing sold in the window'}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Still owed</p><span class="ow-mt-v">${f(owed)}</span>
-      <p class="ow-mt-s">UGX &middot; ${owing.length} carrying a balance${late.length ? `, ${late.length} ${custTermsPhrase()}` : ''}</p></div>
-  </div>`;
-
-  /* ---- the band: who needs you today ---- */
-  const band = document.getElementById('custAttentionWrap');
-  if(band) band.innerHTML = all.length ? customerAttentionHTML(all) : '';
-
-  /* ---- the lenses. Counted over the book, not over the search ---- */
-  const lenses = {
-    all: all,
-    buying: bought,
-    quiet: all.filter(r=> r.quiet),
-    owing: owing,
-    both: all.filter(r=> r.both),
-  };
-  Object.entries({ all: 'custSegAll', buying: 'custSegBuying', quiet: 'custSegQuiet',
-    owing: 'custSegOwing', both: 'custSegBoth' }).forEach(([k, id])=>{
-    const el = document.getElementById(id);
-    if(el) el.textContent = String(lenses[k].length);
-  });
-  document.querySelectorAll('#cust_lens .ow-seg-b').forEach(b=>{
-    b.classList.toggle('ow-on', b.dataset.clens === custLens);
+  [['owing', owing.length], ['all', all.length], ['best', best.length], ['quiet', quiet.length]]
+    .forEach(([k,n])=>{
+      const el = document.getElementById('custSeg' + k[0].toUpperCase() + k.slice(1));
+      if(!el) return;
+      el.textContent = n;
+      const bad = k === 'owing' && n > 0;
+      el.style.background = bad ? 'var(--om-bad)' : 'var(--om-neutral)';
+      el.style.color = bad ? 'var(--om-bad-ink)' : 'var(--om-neutral-ink)';
+    });
+  document.querySelectorAll('#cust_lens .om-lens').forEach(b=>{
+    const on = b.dataset.clens === custLens;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
 
-  /* ---- the register ---- */
+  renderCustomerKpis(all, owing, byAsk);
+  renderCustomerPhoneHead(all, owing, byAsk, best, quiet);
+
   const tokens = searchTokens(filter);
   let rows = (lenses[custLens] || all).slice();
   if(tokens.length){
-    /* EVERY number, not just the first. The old haystack read c.phone
-       and stopped, so a customer saved under their second line could
-       not be found by it -- while the duplicate check, the WhatsApp
-       match and the printed line all knew about both. */
     rows = rows.filter(r=>{
       const hay = [r.name, r.place, r.id, ...r.phones].join(' ').toLowerCase();
       return matchesAllTokens(hay, tokens);
     });
   }
-  /* Biggest first, and never invoiced last -- a dash sorts under every
-     figure, which is where somebody the app cannot yet value belongs. */
-  rows.sort((a, b)=> (b.spend - a.spend) || (b.debt - a.debt) || a.name.localeCompare(b.name));
+  if(custLens !== 'owing'){
+    rows.sort((a,b)=> (b.kept - a.kept) || (b.spend - a.spend) || a.name.localeCompare(b.name));
+  }
 
-  const count = document.getElementById('custBookCount');
-  if(count) count.textContent = tokens.length || custLens !== 'all'
-    ? `${rows.length} of ${all.length} on the book`
-    : `${all.length} on the book`;
+  const title = document.getElementById('cust_card_t');
+  if(title) title.textContent = custLens === 'owing' ? 'Who to ask first — oldest money, largest first'
+    : custLens === 'best' ? 'Ranked by what you kept, not by what they spent'
+    : custLens === 'quiet' ? 'Bought before, nothing lately'
+    : 'Everyone on the book';
 
   if(!rows.length){
-    wrap.innerHTML = !all.length
-      ? `<div class="ow-empty"><b>Nobody is on the book yet.</b>
-          <span>Everything this screen shows &mdash; what each customer is worth, how often they come, what they owe &mdash; is read from your invoiced orders and the debt book, so the book fills itself as you sell: invoicing a name that is not on file offers to add them there and then. If you are moving an existing shop in, start with the people who owe you money; an opening balance keeps the date of its oldest charge, so the ageing on Debtors is right from the first day.</span></div>`
-      : `<div class="ow-empty"><b>Nobody here matches.</b>
-          <span>${tokens.length ? 'The search reads the name, either phone number, the place and the ID. ' : ''}${
-            custLens === 'all' ? '' : `You are looking at <b>${esc(custLens === 'both' ? 'also suppliers' : custLens)}</b> only &mdash; tap <b>All</b> above for the whole book of ${all.length}.`}</span></div>`;
+    wrap.innerHTML = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
+      + (!all.length
+        ? `<b>Nobody is on the book yet.</b><br>The book fills itself as you sell &mdash; invoicing a name that is not on file offers to add them there and then.`
+        : custLens === 'owing'
+        ? `Nobody owes you anything. Press <b>All</b> to read the whole book of ${all.length}.`
+        : tokens.length
+        ? `Nobody here matches. The search reads the name, either number, the place and the ID.`
+        : `Nobody is in this lens. Press <b>All</b> for the whole book of ${all.length}.`)
+      + `</div>`;
+    custPickedId = null;
+    renderCustomerSide(null);
     return;
   }
 
-  const never = rows.filter(r=> !r.everInvoiced).length;
-  const noPhone = rows.filter(r=> !r.phones.length).length;
-  const facts = [];
-  if(never) facts.push(`<b>${never}</b> ${never === 1 ? 'has' : 'have'} never been invoiced and ${never === 1 ? 'sits' : 'sit'} at the foot with dashes rather than zeros, because nothing sold is not the same as nothing earned`);
-  if(noPhone) facts.push(`<b>${noPhone}</b> ${noPhone === 1 ? 'has' : 'have'} no way to reach them on file`);
-  wrap.innerHTML = `<div class="ow-tbl cu-tbl">
-      <div class="ow-tbl-h">
-        <span>Customer</span><span class="cu-c-st">Standing</span>
-        <span class="ow-tbl-n cu-c-when">Last bought</span>
-        <span class="ow-tbl-n cu-c-ev">Every</span>
-        <span class="ow-tbl-n">Paid you, 90 days</span>
-        <span class="ow-tbl-n cu-c-kept">You kept</span>
-        <span class="ow-tbl-n">Owed now</span><span></span>
-      </div>
-      ${listPageSlice('customers', rows).map(r=> customerRegisterRowHTML(r)).join('')}
+  /* Past due is decided by THEIR terms, not the shop's blanket setting,
+     and an account with no terms agreed is never past due -- it is owing,
+     and the row says so. */
+  let groups;
+  if(custLens === 'owing'){
+    const past = rows.filter(r=> r.ageDays >= 0 && r.ageDays > custTermsFor(r.c));
+    const inTime = rows.filter(r=> !(r.ageDays >= 0 && r.ageDays > custTermsFor(r.c)));
+    groups = [
+      {key:'past', rows:past, word:'Past due', tok:'--om-bad', ink:'--om-bad-ink'},
+      {key:'intime', rows:inTime, word:'Owing, still in time', tok:'--om-neutral', ink:'--om-neutral-ink'},
+    ];
+  } else if(custLens === 'quiet'){
+    groups = [{key:'quiet', rows:rows, word:'Gone quiet', tok:'--om-caution', ink:'--om-caution-ink'}];
+  } else {
+    groups = [{key:'all', rows:rows, word: custLens === 'best' ? 'Best' : 'On the book', tok:'--om-neutral', ink:'--om-neutral-ink'}];
+  }
+  groups = groups.filter(g=>g.rows.length);
+
+  /* A BALANCE THAT DISAGREES WITH ITS OWN HISTORY, named before the rows
+     rather than after them. It came off Debtors with the rest of that
+     screen, and it belongs here: every figure below is read from these
+     balances, so a drifted one makes the whole register untrustworthy.
+     Emitted and wired unconditionally, on the single render path -- the
+     old screen had two exits and wired it on both, which is how a fix can
+     come to be offered on one of them and not the other. */
+  const driftBanner = debtDriftBannerHTML();
+  const paged = listPageSlice('customers', rows);
+  const pagedIds = new Set(paged.map(r=>r.id));
+  wrap.innerHTML = driftBanner + groups.map(g=>{
+    const sum = g.rows.reduce((s,r)=>s+r.debt, 0);
+    const sub = g.key === 'quiet'
+      ? `bought ${fmtUGX(Math.round(g.rows.reduce((s,r)=>s+r.spend,0)))} before, nothing lately`
+      : g.key === 'past' || g.key === 'intime'
+      ? fmtUGX(Math.round(sum))
+      : `${fmtUGX(Math.round(g.rows.reduce((s,r)=>s+r.kept,0)))} kept`;
+    const head = `<div class="om-grow">
+      <span class="om-chip" style="background:var(${g.tok});color:var(${g.ink})">${esc(g.word)}</span>
+      <span style="font-size:12.5px;font-weight:700">${g.rows.length} customer${g.rows.length===1?'':'s'}</span>
+      <span style="flex:1"></span>
+      <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${esc(sub)}</span>
+    </div>`;
+    const vis = g.rows.filter(r=>pagedIds.has(r.id));
+    const hidden = g.rows.filter(r=>!pagedIds.has(r.id));
+    const body = vis.map(r=>custRegisterRowHTML(r, g.key, askRank.get(r.id))).join('');
+    const tail = hidden.length ? `<div class="om-orow" data-list-more="customers" role="button" tabindex="0">
+      <span>${hidden.length} more</span><span style="flex:1"></span>
+      <span class="om-fig om-n" style="font-size:12px">${esc(fmtUGX(Math.round(hidden.reduce((s,r)=>s+r.debt,0))))}</span>
+    </div>` : '';
+    return head + body + tail;
+  }).join('');
+
+  wireDebtDriftFix(wrap);
+  wrap.querySelectorAll('[data-cust-row]').forEach(row=>{
+    row.addEventListener('click', (ev)=>{
+      const wa = ev.target.closest('[data-wa]');
+      if(wa){ ev.stopPropagation(); custDraftChase(Number(wa.dataset.wa)); return; }
+      custPickedId = Number(row.dataset.custRow);
+      renderCustomers(document.getElementById('c_search').value || '');
+    });
+  });
+  if(custPickedId != null && !rows.some(r=>r.id===custPickedId)) custPickedId = null;
+  renderCustomerSide(custPickedId != null ? rows.find(r=>r.id===custPickedId) : null);
+}
+
+function custRegisterRowHTML(r, groupKey, rank){
+  const tone = groupKey === 'past' ? 'om-bad'
+    : r.debt > 0.5 ? 'om-warn'
+    : groupKey === 'quiet' ? '' : 'om-studied';
+  const dim = groupKey === 'quiet' ? ' om-done' : '';
+  const on = custPickedId === r.id ? ' om-on' : '';
+  const over = r.c && r.c.creditLimit != null && r.debt > Number(r.c.creditLimit);
+  const aged = r.debt > 0.5
+    ? (r.ageDays >= 0 ? `${r.ageDays} days` : 'not dated')
+    : '—';
+  const secondLine = over ? `<span class="om-chip" style="height:18px;padding:0 6px;background:var(--om-caution);color:var(--om-caution-ink)">over limit</span>`
+    : groupKey === 'quiet' ? `<span style="font-size:11px;color:var(--om-ink-3)">quiet ${r.daysSinceLast} days</span>`
+    : r.place ? `<span style="font-size:11px;color:var(--om-ink-3)">${esc(r.place)}</span>` : '';
+  return `<div class="om-crow${dim}${on}" data-cust-row="${r.id}" tabindex="0">
+    ${custAvatarHTML(r, tone)}
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(r.name)}</div>
+      ${secondLine ? `<div style="margin-top:2px">${secondLine}</div>` : ''}
     </div>
-    ${listMoreButtonHTML('customers', rows.length, 'customers')}
-    <p class="ow-mini cu-foot">${facts.length ? facts.join('. ') + '. ' : ''}Spend, what you kept and how often somebody buys are read from <b>invoiced</b> orders only, so a quote still on the board counts for nothing here &mdash; which is why a customer can show a dash and still owe you money.</p>`;
+    <div class="om-fig om-n" style="font-size:13.5px;text-align:right;color:var(${r.debt>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(r.debt>0.5?fmtUGX(Math.round(r.debt)):'—')}</div>
+    <div class="om-fig om-n" style="font-size:12.5px;text-align:right;color:var(--om-ink-3)">${esc(aged)}</div>
+    ${custPayBarHTML(r)}
+    <div style="text-align:right">${custAskChipHTML(rank)}</div>
+    <div class="om-crow-ph">
+      <span class="om-t om-crow-ph-p">${esc(r.name)}</span>
+      <span class="om-fig om-crow-ph-f om-n" style="color:var(${r.debt>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(r.debt>0.5?fmtUGX(Math.round(r.debt)):'—')}</span>
+      <span class="om-t om-crow-ph-s">${over?'over limit · ':''}${esc(aged)}${r.place?' · '+esc(r.place):''}</span>
+      <span style="text-align:right">${rank!=null&&r.phones.length?`<button type="button" class="om-wa" data-wa="${r.id}" aria-label="Draft the chase on WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg></button>`:custAskChipHTML(rank)}</span>
+    </div>
+  </div>`;
+}
+
+function renderCustomerKpis(all, owing, byAsk){
+  const el = document.getElementById('cust_kpis');
+  if(!el) return;
+  const owed = owing.reduce((s,r)=>s+r.debt, 0);
+  const bands = custAgingBuckets(owing);
+  const bar = owed > 0 ? `<div class="om-bar" style="margin-top:6px;height:6px">`
+    + bands.map(b=>`<span class="om-bar-s" style="width:${(b.sum/owed*100).toFixed(1)}%;background:var(${b.tok})"></span>`).join('')
+    + `</div><div style="margin-top:4px;font-size:10px;color:var(--om-bad-card-ink)">${bands.map(b=>esc(b.label)).join(' · ')}</div>` : '';
+  const top3 = byAsk.slice(0,3);
+  const top3Sum = top3.reduce((s,r)=>s+r.debt, 0);
+  const over = all.filter(r=> r.c && r.c.creditLimit != null && r.debt > Number(r.c.creditLimit));
+  /* Settles inside their own terms, every time, with at least one
+     settled invoice to say it from. */
+  const clean = all.filter(r=>{ const p = custPayHistory(r); return p.n > 0 && p.late === 0 && p.veryLate === 0; });
+
+  el.innerHTML = `
+  <div class="om-kpi om-kpi-bad">
+    <div class="om-lbl" style="font-size:10.5px">Owed to you</div>
+    <div class="om-fig om-kpi-f om-n">${esc(fmtUGX(Math.round(owed)))}</div>
+    ${bar || `<div class="om-kpi-s" style="color:var(--om-bad-card-ink)">nothing is owed</div>`}
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Ask these three first</div>
+    <div class="om-fig om-kpi-f om-n">${esc(fmtUGX(Math.round(top3Sum)))}</div>
+    <div class="om-kpi-s">${owed>0?`${Math.round(top3Sum/owed*100)}% of the debt sits with ${top3.length} of ${all.length}`:'nothing to ask for'}</div>
+  </div>
+  <div class="om-kpi${over.length?' om-kpi-warn':''}">
+    <div class="om-lbl" style="font-size:10.5px"${over.length?' style="color:var(--om-caution-card-ink)"':''}>Credit out beyond limit</div>
+    <div class="om-fig om-kpi-f om-n">${over.length} account${over.length===1?'':'s'}</div>
+    <div class="om-kpi-s"${over.length?' style="color:var(--om-caution-card-ink)"':''}>${over.length?esc(over.map(r=>r.name).join(', ')):'every account is inside its limit'}</div>
+  </div>
+  <div class="om-kpi om-kpi-good">
+    <div class="om-lbl" style="font-size:10.5px;color:var(--om-good-card-ink)">Pay without chasing</div>
+    <div class="om-fig om-kpi-f om-n" style="color:var(--om-good-ink)">${clean.length}</div>
+    <div class="om-kpi-s" style="color:var(--om-good-card-ink)">settle inside their terms, every time</div>
+  </div>`;
+}
+
+function renderCustomerPhoneHead(all, owing, byAsk, best, quiet){
+  const el = document.getElementById('cust_ph_head');
+  if(!el) return;
+  const owed = owing.reduce((s,r)=>s+r.debt, 0);
+  const past = owing.filter(r=> r.ageDays >= 0 && r.ageDays > custTermsFor(r.c));
+  const pastSum = past.reduce((s,r)=>s+r.debt, 0);
+  const top3 = byAsk.slice(0,3).reduce((s,r)=>s+r.debt, 0);
+  const bands = custAgingBuckets(owing);
+  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.?0+$/,'') + 'm'
+    : n >= 1000 ? Math.round(n/1000) + 'k' : String(Math.round(n));
+  const tab = (key,label,n)=>`<button type="button" class="om-ph-tab${custLens===key?' om-on':''}" data-clens="${key}">${esc(label)} ${n}</button>`;
+  el.innerHTML = `<div class="om-ph-t">Customers</div>
+    <div style="margin-top:10px;background:var(--om-rail-hover);border-radius:10px;padding:10px 12px">
+      <div class="om-ph-fig-l">Owed to you</div>
+      <div class="om-fig" style="margin-top:2px;font-size:20px;color:var(--om-on-navy)">${esc(short(owed))}</div>
+      ${owed>0?`<div class="om-bar" style="margin-top:8px;background:var(--om-rail-on)">`
+        + bands.map(b=>`<span class="om-bar-s" style="width:${(b.sum/owed*100).toFixed(1)}%;background:var(${b.tok})"></span>`).join('')
+        + `</div>` : ''}
+      <div style="margin-top:6px;font-size:11px;color:var(--om-on-navy-3)">${esc(short(pastSum))} of it past due${owed>0?` · ${Math.round(top3/owed*100)}% sits with three accounts`:''}</div>
+    </div>
+    <div class="om-ph-tabs">${tab('owing','Owing',owing.length)}${tab('all','All',all.length)}${tab('quiet','Quiet',quiet.length)}</div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>custSetLens(b.dataset.clens)));
+}
+
+function custSetLens(key){
+  custLens = key;
+  custPickedId = null;
+  renderCustomers(document.getElementById('c_search').value || '');
+}
+/* The box is what ships. This opens WhatsApp with the words already in
+   it and records nothing -- nothing sends itself. */
+function custDraftChase(id){
+  const r = customerBookRows().find(x=>x.id===id);
+  if(!r) return;
+  const msg = `Hello ${r.name},\n\nOur records show ${fmtUGX(Math.round(r.debt))} outstanding`
+    + (r.ageDays >= 0 ? `, the oldest of it ${r.ageDays} days old` : '')
+    + `.\n\nCould you let me know which day you can settle it?\n\nThank you.`;
+  window.open(waComposeUrl(r.phones[0] || '', msg), '_blank');
+}
+
+/* THE PANEL. Navy header, the three figures, the evidence, then what can
+   be done -- the same rhythm as the other Sell screens, so the eye learns
+   it once. */
+function renderCustomerSide(r){
+  const el = document.getElementById('cust_side');
+  if(!el) return;
+  if(!r){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick a customer to read what the debt is made of, how they pay, and what their trade actually earns.</div>`
+      + debCreditPanelHTML();
+    wireDebCreditRate(el);
+    return;
+  }
+  const c = r.c || {};
+  const st = r.stats || {};
+  const limit = c.creditLimit == null ? null : Number(c.creditLimit);
+  const over = limit != null && r.debt > limit;
+  const clearBy = over ? r.debt - limit : 0;
+  const terms = custTermsFor(c);
+  const tone = (r.ageDays >= 0 && r.ageDays > terms) ? 'om-bad' : r.debt > 0.5 ? 'om-warn' : 'om-studied';
+  const since = st.first ? new Date(st.first+'T00:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : null;
+
+  /* WHAT THE DEBT IS MADE OF, invoice by invoice -- and the drift check
+     surfaced beside it rather than buried on a screen of its own. A
+     balance that disagrees with its own history is the one thing that
+     makes every other figure here untrustworthy. */
+  const open = customerOutstandingInvoices(r.id);
+  const drift = customerDebtDrift(c);
+  const debtRows = open.length ? open.map(q=>{
+    const days = invoiceOpenDays(q);
+    return `<div class="om-drow">
+      <span class="om-fig" style="font-size:12px;color:var(--om-ink-3);flex:none">${esc(invoiceNumberLabel(q).replace('-','‑'))}</span>
+      <span style="flex:1;min-width:0;font-size:12px;color:var(--om-ink-3)">${days==null?'not dated':days+' days'}</span>
+      <span class="om-fig om-n" style="font-size:12.5px">${esc(fmtUGX(Math.round(invoiceBalanceDue(q))))}</span>
+    </div>`;
+  }).join('') : `<div class="om-read">No invoice is open against this account. Anything owed here came in as an opening balance rather than from a sale.</div>`;
+
+  const pay = custPayHistory(r);
+  const shopKept = customerBookRows().reduce((s,x)=>s+x.kept, 0);
+  const shopSpend = customerBookRows().reduce((s,x)=>s+x.spend, 0);
+  const shopMargin = shopSpend > 0 ? shopKept/shopSpend*100 : null;
+  const tops = (st.topProducts || []).slice(0,3);
+  const topSum = tops.reduce((s,p)=>s+p.value, 0);
+
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-pan">
+      <div style="display:flex;align-items:center;gap:9px">
+        ${custAvatarHTML(r, 'om-av-onnavy', true)}
+        <div style="min-width:0;flex:1">
+          <div class="om-pan-t">${esc(r.name)}</div>
+          <div class="om-pan-m">${since?`customer since ${esc(since)}`:'no invoiced order yet'}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        ${r.phones.length?`<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-rail-on);color:var(--om-on-navy)">${esc(r.phones[0])}</span>`:`<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-rail-on);color:var(--om-on-navy-3)">no number on file</span>`}
+        ${r.place?`<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-rail-on);color:var(--om-on-navy)">${esc(r.place)}</span>`:''}
+      </div>
+    </div>
+    <div class="om-figs">
+      <div><div class="om-lbl" style="font-size:10.5px">Owes now</div><div class="om-fig om-figs-f om-n" style="color:var(${r.debt>0.5?'--om-bad-ink':'--om-ink-3'})">${esc(fmtUGX(Math.round(r.debt)))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Credit limit</div><div class="om-fig om-figs-f om-n" style="color:var(--om-ink-3)">${limit==null?'none set':esc(fmtUGX(limit))}</div></div>
+      <div><div class="om-lbl" style="font-size:10.5px">Bought 2 yrs</div><div class="om-fig om-figs-f om-n">${esc(fmtUGX(Math.round(st.sales||0)))}</div></div>
+    </div>
+    ${over?`<div style="padding:0 14px 12px"><div class="om-note om-note-warn">
+      <b>${esc(fmtUGX(Math.round(clearBy)))} over the limit.</b> New credit sales are blocked for this account until it comes under ${esc(fmtUGX(limit))}. This is a rule, not a warning to dismiss.
+    </div></div>`:''}
+    <div class="om-blk">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="om-lbl" style="font-size:10.5px">What the debt is made of</span>
+        <span style="font-size:11.5px;color:var(--om-ink-3);margin-left:auto">${open.length} invoice${open.length===1?'':'s'} open</span>
+      </div>
+      <div style="margin-top:6px">${debtRows}</div>
+      <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--om-rule-inner)">
+        ${Math.abs(drift) < 1
+          ? `<span class="om-chip" style="background:var(--om-good);color:var(--om-good-ink)">Ledger agrees with the balance &middot; checked</span>`
+          : `<span class="om-chip" style="background:var(--om-bad);color:var(--om-bad-ink)">Ledger and balance disagree by ${esc(fmtUGX(Math.abs(drift)))}</span>`}
+      </div>
+    </div>
+    <div class="om-acts">
+      <button type="button" class="om-btn om-btn-p" id="cust_pan_chase" style="height:34px"${r.phones.length?'':' disabled'}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Draft the chase
+      </button>
+      <button type="button" class="om-btn om-btn-s" id="cust_pan_statement" style="height:34px">Send statement</button>
+      <button type="button" class="om-btn om-btn-s" id="cust_pan_pay" style="height:34px">Record a payment</button>
+    </div>
+  </div>
+
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">What they buy, and what it earns</span></div>
+    <div style="padding:0 14px 12px">
+      <div style="display:flex;gap:12px;padding:8px 0">
+        <div style="flex:1"><div class="om-lbl" style="font-size:10.5px">You kept, 12 months</div><div class="om-fig om-n" style="font-size:15px;color:var(--om-good-ink)">${esc(fmtUGX(Math.round(r.kept)))}</div></div>
+        <div style="flex:1"><div class="om-lbl" style="font-size:10.5px">Margin</div><div class="om-fig om-n" style="font-size:15px">${r.keptPct==null?'—':r.keptPct.toFixed(0)+'%'}</div></div>
+        <div style="flex:1"><div class="om-lbl" style="font-size:10.5px">Shop average</div><div class="om-fig om-n" style="font-size:15px;color:var(--om-ink-3)">${shopMargin==null?'—':shopMargin.toFixed(0)+'%'}</div></div>
+      </div>
+      ${tops.length?tops.map(pr=>`<div class="om-drow">
+        <span class="om-t" style="flex:1;font-size:12.5px">${esc(pr.name)}</span>
+        <span class="om-fig om-n" style="font-size:12px;color:var(--om-ink-3)">${topSum>0?Math.round(pr.value/topSum*100):0}% of spend</span>
+      </div>`).join(''):`<div class="om-read">Nothing invoiced yet, so there is nothing to read about what they buy.</div>`}
+      ${tops.length && r.keptPct != null && shopMargin != null ? `<div class="om-read" style="margin-top:9px">${
+        r.keptPct < shopMargin
+          ? `<b>${esc(tops[0].name)}</b> is ${topSum>0?Math.round(tops[0].value/topSum*100):0}% of what they take and this account runs ${(shopMargin-r.keptPct).toFixed(0)} points under the shop average &mdash; a rise on that one line alone would bring it level.`
+          : `This account runs ${(r.keptPct-shopMargin).toFixed(0)} points above the shop average, on <b>${esc(tops[0].name)}</b> more than anything else.`}</div>`:''}
+    </div>
+  </div>`;
+
+  const byId=(id)=>el.querySelector('#'+id);
+  const ch=byId('cust_pan_chase'); if(ch) ch.onclick=()=>custDraftChase(r.id);
+  /* The statement of account already exists, built from the debt log so a
+     credit sale is not counted twice. This reaches it rather than drawing
+     a second one. */
+  const stm=byId('cust_pan_statement'); if(stm) stm.onclick=()=>{ custViewId = r.id; renderCustomers(document.getElementById('c_search').value || ''); };
+  const pay2=byId('cust_pan_pay'); if(pay2) pay2.onclick=()=>openCustomerDebtModal(r.id, 'payment');
+  /* And the book's own reading, under the picked customer: what the
+     waiting costs the shop, with the rate set beside it. */
+  el.insertAdjacentHTML('beforeend', debCreditPanelHTML());
+  wireDebCreditRate(el);
 }
 
 /* The panel behind a customer card.
@@ -55254,7 +55608,7 @@ function printSupplierStatement(supplierId){
     act('open', row.dataset.sopen);
   });
   if(lens) lens.addEventListener('click', (e)=>{
-    const b = e.target.closest('.ow-seg-b');
+    const b = e.target.closest('.om-lens');
     if(!b) return;
     supLens = b.dataset.slens;
     rerender();
@@ -59850,7 +60204,6 @@ function deleteCustomerDebtLog(customerId, logId){
     deleteCustomerDebtLog(customerId, Number(btn.dataset.id));
   }));
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -59939,7 +60292,6 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
   renderCustomers(document.getElementById('c_search').value);
-  renderDebtorsList();
   toast((editingCustomerDebtType==='charge' ? 'Charge recorded' : 'Payment recorded')
     + paymentDatedSuffix(happenedOn));
 });
@@ -60665,7 +61017,6 @@ function debtDriftTargetNow(customerId, expectedDrift){
 function afterDebtDriftRepair(){
   saveData();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
 }
 function explainDebtDrift(customerId){
   const at = debtDriftTargetNow(customerId);
@@ -60827,132 +61178,10 @@ function wireDebCreditRate(wrap){
     data.presetCreditPct = (Number.isFinite(v) && v > 0 && v <= 100) ? v : 0;
     box.value = data.presetCreditPct > 0 ? data.presetCreditPct : '';
     saveData();
-    renderDebtorsPosition();
+    renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   });
 }
 
-function renderDebtorsPosition(){
-  const wrap = document.getElementById('debPositionWrap');
-  if(!wrap) return;
-  const p = debAgingProfile();
-
-  if(!p.customers){
-    /* NO STRIP OF ZEROS. Four tiles reading 0 is data slop: it fills a
-       settled screen with figures that mean nothing, and makes a book
-       that is straight look like a screen that is broken. One sentence
-       is the whole state.
-
-       A shop with no customers yet has not "settled up" -- it has not
-       started. Saying the second to somebody on their first day reads
-       as the app misunderstanding what it is looking at. */
-    const any = (data.customers||[]).length > 0;
-    wrap.innerHTML = `<div class="ow-pan ow-db-clear">
-      <div class="ow-empty"><b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
-      ${any ? 'Every customer on file is settled up. A balance appears here the moment somebody takes goods on credit.'
-            : 'Debts appear here once a customer takes goods on credit.'}</div>
-    </div>${debCreditPanelHTML()}`;
-    wireDebCreditRate(wrap);
-    return;
-  }
-
-  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
-  const share = (n)=> p.total > 0 ? n / p.total : 0;
-  const pct = (n)=> Math.round(share(n) * 100);
-  const live = p.bands.filter(b=> b.amount > 0);
-  const worst = p.bands.find(b=> b.key === 'b90p');
-  const unknown = p.bands.find(b=> b.key === 'unknown');
-
-  /* ---- the strip ----
-     Four questions and not one more. Every tile is a fact about the
-     SHAPE of the money, which is what this screen is for; who owes it
-     is the list underneath. */
-  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
-    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
-  const tiles = [
-    /* Ink, not crimson. Being owed money by a shop's own customers is
-       trade, not a warning -- and this figure is coloured on no screen
-       in the app. What the old page did wrong was set it in Archivo
-       Black, which is loaded for PAGE NAMES: money is mono here like
-       every other figure the shop can act on. */
-    tile('Owed to you', `${f(p.total)}<span class="ow-u">UGX</span>`,
-      `Across ${p.customers} customer${p.customers===1?'':'s'} &middot; the whole book, whatever the list below is filtered to`),
-  ];
-  /* The bad news, or -- when there is none -- the oldest thing there is.
-     A shop with nothing over ninety days should not be shown an empty
-     crimson tile, and it should not be shown nothing either: how old the
-     oldest money is, is worth a tile on any book. */
-  if(worst && worst.amount > 0){
-    tiles.push(tile('Over 90 days', `${f(worst.amount)}<span class="ow-u">UGX</span>`,
-      `<b>${pct(worst.amount)}%</b> of it, from ${worst.count} customer${worst.count===1?'':'s'}. Money this old rarely arrives on its own`,
-      'ow-bad'));
-  } else {
-    const dated = debAllRows().filter(r=> r.debt > 0.5 && r.ageDays >= 0);
-    const oldest = dated.reduce((m,r)=> (!m || r.ageDays > m.ageDays) ? r : m, null);
-    tiles.push(tile('Oldest balance',
-      oldest ? `${oldest.ageDays}<span class="ow-u">days</span>` : '&mdash;',
-      oldest ? `${esc(oldest.name)} &middot; ${f(oldest.debt)} UGX`
-             : 'nothing here has a dated charge behind it',
-      oldest && oldest.ageDays >= 30 ? 'ow-warn' : ''));
-  }
-  /* How exposed the shop is to one name. Withheld when there is only one
-     debtor: "largest single debt, 100% of the total" is not a finding
-     when it is also the only debt, it is the same number twice. */
-  const big = p.customers > 1 ? p.biggest : null;
-  if(big) tiles.push(tile('Largest single debt', `${f(big.debt)}<span class="ow-u">UGX</span>`,
-    `${esc(big.name)} &middot; <b>${pct(big.debt)}%</b> of everything you are owed`));
-  /* Amber, and only when there is any: a figure whose age cannot be
-     worked out is a caution with a repair attached, and this is the only
-     screen that can carry out the repair. */
-  if(unknown && unknown.amount > 0) tiles.push(tile('Age not known',
-    `${f(unknown.amount)}<span class="ow-u">UGX</span>`,
-    `${unknown.count} customer${unknown.count===1?'':'s'} with nothing dated behind the balance, so no age can be worked out`,
-    'ow-warn'));
-
-  /* ---- the age of the money: ONE device, a bar with a legend ----
-     It was a 16px stacked bar AND five bordered cards repeating the same
-     five figures, both of them the filter -- one fact in two voices,
-     across about 120px of height. The bar keeps the proportion, because
-     one big old balance is the problem and three small fresh ones are
-     not; the cards become a legend that labels it. Same figures, same
-     click targets, half the height, and the legend is plainly
-     subordinate to the bar instead of arguing with it.
-
-     Widths come from the money in each band. A floor keeps a 1% band
-     from collapsing into a line nobody can hit: it distorts the picture
-     slightly, and a segment too small to click is worse. */
-  const segs = live.map(b=> `<button type="button" class="ow-db-ag-s ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
-      style="flex-grow:${b.amount}"
-      data-band="${esc(b.key)}"
-      title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'}">
-      <span class="sr-only">${esc(b.label)}</span></button>`).join('');
-
-  const legend = live.map(b=> `<button type="button" class="ow-db-ag-b ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
-      data-band="${esc(b.key)}">
-      <span class="ow-db-ag-t">${esc(b.short)}</span>
-      <span class="ow-db-ag-v">${f(b.amount)}</span>
-      <span class="ow-db-ag-m">${b.count} customer${b.count===1?'':'s'} &middot; ${pct(b.amount)}%</span>
-    </button>`).join('');
-
-  wrap.innerHTML = `<div class="ow-strip ow-db-strip${tiles.length < 4 ? ' ow-db-s' + tiles.length : ''}">${tiles.join('')}</div>
-  <div class="ow-pan ow-db-ag-pan">
-    <div class="ow-pan-h">
-      <span class="ow-pan-t">Age of what you are owed</span>
-      <span class="ow-pan-n ow-hide-sm">the whole book &mdash; ${debBandFilter ? 'tap the lit band to show everyone' : 'tap a band to work through it'}</span>
-    </div>
-    <div class="ow-db-ag">
-      <div class="ow-db-ag-bar" role="group" aria-label="What you are owed, split by age">${segs}</div>
-      <div class="ow-db-ag-l">${legend}</div>
-    </div>
-  </div>${debCreditPanelHTML()}`;
-
-  wireDebCreditRate(wrap);
-  wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
-    // Clicking the band you are already in takes the filter off, so the
-    // way out is the same control as the way in.
-    debBandFilter = (debBandFilter === el.dataset.band) ? '' : el.dataset.band;
-    renderDebtorsList();
-  }));
-}
 
 /* THE CONSIGNMENT CONSOLE.
 
@@ -62112,282 +62341,12 @@ const DEB_SORT_CHOICES = [
   {key:'name',     label:'Customer name, A to Z'},
 ];
 
-function renderDebtorsList(){
-  const wrap = document.getElementById('deb_tableWrap');
-  if(!wrap) return;
-  const rows = debRowsForList(debSearch);
-  debLastRows = rows;
-  renderDebtorsPosition();
-  renderDebtorsRail();
-  renderDebFilterNote(rows.length);
-
-  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
-  const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
-  const allRows = debAllRows();
-  const owingAll = allRows.filter(r=> r.debt > 0.5);
-  const bandDef = debBandFilter ? agingBandDef(debBandFilter) : null;
-
-  /* ---- the toolbar ----
-     Search, the toggle, the sort and the two things that leave the
-     screen, in one band directly above the rows they act on. All four
-     already existed; they were unfindable because search sat in a form
-     field with a floating label, and Print and Export sat up in the
-     panel head, one heading away from the list and ABOVE the search box
-     that decides what they will contain. */
-  const sortLabel = (DEB_SORT_CHOICES.find(c=> c.key === DEB_SORT_STATE.key) || DEB_SORT_CHOICES[0]).label;
-  const toolbar = `<div class="ow-tb">
-    <label class="ow-f ow-f-grow ow-tb-s${debSearch ? ' ow-set' : ''}">
-      <span class="ow-f-l">Find a customer</span>
-      <span class="ow-f-in">
-        <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-        <input class="ow-f-v ow-f-t" id="deb_search" type="text" placeholder="Name or place" value="${esc(debSearch)}">
-      </span>
-    </label>
-    <div class="ow-f">
-      <span class="ow-f-l">Order</span>
-      <span class="ow-f-in">
-        <select class="ow-f-sel" id="deb_sort" aria-label="How the list is ordered">
-          ${DEB_SORT_CHOICES.map(c=> `<option value="${c.key}"${DEB_SORT_STATE.key===c.key?' selected':''}>${esc(c.label)}</option>`).join('')}
-        </select>
-      </span>
-    </div>
-    <button type="button" class="btn btn-ghost ow-sm ow-db-tg${debHideSettled ? ' ow-on' : ''}"
-      id="deb_hide_no_debt" role="switch" aria-checked="${debHideSettled}">
-      <svg class="icon" viewBox="0 0 24 24">${debHideSettled
-        ? '<path d="M4 12.5l5 5L20 6.5"/>'
-        : '<rect x="4" y="4" width="16" height="16" rx="2"/>'}</svg>
-      Hide settled</button>
-    ${debBandFilter ? `<button type="button" class="ow-cp ow-warn ow-db-fc" id="deb_band_chip"
-      title="Showing only ${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')} — tap to show everyone">
-      ${esc(bandDef ? bandDef.short : 'one band')} only
-      <svg class="ow-db-fc-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>` : ''}
-    ${rows.length ? `<span class="ow-tb-n">
-      <button type="button" class="btn btn-ghost ow-sm" id="deb_print_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-        ${debBandFilter || debSearch ? `Print these ${rows.length}` : 'Print list'}</button>
-      <button type="button" class="btn btn-ghost ow-sm" id="deb_export_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
-        Export CSV</button>
-    </span>` : ''}
-  </div>`;
-
-  /* ---- the age chip ----
-     ONE device for the age, and toned only where the tone means
-     something: crimson past sixty days, amber past thirty and on a
-     balance whose age cannot be worked out at all, plain otherwise. A
-     figure under a month is ordinary trade and is not marked. */
-  const ageChip = (r)=>{
-    const tone = r.ageDays < 0 ? ' ow-warn'
-      : r.ageDays >= 60 ? ' ow-bad'
-      : r.ageDays >= 30 ? ' ow-warn' : '';
-    return `<span class="ow-cp${tone}">${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
-  };
-
-  /* How far through their CURRENT debt they are. Absent rather than
-     empty when there is nothing to measure it from: a bar at zero would
-     say they have paid nothing, which is a claim about somebody's
-     conduct the records do not support. */
-  const progressCell = (r)=>{
-    const p = r.progress;
-    if(!p || p.pct === null){
-      const why = (p && p.reason === 'drift')
-        ? 'This balance does not match its own history, so anything measured from that history would describe a different figure. Fix it with the note above.'
-        : 'No dated charges behind this balance, so there is nothing to measure against.';
-      return `<span class="deb-prog-none" title="${esc(why)}">&mdash;</span>`;
-    }
-    const pct = Math.round(p.pct*100);
-    return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} charged on what is still open">
-      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${pct}%"></div></div>
-      <span class="deb-prog-pct">${pct}%</span>
-    </div>`;
-  };
-
-  /* When somebody last paid ANYTHING. The single best read on whether a
-     customer has gone quiet -- and never-paid is crimson because it is
-     the one value in this column worth stopping on: a customer who never
-     started is a different thing from one who has gone quiet, and only
-     the first is a reason not to sell to them again. */
-  const paidCell = (r)=> r.lastPaid
-    ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
-
-  /* ---- one debtor, opened ----
-     The invoices behind the balance, from the same reading the demand
-     names them by (debtChaseInvoices), so this screen and the message
-     that goes out cannot list a customer's invoices differently. This is what the screen is for: seeing WHY the figure
-     is what it is before anybody is asked for it. */
-  const openBody = (r)=>{
-    const invs = debtChaseInvoices(r.id);
-    const listed = invs.reduce((s,i)=> s + i.due, 0);
-    const carried = r.debt - listed;
-
-    const table = invs.length ? `<div class="ow-tbl" style="--ow-tbl-cols:minmax(0,1fr) 92px 116px">
-      <div class="ow-tbl-h"><span class="ow-tbl-c">Invoice</span><span class="ow-tbl-c">Dated</span><span class="ow-tbl-n">Still open</span></div>
-      ${invs.map(i=> `<div class="ow-tbl-r">
-        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(i.no)}</span>${i.what ? `<span class="ow-tbl-s">${esc(i.what)}</span>` : ''}</span>
-        <span class="ow-tbl-c" data-l="Dated">${esc(i.date ? fmtShortDate(i.date) : 'no date')}</span>
-        <span class="ow-tbl-n" data-l="Still open">${f(i.due)}</span>
-      </div>`).join('')}
-      ${Math.abs(carried) > 0.5 ? `<div class="ow-tbl-f">
-        <span class="ow-tbl-c">${carried > 0 ? 'Carried from before these invoices' : 'The invoices come to more than the balance'}</span>
-        <span class="ow-tbl-c"></span><span class="ow-tbl-n">${f(Math.abs(carried))}</span></div>` : ''}
-    </div>` : `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their debt history on the customer page says where it came from.</p>`;
-
-    /* NOTHING HERE THAT THE ROW ALREADY SAYS.
-
-       The open row used to open with a sentence -- "255,000 UGX still
-       open across 1 invoice and the oldest of it has been owing 0 days.
-       They have paid 0 UGX of the 255,000 UGX charged on what is still
-       open." -- and close with a standing paragraph about how a payment
-       settles. Every figure in the first was already on the row it had
-       just opened (the balance, the age chip, the paid-off bar) or in
-       the table directly below it, and the second said the same thing
-       under every debtor in the book, whoever they were. Two blocks of
-       prose between the reader and the four lines they opened the row
-       to see.
-
-       The invoices are the reason to open a row, so they are what the
-       row opens onto. The figures behind the paid-off bar are still one
-       hover away on the bar itself, and what a payment does is said
-       once, in the rail, where a standing rule belongs. */
-    return `<div class="ow-q-x">
-      ${table}
-      <div class="ow-q-a">
-        <button type="button" class="btn btn-accent ow-sm deb-receive" data-id="${esc(r.id)}">Receive a payment</button>
-        <button type="button" class="btn btn-ghost ow-sm" data-stats="${esc(r.id)}">Their statement</button>
-      </div>
-    </div>`;
-  };
-
-  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
-     emitted together from this one function, so neither can drift from
-     the other -- the guarantee .ow-q was built to give. */
-  const rowHTML = (r)=>{
-    const open = r.id === debOpenId;
-    const meta = [r.location,
-      r.lastPaid ? 'last paid ' + fmtShortDate(r.lastPaid) : 'never paid',
-      r.progress && r.progress.pct !== null ? Math.round(r.progress.pct*100) + '% paid off' : '',
-    ].filter(Boolean).join(' · ');
-    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(r.id)}">
-      <button type="button" class="ow-q-r" data-open="${esc(r.id)}" aria-expanded="${open}">
-        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        <span class="ow-q-t" title="${esc(r.name)}${r.location ? ' · ' + esc(r.location) : ''}"><span class="ow-q-who">${esc(r.name)}</span>${
-          r.location ? `<span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${esc(r.location)}</span>` : ''}</span>
-        <span class="ow-db-pr">${progressCell(r)}</span>
-        ${paidCell(r)}
-        <span class="ow-q-m">${ageChip(r)}</span>
-        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span></span>
-      </button>
-      <button type="button" class="ow-q-card" data-open="${esc(r.id)}" aria-expanded="${open}">
-        <div class="ow-q-cm">${ageChip(r)}
-          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-        <p class="ow-q-ct">${esc(r.name)}</p>
-        <span class="ow-q-cv">${f(r.debt)}<span class="ow-q-b">${
-          r.ageDays >= 0 ? 'owing ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span></span>
-        <p class="ow-q-note ow-db-cmeta">${esc(meta)}</p>
-      </button>
-      ${open ? openBody(r) : ''}
-    </div>`;
-  };
-
-  /* THE COLUMN NAMES. Five columns of which three are figures need
-     saying, and a queue of rows has no <thead> to say them in. Hidden on
-     the phone, where every cell that had a name carries its own. */
-  const head = `<div class="ow-db-h">
-    <span></span><span>Customer</span><span>Paid off</span><span>Last payment</span>
-    <span class="ow-db-h-c">Owing for</span><span class="ow-db-h-r">Owing</span>
-  </div>`;
-
-  /* Named rather than dropped: what the filters removed is said where it
-     would have been, with the figure it takes with it. */
-  const hiddenCount = owingAll.length - rows.filter(r=> r.debt > 0.5).length;
-  const hiddenSum = owingAll.reduce((s,r)=>s+r.debt,0) - totalDebt;
-  const foot = rows.length && hiddenCount > 0
-    ? `<p class="ow-mini">${debBandFilter ? `Showing <b>${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')}</b> only. ` : ''}${
-        hiddenCount} customer${hiddenCount===1?'':'s'} owing <b>${f(hiddenSum)}</b> ${hiddenCount===1?'is':'are'} not listed${
-        debSearch ? ' by the search and the filters' : ''}. A printed sheet says the same on its face.</p>`
-    : '';
-
-  const empty = data.customers.length === 0
-    ? '<div class="ow-empty"><b>No customers yet.</b> Add one on the Customers screen, or just sell to somebody by name &mdash; a balance appears here the moment they take goods on credit.</div>'
-    : debBandFilter
-      ? `<div class="ow-empty"><b>Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit band above to show everyone.</div>`
-      : debSearch
-        ? `<div class="ow-empty"><b>No customer matches &ldquo;${esc(debSearch)}&rdquo;.</b> Search a name or a place.</div>`
-        /* The panel above has already said nobody owes anything, and
-           saying it again here is the screen agreeing with itself out
-           loud. What is left to say is what this panel is hiding. */
-        : debHideSettled
-          ? `<div class="ow-empty">Nothing to list. <b>Hide settled</b> is on, so the ${data.customers.length} settled customer${data.customers.length===1?'':'s'} on file ${data.customers.length===1?'is':'are'} not shown &mdash; turn it off to see everyone.</div>`
-          : '<div class="ow-empty">No customer on file is carrying a balance.</div>';
-
-  wrap.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h">
-      <span class="ow-pan-t">Debtors</span>
-      <span class="ow-pan-n">${rows.length ? `${rows.length}${
-        rows.length !== owingAll.length ? ' of ' + owingAll.length : ''} &middot; ${f(totalDebt)}${
-        debBandFilter || debSearch ? ' shown' : ''}` : 'none'}</span>
-    </div>
-    ${toolbar}
-    ${debtDriftBannerHTML()}
-    ${rows.length ? head + rows.map(rowHTML).join('') + foot : empty}
-  </div>`;
-
-  wireDebToolbar(wrap);
-  /* Drift can exist on a customer the current filter hides, so the fix
-     has to be reachable from the empty path too, not just the populated
-     one. */
-  wireDebtDriftFix(wrap);
-
-  wrap.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
-    // Clicking the row that is open closes it: the way out is the way in.
-    debOpenId = (debOpenId === btn.dataset.open) ? null : btn.dataset.open;
-    renderDebtorsList();
-  }));
-  wrap.querySelectorAll('.deb-receive').forEach(btn=> btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    openCustomerDebtModal(btn.dataset.id, 'payment');
-  }));
-  // Before chasing somebody it helps to see who they are and what they
-  // have bought. The statement to hand them prints from there too.
-  wrap.querySelectorAll('[data-stats]').forEach(btn=> btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    openCustomerStats(btn.dataset.stats);
-  }));
-}
 
 /* The toolbar is rendered with the list, so its controls are wired after
    every render rather than once at parse time -- the pattern the drift
    fix already uses. Search keeps focus and caret across the re-render it
    causes, or typing a second letter would put the caret back at the
    start. */
-function wireDebToolbar(wrap){
-  const box = wrap.querySelector('#deb_search');
-  if(box){
-    box.addEventListener('input', (e)=>{
-      const at = e.target.selectionStart;
-      debSearch = e.target.value;
-      renderDebtorsList();
-      const again = document.getElementById('deb_search');
-      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(_){} }
-    });
-  }
-  const sort = wrap.querySelector('#deb_sort');
-  if(sort) sort.addEventListener('change', (e)=>{
-    DEB_SORT_STATE.key = e.target.value;
-    DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[e.target.value] || -1;
-    renderDebtorsList();
-  });
-  const tg = wrap.querySelector('#deb_hide_no_debt');
-  if(tg) tg.addEventListener('click', ()=>{ debHideSettled = !debHideSettled; renderDebtorsList(); });
-  const chip = wrap.querySelector('#deb_band_chip');
-  if(chip) chip.addEventListener('click', ()=>{ debBandFilter = ''; renderDebtorsList(); });
-  const prt = wrap.querySelector('#deb_print_btn');
-  if(prt) prt.addEventListener('click', debPrintList);
-  const exp = wrap.querySelector('#deb_export_btn');
-  if(exp) exp.addEventListener('click', debExportCSV);
-}
 
 /* THE RAIL. Why the figure beside a customer is the figure it is, three
    derived readings, and the handoff to the screen that does the asking.
@@ -62431,20 +62390,6 @@ function renderDebtorsRail(){
    echoed down here where the rows it removed would have been -- with the
    way out beside it. A filter you cannot see is a filter you forget you
    set, and then you trust a total that is a slice. */
-function renderDebFilterNote(shown){
-  const el = document.getElementById('debFilterNote');
-  if(!el) return;
-  if(!debBandFilter){ el.innerHTML = ''; return; }
-  const def = agingBandDef(debBandFilter);
-  el.innerHTML = `<div class="ow-pan ow-db-note">
-    <span>Showing only <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'one band')}</b> &mdash; ${shown} customer${shown===1?'':'s'}. The figures above are still the whole book.</span>
-    <button type="button" class="btn btn-ghost ow-sm" id="debClearBand">Show everyone</button>
-  </div>`;
-  el.querySelector('#debClearBand').addEventListener('click', ()=>{
-    debBandFilter = '';
-    renderDebtorsList();
-  });
-}
 function debExportCSV(){
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to export'); return; }
@@ -75398,7 +75343,6 @@ async function saveCashTxn(column){
       resetCashTxnForms();
       renderCbTransactions(); renderCbSummary(); renderCbTriggers();
       renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-      renderDebtorsList();
       toast('Cash in recorded');
       return;
     }
@@ -75971,7 +75915,7 @@ const PRESET_OUTSIDE_RULES = [
      and what a term of the unpriced part would have come to. The TERM
      it buys is the chase grace above; there is deliberately no second
      figure here for it. */
-  { name:'Credit costs', tab:'analytics-debtors', where:'Debtors', unit:'%',
+  { name:'Credit costs', tab:'debtors', where:'Customers, Owing', unit:'%',
     what:'What an order charges for taking the shop’s terms instead of paying now.',
     get:()=> shopCreditPct() },
   { name:'Watch a supplier price for', tab:'prices', where:'Price registry', unit:'days',
@@ -90417,7 +90361,7 @@ const MANAGER_DOORS = {
   consignment: { tab: 'consignment', label: 'Open Consignment' },
   orders: { tab: 'quote-saved', label: 'Open Order tracking' },
   invoices: { tab: 'invoices', label: 'Open Invoices' },
-  debtors: { tab: 'analytics-debtors', label: 'Open Debtors' },
+  debtors: { tab: 'debtors', label: 'Open who owes you' },
   creditors: { tab: 'analytics-creditors', label: 'Open Creditors' },
   followups: { tab: 'followups', label: 'Open Follow-ups' },
   inventory: { tab: 'inventory', label: 'Open Inventory' },

@@ -260,13 +260,16 @@ const onTerms = { pct: 3, days: 30, agreedAt: '2026-09-13' };
  * READS it with the other rules that are set elsewhere.
  */
 {
-  t.check(/id="deb_credit_pct"/.test(src), 'the box is on the Debtors screen');
+  /* The box moved with the debt it is about: Debtors folded into the
+     Customers screen's Owing lens, and the rule this app keeps is that a
+     rate is set beside the figure it changes. */
+  t.check(/id="deb_credit_pct"/.test(src), 'the box is on the screen that shows the debt');
   const wire = extractFunction(src, 'wireDebCreditRate', 'index.html');
   t.check(/data\.presetCreditPct = \(Number\.isFinite\(v\) && v > 0 && v <= 100\) \? v : 0;/.test(wire)
-    && /renderDebtorsPosition\(\)/.test(wire),
+    && /renderCustomers\(/.test(wire),
     'typing in it changes the rate and redraws the sentence under it');
-  t.check(/\{ name:'Credit costs', tab:'analytics-debtors', where:'Debtors', unit:'%',/.test(src),
-    'and The shop reads it, with a door back to where it is set');
+  t.check(/\{ name:'Credit costs', tab:'debtors', where:'Customers, Owing', unit:'%',/.test(src),
+    'and The shop reads it, with a door back to where it is set — through the alias, which still opens that lens');
 
   /* THE NAME COLLISION THIS BLOCK ALREADY CAUSED ONCE. .ow-ot-cr is the
      order row's open/close chevron, declared earlier in the layer; the

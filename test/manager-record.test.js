@@ -226,7 +226,13 @@ const src = read('index.html');
      stopped matching, every check below would pass by checking nothing.
      37 -> 35 when What's coming, What to buy and The day became the
      three lenses of Forecasts. */
-  t.check(starts.length > 33, `every screen in the app is checked (${starts.length})`);
+   /* And 33 -> 32 when Debtors left: it was a second list over the same
+      people, and every one of its ten call sites already called
+      renderCustomers on the line above. It is the Customers screen's
+      Owing lens now, and resolveTab('debtors') opens it with that lens
+      armed, so the destination is still reachable -- it is just not a
+      separate destination any more. */
+  t.check(starts.length > 32, `every screen in the app is checked (${starts.length})`);
   const blank = [];
   starts.forEach((m, i) => {
     const body = src.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : src.length);

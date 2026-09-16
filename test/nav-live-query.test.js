@@ -108,7 +108,13 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
      Forecasts, so the rail went 37 -> 35 and the floor 35 -> 33. What
      the check still means is that every destination is ON the rail
      rather than behind a menu, which is the claim that matters. */
-  t.check((sidebar.match(/data-tab=/g) || []).length > 33,
+   /* And 33 -> 32 when Debtors left: it was a second list over the same
+      people, and every one of its ten call sites already called
+      renderCustomers on the line above. It is the Customers screen's
+      Owing lens now, and resolveTab('debtors') opens it with that lens
+      armed, so the destination is still reachable -- it is just not a
+      separate destination any more. */
+  t.check((sidebar.match(/data-tab=/g) || []).length > 32,
     `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — none of them behind a menu`);
 }
 

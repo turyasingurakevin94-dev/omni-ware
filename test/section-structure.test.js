@@ -40,7 +40,14 @@ const starts = [...src.matchAll(/<section id="tab-([a-z0-9-]+)"/g)];
    does not have to be argued here -- and merging three into one did have
    to be. What's coming, What to buy and The day became the three lenses
    of Forecasts, so the total went 37 -> 35 and the floor 35 -> 33. */
-t.check(starts.length > 33, `every screen is checked (${starts.length})`);
+/* 32, not 33. Debtors left: it was a second list over the same people,
+   and every one of its ten call sites already called renderCustomers on
+   the line above -- so the screens could only ever disagree, never add
+   anything. It is the Customers screen's Owing lens now, ranked by age
+   then amount rather than by amount alone, and resolveTab('debtors')
+   opens it with that lens armed. The total went 34 -> 33 and the floor
+   33 -> 32. */
+t.check(starts.length > 32, `every screen is checked (${starts.length})`);
 
 /* The screens live under <main>; the slice for each runs to the next
    one, which is how goToTab's own sibling assumption reads too. */

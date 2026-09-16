@@ -140,9 +140,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the held-stock note is worked out before the slice, so it describes the search');
 
   const customers = (/function renderCustomers\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* Customers takes a page the same way and draws its own affordance,
+     for the reason recorded on OWN_CONTROL below: its register is grouped
+     and every group header carries that group's subtotal, so a shared
+     button at the foot would leave a header disagreeing with the rows
+     under it. */
   t.check(/listPageSlice\('customers', rows\)/.test(customers)
-    && /listMoreButtonHTML\('customers', rows\.length,/.test(customers),
-    'customers likewise');
+    && /data-list-more="customers"/.test(customers),
+    'customers likewise, with the overflow row as its control');
 
   const suppliers = (/function renderSuppliers\([\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/listPageSlice\('suppliers', rows\)/.test(suppliers)
@@ -191,7 +196,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      must draw an affordance -- just not that button. A list that slices
      and offers no way out of the page is the fault this section exists to
      catch, and the last check below is what holds Invoices to it. */
-  const OWN_CONTROL = ['invoices'];
+  /* Customers joined it for the same reason: its register is grouped
+     too -- Past due, then Owing still in time -- and each header carries
+     that group's subtotal. */
+  const OWN_CONTROL = ['customers', 'invoices'];
   const usedOrOwn = [...new Set([...used, ...OWN_CONTROL])].sort();
 
   t.check(used.length >= 4, `at least the four long pages are paged (${used.join(', ')})`);

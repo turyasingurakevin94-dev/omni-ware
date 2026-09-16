@@ -608,44 +608,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
                     'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
     },
-    /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
-       named the word the shop already uses. Two stacked .panel blocks
-       became a strip, one age bar with a legend where there had been a
-       bar AND five bordered cards saying the same five figures, and a
-       six-column <table> with a phone card-wall beside it became .ow-q
-       rows that open in place and emit their own cards.
-
-       .age-* is no longer worn by either ledger screen: the creditors
-       list, which was this screen's last wearer, has since been drawn
-       as a console of its own. Both entries retire the same families,
-       and each is pinned separately so neither conversion can be
-       mistaken for the other's. */
-    'analytics-debtors': {
-      retired: ['page-head', 'panel', 'panel-head-row', 'an-toolbar', 'btn-row', 'field',
-                'sq-select-all-label', 'empty',
-                'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-aside', 'age-bar', 'age-seg',
-                'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
-                'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
-                'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db'],
-      renders: ['renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail', 'renderDebFilterNote'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    /* No ow-q-why: an open debtor opens straight onto its
-                       invoices. The sentence that used to stand there
-                       repeated the row it had just opened -- the
-                       balance, the age and the paid-off share are all
-                       already on that row -- and the paragraph under it
-                       said the same thing about every debtor in the
-                       book. The reasoning a screen genuinely owes the
-                       reader is in the rail; what is left in an open
-                       row is the evidence. */
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
-    },
+    /* DEBTORS IS GONE, and its entry with it. The screen was a second
+       list over the same people: every one of its ten call sites already
+       called renderCustomers on the line directly above, so the two could
+       only ever disagree about the same money. It is the Customers
+       screen's Owing lens now -- ranked by age then amount rather than by
+       amount alone, with the aging bar on the strip and the drift check
+       on the customer's panel -- and resolveTab('debtors') opens it with
+       that lens armed. Nothing this entry guarded is unguarded: the
+       customers entry above now carries it. */
     /* CREDITORS -- "Who you owe" until it was drawn as a console, and
        now named the word the shop already uses, like its twin.
 
@@ -1056,13 +1027,51 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
                 'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
-                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
-                'customerAccountRailHTML', 'customerStatsHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
-                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
+      /* THE BOOK IS THE CARD SYSTEM'S; THE ACCOUNT IS STILL THE CONSOLE'S,
+         and that split is deliberate, the same shape as Invoices' two
+         registers.
+
+         What changed and why: Debtors was deleted into this screen's
+         Owing lens. It was a second renderer over the same people, and
+         the evidence is stronger than the argument -- every one of its
+         ten call sites already called renderCustomers on the line
+         directly above it, so the two lists could only ever disagree,
+         never add anything. The lens ranks by age THEN amount (the order
+         a shop asks in, where Debtors ranked by amount alone), keeps the
+         aging bar on the strip, and carries the drift check onto the
+         customer's panel where it can be seen rather than onto a screen
+         of its own.
+
+         The account view -- the full record with the statement of
+         account the counter hands across -- is NOT converted. It steps in
+         place of the book as it always did, and it is reached from the
+         panel now rather than from the row, because the row fills the
+         panel. Its builders still draw the console, which is why the
+         console families stay in rendersUses below. */
+      uses: ['om-screen', 'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens',
+             'om-lenschip', 'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-c', 'om-col', 'om-scroll', 'om-side', 'om-find', 'om-find-i',
+             'om-ph-head', 'om-ph-only'],
+      renders: ['renderCustomers', 'custRegisterRowHTML', 'renderCustomerKpis',
+                'renderCustomerPhoneHead', 'renderCustomerSide', 'custAvatarHTML',
+                'custPayBarHTML', 'custAskChipHTML',
+                'customerAttentionHTML', 'customerAccountHTML', 'customerFiguresHTML',
+                'renderCustomerAccount', 'customerAccountRailHTML', 'customerStatsHTML'],
+      rendersUses: [
+                    /* the book, on the card system */
+                    'om-crow', 'om-crow-ph', 'om-grow', 'om-orow', 'om-av', 'om-bar', 'om-bar-s',
+                    'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n', 'om-kpi', 'om-kpi-f', 'om-kpi-s',
+                    'om-pan', 'om-pan-t', 'om-pan-m', 'om-figs', 'om-figs-f', 'om-blk', 'om-acts',
+                    'om-drow', 'om-read', 'om-note', 'om-btn', 'om-btn-p', 'om-btn-s', 'om-wa',
+                    'om-ph-t', 'om-ph-tabs', 'om-ph-tab',
+                    /* the account, still on the console */
+                    'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
+                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-n', 'ow-tbl-a',
+                    /* ow-tbl-s went with customerRegisterRowHTML, the console row
+                       builder this screen's book replaced. It was the register's
+                       truncating second line; the card row carries that as its own
+                       element, and the function is deleted rather than left to be
+                       found and called by mistake. */
                     'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
                     'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
                     'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',

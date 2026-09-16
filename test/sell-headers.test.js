@@ -60,8 +60,12 @@ const src = read('index.html');
    including the 24 hours it lingers on the Order tracking board, is said
    by the empty state -- which is the moment somebody is actually asking.
    That is checked below rather than taken on trust. */
-const SELL = ['quote-saved', 'customers', 'followups', 'agents', 'whatsapp'];
-const CARD_SYSTEM = ['quote', 'invoices'];
+/* Customers joins them, and it absorbed a screen on the way: Debtors is
+   its Owing lens now. The folded paragraph went the way Invoices' did --
+   what it explained is said by the screen, per row. The two facts worth
+   keeping are checked below rather than taken on trust. */
+const SELL = ['quote-saved', 'followups', 'agents', 'whatsapp'];
+const CARD_SYSTEM = ['quote', 'invoices', 'customers'];
 const sectionOf = (tab) => {
   const i = src.indexOf(`<section id="tab-${tab}"`);
   const next = src.slice(i + 10).search(/<section id="tab-/);
