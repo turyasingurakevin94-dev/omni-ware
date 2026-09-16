@@ -527,7 +527,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    register's own rail and the register is this list's
                    Sent group now, so it takes the panel while that group
                    is open and nothing is picked. */
-                'renderFollowUpScore', 'renderWhatsApp'],
+                'renderFollowUpScore', 'renderWhatsApp',
+                /* ONE COMPOSER, TWO SCREENS. The draft box and the
+                   "say whether it went" stamp are drawn by
+                   composerBoxHTML / composerStampHTML, shared with the
+                   Quote screen's Sent lens so neither may restate the
+                   promise in words of its own. The layer's classes are
+                   in those functions now, which is exactly why they are
+                   on this list: a shared helper still has to draw the
+                   card system. */
+                'composerBoxHTML', 'composerStampHTML'],
       rendersUses: [
                     /* the queue, on the card system */
                     /* om-blk is gone from this screen and that is the

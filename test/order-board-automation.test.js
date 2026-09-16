@@ -176,6 +176,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const scope = compileScope([
     extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
     extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html'),
+    extractFunction(src, 'stateAge', 'index.html'),
     extractFunction(src, 'orderStageOverdue', 'index.html'),
     ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
   ], {

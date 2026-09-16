@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{background:#e8e7e2;margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#1b2233}
+a{color:#1d55a8;text-decoration:none}
+a:hover{color:#123c7d}
+.fig{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-0.02em}
+.lbl{font-size:11px;font-weight:600;letter-spacing:0.03em;color:#5f6a7d}
+.card{background:#fff;border:1px solid #ecebe6;border-radius:14px;box-shadow:0 1px 2px rgba(23,34,60,.05)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.nav{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;margin:1px 0;background:none;border:0;border-radius:9px;color:#b9c2d6;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;text-align:left;cursor:pointer}
+.nav:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav.on{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.nav > span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#a8b2c7}
+.grp{display:flex;align-items:center;gap:8px;padding:15px 10px 4px}
+.grp-i{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+.grp-t{font-size:10.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d89a5}
+.grp-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#7d89a5;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-p{background:#c2311f;color:#fff}
+.btn-p:hover{background:#a5291a}
+.btn-s{background:#fff;border:1px solid #dcdad4;color:#1b2233}
+.btn-s:hover{background:#f7f6f3}
+.btn-d{background:#17223c;color:#fff}
+.btn-d:hover{background:#243354}
+.btn-g{background:none;color:#5f6a7d}
+.btn-g:hover{background:#f1efeb;color:#1b2233}
+.gi{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:500;font-size:13px;color:#1b2233;background:none;border:1px solid transparent;border-radius:7px;padding:4px 7px;text-align:right}
+.gi:hover{border-color:#e2e0da;background:#faf9f6}
+.gi:focus{outline:none;border-color:#17223c;background:#fff}
+.lens{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:0;border-radius:8px;background:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:#5f6a7d;cursor:pointer}
+.lens:hover{background:#efedE9;color:#1b2233}
+.grow{display:flex;align-items:center;gap:9px;padding:8px 14px;background:#faf9f6;border-top:1px solid #f0eeea;border-bottom:1px solid #f0eeea}
+.av{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.lens.on{background:#fff;color:#1b2233;box-shadow:0 1px 2px rgba(23,34,60,.08)}
+.irow{display:grid;grid-template-columns:26px minmax(200px,1fr) 68px 92px 100px 1px 108px 88px 52px;align-items:center;column-gap:8px;padding:9px 14px;border-top:1px solid #f0eeea}
+.irow:hover{background:#faf9f6}
+.qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid #f0eeea}
+.qrow:hover{background:#faf9f6}
+.sug{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:1px solid #e6e4df;border-radius:999px;background:#fff;font-size:12px;color:#1b2233;white-space:nowrap;flex:none;cursor:pointer}
+.sug:hover{border-color:#c9c6bf;background:#faf9f6}
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:22px;padding:30px">
+  <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;max-width:1440px">
+    <div style="font-size:27px;font-weight:700;letter-spacing:-0.02em">Turn 2 · Quote, the Sent lens</div>
+    <div style="font-size:13.5px;line-height:1.55;color:#535d70;max-width:64ch;text-wrap:pretty">The third lens had a chip and no design. <a href="#2a">2a</a> draws it, and it forces a distinction the chip was hiding: <strong>Saved</strong> is written and nobody has seen it, <strong>Sent</strong> is with the client and waiting on a yes. I corrected <a href="#1b">1b</a>, which claimed both.</div>
+  </div>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap">
+
+  <div id="2a" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">2A</span>
+      <span style="font-size:12.5px;color:#535d70">The Sent lens · content area, 1040 wide</span>
+    </div>
+
+    <div style="width:1040px;background:#f6f5f2;border-radius:14px;overflow:hidden;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="height:58px;background:#fff;border-bottom:1px solid #ecebe6;display:flex;align-items:center;gap:16px;padding:0 22px">
+        <div style="display:flex;align-items:center;gap:8px;flex:none">
+          <span style="font-size:12.5px;color:#535d70">Sell</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b6bdca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          <span style="font-size:14px;font-weight:600">New quote</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px;height:36px;padding:0 12px;border-radius:10px;background:#f4f3f0;border:1px solid #ecebe6">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;min-width:0;font-size:13px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Client, item, or "sent over a week ago"</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-p" style="height:34px;padding:0 13px;font-size:13px;flex:none">New quote</button>
+        <div style="width:34px;height:34px;flex:none;border-radius:999px;background:#17223c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">KT</div>
+      </div>
+
+      <div style="padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">Out with clients</div>
+          <div style="margin-top:3px;font-size:13px;color:#535d70">Twelve quotes sent and unanswered · 9,180,000 waiting on a yes · longest wait first</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:#efedE9;border-radius:10px;padding:4px;flex:none">
+          <button class="lens">Building
+            <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">4 lines</span>
+          </button>
+          <button class="lens">Saved
+            <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">8</span>
+          </button>
+          <button class="lens on">Sent
+            <span class="chip" style="height:18px;padding:0 6px;background:#ffe1dc;color:#b2301f">12</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="padding:14px 22px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <div style="background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+          <div class="lbl" style="font-size:10.5px">Waiting on a yes</div>
+          <div class="fig" style="margin-top:3px;font-size:20px">9,180,000</div>
+          <div style="margin-top:1px;font-size:11.5px;color:#535d70">12 quotes · 1,940,000 of margin in them</div>
+        </div>
+        <div style="background:#ecf8f2;border:1px solid #d3ebe0;border-radius:14px;padding:12px 14px">
+          <div class="lbl" style="font-size:10.5px;color:#39544b">Sent quotes that became orders</div>
+          <div class="fig" style="margin-top:3px;font-size:20px;color:#0f7a56">44%</div>
+          <div style="margin-top:1px;font-size:11.5px;color:#39544b">61% when answered inside a week</div>
+        </div>
+        <div style="background:#fff1ec;border:1px solid #fadbd1;border-radius:14px;padding:12px 14px">
+          <div class="lbl" style="font-size:10.5px;color:#7a4436">Past two weeks, no reply</div>
+          <div class="fig" style="margin-top:3px;font-size:20px">3 quotes</div>
+          <div style="margin-top:1px;font-size:11.5px;color:#7a4436">4,270,000 · these convert 8% of the time</div>
+        </div>
+      </div>
+
+      <div style="padding:14px 22px 22px">
+        <div class="card" style="overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
+            <span style="font-size:13.5px;font-weight:700">Who has not answered</span>
+            <span style="font-size:11.5px;color:#535d70">a yes moves the quote to Order tracking, so nothing won is listed here</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:7px 14px;background:#faf9f6;border-top:1px solid #f0eeea;border-bottom:1px solid #f0eeea">
+            <span></span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Client, and what for</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Value</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Sent</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">You keep</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Next</span>
+          </div>
+
+          <div class="grow">
+            <span class="chip" style="background:#ffe1dc;color:#b2301f">Past its limit · 14 days</span>
+            <span style="font-size:12.5px;font-weight:700">3</span>
+            <span style="flex:1"></span>
+            <span class="fig" style="font-size:12.5px">4,270,000</span>
+            <span style="font-size:12px;color:#535d70">· oldest 21 days</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;background:#f4f1ff;cursor:pointer">
+            <span class="av" style="background:#ffe1dc;color:#b2301f">NT</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Nakawa Traders</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">iron sheets, 200 Pcs · they also owe 2,410,000</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">2,450,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#b2301f">21 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#fff3d9;color:#96600f">12%</span></div>
+            <div style="text-align:right"><button class="btn btn-s" style="height:28px;padding:0 10px;font-size:11.5px">Ask again</button></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer">
+            <span class="av" style="background:#ffe1dc;color:#b2301f">KH</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Kabalagala Hardware</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">cement, 150 bags · price has since risen 500</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">1,180,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#b2301f">17 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#e2f5ec;color:#0f7a56">26%</span></div>
+            <div style="text-align:right"><button class="btn btn-s" style="height:28px;padding:0 10px;font-size:11.5px">Requote</button></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer">
+            <span class="av" style="background:#ffe1dc;color:#b2301f">BB</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Bwaise Builders</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">binding wire, 40 rolls · asked twice, no answer</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">640,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#b2301f">15 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#e2f5ec;color:#0f7a56">31%</span></div>
+            <div style="text-align:right"><button class="btn btn-g" style="height:28px;padding:0 10px;font-size:11.5px">Let it go</button></div>
+          </div>
+
+          <div class="grow">
+            <span class="chip" style="background:#f2f0ec;color:#535d70">Waiting, still in time</span>
+            <span style="font-size:12.5px;font-weight:700">9</span>
+            <span style="flex:1"></span>
+            <span class="fig" style="font-size:12.5px">4,910,000</span>
+            <span style="font-size:12px;color:#535d70">· none over 6 days</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer">
+            <span class="av" style="background:#eaf1ff;color:#1d5bb8">KL</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ken Lubega</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">roofing, mixed · read it the same day</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">1,860,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#535d70">6 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#e2f5ec;color:#0f7a56">24%</span></div>
+            <div style="text-align:right"><span style="font-size:11.5px;color:#535d70">waiting</span></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer">
+            <span class="av" style="background:#f2f0ec;color:#535d70">IB</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Innocent Busingye</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">plumbing, 18 lines · first quote to him</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">1,240,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#535d70">4 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#fff3d9;color:#96600f">19%</span></div>
+            <div style="text-align:right"><span style="font-size:11.5px;color:#535d70">waiting</span></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid #f0eeea;cursor:pointer">
+            <span class="av" style="background:#f2f0ec;color:#535d70">WJ</span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Wasswa Joints</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">fittings, 9 lines · sent this morning</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right">820,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#535d70">2 days</span></div>
+            <div style="text-align:right"><span class="chip" style="background:#e2f5ec;color:#0f7a56">28%</span></div>
+            <div style="text-align:right"><span style="font-size:11.5px;color:#535d70">waiting</span></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;opacity:.75">
+            <span></span>
+            <div style="min-width:0">
+              <div style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Six more sent this week</div>
+              <div style="margin-top:2px;font-size:11px;color:#535d70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">all under 300,000 · nothing to chase yet</div>
+            </div>
+            <div class="fig" style="font-size:13px;text-align:right;color:#535d70">990,000</div>
+            <div style="text-align:right"><span class="fig" style="font-size:12.5px;color:#535d70">2–5 days</span></div>
+            <div style="text-align:right"><span style="font-size:11.5px;color:#535d70">—</span></div>
+            <div style="text-align:right"><span style="font-size:11.5px;color:#535d70">—</span></div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;align-items:flex-start;gap:9px;background:#fff;border:1px solid #ecebe6;border-radius:14px;padding:12px 14px">
+          <svg width="15" height="15" style="flex:none;margin-top:2px" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+          <div style="flex:1;min-width:0;font-size:12.5px;color:#40465a;line-height:1.55;text-wrap:pretty"><strong>Why fourteen days is the limit.</strong> Of 90 days of sent quotes, the ones answered inside a week became orders <strong>61%</strong> of the time; past fourteen days it is <strong>8%</strong>. So the top group is not simply the old one — it is the one where asking again is still worth the message, and Kabalagala's needs a requote rather than a reminder, because cement has risen 500 a bag since it was priced. The fourteen is the <em>Sent</em> stage limit, set in Setup beside the board's stage limits and measured by the same clock — not a threshold invented for this screen.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:1040px;background:#f4f1ff;border:1px solid #e3ddfb;border-radius:14px;padding:16px 18px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:26px;height:26px;border-radius:8px;background:#e5dffd;color:#5b46d6;display:flex;align-items:center;justify-content:center;flex:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+      </span>
+      <span style="font-size:14px;font-weight:700">Sent against the stage board — what is shared, and what must not be</span>
+    </div>
+    <div style="margin-top:11px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;font-size:12.5px;color:#40465a">
+      <div><div style="font-weight:700;margin-bottom:3px">Building</div>The quote in your hands. One at a time, and the only lens with a dock.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Saved</div>Written, and <strong>nobody has seen it</strong>. Waiting on you, not on the client — so its action is <em>send</em>.</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Sent</div>With the client, waiting on a yes. Its action is <em>ask again</em>, <em>requote</em>, or <em>let it go</em>.</div>
+    </div>
+    <div style="margin-top:12px;padding-top:11px;border-top:1px solid #e3ddfb;font-size:12.5px;color:#40465a;text-wrap:pretty"><strong>Sent is not a sixth lane, and here is the evidence.</strong> The board's five lanes are all work the shop is doing — Taken waits on a supplier, Buying on a trip, Preparing on a packer. A sent quote waits on somebody who has not agreed to buy anything. Every figure on the board is derived over <em>live orders</em>: <span class="fig" style="font-size:12px">54 live</span>, <span class="fig" style="font-size:12px">cash to buy in 2,180,000</span>, <span class="fig" style="font-size:12px">18 to invoice</span>. Put twelve unaccepted quotes in a lane and all three inflate by work nobody has commissioned. So a yes turns the quote into an order and it leaves this screen; the board lists only what was agreed, and the card header says so where someone hunting a won quote will read it.<br><br><strong>But three mechanics are genuinely one thing, and must be written once.</strong> <em>The clock:</em> the board already measures how long a thing has sat and flags <span class="fig" style="font-size:12px">5 past their stage limit</span>. Sent's fourteen days is that same limit for a different state — one age-and-limit function, and the number belongs in Setup beside the board's stage limits, not invented here. <em>The decision:</em> a quote gone cold is a decision needing the owner, exactly like an order whose supplier has gone quiet — so it belongs in whichever single needs-you queue the app keeps, and the <strong>Next</strong> column on a row is the reminder, never a second queue. <em>The words to the client:</em> Ask again writes a message and hands it to WhatsApp, which is the Messages pattern — the same composer and the same stamp, not a copy of it.<br><br><strong>Two things this raises that are yours to call.</strong> The board carries its own needs-you dock serving twenty decisions one at a time, and Today carries a badge of eight: those are two answers to "what needs me now", and I have not touched either. And the board is the one screen still in the older Inter and verdigris palette — the other twelve are in this one. <strong>What I corrected:</strong> <a href="#1b">1b</a> described Saved as "saved and not yet ordered · waiting on a yes", which is this lens's job — a quote nobody has seen is not waiting on a yes. Saved now reads <em>written and not yet sent · 6,240,000 the client has not seen</em>.</div>
+  </div>
+
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:22px;padding:30px">
+  <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;max-width:1440px">
+    <div style="font-size:27px;font-weight:700;letter-spacing:-0.02em">Turn 1 · Quote</div>
+    <div style="font-size:13.5px;line-height:1.55;color:#535d70;max-width:64ch;text-wrap:pretty">Screen 2 of the pass, in the card idiom. <a href="#1a">1a</a> the quote being built, <a href="#1b">1b</a> the same screen's <em>Saved</em> lens, <a href="#1c">1c</a> the phone. The cut: <strong>Saved quotes stops being a destination</strong> — see the note under 1b.</div>
+  </div>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1A</span>
+      <span style="font-size:12.5px;color:#535d70">Console · building a quote · 1440 × 900</span>
+    </div>
+
+    <div style="width:1440px;height:900px;background:#f6f5f2;border-radius:18px;overflow:hidden;display:flex;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="width:236px;flex:none;background:#17223c;display:flex;flex-direction:column;overflow:hidden">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:16px 14px 10px">
+          <div style="width:30px;height:30px;border-radius:9px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14.5px;font-weight:700;color:#fff;letter-spacing:-0.01em">Omni&#8209;Ware</div>
+            <div style="font-size:11px;color:#a8b2c7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ssekitoleko Hardware</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px 14px">
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+            <span>Today</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">8</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#ffe3d6;color:#8f3009">Se</span><span class="grp-t">Sell</span></div>
+          <button class="nav on">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+            <span>New quote</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13v9H3z"></path><path d="M16 9h4l1 3v3h-5"></path><circle cx="7" cy="18" r="1.6"></circle><circle cx="17.5" cy="18" r="1.6"></circle></svg>
+            <span>Order tracking</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">5</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v5h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+            <span>Invoices</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">4</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+            <span>Customers</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">11</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>Messages</span>
+            <span class="chip" style="background:#c2311f;color:#fff;height:19px;min-width:19px;padding:0 6px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex:none">13</span>
+          </button>
+          <button class="nav">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.5 4.21"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+            <span>Sales agents</span>
+          </button>
+          <div class="grp"><span class="grp-i" style="background:#e6e3ff;color:#4230a8">Bu</span><span class="grp-t">Buy</span><span class="grp-n">2</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#d9f2e6;color:#0b5e42">Ca</span><span class="grp-t">Catalogue</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#d7e8ff;color:#164a96">Mo</span><span class="grp-t">Money</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#ffdfe9;color:#8a2450">In</span><span class="grp-t">Insight</span><span class="grp-n">4</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+          <div class="grp"><span class="grp-i" style="background:#f0eeea;color:#5f6a7d">Su</span><span class="grp-t">Setup</span><span class="grp-n">3</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7d89a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+
+        <div style="flex:none;height:58px;background:#fff;border-bottom:1px solid #ecebe6;display:flex;align-items:center;gap:16px;padding:0 22px">
+          <div style="display:flex;align-items:center;gap:8px;flex:none">
+            <span style="font-size:12.5px;color:#5f6a7d">Sell</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b6bdca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+            <span style="font-size:14px;font-weight:600">New quote</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:400px;height:36px;padding:0 12px;border-radius:10px;background:#f4f3f0;border:1px solid #ecebe6">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span style="flex:1;min-width:0;font-size:13px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Search a screen, customer or product</span>
+            <span style="font-size:10.5px;font-weight:600;color:#5f6a7d;background:#fff;border:1px solid #e2e0da;border-radius:6px;padding:2px 6px">Ctrl K</span>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:7px;flex:none">
+            <span class="chip" style="background:#eaf1ff;color:#1d5bb8"><span class="fig" style="font-size:12px">12</span> quoted</span>
+            <span class="chip" style="background:#fff3d9;color:#96600f"><span class="fig" style="font-size:12px">5</span> packing</span>
+            <span class="chip" style="background:#e2f5ec;color:#0f7a56"><span class="fig" style="font-size:12px">3</span> out</span>
+          </div>
+          <div style="width:34px;height:34px;flex:none;border-radius:999px;background:#17223c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">KT</div>
+        </div>
+
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+
+          <div style="flex:none;padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">Quote</div>
+              <div style="margin-top:3px;font-size:13px;color:#5f6a7d">Build the order live, on the call · say the price, move to the next item</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:#efedE9;border-radius:10px;padding:4px;flex:none">
+              <button class="lens on">Building
+                <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">4 lines</span>
+              </button>
+              <button class="lens">Saved
+                <span class="chip" style="height:18px;padding:0 6px;background:#ffe1dc;color:#b2301f">8</span>
+              </button>
+              <button class="lens">Sent
+                <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">12</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 22px 0;display:flex;gap:16px;align-items:flex-start">
+
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px">
+
+              <div class="card" style="display:flex;align-items:stretch;overflow:hidden">
+                <div style="flex:1.5;min-width:0;padding:11px 14px;border-right:1px solid #f0eeea">
+                  <div class="lbl" style="font-size:10.5px">Client</div>
+                  <div style="margin-top:2px;display:flex;align-items:baseline;gap:8px">
+                    <span style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Jackson Mubiru</span>
+                    <span class="fig" style="font-size:12px;font-weight:500;color:#5f6a7d">0772 481 330</span>
+                  </div>
+                </div>
+                <div style="flex:.9;min-width:0;padding:11px 14px;border-right:1px solid #f0eeea">
+                  <div class="lbl" style="font-size:10.5px">Date</div>
+                  <div class="fig" style="margin-top:2px;font-size:14px;font-weight:500">15 Sep 2026</div>
+                </div>
+                <div style="flex:.7;min-width:0;padding:11px 14px;border-right:1px solid #f0eeea">
+                  <div class="lbl" style="font-size:10.5px">Orders</div>
+                  <div class="fig" style="margin-top:2px;font-size:14px">12</div>
+                </div>
+                <div style="flex:.9;min-width:0;padding:11px 14px;border-right:1px solid #f0eeea;background:#ecf8f2">
+                  <div class="lbl" style="font-size:10.5px;color:#39544b">Owes now</div>
+                  <div class="fig" style="margin-top:2px;font-size:14px;color:#0f7a56">0 <span style="font-size:10.5px;font-weight:500;color:#39544b">UGX</span></div>
+                </div>
+                <div style="flex:1.3;min-width:0;padding:11px 14px">
+                  <div class="lbl" style="font-size:10.5px">Last order</div>
+                  <div style="margin-top:2px;display:flex;align-items:baseline;gap:7px">
+                    <span class="fig" style="font-size:14px">230,000</span>
+                    <span style="font-size:11.5px;color:#5f6a7d">yesterday</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="overflow:hidden">
+                <div style="padding:11px 14px;display:flex;align-items:center;gap:10px">
+                  <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid #e2e0da;border-radius:10px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                    <span style="flex:1;min-width:0;font-size:13.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Add item — name, SKU or supplier code</span>
+                    <span style="font-size:10.5px;font-weight:600;color:#5f6a7d;background:#f4f3f0;border:1px solid #e2e0da;border-radius:6px;padding:2px 6px">/</span>
+                  </div>
+                </div>
+
+                <div style="padding:0 14px 10px;display:flex;align-items:center;gap:7px;overflow:hidden">
+                  <span class="lbl" style="font-size:10.5px;flex:none">Usually buys</span>
+                  <button class="sug">Black screws 8" <span class="fig" style="font-size:11.5px">7 Box</span></button>
+                  <button class="sug">Iron sheets G28 <span class="fig" style="font-size:11.5px">12 Pcs</span></button>
+                  <button class="sug">Hinges 100mm <span class="fig" style="font-size:11.5px">4 Ctn</span></button>
+                  <button class="sug" style="border-style:dashed;color:#5f6a7d">+3 more</button>
+                </div>
+
+                <div style="display:grid;grid-template-columns:26px minmax(200px,1fr) 68px 92px 100px 1px 108px 88px 52px;align-items:center;column-gap:8px;padding:8px 14px;background:#faf9f6;border-top:1px solid #f0eeea">
+                  <span></span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Item</span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Qty</span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Price each</span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Line total</span>
+                  <span style="width:1px;height:14px;background:#dcdad4"></span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Buy from</span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Buy @</span>
+                  <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Keep</span>
+                </div>
+
+                <div class="irow">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d">1</span>
+                  <div style="min-width:0">
+                    <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Soft Close Mulper — Half Bend</div>
+                    <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ctn · 4 in stock</div>
+                  </div>
+                  <div style="text-align:right"><span class="gi">1</span><span style="font-size:10.5px;color:#5f6a7d"> Ctn</span></div>
+                  <div style="text-align:right"><span class="gi">265,000</span></div>
+                  <div class="fig" style="font-size:13.5px;text-align:right">265,000 <span style="font-size:10.5px;font-weight:500;color:#5f6a7d">UGX</span></div>
+                  <span style="width:1px;height:100%;background:#f0eeea"></span>
+                  <div style="min-width:0;font-size:12.5px;color:#1b2233;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Roto Industry</div>
+                  <div style="text-align:right"><span class="gi" style="font-size:12.5px;color:#5f6a7d">250,000</span></div>
+                  <div style="text-align:right"><span class="chip" style="height:19px;padding:0 7px;background:#fff3d9;color:#96600f">6%</span></div>
+                </div>
+
+                <div class="irow">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d">2</span>
+                  <div style="min-width:0">
+                    <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">G&#8209;MAN Bow Saw 24"</div>
+                    <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Bundle · 18 in stock · <span style="color:#96600f;font-weight:600">500 cheaper at Shafik Katwe</span></div>
+                  </div>
+                  <div style="text-align:right"><span class="gi">2</span><span style="font-size:10.5px;color:#5f6a7d"> Bdl</span></div>
+                  <div style="text-align:right"><span class="gi">105,000</span></div>
+                  <div class="fig" style="font-size:13.5px;text-align:right">210,000 <span style="font-size:10.5px;font-weight:500;color:#5f6a7d">UGX</span></div>
+                  <span style="width:1px;height:100%;background:#f0eeea"></span>
+                  <div style="min-width:0;font-size:12.5px;color:#1b2233;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Mulongo Hardware</div>
+                  <div style="text-align:right"><span class="gi" style="font-size:12.5px;color:#5f6a7d">95,000</span></div>
+                  <div style="text-align:right"><span class="chip" style="height:19px;padding:0 7px;background:#e2f5ec;color:#0f7a56">10%</span></div>
+                </div>
+
+                <div class="irow">
+                  <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d">3</span>
+                  <div style="min-width:0">
+                    <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Iron sheets G28 · 3m box profile</div>
+                    <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Pcs · <span style="color:#b2301f;font-weight:600">0 in stock · 1 to order in</span></div>
+                  </div>
+                  <div style="text-align:right"><span class="gi">1</span><span style="font-size:10.5px;color:#5f6a7d"> Pcs</span></div>
+                  <div style="text-align:right"><span class="gi">29,000</span></div>
+                  <div class="fig" style="font-size:13.5px;text-align:right">29,000 <span style="font-size:10.5px;font-weight:500;color:#5f6a7d">UGX</span></div>
+                  <span style="width:1px;height:100%;background:#f0eeea"></span>
+                  <div style="min-width:0;font-size:12.5px;color:#1b2233;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Kampala Steel</div>
+                  <div style="text-align:right"><span class="gi" style="font-size:12.5px;color:#5f6a7d">27,500</span></div>
+                  <div style="text-align:right"><span class="chip" style="height:19px;padding:0 7px;background:#fff3d9;color:#96600f">5%</span></div>
+                </div>
+
+                <div class="irow" style="background:#fbfaf8">
+                  <span></span>
+                  <div style="min-width:0">
+                    <div style="font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Transport <span style="font-size:11.5px;color:#5f6a7d">· charge</span></div>
+                  </div>
+                  <span></span>
+                  <span></span>
+                  <div style="text-align:right"><span class="gi" style="font-size:13.5px;font-weight:600">60,000</span></div>
+                  <span style="width:1px;height:100%;background:#f0eeea"></span>
+                  <span></span><span></span><span></span>
+                </div>
+
+                <div class="irow" style="background:#fbfaf8">
+                  <span></span>
+                  <div style="min-width:0">
+                    <div style="font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Credit terms <span style="font-size:11.5px;color:#5f6a7d">· +3% on 30 days</span></div>
+                  </div>
+                  <span></span>
+                  <span></span>
+                  <div class="fig" style="font-size:13.5px;text-align:right">15,120 <span style="font-size:10.5px;font-weight:500;color:#5f6a7d">UGX</span></div>
+                  <span style="width:1px;height:100%;background:#f0eeea"></span>
+                  <span></span><span></span><span></span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-top:1px solid #f0eeea;overflow:hidden">
+                  <span style="width:22px;height:22px;flex:none;border:1px dashed #c9c6bf;border-radius:7px;display:flex;align-items:center;justify-content:center">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+                  </span>
+                  <span style="font-size:12.5px;color:#5f6a7d;flex:none">Next item, a charge, or credit terms</span>
+                  <button class="sug">Delivery <span class="fig" style="font-size:11.5px">60,000</span></button>
+                  <button class="sug">Urgent <span class="fig" style="font-size:11.5px">5%</span></button>
+                  <button class="sug">On credit <span class="fig" style="font-size:11.5px">+3%</span></button>
+                  <button class="sug" style="border-style:dashed;color:#5f6a7d">Other</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="width:310px;flex:none;display:flex;flex-direction:column;gap:12px">
+
+              <div style="background:#fff3d9;border:1px solid #f6e2b8;border-radius:14px;padding:13px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:26px;height:26px;border-radius:8px;background:#ffeccd;color:#96600f;display:flex;align-items:center;justify-content:center;flex:none">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6"></path><path d="m22 17-8.5-8.5-5 5L2 7"></path></svg>
+                  </span>
+                  <span style="font-size:13.5px;font-weight:700">Cheaper elsewhere</span>
+                  <span class="chip" style="height:19px;padding:0 7px;background:#ffeccd;color:#96600f;margin-left:auto">1 of 3</span>
+                </div>
+                <div style="margin-top:10px;display:flex;align-items:baseline;gap:8px">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">G&#8209;MAN Bow Saw 24"</div>
+                    <div style="font-size:11.5px;color:#6b5a33">Shafik Katwe · last bought 20 Aug</div>
+                  </div>
+                  <span class="fig" style="font-size:14px;color:#96600f">&#8722;500</span>
+                </div>
+                <button class="btn btn-s" style="margin-top:10px;width:100%;height:34px;justify-content:center;font-size:12.5px">Switch the supplier on line 2</button>
+              </div>
+
+              <div class="card" style="padding:13px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:13.5px;font-weight:700">Stock to cover it</span>
+                  <span class="chip" style="height:19px;padding:0 7px;background:#ffe1dc;color:#b2301f;margin-left:auto">1 short</span>
+                </div>
+                <div style="margin-top:9px;display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;align-items:baseline;gap:8px">
+                    <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Soft Close Mulper</span>
+                    <span class="fig" style="font-size:12.5px">1 / 4</span>
+                  </div>
+                  <div style="display:flex;align-items:baseline;gap:8px">
+                    <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">G&#8209;MAN Bow Saw</span>
+                    <span class="fig" style="font-size:12.5px">2 / 18</span>
+                  </div>
+                  <div style="display:flex;align-items:baseline;gap:8px">
+                    <span style="flex:1;min-width:0;font-size:12.5px;color:#b2301f;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Iron sheets G28</span>
+                    <span class="fig" style="font-size:12.5px;color:#b2301f">0 / 1 <span style="font-size:10.5px;font-weight:500">order in</span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="padding:13px 14px">
+                <div style="font-size:13.5px;font-weight:700">Goes with it</div>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:7px">
+                  <button class="sug">Roofing nails 2.5" <span class="fig" style="font-size:11.5px">4 of 5 orders</span></button>
+                  <button class="sug">Ridge caps <span class="fig" style="font-size:11.5px">3 of 5</span></button>
+                </div>
+              </div>
+
+              <div class="card" style="padding:13px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:13.5px;font-weight:700">Last order</span>
+                  <span style="font-size:11.5px;color:#5f6a7d;margin-left:auto">14 Sept</span>
+                </div>
+                <div style="margin-top:9px;display:flex;align-items:baseline;gap:8px">
+                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Soft Close Mulper · 1 Ctn</span>
+                  <span class="fig" style="font-size:12.5px">125,000</span>
+                </div>
+                <div style="margin-top:6px;display:flex;align-items:baseline;gap:8px">
+                  <span style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Black screws 8" · 7 Box</span>
+                  <span class="fig" style="font-size:12.5px">105,000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:none;height:72px;background:#fff;border-top:1px solid #ecebe6;display:flex;align-items:center;gap:0;padding:0 22px">
+            <div style="padding-right:22px">
+              <div class="lbl" style="font-size:10.5px">Client pays · 5 lines</div>
+              <div class="fig" style="font-size:22px;white-space:nowrap">519,120 <span style="font-size:12px;font-weight:500;color:#5f6a7d">UGX</span></div>
+            </div>
+            <div style="padding:0 22px;border-left:1px solid #f0eeea">
+              <div class="lbl" style="font-size:10.5px">Costs you</div>
+              <div class="fig" style="font-size:15px;font-weight:500;color:#5f6a7d;white-space:nowrap">467,500</div>
+            </div>
+            <div style="padding:0 22px;border-left:1px solid #f0eeea;display:flex;align-items:center;gap:9px">
+              <div>
+                <div class="lbl" style="font-size:10.5px">You keep</div>
+                <div class="fig" style="font-size:15px;color:#0f7a56;white-space:nowrap">51,620</div>
+              </div>
+              <span class="chip" style="background:#e2f5ec;color:#0f7a56">10%</span>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:9px;flex:none">
+              <button class="btn btn-s" style="height:42px;padding:0 14px;font-size:13.5px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+                Send on WhatsApp
+              </button>
+              <button class="btn btn-s" style="width:42px;height:42px;justify-content:center;padding:0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+              </button>
+              <button class="btn btn-p" style="height:42px;padding:0 18px;font-size:14px;font-weight:700">Save quote</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="1b" style="display:flex;flex-direction:column;gap:10px;width:1040px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1B</span>
+      <span style="font-size:12.5px;color:#535d70">Same screen · <strong>Saved</strong> lens · the content area only</span>
+    </div>
+
+    <div style="width:1040px;background:#f6f5f2;border:1px solid #dcdad4;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(23,34,60,.12)">
+      <div style="padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">Quote</div>
+          <div style="margin-top:3px;font-size:13px;color:#5f6a7d">Eight quotes written and not yet sent · 6,240,000 the client has not seen</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:#efedE9;border-radius:10px;padding:4px;flex:none">
+          <button class="lens">Building <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">4 lines</span></button>
+          <button class="lens on">Saved <span class="chip" style="height:18px;padding:0 6px;background:#ffe1dc;color:#b2301f">8</span></button>
+          <button class="lens">Sent <span class="chip" style="height:18px;padding:0 6px;background:#f2f0ec;color:#5f6a7d">12</span></button>
+        </div>
+      </div>
+
+      <div style="padding:14px 22px 22px">
+        <div class="card" style="overflow:hidden">
+          <div class="qrow" style="background:#faf9f6;border-top:0">
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Client</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Value</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase">Waiting</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">You keep</span>
+            <span class="lbl" style="font-size:10px;letter-spacing:0.07em;text-transform:uppercase;text-align:right">Next</span>
+          </div>
+
+          <div class="qrow">
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Kato Construction Ltd</div>
+              <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">14 lines · iron sheets, cement, nails</div>
+            </div>
+            <div class="fig" style="font-size:14px;text-align:right">2,180,000</div>
+            <div><span class="chip" style="background:#ffe1dc;color:#b2301f">19 days · price stale</span></div>
+            <div class="fig" style="font-size:13px;color:#0f7a56;text-align:right">214,000</div>
+            <div style="text-align:right"><button class="btn btn-p" style="height:32px;padding:0 11px;font-size:12.5px">Re-price &amp; send</button></div>
+          </div>
+
+          <div class="qrow">
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Nakawa Traders</div>
+              <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">6 lines · roofing</div>
+            </div>
+            <div class="fig" style="font-size:14px;text-align:right">1,340,000</div>
+            <div><span class="chip" style="background:#fff3d9;color:#96600f">8 days</span></div>
+            <div class="fig" style="font-size:13px;color:#0f7a56;text-align:right">128,000</div>
+            <div style="text-align:right"><button class="btn btn-s" style="height:32px;padding:0 11px;font-size:12.5px">Chase it</button></div>
+          </div>
+
+          <div class="qrow">
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ssebunya Joints</div>
+              <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">3 lines · hinges, screws</div>
+            </div>
+            <div class="fig" style="font-size:14px;text-align:right">742,000</div>
+            <div><span class="chip" style="background:#f2f0ec;color:#5f6a7d">3 days</span></div>
+            <div class="fig" style="font-size:13px;color:#0f7a56;text-align:right">96,000</div>
+            <div style="text-align:right"><button class="btn btn-s" style="height:32px;padding:0 11px;font-size:12.5px">Open</button></div>
+          </div>
+
+          <div class="qrow">
+            <div style="min-width:0">
+              <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Mulongo Hardware</div>
+              <div style="font-size:11.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">9 lines · mixed · <span style="color:#b2301f;font-weight:600">owes 3,330,000</span></div>
+            </div>
+            <div class="fig" style="font-size:14px;text-align:right">1,980,000</div>
+            <div><span class="chip" style="background:#ffe1dc;color:#b2301f">held · debt first</span></div>
+            <div class="fig" style="font-size:13px;color:#5f6a7d;text-align:right">186,000</div>
+            <div style="text-align:right"><button class="btn btn-s" style="height:32px;padding:0 11px;font-size:12.5px">Open debt</button></div>
+          </div>
+
+          <div style="padding:11px 14px;border-top:1px solid #f0eeea;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12.5px;color:#5f6a7d">4 more saved quotes · 0 shown from the last 90 days</span>
+            <button class="btn btn-g" style="height:30px;padding:0 10px;font-size:12.5px;margin-left:auto">Show all 8
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;background:#f4f1ff;border:1px solid #e3ddfb;border-radius:14px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="width:26px;height:26px;border-radius:8px;background:#e5dffd;color:#5b46d6;display:flex;align-items:center;justify-content:center;flex:none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            </span>
+            <span style="font-size:13.5px;font-weight:700">Why Saved quotes is not a screen of its own any more</span>
+          </div>
+          <div style="margin-top:8px;font-size:13px;line-height:1.55;color:#40465a;text-wrap:pretty">A quote being built and a quote saved are one document at two moments — the same lines, the same client, the same arithmetic, and the same file. Two rail rows meant a quote had two homes and neither was the real one, and the saved list could not be reached from the screen where a quote is written. They are two <strong>lenses</strong> over one screen now, the pattern this app already uses for Invoices (sales / bills) and Inventory (shelf / movements).</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:#40465a">
+            <div>· <strong>What is lost:</strong> nothing. Every saved quote is reachable in one tap from the screen that writes quotes.</div>
+            <div>· <strong>What absorbs it:</strong> the Quote row, whose rail count becomes the saved total (8) rather than a second row's badge.</div>
+            <div>· <strong>The words still reach it:</strong> "saved", "drafts", "pending", "waiting", "estimate", "proposal" move onto Quote's keywords, and <span class="fig" style="font-size:12px">resolveTab('quote-saved')</span> keeps the old door open on the Saved lens.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="1c" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;background:#17223c;color:#fff;padding:3px 9px;border-radius:999px">1C</span>
+      <span style="font-size:12.5px;color:#535d70">Phone · 390 × 844 · compact</span>
+    </div>
+
+    <div style="width:390px;height:844px;background:#f6f5f2;border-radius:26px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(23,34,60,.16)">
+
+      <div style="flex:none;background:#17223c;padding:10px 12px 0">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:24px;height:24px;border-radius:7px;background:#ef4b39;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-6h6v6"></path></svg>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:7px">
+            <span style="font-size:14px;font-weight:700;color:#fff">Quote</span>
+            <span style="font-size:11px;color:#a8b2c7">Jackson · 15 Sep</span>
+          </div>
+          <svg width="18" height="18" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v5h6"></path></svg>
+          <svg width="18" height="18" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b9c2d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+        </div>
+        <div style="margin-top:9px;display:flex;gap:0">
+          <button style="flex:1;height:36px;background:none;border:0;border-bottom:2px solid #ef4b39;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer">Building <span class="fig" style="font-size:11px;color:#a8b2c7">4</span></button>
+          <button style="flex:1;height:36px;background:none;border:0;border-bottom:2px solid transparent;color:#a8b2c7;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">Saved <span class="fig" style="font-size:11px">8</span></button>
+          <button style="flex:1;height:36px;background:none;border:0;border-bottom:2px solid transparent;color:#a8b2c7;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">Details <span class="fig" style="font-size:11px">4</span></button>
+        </div>
+      </div>
+
+      <div style="flex:none;background:#fff;border-bottom:1px solid #ecebe6;padding:8px 12px">
+        <div style="display:flex;align-items:center;gap:9px;height:40px;padding:0 11px;border:1px solid #e2e0da;border-radius:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;min-width:0;font-size:13.5px;color:#5f6a7d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Add item — name, SKU or code</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow-y:auto;background:#fff">
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;padding:6px 12px;background:#faf9f6;border-bottom:1px solid #f0eeea">
+          <span></span>
+          <span class="lbl" style="font-size:9.5px;letter-spacing:0.07em;text-transform:uppercase">Item</span>
+          <span class="lbl" style="font-size:9.5px;letter-spacing:0.07em;text-transform:uppercase">Line total</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;row-gap:1px;padding:8px 12px;border-bottom:1px solid #f0eeea">
+          <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d;grid-row:span 2">1</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Soft Close Mulper — Half Bend</div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">265,000</div>
+          <div style="grid-column:2 / span 2;display:flex;align-items:baseline;gap:6px;font-size:11.5px;color:#5f6a7d">
+            <span class="fig" style="font-size:11.5px;font-weight:500;color:#1b2233;text-decoration:underline dotted #b6bdca;text-underline-offset:3px">1 Ctn</span>
+            <span>&#215;</span>
+            <span class="fig" style="font-size:11.5px;font-weight:500;color:#1b2233;text-decoration:underline dotted #b6bdca;text-underline-offset:3px">265,000</span>
+            <span style="flex:1"></span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Roto Industry</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;row-gap:1px;padding:8px 12px;border-bottom:1px solid #f0eeea;background:#fbfaf8">
+          <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d;grid-row:span 2">2</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">G&#8209;MAN Bow Saw 24" <span style="font-size:11.5px;font-weight:400;color:#5f6a7d">· Mulongo</span></div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">210,000</div>
+          <div style="grid-column:2 / span 2;display:flex;align-items:center;gap:6px;margin-top:5px">
+            <div style="display:flex;align-items:center;height:32px;border:1px solid #e2e0da;border-radius:7px;overflow:hidden;flex:none">
+              <span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#5f6a7d;border-right:1px solid #f0eeea">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+              </span>
+              <span class="fig" style="min-width:46px;text-align:center;font-size:13.5px;font-weight:500">2 <span style="font-size:10.5px;font-weight:500;color:#5f6a7d">Bdl</span></span>
+              <span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#5f6a7d;border-left:1px solid #f0eeea">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+              </span>
+            </div>
+            <span class="fig" style="font-size:12.5px;color:#5f6a7d">&#215;</span>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;height:32px;padding:0 10px;border:1px solid #17223c;border-radius:7px">
+              <span class="fig" style="flex:1;font-size:13.5px;font-weight:500">105,000</span>
+              <span style="font-size:10.5px;color:#5f6a7d;flex:none">each</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;row-gap:1px;padding:8px 12px;border-bottom:1px solid #f0eeea">
+          <span class="fig" style="font-size:11px;font-weight:500;color:#5f6a7d;grid-row:span 2">3</span>
+          <div style="min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Iron sheets G28 · 3m box profile</div>
+          <div class="fig" style="font-size:13.5px;text-align:right;white-space:nowrap">29,000</div>
+          <div style="grid-column:2 / span 2;display:flex;align-items:baseline;gap:6px;font-size:11.5px;color:#5f6a7d">
+            <span class="fig" style="font-size:11.5px;font-weight:500;color:#1b2233;text-decoration:underline dotted #b6bdca;text-underline-offset:3px">1 Pcs</span>
+            <span>&#215;</span>
+            <span class="fig" style="font-size:11.5px;font-weight:500;color:#1b2233;text-decoration:underline dotted #b6bdca;text-underline-offset:3px">29,000</span>
+            <span style="flex:1"></span>
+            <span style="color:#b2301f;font-weight:600;white-space:nowrap">0 in stock</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;padding:9px 12px;border-bottom:1px solid #f0eeea;background:#fbfaf8">
+          <span></span>
+          <div style="min-width:0;font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Transport <span style="font-size:11.5px;color:#5f6a7d">· charge</span></div>
+          <div class="fig" style="font-size:13.5px;text-align:right;text-decoration:underline dotted #b6bdca;text-underline-offset:3px">60,000</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;column-gap:8px;padding:9px 12px;border-bottom:1px solid #f0eeea;background:#fbfaf8">
+          <span></span>
+          <div style="min-width:0;font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Credit terms <span style="font-size:11.5px;color:#5f6a7d">· +3%</span></div>
+          <div class="fig" style="font-size:13.5px;text-align:right">15,120</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid #f0eeea;overflow:hidden">
+          <span style="width:20px;height:20px;flex:none;border:1px dashed #c9c6bf;border-radius:6px;display:flex;align-items:center;justify-content:center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+          </span>
+          <button class="sug" style="height:24px;font-size:11.5px">Delivery <span class="fig" style="font-size:11px">60,000</span></button>
+          <button class="sug" style="height:24px;font-size:11.5px">Urgent <span class="fig" style="font-size:11px">5%</span></button>
+          <button class="sug" style="height:24px;font-size:11.5px;border-style:dashed;color:#5f6a7d">Other</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#faf9f6;border-bottom:1px solid #f0eeea">
+          <span style="font-size:11.5px;color:#5f6a7d;flex:1;min-width:0">Shop side · costs you <span class="fig" style="font-size:11.5px;font-weight:500">467,500</span> · you keep <span class="fig" style="font-size:11.5px;color:#1b2233">51,620</span></span>
+          <span class="chip" style="height:18px;padding:0 6px;background:#e2f5ec;color:#0f7a56;flex:none">10%</span>
+          <svg width="14" height="14" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="#b6bdca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </div>
+      </div>
+
+      <div style="flex:none;height:64px;background:#fff;border-top:1px solid #ecebe6;display:flex;align-items:center;gap:8px;padding:0 12px">
+        <div style="flex:1;min-width:0">
+          <div class="lbl" style="font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase">Client pays · 5 lines</div>
+          <div class="fig" style="font-size:20px;white-space:nowrap">519,120 <span style="font-size:11px;font-weight:500;color:#5f6a7d">UGX</span></div>
+        </div>
+        <button class="btn btn-s" style="width:44px;height:44px;justify-content:center;padding:0;flex:none">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+        </button>
+        <button class="btn btn-p" style="height:44px;padding:0 16px;font-size:14px;font-weight:700;flex:none">Save quote</button>
+      </div>
+
+      <div style="flex:none;height:56px;background:#fff;border-top:1px solid #ecebe6;display:flex;align-items:stretch;padding:0 2px">
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"></path><path d="M22 22H2"></path><path d="m8 6 4-4 4 4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Today</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <span style="display:flex;align-items:center;justify-content:center;width:38px;height:22px;border-radius:999px;background:#ffe1dc">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#ef4b39" stroke="#ef4b39" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path></svg>
+          </span>
+          <span style="font-size:9.5px;font-weight:700;color:#c2311f">Sell</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Money</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">Manager</span>
+        </button>
+        <button style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5f6a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+          <span style="font-size:9.5px;font-weight:600;color:#5f6a7d">More</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>

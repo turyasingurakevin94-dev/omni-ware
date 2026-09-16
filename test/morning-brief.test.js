@@ -32,7 +32,7 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
 
 /* ---------- 1. the stage-timer rule, now shared ----------------------- */
 {
-  const scope = compileScope([extractFunction(src, 'orderStageOverdue', 'index.html')], {}, ['orderStageOverdue']);
+  const scope = compileScope([extractFunction(src, 'stateAge', 'index.html'), extractFunction(src, 'orderStageOverdue', 'index.html')], {}, ['stateAge', 'orderStageOverdue']);
   const limits = { preparing: 60 };
   eq(scope.orderStageOverdue({ status: 'preparing', stageEnteredAt: NOW - 61 * 60000 }, limits, NOW), true,
     'past its limit flags');
@@ -136,6 +136,7 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
   extractFunction(src, 'consignmentSettled', 'index.html'),
   extractFunction(src, 'consignmentRows', 'index.html'),
   extractFunction(src, 'consignmentOwedTotal', 'index.html'),
+    extractFunction(src, 'stateAge', 'index.html'),
     extractFunction(src, 'orderStageOverdue', 'index.html'),
     extractFunction(src, 'cashIsMoneyIn', 'index.html'),
     extractFunction(src, 'cashIsDebtCollection', 'index.html'),
