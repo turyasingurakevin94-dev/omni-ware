@@ -803,9 +803,60 @@ Deviations, each for a reason:
   `rgba(239,75,57,.18)` over the navy, which is the coral at 18% over the navy
   and nothing else, so it is `color-mix`ed from the two tokens it is made of
   rather than added to a palette that is closed at 73.
-- **`renderFollowUpsContact`, `renderFollowUpsAll` and `renderFollowUpSummary`
-  are now unreachable** — nothing on any screen calls them. They are left in
-  place in this pass rather than deleted in the same commit as a large
-  redesign; deleting them is a pass of its own, because a dozen assertions
-  across five test files pin behaviour that has moved and each needs
-  re-verifying at its new address.
+### 8.17 The deletion pass
+
+`renderFollowUpsContact`, `renderFollowUpsAll` and `renderFollowUpSummary` drew
+the second tab. Once the tab went, nothing called them. They are **deleted**
+now, in a pass of their own rather than in the same commit as the redesign,
+because a dozen assertions across six test files pinned behaviour that had
+moved and each one needed re-verifying at its new address. Code nothing calls
+is code the next reader has to prove is dead before they can change anything
+near it.
+
+Gone with them, and only theirs: `fupSetHTML`, `fupHeldPanelHTML`, `fupRowHay`,
+`fupRowLenses`, `fupRowValue`, `fupDaysQuiet`, `fupCp`, `fupDay`, `fupRowChip`,
+`followUpStatePill`, `followUpWaUrl` and the `fupAwaiting` state — plus 63
+unworn `.fup-*` rules and the whole follow-ups phone block, which sized a pane
+that no longer exists. `briefWhyHTML`'s `{fold:true}` disposition went too: its
+only emitter of `fup-see-why` was the deleted pane. The shadow ceiling in the
+ratchet fell 54 → 53 as a result; it may only fall.
+
+What the pass *found*, which is the reason a deletion is worth doing as its own
+piece of work rather than as a tidy-up:
+
+- **Two real acts had been dropped, not re-homed.** A held row for somebody who
+  named a day, or who is inside the rest period, carries an act that the
+  conversation itself produces — *name a different day*, *ask again today*. The
+  retired Chase screen did these with browser `prompt()`s in a band; the
+  redesign lost them. They are back as `msgHeldActHTML` + `msgHeldFormHTML`,
+  inline on the row, which is where a hold belongs: it argues with a row, so it
+  lives next to it. `payment-promises.test.js` exists to protect exactly this.
+- **Send was offered to a client with no phone number.** The pane withheld it
+  and said so in three places; the redesign drew it unconditionally, so a
+  phoneless account got a button that opened `wa.me/` with nothing in it and
+  failed inside WhatsApp, where this screen cannot see it. Withheld again now,
+  with the gap named where the button would be — the contact line in caution
+  ink, the phone's own head, and the note in the send block.
+- **Two accent buttons could share a screen.** A held row's form and the
+  panel's could both be open, putting two coral confirms on one screen saying
+  two different things. Opening either now closes the other.
+- **A held row's act read as a third line of grey.** `.om-btn-g` is background
+  none and ink-3, on a group already painted at `.68` opacity. `.om-btn-s` is
+  the same quiet button with an edge, and on the phone it is a full tap target:
+  the row was already 44 tall, the button inside it was not.
+
+Each re-pointed assertion carries its own argument in the test file — what the
+old one meant, why it stopped being true, and what the new one means. The
+three that moved furthest:
+
+- **The state pill** (`Waiting · Not told · Told · Closed`) was three lines of
+  derivation over `followUpReasons`, `followUpLastContact` and `closedAt`.
+  Membership of the queue *is* the state now, so the assertions go to those
+  engines directly — which is where the rule always lived.
+- **The five-tile strip** is the three figure cards, and the "figures and filter
+  cannot drift" claim is stronger than it was: they were two call sites of one
+  shared reading, and they are now one array computed once per render.
+- **The prefix rule** (`fup-` or the layer's, nothing else) now applies to what
+  still renders `fup-` markup — the follow-up list modal, its add-results rows
+  and the measurement panel. The three screens that would have introduced a
+  stray family are the three that no longer exist.

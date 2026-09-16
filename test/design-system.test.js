@@ -150,7 +150,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .bl-send's filled button, each of which carried an elevation of
        its own. Depth on this app is hairlines; two fewer shadows is the
        gain, and this is where it is locked in. */
-    'shadows': [54, /box-shadow:\s*([^;}]+)/g],
+    /* 53, not 54: the follow-up pane's own card floated. It was the one
+       surface on that screen with an elevation, and it went with the
+       pane when the second Messages tab was deleted. Depth on this app
+       is hairlines; the gain is locked in here. */
+    'shadows': [53, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour

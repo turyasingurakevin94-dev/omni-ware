@@ -240,14 +240,23 @@ if (scope) {
   /* THE FOUR ACTS THAT MADE IT A SCREEN, each still performed, each on
      the hub. These were checked against renderChaseScreen; they are
      checked against the functions that do the same work now. */
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  /* THE PANE IS DELETED, so these are checked against the panel that
+     does the same work: renderMessageSide. It is not a rename -- the
+     pane was a queue and a work column inside a second tab, and this is
+     the recipient column of the one list -- but the four acts are the
+     same four acts and this is where they are performed. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
   const digest = extractFunction(src, 'followUpHubDigest', 'index.html');
   const record = extractFunction(src, 'recordFollowUpClient', 'index.html');
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
   t.check(/debtChaseMessage\(row\.chase, shopIdentity\(\), \{bare:true\}\)/.test(digest),
     'the demand is still written from the customer’s own invoices — the same builder, dropping only the '
     + 'greeting and sign-off the hub’s message already has');
-  t.check(/followUpWaUrl\(row, draftOf\(cid\)/.test(wire),
+  /* The send is on the panel now and builds from the box's CURRENT
+     contents, which is the same claim the pane's followUpWaUrl made and
+     one line shorter: there is one box on this screen, so there is
+     nothing to look up. */
+  t.check(/waComposeUrl\(r\.phone \|\| '', box \? box\.value : body\)/.test(side),
     'sending opens WhatsApp with the message written — the same door the quote sender uses');
   t.check(/if\(row\.chase\)\{ markDebtChased\(String\(customerId\)\); told\.chased = true; \}/.test(record),
     'and saying it went records the chase');
@@ -255,9 +264,14 @@ if (scope) {
     && /if\(told\.chased\) unmarkDebtChased\(told\.customerId\);/.test(extractFunction(src, 'unrecordFollowUpClient', 'index.html')),
     'while "It did not go" takes that stamp back — the undo the old footer offered, now covering every '
     + 'engine the one message spoke for');
-  t.check(/fup-pay/.test(contact) && /openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire),
+  t.check(/fup-pay/.test(side) && /openCustomerDebtModal\(btn\.dataset\.cust, 'payment'\)/.test(wire),
     'a customer who pays is received through the same door as the Debtors list');
-  t.check(/class="ow-msg fup-msg"/.test(contact) && /draftOf\(cid\) \|\| followUpHubDigest/.test(wire),
+  /* ONE BOX, and it is what ships. The pane had a second one and the two
+     shared fupDrafts so they could not disagree; there is one now, and
+     the send reads it rather than the builder. */
+  t.check(/<textarea class="om-box" id="msg_box"/.test(side)
+    && /fupDrafts\[cid\] = box\.value/.test(side)
+    && /fupDrafts\[cid\] != null\) return fupDrafts\[cid\]/.test(extractFunction(src, 'msgDraftFor', 'index.html')),
     'the message is editable, and what SENDS is what the owner sees — not a copy of it');
 
   /* The badge did not go dark, it went to the row that now owns the
@@ -290,10 +304,16 @@ if (scope) {
  * not, each with a home.
  */
 {
-  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
-  const held = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  /* THE FOUR THINGS THE OLD SCREEN COULD SAY, at the addresses the
+     second handoff gave them. The pane and the five-tile summary are
+     deleted; the held-back panel is a group on the list, drawn by
+     msgHeldRowHTML off msgHeldRows, and the client's work is the
+     recipient panel. */
+  const side = extractFunction(src, 'renderMessageSide', 'index.html');
+  const heldRow = extractFunction(src, 'msgHeldRowHTML', 'index.html');
   const heldRows = extractFunction(src, 'followUpHeldBack', 'index.html');
-  const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+  const msgHeld = extractFunction(src, 'msgHeldRows', 'index.html');
+  const kpis = extractFunction(src, 'renderMessageKpis', 'index.html');
 
   /* 1. THE LENS ITSELF. 'money' is one of the six reasons the queue
         narrows by, and it is the one the retired door lands on. */
@@ -305,13 +325,23 @@ if (scope) {
         checks the lines add to the balance BEFORE the demand goes. It is
         drawn from row.chase.invoices -- debtChaseInvoices, the same
         reading the message itself is written from. */
-  t.check(/What the message quotes/.test(contact)
-    && /ch\.invoices\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(contact),
+  /* It has its own builder now -- msgQuotedHTML, a card on the panel --
+     because the pane it was a block inside is deleted. Same reading,
+     same source, and it is on the card the send button is on, which is
+     the whole point of it. */
+  const quoted = extractFunction(src, 'msgQuotedHTML', 'index.html');
+  t.check(/What the message quotes/.test(quoted)
+    && /\(ch\.invoices\|\|\[\]\)\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(quoted),
     'the invoices behind the demand are on the client’s card, so the arithmetic can be read before it is sent');
-  t.check(/class="ow-tbl-f"><div class="ow-tbl-c">Balance/.test(contact),
+  t.check(/om-qline-f[\s\S]{0,160}Balance/.test(quoted),
     'ending with the balance they add to, which is what makes it a check rather than a list');
-  t.check(/The invoices on file add up to more than this balance/.test(contact)
-    && /No invoice stands behind this balance/.test(contact),
+  /* The two reasons a breakdown cannot be quoted. One of them -- the
+     carried balance -- is the case the second handoff draws, and it is
+     said twice on purpose: on the panel's amber block where the decision
+     is made, and here where the table would otherwise be. */
+  t.check(/The invoices on file add up to more than this balance/.test(quoted)
+    && /No invoice stands behind this balance/.test(quoted)
+    && /No invoice stands behind this balance/.test(side),
     'and where they do NOT stand behind the balance it says which of the two reasons it is — the same two '
     + 'the message itself distinguishes, rather than printing a breakdown the shop cannot stand behind');
 
@@ -323,8 +353,36 @@ if (scope) {
   t.check(/chase\.promised\.forEach/.test(heldRows) && /chase\.resting\.forEach/.test(heldRows)
     && /chase\.blocked\.forEach/.test(heldRows),
     'the promised, resting and held-back accounts are all still named rather than dropped');
-  t.check(/fup-held-promise/.test(held) && /fup-held-unpromise/.test(held) && /fup-held-again/.test(held),
-    'with the acts they need: a different day, a day they never named, and a chase that can be repeated');
+  /* THE HELD-BACK BAND'S THREE PROMPTS went with it, and what replaced
+     them is not a smaller version of the same thing -- it is the other
+     way up. Those prompts acted on somebody who was NOT on screen: a
+     name in a band, a browser prompt, a date typed blind. The panel acts
+     on the person in front of you, so "They promised a date" is a field
+     on their own card and the reasons they are held are read on their
+     row above the list.
+
+     What must survive is that a hold is READABLE and REVERSIBLE, and
+     both are checked here rather than assumed. */
+  t.check(/esc\(h\.reason\)/.test(heldRow) && /lifts \$\{esc\(msgDay\(h\.until\)\)\}/.test(heldRow),
+    'every held row carries the reason and the day it lifts, which is the whole of what a hold is');
+  /* The act moved off the row's own template and into msgHeldActHTML,
+     because a held row has THREE possible acts and only one of them is
+     Lift: an owner's hold lifts, a promise can be given a different day,
+     a rested account can be asked again today, and an engine's hold has
+     no act at all. Four branches inline in the row was the row's markup
+     arguing with itself. The claim is the same claim -- an owner's hold
+     is reversible from the row, an engine's names whose it is -- and it
+     is checked at both addresses so neither half can quietly go. */
+  const heldAct = extractFunction(src, 'msgHeldActHTML', 'index.html');
+  t.check(/h\.own/.test(heldAct) && /data-msglift=/.test(heldAct),
+    'the owner\'s own holds can be lifted from the row');
+  t.check(/the engine, not you/.test(heldRow),
+    'and an engine\'s says whose it is — the rule is the thing to change');
+  t.check(/\$\{msgHeldActHTML\(h\)\}/.test(heldRow),
+    'with the act drawn on the row itself rather than behind a tap, because a hold argues with a row and is read beside it');
+  t.check(/addPaymentPromise\(r\.customerId, on, amt/.test(side)
+    && /msg_prom_set/.test(extractFunction(src, 'msgPanelFormHTML', 'index.html')),
+    'and a day they named is written down on their own card, where the conversation just happened');
   t.check(/promiseId: r\.promise\.id/.test(heldRows),
     'the promise carries its own id, so "They did not say that" removes the row it is standing on');
 
@@ -343,9 +401,13 @@ if (scope) {
         short label the approved canvas gives all five; and the help says
         where the book is, so the division the app states in three other
         places is readable and not merely true. */
-  t.check(/tile\('Money', 'money', n\('money'\) \? 'past your terms'/.test(summary),
-    'the Money tile keeps the canvas’s own sub, in the shape the other four wear');
-  t.check(!/moneyOwed|moneyNote/.test(contact) && !/moneyOwed/.test(summary),
+  /* The five-tile strip is gone with the pane; three cards replace it,
+     and the Money reading is the first of them. It says what is riding
+     on the queue and how far past terms the worst of it is -- both
+     readings OF THIS QUEUE -- and nothing about the book. */
+  t.check(/past your terms/.test(kpis) && /riding on/.test(kpis),
+    'the Money card says what is at stake in this queue and how late it is, and nothing wider');
+  t.check(!/moneyOwed|moneyNote/.test(side) && !/moneyOwed/.test(kpis),
     'and no total is worked out over this queue — a position over a subset is a position nobody can trust');
   /* THE SAME CLAIM AT TWO NEW ADDRESSES, and both moved for a reason.
      The SECTION is tab-messages: Follow-ups and WhatsApp were merged, so
