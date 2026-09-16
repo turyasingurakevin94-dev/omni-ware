@@ -31673,6 +31673,40 @@ function orderPurchaseLines(q){
     };
   });
 }
+/* ---- WHAT AN ORDER COST, as against what left the till -------------
+
+   orderPurchaseLines reports the quantity that has to be COLLECTED, and
+   wherever the supplier breaks no packs that is a whole pack: one kilo
+   of hinges from a man who sells the twenty-kilo box is twenty kilos of
+   cash. That is the right figure for the buying list, which is a person
+   walking to market with money, and the wrong one for an order, because
+   the other nineteen kilos go on the shelf. They are stock. They are not
+   this sale.
+
+   Charged to the order they read "Cost, as bought 230,000" against
+   "Client pays 12,000" and called an ordinary sale a 1,816% loss -- not
+   a stale figure but a wrong one, on the screen an owner opens to decide
+   whether an order is worth doing at all.
+
+   Three readings, one unit cost: what the buyer actually paid where a
+   line has come in, and today's cheapest where it has not. */
+function orderLineUnitCost(l){
+  return (l && (l.settled || l.received))
+    ? (Number(l.it && l.it.receivedPrice) || 0)
+    : (Number(l && l.unitCost) || 0);
+}
+/* The order's own goods, at the quantity the ORDER takes -- the figure
+   that may be set against what the client pays. */
+function orderOwnCost(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.quotedQty) || 0), 0);
+}
+/* And the rest of the pack, which is real money and belongs to the
+   shelf. Named rather than dropped: it is the difference between the two
+   figures above, and an owner who is not told about it cannot reconcile
+   the till. */
+function orderPackSurplusCash(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.surplus) || 0), 0);
+}
 function orderCashToBuy(q){
   return orderPurchaseLines(q).reduce((s,l)=> s + (l.lineCost || 0), 0);
 }
@@ -42000,9 +42034,30 @@ function otPreviewSpec(id){
      any stock line on it cannot have its margin worked out here, and
      says so rather than reporting the whole price as profit. */
   const buys = orderPurchaseLines(q);
-  const cost = buys.reduce((sum, l)=> sum + (l.settled || l.received
-    ? (Number(l.it.receivedQty) || 0) * (Number(l.it.receivedPrice) || 0)
-    : (l.lineCost || 0)), 0);
+  /* WHAT THIS ORDER COST, which is not what left the till.
+
+     orderPurchaseLines reports the quantity that has to be COLLECTED,
+     and that is a whole pack wherever the supplier breaks none: one kilo
+     of hinges from a man who sells the twenty-kilo box is twenty kilos
+     of cash. Right for the buying list, which is a man walking to market
+     with money. Wrong here, because the other nineteen kilos go on the
+     shelf -- they are stock, not this sale. Charging them to the order
+     read "Cost, as bought 230,000" against "Client pays 12,000" and
+     called an ordinary sale a 1,816% loss, which is not a stale figure
+     but a wrong one, on the screen an owner opens to decide whether an
+     order is worth doing.
+
+     So the order is costed at the quantity the ORDER takes, per unit, at
+     what the buyer actually paid where a line has come in and today's
+     cheapest where it has not. What the pack forced on top is real money
+     and is named below rather than dropped -- it is simply not this
+     order's. */
+  const cost = orderOwnCost(buys);
+  const overPack = buys.filter(l=> (Number(l.surplus) || 0) > 0);
+  const overPackCash = orderPackSurplusCash(buys);
+  const overPackNote = overPack.length
+    ? `${overPack.length} line${overPack.length === 1 ? ' comes' : 's come'} in a pack bigger than the order, so ${esc(fmtUGX(Math.round(overPackCash)))} more leaves the till than is costed here — that surplus goes on the shelf as stock. `
+    : '';
   const total = savedQuoteTotal(q);
   const margin = total - cost;
   const wholeCost = s.fromStock === 0 && !s.unpriced;
@@ -42140,9 +42195,9 @@ function otPreviewSpec(id){
             <div class="ow-dlg-hr"></div>
             ${wholeCost
               ? `<div class="ow-dlg-kv ${margin < 0 ? 'ow-bad' : 'ow-good'}"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">${esc(otFig(Math.round(margin)))}</span></div>
-                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price.</div>`
+                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price. ${overPackNote}</div>`
               : `<div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">not from here</span></div>
-                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated.</div>`}
+                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated. ${overPackNote}</div>`}
           </div>
           <div class="ow-dlg-hr"></div>
           <div class="ow-dlg-sect">
