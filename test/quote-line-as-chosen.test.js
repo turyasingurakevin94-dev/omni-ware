@@ -189,14 +189,23 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the unit under the product name is the one the line is counted in — "Ctn" under a carton line, not "Pair"');
   t.check(!/value="\$\{it\.qty\}"/.test(rows),
     'the base count is no longer what the box shows');
-  t.check(/q-sell[^>]*value="\$\{Math\.round\(sell \* per\)\}"/.test(rows),
+  /* qFig IS Math.round WITH SEPARATORS. The money boxes show the figure
+     the way the document prints it and the way it is said on a call --
+     265,000, not 265000 -- which a type="number" input cannot hold, so
+     they are text boxes. `* per` is untouched: the box still carries
+     the price of whatever the line is counted in. */
+  t.check(/q-sell[^>]*value="\$\{qFig\(sell \* per\)\}"/.test(rows),
     'Price each is per that unit — the carton price beside a carton count');
-  t.check(/q-price"[^>]*value="\$\{Math\.round\(it\.price \* per\)\}"/.test(rows),
+  t.check(/q-price"[^>]*value="\$\{qFig\(it\.price \* per\)\}"/.test(rows),
     'and so is Buy @');
   t.check(/const per = quoteLineCountPer\(item\);/.test(rows),
     'the edit handlers read the same factor off the line');
-  t.check(/item\.price = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
-    && /item\.sellPrice = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
+  /* qNum is what undoes qFig: it strips the separators the box wrote and
+     the spaces a person adds, and returns 0 for anything else -- the
+     same floor `|| 0` gave. The division by the line's own factor is
+     unchanged, which is the claim this check exists for. */
+  t.check(/item\.price = qNum\(e\.target\.value\) \/ quoteLineCountPer\(item\);/.test(rows)
+    && /item\.sellPrice = qNum\(e\.target\.value\) \/ quoteLineCountPer\(item\);/.test(rows),
     'a price typed per carton is kept per base unit');
   t.check(/item\.qtyIn = per > 1 \? 'pack' : 'unit';/.test(rows),
     'an edited count makes the choice explicit on the line');

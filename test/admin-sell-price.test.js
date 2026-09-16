@@ -267,6 +267,13 @@ const line = (over) => Object.assign({
       extractFunction(src, 'consignedForLine', 'index.html'),
       extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
       extractFunction(src, 'sellBelowCostClause', 'index.html'),
+      /* And what a typed figure means. The money boxes on the quote show
+         grouped digits, which a type="number" input cannot hold, so they
+         are text boxes and the handler parses what was typed. Compiled
+         in rather than stubbed: "265,000" reaching item.sellPrice as
+         265 instead of 265000 is precisely the fault this file is for,
+         and a stub returning Number() would hide it. */
+      extractFunction(src, 'qNum', 'index.html'),
       /* The handler now reads which unit the row counts in -- a price
          typed beside a carton count is a carton price, divided back to
          the base unit before it is kept. A loose line divides by 1, so

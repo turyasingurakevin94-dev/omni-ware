@@ -24639,6 +24639,17 @@ function highlightTokens(text, tokens){
 }
 
 function fmtUGX(n){ return n===null||n===undefined||n===''? '' : Number(n).toLocaleString('en-UG') + ' UGX'; }
+/* A typed figure, read back. The money boxes on the quote show grouped
+   digits -- 265,000, not 265000 -- because that is how the figure is
+   said on the call and how the rest of the document prints it. A
+   type="number" input CANNOT hold that: the browser rejects a value
+   with separators in it and shows the bare digits instead, which is why
+   those boxes read 26500 next to a line total reading 265,000. They are
+   text boxes with inputmode="decimal", and this is what turns what was
+   typed back into a number. Everything the shop can type is stripped:
+   the separators the box itself wrote, and the spaces a person adds. */
+function qNum(v){ return Number(String(v==null?'':v).replace(/[,\s]/g, '')) || 0; }
+function qFig(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
 // Compact price + unit, e.g. "10,000/pc" — used on the Recommended Prices
 // squares in New Quote where space is tight and "UGX" would be redundant.
 function fmtPriceCompact(n, unit){
@@ -38033,7 +38044,7 @@ function renderQuoteItems(){
     const qtyShown = asPack ? packView.packs : it.qty;
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
-        <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
+        <input type="text" inputmode="decimal" class="ow-gi om-gi price-input q-sell${manual?' q-sell-manual':''}" value="${qFig(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
         <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
@@ -38057,7 +38068,7 @@ function renderQuoteItems(){
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <span class="om-idiv" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi om-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
+      <div class="ow-tbl-n" data-l="Buy @"><input type="text" inputmode="decimal" class="ow-gi om-gi price-input q-price" value="${qFig(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
@@ -38204,7 +38215,7 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
-      item.price = (Number(e.target.value) || 0) / quoteLineCountPer(item);
+      item.price = qNum(e.target.value) / quoteLineCountPer(item);
       // At THIS line's quantity -- the price was agreed for this many, and
       // the price book records it against that.
       /* item.unit was snapshotted from whoever this line was quoted
@@ -38215,7 +38226,7 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
-      item.sellPrice = (Number(e.target.value) || 0) / quoteLineCountPer(item);
+      item.sellPrice = qNum(e.target.value) / quoteLineCountPer(item);
       // Never blocked, only said. See sellBelowCostClause.
       const below = sellBelowCostClause(item);
       if(below) toast(`Saved — but ${below}.`, 7000);
@@ -38580,13 +38591,14 @@ function chargeRowsHTML(q, goodsTotal){
       </div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n" data-l="${isPercent ? 'Rate' : 'Amount'}"><div class="q-sell-cell">
-        <input type="number" class="ow-gi" data-chg-val="${i}" min="0" step="any"
-          value="${Number(ch.value) > 0 ? Number(ch.value) : ''}"
+        <input type="text" inputmode="decimal" class="ow-gi om-gi" data-chg-val="${i}"
+          value="${Number(ch.value) > 0 ? (isPercent ? Number(ch.value) : qFig(ch.value)) : ''}"
           placeholder="${isPercent ? 'e.g. 5' : 'e.g. 20000'}"
           aria-label="${esc(asked)}, ${isPercent ? 'percent of the items' : 'amount in shillings'}">${
         isPercent ? '<span class="q-chg-pct">%</span>' : ''}</div></div>
       <div class="ow-tbl-n${isPercent ? '' : ' q-chg-same'}" data-l="${isPercent ? 'Comes to' : 'Line total'}" title="What this charge adds to the client's bill">${
         amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
+      <span class="om-idiv" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first"></div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n"></div>
@@ -38707,7 +38719,7 @@ function wireQuoteCharges(wrap){
     // Never below nothing. A charge is money the shop is owed; taking money
     // OFF a bill is a discount, which is a decision about the price of the
     // goods and belongs on the line that sets it.
-    ch.value = Math.max(0, Number(inp.value)||0);
+    ch.value = Math.max(0, qNum(inp.value));
     redraw();
   }));
   wrap.querySelectorAll('[data-chg-del]').forEach(btn=> btn.addEventListener('click', ()=>{
