@@ -791,6 +791,18 @@ Deviations, each for a reason:
   preview of a telling's picture**. The two picture *acts* — share it, save it —
   are on the Telling panel, so the owner still gets the image; what they cannot
   do is look at it first.
+- **The phone is a second screen, not a reflow.** Frame 2b is a *detail* view:
+  pick somebody and the recipient fills the screen — back chevron, avatar, name,
+  `0782432454 · first ask`, a `1 of 1` chip and an AT STAKE strip on the navy —
+  with the list behind the chevron. That is the two-designs law doing its actual
+  job: the desktop shows the list and the recipient side by side because it has
+  the width, the phone shows one at a time because it does not. Built. The
+  panel's own navy header and its repeated *Owes* figure are hidden there, since
+  the screen's head already carries both.
+- **The AT STAKE strip introduces no colour.** The frame paints it
+  `rgba(239,75,57,.18)` over the navy, which is the coral at 18% over the navy
+  and nothing else, so it is `color-mix`ed from the two tokens it is made of
+  rather than added to a palette that is closed at 73.
 - **`renderFollowUpsContact`, `renderFollowUpsAll` and `renderFollowUpSummary`
   are now unreachable** — nothing on any screen calls them. They are left in
   place in this pass rather than deleted in the same commit as a large
