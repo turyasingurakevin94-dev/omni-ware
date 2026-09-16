@@ -132,14 +132,44 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      not merely lose a line, it would shift every cell after it one
      column to the left, which is the failure this now catches and the
      border version could not. */
-  t.check(/--ow-tbl-cols:[^;]*\b1px\b/.test(src),
-    'the shop’s columns start behind a divider, and it is a track of its own');
-  t.check(/\.q-doc \.q-tbl-rule\{[\s\S]{0,160}?background:/.test(src),
-    'which is a real rule, not just a class name');
+  /* THE TRACK IS 17px NOW, NOT 1px, AND THE RULE IS CENTRED IN IT.
+     What this assertion has always meant is that the divider is a TRACK
+     and not a border on a cell -- and that is still exactly true. What
+     stopped being true is the width. A 1px track gave the rule no
+     channel: with the table's 8px gap the shop's side began 9px after
+     the line and the client's figures ended 8px before it, half the
+     card's own 16px gutter, on the one boundary in this document that
+     exists to read as a division. The supplier names sat almost on the
+     line.
+
+     So the track is a channel and the 1px line is centred inside it,
+     which is the pair this now pins. Asserting the track alone would let
+     a later edit turn track 7 into a 17px grey BAR and still pass; the
+     justify-self is what keeps it a hairline with room either side. */
+  const ruleRule = (/\.q-doc \.q-tbl-rule\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/--ow-tbl-cols:[^;]*\b17px\b/.test(src),
+    'the shop’s columns start behind a divider, and it is a track of its own — wide enough to be a channel');
+  t.check(/background:/.test(ruleRule) && /width:1px/.test(ruleRule) && /justify-self:center/.test(ruleRule),
+    'and what sits in that track is a 1px rule centred in it, not a bar filling it');
   const ruleCells = (t2) => (t2.match(/class="q-tbl-rule"/g) || []).length;
+  /* FOUR, NOT TWO, AND FOR THE REASON THE ASSERTION WAS WRITTEN.
+     The document gained two rows: the one that NAMES the two sides the
+     rule divides, above the column names, and the goods subtotal. Both
+     span the document, so both emit the track's cell -- and a row that
+     skipped it would shift every cell after it one column left, which
+     is the failure this count exists to catch, unchanged. */
   t.check(/<div class="ow-tbl-c q-shop-first">Buy from<\/div>/.test(items)
-    && ruleCells(items) === 2,
-    'and the header and every line honour it (header + row = ' + ruleCells(items) + ')');
+    && ruleCells(items) === 4,
+    'and every row that spans the document honours it — the sides, the column names, a line, the goods subtotal (= ' + ruleCells(items) + ')');
+  /* The row that names the sides is the one place the two sides are said
+     in words rather than implied by which side of the rule a column is
+     on. It is a console reading: below 820 the row is a card and there
+     is no second side to name, so it is not drawn there. */
+  t.check(/<span class="q-side-l" style="grid-column:3\/7">The client pays<\/span>/.test(items)
+    && /<span class="q-side-l q-side-shop" style="grid-column:8\/11">The shop buys<\/span>/.test(items),
+    'and the rule has a name on each side of it, placed on the tracks it divides');
+  t.check(/\.q-doc \.ow-tbl-h\.q-sides\{display:none;\}/.test(src),
+    'which the phone does not draw, having no second side to divide off');
   /* The divider runs the length of the document: the header, every
      line, every charge, and the credit row. The foot that used to carry
      it is gone, so the document ends at the add row and the rule ends

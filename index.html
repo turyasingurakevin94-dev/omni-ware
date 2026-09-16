@@ -743,6 +743,14 @@
      the line count on the dock -- are never drawn on the console. */
   .q-shop-toggle,.q-phbar,.q-ph-meta,.q-ph-shop,.q-ph-x,.q-ph-hint,.q-rstp,.q-add-fade,.qp-says-n,.q-more-ph,
   .q-tabbar,.q-search-n,.q-rail-facts,.q-rail-in{display:none;}
+  /* The phone's compact one-line form of a rail reading. The console
+     draws the note instead, which has room for the reasoning AND the
+     act. .q-advice is named here as well as .q-rail-sec: the sweep's
+     findings moved out of the rail into the strip under the document,
+     and the rule that had kept the console from saying each finding
+     twice -- once as this row, once as the note below it -- did not
+     move with them. In a 304px rail it read as a heading over its own
+     paragraph; across the strip it is plainly the same sentence twice. */
   .q-rail-sec .q-rail-ph{display:none;}
   /* A search result: the name on one line with the stock beside it,
      one line of meta under it. */
@@ -6192,40 +6200,74 @@
      #q_rail in the markup -- and what it held that was worth keeping is
      either on a row, in the client strip, or in .q-advice below. */
   #tab-quote > .ow-grid{grid-template-columns:minmax(0,1fr);}
-  #tab-quote > .ow-grid > .ow-side{display:none;}
-  /* Build, check, act -- left to right, in the order the work meets
-     them. 1.5fr / 1fr because the first card carries prose and two
-     buttons and the second is usually one sentence and a count. */
-  .q-advice{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
-    gap:var(--ow-sp-16);align-items:start;margin-top:var(--ow-sp-16);}
+  /* THE CONSOLE DOES NOT DRAW THE RAIL, AND ONLY THE CONSOLE.
+     Written flat, this rule reached the phone too -- and beat
+     `body.q-tab-details #q_rail{display:flex}` on specificity, one id
+     and two classes against one id, one class and an element. So the
+     Details tab has been drawing an empty pane since the rail moved out
+     of the console: the client's facts and their standing were rendered
+     into a container that could never be shown. The container survives
+     FOR the phone (see the note on #q_rail in the markup), so the rule
+     that hides it has to say which width it means. */
+  @media (min-width:821px){ #tab-quote > .ow-grid > .ow-side{display:none;} }
+  /* WHAT IS LEFT TO SETTLE, ON ONE STRIP.
+     These were two cards side by side, and they were drawn whether or not
+     they had anything to say: on a quote where every line is already at
+     its cheapest supplier and nothing is written down to go with it, the
+     screen spent a hundred and ten pixels on two cards reporting that
+     the shop is fine. A screen that says "nothing to do" at the size it
+     would say "three things to do" has told you nothing twice.
+
+     So the strip is one bordered row. Its head cell counts what is left;
+     each reading that HAS something takes a cell after it, ruled off
+     from its neighbours; a reading with nothing to offer renders empty
+     and is not drawn at all. With nothing at all left, the head is the
+     whole strip and it says so in one line. */
+  .q-advice{display:flex;align-items:stretch;margin-top:var(--ow-sp-16);
+    background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+    overflow:hidden;}
   .q-advice .q-adv-card:empty{display:none;}
-  /* A card that has something to act on spans the row when it is the
-     only one with anything to say. */
-  .q-advice .q-adv-card{min-width:0;padding:var(--ow-sp-12) var(--ow-sp-16);}
+  /* Top-aligned, not centred: a cell beside it can run to several
+     lines, and a centred head then floats down the middle of the strip
+     away from the cell titles it is counting -- far enough, on a quote
+     with a long finding, to sit under the dock. */
+  .q-adv-hd{flex:none;display:flex;align-items:flex-start;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-10) var(--ow-sp-12);min-width:0;}
+  .q-adv-hd .icon{margin-top:1px;}
+  .q-adv-hd .icon{width:16px;height:16px;flex:none;}
+  .q-adv-hd-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.07em;
+    text-transform:uppercase;white-space:nowrap;}
+  .q-adv-hd-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Something to settle: the head wears the caution tint and the cells
+     follow it. Nothing to settle: it is a quiet line of ink, because a
+     green banner is a second thing to read about there being nothing to
+     read. */
+  .q-advice.q-has-settle{border-color:var(--ow-amber-soft);}
+  .q-advice.q-has-settle .q-adv-hd{background:var(--ow-amber-faint);color:var(--ow-amber-ink);}
+  .q-advice.q-has-settle .q-adv-hd .q-adv-hd-s{color:var(--ow-amber-ink);}
+  .q-advice:not(.q-has-settle) .q-adv-hd .icon{color:var(--ow-verdigris);}
+  .q-advice:not(.q-has-settle) .q-adv-hd-t{color:var(--ow-ink-600);}
+  .q-advice .q-adv-card{flex:1 1 0;min-width:0;padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-left:1px solid var(--ow-rule-soft);}
   /* A card, not a panel. The panel header -- 11px uppercase, letter-spaced,
      a count in the far corner, a hairline under -- is the vocabulary for a
      REGION of the console, and it made a two-sentence suggestion look like
      a section of the app. These two are advice: a mark saying what kind,
      the thing itself, and how much of it there is. */
-  .q-advice .q-adv-h{display:flex;align-items:center;gap:var(--ow-sp-10);margin-bottom:var(--ow-sp-8);}
-  .q-adv-chip{width:30px;height:30px;flex:none;border-radius:var(--ow-r-sm);
-    display:flex;align-items:center;justify-content:center;}
-  .q-adv-chip .icon{width:16px;height:16px;}
-  .q-adv-chip.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .q-adv-chip.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .q-adv-t{flex:1;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);
-    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .q-advice .q-adv-h{display:flex;align-items:center;gap:var(--ow-sp-6);margin-bottom:var(--ow-sp-6);}
+  .q-adv-t{flex:1;min-width:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* The count is a pill and it carries the ANSWER, not just the number:
      green when the sweep found nothing to do, amber when it did. In the
      corner of a panel header the same figure said neither. */
-  .q-adv-n{flex:none;display:inline-flex;align-items:center;height:24px;padding:0 var(--ow-sp-10);
-    border-radius:var(--ow-r-pill);font-size:11px;font-weight:var(--ow-fw-700);
+  .q-adv-n{flex:none;display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-sm);font-size:11px;font-weight:var(--ow-fw-700);
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
   .q-adv-n.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
   .q-adv-n.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   /* What goes with a line is the one card that ever proposes an act, so
      it wears the tint that means "there is something here for you". */
-  #q_adv_with{background:var(--ow-amber-faint);border-color:var(--ow-amber-soft);}
   .q-advice .q-rail-note,.q-advice .ow-mini{border-top:0;padding:0;margin:0 0 var(--ow-sp-8);
     font-size:var(--ow-t-13);line-height:var(--ow-lh-snug);color:var(--ow-ink-600);}
   .q-advice .q-rail-note:last-child,.q-advice .ow-mini:last-child{margin-bottom:0;}
@@ -6238,6 +6280,16 @@
     background:var(--ow-paper);color:var(--ow-ink-900);
     font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
   .q-advice .q-rail-act:hover{background:var(--ow-steel-050);border-color:var(--ow-steel-400);}
+  /* THE FINDING IS SAID ONCE. .q-rail-ph is the phone's compact one-line
+     form of a rail reading; the console draws the note below it, which
+     has room for the reasoning AND the act. The rule that kept the
+     console from drawing both names .q-rail-sec, and these findings
+     moved out of the rail into this strip without it. In a 304px rail
+     the row read as a heading over its own paragraph; across the strip
+     it is plainly the same sentence twice.
+     Written past .q-rail-act above, which sets its own display at the
+     same specificity and would otherwise win by being later. */
+  .q-advice .q-rail-act.q-rail-ph{display:none;}
   /* The line-total track is minmax(112px, auto): a money column is
      sized to its content and never truncates, and with subgrid the
      foot's larger total sizes the same track for every row above it.
@@ -6256,8 +6308,18 @@
      shop's (who it comes from, what it costs us, what is kept). A
      border would have belonged to one side; the rule belongs to
      neither. */
-  .q-doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 74px 58px 118px 130px 1px 156px 112px 66px;}
-  .q-doc .q-tbl-rule{background:var(--ow-steel-100);align-self:stretch;width:1px;
+  /* TRACK 7 IS A CHANNEL, AND THAT IS NOT THE SAME AS A TRACK.
+     It was 1px wide, so with the table's 8px gap the shop's side began
+     9px after the line and the client's figures ended 8px before it --
+     half the card's own 16px gutter, on the one boundary in the document
+     that exists to READ as a division. The supplier names sat almost on
+     the line. The track is 17 now and the 1px rule is centred in it, so
+     the channel is 8 + 17 + 8 with a clear 16 either side: the gutter,
+     on this app's scale, symmetric across a rule that belongs to neither
+     side. The item column pays for it, because every other track is
+     sized to a figure that must not be clipped. */
+  .q-doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 74px 58px 118px 130px 17px 156px 112px 66px;}
+  .q-doc .q-tbl-rule{background:var(--ow-steel-100);align-self:stretch;justify-self:center;width:1px;
     margin:calc(var(--ow-sp-8) * -1) 0;}
   .q-doc .ow-tbl-h .q-tbl-rule{margin:calc(var(--ow-sp-8) * -1) 0;}
   /* The unit is a column on the console. It stays inside the quantity
@@ -6285,18 +6347,34 @@
   .q-doc .q-doc-namecol{display:flex;flex-direction:column;min-width:0;}
   /* THE FIGURES YOU CAN CHANGE SAY SO, AT REST.
      Quantity, price each, buy @, and a charge's amount are the four
-     things a rep edits on a call. Until now they announced themselves
-     only on hover, which a rep who has never used the screen never
-     discovers, and never at all on a touch screen -- there is no hover
-     on a phone, so the affordance did not exist there.
+     things a rep edits on a call. They once announced themselves only on
+     hover -- which a rep who has never used the screen never discovers,
+     and which does not exist at all on a phone -- so they were given a
+     dashed underline, the document's own mark for a blank to be filled.
 
-     A dashed underline is the document's own mark for a blank to be
-     filled. It is scoped to .q-doc deliberately: it means "this figure
+     A DASHED UNDERLINE IS ONE MARK, AND THERE ARE FOUR PER ROW. Eight of
+     them down a table stopped reading as "fill this in" and started
+     reading as a texture the eye has to sort out before it can read the
+     figures sitting on them. The slot says the same thing by SHAPE: the
+     page's own ground, set into the white row, no line at all -- and it
+     still holds at rest, which was the whole point of the dash. It stays
+     scoped to .q-doc, for the reason the dash was: it means "this figure
      is yours to change", and if every .ow-gi in the app wore it the mark
-     would stop meaning anything. On focus it goes solid, which is the
-     difference between "you can write here" and "you are writing here". */
-  .q-doc .ow-gi{border-bottom:1px dashed var(--ow-steel-400);}
-  .q-doc .ow-gi:focus{border-bottom-style:solid;}
+     would stop meaning anything. */
+  .q-doc .ow-gi{background:var(--ow-steel-050);}
+  /* A charge's row is already tinted, so its slot is white: the slot is
+     always the value its row is not. */
+  .q-doc .q-charge .ow-gi{background:var(--ow-paper);}
+  /* THE SHOP'S SIDE RESTS QUIET.
+     Reading DOWN the client's prices is the thing this screen is for,
+     and three columns of cost at full ink interrupt it on every line.
+     They sit at ink-600 -- 5.9:1, still well over the floor, just not
+     competing -- and come to full ink on the line the hand is on. */
+  .q-doc .q-shop-first,.q-doc .q-shop-first .q-sup-text,.q-doc .q-price{color:var(--ow-ink-600);}
+  .q-doc .ow-tbl-r:hover .q-shop-first,.q-doc .ow-tbl-r:hover .q-shop-first .q-sup-text,
+  .q-doc .ow-tbl-r:hover .q-price,
+  .q-doc .ow-tbl-r:focus-within .q-shop-first,.q-doc .ow-tbl-r:focus-within .q-shop-first .q-sup-text,
+  .q-doc .ow-tbl-r:focus-within .q-price{color:var(--ow-ink-900);}
   .q-doc .ow-tbl-h,.q-doc .ow-tbl-r,.q-doc .ow-tbl-f{gap:var(--ow-sp-8);}
   /* THE CARD'S OWN GUTTER. Every row of the document -- the header, a
      line, a charge, the foot -- starts the same distance in from the
@@ -6310,6 +6388,19 @@
      scale exists to cure. Two pixels, against one spacing system. */
   .q-doc .ow-tbl-h,.q-doc .ow-tbl-r{padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
   .q-doc .ow-tbl-r{padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);min-height:42px;}
+  /* THE TWO SIDES ARE NAMED.
+     The rule has divided this document since the handoff, and a reader
+     who had not been told still had to work out WHICH side was which --
+     by reading the column names one at a time, on a screen read at a
+     glance. Two labels over the two groups say it once. They are the
+     column names' own 11px, at ink-900 for the client's side and ink-600
+     for the shop's, because the row beneath them is quiet on that side
+     too and the header would otherwise contradict it. */
+  .q-doc .ow-tbl-h.q-sides{padding-top:var(--ow-sp-6);padding-bottom:0;border-bottom:0;}
+  .q-doc .q-side-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.11em;
+    text-transform:uppercase;color:var(--ow-ink-900);white-space:nowrap;}
+  .q-doc .q-side-l.q-side-shop{color:var(--ow-ink-600);}
+  .q-doc .ow-tbl-h.q-sides + .ow-tbl-h{padding-top:var(--ow-sp-4);}
   /* The header is a band, not a row of words floating over the first
      line: its own quiet ground and a hairline under it. */
   .q-doc .ow-tbl-h{background:var(--ow-paper-2);}
@@ -6417,15 +6508,15 @@
      the number in the figure face beside the name. The date follows,
      then the facts the books hold. The phone's fold is not drawn here. */
   .q-client-fold{display:none;}
-  .q-band .ow-cb-f-name{flex:1.4 1 0;}
+  .q-band .ow-cb-f-name{flex:1.15 1 0;min-width:212px;}
   .q-client-cell{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
   .q-client-cell #q_client_name{flex:1 1 auto;min-width:0;font-size:15px;}
   .q-client-cell .q-client-phone{flex:0 1 128px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;font-weight:400;color:var(--ow-ink-600);}
-  .q-band .ow-cb-f-dt{flex:.8 1 0;min-width:150px;}
+  .q-band .ow-cb-f-dt{flex:.55 1 0;min-width:150px;}
   .q-band #q_date{font-size:15px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
-  .q-band .ow-cb-k{flex:2.7 1 0;padding:0;}
+  .q-band .ow-cb-k{flex:3.3 1 0;padding:0;}
   .q-band .ow-cb-kn{flex:.8 1 0;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-6);align-self:stretch;}
   .q-band .ow-cb-kn:first-child{flex:.6 1 0;}
   .q-band .ow-cb-kn:last-child{flex:1.3 1 0;}
@@ -6615,6 +6706,63 @@
   }
   .q-margin-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .q-margin-pill.danger{background:var(--ow-crimson-soft);color:var(--danger);}
+
+  /* KEEP SAYS "ELEVEN PER CENT". ELEVEN AGAINST WHAT?
+     A share with no baseline is not a reading, and the shop's own mark
+     -- presetTargetMarginPct, the same figure the market screen and the
+     buying screens measure against -- was nowhere on the one screen
+     where the price is actually set. The pill keeps the figure; a 3px
+     meter under it puts that figure in a POSITION, with the mark
+     notched on it. Colour and place say the same thing, which is what
+     this app requires of a status that matters.
+
+     The scale runs 0 to twice the mark, so the notch sits at the middle
+     and "short of it" and "past it" read as sides rather than as a
+     number to compare. A line at or over twice the mark pins full. */
+  .q-keep-cell{display:flex;flex-direction:column;align-items:flex-end;gap:var(--ow-sp-4);min-width:0;}
+  .q-mark-meter{position:relative;width:52px;height:3px;border-radius:var(--ow-r-pill);
+    background:var(--ow-steel-100);overflow:hidden;}
+  .q-mark-meter i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);
+    background:var(--ow-verdigris);}
+  .q-mark-meter.warn i{background:var(--ow-amber);}
+  .q-mark-meter.danger i{background:var(--ow-crimson);}
+  .q-mark-meter b{position:absolute;top:0;bottom:0;width:1px;background:var(--ow-ink-900);}
+
+  /* THE FLOOR, WHERE THE PRICE IS TYPED.
+     The commonest counter-move in a yard is "punguza" -- come down a
+     little -- and the screen could not answer it: the rep did the
+     arithmetic on the call or guessed. marginTargetPrice(cost, mark) is
+     the lowest price that still holds the shop's mark, and it is stated
+     under the box the rep is about to change.
+
+     Only on a line that is UNDER the mark. A line already holding it has
+     nothing to be told, and a caption on every row would mark nothing --
+     the same rule the shelf tag on the name is drawn by. */
+  .q-doc .q-floor{display:block;margin-top:2px;font-size:11px;font-weight:var(--ow-fw-600);
+    color:var(--ow-amber-ink);text-align:right;white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+  .q-doc .q-floor::before{content:"floor ";font-family:'Figtree',system-ui,sans-serif;
+    letter-spacing:0;font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+
+  /* THE GOODS, BEFORE THE THINGS THAT ARE NOT GOODS.
+     Drawn only when a charge or the terms follow it: with nothing after
+     it the subtotal IS what the client pays, and the dock says that. */
+  .q-doc .ow-tbl-r.q-goods-sub{background:var(--ow-paper-2);min-height:34px;}
+  .q-doc .q-goods-sub .q-sub-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+
+  /* WHEN THESE FIGURES WERE TRUE.
+     Iron sheet prices move in a week, and the document said nothing
+     about when the book it is quoting from was last written in. This is
+     the oldest price row behind any line on the quote -- amber once it
+     is older than the shop's own price-watch window. */
+  .q-doc .q-doc-foot{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:32px;
+    padding:var(--ow-sp-6) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);font-size:var(--ow-t-11);color:var(--ow-ink-600);flex-wrap:wrap;}
+  .q-doc .q-doc-foot .ow-fig{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .q-doc .q-doc-foot .q-stale{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .q-doc .q-doc-foot .q-stale .ow-fig{color:var(--ow-amber-ink);}
+  .q-doc .q-doc-foot .q-foot-sp{flex:1;}
 
 
 
@@ -9350,10 +9498,24 @@
     #q_item_search{font-size:16px;}
     .q-item-search-hint{display:none;}
     .q-client-usual.show{display:none;}
-    /* The advice is a COLUMN on the phone. Two tracks of a 358px body
-       gives each card 170px, which wraps "Cheaper elsewhere" onto two
-       lines before it has said anything. */
-    .q-advice{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);margin-top:var(--ow-sp-12);}
+    /* THE STRIP IS A COLUMN ON THE PHONE. Cells beside each other need
+       a console's width: at 358px the head and one finding leave the
+       finding about 190px, which wraps its first line before it has
+       said anything. So the head is a row, each reading is a row under
+       it, and they are ruled off from each other rather than from their
+       neighbours. It also stops being a card with a border of its own --
+       on the Details tab it IS the pane, like the readings above it. */
+    .q-advice{flex-direction:column;margin:0;border:0;border-radius:0;background:transparent;}
+    .q-advice .q-adv-hd{padding:var(--ow-sp-10) 16px;}
+    .q-advice .q-adv-hd-s{white-space:normal;overflow:visible;}
+    .q-advice .q-adv-card{border-left:0;border-top:1px solid var(--ow-rule-soft);
+      padding:var(--ow-sp-10) 16px var(--ow-sp-12);background:var(--ow-paper);}
+    /* And the finding goes back to its compact one-line form here, which
+       is what .q-rail-ph is for: the console draws the note instead,
+       and the rule that hides this row there is written past
+       .q-rail-act, so it needs the same weight to be undone. */
+    .q-advice .q-rail-act.q-rail-ph{display:flex;width:100%;margin:0;
+      text-decoration:none;cursor:pointer;height:auto;min-height:var(--ow-tap);}
     #q_itemsWrap{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
     /* The empty document names the next act and offers the usuals as
        lines a thumb can take. The keyboard hint is a desk's. */
@@ -9613,6 +9775,29 @@
     /* The rule is a console track. Below 820 the row is a card and there
        is no second side to divide off. */
     .q-doc .q-line > .q-tbl-rule,.q-doc .ow-tbl-h .q-tbl-rule{display:none;}
+    /* AND FOR THE SAME REASON, THE SIDES ARE NOT NAMED HERE. Two groups
+       of columns beside each other is a console idea; this document is
+       one column of cards, and a heading announcing a division that is
+       not drawn would be a label for nothing. */
+    .q-doc .ow-tbl-h.q-sides{display:none;}
+    /* THE GOODS SUBTOTAL IS ONE LINE: the words and the figure. Left to
+       the generic card treatment it came out as two labelled rows --
+       "GOODS SUBTOTAL 1,045,320" over "BUY @ 960,000" -- with the words
+       said twice. What the shop paid is not repeated: the strip at the
+       foot already states it, and this document keeps no cost column. */
+    .q-doc .ow-tbl-r.q-goods-sub{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:40px;
+      padding:var(--ow-sp-8) 16px;border-top:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .q-doc .q-goods-sub > .q-gutter,.q-doc .q-goods-sub > .q-tbl-rule,
+    .q-doc .q-goods-sub > .q-shop-first,.q-doc .q-goods-sub > [data-l="Buy @"],
+    .q-doc .q-goods-sub > .ow-tbl-n:empty,.q-doc .q-goods-sub > .ow-tbl-c:empty{display:none;}
+    .q-doc .q-goods-sub > [data-l="Goods subtotal"]{margin-left:auto;font-size:14px;font-weight:var(--ow-fw-600);}
+    .q-doc .q-goods-sub > [data-l="Goods subtotal"]::before{display:none;}
+    .q-doc .q-goods-sub .q-sub-l{font-size:14px;}
+    /* The foot wraps to two lines in a hand rather than truncating the
+       one reading on it that goes stale. */
+    .q-doc .q-doc-foot{padding:var(--ow-sp-8) 16px;row-gap:var(--ow-sp-4);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .q-doc .q-doc-foot .q-foot-sp{flex:1 1 100%;height:0;}
     /* And the unit goes back inside the stepper, where it says what the
        number in the box is counting. */
     .q-doc .q-line .q-qty-unit{display:inline;}
@@ -17204,9 +17389,10 @@
            card joins them only when a line is short and the shop has
            written down what it uses instead. -->
       <div class="q-advice" id="q_advice">
-        <div class="ow-pan q-adv-card" id="q_adv_with"></div>
-        <div class="ow-pan q-adv-card" id="q_adv_cheaper"></div>
-        <div class="ow-pan q-adv-card" id="q_adv_swap"></div>
+        <div class="q-adv-hd" id="q_adv_hd"></div>
+        <div class="q-adv-card" id="q_adv_with"></div>
+        <div class="q-adv-card" id="q_adv_cheaper"></div>
+        <div class="q-adv-card" id="q_adv_swap"></div>
       </div>
 
       <!-- The money and the actions, fused and always at hand. The total
@@ -36218,6 +36404,32 @@ function wireUsualRows(slot){
    received was totalled by. The tone follows the band: open reads in
    ink, late in amber, past sixty days in crimson -- the figure alone
    never colours a cell. */
+/* WHAT THIS CLIENT USUALLY LEAVES THE SHOP.
+   The quote says it keeps 8%. Eight against what? The dock has always
+   measured against nothing, and the shop's own mark is a mark for the
+   whole trade -- this is the mark for this person. A builder who has
+   never paid more than 7% is not a quote gone wrong; a builder who
+   normally pays 14% and is being quoted 8 is.
+
+   Read off the saved orders the same way the dock reads this one: goods
+   sold, goods cost, the share between them. An order with no cost on it
+   cannot be scored and is not counted as zero -- it is left out, and the
+   count returned says how many WERE counted, so the caller can say five
+   or say two rather than implying five. */
+function clientKeptPct(orders, limit){
+  const recent = (orders||[]).slice().sort((a,b)=>
+    String(b.savedAt||b.date||'').localeCompare(String(a.savedAt||a.date||''))).slice(0, limit||5);
+  let sell = 0, cost = 0, counted = 0;
+  recent.forEach(q=>{
+    const s2 = (q.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
+    const c2 = (q.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*(Number(it.price)||0), 0);
+    if(!(s2 > 0) || !(c2 > 0)) return;
+    sell += s2; cost += c2; counted += 1;
+  });
+  if(!counted || !(sell > 0)) return null;
+  return { pct: Math.round((sell - cost) / sell * 1000) / 10, counted };
+}
+
 function renderClientHistoryBox(){
   const box = document.getElementById('q_client_history');
   if(!box) return;
@@ -36262,6 +36474,25 @@ function renderClientHistoryBox(){
     cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now${esc(age)}</span><span class="ow-cb-kv ow-fig${tone}">${esc(fmtUGX(standing.owed))}</span><span class="ow-cb-kx${saysTone}">${esc(says)}</span></div>`);
   } else if(customer){
     cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Owed now</span><span class="ow-cb-kv ow-fig">${esc(fmtUGX(0))}</span><span class="ow-cb-kx ow-good">Nothing outstanding</span></div>`);
+  }
+  /* WHAT THEY USUALLY LEAVE, beside what this quote leaves. Drawn only
+     when their own orders can actually be scored: a client with no
+     costed order behind them has no usual, and inventing one from a
+     single order would be worse than the blank. */
+  const kept = clientKeptPct(orders, 5);
+  if(kept){
+    const q2 = data.quote || {};
+    const sellNow = (q2.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
+    const costNow = (q2.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*(Number(it.price)||0), 0);
+    const nowPct = sellNow > 0 ? Math.round((sellNow - costNow) / sellNow * 1000) / 10 : null;
+    /* Amber only when THIS quote is a full point under their usual. A
+       rounding's worth of difference is not a warning, and a screen that
+       warns about noise stops being read. */
+    const thin = nowPct != null && nowPct < kept.pct - 1;
+    const says = nowPct == null
+      ? 'No lines priced yet'
+      : `This quote ${nowPct}%`;
+    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Keeps &middot; last ${kept.counted}</span><span class="ow-cb-kv ow-fig">${kept.pct}%</span><span class="ow-cb-kx${thin ? ' ow-warn' : ''}" title="The share the shop kept across this client's last ${kept.counted} costed order${kept.counted===1?'':'s'}, against what this quote keeps on its goods">${esc(says)}</span></div>`);
   }
   if(last){
     const when = savedAgoLabel(last.savedAt || last.date || '');
@@ -37612,6 +37843,30 @@ function qFigShow(v){
   return num.toLocaleString('en-UG', { maximumFractionDigits: 6 });
 }
 
+/* WHEN THE BOOK BEHIND THIS QUOTE WAS LAST WRITTEN IN.
+   Iron sheet prices in Kampala move in a week, and the document said
+   nothing at all about the age of the figures it was quoting. This is
+   the oldest dated price row behind any bought-in line.
+
+   A line from the shelf has no supplier row and is skipped; a line whose
+   row carries no date is skipped too, and the caller says "no dated
+   price behind these lines" rather than treating a missing date as
+   today's. Missing is reported, never read as a zero. */
+function quoteBookAsOf(items){
+  let oldest = null;
+  (items||[]).forEach(it=>{
+    if(!it.productId || !it.supplierId || it.supplierId==='__stock__') return;
+    const vi = it.variantIdx==null ? null : it.variantIdx;
+    const row = (data.prices||[]).find(p=> p.productId===it.productId
+      && (p.variantIdx==null?null:p.variantIdx)===vi
+      && String(p.supplierId)===String(it.supplierId));
+    const d = row && row.date;
+    if(!d) return;
+    if(!oldest || String(d) < oldest) oldest = String(d);
+  });
+  return oldest;
+}
+
 function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
@@ -37629,7 +37884,18 @@ function renderQuoteItems(){
   // back to the buy price itself if no markup rule is set).
   // Rows below this margin % are flagged amber; at/below 0% (selling at or
   // under cost) are flagged red. Purely visual — doesn't block saving/printing.
-  const MARGIN_WARN_PCT = 10;
+  /* THE MARK IS THE SHOP'S, NOT TEN.
+     This screen has been saying "thin" about ten per cent since it was
+     written, while the market and buying screens have measured against
+     targetMarginPct() -- the figure the owner actually set -- since the
+     day that preset landed. One shop lives on 3% and another will not
+     get out of bed under 30; the amber only means something once the
+     figure is theirs. Ten stays the fallback, so nothing moves for a
+     shop that never touched it.
+     The typeof guard is not defensive noise: this function is extracted
+     ALONE into several test scopes, and an undeclared identifier in a
+     typeof is the one read that cannot throw. */
+  const MARGIN_WARN_PCT = (typeof targetMarginPct === 'function') ? targetMarginPct() : 10;
   let grandBuy = 0, grandSell = 0;
   /* ONE TEMPLATE, TWO SKINS. The row is an .ow-tbl-r; every cell that
      had a column name carries it as data-l, and below 820px the layer
@@ -37714,11 +37980,25 @@ function renderQuoteItems(){
       : null;
     const cheapestSub = (bestAtQty && String(bestAtQty.supplierId)===String(it.supplierId))
       ? `<span class="q-cheapest">Cheapest that has it</span>` : '';
+    /* HOW LOW CAN I GO. The lowest price each that still holds the
+       shop's mark, in the unit the box counts in -- stated only on a
+       line that is under the mark, because a line already holding it
+       has nothing to be told and a caption on every row marks nothing.
+       Same arithmetic as everywhere else this question is asked. */
+    const floorEach = (typeof marginTargetPrice === 'function' && buy > 0)
+      ? marginTargetPrice(buy * per, MARGIN_WARN_PCT) : null;
+    const floorHTML = (floorEach && sell > 0 && marginPct < MARGIN_WARN_PCT)
+      ? `<span class="q-floor" title="Your floor: at ${esc(qFigShow(floorEach))}${countUnit ? ' per ' + esc(countUnit) : ''} this line still keeps ${MARGIN_WARN_PCT}%, which is your mark">${qFigShow(floorEach)}</span>`
+      : '';
+    /* Where this line's share sits against that mark, as a POSITION.
+       The scale runs to twice the mark so the notch is the middle and
+       short-of-it reads as a side, not as a number to compare. */
+    const meterFill = Math.max(0, Math.min(100, (marginPct / (MARGIN_WARN_PCT * 2)) * 100));
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
         <input type="text" inputmode="decimal" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" value="${qFigShow(Math.round(sell * per))}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
         <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
-      </div>`;
+      </div>${floorHTML}`;
 
     return `<div class="ow-tbl-r q-line${rowMarginClass}" data-line="${it.lineId}">
       <div class="ow-tbl-c q-gutter">
@@ -37742,7 +38022,7 @@ function renderQuoteItems(){
       <span class="q-tbl-rule" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}${cheapestSub}</div>
       <div class="ow-tbl-n" data-l="Buy @"><input type="text" inputmode="decimal" class="ow-gi price-input q-price" value="${qFigShow(Math.round(it.price * per))}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
-      <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
+      <div class="ow-tbl-n" data-l="Keep"><span class="q-keep-cell"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span><span class="q-mark-meter ${pillClass}" title="Your mark is ${MARGIN_WARN_PCT}%" aria-hidden="true"><i style="width:${Math.round(meterFill)}%"></i><b style="left:50%"></b></span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
            third line, behind the shop strip, saying what the shop pays
@@ -37823,7 +38103,47 @@ function renderQuoteItems(){
     renderQuoteRail();
     return;
   }
+  /* THE GOODS, BEFORE THE THINGS THAT ARE NOT GOODS. "How much for just
+     the items?" is asked on every call that has transport on it, and the
+     document could not answer it: the rows ran straight from the last
+     line into the charges. Drawn only when something follows it -- with
+     no charge and no terms the subtotal IS what the client pays, and the
+     dock states that once. Every cell placed by hand, including the
+     rule's, because a row that skips the rule track shifts every cell
+     after it one column left. */
+  const goodsSubHtml = (chargesTotal > 0 || creditCharge > 0) ? `<div class="ow-tbl-r q-goods-sub">
+      <div class="ow-tbl-c q-gutter"></div>
+      <div class="ow-tbl-c"><span class="q-sub-l">Goods subtotal</span></div>
+      <div class="ow-tbl-n"></div>
+      <div class="ow-tbl-c"></div>
+      <div class="ow-tbl-n"></div>
+      <div class="ow-tbl-n" data-l="Goods subtotal" title="The items alone, before any charge or credit terms">${fmtUGX(grandSell)}</div>
+      <span class="q-tbl-rule" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first"></div>
+      <div class="ow-tbl-n" data-l="Buy @" title="What the items cost the shop">${fmtUGX(grandBuy)}</div>
+      <div class="ow-tbl-n"></div>
+    </div>` : '';
+  /* WHEN THESE FIGURES WERE TRUE. The oldest dated price behind any
+     bought-in line -- amber once it is past the shop's own price-watch
+     window. A line the book has no date for is NAMED, not counted as
+     fresh: a quote cannot report a staleness it does not know. */
+  const asOf = quoteBookAsOf(items);
+  const watchDays = Number(data.presetPriceWatchDays) || 0;
+  const asOfAge = asOf ? daysSinceDate(asOf) : -1;
+  const asOfStale = watchDays > 0 && asOfAge > watchDays;
+  const footHtml = `<div class="q-doc-foot">
+      <span>${items.length} item${items.length===1?'':'s'}${orderCharges(data.quote).length ? ` · ${orderCharges(data.quote).length} charge${orderCharges(data.quote).length===1?'':'s'}` : ''}</span>
+      <span class="q-foot-sp"></span>
+      ${asOf
+        ? `<span class="${asOfStale ? 'q-stale' : ''}" title="The oldest dated price behind a bought-in line on this quote${watchDays ? ` — you watch prices every ${watchDays} days` : ''}">Oldest price on this quote <span class="ow-fig">${esc(fmtDayMonth(asOf))}</span>${asOfAge > 0 ? ` · <span class="ow-fig">${asOfAge}</span> day${asOfAge===1?'':'s'} old` : ''}</span>`
+        : `<span title="No line on this quote is priced from a dated row in the book">No dated price behind these lines</span>`}
+    </div>`;
   wrap.innerHTML = `<div class="ow-tbl">
+    <div class="ow-tbl-h q-sides">
+      <span class="q-side-l" style="grid-column:3/7">The client pays</span>
+      <span class="q-tbl-rule" style="grid-column:7" aria-hidden="true"></span>
+      <span class="q-side-l q-side-shop" style="grid-column:8/11">The shop buys</span>
+    </div>
     <div class="ow-tbl-h">
       <div class="ow-tbl-c q-gutter"></div>
       <div class="ow-tbl-c">Item</div>
@@ -37835,8 +38155,8 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-shop-first">Buy from</div>
       <div class="ow-tbl-n">Buy @</div>
       <div class="ow-tbl-n">Keep</div>
-    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}
-  </div>`;
+    </div>${rowsHtml}${goodsSubHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}
+  </div>${footHtml}`;
 
   if(takesCharges || takesCredit) wireQuoteCharges(wrap);
 
@@ -38009,6 +38329,10 @@ function renderQuoteRail(){
   /* Whether any section is warning -- a cheaper supplier, a line the
      shelf cannot cover -- for the dot on the phone's Details tab. */
   let railWarn = false;
+  /* What each reading found, tallied so the strip's head can report the
+     whole thing in one line instead of three cards each reporting their
+     own nothing. */
+  const settle = { cheaper: 0, bought: 0, withIt: 0, swap: 0 };
   ensureQuote();
   const items = data.quote.items || [];
   const n = (v)=> Number(v).toLocaleString('en-UG');
@@ -38054,17 +38378,19 @@ function renderQuoteRail(){
       if(!(bestPrice < paying)) return null;
       return { it, idx, qty, bestPrice, less: paying-bestPrice, kept: (paying-bestPrice)*qty, supplierId: best.supplierId };
     }).filter(Boolean);
-    const head = `<div class="q-adv-h"><span class="q-adv-chip ${cheaper.length ? 'ow-warn' : 'ow-good'}">${
-      cheaper.length ? `<svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></svg>` : `<svg class="icon" viewBox="0 0 24 24"><path d="m4 12.5 5.2 5.2L20 7"/></svg>`}</span><span class="q-adv-t">Cheaper elsewhere</span>${
-      bought.length ? `<span class="q-adv-n ${cheaper.length ? 'ow-warn' : 'ow-good'}">${cheaper.length} of ${bought.length}</span>` : ''}</div>`;
+    const head = `<div class="q-adv-h"><span class="q-adv-t">Cheaper elsewhere</span><span class="q-adv-n ow-warn">${cheaper.length} of ${bought.length}</span></div>`;
+    /* A CELL IS DRAWN ONLY WHEN THERE IS SOMETHING TO SETTLE. The three
+       "nothing here" sentences this used to render are the strip's own
+       head now -- said once, for all three readings, instead of three
+       times in three cards the width of the screen. */
     let body = '';
-    if(!items.length) body = `<p class="ow-mini">Add a line and the price book says who else sells it, at this quantity.</p>`;
-    else if(!bought.length) body = `<p class="ow-mini">Every line is from the shelf — nothing to buy in.</p>`;
-    else if(!cheaper.length) body = `<p class="ow-mini">Every bought-in line is already at the cheapest supplier that has it, at its quantity.</p>`;
+    if(!cheaper.length) body = '';
     else body = cheaper.map(c=> `<button type="button" class="ow-sr q-rail-act q-rail-ph" data-line="${c.it.lineId}" data-supplier="${esc(c.supplierId)}" data-price="${c.bestPrice}" title="Switch line ${c.idx+1} to ${esc(supplierName(c.supplierId))}"><span class="ow-sr-k">${esc(c.it.productName)} <span class="q-rail-sub">· ${esc(supplierName(c.supplierId))}</span></span><span class="ow-sr-v ow-warn">&minus;${n(c.less)} <span class="ow-u">/ ${esc(c.it.unit||'unit')}</span></span></button>`).join('')
       + cheaper.map(c=> `<div class="q-rail-note"><b>Line ${c.idx+1} · ${esc(c.it.productName)}</b><br>${esc(supplierName(c.supplierId))} at <span class="ow-fig">${n(c.bestPrice)}</span>/${esc(c.it.unit||'unit')}, <span class="ow-fig">${n(c.less)}</span> less. On ${n(c.qty)} that is <span class="ow-fig">${n(c.kept)} UGX</span> kept.<div><button type="button" class="q-rail-act" data-line="${c.it.lineId}" data-supplier="${esc(c.supplierId)}" data-price="${c.bestPrice}">Switch line ${c.idx+1} to ${esc(supplierName(c.supplierId))}</button></div></div>`).join('');
     if(cheaper.length) railWarn = true;
-    cheaperEl.innerHTML = head + body;
+    settle.cheaper = cheaper.length;
+    settle.bought = bought.length;
+    cheaperEl.innerHTML = body ? head + body : '';
     /* The switch is the row picker's own move -- setLineSupplier, then
        the line re-priced at that supplier's figure for this quantity,
        which is the number the note just quoted. */
@@ -38098,11 +38424,10 @@ function renderQuoteRail(){
           rows.push({ c, idx, line: it });
         });
     });
-    const head = `<div class="q-adv-h"><span class="q-adv-chip ow-warn"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></svg></span><span class="q-adv-t">Goes with it</span>${
-      rows.length ? `<span class="q-adv-n ow-warn">${rows.length}</span>` : ''}</div>`;
+    const head = `<div class="q-adv-h"><span class="q-adv-t">Goes with it</span><span class="q-adv-n ow-warn">${rows.length}</span></div>`;
+    settle.withIt = rows.length;
     let body = '';
-    if(!items.length) body = `<p class="ow-mini">Add a line and what you have written down about it sits beside it.</p>`;
-    else if(!rows.length) body = `<p class="ow-mini">Nothing written down for these lines yet.</p>`;
+    if(!rows.length) body = '';
     else body = rows.slice(0, 4).map(r=>{
       const c = r.c;
       const say = c.verbId === 'needs' ? 'cannot be used without' : c.verbId === 'part' ? 'is part of the same job as' : 'usually goes with';
@@ -38118,7 +38443,7 @@ function renderQuoteRail(){
       return `<div class="q-rail-note"><b>${esc(c.label)}</b> &mdash; ${esc(say)} line ${r.idx+1}. ${qty} at <span class="ow-fig">${n(c.price)}</span>/${esc(c.unit || 'unit')}${
         c.evidence.withFrom ? `, on ${c.evidence.andTo} of ${c.evidence.withFrom} orders that carried it` : ''}.<div><button type="button" class="q-rail-act" data-with="${esc(c.productId)}" data-wv="${c.variantIdx == null ? '' : c.variantIdx}" data-wq="${c.qty || 1}" data-wp="${c.price}">Add ${c.qty ? n(c.qty) + ' ' + esc(c.unit || '') : ''} to the quote</button></div></div>`;
     }).join('') + (rows.length > 4 ? `<p class="ow-mini">${rows.length - 4} more written down for these lines.</p>` : '');
-    withEl.innerHTML = head + body;
+    withEl.innerHTML = body ? head + body : '';
     /* The add is the item picker's own move, done from here: our own
        shelf where it can serve the quantity, otherwise the cheapest
        supplier who can, at the figure this note just quoted. */
@@ -38184,7 +38509,8 @@ function renderQuoteRail(){
        empty panel saying "nothing to swap" is a row of chrome reporting
        that the shop is fine, which the quote already implies. */
     swapEl.innerHTML = body
-      ? `<div class="q-adv-h"><span class="q-adv-chip ow-warn"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></svg></span><span class="q-adv-t">What you use instead</span></div>` + body : '';
+      ? `<div class="q-adv-h"><span class="q-adv-t">What you use instead</span></div>` + body : '';
+    settle.swap = body ? 1 : 0;
     /* The swap keeps the quantity and changes what the line IS: the
        product, its size, its name, its unit and both its figures. */
     swapEl.querySelectorAll('.q-rail-act').forEach(btn=>{
@@ -38223,6 +38549,35 @@ function renderQuoteRail(){
 
      Nothing else read this. renderClientHistoryBox owns the fact now.
      See the handoff's decision 1. */
+
+  /* THE STRIP'S HEAD. It counts what is left to settle, and when that is
+     nothing it is the whole strip: one quiet line saying what WAS
+     checked, rather than two cards the width of the screen each saying
+     the shop is fine. An empty quote gets the sentence that teaches
+     instead -- there is nothing to check yet, and saying "0 to settle"
+     about a form nobody has started is the same fault the dock's margin
+     pill was fixed for. */
+  {
+    const hd = document.getElementById('q_adv_hd');
+    const strip = document.getElementById('q_advice');
+    const left = settle.cheaper + settle.withIt + settle.swap;
+    if(hd && strip){
+      strip.classList.toggle('q-has-settle', left > 0);
+      if(!items.length){
+        hd.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span class="q-adv-hd-s">Add a line and the book says who else sells it, what usually goes with it, and what you use when the shelf is empty.</span>`;
+      } else if(left > 0){
+        hd.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><span class="q-adv-hd-t">${left} to settle</span>`;
+      } else {
+        /* What was actually checked, so "nothing to settle" reads as a
+           report rather than a shrug. The supplier sweep only ran on
+           lines the shop is buying in, so it says how many that was. */
+        const checked = settle.bought
+          ? `${settle.bought} bought-in line${settle.bought===1?'':'s'} already at their cheapest supplier`
+          : 'every line is off your own shelf';
+        hd.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="m4 12.5 5.2 5.2L20 7"/></svg><span class="q-adv-hd-t">Nothing to settle</span><span class="q-adv-hd-s">&middot; ${checked}, and nothing written down to go with them</span>`;
+      }
+    }
+  }
 
   /* The phone's Details tab: how many sections have something to say,
      and whether any of it is a warning. */
