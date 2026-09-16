@@ -401,6 +401,41 @@ const src = read('index.html');
     'the card keeps its bottom corners, clipped on the row that reaches them');
 }
 
+/* ---------- 7c. a send is stamped, never assumed --------------------- *
+ *
+ * THE APP CANNOT SEE WHATSAPP. The hand-off opens a deep link with the
+ * quote in it and the app never learns what happened on the other side,
+ * so "sent" is not a state it may set for itself. It asks, and nothing
+ * is recorded until the owner answers -- which is what makes the Sent
+ * lens a count of what went out rather than a count of buttons pressed.
+ *
+ * Checked here because the cheapest way to make Sent look alive is to
+ * stamp it on the click, and that would be the app telling the shop
+ * something only the shop can know.
+ */
+{
+  const src2 = read('index.html');
+  const send = (/getElementById\('q_whatsapp_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(src2) || [''])[0];
+  t.check(/window\.open\(waComposeUrl/.test(send), 'the hand-off opens the link');
+  t.check(!/sentAt\s*=/.test(send),
+    'and does not record a send: pressing the button is not evidence that anything arrived');
+  t.check(/quotePendingStamp\s*=/.test(send),
+    'it arms the question instead');
+
+  const stamp = (/function quoteStampSent\([\s\S]*?\n\}/.exec(src2) || [''])[0];
+  t.check(/rec\.sentAt = Date\.now\(\)/.test(stamp) && /if\(went/.test(stamp),
+    'only the answer writes the send');
+  t.check(/quotePendingStamp = null;/.test(stamp),
+    'and the question closes either way, so it cannot be answered twice');
+
+  /* Saved and Sent are disjoint: a quote the client has is waiting on
+     them, one they do not is waiting on you, and those are two piles. */
+  t.check(/function quoteSavedRows\(\)[\s\S]{0,400}?!q\.sentAt/.test(src2),
+    'a stamped quote leaves Saved');
+  t.check(/function quoteSentRows\(\)[\s\S]{0,400}?q\.sentAt/.test(src2),
+    'and joins Sent');
+}
+
 /* ---------- 8. the phone bar respects the bottom nav ----------------- */
 {
   t.check(/\.q-stickybar\{left:0;bottom:calc\(var\(--mobile-bottomnav-h\) \+ env\(safe-area-inset-bottom, 0px\)\)/.test(src),

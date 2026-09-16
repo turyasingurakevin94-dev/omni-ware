@@ -16275,6 +16275,10 @@
        the tint rather than on the softer card fill. */
     --om-caution-rule:#f6e2b8;    --om-caution-tile:#ffeccd;
     --om-caution-tint-ink:#6b5a33;
+    /* The ink of a note the app makes about ITSELF -- what it cannot
+       see, what it has not been told. Quieter than body ink because it
+       is the app talking, not the books. */
+    --om-note-ink:#40465a;
     --om-rail-hover:rgba(255,255,255,.07);
     --om-rail-on:rgba(255,255,255,.13);
 
@@ -16711,6 +16715,22 @@
   /* An empty lens says what would fill it. "Not enough yet" is an
      answer; a blank panel is not. */
   .om-qempty{padding:26px 22px;text-align:center;color:var(--om-ink-3);font-size:13px;line-height:1.55}
+
+  /* ---- THE STAMP -----------------------------------------------------
+     THE APP CANNOT SEE WHATSAPP. Sending opens a deep link with the
+     quote in it and the app never learns what happened there -- so the
+     send is not a state the app may set for itself. It asks, and
+     nothing is recorded until the owner answers.
+     
+     This is the same card the Messages handoff draws under its send
+     button, in the same words, because it is the same promise: no
+     faked delivery state, and the screen does not pretend.
+     -------------------------------------------------------------------- */
+  .om-stamp{background:var(--om-surface);border:1px solid var(--om-rule-input);border-radius:11px;padding:10px 11px}
+  .om-stamp-row{display:flex;align-items:flex-start;gap:8px}
+  .om-stamp-t{font-size:12px;color:var(--om-note-ink);text-wrap:pretty}
+  .om-stamp-acts{margin-top:9px;display:flex;gap:7px}
+  .om-stamp-acts .om-btn{flex:1;height:34px;justify-content:center;font-size:12.5px}
 
   /* ---- the client strip --------------------------------------------
      Who it is for and what the books already hold on them, as cells of
@@ -18199,6 +18219,7 @@
                column rather than a stack of empty boxes. -->
           <!-- The phone's Details pane opens with the client's facts;
                the console has them on the band and never draws this. -->
+          <div class="q-rail-sec" id="q_rail_stamp" hidden></div>
           <div class="q-rail-sec q-rail-facts om-card om-qr" id="q_rail_facts"></div>
           <div class="q-rail-sec om-card om-qr" id="q_rail_client"></div>
           <div class="q-rail-sec om-card-caution" id="q_rail_cheaper"></div>
@@ -39182,11 +39203,55 @@ document.addEventListener('click', (e)=>{
  * ================================================================== */
 let quoteLens = 'building';
 function quoteSavedRows(){
-  /* Saved is every quote written down and not yet turned into money:
-     saved, not invoiced, not voided. In this app saving a quote makes
-     it a Taken order on the board, so "not yet ordered" is read as
-     "has not moved past the stage saving put it in". */
-  return (data.savedQuotes || []).filter(q=> !q.voided && !q.invoiced);
+  /* Saved is every quote written down, not yet sent and not yet turned
+     into money. Saved and Sent are disjoint on purpose: a quote you
+     have sent is waiting on the client, a quote you have not is waiting
+     on you, and those are two different piles to work through. */
+  return (data.savedQuotes || []).filter(q=> !q.voided && !q.invoiced && !q.sentAt);
+}
+function quoteSentRows(){
+  /* Sent is what was STAMPED as sent. Not what the app assumed: the
+     hand-off opens a link and the app never learns what happened on the
+     other side of it, so only an answer from the owner puts a quote
+     here. */
+  return (data.savedQuotes || []).filter(q=> !q.voided && !q.invoiced && q.sentAt);
+}
+/* Which quote is waiting on an answer about whether it went. Held in
+   memory rather than on the record: an unanswered ask is not a fact
+   about the quote, it is a question on this screen. */
+let quotePendingStamp = null;
+/* The send needs a record to stamp, and the save is the button's own
+   handler -- guarded, async, and the only path that writes a quote
+   correctly. So the send presses it and waits for the id to appear
+   rather than growing a second way to save. Bounded: if it has not
+   landed in three seconds something else is wrong and the stamp is not
+   armed over a quote that may not exist. */
+async function quoteEnsureSaved(){
+  if(data.quote.savedId) return data.quote.savedId;
+  const btn = document.getElementById('q_save_btn');
+  if(!btn) return null;
+  btn.click();
+  for(let i = 0; i < 60; i++){
+    await new Promise(r=> setTimeout(r, 50));
+    if(data.quote.savedId) return data.quote.savedId;
+  }
+  return null;
+}
+function quoteStampSent(went){
+  const id = quotePendingStamp;
+  quotePendingStamp = null;
+  if(went && id){
+    const rec = (data.savedQuotes || []).find(q=> String(q.id) === String(id));
+    if(rec){ rec.sentAt = Date.now(); saveData(); }
+    toast('Marked as sent — it is on the Sent lens now');
+  } else if(!went){
+    /* Nothing is recorded. The quote stays exactly where it was, which
+       is the whole point of asking rather than assuming. */
+    toast('Nothing recorded — the quote is still waiting to be sent');
+  }
+  renderQuoteItems();
+  renderQuoteRail();
+  if(typeof setQuoteLens === 'function') setQuoteLens(quoteLens);
 }
 function quoteSavedKept(q){
   /* Derived from the rows, never stored: what the client pays for the
@@ -39200,15 +39265,15 @@ function quoteSavedKept(q){
 }
 function quoteLensPaneHTML(){
   const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
-  if(quoteLens === 'sent'){
+  const rows = quoteLens === 'sent' ? quoteSentRows() : quoteSavedRows();
+  if(quoteLens === 'sent' && !rows.length){
     return `<div class="om-card"><div class="om-qempty">
-      <b>Nothing records that a quote was sent.</b><br>
+      <b>Nothing has been stamped as sent.</b><br>
       Sending opens WhatsApp with the quote in it, and the app cannot see
-      what happens there &mdash; so a count here would be a guess. Stamping a
-      send, the way Messages does, is what would fill this.
+      what happens there &mdash; so a quote arrives here only when you say it
+      went. Send one and answer the question that follows.
     </div></div>`;
   }
-  const rows = quoteSavedRows();
   if(!rows.length){
     return `<div class="om-card"><div class="om-qempty">
       <b>No quotes waiting on a yes.</b><br>
@@ -39226,12 +39291,19 @@ function quoteLensPaneHTML(){
     const who = ((r.q.client && r.q.client.name) || '').trim() || 'No name on it';
     const lines = (r.q.items || []).length;
     const what = (r.q.items || []).slice(0,3).map(i=> i.productName).join(', ');
-    const waited = savedAgoLabel(r.q.savedAt || r.q.date || '');
+    /* On Sent, "waiting" is how long the CLIENT has had it -- which is
+       the figure that decides whether to chase -- not how long ago it
+       was written down. */
+    const waited = savedAgoLabel((quoteLens === 'sent' ? r.q.sentAt : null) || r.q.savedAt || r.q.date || '');
     /* The action the row has earned. A client who owes you money is
        asked about the money first -- a second quote to somebody already
        behind is a bigger hole, not a bigger sale. */
     const next = r.owed > 0
       ? { label:'Open debt', cls:'om-btn-s', tone:`background:var(--om-bad);color:var(--om-bad-ink)` }
+      /* A quote the client already has is waiting on them, so the act
+         it has earned is asking -- not opening it again. */
+      : quoteLens === 'sent'
+      ? { label:'Chase it', cls:'om-btn-s', tone:'' }
       : { label:'Open', cls:'om-btn-s', tone:'' };
     return `<div class="om-qrow" data-saved="${esc(String(r.q.id))}">
       <div class="om-t">
@@ -39254,7 +39326,8 @@ function quoteLensPaneHTML(){
       <span class="om-lbl" style="text-align:right">You keep</span>
       <span class="om-lbl" style="text-align:right">Next</span>
     </div>${body}
-    <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} saved and not yet ordered
+    <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} ${
+      quoteLens === 'sent' ? 'with the client' : 'saved and not yet ordered'}
       &middot; <span class="om-fig">${n(total)}</span> waiting on a yes</div>
   </div>`;
 }
@@ -39292,7 +39365,11 @@ function setQuoteLens(lens){
         ? `${rows.length} quote${rows.length===1?'':'s'} saved and not yet ordered \u00b7 ${Number(Math.round(total)).toLocaleString('en-UG')} waiting on a yes`
         : 'Nothing saved and waiting on a yes';
     } else {
-      sub.textContent = 'What was sent, once a send is something the app is told about';
+      const sent = quoteSentRows();
+      const st = sent.reduce((t,q)=> t + savedQuoteTotal(q), 0);
+      sub.textContent = sent.length
+        ? `${sent.length} quote${sent.length===1?'':'s'} with the client \u00b7 ${Number(Math.round(st)).toLocaleString('en-UG')} waiting on an answer`
+        : 'Nothing stamped as sent yet';
     }
   }
   document.querySelectorAll('[data-qlens]').forEach(b=>{
@@ -39366,8 +39443,13 @@ function renderQuoteItems(){
     if(sp) sp.textContent = String(quoteSavedRows().length);
     const tn = document.getElementById('q_lens_n_sent');
     if(tn){
-      tn.textContent = '—';
-      tn.title = 'Nothing records that a quote was sent yet — the WhatsApp hand-off is a link the app cannot see, so a count here would be a guess.';
+      /* A real count now that a send is something the owner tells the
+         app. It counts STAMPS, not hand-offs: opening the link is not
+         sending, and only the answer afterwards puts a quote here. */
+      const sent = quoteSentRows().length;
+      tn.textContent = String(sent);
+      tn.hidden = !sent;
+      tn.title = 'Quotes you have said went out — the app records a send only when you stamp it.';
     }
   }
   if(quoteLastCount >= 0 && items.length > quoteLastCount) setQuoteTab('quote');
@@ -39707,6 +39789,32 @@ function renderQuoteItems(){
    prints a figure the books do not hold is the one thing this rail
    must never do. */
 function renderQuoteRail(){
+  /* THE ASK COMES FIRST while it is open. The rail is ordered by
+     urgency and an unanswered question about money that may already be
+     with a client outranks a cheaper supplier. */
+  {
+    const el = document.getElementById('q_rail_stamp');
+    if(el){
+      const on = !!quotePendingStamp;
+      el.hidden = !on;
+      el.innerHTML = on ? `<div class="om-stamp">
+        <div class="om-stamp-row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg>
+          <div class="om-stamp-t">The app cannot see WhatsApp. Say whether it went &mdash; nothing is recorded until you do.</div>
+        </div>
+        <div class="om-stamp-acts">
+          <button type="button" class="om-btn om-btn-s" data-stamp="sent">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-good-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            It was sent</button>
+          <button type="button" class="om-btn om-btn-s" data-stamp="not">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-bad-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            It was not</button>
+        </div>
+      </div>` : '';
+      el.querySelectorAll('[data-stamp]').forEach(btn=> btn.addEventListener('click', ()=>
+        quoteStampSent(btn.dataset.stamp === 'sent')));
+    }
+  }
   const clientEl = document.getElementById('q_rail_client');
   const cheaperEl = document.getElementById('q_rail_cheaper');
   const withEl = document.getElementById('q_rail_with');
@@ -40536,6 +40644,16 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
   ].join('\n');
 
   window.open(waComposeUrl(data.quote.client.phone, msg), '_blank');
+  /* AND THEN IT ASKS. The app cannot see WhatsApp: opening the link is
+     the last thing it knows. Whether the client got this is a fact only
+     the owner has, so the screen asks for it rather than writing a
+     delivery state it cannot stand behind. Nothing is recorded until
+     they answer -- which is also why the quote is saved first: there
+     has to be a record for the answer to be written onto. */
+  quoteEnsureSaved().then((id)=>{
+    quotePendingStamp = id || null;
+    renderQuoteRail();
+  });
 });
 
 // Builds the internal sales-group version of a just-saved quote: item name
