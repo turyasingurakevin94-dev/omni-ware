@@ -16747,13 +16747,23 @@
      Who it is for and what the books already hold on them, as cells of
      one card split by rules. Each is a label over a figure, so the
      three facts read at the same speed as the two fields. */
-  .om-qclient{display:flex;align-items:stretch;overflow:hidden;margin:0 0 12px}
+  /* NO overflow:hidden ON A CARD THAT HOSTS A PICKER. It was here to
+     clip the cells inside the card's 14px corners, and it also clipped
+     the client autocomplete -- a 116px dropdown inside a 62px strip,
+     rendered, populated and invisible. The JS was never wrong: typing a
+     name built the rows and the card cut them off, which looks exactly
+     like a dead field. Corners are clipped on the children that paint
+     to an edge instead; see .om-addrow. */
+  .om-qclient{display:flex;align-items:stretch;margin:0 0 12px}
   .om-qclient-cell{padding:11px 14px;min-width:0;border-left:1px solid var(--om-rule-inner)}
   .om-qclient-cell:first-child{border-left:0}
   .om-qclient-v{margin-top:2px;display:flex;align-items:baseline;gap:7px}
 
   /* ---- the document card and its front door ------------------------ */
-  .om-qdoc{overflow:hidden}
+  .om-qdoc{overflow:visible}
+  /* The one child that paints to the card's bottom edge, so a hover or a
+     charge row's tint cannot square the corner off. */
+  .om-qdoc .om-addrow{border-radius:0 0 14px 14px}
   .om-qsearch-wrap{padding:11px 14px;display:flex;align-items:center;gap:10px}
   .om-qsearch{display:flex;align-items:center;gap:9px;flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid var(--om-rule-input);border-radius:10px;background:var(--om-surface)}
   .om-qsearch:focus-within{border-color:var(--om-navy)}
