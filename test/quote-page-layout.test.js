@@ -298,11 +298,26 @@ const src = read('index.html');
   /* THE PHONE'S TWO TABS sit between them: the quote, and the details the
      console keeps in its rail. The chips are still above the lines; the
      tab bar is not drawn at all on the console. */
-  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="[^"]*\bq-tabbar\b[^"]*" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
-    'with the phone’s Quote / Details tabs between the chips and the lines');
-  const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>/.exec(src) || [''])[0];
-  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 2 && /data-qtab="quote"/.test(tabs) && /data-qtab="details"/.test(tabs),
-    'two cells, one per pane');
+  /* THE TABS MOVED INTO THE NAVY HEADER, and there are three of them.
+     
+     They used to sit inside the document, between the usual-buys chips
+     and the lines, because the header above was 48px of name and two
+     icons with no room for anything else. The card system's phone
+     header carries the screen's name, who the quote is for, those two
+     icons AND the lenses -- which is what lets the console's title
+     block and its pill row be dropped on the phone entirely rather
+     than drawn a second time under the bar.
+     
+     Three cells, not two: Building and Saved are the same two lenses
+     the console shows as pills, and Details is where the rail's cards
+     go on a screen with no room beside the list for them. The pane
+     switch is unchanged -- data-qtab is still what setQuoteTab reads. */
+  const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>\s*<\/div>/.exec(src) || [''])[0];
+  t.check(/<div class="q-phbar"[\s\S]*?id="q_tabbar"/.test(src),
+    'the phone’s lenses sit in its own header, not inside the document');
+  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 3
+    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs) && /data-qtab="details"/.test(tabs),
+    'three cells — the two lenses the console shows as pills, and Details');
   t.check(/id="q_tab_n_quote"/.test(tabs) && /id="q_tab_n_details"/.test(tabs) && /id="q_tab_dot"/.test(tabs),
     'each carrying its count, and Details a dot for a section that is warning');
   t.check(/\.q-tabbar\{display:none;\}/.test(src) || /,\s*\n?\s*\.q-tabbar,/.test(src),
@@ -451,7 +466,11 @@ const src = read('index.html');
     'the two-cell box is not drawn on the phone; the strip carries the figures');
   t.check(/figs\.innerHTML = `· costs you <b class="qp-sf-c">/.test(bar2) && /you keep <b class="qp-sf-k">/.test(bar2),
     'and the strip is written by the same render as the bar, from the same figures');
-  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src)
+  /* "Keep", not "Margin". The column was renamed with the table, and
+     this selector is what takes the shop's three cells off the phone
+     card -- it went on naming the old word for one commit, and the
+     Keep cell landed on top of the line's own second row. */
+  t.check(/\.q-doc \.q-line > \.q-shop-first,\s*\.q-doc \.q-line > \[data-l="Buy @"\],\s*\.q-doc \.q-line > \[data-l="Keep"\]\{display:none;\}/.test(src)
     && /body\.q-shop-open \.q-doc \.q-line > \.q-ph-shop\{display:flex;/.test(src),
     'a line’s shop side is not drawn until the strip opens it');
   const toggle = extractFunction(src, 'setShopSideOpen', 'index.html');
