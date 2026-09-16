@@ -100428,27 +100428,52 @@ function renderMessages(){
   const held = msgHeldRows(now, rows);
   const waiting = msgWaitingRows(now, rows);
   const sentLog = msgSentLog();
-  const setN = (id, n, bad)=>{
+  /* THE LENS YOU ARE ON WEARS ITS OWN COLOUR; the other two go quiet.
+
+     Money is a debt, so its colour is the bad tint. Telling is news, so
+     its colour is the studied blue -- the same one the Good until column
+     and the Say today card wear, so the chip and the lens it opens are
+     visibly the same thing. Posting is a suggestion about a product
+     rather than a word anybody is owed, so its colour is the neutral
+     one, on or off.
+
+     The frames say this twice: on the register Money is active and
+     coral, and on Telling it is Telling that is blue while Money sits
+     grey beside it. The one frame that contradicts it is turn 1's, which
+     the handoff itself marks as superseded. Nothing is lost by the
+     inactive chips going quiet -- the rail badge counts money plus
+     telling whatever lens is open, and the money card names the rest. */
+  const TONE = {bad: ['--om-bad', '--om-bad-ink'], studied: ['--om-studied', '--om-studied-ink'],
+    neutral: ['--om-neutral', '--om-neutral-ink']};
+  const setN = (id, n, tone, on)=>{
     const el = document.getElementById(id);
     if(!el) return;
     /* A LENS CHIP WITH NOTHING IN IT IS NOT A ZERO, it is nothing. The
        frame draws Telling with no chip at all, which is the same rule the
        cards obey: a count that would read 0 is not a count worth
-       printing. */
+       printing.
+
+       AND `hidden` ALONE DOES NOT DO IT. .om-chip sets display:inline-flex
+       from the author stylesheet, which outranks the user agent's
+       [hidden]{display:none} on cascade origin -- so the attribute was
+       set, assistive tech was told, and the eye still saw an empty grey
+       pill on the lens with nothing waiting. */
     el.textContent = n ? String(n) : '';
     el.hidden = !n;
-    el.style.background = bad && n ? 'var(--om-bad)' : 'var(--om-neutral)';
-    el.style.color = bad && n ? 'var(--om-bad-ink)' : 'var(--om-neutral-ink)';
+    el.style.display = n ? '' : 'none';
+    const t = TONE[(on && n) ? tone : 'neutral'] || TONE.neutral;
+    el.style.background = `var(${t[0]})`;
+    el.style.color = `var(${t[1]})`;
   };
-  setN('msgSegMoney', money.length, true);
-  setN('msgSegTelling', telling.length, false);
+  setN('msgSegMoney', money.length, 'bad', msgLens === 'money');
+  setN('msgSegTelling', telling.length, 'studied', msgLens === 'telling');
   /* THE POSTING COUNT IS THE NOMINATIONS, and it is deliberately NOT in
      the badge: a nomination is the algorithm's suggestion, not a word the
      shop owes anybody, and a badge that rises because the queue grew
      teaches people to ignore badges. */
   const picks = (typeof waPickView === 'function') ? waPickView(todayISO()) : null;
   const nominated = picks ? (picks.candidates || picks.ranked || []).length : 0;
-  setN('msgSegPosting', nominated, false);
+  setN('msgSegPosting', nominated, 'neutral', msgLens === 'posting');
   postLastCounts = {money: money.length, telling: telling.length, posting: nominated};
 
   if(onPost){

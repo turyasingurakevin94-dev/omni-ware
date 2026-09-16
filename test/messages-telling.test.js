@@ -191,6 +191,39 @@ const kpis = extractFunction(src, 'renderTellKpis', 'index.html');
     'the count that matters is broken into the kinds behind it');
 }
 
+/* ---------- 5b. the lens chips, left to right ------------------------ */
+{
+  /* THE LENS YOU ARE ON WEARS ITS OWN COLOUR; the other two go quiet.
+     Money is a debt, so its colour is the bad tint; Telling is news, so
+     its colour is the studied blue — the same one the Good until column
+     and the Say today card wear, which is what makes the chip and the
+     lens it opens visibly the same thing; Posting is a suggestion about
+     a product rather than a word anybody is owed, so it is neutral
+     whether you are on it or not.
+
+     Two frames draw this: the register has Money active and coral beside
+     a grey Posting, and Telling has Telling blue beside a grey Money.
+     The one frame that contradicts it is turn 1's, which its own handoff
+     marks as superseded. */
+  t.check(/setN\('msgSegMoney', money\.length, 'bad', msgLens === 'money'\);/.test(screen)
+    && /setN\('msgSegTelling', telling\.length, 'studied', msgLens === 'telling'\);/.test(screen)
+    && /setN\('msgSegPosting', nominated, 'neutral', msgLens === 'posting'\);/.test(screen),
+    'each lens chip is tinted only while that lens is the one being read, in that lens’s own colour');
+  t.check(/const t = TONE\[\(on && n\) \? tone : 'neutral'\] \|\| TONE\.neutral;/.test(screen),
+    'and the other two go neutral rather than competing with it');
+
+  /* A CHIP WITH NOTHING IN IT IS NOT A ZERO, IT IS NOTHING — and
+     `hidden` alone did not do it. .om-chip sets display:inline-flex from
+     the author stylesheet, which outranks the user agent's
+     [hidden]{display:none} on cascade origin, so the attribute was set,
+     assistive tech was told, and the eye still saw an empty grey pill on
+     the lens with no work waiting. */
+  t.check(/el\.hidden = !n;\s*\n\s*el\.style\.display = n \? '' : 'none';/.test(screen),
+    'a count of nought removes the chip from the row as well as from the accessibility tree');
+  t.check(/\.om-chip\{display:inline-flex/.test(code),
+    'which is necessary because the chip class sets its own display and would otherwise win');
+}
+
 /* ---------- 6. it is its own view, on both designs ------------------- */
 {
   t.check(/const onTell = msgLens === 'telling';/.test(screen)

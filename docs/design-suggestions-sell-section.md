@@ -1039,3 +1039,34 @@ rows beneath it disagreeing about the same thing is the Debtors bug this app was
 rebuilt to remove. It counts the money queue now, and the card beside it names
 the words the Telling lens holds, so *everything else is clear* is never said
 over three unsent messages.
+
+#### 8.19a The lens chips, and the one thing the frames disagree about
+
+Three faults were visible in the live chip row against 4a, left to right:
+
+1. **Money's chip was coral on every lens.** 4a draws it grey while Telling is
+   the one being read.
+2. **Telling's chip was an empty grey pill** when nothing was worth telling. The
+   code set `hidden`, and `hidden` alone does not do it: `.om-chip` sets
+   `display:inline-flex` from the author stylesheet, which outranks the user
+   agent's `[hidden]{display:none}` on cascade origin. So the attribute was set,
+   assistive tech was told, and the eye still saw a pill with nothing in it —
+   which is the exact fault the zero rule exists to prevent, wearing the rule's
+   own clothes.
+3. **Telling's chip was neutral** where every frame that shows a Telling count
+   draws it in the studied blue.
+
+The rule now: **the lens you are on wears its own colour; the other two go
+quiet.** Money is a debt, so its colour is the bad tint. Telling is news, so its
+colour is the studied blue — the same one the *Good until* column and the *Say
+today* card wear, which is what makes the chip and the lens it opens read as one
+thing. Posting is a suggestion about a product rather than a word anybody is
+owed, so it is neutral whether you are on it or not.
+
+**The frames disagree, and this is the resolution.** 4a (Telling active) draws
+Money grey; 2a (Money active) draws Money coral and Posting grey; turn 1's
+posting frame draws Money coral and Telling blue while *Posting* is active. The
+rule above satisfies 4a and 2a exactly and contradicts only turn 1's — which the
+turn-4 handoff explicitly marks as superseded. Nothing is lost by the inactive
+chips going quiet: the rail badge counts money plus telling whatever lens is
+open, and the Money card names what the other lens holds.
