@@ -1,0 +1,501 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* ==================================================================
+       OMNI-WARE CONSOLE CHROME — lifted from index.html, not remembered.
+       Tokens: index.html :root (l.39-64) and the OW layer (l.12477-12516).
+       Chrome: .topbar (l.127), .sidebar (l.305), nav button (l.348),
+       main padding (l.532), .ow-ph (l.12632), .ow-pan (l.12520),
+       .ow-tbl (l.13082), .ow-fig (l.13165), .ow-cp (l.12760).
+       ================================================================== */
+    :root{
+      --ow-steel-950:#16203C; --ow-steel-800:#243052; --ow-steel-400:#767F91;
+      --ow-steel-100:#E0DCD4; --ow-steel-050:#F7F5F2;
+      --ow-paper:#FFFFFF; --ow-paper-2:#FCFBF9;
+      --ow-oxide:#C93A30; --ow-oxide-deep:#A82D24; --ow-oxide-light:#E5483D; --ow-oxide-soft:#FDE8E4;
+      --ow-verdigris:#0F6B43; --ow-verdigris-soft:#E4F4EA;
+      --ow-amber:#95530C; --ow-amber-soft:#FDEEE1; --ow-amber-faint:#FEF8F2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#8E2A22; --ow-crimson-soft:#FBE5E2;
+      --ow-ink-900:#1C2233; --ow-ink-600:#5F6980; --ow-ink-400:#767F91;
+      --ow-rule:#E6E3DD; --ow-rule-soft:#EFECE6;
+      --ow-r-sm:8px; --ow-r:9px; --ow-r-lg:12px; --ow-r-pill:999px;
+      --ow-lift:0 1px 2px rgba(27,36,56,.06), 0 6px 20px rgba(27,36,56,.09);
+      --ow-tap:44px; --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);text-decoration:none;} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+    .icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- navy top bar, 54px ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;z-index:5;
+      box-shadow:0 1px 0 rgba(255,255,255,.07);}
+    .brand{display:flex;align-items:center;gap:10px;flex:none;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Archivo Black',system-ui,sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',system-ui,sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#5A6774;font-weight:500;}
+    .tb-search{position:relative;width:320px;margin-left:22px;height:32px;border-radius:8px;
+      background:rgba(255,255,255,.09);display:flex;align-items:center;padding:0 10px;gap:8px;}
+    .tb-search .icon{width:14px;height:14px;stroke:#8E9BA8;stroke-width:2;}
+    .tb-search span{font-size:13px;color:#8E9BA8;}
+    .tb-kbd{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:#8E9BA8;
+      border:1px solid rgba(255,255,255,.18);border-bottom-width:2px;border-radius:4px;padding:1px 5px;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#C7CFD8;}
+    .tb-ic .icon{width:17px;height:17px;}
+
+    /* ---- navy rail, 220px. The row you are on is INVERTED, never oxide. ---- */
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 0 16px;display:flex;flex-direction:column;z-index:4;overflow:hidden;}
+    .navl{display:flex;flex-direction:column;gap:1px;padding:0 10px 10px;}
+    .nav-section-label{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
+      color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;}
+    .navl > .nav-section-label:first-child{padding-top:2px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;overflow:hidden;}
+    .nav-b .nav-icon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .nav-b .nav-label{overflow:hidden;text-overflow:ellipsis;}
+    .nav-b.active{background:var(--ow-paper);color:var(--ow-steel-950);font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+
+    /* ---- the work area: main{padding:calc(54+26) 40px 32px; margin-left:220px} ---- */
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;
+      padding:26px 40px 32px;overflow:hidden;}
+
+    /* ---- the page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Figtree',system-ui,sans-serif;font-weight:700;font-size:19px;margin:0;
+      letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+      color:var(--ow-ink-400);margin-left:1px;align-self:center;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 13px;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule);background:var(--ow-paper);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;}
+    .btn.sm{height:30px;padding:0 11px;font-size:12px;}
+    .btn .icon{width:15px;height:15px;}
+    .btn-accent{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;font-weight:700;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);}
+
+    /* ---- panel, chip, figure ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-fig-u{font-size:.82em;font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+    .ow-fig.ow-bad{color:var(--ow-crimson);}
+    .ow-fig.ow-good{color:var(--ow-verdigris);}
+    .ow-fig.ow-warn{color:var(--ow-amber-ink);}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;max-width:var(--ow-measure);}
+
+    /* ---- the document table ---- */
+    .ow-tbl{display:grid;grid-template-columns:var(--ow-tbl-cols);}
+    .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;grid-template-columns:subgrid;
+      align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--ow-rule-soft);}
+    .ow-tbl-h{border-top:0;padding-top:6px;padding-bottom:6px;font-size:11px;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);
+      border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .ow-tbl-h + .ow-tbl-r{border-top:0;}
+    .ow-tbl-r{font-size:13px;color:var(--ow-ink-900);min-height:42px;padding-top:6px;padding-bottom:6px;}
+    .ow-tbl-c{min-width:0;}
+    .ow-tbl-p{display:block;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:600;letter-spacing:.06em;}
+
+    /* ---- the ghost input: a document, not a form. Dashed = yours to change. ---- */
+    .gi{display:inline-block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);text-align:right;
+      padding:4px 6px;border:1px solid transparent;border-radius:var(--ow-r-sm);
+      border-bottom:1px dashed var(--ow-steel-400);}
+
+    /* ---- the dock: min-height 64, fixed to the foot, left of it the rail ---- */
+    .dock{position:absolute;left:220px;right:0;bottom:0;min-height:64px;display:flex;align-items:center;
+      padding:0 24px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);z-index:6;}
+    .dock-acts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;}
+    .qbar-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:40px;
+      height:40px;padding:0 12px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;background:var(--ow-paper);}
+    .qbar-btn .icon{width:18px;height:18px;}
+    .qbar-save{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;
+      padding:0 18px;border-radius:var(--ow-r-lg);background:var(--ow-oxide);color:#fff;
+      font-size:14px;font-weight:700;white-space:nowrap;}
+    .qbar-save .icon{width:15px;height:15px;}
+    .qp-says{display:flex;align-items:baseline;gap:10px;padding-right:16px;border-right:1px solid var(--ow-rule-soft);}
+    .qp-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-v{font-family:var(--mono);font-weight:600;font-size:22px;line-height:1.1;color:var(--ow-ink-900);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;}
+    .qp-cell{display:flex;align-items:baseline;gap:8px;padding:0 14px;flex:none;}
+    .qp-cell.rule{border-right:1px solid var(--ow-rule-soft);}
+    .qp-sv{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:500;color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-sv.b{font-weight:600;color:var(--ow-ink-900);}
+    .qp-sv.warn{color:var(--ow-amber-ink);}
+    .qp-pill{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:var(--ow-r-sm);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
+      background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .qp-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .qp-pill.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+
+    /* ---- the margin meter: colour AND position, never colour alone ---- */
+    .meter{position:relative;height:6px;border-radius:999px;background:var(--ow-steel-100);overflow:hidden;}
+    .meter i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--ow-amber);}
+    .meter i.good{background:var(--ow-verdigris);}
+    .meter b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ow-ink-900);border-radius:1px;}
+    /* ---------- C · DEAL FIRST --------------------------------------- */
+    /* The money reads at the TOP, where a rep looks first; the acts stay
+       at the FOOT, where the hands are. The document is dense and quiet
+       between them, because by the time you are reading it you already
+       know whether this deal is worth doing. */
+    .cmd{display:flex;align-items:center;gap:16px;height:48px;margin-bottom:16px;}
+    .cmd h1{font-family:'Figtree',system-ui,sans-serif;font-weight:700;font-size:19px;margin:0;
+      letter-spacing:-.015em;line-height:1.1;white-space:nowrap;}
+    .cmd-f{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      outline:2px solid var(--ow-steel-950);outline-offset:1px;font-size:14px;color:var(--ow-ink-600);}
+    .cmd-f .icon{width:17px;height:17px;color:var(--ow-ink-600);}
+    .cmd-f .caret{width:1px;height:18px;background:var(--ow-steel-950);margin-left:-6px;}
+    .cmd-f .kb{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ow-ink-600);
+      border:1px solid var(--ow-rule);border-bottom-width:2px;border-radius:4px;padding:1px 6px;}
+
+    /* the deal: who, what they pay, what is kept — one band, three readings */
+    .deal{display:flex;align-items:stretch;height:140px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);margin-bottom:12px;overflow:hidden;}
+    .deal-c{padding:13px 20px;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+    .deal-c + .deal-c{border-left:1px solid var(--ow-rule-soft);}
+    .deal-nm{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .deal-meta{margin-top:4px;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .deal-meta .ow-fig{font-size:12px;font-weight:600;color:var(--ow-ink-900);}
+    .deal-ph{margin-top:3px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
+      color:var(--ow-ink-600);letter-spacing:-.02em;}
+    .deal-ch{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap;}
+    .deal-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .deal-big{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+      font-size:34px;font-weight:600;line-height:1.05;margin-top:5px;}
+    .deal-big .u{font-size:.42em;font-weight:400;color:var(--ow-ink-600);margin-left:.3em;letter-spacing:0;}
+    .deal-sub{margin-top:6px;font-size:11.5px;color:var(--ow-ink-600);white-space:nowrap;}
+    .deal-sub .ow-fig{font-size:11.5px;font-weight:600;color:var(--ow-ink-900);}
+    .deal-keep{display:flex;align-items:baseline;gap:8px;margin-top:5px;}
+    .deal-keep b{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+      font-size:22px;font-weight:600;color:var(--ow-amber-ink);line-height:1.1;}
+    .meter-sc{position:relative;height:15px;margin-top:5px;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .meter-sc .a{position:absolute;left:0;} .meter-sc .z{position:absolute;right:0;}
+    .meter-sc .m{position:absolute;transform:translateX(-50%);color:var(--ow-ink-900);font-weight:600;
+      font-family:'Figtree',system-ui,sans-serif;}
+    .deal-say{margin:8px 0 0;font-size:11.5px;line-height:1.4;color:var(--ow-ink-600);}
+    .deal-say b{color:var(--ow-ink-900);font-weight:600;}
+
+    /* ONE decision at a time. A list of three decisions is a reason to
+       make none, so the longest-waiting one gets the row and the rest
+       wait behind a Next. */
+    .dq{display:flex;align-items:center;gap:14px;height:64px;padding:0 16px 0 14px;margin-bottom:12px;
+      background:var(--ow-amber-faint);border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-lg);}
+    .dq-m{width:32px;height:32px;flex:none;border-radius:var(--ow-r-sm);background:var(--ow-amber-soft);
+      color:var(--ow-amber-ink);display:flex;align-items:center;justify-content:center;}
+    .dq-m .icon{width:18px;height:18px;}
+    .dq-b{flex:1 1 auto;min-width:0;}
+    .dq-t{font-size:13.5px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dq-s{margin-top:2px;font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dq-a{display:flex;align-items:center;gap:8px;flex:none;}
+    .dq-n{display:flex;align-items:center;gap:10px;flex:none;padding-left:14px;
+      border-left:1px solid var(--ow-amber-soft);}
+    .dq-nx{font-size:11.5px;color:var(--ow-ink-600);line-height:1.35;max-width:210px;}
+    .dq-nx b{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-amber-ink);margin-bottom:2px;}
+    .dq-ct{display:flex;align-items:center;justify-content:center;width:34px;height:34px;flex:none;
+      border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r);background:var(--ow-paper);color:var(--ow-ink-900);}
+    .dq-ct .icon{width:16px;height:16px;}
+
+    /* the document, dense and quiet */
+    .doc{display:flex;flex-direction:column;height:448px;}
+    .q-usual{display:flex;align-items:center;gap:6px;height:34px;padding:0 16px;flex:none;
+      border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;}
+    .q-usual-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-right:4px;white-space:nowrap;}
+    .chipb{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:var(--ow-r-sm);
+      border:1px solid var(--ow-rule);background:var(--ow-paper);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);white-space:nowrap;}
+    .chipb .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);}
+    .doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 64px 48px 118px 132px 1px 164px 106px 88px;flex:none;}
+    .q-rule{background:var(--ow-steel-100);align-self:stretch;width:1px;margin:-8px 0;}
+    .doc .ow-tbl-r{position:relative;min-height:44px;}
+    .doc .ow-tbl-r.on{background:var(--ow-paper-2);}
+    .doc .ow-tbl-r.on::before{content:"";position:absolute;left:0;top:-1px;bottom:0;width:3px;background:var(--ow-steel-950);}
+    .shopc{color:var(--ow-ink-600);}
+    .ow-tbl-r.on .shopc{color:var(--ow-ink-900);}
+    .q-num{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);text-align:center;}
+    .q-qty{display:flex;align-items:center;justify-content:flex-end;}
+    .q-qty .gi{width:52px;}
+    .u-cell{font-size:12px;color:var(--ow-ink-600);}
+    .q-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:var(--ow-r-pill);
+      background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:10.5px;font-weight:700;white-space:nowrap;}
+    .sup-cell{min-width:0;display:flex;flex-direction:column;gap:1px;}
+    .sup-nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sup-alt{font-size:11px;font-weight:600;color:var(--ow-verdigris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .keep{display:flex;flex-direction:column;align-items:flex-end;gap:4px;justify-self:end;}
+    .keep-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;}
+    .keep-v.warn{color:var(--ow-amber-ink);}
+    .meter.sm{width:56px;height:3px;}
+    .doc .ow-tbl-r.chg{background:var(--ow-amber-faint);}
+    .doc .q-mark{display:inline-flex;color:var(--ow-ink-600);margin-right:8px;vertical-align:-2px;}
+    .doc .q-mark .icon{width:15px;height:15px;}
+    .sub-r{background:var(--ow-paper-2);}
+    .q-add{display:flex;align-items:center;gap:6px;min-height:42px;padding:6px 16px;flex:none;
+      border-top:1px solid var(--ow-rule-soft);}
+    .q-add-sq{width:22px;height:22px;border-radius:var(--ow-r-sm);border:1px dashed var(--ow-rule);
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);margin-right:8px;}
+    .q-add-sq .icon{width:13px;height:13px;}
+    .q-add .lbl{font-size:12px;color:var(--ow-ink-600);margin-right:4px;}
+    .q-blank{flex:1 1 auto;min-height:0;}
+    .q-foot{display:flex;align-items:center;gap:10px;height:36px;padding:0 16px;flex:none;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);font-size:11px;color:var(--ow-ink-600);}
+    .q-foot .ow-fig{font-size:11px;font-weight:600;color:var(--ow-ink-900);}
+    /* the dock is acts, and the one fact the band above does not carry */
+    .dock-note{display:flex;align-items:baseline;gap:8px;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:900px">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">OW</div><div class="tag">OMNI-WARE</div></div>
+    <div class="tb-where"><span class="g">Sell</span><span class="g">/</span><span>New quote</span></div>
+    <div class="tb-search">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <span>Search screens, or ask the Manager</span><span class="tb-kbd">Ctrl K</span>
+    </div>
+    <div class="tb-sp"></div>
+    <div class="tb-ic"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4c0 6 2 7 2 7H6s2-1 2-7a4 4 0 0 1 4-4Z"/><path d="M10.5 18a1.8 1.8 0 0 0 3 0"/></svg></div>
+    <div class="tb-ic"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></div>
+  </header>
+  <aside class="sidebar">
+    <div class="navl">
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg><span class="nav-label">Dashboard</span></div>
+      <div class="nav-section-label">Sell</div>
+      <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg><span class="nav-label">New quote</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="nav-label">Order tracking</span><b class="nav-badge">7</b></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg><span class="nav-label">Invoices</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="nav-label">Customers</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="nav-label">Follow-ups</span><b class="nav-badge">3</b></div>
+      <div class="nav-section-label">Buy</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h2l2.6 10.4a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg><span class="nav-label">What to buy</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg><span class="nav-label">Suppliers</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg><span class="nav-label">Price book</span></div>
+      <div class="nav-section-label">Money</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="12" r="2.6"/></svg><span class="nav-label">Debtors</span><b class="nav-badge">12</b></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2Z"/><path d="M8 11h8M8 15h5"/></svg><span class="nav-label">Creditors</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18"/><path d="M7 15h3"/></svg><span class="nav-label">Cashbook</span></div>
+      <div class="nav-section-label">Insight</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 6v6h-6"/></svg><span class="nav-label">Manager</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nav-label">Sales</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span class="nav-label">Inventory</span></div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="cmd">
+      <h1>New quote</h1>
+      <div class="cmd-f">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="caret"></span>
+        <span>Item, SKU, supplier code — or a client's name to start a quote</span>
+        <span class="kb">/</span>
+      </div>
+      <div class="btn sm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+        Order tracking
+      </div>
+    </div>
+
+    <!-- THE DEAL. Who it is with, what they pay, and what is left of it —
+         the three things the rep is asked on the call, in that order. -->
+    <div class="deal">
+      <div class="deal-c" style="flex:0 0 332px">
+        <div class="deal-nm">Jackson Mubiru</div>
+        <div class="deal-ph">0772 481 330 · 15 Sep 2026</div>
+        <div class="deal-meta">12 orders · last <span class="ow-fig">230,000</span> yesterday</div>
+        <div class="deal-ch">
+          <span class="ow-cp ow-good">Owes nothing</span>
+          <span class="ow-cp">30-day terms · +3%</span>
+        </div>
+      </div>
+      <div class="deal-c" style="flex:0 0 384px">
+        <span class="deal-l">Client pays</span>
+        <span class="deal-big">579,120<span class="u">UGX</span></span>
+        <span class="deal-sub">Goods <span class="ow-fig">504,000</span> · transport <span class="ow-fig">60,000</span> · 30-day terms <span class="ow-fig">15,120</span></span>
+      </div>
+      <div class="deal-c" style="flex:1 1 auto">
+        <span class="deal-l">You keep on the goods</span>
+        <div class="deal-keep"><b>36,500</b><span class="qp-pill warn">7.2%</span></div>
+        <div style="margin-top:7px">
+          <div class="meter"><i style="width:48%"></i><b style="left:66.6%"></b></div>
+          <div class="meter-sc"><span class="a">0%</span><span class="m" style="left:66.6%">your floor 10%</span><span class="z">15%</span></div>
+        </div>
+        <p class="deal-say">Under your floor, and under the <b>11%</b> Jackson's last five orders kept. <b>519,500</b> holds 10% — <b>15,500</b> more.</p>
+      </div>
+    </div>
+
+    <!-- ONE decision at a time; the other two are named, not listed. -->
+    <div class="dq">
+      <span class="dq-m"><svg class="icon" viewBox="0 0 24 24"><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg></span>
+      <span class="dq-b">
+        <span class="dq-t">Line 3 · Iron sheets G28 — nothing on the shelf</span>
+        <span class="dq-s">1 to order in. Kampala Steel at 27,500 — last bought there 2 Sep.</span>
+      </span>
+      <span class="dq-a">
+        <span class="btn">Add to the buying trip</span>
+        <span class="btn btn-ghost">Not now</span>
+      </span>
+      <span class="dq-n">
+        <span class="dq-nx"><b>Next · 2 more</b>500 less at Shafik Katwe · this quote keeps 7.2%</span>
+        <span class="dq-ct"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+      </span>
+    </div>
+
+    <div class="ow-pan doc">
+      <div class="q-usual">
+        <span class="q-usual-l">Jackson usually buys</span>
+        <span class="chipb">Black screws 8" <span class="n">7 Box</span></span>
+        <span class="chipb">Iron sheets G28 <span class="n">12 Pcs</span></span>
+        <span class="chipb">Hinges 100mm <span class="n">4 Ctn</span></span>
+        <span class="chipb">Roofing nails 2.5" <span class="n">5 Kg</span></span>
+        <span class="chipb" style="color:var(--ow-ink-600)">+2 more</span>
+      </div>
+      <div class="ow-tbl">
+        <div class="ow-tbl-h">
+          <span></span><span>Item</span>
+          <span class="ow-tbl-n">Qty</span><span>Unit</span>
+          <span class="ow-tbl-n">Price each</span><span class="ow-tbl-n">Line total</span>
+          <span class="q-rule"></span>
+          <span>Buy from</span><span class="ow-tbl-n">Buy @</span><span class="ow-tbl-n">Keep</span>
+        </div>
+        <div class="ow-tbl-r">
+          <span class="q-num">1</span>
+          <span class="ow-tbl-c"><span class="ow-tbl-p">Soft Close Mulper — Half Bend</span><span class="ow-tbl-s">4 on the shelf · covers it</span></span>
+          <span class="q-qty"><span class="gi">1</span></span><span class="u-cell">Ctn</span>
+          <span class="ow-tbl-n"><span class="gi">265,000</span></span>
+          <span class="ow-tbl-n">265,000 <span class="ow-fig-u">UGX</span></span>
+          <span class="q-rule"></span>
+          <span class="sup-cell shopc"><span class="sup-nm">Roto Industry</span><span class="sup-alt">cheapest at 1 Ctn</span></span>
+          <span class="ow-tbl-n shopc"><span class="gi" style="color:inherit">250,000</span></span>
+          <span class="keep"><span class="keep-v warn">5.7%</span><span class="meter sm"><i style="width:38%"></i><b style="left:66.6%"></b></span></span>
+        </div>
+        <div class="ow-tbl-r on">
+          <span class="q-num">2</span>
+          <span class="ow-tbl-c"><span class="ow-tbl-p">G-MAN Bow Saw 24"</span><span class="ow-tbl-s">18 on the shelf · covers it</span></span>
+          <span class="q-qty"><span class="gi">2</span></span><span class="u-cell">Bdl</span>
+          <span class="ow-tbl-n"><span class="gi">105,000</span></span>
+          <span class="ow-tbl-n">210,000 <span class="ow-fig-u">UGX</span></span>
+          <span class="q-rule"></span>
+          <span class="sup-cell shopc"><span class="sup-nm">Mulongo Hardware</span><span class="sup-alt">Shafik Katwe 500 less</span></span>
+          <span class="ow-tbl-n shopc"><span class="gi" style="color:inherit">95,000</span></span>
+          <span class="keep"><span class="keep-v warn">9.5%</span><span class="meter sm"><i style="width:63%"></i><b style="left:66.6%"></b></span></span>
+        </div>
+        <div class="ow-tbl-r">
+          <span class="q-num">3</span>
+          <span class="ow-tbl-c"><span class="ow-tbl-p">Iron sheets G28 · 3m box profile</span><span class="ow-tbl-s"><span class="q-tag">0 on the shelf · 1 to order in</span></span></span>
+          <span class="q-qty"><span class="gi">1</span></span><span class="u-cell">Pcs</span>
+          <span class="ow-tbl-n"><span class="gi">29,000</span></span>
+          <span class="ow-tbl-n">29,000 <span class="ow-fig-u">UGX</span></span>
+          <span class="q-rule"></span>
+          <span class="sup-cell shopc"><span class="sup-nm">Kampala Steel</span><span class="sup-alt">cheapest at 1 Pcs</span></span>
+          <span class="ow-tbl-n shopc"><span class="gi" style="color:inherit">27,500</span></span>
+          <span class="keep"><span class="keep-v warn">5.2%</span><span class="meter sm"><i style="width:35%"></i><b style="left:66.6%"></b></span></span>
+        </div>
+        <div class="ow-tbl-r sub-r">
+          <span></span><span style="font-size:12px;color:var(--ow-ink-600);font-weight:600">Goods subtotal</span>
+          <span></span><span></span><span></span>
+          <span class="ow-tbl-n">504,000 <span class="ow-fig-u">UGX</span></span>
+          <span class="q-rule"></span><span></span>
+          <span class="ow-tbl-n shopc">467,500 <span class="ow-fig-u">UGX</span></span>
+          <span class="keep"><span class="keep-v warn">7.2%</span><span class="meter sm"><i style="width:48%"></i><b style="left:66.6%"></b></span></span>
+        </div>
+        <div class="ow-tbl-r chg">
+          <span class="q-num">4</span>
+          <span class="ow-tbl-c"><span class="ow-tbl-p"><span class="q-mark"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span>Transport</span></span>
+          <span></span><span></span><span></span>
+          <span class="ow-tbl-n"><span class="gi">60,000</span></span>
+          <span class="q-rule"></span>
+          <span class="sup-cell shopc" style="font-size:12px">a charge · not costed</span><span></span><span></span>
+        </div>
+        <div class="ow-tbl-r chg">
+          <span class="q-num">5</span>
+          <span class="ow-tbl-c"><span class="ow-tbl-p"><span class="q-mark"><svg class="icon" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M2.5 10h19"/><path d="M6 14h4"/></svg></span>Credit terms</span><span class="ow-tbl-s" style="padding-left:23px">+3% on 30 days · due 15 Oct</span></span>
+          <span></span><span></span><span></span>
+          <span class="ow-tbl-n">15,120 <span class="ow-fig-u">UGX</span></span>
+          <span class="q-rule"></span>
+          <span class="sup-cell shopc" style="font-size:12px">paid 15 Oct</span><span></span><span></span>
+        </div>
+      </div>
+      <div class="q-add">
+        <span class="q-add-sq"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="lbl">Next item, a charge, or credit terms</span>
+        <span class="chipb">Delivery <span class="n">60,000</span></span>
+        <span class="chipb">Urgent <span class="n">5%</span></span>
+        <span class="chipb">On credit <span class="n">+3%</span></span>
+        <span class="chipb" style="color:var(--ow-ink-600)">Other</span>
+      </div>
+      <div class="q-blank"></div>
+      <div class="q-foot">
+        <span>3 items · 2 charges</span><span style="color:var(--ow-rule)">·</span>
+        <span>Prices as of <span class="ow-fig">15 Sep, 08:40</span></span><span style="color:var(--ow-rule)">·</span>
+        <span>Holds <span class="ow-fig">7 days</span></span>
+        <span style="margin-left:auto">Client copy prints the left of the rule only</span>
+      </div>
+    </div>
+  </main>
+
+  <div class="dock">
+    <div class="dock-note">
+      <span class="qp-l">On his account until 15 Oct</span>
+      <span class="qp-sv b">579,120 <span class="ow-fig-u">UGX</span></span>
+    </div>
+    <div class="dock-acts">
+      <span class="qbar-btn">Client copy</span>
+      <span class="qbar-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Send on WhatsApp</span>
+      <span class="qbar-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></span>
+      <span class="qbar-save"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save quote</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

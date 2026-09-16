@@ -1,0 +1,580 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* ==================================================================
+       OMNI-WARE CONSOLE CHROME — lifted from index.html, not remembered.
+       Tokens: index.html :root (l.39-64) and the OW layer (l.12477-12516).
+       Chrome: .topbar (l.127), .sidebar (l.305), nav button (l.348),
+       main padding (l.532), .ow-ph (l.12632), .ow-pan (l.12520),
+       .ow-tbl (l.13082), .ow-fig (l.13165), .ow-cp (l.12760).
+       ================================================================== */
+    :root{
+      --ow-steel-950:#16203C; --ow-steel-800:#243052; --ow-steel-400:#767F91;
+      --ow-steel-100:#E0DCD4; --ow-steel-050:#F7F5F2;
+      --ow-paper:#FFFFFF; --ow-paper-2:#FCFBF9;
+      --ow-oxide:#C93A30; --ow-oxide-deep:#A82D24; --ow-oxide-light:#E5483D; --ow-oxide-soft:#FDE8E4;
+      --ow-verdigris:#0F6B43; --ow-verdigris-soft:#E4F4EA;
+      --ow-amber:#95530C; --ow-amber-soft:#FDEEE1; --ow-amber-faint:#FEF8F2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#8E2A22; --ow-crimson-soft:#FBE5E2;
+      --ow-ink-900:#1C2233; --ow-ink-600:#5F6980; --ow-ink-400:#767F91;
+      --ow-rule:#E6E3DD; --ow-rule-soft:#EFECE6;
+      --ow-r-sm:8px; --ow-r:9px; --ow-r-lg:12px; --ow-r-pill:999px;
+      --ow-lift:0 1px 2px rgba(27,36,56,.06), 0 6px 20px rgba(27,36,56,.09);
+      --ow-tap:44px; --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);text-decoration:none;} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+    .icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- navy top bar, 54px ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;z-index:5;
+      box-shadow:0 1px 0 rgba(255,255,255,.07);}
+    .brand{display:flex;align-items:center;gap:10px;flex:none;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Archivo Black',system-ui,sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',system-ui,sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#5A6774;font-weight:500;}
+    .tb-search{position:relative;width:320px;margin-left:22px;height:32px;border-radius:8px;
+      background:rgba(255,255,255,.09);display:flex;align-items:center;padding:0 10px;gap:8px;}
+    .tb-search .icon{width:14px;height:14px;stroke:#8E9BA8;stroke-width:2;}
+    .tb-search span{font-size:13px;color:#8E9BA8;}
+    .tb-kbd{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:#8E9BA8;
+      border:1px solid rgba(255,255,255,.18);border-bottom-width:2px;border-radius:4px;padding:1px 5px;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#C7CFD8;}
+    .tb-ic .icon{width:17px;height:17px;}
+
+    /* ---- navy rail, 220px. The row you are on is INVERTED, never oxide. ---- */
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 0 16px;display:flex;flex-direction:column;z-index:4;overflow:hidden;}
+    .navl{display:flex;flex-direction:column;gap:1px;padding:0 10px 10px;}
+    .nav-section-label{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
+      color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;}
+    .navl > .nav-section-label:first-child{padding-top:2px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;overflow:hidden;}
+    .nav-b .nav-icon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .nav-b .nav-label{overflow:hidden;text-overflow:ellipsis;}
+    .nav-b.active{background:var(--ow-paper);color:var(--ow-steel-950);font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+
+    /* ---- the work area: main{padding:calc(54+26) 40px 32px; margin-left:220px} ---- */
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;
+      padding:26px 40px 32px;overflow:hidden;}
+
+    /* ---- the page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Figtree',system-ui,sans-serif;font-weight:700;font-size:19px;margin:0;
+      letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+      color:var(--ow-ink-400);margin-left:1px;align-self:center;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 13px;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule);background:var(--ow-paper);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;}
+    .btn.sm{height:30px;padding:0 11px;font-size:12px;}
+    .btn .icon{width:15px;height:15px;}
+    .btn-accent{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;font-weight:700;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);}
+
+    /* ---- panel, chip, figure ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-fig-u{font-size:.82em;font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+    .ow-fig.ow-bad{color:var(--ow-crimson);}
+    .ow-fig.ow-good{color:var(--ow-verdigris);}
+    .ow-fig.ow-warn{color:var(--ow-amber-ink);}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;max-width:var(--ow-measure);}
+
+    /* ---- the document table ---- */
+    .ow-tbl{display:grid;grid-template-columns:var(--ow-tbl-cols);}
+    .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;grid-template-columns:subgrid;
+      align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--ow-rule-soft);}
+    .ow-tbl-h{border-top:0;padding-top:6px;padding-bottom:6px;font-size:11px;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);
+      border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .ow-tbl-h + .ow-tbl-r{border-top:0;}
+    .ow-tbl-r{font-size:13px;color:var(--ow-ink-900);min-height:42px;padding-top:6px;padding-bottom:6px;}
+    .ow-tbl-c{min-width:0;}
+    .ow-tbl-p{display:block;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:600;letter-spacing:.06em;}
+
+    /* ---- the ghost input: a document, not a form. Dashed = yours to change. ---- */
+    .gi{display:inline-block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);text-align:right;
+      padding:4px 6px;border:1px solid transparent;border-radius:var(--ow-r-sm);
+      border-bottom:1px dashed var(--ow-steel-400);}
+
+    /* ---- the dock: min-height 64, fixed to the foot, left of it the rail ---- */
+    .dock{position:absolute;left:220px;right:0;bottom:0;min-height:64px;display:flex;align-items:center;
+      padding:0 24px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);z-index:6;}
+    .dock-acts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;}
+    .qbar-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:40px;
+      height:40px;padding:0 12px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;background:var(--ow-paper);}
+    .qbar-btn .icon{width:18px;height:18px;}
+    .qbar-save{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;
+      padding:0 18px;border-radius:var(--ow-r-lg);background:var(--ow-oxide);color:#fff;
+      font-size:14px;font-weight:700;white-space:nowrap;}
+    .qbar-save .icon{width:15px;height:15px;}
+    .qp-says{display:flex;align-items:baseline;gap:10px;padding-right:16px;border-right:1px solid var(--ow-rule-soft);}
+    .qp-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-v{font-family:var(--mono);font-weight:600;font-size:22px;line-height:1.1;color:var(--ow-ink-900);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;}
+    .qp-cell{display:flex;align-items:baseline;gap:8px;padding:0 14px;flex:none;}
+    .qp-cell.rule{border-right:1px solid var(--ow-rule-soft);}
+    .qp-sv{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:500;color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-sv.b{font-weight:600;color:var(--ow-ink-900);}
+    .qp-sv.warn{color:var(--ow-amber-ink);}
+    .qp-pill{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:var(--ow-r-sm);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
+      background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .qp-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .qp-pill.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+
+    /* ---- the margin meter: colour AND position, never colour alone ---- */
+    .meter{position:relative;height:6px;border-radius:999px;background:var(--ow-steel-100);overflow:hidden;}
+    .meter i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--ow-amber);}
+    .meter i.good{background:var(--ow-verdigris);}
+    .meter b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ow-ink-900);border-radius:1px;}
+    /* ---------- B · SHEET & ANSWER ---------------------------------- */
+    .work{display:grid;grid-template-columns:740px 384px;gap:16px;align-items:start;}
+
+    /* the client band, one 48px line: what you type, then what the books hold */
+    .ow-cb{display:flex;align-items:stretch;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);margin-bottom:16px;}
+    .ow-cb-f{min-width:0;padding:6px 12px 5px;border-bottom:2px solid transparent;}
+    .ow-cb-f + .ow-cb-f,.ow-cb-k{border-left:1px solid var(--ow-rule-soft);}
+    .ow-cb-l{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-bottom:2px;line-height:1.2;}
+    .ow-cb-v{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:15px;font-weight:500;line-height:1.35;}
+    .ow-cb-k{display:flex;flex:1 1 auto;align-items:center;min-width:0;padding:0 4px;}
+    .ow-cb-kn{padding:0 12px;border-left:1px solid var(--ow-rule-soft);min-width:0;}
+    .ow-cb-kn:first-child{border-left:0;}
+    .ow-cb-kl{display:block;font-size:11px;color:var(--ow-ink-600);line-height:1.35;white-space:nowrap;}
+    .ow-cb-kv{display:block;font-size:13px;font-weight:500;line-height:1.35;white-space:nowrap;color:var(--ow-ink-900);}
+
+    /* the sheet: five columns, the client's side only */
+    .sheet{display:flex;flex-direction:column;height:615px;}
+    .q-search{display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-600);font-size:13px;flex:none;}
+    .q-search .icon{width:16px;height:16px;color:var(--ow-ink-400);}
+    .q-search .kb{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ow-ink-400);
+      border:1px solid var(--ow-rule);border-bottom-width:2px;border-radius:4px;padding:1px 6px;}
+    .q-usual{display:flex;align-items:center;gap:6px;height:34px;padding:0 16px;flex:none;
+      border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;}
+    .q-usual-l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-right:4px;white-space:nowrap;}
+    .chipb{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:var(--ow-r-sm);
+      border:1px solid var(--ow-rule);background:var(--ow-paper);font-size:12px;font-weight:500;
+      color:var(--ow-ink-900);white-space:nowrap;}
+    .chipb .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);}
+
+    .sheet .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 92px 132px 140px;flex:none;}
+    .sheet .ow-tbl-r{position:relative;}
+    .sheet .ow-tbl-r.on{background:var(--ow-paper-2);}
+    .sheet .ow-tbl-r.on::before{content:"";position:absolute;left:0;top:-1px;bottom:0;width:3px;
+      background:var(--ow-steel-950);}
+    .q-num{font-family:var(--mono);font-size:11px;color:var(--ow-ink-600);text-align:center;}
+    .q-qty{display:flex;align-items:center;justify-content:flex-end;gap:4px;}
+    .q-qty .gi{width:52px;}
+    .q-qty .u{font-size:11px;color:var(--ow-ink-600);}
+    .q-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;margin-left:6px;
+      border-radius:var(--ow-r-pill);background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+      font-size:10.5px;font-weight:700;white-space:nowrap;}
+    .sheet .ow-tbl-r.chg{background:var(--ow-amber-faint);}
+    .sheet .q-mark{display:inline-flex;color:var(--ow-ink-400);margin-right:8px;vertical-align:-2px;}
+    .sheet .q-mark .icon{width:15px;height:15px;}
+    .q-add{display:flex;align-items:center;gap:6px;min-height:42px;padding:6px 16px;
+      border-top:1px solid var(--ow-rule-soft);flex:none;}
+    .q-add-sq{width:22px;height:22px;border-radius:var(--ow-r-sm);border:1px dashed var(--ow-rule);
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-400);margin-right:8px;}
+    .q-add-sq .icon{width:13px;height:13px;}
+    .q-add .lbl{font-size:12px;color:var(--ow-ink-600);margin-right:4px;}
+    .q-blank{flex:1 1 auto;min-height:0;}
+    .q-foot{display:flex;align-items:center;gap:10px;height:38px;padding:0 16px;flex:none;
+      border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);
+      font-size:11px;color:var(--ow-ink-600);}
+    .q-foot .ow-fig{font-size:11px;font-weight:600;color:var(--ow-ink-900);}
+
+    /* the answer column */
+    .ansn{display:flex;flex-direction:column;gap:16px;height:615px;}
+    .ansn > .ow-pan:last-child{flex:1 1 auto;}
+    .kv{display:flex;align-items:baseline;gap:8px;padding:0 16px;}
+    .ln-h{padding:9px 16px 8px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ln-n{font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.25;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ln-s{margin-top:2px;font-size:12px;color:var(--ow-ink-600);}
+    .sub-r{background:var(--ow-paper-2);}
+    .kv-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .kv-v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+      font-size:26px;font-weight:600;line-height:1.1;color:var(--ow-amber-ink);}
+    .meter-wrap{padding:0 16px;}
+    .meter-sc{position:relative;height:15px;margin-top:5px;font-size:11px;color:var(--ow-ink-600);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .meter-sc .a{position:absolute;left:0;}
+    .meter-sc .z{position:absolute;right:0;}
+    .meter-sc .m{position:absolute;transform:translateX(-50%);color:var(--ow-ink-900);font-weight:600;
+      font-family:'Figtree',system-ui,sans-serif;}
+    .say{margin:0;padding:10px 16px 0;font-size:12px;line-height:1.45;color:var(--ow-ink-600);}
+    .say b{color:var(--ow-ink-900);font-weight:600;}
+    .flag{display:flex;align-items:flex-start;gap:10px;padding:9px 16px 10px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .flag-m{width:24px;height:24px;flex:none;border-radius:var(--ow-r-sm);display:flex;align-items:center;justify-content:center;}
+    .flag-m .icon{width:15px;height:15px;}
+    .flag-m.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .flag-m.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .flag-b{flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--ow-ink-900);font-weight:600;}
+    .flag-b s{display:block;margin-top:2px;font-size:11.5px;font-weight:400;color:var(--ow-ink-600);
+      text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .flag-a{flex:none;margin-top:1px;}
+
+    .sup{display:grid;grid-template-columns:minmax(0,1fr) 84px 58px;align-items:center;gap:8px;
+      padding:6px 16px;border-top:1px solid var(--ow-rule-soft);}
+    .sup:first-of-type{border-top:0;}
+    .sup.on{background:var(--ow-paper-2);}
+    .sup-n{min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sup-s{display:block;font-size:11px;font-weight:400;color:var(--ow-ink-600);margin-top:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sup-p{justify-self:end;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;}
+    .sup-d{justify-self:end;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;}
+    .ow-sr{display:flex;align-items:center;gap:8px;height:30px;padding:0 16px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .ow-sr-k{flex:1;min-width:0;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-sr-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;}
+    .ow-sr-v.ow-warn{color:var(--ow-amber-ink);font-weight:600;}
+  </style>
+</helmet>
+<div class="app" style="width:1440px;height:900px">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">OW</div><div class="tag">OMNI-WARE</div></div>
+    <div class="tb-where"><span class="g">Sell</span><span class="g">/</span><span>New quote</span></div>
+    <div class="tb-search">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <span>Search screens, or ask the Manager</span><span class="tb-kbd">Ctrl K</span>
+    </div>
+    <div class="tb-sp"></div>
+    <div class="tb-ic"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4c0 6 2 7 2 7H6s2-1 2-7a4 4 0 0 1 4-4Z"/><path d="M10.5 18a1.8 1.8 0 0 0 3 0"/></svg></div>
+    <div class="tb-ic"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></div>
+  </header>
+  <aside class="sidebar">
+    <div class="navl">
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg><span class="nav-label">Dashboard</span></div>
+      <div class="nav-section-label">Sell</div>
+      <div class="nav-b active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg><span class="nav-label">New quote</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="nav-label">Order tracking</span><b class="nav-badge">7</b></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg><span class="nav-label">Invoices</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="nav-label">Customers</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="nav-label">Follow-ups</span><b class="nav-badge">3</b></div>
+      <div class="nav-section-label">Buy</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h2l2.6 10.4a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg><span class="nav-label">What to buy</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg><span class="nav-label">Suppliers</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg><span class="nav-label">Price book</span></div>
+      <div class="nav-section-label">Money</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="12" r="2.6"/></svg><span class="nav-label">Debtors</span><b class="nav-badge">12</b></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2Z"/><path d="M8 11h8M8 15h5"/></svg><span class="nav-label">Creditors</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18"/><path d="M7 15h3"/></svg><span class="nav-label">Cashbook</span></div>
+      <div class="nav-section-label">Insight</div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 6v6h-6"/></svg><span class="nav-label">Manager</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nav-label">Sales</span></div>
+      <div class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span class="nav-label">Inventory</span></div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="ow-ph">
+      <div>
+        <h1 class="ow-ph-t" style="display:flex;align-items:center;gap:7px">New quote <span class="ow-i">i</span></h1>
+        <p class="ow-ph-sub">Build the order live, on the call.</p>
+      </div>
+      <span class="ow-ph-sp"></span>
+      <div class="btn sm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+        Order tracking
+      </div>
+    </div>
+
+    <!-- WHO IT IS FOR — one 48px line. What you type, then what the books
+         already hold. The third line under each figure has gone to the
+         answer column, where it can be a sentence instead of a caption. -->
+    <div class="ow-cb">
+      <div class="ow-cb-f" style="flex:0 0 268px;border-bottom-color:var(--ow-steel-950)">
+        <span class="ow-cb-l">Client</span>
+        <span class="ow-cb-v"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Jackson Mubiru</span><span class="ow-fig" style="font-size:13px;font-weight:400;color:var(--ow-ink-600)">0772 481 330</span></span>
+      </div>
+      <div class="ow-cb-f" style="flex:0 0 136px">
+        <span class="ow-cb-l">Date</span>
+        <span class="ow-cb-v ow-fig" style="font-weight:500">15 Sep 2026</span>
+      </div>
+      <div class="ow-cb-k">
+        <div class="ow-cb-kn" style="flex:0 0 96px">
+          <span class="ow-cb-kl">Orders</span>
+          <span class="ow-cb-kv ow-fig">12</span>
+        </div>
+        <div class="ow-cb-kn" style="flex:0 0 136px">
+          <span class="ow-cb-kl">Owes now</span>
+          <span class="ow-cb-kv ow-fig ow-good">0 <span class="ow-fig-u">UGX</span></span>
+        </div>
+        <div class="ow-cb-kn" style="flex:1 1 auto">
+          <span class="ow-cb-kl">Last order</span>
+          <span class="ow-cb-kv ow-fig">230,000 <span class="ow-fig-u">yesterday</span></span>
+        </div>
+        <div class="ow-cb-kn" style="flex:none;border-left:0;display:flex;align-items:center">
+          <span class="ow-cp">30-day terms · +3%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="work">
+      <!-- ================= THE CLIENT'S SHEET =================
+           Five columns and nothing else: this is the paper they get.
+           No cost, no supplier, no margin — the rep can turn the screen
+           round. The shop's answer lives in the column at the right. -->
+      <div class="ow-pan sheet">
+        <div class="q-search">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Add item — name, SKU or supplier code</span>
+          <span class="kb">/</span>
+        </div>
+        <div class="q-usual">
+          <span class="q-usual-l">Jackson usually buys</span>
+          <span class="chipb">Black screws 8" <span class="n">7 Box</span></span>
+          <span class="chipb">Iron sheets G28 <span class="n">12 Pcs</span></span>
+          <span class="chipb">Hinges 100mm <span class="n">4 Ctn</span></span>
+          <span class="chipb" style="color:var(--ow-ink-600)">+3 more</span>
+        </div>
+
+        <div class="ow-tbl">
+          <div class="ow-tbl-h">
+            <span></span><span>Item</span>
+            <span class="ow-tbl-n">Qty</span>
+            <span class="ow-tbl-n">Price each</span>
+            <span class="ow-tbl-n">Line total</span>
+          </div>
+
+          <div class="ow-tbl-r">
+            <span class="q-num">1</span>
+            <span class="ow-tbl-c">
+              <span class="ow-tbl-p">Soft Close Mulper — Half Bend</span>
+              <span class="ow-tbl-s">Ctn · 4 on the shelf</span>
+            </span>
+            <span class="q-qty"><span class="gi">1</span><span class="u">Ctn</span></span>
+            <span class="ow-tbl-n"><span class="gi">265,000</span></span>
+            <span class="ow-tbl-n">265,000 <span class="ow-fig-u">UGX</span></span>
+          </div>
+
+          <div class="ow-tbl-r on">
+            <span class="q-num">2</span>
+            <span class="ow-tbl-c">
+              <span class="ow-tbl-p">G-MAN Bow Saw 24"</span>
+              <span class="ow-tbl-s">Bundle · 18 on the shelf</span>
+            </span>
+            <span class="q-qty"><span class="gi">2</span><span class="u">Bdl</span></span>
+            <span class="ow-tbl-n"><span class="gi">105,000</span></span>
+            <span class="ow-tbl-n">210,000 <span class="ow-fig-u">UGX</span></span>
+          </div>
+
+          <div class="ow-tbl-r">
+            <span class="q-num">3</span>
+            <span class="ow-tbl-c">
+              <span class="ow-tbl-p">Iron sheets G28 · 3m box profile</span>
+              <span class="ow-tbl-s">Pcs<span class="q-tag">0 on the shelf · 1 to order in</span></span>
+            </span>
+            <span class="q-qty"><span class="gi">1</span><span class="u">Pcs</span></span>
+            <span class="ow-tbl-n"><span class="gi">29,000</span></span>
+            <span class="ow-tbl-n">29,000 <span class="ow-fig-u">UGX</span></span>
+          </div>
+
+          <div class="ow-tbl-r sub-r">
+            <span></span>
+            <span style="font-size:12px;color:var(--ow-ink-600);font-weight:600">Goods subtotal</span>
+            <span></span><span></span>
+            <span class="ow-tbl-n">504,000 <span class="ow-fig-u">UGX</span></span>
+          </div>
+
+          <div class="ow-tbl-r chg">
+            <span class="q-num">4</span>
+            <span class="ow-tbl-c">
+              <span class="ow-tbl-p"><span class="q-mark"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span>Transport</span>
+            </span>
+            <span></span>
+            <span class="ow-tbl-n" style="font-size:12px;font-weight:400;color:var(--ow-ink-600);font-family:inherit;letter-spacing:0">charge</span>
+            <span class="ow-tbl-n"><span class="gi">60,000</span></span>
+          </div>
+
+          <div class="ow-tbl-r chg">
+            <span class="q-num">5</span>
+            <span class="ow-tbl-c">
+              <span class="ow-tbl-p"><span class="q-mark"><svg class="icon" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M2.5 10h19"/><path d="M6 14h4"/></svg></span>Credit terms</span>
+              <span class="ow-tbl-s" style="padding-left:23px">+3% on 30 days · due 15 Oct</span>
+            </span>
+            <span></span>
+            <span></span>
+            <span class="ow-tbl-n">15,120 <span class="ow-fig-u">UGX</span></span>
+          </div>
+
+        </div>
+
+        <div class="q-add">
+          <span class="q-add-sq"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="lbl">Next item, a charge, or credit terms</span>
+          <span class="chipb">Delivery <span class="n">60,000</span></span>
+          <span class="chipb">Urgent <span class="n">5%</span></span>
+          <span class="chipb">On credit <span class="n">+3%</span></span>
+          <span class="chipb" style="color:var(--ow-ink-600)">Other</span>
+        </div>
+
+        <div class="q-blank"></div>
+
+        <div class="q-foot">
+          <span>3 items · 2 charges</span>
+          <span style="color:var(--ow-rule)">·</span>
+          <span>Prices as of <span class="ow-fig">15 Sep, 08:40</span></span>
+          <span style="color:var(--ow-rule)">·</span>
+          <span>Holds <span class="ow-fig">7 days</span></span>
+          <span style="margin-left:auto">Client copy shows these five columns only</span>
+        </div>
+      </div>
+
+      <!-- ================= THE SHOP'S ANSWER ================= -->
+      <div class="ansn">
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">This quote</span>
+            <span class="ow-pan-n">2 to decide</span>
+          </div>
+          <div class="kv" style="padding-top:12px">
+            <span class="kv-l">You keep</span>
+            <span class="ow-ph-sp"></span>
+            <span class="kv-v">36,500</span>
+            <span class="qp-pill warn" style="align-self:center">7.2%</span>
+          </div>
+          <div class="meter-wrap" style="margin-top:12px">
+            <div class="meter">
+              <i style="width:48%"></i>
+              <b style="left:66.6%"></b>
+            </div>
+            <div class="meter-sc">
+              <span class="a">0%</span>
+              <span class="m" style="left:66.6%">your floor 10%</span>
+              <span class="z">15%</span>
+            </div>
+          </div>
+          <p class="say" style="padding-bottom:12px">Under your floor, and under the <b>11%</b> Jackson's last five orders kept. <b>519,500</b> on the goods holds 10%. On 30-day terms <b>579,120</b> sits on his account until 15 Oct.</p>
+
+          <div class="flag">
+            <span class="flag-m warn"><svg class="icon" viewBox="0 0 24 24"><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5"/></svg></span>
+            <span class="flag-b">Line 3 · nothing on the shelf<s>1 to order in from Kampala Steel</s></span>
+            <span class="flag-a"><span class="btn sm">Add to trip</span></span>
+          </div>
+          <div class="flag">
+            <span class="flag-m warn"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></svg></span>
+            <span class="flag-b">Line 2 · 500 less at Shafik Katwe<s>Keeps 1,000. Last bought 20 Aug</s></span>
+            <span class="flag-a"><span class="btn sm">Switch</span></span>
+          </div>
+        </div>
+
+        <div class="ow-pan">
+          <div class="ow-pan-h">
+            <span class="ow-pan-t">This line</span>
+            <span class="ow-pan-n">2 of 5</span>
+          </div>
+          <div class="ln-h">
+            <div class="ln-n">G-MAN Bow Saw 24"</div>
+            <div class="ln-s">2 Bdl · 18 on the shelf, covers it</div>
+          </div>
+          <div style="padding:8px 16px 6px;display:flex;align-items:baseline;gap:8px">
+            <span class="kv-l">Buy from</span>
+            <span class="ow-ph-sp"></span>
+            <span style="font-size:11px;color:var(--ow-ink-600)">priced at 2 Bdl</span>
+          </div>
+          <div class="sup on" style="border-top:1px solid var(--ow-rule-soft)">
+            <span class="sup-n">Mulongo Hardware<span class="sup-s">On this line · bought 6 times</span></span>
+            <span class="sup-p">95,000</span>
+            <span class="sup-d" style="color:var(--ow-ink-600)">—</span>
+          </div>
+          <div class="sup">
+            <span class="sup-n">Shafik Katwe<span class="sup-s">Last bought 20 Aug</span></span>
+            <span class="sup-p">94,500</span>
+            <span class="sup-d ow-good">&minus;500</span>
+          </div>
+          <div class="sup">
+            <span class="sup-n">Roto Industry<span class="sup-s">Last bought 2 Jul</span></span>
+            <span class="sup-p">97,200</span>
+            <span class="sup-d" style="color:var(--ow-ink-600)">+2,200</span>
+          </div>
+          <div class="ow-sr" style="border-top:1px solid var(--ow-rule)">
+            <span class="ow-sr-k">You keep on this line</span>
+            <span class="ow-sr-v ow-warn">20,000 <span class="ow-fig-u">9.5%</span></span>
+          </div>
+          <div class="ow-sr">
+            <span class="ow-sr-k">Holds 10% at</span>
+            <span class="ow-sr-v">105,600 <span class="ow-fig-u">/ Bdl</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="dock">
+    <div class="qp-says">
+      <span class="qp-l">Client pays · 5 lines</span>
+      <span class="qp-v">579,120</span>
+    </div>
+    <div class="qp-cell rule"><span class="qp-l">Costs you</span><span class="qp-sv">467,500</span></div>
+    <div class="qp-cell rule"><span class="qp-l">You keep</span><span class="qp-sv b warn">36,500</span><span class="qp-pill warn">7.2%</span></div>
+    <div class="qp-cell"><span class="qp-l">Cash in</span><span class="qp-sv">15 Oct</span></div>
+    <div class="dock-acts">
+      <span class="qbar-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="qbar-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></span>
+      <span class="qbar-save"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save quote</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

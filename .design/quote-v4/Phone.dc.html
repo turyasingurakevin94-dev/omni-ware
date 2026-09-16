@@ -1,0 +1,415 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* ==================================================================
+       OMNI-WARE CONSOLE CHROME — lifted from index.html, not remembered.
+       Tokens: index.html :root (l.39-64) and the OW layer (l.12477-12516).
+       Chrome: .topbar (l.127), .sidebar (l.305), nav button (l.348),
+       main padding (l.532), .ow-ph (l.12632), .ow-pan (l.12520),
+       .ow-tbl (l.13082), .ow-fig (l.13165), .ow-cp (l.12760).
+       ================================================================== */
+    :root{
+      --ow-steel-950:#16203C; --ow-steel-800:#243052; --ow-steel-400:#767F91;
+      --ow-steel-100:#E0DCD4; --ow-steel-050:#F7F5F2;
+      --ow-paper:#FFFFFF; --ow-paper-2:#FCFBF9;
+      --ow-oxide:#C93A30; --ow-oxide-deep:#A82D24; --ow-oxide-light:#E5483D; --ow-oxide-soft:#FDE8E4;
+      --ow-verdigris:#0F6B43; --ow-verdigris-soft:#E4F4EA;
+      --ow-amber:#95530C; --ow-amber-soft:#FDEEE1; --ow-amber-faint:#FEF8F2; --ow-amber-ink:#7A4A02;
+      --ow-crimson:#8E2A22; --ow-crimson-soft:#FBE5E2;
+      --ow-ink-900:#1C2233; --ow-ink-600:#5F6980; --ow-ink-400:#767F91;
+      --ow-rule:#E6E3DD; --ow-rule-soft:#EFECE6;
+      --ow-r-sm:8px; --ow-r:9px; --ow-r-lg:12px; --ow-r-pill:999px;
+      --ow-lift:0 1px 2px rgba(27,36,56,.06), 0 6px 20px rgba(27,36,56,.09);
+      --ow-tap:44px; --ow-measure:76ch;
+      --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ow-ink-900);background:var(--ow-steel-050);-webkit-font-smoothing:antialiased;}
+    a{color:var(--ow-oxide);text-decoration:none;} a:hover{color:var(--ow-oxide-deep);}
+    .app{position:relative;background:var(--ow-steel-050);overflow:hidden;}
+    .icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ---- navy top bar, 54px ---- */
+    .topbar{position:absolute;top:0;left:0;right:0;height:54px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:6px;padding:0 18px 0 20px;color:#fff;z-index:5;
+      box-shadow:0 1px 0 rgba(255,255,255,.07);}
+    .brand{display:flex;align-items:center;gap:10px;flex:none;margin-right:18px;}
+    .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Archivo Black',system-ui,sans-serif;font-size:13px;}
+    .brand .tag{font-family:'Archivo Black',system-ui,sans-serif;font-size:16.5px;letter-spacing:.4px;line-height:1.15;}
+    .tb-where{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+    .tb-where .g{color:#5A6774;font-weight:500;}
+    .tb-search{position:relative;width:320px;margin-left:22px;height:32px;border-radius:8px;
+      background:rgba(255,255,255,.09);display:flex;align-items:center;padding:0 10px;gap:8px;}
+    .tb-search .icon{width:14px;height:14px;stroke:#8E9BA8;stroke-width:2;}
+    .tb-search span{font-size:13px;color:#8E9BA8;}
+    .tb-kbd{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:#8E9BA8;
+      border:1px solid rgba(255,255,255,.18);border-bottom-width:2px;border-radius:4px;padding:1px 5px;}
+    .tb-sp{flex:1;}
+    .tb-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#C7CFD8;}
+    .tb-ic .icon{width:17px;height:17px;}
+
+    /* ---- navy rail, 220px. The row you are on is INVERTED, never oxide. ---- */
+    .sidebar{position:absolute;top:54px;left:0;bottom:0;width:220px;background:var(--ow-steel-950);
+      padding:14px 0 16px;display:flex;flex-direction:column;z-index:4;overflow:hidden;}
+    .navl{display:flex;flex-direction:column;gap:1px;padding:0 10px 10px;}
+    .nav-section-label{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
+      color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;}
+    .navl > .nav-section-label:first-child{padding-top:2px;}
+    .nav-b{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:500;color:#C7CFD8;white-space:nowrap;overflow:hidden;}
+    .nav-b .nav-icon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round;}
+    .nav-b .nav-label{overflow:hidden;text-overflow:ellipsis;}
+    .nav-b.active{background:var(--ow-paper);color:var(--ow-steel-950);font-weight:700;}
+    .nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;
+      background:rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:1px 6px;}
+
+    /* ---- the work area: main{padding:calc(54+26) 40px 32px; margin-left:220px} ---- */
+    .main{position:absolute;top:54px;left:220px;right:0;bottom:0;
+      padding:26px 40px 32px;overflow:hidden;}
+
+    /* ---- the page header ---- */
+    .ow-ph{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+      border-bottom:1px solid var(--ow-rule);padding:0 0 12px;margin-bottom:16px;}
+    .ow-ph-t{font-family:'Figtree',system-ui,sans-serif;font-weight:700;font-size:19px;margin:0;
+      letter-spacing:-.015em;line-height:1.1;}
+    .ow-ph-sub{font-size:12px;color:var(--ow-ink-600);margin:0 0 1px;}
+    .ow-ph-sp{flex:1;}
+    .ow-i{width:17px;height:17px;border-radius:50%;border:1px solid var(--ow-rule);
+      display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+      color:var(--ow-ink-400);margin-left:1px;align-self:center;}
+
+    /* ---- buttons ---- */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 13px;
+      border-radius:var(--ow-r);border:1px solid var(--ow-rule);background:var(--ow-paper);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;}
+    .btn.sm{height:30px;padding:0 11px;font-size:12px;}
+    .btn .icon{width:15px;height:15px;}
+    .btn-accent{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;font-weight:700;}
+    .btn-ghost{background:transparent;color:var(--ow-ink-600);}
+
+    /* ---- panel, chip, figure ---- */
+    .ow-pan{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    .ow-pan-h{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .ow-pan-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .ow-pan-n{font-size:11px;color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.02em;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+    .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+    .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .ow-cp.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+    .ow-fig{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .ow-fig-u{font-size:.82em;font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+    .ow-fig.ow-bad{color:var(--ow-crimson);}
+    .ow-fig.ow-good{color:var(--ow-verdigris);}
+    .ow-fig.ow-warn{color:var(--ow-amber-ink);}
+    .ow-mini{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;max-width:var(--ow-measure);}
+
+    /* ---- the document table ---- */
+    .ow-tbl{display:grid;grid-template-columns:var(--ow-tbl-cols);}
+    .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{display:grid;grid-column:1/-1;grid-template-columns:subgrid;
+      align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--ow-rule-soft);}
+    .ow-tbl-h{border-top:0;padding-top:6px;padding-bottom:6px;font-size:11px;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);
+      border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .ow-tbl-h + .ow-tbl-r{border-top:0;}
+    .ow-tbl-r{font-size:13px;color:var(--ow-ink-900);min-height:42px;padding-top:6px;padding-bottom:6px;}
+    .ow-tbl-c{min-width:0;}
+    .ow-tbl-p{display:block;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-s{display:block;min-width:0;margin-top:1px;font-size:12px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-tbl-n{justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+    .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:600;letter-spacing:.06em;}
+
+    /* ---- the ghost input: a document, not a form. Dashed = yours to change. ---- */
+    .gi{display:inline-block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:13px;font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-900);text-align:right;
+      padding:4px 6px;border:1px solid transparent;border-radius:var(--ow-r-sm);
+      border-bottom:1px dashed var(--ow-steel-400);}
+
+    /* ---- the dock: min-height 64, fixed to the foot, left of it the rail ---- */
+    .dock{position:absolute;left:220px;right:0;bottom:0;min-height:64px;display:flex;align-items:center;
+      padding:0 24px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);z-index:6;}
+    .dock-acts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;}
+    .qbar-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:40px;
+      height:40px;padding:0 12px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      color:var(--ow-ink-900);font-size:13px;font-weight:600;white-space:nowrap;background:var(--ow-paper);}
+    .qbar-btn .icon{width:18px;height:18px;}
+    .qbar-save{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;
+      padding:0 18px;border-radius:var(--ow-r-lg);background:var(--ow-oxide);color:#fff;
+      font-size:14px;font-weight:700;white-space:nowrap;}
+    .qbar-save .icon{width:15px;height:15px;}
+    .qp-says{display:flex;align-items:baseline;gap:10px;padding-right:16px;border-right:1px solid var(--ow-rule-soft);}
+    .qp-l{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-v{font-family:var(--mono);font-weight:600;font-size:22px;line-height:1.1;color:var(--ow-ink-900);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;}
+    .qp-cell{display:flex;align-items:baseline;gap:8px;padding:0 14px;flex:none;}
+    .qp-cell.rule{border-right:1px solid var(--ow-rule-soft);}
+    .qp-sv{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:15px;font-weight:500;color:var(--ow-ink-600);white-space:nowrap;}
+    .qp-sv.b{font-weight:600;color:var(--ow-ink-900);}
+    .qp-sv.warn{color:var(--ow-amber-ink);}
+    .qp-pill{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:var(--ow-r-sm);
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
+      background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .qp-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+    .qp-pill.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+
+    /* ---- the margin meter: colour AND position, never colour alone ---- */
+    .meter{position:relative;height:6px;border-radius:999px;background:var(--ow-steel-100);overflow:hidden;}
+    .meter i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--ow-amber);}
+    .meter i.good{background:var(--ow-verdigris);}
+    .meter b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ow-ink-900);border-radius:1px;}
+    /* ---------- B ON THE PHONE ---------------------------------------
+       820px is a SWITCH, not a reflow. 15px body, 44px targets, 16px page
+       padding, the document as rows you can work with a thumb, and the
+       shop's side — B's whole right column — behind the second tab. ---- */
+    .app{background:var(--ow-steel-050);}
+    .phbar{position:absolute;top:0;left:0;right:0;height:48px;background:var(--ow-steel-950);
+      display:flex;align-items:center;gap:10px;padding:0 10px 0 12px;color:#fff;}
+    .phbar .mk{width:28px;height:28px;border-radius:8px;background:var(--ow-oxide);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',system-ui,sans-serif;font-size:11px;}
+    .phbar .t{font-size:15px;font-weight:700;line-height:1.15;}
+    .phbar .t small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;
+      text-transform:uppercase;color:#8D99B5;margin-top:1px;}
+    .phbar .sp{flex:1;}
+    .phbar .ib{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#C7CFD8;}
+    .phbar .ib .icon{width:20px;height:20px;}
+    .ph{position:absolute;top:48px;left:0;right:0;bottom:104px;padding:16px;overflow:hidden;}
+    .ph::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;pointer-events:none;
+      background:linear-gradient(to bottom, rgba(247,245,242,0), rgba(247,245,242,.96));}
+
+    .fold{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);margin-bottom:12px;}
+    .fold-n{flex:none;font-size:15px;font-weight:600;white-space:nowrap;}
+    .fold-p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ow-ink-600);
+      letter-spacing:-.02em;}
+    .fold-m{margin-left:auto;min-width:0;font-size:12.5px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .fold .icon{width:18px;height:18px;color:var(--ow-ink-600);}
+
+    .tabs{display:flex;gap:0;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);padding:4px;margin-bottom:12px;}
+    .tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:36px;
+      border-radius:var(--ow-r-sm);font-size:14px;font-weight:600;color:var(--ow-ink-600);}
+    .tab.on{background:var(--ow-steel-950);color:#fff;}
+    .tab .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+      background:rgba(255,255,255,.18);border-radius:999px;padding:0 6px;}
+    .tab:not(.on) .n{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+    .tab .dot{width:6px;height:6px;border-radius:50%;background:var(--ow-amber);}
+
+    .pdoc{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .psearch{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;
+      border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-600);font-size:14px;}
+    .psearch .icon{width:18px;height:18px;color:var(--ow-ink-600);}
+    .pusual{position:relative;display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;
+      overflow:hidden;border-bottom:1px solid var(--ow-rule-soft);}
+    .pusual::after{content:"";position:absolute;top:0;bottom:0;right:0;width:32px;pointer-events:none;
+      background:linear-gradient(to right, rgba(255,255,255,0), #fff);}
+    .pusual .l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--ow-ink-600);margin-right:2px;white-space:nowrap;}
+    .pchip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:var(--ow-r-sm);
+      border:1px solid var(--ow-rule);font-size:13px;font-weight:500;white-space:nowrap;}
+    .pchip .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ow-ink-600);}
+
+    .prow{padding:11px 14px;border-top:1px solid var(--ow-rule-soft);}
+    .prow-t{display:flex;align-items:flex-start;gap:10px;}
+    .prow-n{flex:1;min-width:0;font-size:15px;font-weight:600;line-height:1.25;}
+    .prow-s{display:block;margin-top:3px;font-size:12.5px;font-weight:400;color:var(--ow-ink-600);}
+    .prow-v{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:16px;font-weight:600;white-space:nowrap;}
+    .prow-v .u{font-size:.68em;font-weight:400;color:var(--ow-ink-600);}
+    .prow-b{display:flex;align-items:center;gap:10px;margin-top:9px;}
+    .stp{display:flex;align-items:center;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      height:44px;overflow:hidden;background:var(--ow-paper);}
+    .stp button,.stp .b{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+      color:var(--ow-ink-900);background:none;border:0;}
+    .stp .b .icon{width:18px;height:18px;}
+    .stp .v{min-width:46px;text-align:center;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:15px;font-weight:600;border-left:1px solid var(--ow-rule-soft);border-right:1px solid var(--ow-rule-soft);
+      height:44px;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 8px;}
+    .stp .v i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--ow-ink-600);font-family:'Figtree',system-ui,sans-serif;}
+    .peach{margin-left:auto;text-align:right;}
+    .peach .k{display:block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-ink-600);}
+    .peach .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;
+      letter-spacing:-.02em;border-bottom:1px dashed var(--ow-steel-400);padding-bottom:1px;}
+    .ptag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--ow-r-pill);
+      background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:11px;font-weight:700;
+      margin-left:6px;vertical-align:-4px;}
+    .prow.chg{background:var(--ow-amber-faint);}
+    .prow.chg .prow-t{align-items:center;}
+    .pmark{display:inline-flex;color:var(--ow-ink-600);margin-right:8px;vertical-align:-3px;}
+    .pmark .icon{width:17px;height:17px;}
+    .padd{display:flex;align-items:center;gap:8px;height:48px;padding:0 14px;border-top:1px solid var(--ow-rule-soft);
+      color:var(--ow-ink-600);font-size:13.5px;}
+    .padd .sq{width:26px;height:26px;border-radius:var(--ow-r-sm);border:1px dashed var(--ow-rule);
+      display:flex;align-items:center;justify-content:center;}
+    .padd .sq .icon{width:15px;height:15px;}
+
+    /* the shop's side folded to a 36px strip, and the dock below it */
+    .shopstrip{position:absolute;left:0;right:0;bottom:68px;height:36px;display:flex;align-items:center;gap:8px;
+      padding:0 16px;background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+    .shopstrip{gap:7px;}
+    .shopstrip .l{font-size:12.5px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+    .shopstrip .f{font-size:12px;color:var(--ow-ink-600);white-space:nowrap;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;}
+    .shopstrip .f b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+    .shopstrip .icon{width:16px;height:16px;color:var(--ow-ink-600);margin-left:auto;}
+    .pdock{position:absolute;left:0;right:0;bottom:0;height:68px;display:flex;align-items:center;gap:10px;
+      padding:0 12px 0 16px;background:var(--ow-paper);border-top:1px solid var(--ow-rule);}
+    .pdock .k{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+      color:var(--ow-ink-600);}
+    .pdock .v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+      font-size:22px;font-weight:600;line-height:1.15;}
+    .pdock .v .u{font-size:.45em;font-weight:400;color:var(--ow-ink-600);margin-left:.25em;}
+    .pdock .acts{margin-left:auto;display:flex;align-items:center;gap:8px;}
+    .pdock .ib{width:44px;height:44px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);
+      display:flex;align-items:center;justify-content:center;color:var(--ow-ink-900);}
+    .pdock .ib .icon{width:20px;height:20px;}
+    .pdock .save{display:flex;align-items:center;gap:7px;height:44px;padding:0 16px;border-radius:var(--ow-r-lg);
+      background:var(--ow-oxide);color:#fff;font-size:15px;font-weight:700;white-space:nowrap;}
+    .pdock .save .icon{width:17px;height:17px;}
+  </style>
+</helmet>
+<div class="app" style="width:390px;height:844px">
+  <div class="phbar">
+    <div class="mk">OW</div>
+    <div class="t">New quote<small>Sell</small></div>
+    <div class="sp"></div>
+    <div class="ib"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+    <div class="ib"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></div>
+  </div>
+
+  <div class="ph">
+    <div class="fold">
+      <span class="fold-n">Jackson Mubiru</span>
+      <span class="fold-m">12 orders · owes nothing</span>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+
+    <!-- B's two columns become the phone's two tabs: the client's sheet,
+         and the shop's answer. The dot says the shop side has something. -->
+    <div class="tabs">
+      <div class="tab on">Quote <span class="n">5</span></div>
+      <div class="tab">Shop side <span class="n">2</span><span class="dot"></span></div>
+    </div>
+
+    <div class="pdoc">
+      <div class="psearch">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Add item — name or SKU</span>
+      </div>
+      <div class="pusual">
+        <span class="l">Usually</span>
+        <span class="pchip">Black screws 8" <span class="n">7 Box</span></span>
+        <span class="pchip">Iron sheets G28 <span class="n">12</span></span>
+        <span class="pchip" style="color:var(--ow-ink-600)">+4</span>
+      </div>
+
+      <div class="prow">
+        <div class="prow-t">
+          <span class="prow-n">Soft Close Mulper — Half Bend<span class="prow-s">Ctn · 4 on the shelf</span></span>
+          <span class="prow-v">265,000 <span class="u">UGX</span></span>
+        </div>
+        <div class="prow-b">
+          <span class="stp">
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></span>
+            <span class="v">1 <i>Ctn</i></span>
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </span>
+          <span class="peach"><span class="k">Price each</span><span class="v">265,000</span></span>
+        </div>
+      </div>
+
+      <div class="prow">
+        <div class="prow-t">
+          <span class="prow-n">G-MAN Bow Saw 24"<span class="prow-s">Bundle · 18 on the shelf</span></span>
+          <span class="prow-v">210,000 <span class="u">UGX</span></span>
+        </div>
+        <div class="prow-b">
+          <span class="stp">
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></span>
+            <span class="v">2 <i>Bdl</i></span>
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </span>
+          <span class="peach"><span class="k">Price each</span><span class="v">105,000</span></span>
+        </div>
+      </div>
+
+      <div class="prow">
+        <div class="prow-t">
+          <span class="prow-n">Iron sheets G28 · 3m box profile<span class="prow-s">Pcs<span class="ptag">0 on the shelf · 1 to order in</span></span></span>
+          <span class="prow-v">29,000 <span class="u">UGX</span></span>
+        </div>
+        <div class="prow-b">
+          <span class="stp">
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></span>
+            <span class="v">1 <i>Pcs</i></span>
+            <span class="b"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </span>
+          <span class="peach"><span class="k">Price each</span><span class="v">29,000</span></span>
+        </div>
+      </div>
+
+      <div class="prow chg">
+        <div class="prow-t">
+          <span class="prow-n"><span class="pmark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span>Transport</span>
+          <span class="prow-v">60,000 <span class="u">UGX</span></span>
+        </div>
+      </div>
+
+      <div class="prow chg">
+        <div class="prow-t">
+          <span class="prow-n"><span class="pmark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M2.5 10h19"/><path d="M6 14h4"/></svg></span>Credit terms<span class="prow-s" style="padding-left:25px">+3% on 30 days · due 15 Oct</span></span>
+          <span class="prow-v">15,120 <span class="u">UGX</span></span>
+        </div>
+      </div>
+
+      <div class="padd">
+        <span class="sq"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span>Next item, a charge, or terms</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="shopstrip">
+    <span class="l">Shop side</span>
+    <span class="f">costs <b>467,500</b> · keeps <b>36,500</b></span>
+    <span class="qp-pill warn">7.2%</span>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+  </div>
+
+  <div class="pdock">
+    <div>
+      <span class="k">Client pays</span>
+      <span class="v">579,120<span class="u">UGX</span></span>
+    </div>
+    <div class="acts">
+      <span class="ib"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="save"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
