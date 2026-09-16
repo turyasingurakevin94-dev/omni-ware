@@ -227,7 +227,7 @@ if (scope) {
   t.check(!/id="tab-chase"/.test(src) && !/data-tab="chase"/.test(sidebar),
     'Chase debts is not a destination of its own any more');
   const alias = extractFunction(src, 'resolveTab', 'index.html');
-  t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+  t.check(/if\(tab === 'chase'\)\{[^}]*msgLens = 'money'[^}]*return 'messages'; \}/.test(alias),
     'but the old door still opens it, on the money lens it meant — resolved once at the top of goToTab, '
     + 'so a saved last-tab cannot boot into a section that is gone');
   t.check(!/function renderChaseScreen/.test(src) && !/renderChaseBadge/.test(src),
@@ -343,9 +343,23 @@ if (scope) {
     'the Money tile keeps the canvas’s own sub, in the shape the other four wear');
   t.check(!/moneyOwed|moneyNote/.test(contact) && !/moneyOwed/.test(summary),
     'and no total is worked out over this queue — a position over a subset is a position nobody can trust');
-  const sect = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-  t.check(/what the whole book comes to, and how much of it is old, is <b>Debtors<\/b>/.test(sect),
+  /* THE SAME CLAIM AT TWO NEW ADDRESSES, and both moved for a reason.
+     The SECTION is tab-messages: Follow-ups and WhatsApp were merged, so
+     there is no tab-followups to look in and this lookup found nothing
+     rather than finding a line that had gone. And the reading it points
+     at is no longer called Debtors -- Debtors was cut and is the Owing
+     lens on Customers now, so a note still sending the owner to Debtors
+     would name a screen the rail does not have. What the assertion
+     means is unchanged and is the only thing that matters: this queue is
+     a SUBSET, it says so, and it says where the whole book is read. */
+  const sect = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  t.check(/What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing<\/b>/.test(sect),
     'the money lens names where that reading does live, rather than leaving the owner to wonder why it is not here');
+  /* And it is the MONEY lens's alone. Under Telling there is no book of
+     news for it to point at, so a note that stayed up would be a
+     pointer to nothing. */
+  t.check(/book\.style\.display = \(msgLens === 'money'\)/.test(extractFunction(src, 'renderMessages', 'index.html')),
+    'and only under the lens it is about');
 
   /* 5. THE TWO RULES. They were a sentence and a fold-out form in the
         old header. They are fields in THIS screen's header now, beside
@@ -356,10 +370,27 @@ if (scope) {
         under any other, and three rule fields do not fit a phone header.
         Read on Did it work whatever lens is open, so choosing the lens
         is never the only way to find out what the rule is. */
-  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  /* STILL ONE GROUP, at the address the merge gave it. The header those
+     fields sat in was the console header of a screen that no longer
+     exists; Messages wears the card system's title block, which has no
+     room for three rule fields and no "i" to fold them behind. So the
+     group moved down into #msg_fup_body -- the hub's own pane, which
+     also carries the held-back reasons and the register -- and the
+     screen grew a door to it, because three live features behind a
+     permanently hidden div is three features nobody can reach. What is
+     asserted is what was always asserted: the two rules are FIELDS, not
+     a fold-out form, and they are grouped with the rule that was
+     already there rather than scattered. */
+  const sec = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="fup_chase_after"/.test(sec) && /id="fup_chase_rest"/.test(sec)
     && /class="fup-rules"/.test(sec),
-    'the two rules the queue obeys are fields in the header, grouped with the rule that was already there');
+    'the two rules the queue obeys are fields, grouped with the rule that was already there');
+  /* The door. Without it the group, the reasons and the register are in
+     the file and on no screen. */
+  t.check(/id="msg_hub_btn"[^>]*aria-controls="msg_fup_body"/.test(sec),
+    'and the pane holding them has a door, so the rules can actually be changed');
+  t.check(/hub\.hidden = onPost \|\| !msgHubOpen/.test(extractFunction(src, 'renderMessages', 'index.html')),
+    'which opens and shuts it, and shuts it under Posting — there is no queue there for a rule to govern');
   const render = extractFunction(src, 'renderFollowUps', 'index.html');
   t.check(/fupTab === 'contact' && fupWhy === 'money'/.test(render) && /field\.hidden = !moneyLens/.test(render),
     'and they are on screen only while the lens they decide is the one being read');

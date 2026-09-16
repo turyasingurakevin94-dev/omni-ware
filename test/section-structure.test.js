@@ -47,7 +47,14 @@ const starts = [...src.matchAll(/<section id="tab-([a-z0-9-]+)"/g)];
    then amount rather than by amount alone, and resolveTab('debtors')
    opens it with that lens armed. The total went 34 -> 33 and the floor
    33 -> 32. */
-t.check(starts.length > 32, `every screen is checked (${starts.length})`);
+/* And 32 -> 31 when WhatsApp and Follow-ups became Messages. Neither
+   was usable alone: Follow-ups is the list of people you owe a word,
+   already tagged with a reason, and its only action was to open the box;
+   WhatsApp is the box, and its only content came from the list. The nav
+   index had already recorded the confusion -- the obvious search for
+   Follow-ups is "broadcast", which belonged to WhatsApp. One screen, one
+   rail row, one badge. */
+t.check(starts.length > 31, `every screen is checked (${starts.length})`);
 
 /* The screens live under <main>; the slice for each runs to the next
    one, which is how goToTab's own sibling assumption reads too. */

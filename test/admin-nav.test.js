@@ -86,7 +86,15 @@ const INDEX = railIndex();
 /* ---------- 1. nothing was lost ------------------------------------- */
 {
   const EVERY_TAB = [
-    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
+    /* 'whatsapp' leaves this list because the ROW left the rail, and
+       what replaced it is on the line below. WhatsApp and Follow-ups
+       were never usable apart -- Follow-ups is the list of people the
+       shop owes a word and its only action was to open the box;
+       WhatsApp is the box, and its only content came from that list.
+       One screen, one row, one badge, and both old doors still open it
+       (checked below). This list is the rail's complete map, so a
+       merged row is named once, not twice. */
+    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'messages',
     'compare', 'sourcing', 'suppliers',
     /* Purchase invoices is NOT in this list, and that is deliberate. An
        order, the invoice it becomes and the bills it raises against its
@@ -285,23 +293,34 @@ const INDEX = railIndex();
      two things a merge can actually lose -- the words people search by,
      and the name still being spoken at the destination. */
   {
-    const fu = INDEX.find((x) => x.tab === 'followups') || { label: '', keywords: '' };
+    /* The row is 'messages' now, and this lookup found NOTHING once it
+       was -- which is the failure mode this whole block exists to
+       catch, arriving from the other direction. The claim is unchanged:
+       whatever row survives a merge carries the absorbed screen's
+       search words, or the absorbed screen is unreachable for the words
+       people actually type. */
+    const fu = INDEX.find((x) => x.tab === 'messages') || { label: '', keywords: '' };
     const carried = ['worth', 'telling', 'marketing', 'recommend', 'brief',
       'picture', 'gif', 'promote', 'campaign', 'offer', 'suggest'];
     const lost = carried.filter((w) => !fu.keywords.includes(w));
     t.check(lost.length === 0,
       `Follow-ups carries the search words of the screen it absorbed${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
-    /* NOT "broadcast". WhatsApp is the real answer for it, and the note
-       above the Follow-ups button already records this law for the word
-       "stock": claiming a word another screen owns buries that screen
-       for its own most obvious search. */
-    const wa = INDEX.find((x) => x.tab === 'whatsapp') || { keywords: '' };
-    t.check(!/broadcast/.test(fu.keywords) && /broadcast/.test(wa.keywords),
-      'and not "broadcast", which is WhatsApp\'s own most obvious search, and still its');
+    /* "BROADCAST" INVERTS, and the inversion is the point of the merge.
+       The old rule was: Follow-ups may not claim "broadcast", because
+       WhatsApp owns it and claiming another screen's most obvious
+       search buries that screen. That rule was right, and it was the
+       app recording a confusion it could not resolve -- the obvious
+       search for the follow-up queue WAS "broadcast", and it landed on
+       a different screen. There is one screen now, so the word has one
+       home and no screen to bury. What survives is the law, not the
+       verdict: exactly one row may carry it. */
+    const owners = INDEX.filter((x) => /broadcast/.test(x.keywords));
+    t.check(/broadcast/.test(fu.keywords) && owners.length === 1,
+      'and "broadcast" is Messages\' now — one screen, so the word has one owner and buries nothing');
     t.check(!INDEX.some((x) => x.tab === 'telling') && !/id="tab-telling"/.test(src),
       'Worth telling is not a destination any more, and has no section left behind');
     const alias = extractFunction(src, 'resolveTab', 'index.html');
-    t.check(/if\(tab === 'telling'\)\{[^}]*fupWhy = 'telling'[^}]*return 'followups'; \}/.test(alias),
+    t.check(/if\(tab === 'telling'\)\{[^}]*msgLens = 'telling'[^}]*return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the lens it meant — resolved once at the top of goToTab, so a saved last-tab cannot boot into a section that is gone');
     const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
     const why = extractDeclaration(src, 'FUP_WHY', 'index.html');
@@ -325,8 +344,14 @@ const INDEX = railIndex();
       'and not "owing", which belongs to the screen that owns the whole book — Customers, since Debtors folded into it');
     t.check(!INDEX.some((x) => x.tab === 'chase') && !/id="tab-chase"/.test(src),
       'Chase debts is not a destination any more, and has no section left behind');
-    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*return 'followups'; \}/.test(alias),
+    t.check(/if\(tab === 'chase'\)\{[^}]*fupWhy = 'money'[^}]*msgLens = 'money'[^}]*return 'messages'; \}/.test(alias),
       'but the old door still opens it, on the money lens it meant — same resolve, same reason');
+    /* And so do the two doors the merge itself closed. A saved last-tab
+       is the case this is really about: a shop that shut the app on
+       WhatsApp must not boot into a section that is gone. */
+    t.check(/if\(tab === 'whatsapp'\)\{[^}]*msgLens = 'posting'[^}]*return 'messages'; \}/.test(alias)
+      && /if\(tab === 'followups'\)\{[^}]*return 'messages'; \}/.test(alias),
+      'and so do WhatsApp\'s and Follow-ups\' own — WhatsApp on the lens that was its desk');
     t.check(/'money','Money'/.test(why),
       'and the queue it brought is a named lens at the destination, not a filter somebody has to build');
     /* The badge did not go dark with the row. A debtor the money lens

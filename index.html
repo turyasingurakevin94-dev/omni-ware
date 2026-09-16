@@ -16439,7 +16439,12 @@
 
   /* The mono box. THE BOX IS WHAT SHIPS — the app cannot see WhatsApp,
      so the edited contents are the truth, not a template behind them. */
-  .om-box{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:400;line-height:1.55;color:var(--om-ink);white-space:pre-wrap;background:var(--om-inset);border:1px solid var(--om-rule-input);border-radius:11px;padding:11px 12px}
+  /* A <textarea> is 20 columns wide until something says otherwise, so
+     the draft drew as a 180px ribbon in a 300px card and every message
+     looked folded whether it was or not. It fills its card, and how wide
+     the message really is -- and whether a phone bubble will fold it --
+     is measured and said under it. */
+  .om-box{width:100%;box-sizing:border-box;resize:vertical;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:400;line-height:1.55;color:var(--om-ink);white-space:pre-wrap;background:var(--om-inset);border:1px solid var(--om-rule-input);border-radius:11px;padding:11px 12px}
 
   .om-drow{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid var(--om-rule-inner)}
 
@@ -16468,7 +16473,9 @@
      UGX" and "1,600,000 UGX" touch -- two figures with no gap read as one
      wrong number. Same proportions, four columns wider. */
   .om-arow,.om-cols-a{grid-template-columns:30px minmax(150px,1fr) 112px 104px 104px 116px 58px}
-  .om-mrow{grid-template-columns:30px minmax(160px,1fr) 96px 96px 74px}
+  /* Wider money and last-word tracks than the frame, for the same
+     reason as the other registers: the figures here carry UGX. */
+  .om-mrow,.om-cols-m{grid-template-columns:30px minmax(150px,1fr) 118px 108px 74px}
 
   /* The agent waterfall. Five rows on ONE denominator — client paid is
      100% — so two different totals can never be drawn the same length. */
@@ -16858,9 +16865,16 @@
      screen that sits inside main's padding is 80px narrower than the frame
      it is drawn from, and the register's last column falls off the end.
      The quote escapes the same way with margin:0 -18px. */
-  .om-screen{display:flex;flex-direction:column;min-height:100%;background:var(--om-ground);margin:0 -40px}
-  @media (min-width:1600px){ .om-screen{margin:0 -56px} }
-  @media (min-width:2000px){ .om-screen{margin:0 -72px} }
+  /* min-height:100% resolved against an auto-height <main> -- which is a
+     flex CHILD in a row, not a box with a height -- so it computed to
+     nothing and a short screen painted its warm ground for four hundred
+     pixels and then stopped, leaving the console's grey under the rest.
+     The viewport is the thing that actually has a height, so the ground
+     is measured from it, less exactly the padding main takes at each
+     width. */
+  .om-screen{display:flex;flex-direction:column;min-height:calc(100vh - var(--topbar-h) - 58px);background:var(--om-ground);margin:0 -40px}
+  @media (min-width:1600px){ .om-screen{margin:0 -56px;min-height:calc(100vh - var(--topbar-h) - 70px)} }
+  @media (min-width:2000px){ .om-screen{margin:0 -72px;min-height:calc(100vh - 116px)} }
   /* THE SCREEN'S OWN SEARCH. The handoff draws this inside a 58px top bar
      with the breadcrumb and the avatar -- but that bar is the APP's, not
      this screen's, and the app already draws one above every screen. A
@@ -17025,6 +17039,15 @@
        can ask for later. */
     .om-wf{grid-template-columns:62px minmax(0,1fr) 84px}
   }
+  .om-mrow-ph{display:none}
+  @media (max-width: 820px){
+    .om-mrow{display:block;padding:10px 16px;min-height:44px}
+    .om-mrow > :not(.om-mrow-ph){display:none}
+    .om-mrow-ph{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+    .om-mrow-ph-p{font-size:14px;font-weight:600}
+    .om-mrow-ph-s{font-size:11.5px;color:var(--om-ink-3)}
+    .om-mrow-ph-f{font-size:14px;text-align:right}
+  }
   .om-menu-w{position:relative}
   .om-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:var(--om-surface);border:1px solid var(--om-rule);border-radius:11px;box-shadow:var(--om-shadow);padding:4px;display:none}
   .om-menu.om-on{display:block}
@@ -17060,6 +17083,25 @@
   .om-blk{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:11px 14px}
   .om-acts{padding:11px 14px;border-top:1px solid var(--om-rule-inner);display:flex;gap:8px;flex-wrap:wrap}
   .om-read{font-size:12px;line-height:1.55;color:var(--om-ink-2);text-wrap:pretty}
+  /* A footnote UNDER the work rather than inside it: a screen that is
+     deliberately a subset says so where the subset ends, not in a
+     paragraph above it that nobody reads twice. Measured, because an
+     unmeasured line runs the width of a 1660px window. */
+  /* A line of screen-level context above the work: the one fact that
+     goes stale, and the act no panel below can offer. */
+  .om-subhead{display:flex;align-items:center;gap:10px;padding:0 22px 12px}
+  /* The note and the door it belongs with, so the door is one element on
+     both designs rather than two that can come to disagree. */
+  /* One quoted line of the demand: what it is on the left, what it is
+     worth on the right, and the balance they add to under a rule. */
+  .om-qline{display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--om-rule-inner)}
+  .om-qline > div:first-child{flex:1;min-width:0}
+  .om-qline-q{color:var(--om-ink-3)}
+  .om-qline-f{border-bottom:0;border-top:1px solid var(--om-rule);padding-top:9px}
+  .om-footrow{display:flex;align-items:flex-start;gap:14px;padding:0 22px 20px}
+  .om-footrow .om-foot{flex:1;padding:0}
+  .om-footrow .om-btn{flex:none}
+  .om-foot{margin:0;padding:0 22px 20px;max-width:88ch;font-size:11.5px;line-height:1.55;color:var(--om-ink-3);text-wrap:pretty}
   /* Settled work is dimmed, never hidden: it is still the answer to
      "did that one get paid". */
   .om-done{opacity:.62}
@@ -17069,12 +17111,23 @@
     .om-kpis{display:none}
     /* main pads 16px at this width, not 40 -- the desktop escape would
        drag the whole screen 24px off both edges. */
-    .om-screen{margin:0 -16px}
+    .om-screen{margin:0 -16px;min-height:calc(100vh - var(--mobile-topbar-h) - var(--mobile-bottomnav-h) - env(safe-area-inset-bottom) - 40px)}
     .om-ph-only{display:block}
     .om-qtitle{display:none}
     .om-card.om-list{border:0;border-radius:0;box-shadow:none}
-    .om-card-h,.om-cols{display:none}
+    /* The LIST card's header and its column row, which are the desktop's
+       way in and have their own phone equivalents above. Scoped, because
+       the side panel's cards wear .om-card-h too and un-scoping it left
+       "Last word" and "What the message quotes" as unlabelled blocks --
+       a card with no name is a card nobody can place. */
+    .om-list > .om-card-h,.om-cols{display:none}
     .om-body{display:block;padding:0}
+    .om-foot{padding:14px 16px 18px}
+    .om-subhead{padding:12px 16px}
+    /* Stacked, and the door is a thumb-sized target rather than a 32px
+       chip beside a paragraph. */
+    .om-footrow{flex-direction:column;gap:12px;padding:14px 16px 18px}
+    .om-footrow .om-btn{width:100%;height:44px}
     .om-list{overflow:visible}
     .om-side{width:auto;overflow:visible;padding:12px 16px 16px}
     .om-ph-head{background:var(--om-navy);padding:12px 16px 0}
@@ -17406,18 +17459,14 @@
              reason. NOT "owing", "who owes" or "aging": those belong to
              Debtors, which owns the whole book -- this row owns the
              ASKING, so it takes the words for the act. -->
-        <button class="om-nav" data-tab="followups" title="Follow-ups" data-keywords="keep posted update client waiting notify remind chase chasing collect collecting overdue late payment demand debt debts owed told worth telling marketing recommend recommendation brief picture gif promote tell offer suggest campaign">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-          <span class="nav-label">Follow-ups</span>
+        <button class="om-nav" data-tab="messages" title="Messages" data-keywords="whatsapp broadcast message messages send catalogue keep posted update client waiting notify remind chase chasing collect collecting overdue late payment demand debt debts owed told worth telling marketing recommend recommendation brief picture gif promote tell offer suggest campaign post posting status">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="nav-label">Messages</span>
           <b class="nav-badge" id="navBadgeFollowUps" hidden></b>
         </button>
         <button class="om-nav" data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="nav-label">Sales agents</span>
-        </button>
-        <button class="om-nav" data-tab="whatsapp" title="WhatsApp" data-keywords="broadcast message catalogue send">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.5-1.5 2 1-1 2c-4.5.5-9.5-4.5-9-9l2-1 1 2z"/></svg>
-          <span class="nav-label">WhatsApp</span>
         </button>
       </div>
       <div class="nav-group" data-group="Buy">
@@ -18657,34 +18706,183 @@
          the unit of work here is ONE MESSAGE TO ONE CLIENT, which the
          data has always known (followUpClientsToContact groups by
          customer for exactly that reason) and the layout used not to. -->
-    <section id="tab-followups" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Follow-ups</h1>
-        <p class="ow-ph-sub">Who is waiting to hear from you.</p>
-        <!-- THE EXPLANATION, ALL OF IT, BEHIND THE "i".
+    <section id="tab-messages" style="display:none;">
+      <!-- MESSAGES. WhatsApp and Follow-ups were never usable apart:
+           Follow-ups is the list of people you owe a word, already tagged
+           with a reason, and its only action was to open the box;
+           WhatsApp is the box, and its only content came from the list.
+           The nav index already recorded the confusion -- the obvious
+           search for Follow-ups is "broadcast", which belonged to
+           WhatsApp.
 
-             The screen used to argue with itself in grey: nine lines of
-             paragraph on the reference tab, two more under the rules, a
-             disclaimer under Held back and another under the picture. A
-             caveat that has to be read once does not belong on a screen
-             read every morning -- but it cannot be deleted either,
-             because two of this app's laws are why it exists: named
-             rather than dropped, and a failure must name itself. So the
-             whole argument is here, and what stays on the surface beside
-             each figure is one short line. -->
-        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue &mdash; the five tiles above name the reasons, and pressing one shows only those clients. One reason each, the dearest first, so nobody is listed twice. One message per client, however many things it covers, written from their own records for you to change and send. Ring them, take a payment, write down a day they promised, add to their list &mdash; all from here. The app never sends anything by itself.</p>
-        <p class="ow-ph-help"><b>Money</b> is who is past your terms, worst-aged first, each with the demand written from their own invoices &mdash; and those invoices on their card, adding to the balance, so the arithmetic is checked before it goes. Nobody is asked inside the grace period, nobody twice inside the rest period, and a balance that does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Both rules are fields in this header while that tile is pressed. This queue is only who is past your terms today; what the whole book comes to, and how much of it is old, is <b>Debtors</b>, which owns that reading &mdash; a total worked out over this list would describe a slice of the shop rather than the shop.</p>
-        <p class="ow-ph-help"><b>Held back</b> is who is deliberately not being messaged today: anyone told inside the last fortnight, chased in the last week, past your terms, or with no number on file. Somebody you are chasing for money does not also get a picture of cement &mdash; they get the statement. They are named rather than dropped, and a client already in the queue carries their hold on their own card. A debtor who named a day, or who was asked too recently, carries the two acts that conversation needs on their row. Something worth telling goes as a <b>picture</b> built from their own dealings, one per client per fortnight; look at it before you send.</p>
-        <p class="ow-ph-help"><b>Whether any of it works.</b> Bought within a fortnight is not proof the message did it &mdash; somebody due cement would have bought cement anyway. It is the only measure the books can honestly give, and a reason that never converts sinks down the ranking on its own. Tellings about goods still being sourced are left out: there is nothing on the shelf to buy yet. Money is not counted and cannot be &mdash; a chase note is dropped the moment the client owes nothing, which is exactly when the chase worked, so any rate would flatter you. The rules on <b>Register</b> are the whole algorithm: no model, and a site stage is asked once, goes stale by itself, and is set on the client’s own record.</p>
-        <span class="ow-ph-sp"></span>
-        <!-- TWO VIEWS, NOT THREE. "Did it work" was a third peer of the
-             work, and it brought its own metric strip with it -- so the
-             page's own furniture moved as you switched, and the reference
-             material sat where the eye looks for the queue. The register
-             IS the history and the score MEASURES it, so they share one
-             view: the table, and the 304px rail beside it. -->
+           THE CONSTRAINT THAT SHAPES ALL OF IT: this app cannot see
+           WhatsApp. Sending opens a deep link carrying whatever is in the
+           box, so the BOX is the truth and not a template, and afterwards
+           the owner stamps whether it went. Nothing is recorded until
+           they do. Do not fake a delivery state, do not disable the
+           draft, and never send the app's version instead of the edited
+           one.
+
+           Three lenses: Money and Telling are the queue, Posting is the
+           daily product post -- which is a message with a product
+           attached instead of an invoice, and which already lived here as
+           the WhatsApp screen's post desk.
+
+           The follow-ups panes below are kept and still rendered: they
+           carry the chase timing, the held-back reasons and the register,
+           none of which the handoff draws. They are recorded in
+           docs/design-suggestions-sell-section.md. -->
+      <div class="om-screen">
+        <div class="om-qtitle">
+          <div style="flex:1;min-width:0">
+            <h1 class="om-qtitle-t">Messages</h1>
+            <p class="om-qtitle-s">Every word the shop owes someone, and the box it is written in</p>
+          </div>
+          <div class="om-lensgroup" id="msg_lens" role="tablist" aria-label="Which messages">
+            <button type="button" class="om-lens om-on" role="tab" aria-selected="true" data-msglens="money">Money <span class="om-chip om-lenschip" id="msgSegMoney"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="telling">Telling <span class="om-chip om-lenschip" id="msgSegTelling"></span></button>
+            <button type="button" class="om-lens" role="tab" aria-selected="false" data-msglens="posting">Posting <span class="om-chip om-lenschip" id="msgSegPosting"></span></button>
+          </div>
+        </div>
+
+        <div class="om-kpis" id="msg_kpis"></div>
+        <div class="om-ph-only om-ph-head" id="msg_ph_head"></div>
+
+        <div class="om-body" id="msg_queue_body">
+          <div class="om-card om-list">
+            <div class="om-card-h">
+              <span class="om-card-t" id="msg_card_t">Who you owe a word</span>
+              <span class="om-fig om-n" id="msg_card_n" style="font-size:11.5px;color:var(--om-ink-3)"></span>
+              <span style="flex:1"></span>
+              <!-- A REAL BASIS, not flex:1 against a flex:1 spacer. With
+                   basis 0 the field's hypothetical size is nothing and the
+                   free space the spacer leaves is nothing, so it drew as a
+                   bare magnifier with no box to type in. -->
+              <div class="om-find" style="flex:1 1 210px;min-width:150px;max-width:250px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="om-find-i" id="msg_search" type="search" placeholder="Name, number, or what it is about" aria-label="Search messages" autocomplete="off">
+              </div>
+              <button type="button" class="om-btn om-btn-s" id="msg_broadcast_btn" style="height:32px;padding:0 11px;font-size:12.5px">Broadcast</button>
+            </div>
+            <div class="om-cols om-cols-m">
+              <span></span>
+              <span class="om-col">Who, and what about</span>
+              <span class="om-col" style="text-align:right">At stake</span>
+              <span class="om-col">Last word</span>
+              <span class="om-col" style="text-align:right">State</span>
+            </div>
+            <div class="om-scroll" id="msg_list"></div>
+          </div>
+          <div class="om-side" id="msg_side"></div>
+        </div>
+
+        <!-- WHERE THE WHOLE BOOK IS READ. This queue is deliberately a
+             subset -- who is past your terms TODAY, rested and
+             de-duplicated -- so a total worked out over it would describe
+             a slice of the shop rather than the shop. It used to point at
+             Debtors; Debtors is the Owing lens on Customers now, and the
+             pointer follows the reading rather than the old screen name.
+             On the money lens only: it settles nothing under Telling. -->
+        <!-- ONE MESSAGE PER CLIENT is the rule the whole queue is built
+             on -- followUpHubRows groups by customer for exactly this
+             reason -- and it held a paragraph behind an "i" on the screen
+             this one replaced. It reads under both queue lenses because
+             it is true under both; only the whole-book pointer is the
+             money lens's alone. -->
+        <!-- THE WAY INTO THE HUB, beside the line that explains the queue,
+             because what it opens is the rest of that explanation: the two
+             rules this queue obeys, the accounts it is holding back and
+             why, and the register behind both. It is HERE rather than in
+             the card header for a reason the two-designs law makes plain
+             -- the phone hides that header, so a door there is a door on
+             one design only, and these are three live features that
+             without it are reachable by nobody at all. One element, one
+             listener, both designs. -->
+        <div class="om-footrow">
+        <p class="om-foot" id="msg_queue_note"><span id="msg_note_book">Only who is past your terms today. What the whole book comes to, and how much of it is old, is <b>Customers &rarr; Owing</b>, which owns that reading. </span>One message per client, however many things they are waiting for &mdash; this queue groups by person, not by item, so nobody is sent four notes in a morning.</p>
+          <button type="button" class="om-btn om-btn-s" id="msg_hub_btn" aria-expanded="false" aria-controls="msg_fup_body">Rules &amp; register</button>
+        </div>
+
+        <!-- THE POSTING LENS is the WhatsApp post desk, which already did
+             this job: a recommendation over signals, capped at three a
+             day, with the same hand-off and the same stamp. -->
+        <div id="msg_posting_body" style="display:none;">
+
+        <!-- THE TWO THINGS THE WHATSAPP HEADER OWNED, at the lens that
+             holds its desk. The live headline says how many people are
+             waiting and how long the worst of them has waited -- the one
+             line on this screen that rots, which is why it was never
+             foldable and is not foldable here. The search reaches every
+             chat, answered or not, which no panel below can do: the
+             panes are queues, and a chat that has been answered has
+             left them. -->
+        <div class="om-subhead">
+          <span class="om-t" id="wa_ph_sub" style="font-size:12.5px;color:var(--om-ink-2)"></span>
+          <span style="flex:1"></span>
+          <button type="button" class="om-btn om-btn-s" id="wa_find_btn" title="Search every chat, waiting or not" style="height:30px;padding:0 10px;font-size:12px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            Search all chats
+          </button>
+        </div>
+
+      <div class="ow-strip ow-strip-5" id="wa_strip"></div>
+
+      <div class="po-grid wa-cons" id="wa_console">
+        <div class="ow-stack">
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t" id="wa_waiting_t">People waiting</span>
+              <span class="ow-pan-n" id="wa_waiting_n"></span>
+            </div>
+            <div class="wa-find" id="wa_find_row" style="display:none;">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+              <input id="wa_conv_search" placeholder="Search every chat by name or number" autocomplete="off">
+            </div>
+            <div id="wa_waiting"></div>
+            <p class="ow-mini" id="wa_waiting_note"></p>
+          </div>
+          <div class="ow-pan" id="wa_answered_pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Answered today</span>
+              <span class="ow-pan-n" id="wa_answered_n"></span>
+            </div>
+            <div id="wa_answered"></div>
+            <p class="ow-mini" id="wa_answered_note"></p>
+          </div>
+          <div class="ow-pan" id="wa_answering_pan"></div>
+          <div class="ow-pan" id="wa_words_pan"></div>
+        </div>
+
+        <div class="ow-stack">
+          <div class="ow-pan" id="wa_post_pan"></div>
+          <div class="ow-pan" id="wa_why_pan"></div>
+          <div class="ow-pan" id="wa_learn_pan"></div>
+          <div class="ow-pan" id="wa_bc_pan"></div>
+          <div class="ow-pan" id="wa_chan_pan"></div>
+        </div>
+      </div>
+
+      <div class="ow-pan" id="wa_connect_pan" style="display:none;">
+        <div class="ow-pan-h"><span class="ow-pan-t">Not connected</span></div>
+        <div id="wa_connect"></div>
+      </div>
+        <!-- THE APP'S OLDEST LAW, stated on the screen it matters most.
+             Everything on this desk -- what somebody is worth, what a
+             product has been asked for, what a post is expected to earn
+             -- is read from the shop's own books, and every send is a
+             tap. Neither half of that sentence is decoration. -->
+        <p class="om-foot">Every figure on this desk is counted live from the shop&rsquo;s own records, and nothing leaves the shop until you press send.</p>
+        </div>
+
+        <!-- Kept and still rendered: the chase timing, the held-back
+             reasons and the register. None of it is in the frame. -->
+        <div id="msg_fup_body" hidden>
         <div class="ow-seg fup-tabs" id="fup_tabs">
-          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Work<span class="ow-seg-n" id="fupSegContact"></span></button>
+          <!-- "Work" was the name when this WAS the work. The work is the
+               card queue above now, so this tab is what stands behind it:
+               who is being held back and why, and the long record of the
+               client picked up there. -->
+          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Held back &amp; record<span class="ow-seg-n" id="fupSegContact"></span></button>
           <button type="button" class="ow-seg-b" data-fuptab="all">Register<span class="ow-seg-n" id="fupSegAll"></span></button>
         </div>
         <!-- The rules this screen turns on, in the header beside the
@@ -18727,13 +18925,13 @@
           </div>
         </div>
         <button type="button" class="btn btn-ghost ow-sm" id="fup_add_any">Add a follow-up</button>
-      </div>
       <div id="fupSummaryRow"></div>
       <div id="fup_contact_pane">
         <div id="fup_contact_list"></div>
       </div>
       <div id="fup_all_pane" style="display:none;">
         <div id="fup_all_list"></div>
+      </div>        </div>
       </div>
     </section>
 
@@ -19709,60 +19907,6 @@
     </section>
 
     <!-- WHATSAPP: TODAY'S POST -->
-    <section id="tab-whatsapp" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">WhatsApp</h1>
-        <p class="ow-ph-sub" id="wa_ph_sub">The shop&rsquo;s online front desk.</p>
-        <p class="ow-ph-help">Who is waiting for an answer, what they asked for at your own prices, and what the shop has already said today. Every figure is counted live from the shop's own records, and nothing leaves the shop until you press send.</p>
-        <span class="ow-ph-sp"></span>
-        <button class="btn btn-ghost ow-sm btn-icon" id="wa_find_btn" title="Search every chat, waiting or not">
-          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-          Search all chats
-        </button>
-      </div>
-
-      <div class="ow-strip ow-strip-5" id="wa_strip"></div>
-
-      <div class="po-grid wa-cons" id="wa_console">
-        <div class="ow-stack">
-          <div class="ow-pan">
-            <div class="ow-pan-h">
-              <span class="ow-pan-t" id="wa_waiting_t">People waiting</span>
-              <span class="ow-pan-n" id="wa_waiting_n"></span>
-            </div>
-            <div class="wa-find" id="wa_find_row" style="display:none;">
-              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-              <input id="wa_conv_search" placeholder="Search every chat by name or number" autocomplete="off">
-            </div>
-            <div id="wa_waiting"></div>
-            <p class="ow-mini" id="wa_waiting_note"></p>
-          </div>
-          <div class="ow-pan" id="wa_answered_pan">
-            <div class="ow-pan-h">
-              <span class="ow-pan-t">Answered today</span>
-              <span class="ow-pan-n" id="wa_answered_n"></span>
-            </div>
-            <div id="wa_answered"></div>
-            <p class="ow-mini" id="wa_answered_note"></p>
-          </div>
-          <div class="ow-pan" id="wa_answering_pan"></div>
-          <div class="ow-pan" id="wa_words_pan"></div>
-        </div>
-
-        <div class="ow-stack">
-          <div class="ow-pan" id="wa_post_pan"></div>
-          <div class="ow-pan" id="wa_why_pan"></div>
-          <div class="ow-pan" id="wa_learn_pan"></div>
-          <div class="ow-pan" id="wa_bc_pan"></div>
-          <div class="ow-pan" id="wa_chan_pan"></div>
-        </div>
-      </div>
-
-      <div class="ow-pan" id="wa_connect_pan" style="display:none;">
-        <div class="ow-pan-h"><span class="ow-pan-t">Not connected</span></div>
-        <div id="wa_connect"></div>
-      </div>
-    </section>
 
     <!-- FIXED ASSETS -->
     <!-- WHAT THE SHOP OWNS, AND WHAT IS OWED ON IT.
@@ -30785,6 +30929,13 @@ function resolveTab(tab){
      Loans boots into getElementById('tab-loans').style and throws before
      anything renders. */
   if(tab === 'loans') return 'assets';
+  /* WHATSAPP AND FOLLOW-UPS ARE ONE SCREEN. Neither was usable alone:
+     the list's only action was to open the box, and the box's only
+     content came from the list. 'whatsapp' opens the Posting lens,
+     because the post desk is what that screen actually was; 'followups'
+     opens the queue. */
+  if(tab === 'whatsapp'){ msgLens = 'posting'; return 'messages'; }
+  if(tab === 'followups'){ msgLens = msgLens === 'posting' ? 'money' : msgLens; return 'messages'; }
   /* DEBTORS IS THE CUSTOMERS SCREEN'S OWING LENS. It was a second list
      over the same people: renderCustomers and renderDebtorsList had to be
      called together after every void and every payment, and every one of
@@ -30807,7 +30958,7 @@ function resolveTab(tab){
      whose last screen was Worth telling boots into
      getElementById('tab-telling').style and throws before anything
      renders. */
-  if(tab === 'telling'){ fupTab = 'contact'; fupWhy = 'telling'; return 'followups'; }
+  if(tab === 'telling'){ fupTab = 'contact'; fupWhy = 'telling'; msgLens = 'telling'; return 'messages'; }
   /* AND CHASE DEBTS, for the same reason and by the same reading. That
      page built its queue from debtChaseRows(); so does this hub, which
      has carried every one of its four bands since the day it was
@@ -30822,7 +30973,7 @@ function resolveTab(tab){
      hub puts both in one message. So the door that said "chase" presses
      the Money tile, and a shop whose last screen was Chase debts boots
      into it rather than into getElementById('tab-chase').style. */
-  if(tab === 'chase'){ fupTab = 'contact'; fupWhy = 'money'; return 'followups'; }
+  if(tab === 'chase'){ fupTab = 'contact'; fupWhy = 'money'; msgLens = 'money'; return 'messages'; }
   /* And the score's own door. It was a peer view; the measurement is now
      the Register's rail, so a saved last-tab or an old link lands on the
      material rather than on a pane that is gone. */
@@ -30912,12 +31063,16 @@ function goToTab(tab){
   if(tab==='prices') showPriceLens(prLens);
   if(tab==='media') renderMedia();
   if(tab==='pricing') renderPricing();
-  if(tab==='whatsapp'){ waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
   if(tab==='sourcing') renderSourcing();
   if(tab==='consignment') renderConsignment();
-  if(tab==='followups') renderFollowUps();
+  /* ONE SCREEN NOW. renderMessages draws the queue and calls
+     renderFollowUps itself, so the hub's panes, its badge and its chase
+     timing all stay in step with what the register above them shows.
+     waInboxEnter still runs, because the inbox is where the shop hears
+     back and the Waiting figure is read off it. */
+  if(tab==='messages'){ waInboxEnter(); renderMessages(); }
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderAssetsLoans();
   if(tab==='payroll') renderPayroll();
@@ -45267,6 +45422,30 @@ document.querySelectorAll('#iv_side .ow-seg-b').forEach(btn=>{
    were a second mechanism that vanished on the phone along with the
    headings themselves, so the shop's own screen could not be reordered
    at all. */
+document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
+  b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens));
+});
+/* The queue's own three controls, bound once at parse time: they sit in
+   the static card header, not in the region renderMessages redraws. */
+(()=>{
+  const find = document.getElementById('msg_search');
+  if(find) find.addEventListener('input', ()=> renderMessages());
+  const hub = document.getElementById('msg_hub_btn');
+  if(hub) hub.addEventListener('click', ()=>{ msgHubOpen = !msgHubOpen; renderMessages();
+    if(msgHubOpen){ const b = document.getElementById('msg_fup_body'); if(b) b.scrollIntoView({behavior:'smooth', block:'nearest'}); } });
+  /* BROADCAST IS ONE MESSAGE TO MANY, which is the post desk's act and
+     not the queue's -- the queue is one message to one client, which is
+     the whole reason it groups by customer. So the button opens the desk
+     that owns it rather than growing a second composer here. */
+  const bc = document.getElementById('msg_broadcast_btn');
+  if(bc) bc.addEventListener('click', ()=>{
+    msgSetLens('posting');
+    const open = document.getElementById('wa_bc_open');
+    if(open) open.click();
+    const pan = document.getElementById('wa_bc_pan');
+    if(pan) pan.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+})();
 document.querySelectorAll('#inv_lens .om-lens').forEach(btn=>{
   btn.addEventListener('click', ()=>invSetLens(btn.dataset.lens));
 });
@@ -96066,6 +96245,10 @@ function renderFollowUpsContact(){
   const tokens = searchTokens(fupQueueQuery);
   const under = fupWhy === 'all' ? rows : rows.filter(r=> fupRowLenses(r).has(fupWhy));
   const shown = !tokens.length ? under : under.filter(row=> matchesAllTokens(fupRowHay(row), tokens));
+  /* THE CARD QUEUE OWNS WHO IS BEING WORKED. Two selections over one
+     list is how a screen comes to write one client's message under
+     another client's name. */
+  if(typeof msgPickedId !== 'undefined' && msgPickedId != null) fupSelectedCustomerId = msgPickedId;
   if(!shown.some(r=> String(r.customerId) === String(fupSelectedCustomerId)))
     fupSelectedCustomerId = shown.length ? shown[0].customerId : null;
   const sel = shown.find(r=> String(r.customerId) === String(fupSelectedCustomerId)) || null;
@@ -96327,8 +96510,20 @@ function renderFollowUpsContact(){
       </div>
     </div>`;
   }
-  fupSetHTML(wrap, `<div class="ow-grid-l fup-grid">
-    <div class="ow-stack fup-left">${queuePanel}${fupHeldPanelHTML(now, rows)}</div>${work}</div>`);
+  /* THE QUEUE COLUMN IS GONE FROM THIS PANE, and that is the merge
+     rather than a loss. This pane opens UNDER the card queue, which is
+     the same walk of the same ledger drawn by followUpHubRows: keeping
+     the console list here drew every client twice on one screen, each
+     copy with its own selection, and a shop reading two lists of the
+     same four people trusts neither.
+
+     What is left is what the card screen does not have -- who is NOT
+     being asked and why, and the long record of whoever is picked
+     above: the invoice-by-invoice check, the optional lines, the
+     promise and the payment doors. The card queue owns the picking, so
+     fupSelectedCustomerId follows msgPickedId rather than holding an
+     opinion of its own. */
+  fupSetHTML(wrap, `${fupHeldPanelHTML(now, rows)}${work}`);
 }
 
 /* THE FIVE TILES, WHICH ARE ALSO THE FILTER.
@@ -96588,6 +96783,477 @@ function renderFollowUpScore(){
   return work + rules;
 }
 
+/* MESSAGES: the queue and the box, which were never usable apart.
+
+   msgLens is which of the three is open. Money and Telling are the same
+   queue read two ways -- followUpHubRows tags every row with the kinds it
+   is here for -- and Posting is the daily product post, which is a
+   message with a product attached instead of an invoice. */
+let msgLens = 'money';
+let msgPickedId = null;
+/* Shut by default: the queue is the work, and the rules, the held-back
+   reasons and the register are the settings and the audit behind it. */
+let msgHubOpen = false;
+
+function msgSetLens(key){
+  msgLens = key;
+  /* The hub's own lens follows, so the panes below and the badge keep
+     describing the same walk of the ledger. */
+  if(key === 'money' || key === 'telling'){ fupTab = 'contact'; fupWhy = key; }
+  document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
+    const on = b.dataset.msglens === key;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderMessages();
+}
+
+/* WHO SPOKE LAST, AND WHEN -- the single most useful column on the
+   screen, and the one the app can actually answer: it knows when IT last
+   wrote (the contact stamps), and it knows when a conversation last had
+   an inbound message. It does NOT know whether a WhatsApp message was
+   read, and never claims to. */
+function msgLastWord(row){
+  const c = row.customer;
+  const mine = c ? followUpLastContactAt(c.id) : null;
+  const theirs = c ? msgLastInboundAt(c) : null;
+  if(!mine && !theirs) return {who:'never', at:null};
+  if(mine && (!theirs || mine >= theirs)) return {who:'you', at:mine};
+  return {who:'them', at:theirs};
+}
+/* The newest inbound message from a number this customer is on. The
+   inbox is the only place the shop hears back, and it is loaded from the
+   server -- so an empty inbox means "not loaded or nothing", never "they
+   did not reply", which is why a missing answer reads as 'never' rather
+   than as silence on their part. */
+function msgLastInboundAt(c){
+  const phones = contactPhones(c).map(p=> String(p).replace(/[^0-9]/g,'').slice(-9));
+  if(!phones.length) return null;
+  let best = null;
+  ((waInbox && waInbox.allMsgs) || []).forEach(m=>{
+    if(m.direction === 'out' || m.from_me) return;
+    const d = String(m.wa_id || m.from || '').replace(/[^0-9]/g,'').slice(-9);
+    if(!phones.includes(d)) return;
+    const at = String(m.created_at || m.at || '').slice(0,10);
+    if(at && (!best || at > best)) best = at;
+  });
+  return best;
+}
+/* The last time the shop wrote to them, from the contact stamps the hub
+   already keeps -- the same ledger markDebtChased and
+   recordFollowUpClient write to. */
+function followUpLastContactAt(customerId){
+  let best = null;
+  (followUpsAll() || []).forEach(f=>{
+    if(String(f.customerId) !== String(customerId)) return;
+    (f.contacts || []).forEach(k=>{
+      const at = String(k.at || '').slice(0,10);
+      if(at && (!best || at > best)) best = at;
+    });
+  });
+  return best;
+}
+
+function renderMessages(){
+  const queue = document.getElementById('msg_queue_body');
+  const posting = document.getElementById('msg_posting_body');
+  if(!queue || !posting) return;
+  const onPost = msgLens === 'posting';
+  queue.style.display = onPost ? 'none' : '';
+  posting.style.display = onPost ? '' : 'none';
+  /* The hub belongs to the queue lenses. Under Posting there is no queue
+     for its rules to govern, so the door and its panes go with it. */
+  const hub = document.getElementById('msg_fup_body');
+  if(hub) hub.hidden = onPost || !msgHubOpen;
+  const hubBtn = document.getElementById('msg_hub_btn');
+  if(hubBtn){
+    hubBtn.setAttribute('aria-expanded', (!onPost && msgHubOpen) ? 'true' : 'false');
+    hubBtn.classList.toggle('om-on', !onPost && msgHubOpen);
+  }
+  /* The one-message rule reads under both queue lenses; the whole-book
+     pointer is the money lens's alone, because under Telling there is no
+     book of news for it to point at. */
+  const foot = document.getElementById('msg_queue_note');
+  if(foot) foot.style.display = onPost ? 'none' : '';
+  const book = document.getElementById('msg_note_book');
+  if(book) book.style.display = (msgLens === 'money') ? '' : 'none';
+  document.querySelectorAll('#msg_lens .om-lens').forEach(b=>{
+    const on = b.dataset.msglens === msgLens;
+    b.classList.toggle('om-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+
+  /* The hub still renders: it owns the chase timing, the held-back
+     reasons and the register, and the badge is counted from its walk. */
+  renderFollowUps();
+
+  const now = Date.now();
+  const chase = debtChaseRows();
+  const rows = followUpHubRows(now, chase);
+  const money = rows.filter(r=> r.kinds.has('money'));
+  const telling = rows.filter(r=> r.kinds.has('telling') || r.kinds.has('news'));
+  const setN = (id, n, bad)=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = n;
+    el.style.background = bad && n ? 'var(--om-bad)' : 'var(--om-neutral)';
+    el.style.color = bad && n ? 'var(--om-bad-ink)' : 'var(--om-neutral-ink)';
+  };
+  setN('msgSegMoney', money.length, true);
+  setN('msgSegTelling', telling.length, false);
+  /* THE POSTING COUNT IS THE NOMINATIONS, and it is deliberately NOT in
+     the badge: a nomination is the algorithm's suggestion, not a word the
+     shop owes anybody, and a badge that rises because the queue grew
+     teaches people to ignore badges. */
+  const picks = (typeof waPickView === 'function') ? waPickView(todayISO()) : null;
+  setN('msgSegPosting', picks ? (picks.ranked || []).length : 0, false);
+
+  renderMessageKpis(money, telling, picks);
+  renderMessagePhoneHead(money, telling, picks);
+  if(onPost) return;
+
+  const list = document.getElementById('msg_list');
+  if(!list) return;
+  const tokens = searchTokens(document.getElementById('msg_search') ? document.getElementById('msg_search').value : '');
+  let shown = (msgLens === 'money' ? money : telling);
+  if(tokens.length){
+    shown = shown.filter(r=> matchesAllTokens(
+      [r.name, r.phone, (r.items||[]).map(i=>i.productName||'').join(' ')].join(' ').toLowerCase(), tokens));
+  }
+  const title = document.getElementById('msg_card_t');
+  if(title){
+    /* .om-card-t ellipsises, and an ellipsis with nothing behind it is a
+       sentence the owner cannot finish reading. */
+    title.textContent = msgLens === 'money'
+      ? 'About money — worst-aged first'
+      : 'Telling them something';
+    title.title = title.textContent;
+  }
+  const n = document.getElementById('msg_card_n');
+  if(n) n.textContent = `${shown.length} to write`;
+
+  if(!shown.length){
+    list.innerHTML = `<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--om-ink-3);line-height:1.55">`
+      + (msgLens === 'money'
+        ? `Nobody is due a chase today. The Chase engine is holding the rest back &mdash; open <b>Rules &amp; register</b> above to read why, one customer at a time.`
+        : `Nobody is waiting on news. A row appears here when something a client asked about comes in, or a price they were quoted moves.`)
+      + `</div>`;
+    msgPickedId = null;
+    renderMessageSide(null);
+    return;
+  }
+  list.innerHTML = shown.map(r=> msgRowHTML(r)).join('');
+  list.querySelectorAll('[data-msgrow]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      msgPickedId = row.dataset.msgrow;
+      renderMessages();
+    });
+  });
+  if(msgPickedId != null && !shown.some(r=> String(r.customerId) === String(msgPickedId))) msgPickedId = null;
+  const picked = msgPickedId == null ? null : shown.find(r=> String(r.customerId) === String(msgPickedId));
+  renderMessageSide(picked || null);
+}
+
+function msgRowHTML(r){
+  const stake = r.chase ? (Number(r.chase.debt)||0) : (Number(r.debt)||0);
+  const lw = msgLastWord(r);
+  const on = String(msgPickedId) === String(r.customerId) ? ' om-on' : '';
+  const about = r.chase
+    ? `owes ${esc(fmtUGX(Math.round(stake)))}${r.chase.oldestDays != null ? ` &middot; ${r.chase.oldestDays} days` : ''}`
+    : (r.items && r.items.length)
+      ? esc(r.items.slice(0,2).map(i=> i.productName || 'an item').join(', '))
+      : 'something you said you would tell them';
+  const tone = r.chase ? 'om-bad' : 'om-studied';
+  /* State is what the SHOP has done, never what WhatsApp did: draft means
+     nothing has been written, due means it is owed today, sent means the
+     owner stamped it. */
+  const state = lw.who === 'you'
+    ? `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-good);color:var(--om-good-ink)">sent</span>`
+    : r.chase
+      ? `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-bad);color:var(--om-bad-ink)">draft</span>`
+      : `<span class="om-chip" style="height:19px;padding:0 7px;background:var(--om-neutral);color:var(--om-neutral-ink)">due</span>`;
+  const lwText = lw.who === 'never' ? 'never'
+    : `${lw.who}, ${esc(fmtShortDate(lw.at))}`;
+  return `<div class="om-mrow${on}" data-msgrow="${esc(String(r.customerId))}" tabindex="0" role="button">
+    <span class="om-av ${tone}">${esc(nameInitials(r.name))}</span>
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:13.5px;font-weight:600">${esc(r.name)}</div>
+      <div class="om-t" style="margin-top:2px;font-size:11px;color:var(--om-ink-3)">${about}</div>
+    </div>
+    <div class="om-fig om-n" style="font-size:13px;text-align:right;color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'—'}</div>
+    <div class="om-t" style="font-size:11.5px;color:var(--om-ink-3)">${lwText}</div>
+    <div style="text-align:right">${state}</div>
+    <div class="om-mrow-ph">
+      <span class="om-t om-mrow-ph-p">${esc(r.name)}</span>
+      <span class="om-fig om-mrow-ph-f om-n" style="color:var(${stake>0?'--om-bad-ink':'--om-ink-3'})">${stake>0?esc(fmtUGX(Math.round(stake))):'—'}</span>
+      <span class="om-t om-mrow-ph-s">${about} &middot; ${lwText}</span>
+      <span style="text-align:right">${state}</span>
+    </div>
+  </div>`;
+}
+
+function renderMessageKpis(money, telling, picks){
+  const el = document.getElementById('msg_kpis');
+  if(!el) return;
+  const stake = money.reduce((s,r)=> s + (r.chase ? (Number(r.chase.debt)||0) : 0), 0);
+  const overdue = money.reduce((s,r)=> s + ((r.chase && r.chase.oldestDays >= 0) ? (Number(r.chase.debt)||0) : 0), 0);
+  const held = money.concat(telling).reduce((s,r)=> s + (r.held ? r.held.length : 0), 0);
+  el.innerHTML = `
+  <div class="om-kpi om-kpi-bad">
+    <div class="om-lbl" style="font-size:10.5px">About money</div>
+    <div class="om-fig om-kpi-f om-n">${money.length}</div>
+    <div class="om-kpi-s" style="color:var(--om-bad-card-ink)">${esc(fmtUGX(Math.round(stake)))} riding on them${overdue>0?` &middot; ${esc(fmtUGX(Math.round(overdue)))} of it overdue`:''}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Telling someone something</div>
+    <div class="om-fig om-kpi-f om-n">${telling.length}</div>
+    <div class="om-kpi-s">no money at stake${held?` &middot; ${held} held back with a reason`:''}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Nominated to post</div>
+    <div class="om-fig om-kpi-f om-n">${picks ? (picks.ranked||[]).length : 0}</div>
+    <div class="om-kpi-s">${picks ? `${(picks.picks||[]).length} of 3 slots taken today` : 'the post desk is still reading'}</div>
+  </div>
+  <div class="om-kpi">
+    <div class="om-lbl" style="font-size:10.5px">Waiting on a reply</div>
+    <div class="om-fig om-kpi-f om-n">${(typeof waWaitingConvs === 'function' && waInbox) ? waWaitingConvs(waInbox.convs, waInbox.allMsgs, Date.now()).length : 0}</div>
+    <div class="om-kpi-s">in the inbox &mdash; the only place the shop hears back</div>
+  </div>`;
+}
+
+function renderMessagePhoneHead(money, telling, picks){
+  const el = document.getElementById('msg_ph_head');
+  if(!el) return;
+  const stake = money.reduce((s,r)=> s + (r.chase ? (Number(r.chase.debt)||0) : 0), 0);
+  const short = (n)=> n >= 1000000 ? (n/1000000).toFixed(2).replace(/\.?0+$/,'') + 'm'
+    : n >= 1000 ? Math.round(n/1000) + 'k' : String(Math.round(n));
+  const tab = (key,label,n)=>`<button type="button" class="om-ph-tab${msgLens===key?' om-on':''}" data-msglens="${key}">${esc(label)} ${n}</button>`;
+  el.innerHTML = `<div class="om-ph-t">Messages</div>
+    <div class="om-ph-figs">
+      <div class="om-ph-fig om-ph-fig-bad"><div class="om-ph-fig-l" style="color:var(--om-bad-ink)">At stake</div><div class="om-fig om-ph-fig-v" style="color:var(--om-bad-ink)">${esc(short(stake))}</div></div>
+      <div class="om-ph-fig"><div class="om-ph-fig-l">To write</div><div class="om-fig om-ph-fig-v">${money.length + telling.length}</div></div>
+      <div class="om-ph-fig"><div class="om-ph-fig-l">Nominated</div><div class="om-fig om-ph-fig-v">${picks ? (picks.ranked||[]).length : 0}</div></div>
+    </div>
+    <div class="om-ph-tabs">${tab('money','Money',money.length)}${tab('telling','Telling',telling.length)}${tab('posting','Posting','')}</div>`;
+  el.querySelectorAll('.om-ph-tab').forEach(b=>b.addEventListener('click', ()=>msgSetLens(b.dataset.msglens)));
+}
+
+/* THE PANEL, and the box in it is the whole point.
+
+   The app cannot see WhatsApp. Pressing send opens a deep link carrying
+   whatever is in this box AT THAT MOMENT -- so the box is editable, it is
+   what ships, and the screen never substitutes its own version. Nothing
+   is recorded until the owner comes back and says whether it went. */
+function renderMessageSide(r){
+  const el = document.getElementById('msg_side');
+  if(!el) return;
+  if(!r){
+    el.innerHTML = `<div class="om-card" style="padding:18px 16px;font-size:12.5px;color:var(--om-ink-3);line-height:1.55">Pick somebody to read what will be sent. The box is editable and the box is what ships &mdash; this app cannot see WhatsApp, so nothing is recorded until you say whether it went.</div>`;
+    return;
+  }
+  const stake = r.chase ? (Number(r.chase.debt)||0) : 0;
+  const lw = msgLastWord(r);
+  const body = msgDraftFor(r);
+  el.innerHTML = `
+  <div class="om-card">
+    <div class="om-pan">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span class="om-av om-av-onnavy om-av-lg">${esc(nameInitials(r.name))}</span>
+        <div style="min-width:0;flex:1">
+          <div class="om-pan-t">${esc(r.name)}</div>
+          <div class="om-pan-m">${r.phone ? esc(r.phone) : 'no number on file'}${stake>0?` &middot; ${esc(fmtUGX(Math.round(stake)))} at stake`:''}</div>
+        </div>
+        ${r.chase && r.chase.chasedCount ? `<span class="om-chip" style="background:var(--om-rail-on);color:var(--om-on-navy)">${r.chase.chasedCount+1}${r.chase.chasedCount===0?'st':'th'} chase</span>` : ''}
+      </div>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="om-lbl" style="font-size:10.5px">What will be sent</span>
+        <span style="font-size:11px;color:var(--om-ink-3);margin-left:auto">edit it &mdash; the box is what ships</span>
+      </div>
+      <textarea class="om-box" id="msg_box" rows="12" style="margin-top:7px">${esc(body)}</textarea>
+      <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap">
+        <span class="om-chip om-fig om-n" id="msg_wide" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
+        <span class="om-chip" id="msg_fits" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
+        <span style="flex:1"></span>
+        <button type="button" class="om-btn om-btn-s" id="msg_shorter" style="height:28px;padding:0 10px;font-size:12px">Shorter</button>
+        <button type="button" class="om-btn om-btn-s" id="msg_firmer" style="height:28px;padding:0 10px;font-size:12px">Firmer</button>
+      </div>
+    </div>
+    <div style="padding:0 14px 12px">
+      <button type="button" class="om-btn om-btn-w" id="msg_send" style="height:40px;width:100%">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Open WhatsApp with this
+      </button>
+    </div>
+    <div class="om-blk">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none;margin-top:1px"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.6 6.6A18.5 18.5 0 0 0 2 12s3 8 10 8a9.1 9.1 0 0 0 5.4-1.6"/><path d="M1 1l22 22"/></svg>
+        <span style="font-size:12px;line-height:1.55;color:var(--om-ink-2)">The app cannot see WhatsApp. When you come back, say whether it went &mdash; nothing is recorded until you do.</span>
+      </div>
+      <div style="margin-top:9px;display:flex;gap:8px">
+        <button type="button" class="om-btn om-btn-s" id="msg_was_sent" style="height:34px;flex:1;color:var(--om-good-ink)">It was sent</button>
+        <button type="button" class="om-btn om-btn-s" id="msg_not_sent" style="height:34px;flex:1;color:var(--om-bad-ink)">It was not</button>
+      </div>
+    </div>
+  </div>
+
+  ${msgQuotedHTML(r)}
+
+  <div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">Last word</span></div>
+    <div style="padding:0 14px 12px">
+      <div class="om-read">${lw.who === 'never'
+        ? 'Nothing has been said to this customer and nothing has come back. This would be the first word.'
+        : lw.who === 'you'
+          ? `You wrote last, on ${esc(fmtShortDate(lw.at))}. Nothing has come back since.`
+          : `They wrote last, on ${esc(fmtShortDate(lw.at))} &mdash; the reply is in the inbox.`}</div>
+      ${r.held && r.held.length ? `<div class="om-read" style="margin-top:9px"><b>Held back:</b> ${r.held.map(h=> esc(h.label)).join('; ')}. The engine is leaving them alone for a reason, and this row is here for something else.</div>` : ''}
+    </div>
+  </div>`;
+
+  const box = el.querySelector('#msg_box');
+  const send = el.querySelector('#msg_send');
+  if(send) send.onclick = ()=>{
+    /* Built from the box's CURRENT contents, never from the template --
+       an edited message that ships as the original is the one thing this
+       screen must never do. */
+    window.open(waComposeUrl(r.phone || '', box ? box.value : body), '_blank');
+  };
+  const sent = el.querySelector('#msg_was_sent');
+  if(sent) sent.onclick = ()=>{
+    /* The stamp. This is the only thing that records anything, and it
+       writes to the same ledger the hub and the chase engine read. */
+    /* ONE call. recordFollowUpClient stamps every follow-up on the row
+       AND calls markDebtChased itself when there is a chase -- doing it
+       again here would chase the same customer twice on one press, which
+       the rest-day arithmetic would then read as two attempts. */
+    /* The SAME ticks the draft was written from, so what is stamped as
+       told is what the message actually said. The hub's own stamp reads
+       fupTickState too; a second opinion here would close a follow-up
+       whose line never went. */
+    fupLastTold = recordFollowUpClient(r.customerId, fupTickState(String(r.customerId), r));
+    delete fupDrafts[String(r.customerId)];
+    saveData();
+    msgPickedId = null;
+    renderMessages();
+    toast('Stamped as sent — it moves to Waiting on a reply');
+  };
+  const not = el.querySelector('#msg_not_sent');
+  if(not) not.onclick = ()=> toast('Nothing recorded — the row stays exactly as it was');
+  const shorter = el.querySelector('#msg_shorter');
+  if(shorter && box) shorter.onclick = ()=>{ box.value = msgShorter(box.value); msgMeasure(el, box); };
+  const firmer = el.querySelector('#msg_firmer');
+  if(firmer && box) firmer.onclick = ()=>{ box.value = msgFirmer(box.value); msgMeasure(el, box); };
+  /* MEASURED FROM THE BOX, on every keystroke. The two chips under the
+     draft used to read "14 chars wide" and "fits a phone" as literals --
+     true of nothing, and a claim about a message the owner may have
+     rewritten since. */
+  /* Typed words are the owner's, and they are kept where the long record
+     keeps its own, so the two boxes cannot drift apart. */
+  if(box) box.addEventListener('input', ()=>{ fupDrafts[String(r.customerId)] = box.value; msgMeasure(el, box); });
+  msgMeasure(el, box);
+}
+
+/* HOW WIDE THE MESSAGE ACTUALLY IS, and whether a phone will fold it.
+   MSG_BUBBLE is the app's own measurement, not a guess: the quote sender
+   found this phone's bubble wraps a monospace line at roughly 25-26
+   characters, which is why its table is built to 22. A line past that
+   does not fail, it FOLDS -- and a folded line in a column of figures is
+   how a customer comes to read the wrong number. */
+const MSG_BUBBLE = 26;
+function msgMeasure(el, box){
+  if(!el) return;
+  const text = box ? box.value : '';
+  const wide = text.split('\n').reduce((m,l)=> Math.max(m, l.length), 0);
+  const w = el.querySelector('#msg_wide');
+  if(w) w.textContent = `${wide} wide`;
+  const f = el.querySelector('#msg_fits');
+  if(!f) return;
+  const fits = wide <= MSG_BUBBLE;
+  f.textContent = fits ? 'fits a phone bubble' : `folds — a bubble wraps at ${MSG_BUBBLE}`;
+  f.style.background = fits ? 'var(--om-neutral)' : 'var(--om-caution)';
+  f.style.color = fits ? 'var(--om-neutral-ink)' : 'var(--om-caution-ink)';
+}
+
+/* WHAT THE MESSAGE QUOTES, on the card the send button is on.
+
+   The demand names invoices and a balance, and the one thing the shop
+   must be able to do before it goes out is check that the lines add to
+   the figure. It is drawn from row.chase.invoices -- debtChaseInvoices,
+   the same reading the message itself is written from, so the table and
+   the message cannot come to disagree.
+
+   And where the lines do NOT stand behind the balance it says which of
+   the two reasons it is, rather than printing a breakdown the shop
+   cannot stand behind. */
+function msgQuotedHTML(r){
+  const ch = r && r.chase;
+  if(!ch) return '';
+  const quoted = (ch.invoices||[]).reduce((s,i)=> s + (Number(i.due)||0), 0);
+  const carried = Math.max(0, (Number(ch.debt)||0) - quoted);
+  const stands = (ch.invoices||[]).length && quoted <= (Number(ch.debt)||0) + 0.5;
+  const line = (p, sub, amt, quiet)=> `<div class="om-qline${quiet?' om-qline-q':''}">
+    <div style="min-width:0">
+      <div class="om-t" style="font-size:12.5px;font-weight:600">${esc(p)}</div>
+      ${sub ? `<div class="om-t" style="margin-top:1px;font-size:11px;color:var(--om-ink-3)">${esc(sub)}</div>` : ''}
+    </div>
+    <div class="om-fig om-n" style="font-size:12.5px;text-align:right">${esc(fmtUGX(Math.round(amt)))}</div>
+  </div>`;
+  const shown = (ch.invoices||[]).slice(0, DEBT_CHASE_INVOICE_LINES);
+  const rest = (ch.invoices||[]).slice(DEBT_CHASE_INVOICE_LINES);
+  return `<div class="om-card">
+    <div class="om-card-h"><span class="om-card-t">What the message quotes</span></div>
+    ${stands ? `<div style="padding:0 14px 4px">
+      ${shown.map(i=> line(i.no, [i.date ? fmtShortDate(i.date) : '', i.what].filter(Boolean).join(' · '), i.due)).join('')}
+      ${rest.length ? line(`and ${rest.length} more`, '', rest.reduce((s,i)=> s + (Number(i.due)||0), 0), true) : ''}
+      ${carried > 0.5 ? line('Carried', 'from earlier, no invoice', carried, true) : ''}
+      <div class="om-qline om-qline-f">
+        <div class="om-t" style="font-size:12.5px;font-weight:700">Balance</div>
+        <div class="om-fig om-n" style="font-size:13px;font-weight:700;text-align:right">${esc(fmtUGX(Math.round(ch.debt)))}</div>
+      </div>
+    </div>
+    <div class="om-blk"><span class="om-read">Every line comes from the ledger and they add to the balance, which is why this account is asked rather than held back.</span></div>`
+    : `<div class="om-blk"><span class="om-read">${(ch.invoices||[]).length
+      ? 'The invoices on file add up to more than this balance, so the message asks for the balance alone rather than quoting a breakdown the shop cannot stand behind.'
+      : 'No invoice stands behind this balance — it was carried onto the account from earlier — so the message asks for the figure alone.'}</span></div>`}
+  </div>`;
+}
+
+/* WHAT WILL BE SENT. The hub's own digest, because it is the one builder
+   that puts the money and the news in ONE message -- the client who owes
+   you is usually the client also waiting on a delivery, and two separate
+   messages is how a shop comes to send both. */
+function msgDraftFor(r){
+  const cid = String(r.customerId);
+  /* ONE DRAFT PER CLIENT, SHARED. The long record under Rules & register
+     has a box on the same words, and two boxes that can hold different
+     text on one screen is how the wrong one gets sent. fupDrafts is the
+     owner's own wording wherever it was typed; with nothing typed both
+     read the same builder from the same ticks. */
+  if(fupDrafts[cid] != null) return fupDrafts[cid];
+  try { return followUpHubDigest(r, fupTickState(cid, r)); }
+  catch(_){ return `Hello ${String(r.name||'').trim().split(/\s+/)[0] || 'there'},\n\n`; }
+}
+/* The two tone buttons rewrite the BOX, never a stored template: there
+   is no template, and the box is what ships. Shorter drops the softening
+   lines; firmer replaces the ask with a dated one. Both leave the
+   figures and the invoice lines exactly as they were, because those are
+   the part nobody may edit by accident. */
+function msgShorter(text){
+  const keep = String(text||'').split('\n').filter(l=>{
+    const t = l.trim();
+    if(!t) return true;
+    return !/^(We said we would get back|An update on what you asked)/.test(t);
+  });
+  return keep.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+function msgFirmer(text){
+  const t = String(text||'');
+  if(/which day/i.test(t)) return t;
+  return t.replace(/\s*$/, '') + '\n\nPlease let me know which day you can settle this.';
+}
+
 function renderFollowUps(){
   const now = Date.now();
   /* The chase reading FIRST: followUpHubRows takes it as an argument now
@@ -96688,11 +97354,21 @@ function wireFollowUpsScreen(){
       });
     });
 
-  const screen = document.getElementById('tab-followups');
+  /* THE SECTION IS tab-messages. Follow-ups and WhatsApp merged into it,
+     and the hub's panes moved with their handlers -- a delegated
+     listener has to be bound to the section the panes actually live in
+     or it hears nothing, and getElementById of a section that is gone
+     throws on boot before the app has drawn anything at all. */
+  const screen = document.getElementById('tab-messages');
+  if(!screen) return;
   screen.addEventListener('input', (e)=>{
     if(e.target.id === 'fup_queue_search'){ fupQueueQuery = e.target.value; renderFollowUpsContact(); return; }
     if(e.target.id === 'fup_search'){ fupRegisterQuery = e.target.value; renderFollowUpsAll(fupRegisterQuery); return; }
     if(e.target.classList.contains('fup-msg')) fupDrafts[e.target.dataset.cust] = e.target.value;
+    /* Deliberately NOT redrawing the card box on every keystroke of the
+       record's box: they share the draft, and re-rendering the box being
+       typed in would take the caret with it. The card reads the shared
+       draft on its next render. */
   });
   /* An optional line ticked in or out. The draft is rewritten only if
      the owner has not touched it: typed words are theirs. */
@@ -96702,7 +97378,10 @@ function wireFollowUpsScreen(){
     fupTicks[cid] = Object.assign({}, fupTickState(cid, fupHubRowsNow().find(r=> String(r.customerId) === cid)),
       {[e.target.dataset.tick]: e.target.checked});
     if(fupDrafts[cid] != null) toast('The message keeps your own words — Put the wording back to see the line come and go', 4000);
-    renderFollowUpsContact();
+    /* The whole screen, because the card panel above draws the SAME
+       draft from these same ticks -- redrawing only this pane would
+       leave the box the send button is on saying the old thing. */
+    renderMessages();
   });
 
   screen.addEventListener('click', (e)=>{
@@ -97061,7 +97740,8 @@ function wireFollowUpListModal(){
     }
     renderFollowUpListModal();
     renderFollowUpBadge();
-    if(document.getElementById('tab-followups').style.display !== 'none') renderFollowUps();
+    const sec = document.getElementById('tab-messages');
+    if(sec && sec.style.display !== 'none') renderMessages();
   });
   const close = ()=>{ followUpListCustomerId = null; closeModal('followUpListModal'); };
   document.getElementById('followUpListClose').addEventListener('click', close);

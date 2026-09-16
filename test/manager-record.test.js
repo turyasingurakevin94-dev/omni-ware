@@ -232,7 +232,14 @@ const src = read('index.html');
       Owing lens now, and resolveTab('debtors') opens it with that lens
       armed, so the destination is still reachable -- it is just not a
       separate destination any more. */
-  t.check(starts.length > 32, `every screen in the app is checked (${starts.length})`);
+  /* And 32 -> 31 when WhatsApp and Follow-ups became Messages. Neither
+   was usable alone: Follow-ups is the list of people you owe a word,
+   already tagged with a reason, and its only action was to open the box;
+   WhatsApp is the box, and its only content came from the list. The nav
+   index had already recorded the confusion -- the obvious search for
+   Follow-ups is "broadcast", which belonged to WhatsApp. One screen, one
+   rail row, one badge. */
+t.check(starts.length > 31, `every screen in the app is checked (${starts.length})`);
   const blank = [];
   starts.forEach((m, i) => {
     const body = src.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : src.length);

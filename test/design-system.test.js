@@ -482,51 +482,53 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .fup-link stay in the FILE -- the follow-up list MODAL still wears
        them, and it is a list to edit rather than a queue to work -- but
        this screen may not emit the card families again. */
-    followups: {
-      /* AND CHASE DEBTS' RETIRED FAMILIES. Its own entry stood below
-         this one and named .chase-card, .chase-list, .chase-acts,
-         .chase-facts and the private .sum-strip -- the card-per-debtor
-         and the hand-rolled strip its console replaced. That screen is
-         this one's Money lens now, so the families it may never wear
-         again are this screen's to refuse: the ratchet follows the
-         markup, and the markup is here. Its own .ch-* vocabulary is NOT
-         added to the list, because nothing in the app wears it at all
-         any more -- a name belongs here when a screen could plausibly
-         reach for it again, and css-class-hooks is what catches a class
-         with no rule behind it. */
+    /* FOLLOW-UPS IS MESSAGES NOW, and WhatsApp came with it.
+
+       Neither was usable alone. Follow-ups is the list of people the shop
+       owes a word, already tagged with a reason, and its only action was
+       to open the box; WhatsApp is the box, and its only content came
+       from the list. The nav index had already recorded the confusion:
+       the obvious search for Follow-ups is "broadcast", which belonged
+       to WhatsApp. One screen, one rail row, one badge.
+
+       The queue above is the card system's -- Money and Telling are one
+       list read two ways, and Posting is the daily product post, which
+       already lived here as the WhatsApp screen's post desk. What stays
+       on the console, and is why the console families are still in
+       rendersUses below: the chase timing, the held-back reasons, the
+       register, the inbox, and the post desk itself. None of those is in
+       the frame, and every one of them is live.
+
+       The retired list is UNCHANGED and still enforced -- moving systems
+       is not an amnesty for the families the console retired. */
+    messages: {
       retired: ['panel', 'dir-summary-row', 'dir-summary-card', 'st-bar', 'st-tabs', 'st-tab', 'search-bar',
                 'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
                 'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill',
                 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
-             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
-      /* AND WORTH TELLING'S BUILDERS, which outlived its screen.
-         That entry said the same brief was drawn three times -- a row in
-         the fortnight's queue, the reasoning under that row, and a panel
-         on the client's own account -- and that a second copy of
-         briefStripHTML would be free to show the owner a filmstrip the
-         picture does not match. It is drawn TWICE now, here and on the
-         account, and that is exactly why this screen opens
-         customerBriefPanelHTML rather than laying the frames out again.
-         The ratchet follows the builders, and the builders are this
-         screen's now. */
-      renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
-                'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
-                'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
-                'briefNoteBody', 'briefLeftOffHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid-l', 'ow-grid', 'ow-side', 'ow-stack',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-lr', 'ow-msg',
-                    'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
-                    'ow-empty', 'ow-mini',
-                    /* The reasoning under a picture makes three different
-                       demands on the owner -- go and fix, weigh before
-                       sending, simply know -- and they arrived in one grey.
-                       Three blocks under their own heading, plus the
-                       picture's own measure under a rule. */
-                    'ow-bn', 'ow-bn-l', 'ow-bn-t', 'ow-bn-fix',
-                    'ow-bn-watch', 'ow-bn-note', 'ow-bn-f'],
+      uses: ['om-screen', 'om-qtitle', 'om-qtitle-t', 'om-qtitle-s', 'om-lensgroup', 'om-lens',
+             'om-lenschip', 'om-kpis', 'om-body', 'om-list', 'om-card', 'om-card-h', 'om-card-t',
+             'om-cols', 'om-cols-m', 'om-col', 'om-scroll', 'om-side', 'om-find', 'om-find-i',
+             'om-ph-head', 'om-ph-only'],
+      renders: ['renderMessages', 'msgRowHTML', 'renderMessageKpis', 'renderMessagePhoneHead',
+                'renderMessageSide', 'msgDraftFor', 'msgLastWord',
+                'renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
+                'renderWhatsApp'],
+      rendersUses: [
+                    /* the queue, on the card system */
+                    'om-mrow', 'om-mrow-ph', 'om-av', 'om-chip', 'om-fig', 'om-lbl', 'om-t', 'om-n',
+                    'om-kpi', 'om-kpi-f', 'om-kpi-s', 'om-pan', 'om-pan-t', 'om-pan-m', 'om-blk',
+                    'om-read', 'om-box', 'om-btn', 'om-btn-s', 'om-btn-w',
+                    'om-ph-t', 'om-ph-figs', 'om-ph-fig', 'om-ph-fig-l', 'om-ph-fig-v',
+                    'om-ph-tabs', 'om-ph-tab',
+                    /* the hub and the post desk, still the console's */
+                    /* ow-u, ow-q, ow-q-r and ow-q-x went with the contact
+                       queue's card list: the queue is .om-mrow now and the
+                       hub's remaining panes are the strip, the register and
+                       the held-back reasons. */
+                    'ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+                    'ow-cp', 'ow-empty', 'ow-mini', 'ow-pan',
+                    'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
     },
     /* Consignment. A card per consignor, each one always fully open --
        an avatar, a title, a private four-tile stat strip and their whole

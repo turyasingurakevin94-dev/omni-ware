@@ -114,7 +114,14 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
       Owing lens now, and resolveTab('debtors') opens it with that lens
       armed, so the destination is still reachable -- it is just not a
       separate destination any more. */
-  t.check((sidebar.match(/data-tab=/g) || []).length > 32,
+  /* And 32 -> 31 when WhatsApp and Follow-ups became Messages. Neither
+   was usable alone: Follow-ups is the list of people you owe a word,
+   already tagged with a reason, and its only action was to open the box;
+   WhatsApp is the box, and its only content came from the list. The nav
+   index had already recorded the confusion -- the obvious search for
+   Follow-ups is "broadcast", which belonged to WhatsApp. One screen, one
+   rail row, one badge. */
+t.check((sidebar.match(/data-tab=/g) || []).length > 31,
     `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — none of them behind a menu`);
 }
 

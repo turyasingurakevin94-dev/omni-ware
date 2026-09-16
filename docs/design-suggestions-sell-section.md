@@ -464,3 +464,76 @@ None are drawn in the frame and all three are live:
 - **Promotions and Claims**, the supplier-bonus machinery. The handoff says the
   bonus figure "has no admin-side home today" — it has two. The panel's Supplier
   bonus block summarises them rather than replacing them.
+
+### 8.11 Messages: one screen where the app had two, and the hub the frame has no room for
+
+WhatsApp and Follow-ups were never usable apart. Follow-ups is the list of people
+the shop owes a word, already tagged with a reason, and its only act was to open
+the box; WhatsApp is the box, and its only content came from that list. The nav
+index had already recorded the confusion — the obvious search for the follow-up
+queue was *"broadcast"*, which belonged to the other screen. They are one rail
+row, one badge and one screen now, with three lenses: **Money**, **Telling**,
+**Posting**. Both old doors still resolve, WhatsApp onto Posting, so a saved
+last-tab cannot boot into a section that is gone.
+
+What the frame draws, and what it does not:
+
+- **The three-pip cap and the signal-ranked product rows of the Posting frame
+  are not built yet.** Posting today is the WhatsApp post desk on the console,
+  unchanged and live, under a card-system lens. It is the one frame in the Sell
+  set still waiting for its screen.
+- **The hub is a second working surface and the frame has no place for it.** The
+  chase rules (*Chase after*, *Rest between*, beside *Quiet after*), the
+  held-back accounts with their reasons, the register of every follow-up, *Add a
+  follow-up*, and one client's long record — the invoice-by-invoice check, the
+  optional lines, *Ring*, *Receive a payment*, *They promised to pay on…* — are
+  all live and none of them is in the handoff. They open under the queue behind
+  **Rules & register**, shut by default. That door is beside the note under the
+  list rather than in the card header, because the phone hides that header and a
+  door on one design only is not a door.
+- **The hub's own queue column was deleted, not moved.** It walked the same
+  ledger as the card list above it, so the screen drew every client twice with
+  two independent selections. The record now follows whoever is picked on the
+  card queue.
+- **There are still two draft boxes on one screen** — the card panel's and the
+  long record's — and that is the deviation most in need of a frame. They cannot
+  say different things (both read `fupDrafts` for the owner's own wording and
+  `fupTickState` for the lines), and both stamp through `recordFollowUpClient`
+  with the same ticks. But one screen should have one box, and deciding which
+  instruments belong on the card panel is a design question, not a code one.
+- **The draft's width is measured, not claimed.** The two chips under the box
+  read `14 chars wide` and `fits a phone` as literals — true of nothing. They
+  are computed from the box on every keystroke now, against the app's own
+  measurement of a WhatsApp bubble (≈26 monospace characters, which is why the
+  quote sender builds its table to 22). Past that the chip says it *folds*.
+- **The queue is a subset and says so.** Only who is past your terms today; what
+  the whole book comes to, and how much of it is old, is **Customers → Owing**.
+  A total worked out over this list would describe a slice of the shop. The note
+  carries the queue's other rule with it — *one message per client, however many
+  things they are waiting for* — which was a paragraph behind an "i" on the
+  screen this one replaced.
+- **Three facts came off the two dead headers** and are checked at their new
+  addresses rather than taken on trust: *every figure counted live from the
+  shop's own records* and *nothing leaves the shop until you press send* (a
+  footnote under the post desk they govern), and *who is waiting, and how long
+  the worst of them has waited* — the one line on the desk that rots, still
+  written by the render, above the work, with the search that reaches every chat
+  beside it.
+
+### 8.12 Two faults in the shared card layer, found by looking at the screens
+
+Both were in the layer the whole Sell set is built on, so both were wrong on
+five screens at once:
+
+- **`.om-screen` had `min-height:100%` against an auto-height `<main>`**, which
+  is a flex *child* in a row and has no height to be a percentage of. It
+  computed to nothing, so a short screen painted its warm ground for four
+  hundred pixels and then stopped, leaving the console's grey under the rest.
+  Measured from the viewport now, less the padding `main` takes at each width.
+- **`.om-card-h` was hidden wholesale on the phone.** That rule is for the list
+  card's header — the desktop's way in, which has its own phone equivalent above
+  — but the side panel's cards wear the same class, so *Last word* and *What the
+  message quotes* drew as unlabelled blocks. Scoped to the list.
+- **A `<textarea>` is 20 columns wide until something says otherwise**, so the
+  draft drew as a 180px ribbon in a 300px card and every message looked folded
+  whether it was or not.

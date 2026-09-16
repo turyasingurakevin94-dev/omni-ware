@@ -466,7 +466,10 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      one view: the grouped table, and these panels in the 304px rail.
      renderFollowUpScore still exists and still owns every claim below --
      it returns the rail rather than writing a pane of its own. */
-  const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  /* The hub is the Messages screen's queue now: WhatsApp and Follow-ups
+     were never usable apart, and its panes, its two views and its chase
+     timing all moved into that section intact. */
+  const sec = (/<section id="tab-messages"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
   eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
