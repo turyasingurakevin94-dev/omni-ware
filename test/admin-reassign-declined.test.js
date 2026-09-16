@@ -214,8 +214,18 @@ const shared = read('shared-worker.js');
   t.check(/if\(orderNeedsDelivery\(q\)\) return \{ main: otStaffGone\(q\.assignedDeliveryId\) \? 'Driver no longer on staff' : 'Nobody named as carrying it'/.test(who)
     && /Going out with \$\{deliveryAssigneeLabel\(q\)\}/.test(who),
     'and the "going out with" reading is its exact opposite');
-  t.check(/case 'loaded': otOpenRow\(id\); otFocusLoad\(id\); break;/.test(admin),
-    'wired to the form in the row rather than to a pop-up over it');
+  /* WIRED TO THE FORM, and to the form wherever the form is. On the
+     phone that is the order's row; on the console there are no rows, so
+     it is the order's own dialog, which draws the very same block. It
+     used to mean the row and only the row, which on a desktop meant
+     marking a row open inside a table that is display:none there -- the
+     button did nothing, and an order out with nobody named could not be
+     given a driver from the desk at all. Still never a pop-up asking the
+     question a second way. */
+  t.check(/case 'loaded': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else \{ otOpenRow\(id\); otFocusLoad\(id\); \} break;/.test(admin),
+    'wired to the form — the row on the phone, the order’s own dialog on the console — rather than to a pop-up over it');
+  t.check(/const loadHtml = orderLoadFormHTML\(q\);/.test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
+    'and that dialog draws the same form, rather than a second way of asking');
   // A third carrier that is not a person of ours: hired transport, named
   // on the note. Without it, every hired lorry had to be recorded as
   // somebody on the payroll or as nobody at all.

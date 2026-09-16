@@ -13660,6 +13660,11 @@
     padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);
     background:var(--ow-paper-2);}
   .ow-dlg-sect{display:flex;flex-direction:column;gap:7px;min-width:0;}
+  /* A secondary way in, sized to its own words. The section is a
+     stretching column, so a bare button in it spans the whole width and
+     reads as the section's main act -- which this is not: the taps on
+     the rows above are. Same shape as the load form's own go row. */
+  .ow-dlg-sup-go{display:flex;}
   .ow-dlg-ln{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
   .ow-dlg-ln-n{flex:1;min-width:0;font-size:var(--ow-t-13);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -17361,6 +17366,11 @@
   .om-nameline:hover{opacity:1;background:var(--om-hover)}
   /* The line that closes the list and says where the record is. */
   .om-sentline{display:flex;align-items:center;gap:9px;padding:11px 14px;font-size:12px;color:var(--om-ink-3)}
+  /* The connection's one line. On the sunken ground, below the last
+     group, because it is not one of the groups: it is an offer, and an
+     offer at the foot of a list of work is read after the work. */
+  .om-linkline{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);font-size:12.5px;color:var(--om-ink-2);text-wrap:pretty}
+  .om-linkline svg{color:var(--om-ink-3)}
   /* THE RULES MENU. Three numbers that decide who is in this list, each
      with the sentence that says what it does -- a bare field labelled
      "Quiet after" is a number nobody can set with any confidence. */
@@ -17447,6 +17457,8 @@
        chrome where the frame has none. */
     .om-ph-detail #msg_wide,.om-ph-detail #msg_fits{display:none}
     .om-holdline,.om-sentline{padding:12px 16px}
+    .om-linkline{flex-wrap:wrap;padding:12px 16px}
+    .om-linkline .om-btn{min-height:44px;flex:1 1 100%;justify-content:center}
     .om-nameline{padding:10px 16px;white-space:normal}
     .om-rules{min-width:0;left:0;right:0}
     .om-rule{grid-template-columns:1fr 70px auto}
@@ -17473,7 +17485,81 @@
        scroller. The figure keeps a column of its own. */
     .om-ph-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--om-rule-inner);background:var(--om-surface)}
     .om-ph-foot{background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);padding:10px 16px}
+    /* THE CONNECTION CARD ON A PHONE (3b). The frame draws it as a
+       full-screen detail with a navy head and a fixed footer; here it is
+       a section of the setup page, so what carries over is the part that
+       is about the hand rather than about the page: each intention line
+       a thumb tall, and the two acts full width at the frame's own
+       heights -- the link at 48, the hand-off at 44 -- with the cost
+       line centred between them instead of beside the button. */
+    .om-wa-line{min-height:44px}
+    .om-wa-f{flex-direction:column;align-items:stretch;gap:8px}
+    .om-wa-f .om-btn{width:100%;justify-content:center}
+    .om-wa-f #wa_link_go{height:48px !important;font-size:14px}
+    .om-wa-f #wa_link_hand{height:44px !important;font-size:13px;order:3}
+    .om-wa-cost{order:2;text-align:center;font-size:11px}
+    .om-wa-f > span[style]{display:none}
   }
+
+  /* ================= THE WHATSAPP CONNECTION =================
+
+     One card on the setup page, and everything about it is a
+     consequence of one finding: an unbuilt feature does not get a place
+     in a working screen. It used to be a quarter of the Messages desk
+     saying "nothing to show" three times and tabulating three absences
+     as none / none / not available, with a primary action that offered
+     to CHECK a connection nobody had made.
+
+     The tile in the header is filled and green because WhatsApp is a
+     real thing that exists; the three tiles below it are DASHED and
+     unfilled because those three capabilities do not yet. A filled tile
+     with a grey glyph would read as broken rather than as available,
+     which is the opposite of what this card is for. */
+  /* It is a card among console panels -- the setup page has not been
+     redesigned yet -- so it gets the air a card needs on either side of
+     it, or it butts straight into the next panel's white and the two
+     read as one region. */
+  .om-walink{margin-bottom:14px}
+  .om-wa-h{display:flex;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid var(--om-rule-inner)}
+  .om-wa-tile{width:34px;height:34px;border-radius:9px;background:var(--om-good);display:flex;align-items:center;justify-content:center;flex:none;color:var(--om-good-ink)}
+  .om-wa-hr{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .om-wa-t{font-size:15px;font-weight:700;color:var(--om-ink)}
+  /* 72ch, because this is the sentence that answers the actual fear --
+     that linking breaks the number the business runs on -- and a
+     sentence that answers a fear has to be readable at one pass. */
+  .om-wa-p{margin:5px 0 0;font-size:13px;line-height:1.55;color:var(--om-ink-2);max-width:72ch;text-wrap:pretty}
+  .om-wa-b{padding:14px}
+  .om-wa-lines{margin-top:11px;display:flex;flex-direction:column;gap:11px}
+  .om-wa-line{display:flex;align-items:flex-start;gap:11px}
+  .om-wa-slot{width:28px;height:28px;border-radius:8px;border:1px dashed var(--om-dashed);display:flex;align-items:center;justify-content:center;flex:none;color:var(--om-on-navy-4)}
+  .om-wa-slot.om-on{border:0;background:var(--om-good);color:var(--om-good-ink)}
+  .om-wa-line-t{font-size:13px;font-weight:600;color:var(--om-ink)}
+  .om-wa-line-s{margin-top:2px;font-size:12px;color:var(--om-ink-2)}
+  .om-wa-f{padding:14px;border-top:1px solid var(--om-rule-inner);background:var(--om-sunken);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .om-wa-cost{font-size:12px;color:var(--om-ink-2)}
+  /* BELOW THE CARD, NOT INSIDE IT. It is the app's oldest law rather
+     than a note about this feature, so it does not sit in a box that
+     could be shut. */
+  .om-wa-promise{margin-top:12px;display:flex;align-items:flex-start;gap:9px;padding:0 2px}
+  .om-wa-promise svg{flex:none;margin-top:2px;color:var(--om-ink-3)}
+  .om-wa-promise span{flex:1;min-width:0;font-size:12.5px;color:var(--om-ink-2);line-height:1.55;text-wrap:pretty}
+  /* THE FLOW, which is what "Link the number" opens rather than what the
+     card wears. The steps and the four fields are genuinely somebody
+     else's job and genuinely cannot be done from a web form alone -- but
+     the phone number id has to be typed at THIS computer, so they are
+     reachable here and sent from here, never printed at a hardware
+     trader who only wanted to know why the inbox was empty. */
+  .om-wa-flow{padding:14px;border-top:1px solid var(--om-rule-inner)}
+  .om-wa-step{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--om-rule-inner);font-size:12.5px;line-height:1.55;color:var(--om-ink-2)}
+  .om-wa-step:first-of-type{border-top:0}
+  .om-wa-step-n{width:20px;height:20px;border-radius:999px;background:var(--om-neutral);color:var(--om-neutral-ink);display:flex;align-items:center;justify-content:center;flex:none;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:600}
+  .om-wa-step code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11.5px;overflow-wrap:anywhere;color:var(--om-ink)}
+  .om-wa-fields{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end;margin-top:4px}
+  .om-wa-field{flex:1 1 220px;min-width:0}
+  .om-wa-field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.03em;color:var(--om-ink-3);margin-bottom:4px}
+  .om-wa-field input{box-sizing:border-box;width:100%;height:34px;padding:0 10px;border:1px solid var(--om-rule-input);border-radius:9px;background:var(--om-field);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;color:var(--om-ink)}
+  .om-wa-check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--om-ink-2);cursor:pointer}
+  .om-wa-check input{width:auto;margin-top:2px;flex:none}
 
   .om-app :focus-visible{outline:2px solid var(--om-coral-text);outline-offset:2px}
 
@@ -19291,10 +19377,6 @@
         </div>
       </div>
 
-      <div class="ow-pan" id="wa_connect_pan" style="display:none;">
-        <div class="ow-pan-h"><span class="ow-pan-t">Not connected</span></div>
-        <div id="wa_connect"></div>
-      </div>
           </div>
 
           <!-- THE APP'S OLDEST LAW, stated on the screen it matters most.
@@ -21030,7 +21112,72 @@
           <div class="pset-rgn" data-rgn="shop">
             <div class="pset-rg">
               <h2 class="pset-rg-t">The shop itself</h2>
-              <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, and what is signed in to it.</span>
+              <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, how it is reached on WhatsApp, and what is signed in to it.</span>
+            </div>
+
+            <!-- THE WHATSAPP CONNECTION, WHICH USED TO BE A QUARTER OF
+                 THE MESSAGES DESK.
+
+                 Linking a number is done once, with the phone in your
+                 hand, often by somebody other than the owner. It is a
+                 setup job, and a setup job does not get a standing place
+                 in a screen that is worked every day -- least of all one
+                 whose entire content, until it is done, is the fact that
+                 it has not been done.
+
+                 What the old area did, and none of it survives: it said
+                 "nothing to show" three times (a line above the band, the
+                 band's own NOT CONNECTED heading, and the sentence inside
+                 it); it tabulated three absences as none / none / not
+                 available, in a house style that elsewhere refuses to
+                 print a 0; and it offered "Check the connection" as the
+                 primary act, for a connection nobody had made.
+
+                 THE ONE SENTENCE THAT IS KEPT is the first one. The real
+                 reason a shop does not link is the fear that it breaks
+                 the number the business runs on, and that sentence is the
+                 only thing anywhere on the screen that answers it -- so
+                 it is read BEFORE the decision rather than after it.
+                 "this screen" became "Omni-Ware" because the screen in
+                 front of you here is not the one that would start seeing
+                 the chats. -->
+            <div class="om-walink" data-find="whatsapp link number chats inbox catalogue browse broadcast connect webhook meta phone number id token catalog waba auto quote register sync">
+              <div class="om-card">
+                <div class="om-wa-h">
+                  <span class="om-wa-tile" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </span>
+                  <div style="flex:1;min-width:0">
+                    <div class="om-wa-hr">
+                      <span class="om-wa-t">WhatsApp</span>
+                      <span class="om-chip" id="wa_link_chip" style="background:var(--om-neutral);color:var(--om-neutral-ink)">not linked</span>
+                    </div>
+                    <p class="om-wa-p" id="wa_link_say"><b>Linking changes nothing on your phone.</b> The same number keeps working there, chats keep arriving as they do now, and Omni&#8209;Ware starts seeing them too.</p>
+                  </div>
+                </div>
+
+                <div class="om-wa-b">
+                  <div class="om-lbl" id="wa_link_lbl" style="font-size:10.5px">What linking would turn on</div>
+                  <div class="om-wa-lines" id="wa_link_lines"></div>
+                </div>
+
+                <div class="om-wa-f">
+                  <button type="button" class="om-btn om-btn-p" id="wa_link_go" aria-expanded="false" aria-controls="wa_link_flow" style="height:38px;padding:0 15px;font-size:13.5px">Link the number</button>
+                  <span class="om-wa-cost">About ten minutes &middot; you will need the phone in your hand</span>
+                  <span style="flex:1"></span>
+                  <button type="button" class="om-btn om-btn-s" id="wa_link_hand" style="height:34px;padding:0 12px;font-size:12.5px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.2L4 20z"/></svg>
+                    Send the steps to someone
+                  </button>
+                </div>
+
+                <div class="om-wa-flow" id="wa_link_flow" hidden></div>
+              </div>
+
+              <div class="om-wa-promise">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <span>Nothing leaves the shop until you press send, and linking does not change that. Every figure on the Messages desk is counted from the shop&rsquo;s own records either way.</span>
+              </div>
             </div>
 
             <div class="ow-pan pset-fold" data-fold="on-paper" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
@@ -28459,7 +28606,12 @@ document.getElementById('wp_posted').addEventListener('click', ()=>{
    directly is last_read_at, its own read marker. */
 
 const WA_WINDOW_MS = 24*60*60*1000;
-const WA_INBOX_POLL_MS = 12000;
+/* WA_INBOX_POLL_MS STOOD HERE. It timed a 12-second refresh of the
+   inbox, guarded by a tab name that stopped existing when WhatsApp and
+   Follow-ups became Messages -- so it cleared itself on its first tick
+   and had not refreshed anything since. The register is not the place to
+   poll a connection, and a dead interval is worse than none: it reads
+   like a live one to the next person. */
 
 // The 24-hour reply window, as the UI states it. The SERVER re-checks
 // this on every send (wa-send refuses a closed window); this copy only
@@ -28505,7 +28657,7 @@ function waTimeShort(ts){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
-let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+let waInbox = { configured: null, convs: [], msgs: [], active: null, sending: false,
   priceDoc: {},       // conversation id -> {wamid, doc} — the PRICE LIST the row
                       // drew, so Send can post the same rows as a picture
   narrow: {},         // conversation id -> {wamid, productId} — the KIND the owner
@@ -30115,24 +30267,33 @@ async function waFetchThread(convId){
   waInbox.msgs = rows || [];
 }
 
+/* THE REGISTER DOES NOT CHECK A CONNECTION IT DOES NOT NEED.
+
+   This used to draw the connection panel when the answer came back no,
+   which is how a screen worked every day came to be a quarter occupied
+   by a setup job. It asks the status ONCE a session, because the Waiting
+   figure and the reply rates are read off the inbox and there is no
+   other way to know whether there is one; when the answer is no it draws
+   nothing at all and the register carries a single line offering the
+   link. Nothing here polls: the 12-second interval that used to sit at
+   the foot of this function belonged to a tab that no longer exists. */
 async function waInboxEnter(){
   if(waInbox.configured == null) waInbox.configured = await waInboxStatus();
   const deskEl = document.getElementById('wa_console');
-  const connEl = document.getElementById('wa_connect_pan');
   const stripEl = document.getElementById('wa_strip');
+  if(!deskEl || !stripEl) return;
   if(!waInbox.configured){
     deskEl.style.display = 'none';
     stripEl.style.display = 'none';
-    connEl.style.display = '';
-    document.getElementById('wa_ph_sub').textContent = 'Not connected yet — this desk has nothing to show.';
+    const sub = document.getElementById('wa_ph_sub');
+    if(sub) sub.textContent = '';
     // Nothing to search: there are no chats until the number is linked.
-    document.getElementById('wa_find_btn').style.display = 'none';
-    waRenderConnect();
+    const find = document.getElementById('wa_find_btn');
+    if(find) find.style.display = 'none';
     return;
   }
   deskEl.style.display = '';
   stripEl.style.display = '';
-  connEl.style.display = 'none';
   document.getElementById('wa_find_btn').style.display = '';
   await waFetchConvs();
   await waFetchInsightMsgs();
@@ -30148,115 +30309,169 @@ async function waInboxEnter(){
   waRenderWords();
   waRenderChannel();
   waRenderBroadcasts();
-  // One poller, self-terminating when the user leaves the tab -- the
-  // interval checks where it is instead of trusting a cleanup hook to run.
-  if(!waInbox.timer){
-    waInbox.timer = setInterval(async ()=>{
-      if(currentActiveTab !== 'whatsapp' || !waInbox.configured){
-        clearInterval(waInbox.timer); waInbox.timer = null; return;
-      }
-      await waFetchConvs();
-      await waFetchInsightMsgs();
-      if(waInbox.active) await waFetchThread(waInbox.active);
-      waRenderInbox();
-      renderWaInsights();
-      waRenderHeadline();
-    }, WA_INBOX_POLL_MS);
-  }
 }
 
-function waRenderConnect(){
-  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
-  const target = document.getElementById('wa_connect');
-  if(!target) return;
-  /* A STATE, NOT A MANUAL.
-     This panel used to open with `npx supabase secrets set …`, a
-     system-user token walkthrough and a webhook URL, printed at a
-     hardware trader who wanted to know why their inbox was empty. The
-     shop owner is told what is missing and what it costs; the terminal
-     work is folded away for whoever set up the computer, because it is
-     genuinely their job and it genuinely cannot be done from a web
-     form. */
-  target.innerHTML = `<div class="wa-conn">
-    <p class="wa-conn-p"><b>Your WhatsApp number is not linked yet</b>, so this desk has nothing to
-      show. Linking changes nothing on your phone — the same number keeps working there, chats keep
-      arriving as they do now, and this screen simply starts seeing them too.</p>
-    <div class="wa-kv" style="border-top:1px solid var(--ow-rule-soft);"><span class="wa-kv-l">Chats readable here</span><span class="wa-kv-v wa-words">none</span></div>
-    <div class="wa-kv"><span class="wa-kv-l">Products customers can browse</span><span class="wa-kv-v wa-words">none</span></div>
-    <div class="wa-kv"><span class="wa-kv-l">Broadcasts</span><span class="wa-kv-v wa-words">not available</span></div>
-    <div class="wa-ra">
-      <button type="button" class="btn btn-ghost ow-sm" id="wa_check">Check the connection</button>
-      ${waInbox.configured ? '<button type="button" class="btn btn-ghost ow-sm" id="wa_conn_back">Back to the desk</button>' : ''}
-    </div>
-    <details class="wa-steps-wrap">
-      <summary class="wa-mh-t" style="cursor:pointer;padding:8px 0;">The technical steps — for whoever set up this computer</summary>
-      <ol class="wa-steps">
-        <li>Create a (free) Meta developer app with the <b>WhatsApp</b> product at
-          developers.facebook.com, under the shop's Meta Business account.</li>
-        <li>In WhatsApp &rarr; API setup, add the existing business number and choose to keep using it
-          in the WhatsApp Business app — Meta walks through scanning a QR from the phone. The app must
-          be opened at least every 14 days or Meta cuts the link.</li>
-        <li>Set the three secrets <b>from your own terminal</b> — never paste a token into a chat or a
-          web form:<br><code>npx supabase secrets set WHATSAPP_ACCESS_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…</code>
-          <br>The token is a permanent System User token with <i>whatsapp_business_messaging</i>; the app
-          secret is on the app's Basic Settings page; the verify token is any phrase you invent.</li>
-        <li>In the app's WhatsApp &rarr; Configuration, set the webhook to
-          <br><code>${esc(hook)}</code><br>with that verify token, and subscribe to <b>messages</b>.</li>
-        <li>Paste the <b>Phone number ID</b> (shown in API setup, next to the number) here:</li>
-      </ol>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_pnid">Phone number ID</label><input id="wa_pnid" placeholder="e.g. 106540352242922"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_pnid_save">Save</button>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_register">Register the number</button>
-      </div>
-      <p class="wa-note" style="border-top:0;padding-left:0;">Registering does what Meta's own dashboard
-        button does, but shows Meta's real answer when it fails. The number must already be verified by
-        SMS code, and must not be running on any WhatsApp app.</p>
-      <ol class="wa-steps">
-        <li>For the catalogue customers browse inside WhatsApp: create one at
-          <b>business.facebook.com/commerce</b> (type: E-commerce), then connect it to the number in
-          <b>WhatsApp Manager &rarr; Catalog</b>.</li>
-        <li>The system-user token needs <i>catalog_management</i> and the catalogue assigned as an asset.
-          If it was generated without them, assign the catalogue to the system user, generate a fresh
-          token ticking <i>catalog_management</i>, and re-set <code>WHATSAPP_ACCESS_TOKEN</code>.</li>
-      </ol>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_catid">Catalog ID</label><input id="wa_catid" placeholder="e.g. 1234567890"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_catid_save">Save</button>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_cat_sync">Sync products to the catalogue</button>
-      </div>
-      <div class="wa-fields">
-        <div class="field"><label for="wa_wabaid">WhatsApp Business Account ID</label><input id="wa_wabaid" placeholder="from WhatsApp Manager's URL (asset_id)"></div>
-        <button type="button" class="btn btn-ghost ow-sm" id="wa_wabaid_save">Save</button>
-      </div>
-      <div class="wa-fields">
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:var(--ow-t-12);line-height:1.45;cursor:pointer;max-width:var(--ow-measure);">
-          <input type="checkbox" id="wa_auto_quote" style="margin-top:2px;">
-          <span>Answer price questions automatically &mdash; only when a customer names a product
-          outright, at the price this app holds for it. That is <b>anything you can sell</b>, photo
-          or no photo, not just what is in the browsable catalogue. Partial matches and ties still
-          wait for you, and every automatic reply is marked <b>auto</b> in the thread and on this
-          screen.</span>
-        </label>
-      </div>
-      <p class="wa-note" style="border-top:0;padding-left:0;">Sync pushes every product that has a photo
-        and a retail price, at retail prices, and removes anything the shop no longer offers. Customers
-        browse it inside WhatsApp and send carts; carts land in Order tracking automatically.</p>
-    </details>
-  </div>`;
-  const back = document.getElementById('wa_conn_back');
-  if(back) back.addEventListener('click', ()=>{
-    if(!waInbox.configured) return;
-    document.getElementById('wa_connect_pan').style.display = 'none';
-    document.getElementById('wa_console').style.display = '';
+/* ================= THE CONNECTION, AS ONE CARD =================
+
+   waRenderConnect drew a panel inside the Messages desk whose whole
+   content was the fact that nothing was connected. This draws the same
+   decision where it belongs -- Setup, beside the other things configured
+   once -- and says it the other way up: not what is missing, but what
+   linking would turn on.
+
+   THE LINK STATUS IS THE ONLY STORED FACT. Whether the Inbox lens
+   exists, whether the Messages register carries its one line, and how
+   many products a customer could browse are all derived from it and from
+   the books. Nothing about this card is remembered twice. */
+function waLinked(){ return waInbox.configured === true; }
+
+/* HOW MANY PRODUCTS A CUSTOMER COULD ACTUALLY BROWSE, counted from the
+   same function the sync itself uses -- so the number on this card and
+   the number that would be pushed can never differ. */
+function waBrowsableCount(){
+  try{ return waCatalogItems().items.length; }catch(_e){ return 0; }
+}
+
+/* THE BIGGEST LIST ONE MESSAGE COULD GO TO, and it is read off the
+   shop's own invoices rather than off the chat list. There IS no chat
+   list until the number is linked, so a figure that needs the thing
+   being argued for cannot appear in the argument -- which is the same
+   fault as tabulating an absence, wearing a number instead of a word.
+
+   Distinct customers per product, largest wins. Returns null when the
+   books cannot answer, and the line says so rather than printing a 0. */
+function waBiggestBuyerList(){
+  const byProduct = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced) return;
+    const cid = String(q.customerId||'').trim();
+    if(!cid) return;
+    (q.items||[]).forEach(it=>{
+      const pid = String(it.productId||'').trim();
+      if(!pid) return;
+      if(!byProduct.has(pid)) byProduct.set(pid, {set:new Set(), name: it.productName || ''});
+      byProduct.get(pid).set.add(cid);
+    });
   });
+  let best = null;
+  byProduct.forEach((v)=>{ if(!best || v.set.size > best.set.size) best = v; });
+  if(!best || best.set.size < 2) return null;
+  return {n: best.set.size, name: best.name};
+}
+
+/* The three capabilities, in the future tense while they are off and in
+   the present once they are on. A dashed, unfilled tile is the "not yet"
+   state; a FILLED tile with a grey glyph would read as broken rather
+   than as available, which is the opposite of what this card says. */
+function waLinkLinesHTML(){
+  const on = waLinked();
+  const n = waBrowsableCount();
+  const big = waBiggestBuyerList();
+  const rows = [
+    ['<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+     on ? 'Chats are read and answered here' : 'Read and answer chats here',
+     'With the customer&rsquo;s account, debt and last order beside the conversation'],
+    ['<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+     on ? 'Customers browse what you sell' : 'Let customers browse what you sell',
+     n ? `Your catalogue, with the ${n} product${n===1?'':'s'} that ${n===1?'has':'have'} a photo and a price`
+       : 'Your catalogue &mdash; no product has both a photo and a price yet, so there would be nothing to browse'],
+    ['<path d="m3 11 18-5v12L3 13z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+     on ? 'One message goes to a picked list' : 'Send one message to a picked list',
+     big ? `A price change to the ${big.n} people who buy ${big.name ? esc(big.name) : 'that line'}, in one send`
+         : 'A price change to everyone who buys one line, in one send &mdash; the books do not yet show a line two people have both bought'],
+  ];
+  return rows.map(([path, t, sub])=> `<div class="om-wa-line">
+    <span class="om-wa-slot${on ? ' om-on' : ''}" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
+    </span>
+    <div style="flex:1;min-width:0">
+      <div class="om-wa-line-t">${t}</div>
+      <div class="om-wa-line-s">${sub}</div>
+    </div>
+  </div>`).join('');
+}
+
+/* THE WORDS THAT GET HANDED OVER. Written once and read twice -- by the
+   flow on this card and by "Send the steps to someone" -- so the person
+   doing the work and the person reading about it cannot be given two
+   different instructions. */
+function waStepsText(){
+  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
+  return [
+    'Linking Omni-Ware to the shop’s WhatsApp number. About ten minutes, and you need the phone.',
+    '',
+    '1. At developers.facebook.com, under the shop’s Meta Business account, create a (free) developer app and add the WhatsApp product.',
+    '2. In WhatsApp → API setup, add the existing business number and choose to keep using it in the WhatsApp Business app. Meta walks through scanning a QR from the phone. That app must be opened at least every 14 days or Meta cuts the link.',
+    '3. From your own terminal — never paste a token into a chat or a web form — set the three secrets:',
+    '   npx supabase secrets set WHATSAPP_ACCESS_TOKEN=... WHATSAPP_APP_SECRET=... WHATSAPP_VERIFY_TOKEN=...',
+    '   The token is a permanent System User token with whatsapp_business_messaging; the app secret is on the app’s Basic Settings page; the verify token is any phrase you invent.',
+    `4. In the app’s WhatsApp → Configuration, set the webhook to ${hook} with that verify token, and subscribe to "messages".`,
+    '5. Open Omni-Ware → Setup → The shop → WhatsApp, press "Link the number", and paste the Phone number ID (shown in API setup, next to the number).',
+    '',
+    'For the catalogue customers browse inside WhatsApp: create one at business.facebook.com/commerce (type: E-commerce), then connect it to the number in WhatsApp Manager → Catalog. The system-user token needs catalog_management and the catalogue assigned as an asset.',
+  ].join('\n');
+}
+
+/* WHAT "LINK THE NUMBER" OPENS. The frame's card has no fields on it,
+   and it is right not to: the card is the decision. But somebody still
+   has to type a Phone number ID at this computer, so the flow is here,
+   shut until the decision is taken, and every field saves as it is
+   filled -- which is what makes it resumable by whoever comes back to
+   it, who may not be whoever started. */
+function waRenderLinkFlow(){
+  const flow = document.getElementById('wa_link_flow');
+  if(!flow) return;
+  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
+  const step = (n, html)=> `<div class="om-wa-step"><span class="om-wa-step-n">${n}</span><div style="flex:1;min-width:0">${html}</div></div>`;
+  flow.innerHTML = `
+    <div class="om-lbl" style="font-size:10.5px">The steps, for whoever does them</div>
+    <div style="margin-top:9px">
+      ${step(1, 'At <b>developers.facebook.com</b>, under the shop&rsquo;s Meta Business account, create a (free) developer app and add the <b>WhatsApp</b> product.')}
+      ${step(2, 'In WhatsApp &rarr; API setup, add the existing business number and choose to keep using it in the WhatsApp Business app &mdash; Meta walks through scanning a QR from the phone. That app must be opened at least every 14 days or Meta cuts the link.')}
+      ${step(3, 'Set the three secrets <b>from your own terminal</b>, never by pasting a token into a chat or a web form:<br><code>npx supabase secrets set WHATSAPP_ACCESS_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…</code>')}
+      ${step(4, `In the app&rsquo;s WhatsApp &rarr; Configuration, set the webhook to <code>${esc(hook)}</code> with that verify token, and subscribe to <b>messages</b>.`)}
+      ${step(5, `Paste the <b>Phone number ID</b> &mdash; it is in API setup, next to the number.
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_pnid">Phone number ID</label><input id="wa_pnid" placeholder="e.g. 106540352242922"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_pnid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+          <button type="button" class="om-btn om-btn-s" id="wa_register" style="height:34px;padding:0 12px;font-size:12.5px">Register the number</button>
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--om-ink-2)">Registering does what Meta&rsquo;s own dashboard button does, but shows Meta&rsquo;s real answer when it fails. The number must already be verified by SMS code, and must not be running on any WhatsApp app.</p>`)}
+      ${step(6, `For the catalogue customers browse inside WhatsApp: create one at <b>business.facebook.com/commerce</b> (type: E&#8209;commerce), connect it to the number in <b>WhatsApp Manager &rarr; Catalog</b>, and give the system-user token <i>catalog_management</i> with the catalogue assigned as an asset.
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_catid">Catalog ID</label><input id="wa_catid" placeholder="e.g. 1234567890"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_catid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+          <button type="button" class="om-btn om-btn-s" id="wa_cat_sync" style="height:34px;padding:0 12px;font-size:12.5px">Sync products</button>
+        </div>
+        <div class="om-wa-fields">
+          <div class="om-wa-field"><label for="wa_wabaid">WhatsApp Business Account ID</label><input id="wa_wabaid" placeholder="from WhatsApp Manager&rsquo;s URL (asset_id)"></div>
+          <button type="button" class="om-btn om-btn-s" id="wa_wabaid_save" style="height:34px;padding:0 12px;font-size:12.5px">Save</button>
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--om-ink-2)">Sync pushes every product that has a photo and a retail price, at retail prices, and removes anything the shop no longer offers. Carts land in Order tracking automatically.</p>`)}
+    </div>
+    <label class="om-wa-check">
+      <input type="checkbox" id="wa_auto_quote">
+      <span><b>Answer price questions automatically</b> &mdash; only when a customer names a product outright, at the price this app holds for it. That is <b>anything you can sell</b>, photo or no photo, not just what is in the browsable catalogue. Partial matches and ties still wait for you, and every automatic reply is marked <b>auto</b> in the thread.</span>
+    </label>
+    <!-- CHECK LIVES HERE, AND ONLY HERE. It was the primary action on a
+         screen where nothing had been attempted; it is a secondary one
+         inside the flow, where something has. -->
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <button type="button" class="om-btn om-btn-s" id="wa_check" style="height:34px;padding:0 12px;font-size:12.5px">Check the connection</button>
+      <span style="font-size:12px;color:var(--om-ink-2)">Nothing is linked until Meta answers &mdash; this asks it.</span>
+    </div>`;
+
   sb.from('wa_numbers').select('phone_number_id, catalog_id, auto_quote, waba_id').eq('shop_id', currentShopId).maybeSingle()
     .then(({ data: row })=>{
-      if(row) document.getElementById('wa_pnid').value = row.phone_number_id || '';
-      if(row && row.catalog_id) document.getElementById('wa_catid').value = row.catalog_id;
-      if(row) document.getElementById('wa_auto_quote').checked = !!row.auto_quote;
-      if(row && row.waba_id) document.getElementById('wa_wabaid').value = row.waba_id;
+      if(!row) return;
+      const set = (id, v)=>{ const el = document.getElementById(id); if(el && v) el.value = v; };
+      set('wa_pnid', row.phone_number_id);
+      set('wa_catid', row.catalog_id);
+      set('wa_wabaid', row.waba_id);
+      const aq = document.getElementById('wa_auto_quote');
+      if(aq) aq.checked = !!row.auto_quote;
     });
+
   document.getElementById('wa_wabaid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_wabaid').value.trim();
     if(!v){ toast('Paste the WhatsApp Business Account ID first'); return; }
@@ -30264,13 +30479,13 @@ function waRenderConnect(){
       .update({ waba_id: v }).eq('shop_id', currentShopId);
     if(error){ toast('Could not save: ' + error.message); return; }
     toast('Account ID saved');
-    });
+  });
   document.getElementById('wa_auto_quote').addEventListener('change', async e=>{
     const on = e.target.checked;
     const { error } = await sb.from('wa_numbers')
       .update({ auto_quote: on }).eq('shop_id', currentShopId);
     if(error){ toast('Could not save: ' + error.message); e.target.checked = !on; return; }
-    toast(on ? 'Auto-answers ON — exact matches only' : 'Auto-answers off');
+    toast(on ? 'Clear price questions will be answered automatically' : 'Every question waits for you again');
   });
   document.getElementById('wa_pnid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_pnid').value.trim();
@@ -30278,11 +30493,14 @@ function waRenderConnect(){
     const { error } = await sb.from('wa_numbers').upsert(
       { shop_id: currentShopId, phone_number_id: v }, { onConflict: 'phone_number_id' });
     if(error){ toast('Could not save: ' + error.message); return; }
+    /* A SECOND ROW IS WORSE THAN NO ROW: every lookup in this file is a
+       maybeSingle(), which fails outright when a shop has two numbers on
+       file. Saving a different number REPLACES the mapping. */
     const { error: cleanErr } = await sb.from('wa_numbers')
       .delete().eq('shop_id', currentShopId).neq('phone_number_id', v);
     if(cleanErr) console.error('old number cleanup failed', cleanErr);
     waInbox.configured = null;
-    toast('Number saved');
+    toast('Number saved — now press Check the connection');
   });
   document.getElementById('wa_catid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_catid').value.trim();
@@ -30309,9 +30527,10 @@ function waRenderConnect(){
         toast(msg, 6000);
         return;
       }
-      const gapNote = (gaps.noPhoto.length + gaps.noPrice.length)
-        ? ` (${gaps.noPhoto.length + gaps.noPrice.length} left out — photos or prices missing)` : '';
-      toast(`Catalog synced — ${res.pushed} pushed, ${res.removed} removed${gapNote}`, 6000);
+      const skipped = gaps.noPhoto.length + gaps.noPrice.length;
+      toast(`${items.length} sent to the catalogue`
+        + (skipped ? ` — ${skipped} left out: ${gaps.noPhoto.length} with no photo, ${gaps.noPrice.length} with no price` : ''), 6000);
+      renderWaLink();
     } finally { btn.disabled = false; }
   });
   document.getElementById('wa_register').addEventListener('click', async ()=>{
@@ -30334,8 +30553,85 @@ function waRenderConnect(){
     const ok = await waInboxStatus();
     waInbox.configured = ok;
     toast(ok ? 'Connected — the inbox is live' : 'Not yet — the token or the number is still missing');
-    if(ok) waInboxEnter();
+    renderWaLink();
+    if(ok && currentActiveTab === 'messages') renderMessages();
   });
+}
+
+/* THE STEPS BECOME A THING YOU HAND OVER, not a disclosure somebody has
+   to be sitting here to expand. The person who does this work is
+   usually not the person reading the card, and the old panel's fold
+   required them to be. Same hand-off pattern as every other send in
+   this app: the words are composed here, the app opens the chat, and it
+   cannot see whether it went -- so it says so rather than stamping. */
+function waSendTheSteps(){
+  const text = waStepsText();
+  /* NO RECIPIENT ON PURPOSE. Everywhere else in this app a bare wa.me
+     link is a fault -- it opens WhatsApp with nothing in the To field
+     and fails there, where the app cannot see it. Here it is the whole
+     point: the shop's own number is not the person who does this work,
+     and who does is a choice only the owner can make, so WhatsApp's own
+     contact picker is the right next screen. */
+  window.open(waComposeUrl('', text), '_blank');
+  toast('The steps are in a chat — pick whoever does this. Nothing is recorded: the app cannot see the send.', 6000);
+}
+
+/* The door from anywhere else: go where the decision lives, open the
+   flow, and put it in front of the eye. */
+function waOpenLinkSetup(){
+  goToTab('presets');
+  setTimeout(()=>{
+    const card = document.querySelector('.om-walink');
+    const go = document.getElementById('wa_link_go');
+    if(go && document.getElementById('wa_link_flow').hidden) go.click();
+    if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 60);
+}
+
+/* The card's face. Called on entering Setup and after anything that
+   could change the answer. */
+function renderWaLink(){
+  const lines = document.getElementById('wa_link_lines');
+  if(!lines) return;
+  const on = waLinked();
+  lines.innerHTML = waLinkLinesHTML();
+  const chip = document.getElementById('wa_link_chip');
+  const num = String(data.presetWaPhone||'').trim();
+  if(chip){
+    chip.textContent = on ? (num ? `linked · ${num}` : 'linked') : 'not linked';
+    chip.style.background = on ? 'var(--om-good)' : 'var(--om-neutral)';
+    chip.style.color = on ? 'var(--om-good-ink)' : 'var(--om-neutral-ink)';
+  }
+  const lbl = document.getElementById('wa_link_lbl');
+  if(lbl) lbl.textContent = on ? 'What linking turned on' : 'What linking would turn on';
+  const say = document.getElementById('wa_link_say');
+  if(say && on) say.innerHTML = '<b>Nothing on your phone changed.</b> The same number keeps working there, chats keep arriving as they do now, and Omni&#8209;Ware sees them too.';
+  const go = document.getElementById('wa_link_go');
+  if(go) go.textContent = on ? 'Change the connection' : 'Link the number';
+  const cost = document.querySelector('.om-wa-cost');
+  if(cost) cost.textContent = on
+    ? 'Open this only to change the number or the catalogue'
+    : 'About ten minutes · you will need the phone in your hand';
+}
+
+/* Bound once, at parse time, against markup that is in the document from
+   the start -- the card's face is static and only its figures are
+   written, so there is no handler to rebind on every render. */
+{
+  const go = document.getElementById('wa_link_go');
+  if(go) go.addEventListener('click', ()=>{
+    const flow = document.getElementById('wa_link_flow');
+    if(!flow) return;
+    const open = flow.hidden;
+    flow.hidden = !open;
+    go.setAttribute('aria-expanded', open ? 'true' : 'false');
+    /* Drawn on first opening rather than on every render: it reads four
+       values off the server, and a setup panel nobody has opened should
+       not be asking the database anything. */
+    if(open && !flow.dataset.drawn){ flow.dataset.drawn = '1'; waRenderLinkFlow(); }
+  });
+  const hand = document.getElementById('wa_link_hand');
+  if(hand) hand.addEventListener('click', waSendTheSteps);
 }
 
 /* The furniture of a real messaging app, all pure and all held by the
@@ -31408,7 +31704,7 @@ function waRenderChannel(){
       </div>
     </div>
     <div class="wa-ra" style="padding-top:0;">
-      <button type="button" class="btn btn-ghost ow-sm" id="wa_conn_open">Connection</button>
+      <button type="button" class="btn btn-ghost ow-sm" id="wa_conn_open">The connection, in Setup</button>
     </div>
     ${gapRows.join('')}
     ${pack.error ? `<p class="wa-note wa-note-warn"><b>The list the system answers from did not refresh.</b>
@@ -31429,12 +31725,11 @@ function waRenderChannel(){
     waRenderChannel();
     renderWhatsApp();
   });
+  /* THE CONNECTION IS NOT ON THIS SCREEN ANY MORE, so this is a door
+     rather than a pane: it goes where the decision lives and opens the
+     flow there, instead of unfolding a setup job inside a desk. */
   const conn = document.getElementById('wa_conn_open');
-  if(conn) conn.addEventListener('click', ()=>{
-    document.getElementById('wa_console').style.display = 'none';
-    document.getElementById('wa_connect_pan').style.display = '';
-    waRenderConnect();
-  });
+  if(conn) conn.addEventListener('click', ()=> waOpenLinkSetup());
 }
 
 
@@ -31671,7 +31966,15 @@ function goToTab(tab){
   // boot. It mattered little when the panes were the whole screen, and
   // it matters now the rail carries counts -- a count is a claim about
   // current data, so it has to be made against current data.
-  if(tab==='presets') renderPresets();
+  if(tab==='presets'){
+    renderPresets();
+    /* The card's figures are read off the books on entry -- how many
+       products could be browsed, and the biggest list one message could
+       go to -- because both change with every photo and every sale, and
+       a card arguing for a feature with a stale figure is arguing with
+       the wrong number. */
+    renderWaLink();
+  }
   /* The sticky totals bar is fixed to the viewport, so it must exist
      only while this tab does -- gated by a body class the bar's CSS
      reads, set here where every tab switch already passes. */
@@ -33386,6 +33689,40 @@ function orderPurchaseLines(q){
       quotedUnitCost: Number(it.price) || 0,
     };
   });
+}
+/* ---- WHAT AN ORDER COST, as against what left the till -------------
+
+   orderPurchaseLines reports the quantity that has to be COLLECTED, and
+   wherever the supplier breaks no packs that is a whole pack: one kilo
+   of hinges from a man who sells the twenty-kilo box is twenty kilos of
+   cash. That is the right figure for the buying list, which is a person
+   walking to market with money, and the wrong one for an order, because
+   the other nineteen kilos go on the shelf. They are stock. They are not
+   this sale.
+
+   Charged to the order they read "Cost, as bought 230,000" against
+   "Client pays 12,000" and called an ordinary sale a 1,816% loss -- not
+   a stale figure but a wrong one, on the screen an owner opens to decide
+   whether an order is worth doing at all.
+
+   Three readings, one unit cost: what the buyer actually paid where a
+   line has come in, and today's cheapest where it has not. */
+function orderLineUnitCost(l){
+  return (l && (l.settled || l.received))
+    ? (Number(l.it && l.it.receivedPrice) || 0)
+    : (Number(l && l.unitCost) || 0);
+}
+/* The order's own goods, at the quantity the ORDER takes -- the figure
+   that may be set against what the client pays. */
+function orderOwnCost(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.quotedQty) || 0), 0);
+}
+/* And the rest of the pack, which is real money and belongs to the
+   shelf. Named rather than dropped: it is the difference between the two
+   figures above, and an owner who is not told about it cannot reconcile
+   the till. */
+function orderPackSurplusCash(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.surplus) || 0), 0);
 }
 function orderCashToBuy(q){
   return orderPurchaseLines(q).reduce((s,l)=> s + (l.lineCost || 0), 0);
@@ -38548,6 +38885,54 @@ function ipLineBuyPrice(supplierId, refRow, qty, stockCost){
   return refRow ? Math.round(purchasePriceAtQty(refRow, qty)) : 0;
 }
 
+/* ============ A PRESS MUST SURVIVE THE REDRAW IT CAUSES ============
+
+   The quantity box commits on `change`, and `change` on a text field
+   fires when the field loses focus -- which, nine times in ten, is the
+   press on "Add to quote" taking the focus away from it. renderIpStage
+   then replaces every node in the sheet BETWEEN that press's mousedown
+   and its mouseup, so the browser is left with no element the two have
+   in common and fires no `click` at all:
+
+       mousedown -> ip_add_btn
+       change    -> ip_qty      (the sheet is rebuilt here)
+       mouseup   -> ip_add_btn  (a different node now)
+       ...and no click, ever
+
+   Nothing happened, nothing said why, and the owner pressed again. It
+   cost a silent press on every line of every quote, and it did the same
+   to the supplier radios and the Use -> cards, which are also pressed
+   with the quantity box still holding focus.
+
+   So a redraw asked for while a press is down waits for that press to
+   finish, and is released on the frame AFTER the pointer comes up --
+   the click is dispatched together with the mouseup, and redrawing
+   between those two is the same bug again. The add itself no longer
+   depends on the redraw having happened: it re-ranks the suppliers at
+   the quantity actually in the box, so the cost it records is right for
+   that quantity whether the sheet has caught up or not. */
+let ipStageRedrawHeld = false, ipStageRedrawWanted = false;
+function ipStageRedraw(){
+  if(ipStageRedrawHeld){ ipStageRedrawWanted = true; return; }
+  ipStageRedrawWanted = false;
+  renderIpStage();
+}
+document.addEventListener('pointerdown', (e)=>{
+  ipStageRedrawHeld = !!(e.target && e.target.closest && e.target.closest('#ip_stage_view'));
+}, true);
+function ipStageReleasePress(){
+  if(!ipStageRedrawHeld) return;
+  ipStageRedrawHeld = false;
+  requestAnimationFrame(()=>{
+    /* Not if the press closed the sheet -- the commonest outcome is
+       that the line went on the quote and there is no sheet to redraw. */
+    const modal = document.getElementById('itemPickerModal');
+    if(ipStageRedrawWanted && modal && modal.classList.contains('show')) ipStageRedraw();
+    else ipStageRedrawWanted = false;
+  });
+}
+document.addEventListener('pointerup', ipStageReleasePress, true);
+document.addEventListener('pointercancel', ipStageReleasePress, true);
 function renderIpStage(){
   const wrap = document.getElementById('ip_stage_view');
   const product = data.products.find(x=>x.id===ipProductId);
@@ -38925,7 +39310,7 @@ function renderIpStage(){
     radio.addEventListener('change', ()=>{
       ipSelectedSupplierId = radio.value;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   });
   // Re-resolves recommended prices, supplier-card prices and Buy @ for
@@ -38936,7 +39321,7 @@ function renderIpStage(){
     ipQtyRaw = Number(document.getElementById('ip_qty').value) || 1;
     ipQtyUnitMode = document.getElementById('ip_qty_unit').value;
     ipSelectedRecType = null;
-    renderIpStage();
+    ipStageRedraw();
   };
   wrap.querySelector('#ip_qty').addEventListener('change', handleQtyChange);
   wrap.querySelector('#ip_qty_unit').addEventListener('change', handleQtyChange);
@@ -38982,7 +39367,7 @@ function renderIpStage(){
       if(!item) return;
       ipSelectedSupplierId = item.dataset.id;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   }
   function ipSelectRecCard(card){
@@ -39026,12 +39411,21 @@ function renderIpStage(){
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
-    const buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
+    /* THE COST IS RE-RANKED AT THE QUANTITY IN THE BOX, not at the one
+       the sheet was last drawn for. refRow is a render-time closure, and
+       the redraw that would refresh it is deliberately held while this
+       press is down (see ipStageRedraw) -- so reading it here would
+       record a volume tier belonging to a different quantity, which is a
+       wrong figure rather than a stale screen. Same call the sheet
+       itself ranks with, so the two can only agree. */
+    const rankedNow = rankedPurchaseRowsAtQty(ipProductId, ipVariantIdx, qty);
+    const refNow = rankedNow.find(r=> r.supplierId===supplierId) || rankedNow[0] || refRow;
+    const buyPrice = ipLineBuyPrice(supplierId, refNow, qty, stockCost);
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
-      packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
+      packUnit: refNow ? (refNow.packUnit||'') : '', packQty: refNow ? (refNow.packQty||0) : '',
       /* How it was counted when it was chosen -- see quoteLinePack. */
       qtyIn: inPacks ? 'pack' : 'unit',
       qty, supplierId, supplierName: supplierName(supplierId),
@@ -43757,7 +44151,13 @@ function orderTrackHTML(status){
    reason can be typed; the open row keeps a way to it. */
 function orderSupplierActsHTML(q, opts){
   const o = opts || {};
-  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
+  /* BOTH KEYS, because this block has two homes: the phone's own row,
+     read by the board's listener (data-act), and the order's dialog on
+     the console, read by the dialog's (data-dlg). orderLoadFormHTML
+     carries the pair for exactly the same reason. A block that carried
+     only one of them worked in one home and was dead in the other --
+     which is what left the console with no way to ask a supplier. */
+  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-dlg="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
   const rows = orderSupplierGroups(q).map(g=>{
     const sid = String(g.supplierId);
     const st = orderSupplierConfirmState(q, sid);
@@ -44012,13 +44412,23 @@ function orderWhoText(q){
 /* HOW IT GOT HERE. Derived from the timestamps the record already
    carries, plus the stage log this screen started writing. An order
    from before that says so rather than inventing a history. */
+/* WHEN IT WAS TAKEN, answered in one place. The trail has always fallen
+   back to the quote's own date when nothing stamped the moment, and the
+   five-dot track did not -- so one dialog said "Taken · not recorded" in
+   its track and "Taken at the desk · 08:00" three inches below it, about
+   the same order. Two answers to one question is worse than either. */
+function orderTakenAt(q){
+  const t = q && (q.savedAt || (q.date ? Date.parse(q.date + 'T08:00:00') : null));
+  const n = typeof t === 'number' ? t : Date.parse(t);
+  return n && !isNaN(n) ? n : null;
+}
 function orderTrail(q){
   const ev = [];
   const push = (at, what, auto)=>{
     const t = typeof at === 'number' ? at : Date.parse(at);
     if(t && !isNaN(t)) ev.push({ at:t, what, auto:!!auto });
   };
-  push(q.savedAt || (q.date ? q.date + 'T08:00:00' : null),
+  push(orderTakenAt(q),
     q.originAgentId ? 'Taken through the agents app' : q.originWa ? 'Taken from a WhatsApp chat' : q.counterSale ? 'Sold at the counter' : 'Taken at the desk');
   Object.entries(q.supplierConfirms || {}).forEach(([sid, rec])=>{
     if(!rec) return;
@@ -44557,7 +44967,7 @@ function otDlgFig(label, n){
 function otStageTimes(q){
   const at = {};
   (q.stageLog || []).forEach(e=>{ if(e && e.status && at[e.status] == null) at[e.status] = e.at; });
-  if(at.draft == null && q.savedAt) at.draft = q.savedAt;
+  if(at.draft == null) at.draft = orderTakenAt(q);
   at[q.status] = q.stageEnteredAt || at[q.status];
   return at;
 }
@@ -44601,9 +45011,30 @@ function otPreviewSpec(id){
      any stock line on it cannot have its margin worked out here, and
      says so rather than reporting the whole price as profit. */
   const buys = orderPurchaseLines(q);
-  const cost = buys.reduce((sum, l)=> sum + (l.settled || l.received
-    ? (Number(l.it.receivedQty) || 0) * (Number(l.it.receivedPrice) || 0)
-    : (l.lineCost || 0)), 0);
+  /* WHAT THIS ORDER COST, which is not what left the till.
+
+     orderPurchaseLines reports the quantity that has to be COLLECTED,
+     and that is a whole pack wherever the supplier breaks none: one kilo
+     of hinges from a man who sells the twenty-kilo box is twenty kilos
+     of cash. Right for the buying list, which is a man walking to market
+     with money. Wrong here, because the other nineteen kilos go on the
+     shelf -- they are stock, not this sale. Charging them to the order
+     read "Cost, as bought 230,000" against "Client pays 12,000" and
+     called an ordinary sale a 1,816% loss, which is not a stale figure
+     but a wrong one, on the screen an owner opens to decide whether an
+     order is worth doing.
+
+     So the order is costed at the quantity the ORDER takes, per unit, at
+     what the buyer actually paid where a line has come in and today's
+     cheapest where it has not. What the pack forced on top is real money
+     and is named below rather than dropped -- it is simply not this
+     order's. */
+  const cost = orderOwnCost(buys);
+  const overPack = buys.filter(l=> (Number(l.surplus) || 0) > 0);
+  const overPackCash = orderPackSurplusCash(buys);
+  const overPackNote = overPack.length
+    ? `${overPack.length} line${overPack.length === 1 ? ' comes' : 's come'} in a pack bigger than the order, so ${esc(fmtUGX(Math.round(overPackCash)))} more leaves the till than is costed here — that surplus goes on the shelf as stock. `
+    : '';
   const total = savedQuoteTotal(q);
   const margin = total - cost;
   const wholeCost = s.fromStock === 0 && !s.unpriced;
@@ -44617,7 +45048,40 @@ function otPreviewSpec(id){
      on an order waiting for transport is to load it out, not to tell the
      client something they already know — so "Send the client an update"
      steps down to a ghost and the dialog still spends its oxide once. */
-  const loading = !!act && act.act === 'loaded';
+  /* ASKED WHEREVER THE PHONE ASKS IT. The form used to appear only when
+     the stage's own act was "loaded", which needs pickingStatus 'done'
+     -- a picker on the worker app. A shop with nobody on that app packs
+     at the desk, and orderLoadFormHTML says so in its own words ("Not
+     packed yet. Loading it from here counts it as picked and packed"),
+     but the console never showed the form that says it: an order that no
+     phone had touched reached Preparing and stopped there for ever, with
+     a lane head reading "You pack it, then you mark it out" and nothing
+     on the screen to mark it out with. So the dialog now carries exactly
+     what the phone's row carries, and the block decides for itself what
+     to say. */
+  const loadHtml = orderLoadFormHTML(q);
+  /* THE FORM IS THE MOVE while it is still asking who is carrying it --
+     that is when the dialog's one oxide belongs to its button and "Send
+     the client an update" steps down to a ghost. An order already out
+     with somebody named gets the same block as a statement of fact, and
+     its move is Delivered, in the footer where it has always been. */
+  const loading = !!loadHtml && (q.status === 'preparing' || orderNeedsDelivery(q));
+  /* What the footer offers, and it is NOT simply "whatever the form is
+     not". Two acts are dropped and only two:
+
+       'loaded'  the form's own button IS that act, and two of them
+                 would be two ways to do one thing, one with no form
+                 attached;
+       'open'    it means "go to where the suppliers are", which on the
+                 console is this dialog -- a button that reopens what
+                 you are already looking at.
+
+     Everything else stays, whether or not the form is drawn. Dropping
+     the act whenever the form appeared took "Decide" off an order whose
+     pick came up short -- the one decision that has to be made before
+     that order can ever be invoiced -- and left the screen offering
+     only to load it out. */
+  const footAct = act && act.act !== 'loaded' && act.act !== 'open' ? act : null;
   const track = SQ_STATUS_ORDER.map((st, j)=>{
     const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
     const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
@@ -44667,7 +45131,29 @@ function otPreviewSpec(id){
       </div>
       <div class="ow-dlg-cols">
         <div class="ow-dlg-col">
-          ${loading ? `<div class="ow-dlg-sect ow-dlg-load">${orderLoadFormHTML(q)}</div>` : ''}
+          ${loadHtml ? `<div class="ow-dlg-sect ow-dlg-load">${loadHtml}</div>` : ''}
+          ${/* THE SUPPLIERS, WHERE THE CONSOLE CAN REACH THEM. One line
+               per supplier still to come back, with the two taps: Ask,
+               which opens their WhatsApp with this order's lines already
+               written, and Confirmed, which is the answer. The phone has
+               had these inside the order's row from the start; the
+               console had them nowhere, so a Taken order could not be
+               moved on from a desk at all. Same call, same buttons. */''}
+          ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="ow-dlg-sect">
+            <div class="ow-dlg-l">Suppliers</div>
+            <div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>
+            ${/* THE WAY TO THE PANEL, which is where a supplier's answer
+                 can be TYPED. Ask and Confirmed are the two taps; "no
+                 stock until Friday" is not a tap, and the panel is the
+                 only place in the app that takes it. The phone's row has
+                 carried this button from the start and the console had
+                 nothing, so a supplier who rang back with a problem
+                 could not be recorded from a desk at all -- while the
+                 board goes on reporting a Problem state that nothing
+                 there could ever reach. */''}
+            <div class="ow-dlg-sup-go"><button type="button" class="btn btn-ghost ow-sm" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button></div>
+            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there. Open Every supplier to write down what one of them actually said.</div>
+          </div>` : ''}
           <div class="ow-dlg-sect">
             <div class="ow-dlg-l">The lines</div>
             ${s.lines.map(l=> `<div class="ow-dlg-ln">
@@ -44704,9 +45190,9 @@ function otPreviewSpec(id){
             <div class="ow-dlg-hr"></div>
             ${wholeCost
               ? `<div class="ow-dlg-kv ${margin < 0 ? 'ow-bad' : 'ow-good'}"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">${esc(otFig(Math.round(margin)))}</span></div>
-                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price.</div>`
+                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price. ${overPackNote}</div>`
               : `<div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">not from here</span></div>
-                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated.</div>`}
+                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated. ${overPackNote}</div>`}
           </div>
           <div class="ow-dlg-hr"></div>
           <div class="ow-dlg-sect">
@@ -44717,10 +45203,16 @@ function otPreviewSpec(id){
           </div>
         </div>
       </div>`,
-    foot: `<div class="ow-dlg-n">Nothing here sends itself.${act ? ` ${esc(otMoveNote(q, act))}` : ''}</div>
+    foot: `<div class="ow-dlg-n">${esc([`Nothing here sends itself.`,
+      loading ? otMoveNote(q, { act:'loaded' }) : '',
+      footAct ? otMoveNote(q, footAct) : ''].filter(Boolean).join(' '))}</div>
       ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
-      ${q.announcedAt || q.status === 'draft' || (act && act.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
-      ${act && !loading ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(act.act)}" data-id="${q.id}">${esc(act.label)}</button>` : ''}`,
+      ${/* Announce steps back into the footer as a ghost whenever the
+           move itself has gone to the form above -- it used to be
+           suppressed BOTH ways at once on an order in Preparing, so the
+           only way to tell the group about it disappeared. */''}
+      ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
+      ${footAct ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>` : ''}`,
   };
 }
 /* What the footer's move will actually do, said before it is pressed. */
@@ -44730,7 +45222,13 @@ function otMoveNote(q, act){
   if(act.act === 'invoice') return 'Invoicing takes the goods off the shelf, raises each supplier bill and books what is unpaid to the client.';
   if(act.act === 'buying') return 'The buying list is where a line is checked in; the order moves itself when the last one is.';
   if(act.act === 'loaded') return 'Say who is carrying it in the form above; that is what puts it on the run.';
-  return 'Everything on this screen is a tap of yours.';
+  if(act.act === 'shortpick') return 'Deciding the short pick is what lets it be invoiced — amend the order to what was found, or bill it as ordered.';
+  if(act.act === 'release') return 'Putting it back in the queue drops the pick with it; the next free picker takes it.';
+  /* Nothing specific to say. Empty rather than a sentence, because the
+     footer can now carry two of these at once -- the form's and the
+     footer act's -- and "Everything on this screen is a tap of yours"
+     beside "Nothing here sends itself." is the same remark twice. */
+  return '';
 }
 
 /* ================= 2b · THE BUYING LIST =================
@@ -44771,10 +45269,23 @@ function otBuyingSpec(){
   const unpriced = [];
   orders.forEach(q=> orderUnpricedLines(q).forEach(line=> unpriced.push({ order:q, line })));
   const waiting = orders.length;
-  /* Lines nobody has been sent for. Nothing buys them until they are on
-     a stop, so they are the first thing in the dialog, not a footnote. */
+  /* LINES NOBODY IS OUT FOR. They are on the round below -- a stop was
+     planned for them the moment a price put them there -- and the thing
+     that has not happened is that somebody has been SENT to it. Saying
+     "on no stop" put this block in flat contradiction with the stop it
+     was drawn directly above, which listed the same line and said, in
+     its own words, "nobody sent yet". One fact, one answer.
+
+     A line with no price on file is a different fault with a different
+     remedy, and has its own block below ("Not on any stop"), so it is
+     taken out here rather than counted twice under a sentence that is
+     not true of it: there is no stop to send anybody to. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   const toCheck = stops.reduce((n, r)=> n + r.lines.filter(l=> !l.settled && !l.received).length, 0);
   /* THE ONE OXIDE. When somebody is out, the thing to do next is check in
      what they brought back — the whole trip at once, which is the act
@@ -44830,10 +45341,9 @@ function otBuyingSpec(){
     body: `<div class="ow-dlg-k">${cashPositionHTML(orders)}</div>
       ${stranded.length ? `<div class="ow-dlg-warn">
         <svg class="icon ow-i16" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/></svg>
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no trip</span> — ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}</span> — ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 4).join(', '))}${
-          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. Nobody buys them until they are on a stop.</div>
-        ${otDlgGhost('pickups', 'Add them to a stop')}
+          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. They are on the round below and nothing is bought until somebody goes: send someone at the stop, or mark the supplier as delivering.</div>
       </div>` : ''}
       ${stops.length ? `<div class="ow-dlg-rows">
         <div class="ow-dlg-hd ow-bl-r">
@@ -44919,8 +45429,16 @@ function otTripSpec(){
   const stops = p.runs.concat(p.noLocation);
   const cash = stops.reduce((s, r)=> s + r.total, 0);
   const lines = stops.reduce((s, r)=> s + r.lines.length, 0);
+  /* Same distinction the buying list draws: on the round, but with
+     nobody sent to it. The unpriced ones are on no stop at all and are
+     reported as such there, so they are not swept in here under a
+     sentence about stops that do not exist for them. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   return {
     w: 760,
     title: "Plan today's trip",
@@ -44940,9 +45458,9 @@ function otTripSpec(){
         ? `Nowhere to go — all ${p.settled} bought-in line${p.settled === 1 ? '' : 's'} on this board ${p.settled === 1 ? 'has' : 'have'} already arrived.`
         : orders.length ? 'Nothing on the board has to be bought in.' : 'No order is waiting on goods.'}</div>`}
       ${stranded.length ? `<div class="ow-dlg-gap">
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no stop.</span> ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}.</span> ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 3).join(', '))}${
-          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — they will not be bought today unless a price puts them on one.</div>
+          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — the stops above are the plan, not somebody walking it. Send a buyer from the buying list.</div>
         ${otDlgGhost('buying', 'Open the buying list')}
       </div>` : ''}
     </div>`,
@@ -45073,6 +45591,10 @@ function openDeliveryRuns(){ otDlgOpen('runs', 0); }
 function openInvoiceDelivered(){ otDlgOpen('invoice', 0); }
 function openAnnounceDialog(id){ otAnnounceDraft = null; otDlgOpen('announce', Number(id)); }
 
+/* The acts that answer in a window of their own rather than on the
+   board. Listed because the dialog has to stand down for them; see the
+   'act' case below for why. */
+const OT_ACTS_WITH_A_WINDOW = ['shortpick', 'prepay', 'confirm', 'edit'];
 /* Everything a dialog can do, from one listener bound once. Each act
    redraws both the dialog and the board, because both are written from
    the same books and neither may be left saying what was true before. */
@@ -45084,8 +45606,43 @@ function otDlgAct(act, el){
     case 'close': otDlgClose(); break;
     case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
-    case 'act': otAct(el.dataset.act2, id, el); otDlgDraw(); break;
-    case 'cancel': cancelSavedQuote(id); otDlgDraw(); break;
+    /* AN ACT WITH A WINDOW OF ITS OWN CLOSES THIS ONE FIRST.
+
+       Every .modal-overlay in this file sits at z-index 100 and this
+       dialog sits at 120, so a modal opened from in here renders BEHIND
+       the dialog and its scrim: the press looks like it did nothing at
+       all. That is how "Decide" on a short pick behaved -- the one
+       decision that has to be made before the order can ever be
+       invoiced.
+
+       Closing rather than restacking, because it is also the right
+       screen: a decision taken in its own window belongs over the
+       board, not over an order dialog that will be stale by the time it
+       is answered. The same move 'whohas' already makes, one case
+       below. */
+    case 'act': {
+      const a2 = el.dataset.act2;
+      if(OT_ACTS_WITH_A_WINDOW.includes(a2)){ otDlgClose(); otAct(a2, id, el); break; }
+      otAct(a2, id, el);
+      otDlgDraw();
+      break;
+    }
+    /* THE SUPPLIER ACTS, in the dialog. The phone asks and confirms
+       inside the order's row; the console has no rows, so the order's
+       own dialog is where they are, and they come through here. Both
+       are redrawn: confirming the last supplier MOVES the order, and a
+       lane behind an open dialog must never still say Taken. */
+    case 'ask': case 'confirmed': case 'undoconfirm': otAct(act, id, el); after(); break;
+    case 'cancel': {
+      cancelSavedQuote(id);
+      /* Off the board, so off the screen. Leaving the dialog up over a
+         board that no longer lists the order invites a second act on
+         something that has already gone. A declined confirm changes
+         nothing, so the dialog stays and simply redraws. */
+      const gone = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+      if(gone && gone.voided) otDlgClose(); else otDlgDraw();
+      break;
+    }
     case 'announce': openAnnounceDialog(id); break;
     case 'tellclient': {
       if(!q) break;
@@ -45331,7 +45888,13 @@ function otDecisionActs(q, need){
   if(q.status === 'draft' && orderSupplierGroups(q).length) secondary = { act:'preview', label:'Suppliers' };
   else if(q.status !== 'draft' && q.status !== 'completed' && !q.announcedAt && primary.act !== 'announce') secondary = { act:'announce', label:'Announce' };
   else secondary = { act:'preview', label:'Open the order' };
-  if(secondary.act === primary.act) secondary = { act:'preview', label:'Open the order' };
+  /* TWO BUTTONS THAT SAY ONE WORD ARE ONE BUTTON AND A BUG. The guard
+     compared only the act, so a Taken order whose move is "Suppliers"
+     shipped with "Suppliers" beside "Suppliers" -- and the old repair
+     handed back another 'preview', which is the thing it was meant to
+     replace. A dock with nothing sensible to put second puts nothing
+     second: one decision, one button. */
+  if(secondary.act === primary.act || secondary.label === primary.label) secondary = null;
   return { primary, secondary };
 }
 
@@ -45384,7 +45947,7 @@ function otDockHTML(needs){
         </div>
         <div class="ow-ot-now-r">
           <span class="ow-ot-now-v" title="What the client pays">${esc(otFig(savedQuoteTotal(q)))}</span>
-          <span class="ow-ot-now-a">${btn(secondary, 'btn-ghost')}${btn(primary, 'btn-accent')}</span>
+          <span class="ow-ot-now-a">${secondary ? btn(secondary, 'btn-ghost') : ''}${btn(primary, 'btn-accent')}</span>
         </div>
       </div>
       <div class="ow-ot-peek">
@@ -45526,9 +46089,17 @@ function renderSavedQuotes(){
       rows = today;
     }
     const shown = rows.filter(q=> otOrderMatches(q, tokens));
-    return otLaneHTML(s, shown, { queued, tail,
-      invoiced: s === 'completed' ? rows.filter(q=> q.invoiced).length : 0,
-      searching: !!tokens.length && !shown.length && !!rows.length });
+    /* WHILE A SEARCH IS ON, A LANE COUNTS WHAT IT IS SHOWING. The other
+       four already did; Delivered added the earlier ones on top, and
+       they are not searched at all -- so a search that matched nothing
+       left a lane head reading 26 over the sentence "No order in this
+       lane matches the search". The strip is the count of the whole
+       board and stays one, deliberately; a lane head is a count of the
+       lane, and a lane showing nothing has nothing in it. */
+    const searching = !!tokens.length;
+    return otLaneHTML(s, shown, { queued, tail: searching ? 0 : tail,
+      invoiced: s === 'completed' ? shown.filter(q=> q.invoiced).length : 0,
+      searching: searching && !shown.length && !!rows.length });
   }).join(''));
 
   /* ---- THE PHONE'S OWN SCREEN, from the same derivations ---------- */
@@ -45619,11 +46190,27 @@ function otUnlinkChargeCost(btn){
   toast('Unlinked — the payment is still in the cash book, back under its own running cost');
 }
 
+/* WHICH OF THE TWO SCREENS IS ON.
+
+   Order tracking is two designs, not one reflowed (SKILL.md §1): above
+   820px the board and its dock, below it the phone's queue and rows.
+   Two acts -- "open it" and "say who has it" -- mean the ROW on the
+   phone and the order's own DIALOG on the console, and for a while they
+   only meant the row: on the console they marked a row open in a table
+   that is display:none there, so the board's own accent button did
+   nothing at all and a Taken order could never be moved on.
+
+   Read from the board's own computed display rather than from a width,
+   so this answer and the stylesheet's can never disagree. */
+function otConsoleShowing(){
+  const board = document.getElementById('ot_board');
+  return !!board && getComputedStyle(board).display !== 'none';
+}
 function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
   const sid = el && el.dataset ? el.dataset.sid : null;
   switch(act){
-    case 'open': otOpenRow(id); break;
+    case 'open': if(otConsoleShowing()) openOrderPreview(id); else otOpenRow(id); break;
     case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
     case 'announce': openAnnounceDialog(id); break;
     case 'ask': askOrderSupplier(id, sid); break;
@@ -45635,7 +46222,7 @@ function otAct(act, id, el){
     case 'buying': openBuyingList(); break;
     case 'pickups': openPickupRuns(); break;
     case 'runs': openDeliveryRuns(); break;
-    case 'loaded': otOpenRow(id); otFocusLoad(id); break;
+    case 'loaded': if(otConsoleShowing()) openOrderPreview(id); else { otOpenRow(id); otFocusLoad(id); } break;
     case 'loadgo': otLoadGo(id, el); break;
     case 'release': releaseOrderToQueue(id); break;
     case 'cancel': cancelSavedQuote(id); break;
@@ -46468,25 +47055,41 @@ window.addEventListener('resize', ()=>{
    the one that isn't. */
 function voidInvoicesWarning(quotes){
   if(!quotes || !quotes.length) return null;
-  const n = quotes.length;
+  /* NO DOCUMENT, NO QUESTION ABOUT ONE.
+
+     `voided` is also how a CANCELLED order leaves the board, and an
+     order cancelled in Taken or Buying has never been billed. Asked
+     about those, this wrote "Void INV-0001? Sarah Namono stops owing
+     164,000 UGX" -- a document that was never raised and a debt that
+     was never booked -- and it came up as a second dialog, directly
+     after the cancel question the board had already asked and answered.
+     Two dialogs for one act, the second of them untrue, on the ordinary
+     way to kill an order taken by mistake.
+
+     Voiding something that HAS been billed asks exactly as before, and
+     the figures below are read off the billed ones only, so a mixed
+     selection cannot report a balance no invoice carries. */
+  const billed = quotes.filter(q=> q && q.invoiced);
+  if(!billed.length) return null;
+  const n = billed.length;
   const it = n === 1 ? 'it' : 'them';
-  const owed = quotes.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
-  const held = quotes.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
+  const owed = billed.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
+  const held = billed.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
   const head = n === 1
-    ? `Void ${invoiceNumberLabel(quotes[0])}?`
+    ? `Void ${invoiceNumberLabel(billed[0])}?`
     : `Void ${n} invoices?`;
   /* One document is named to its customer, because that is who the shop
      is about to stop billing. Several are not: three invoices can all
      belong to one person, and "Customers stop owing" would be the dialog
      inventing a plurality it has not checked. */
-  const who = (quotes[0].client && quotes[0].client.name) || 'The customer';
+  const who = (billed[0].client && billed[0].client.name) || 'The customer';
   const stops = owed <= 0.5
     ? `Nothing is still owed on ${it}, so no balance changes.`
     : n === 1
       ? `${who} stops owing ${fmtUGX(Math.round(owed))}.`
       : `That takes ${fmtUGX(Math.round(owed))} off what customers owe you.`;
   const goods = `\n\nThe goods stay off the shelf — voiding cancels the bill, not the sale. If they never left the shop, undo the invoice instead.`;
-  const takings = quotes.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
+  const takings = billed.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
   const money = held > 0.5
     ? `\n\n${fmtUGX(Math.round(held))} already received stays recorded against ${it} and stays in the Cash Book. The register will keep saying so until ${
         takings === 1 ? 'the payment is' : 'those payments are'} removed.`
@@ -98103,12 +98706,22 @@ function renderMessages(){
   queue.style.display = onPost ? 'none' : '';
   posting.style.display = onPost ? '' : 'none';
   /* Posting has a door of its own, onto the inbox and the record. */
+  /* NO DOOR WITHOUT A ROOM. Everything behind this one -- who is
+     waiting, who was answered, what the system answered by itself, the
+     broadcast arithmetic, the channel's health -- is read off an inbox,
+     and there is no inbox until the number is linked. The door used to
+     open onto one grey sentence saying so, which is the same fault the
+     old connection panel had, in miniature: a place in a working screen
+     held by something that is not there. The register's own line at the
+     foot of the list is where the offer to link belongs. */
+  const linked = waLinked();
   const phub = document.getElementById('post_hub_body');
-  if(phub) phub.hidden = !onPost || !postHubOpen;
+  if(phub) phub.hidden = !onPost || !postHubOpen || !linked;
   const phubBtn = document.getElementById('post_hub_btn');
   if(phubBtn){
-    phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen) ? 'true' : 'false');
-    phubBtn.classList.toggle('om-on', onPost && postHubOpen);
+    phubBtn.hidden = !linked;
+    phubBtn.setAttribute('aria-expanded', (onPost && postHubOpen && linked) ? 'true' : 'false');
+    phubBtn.classList.toggle('om-on', onPost && postHubOpen && linked);
   }
   /* THE QUEUE'S OWN CHROME goes with the queue. The figure cards, the
      phone head and the note row sit OUTSIDE #msg_queue_body -- they are
@@ -98258,12 +98871,34 @@ function renderMessages(){
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${msgShowSent ? 'm18 15-6-6-6 6' : 'M5 12h14'}"/>${msgShowSent ? '' : '<path d="m12 5 7 7-7 7"/>'}</svg></button>` : ''}
   </div>`;
 
+  /* 6. THE ONE LINE THE CONNECTION LEAVES BEHIND.
+
+        A quarter of this screen used to be a panel saying the number is
+        not linked, three times over, with a table of three absences and
+        an offer to CHECK a connection nobody had made. The decision went
+        to Setup, where a thing done once belongs. What stays is this:
+        one line, at the FOOT of a list that has real work in it, so it
+        is read after the work rather than instead of it.
+
+        Not a lens, not a tab, and not a band announcing a void. And it
+        is not drawn at all once the number is linked -- at that point
+        the chats have somewhere of their own to arrive. */
+  if(!waLinked()){
+    html += `<div class="om-linkline">
+      <svg width="15" height="15" style="flex:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>
+      <span style="flex:1;min-width:0">Chats could be answered here too. Link your number and the replies to these messages arrive on this screen.</span>
+      <button type="button" class="om-btn om-btn-s" data-msglink="1" style="height:30px;padding:0 11px;font-size:12px;flex:none">Link WhatsApp</button>
+    </div>`;
+  }
+
   list.innerHTML = html;
   list.querySelectorAll('[data-msgrow]').forEach(row=>{
     row.addEventListener('click', ()=>{ msgPickedId = row.dataset.msgrow; msgPanelForm = null; renderMessages(); });
   });
   const wait = list.querySelector('[data-msgwaiting]');
   if(wait) wait.addEventListener('click', ()=>{ msgWaitingOpen = true; renderMessages(); });
+  const link = list.querySelector('[data-msglink]');
+  if(link) link.addEventListener('click', ()=> waOpenLinkSetup());
   const showSent = list.querySelector('[data-msgsent]');
   if(showSent) showSent.addEventListener('click', ()=>{
     msgShowSent = !msgShowSent;

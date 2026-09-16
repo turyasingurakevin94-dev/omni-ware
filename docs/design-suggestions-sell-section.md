@@ -860,3 +860,97 @@ three that moved furthest:
   still renders `fup-` markup — the follow-up list modal, its add-results rows
   and the measurement panel. The three screens that would have introduced a
   stray family are the three that no longer exist.
+
+### 8.18 The WhatsApp connection, and the three artboards it came with
+
+The third handoff (`design_handoff_messages_whatsapp_link/`) covers the one area
+of Messages the first two left alone: **The inbox & the record**, whose entire
+content, until a number is linked, is the fact that no number is linked. Its
+finding — **an unbuilt feature does not get a place in a working screen** — is the
+same one §8.14's zero rule made about a tile, applied to a quarter of a desk.
+
+What it replaced, stated so the next reader knows what was wrong with it: the area
+said *"nothing to show"* three times (a line above the band, the band's own
+`NOT CONNECTED` heading, and the sentence inside it), tabulated three absences as
+`none · none · not available` in a house style that elsewhere refuses to print a
+`0`, and offered **Check the connection** as its primary act — for a connection
+nobody had made.
+
+**Built, all three artboards:**
+
+- **3a — the card, in Setup › The shop.** The kept sentence at the top, above the
+  decision rather than below it; *What linking would turn on* as three lines in
+  the future tense with dashed, unfilled tiles; an action footer carrying `Link
+  the number` in the coral with the cost beside it and `Send the steps to someone`
+  on the right; the padlock promise below the card, not inside it. On linking the
+  chip fills with the number, the tiles fill ground-and-glyph together, and the
+  copy switches to the present tense.
+- **3b — the phone.** Each intention line a thumb tall, and the two acts full
+  width at the frame's own heights, the link at 48 and the hand-off at 44, with
+  the cost line centred between them.
+- **3c — the one line it leaves in Messages.** At the foot of the register, on the
+  sunken ground, below the last group: the message glyph, the sentence, and a 30px
+  `Link WhatsApp`. Not a lens, not a tab, not a band announcing a void — and gone
+  the moment the number is linked.
+
+**The two figures the frame's lines carry are derived, and one of them could not
+be.** The browsable count reads `waCatalogItems()`, the same function the sync
+itself pushes from, so the card and the push cannot disagree. *"A price change to
+the 24 people who buy that line"* cannot be read off the chat list — there **is**
+no chat list until the number is linked, and a figure that needs the thing being
+argued for is the absence-table fault wearing a number instead of a word. It is
+counted from the shop's own invoices instead: distinct customers per product,
+largest wins, and `null` rather than a `1` when the books cannot answer, which the
+line then says in words.
+
+**Deviations, each for a reason:**
+
+- **The card is a 2026 card on a console screen.** Setup › The shop has not been
+  redesigned: it is thirty `.ow-pan` folds with a search over them. The frame
+  draws this card at 1040 wide under a breadcrumb `Setup › The shop › WhatsApp`,
+  which is a *page*, and building it in the console's vocabulary would have thrown
+  away the one thing the handoff calls final. So it is the card, verbatim, at the
+  head of *The shop itself*, with `data-find` so the page's own search still
+  reaches it — and a visible seam until that page gets a frame.
+  **Setup › The shop is the page this most wants next.**
+- **3b is the card's phone form, not a full-screen detail.** The frame's phone
+  artboard has a navy header with a back chevron and a fixed footer, which is a
+  *page* again. Here the card is a section of one, so what carries over is the
+  part that is about the hand rather than about the page. Same deviation as above,
+  and it resolves with it.
+- **The technical steps are handed over AND still reachable.** The handoff is right
+  that a disclosure requires the person who does the work to be sitting at this
+  screen, which is exactly who is not there — so `Send the steps to someone`
+  composes them and opens WhatsApp's own contact picker, with no recipient, on
+  purpose. But somebody still has to type a Phone number ID at this computer. So
+  `Link the number` **opens the flow** rather than starting an automated one: the
+  numbered steps and the four fields, drawn on first opening (it asks the server
+  four questions, and a panel nobody has opened should ask nothing), each field
+  saving as it is filled, which is what makes it resumable by whoever comes back.
+  `Check the connection` lives at the foot of that flow, where something has been
+  attempted.
+- **The Inbox lens is named but not drawn, so it is not built.** The handoff says
+  a fourth lens appears beside Money, Telling and Posting when the number is
+  linked; no artboard draws it, and it also says *nothing in Messages' three
+  lenses changes*. Those two cannot both hold, because the inbox this app already
+  has lives behind the Posting lens's own door — a lens would have to take it from
+  there. Building an undrawn screen on speculation is the thing this handoff opens
+  by warning against. **The Inbox lens is the other frame this wants**, and the
+  question it has to settle is what the Posting door keeps: the post's own
+  argument and what it learned are Posting's, the waiting/answered/answering
+  panels and the channel's health are the inbox's.
+
+**Two faults the pass found on the way through:**
+
+- **A dead poller that read as a live one.** A 12-second interval refreshed the
+  inbox, guarded by `currentActiveTab !== 'whatsapp'` — a tab name that stopped
+  existing when WhatsApp and Follow-ups became Messages. The guard was therefore
+  true on every tick, so the interval cleared itself immediately and had refreshed
+  nothing since; the assertion that pinned it went on passing because it read the
+  guard rather than the effect. The handoff settles it from the other side — the
+  register must not poll a connection it does not need — so the interval, its
+  constant and its handle are deleted, and what is checked now is their absence.
+- **A door onto one grey sentence.** With the connection gone, the Posting lens's
+  *The inbox & the record* door opened onto a single line saying the number was
+  not linked — the same fault, in miniature. The door is not drawn at all until
+  there is something behind it.

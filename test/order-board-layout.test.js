@@ -114,6 +114,16 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
      set is the genuinely bad case rather than a busy one. */
   t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : ''\)/.test(render),
     'crimson only on the tile that is genuinely bad, and only when it is not empty');
+  /* A LANE HEAD IS A COUNT OF THE LANE, and while a search is on that is
+     what the lane is showing. Four of the five already were; Delivered
+     added the earlier ones on top, and those are never searched -- so a
+     search matching nothing left a head reading 26 directly above the
+     sentence "No order in this lane matches the search". The strip
+     stays a count of the whole board, which is the opposite rule and
+     the one above pins it. */
+  t.check(/tail: searching \? 0 : tail,/.test(render)
+    && /invoiced: s === 'completed' \? shown\.filter\(q=> q\.invoiced\)\.length : 0,/.test(render),
+    'and a lane counts what it is showing once a search narrows it, the earlier ones included');
   t.check(!/'ow-warn'/.test(render.slice(render.indexOf('put(strip,'), render.indexOf('put(dock,'))),
     'and nothing else in the strip is tinted at all');
   /* AND IT SAYS SO WHEN IT CANNOT SAY. With no stage limit set in
@@ -168,7 +178,17 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
     stageEnteredAt: NOW - 3600000, items: [] }, over);
   const need = (o, over) => scope.orderNeedsYou(q(o), over || fine);
 
-  const taps = (h, sid) => new RegExp(`data-act="ask" data-id="7" data-sid="${sid}"`).test(h) && new RegExp(`data-act="confirmed" data-id="7" data-sid="${sid}"`).test(h);
+  /* BOTH ROUTING KEYS, because this block has two homes. It used to be
+     pinned as `data-act` alone, which was true while the supplier taps
+     only ever appeared in the phone's row -- and that was the whole
+     defect: the console reads `data-dlg` (the order's dialog is outside
+     #tab-quote-saved, so the board's listener never sees it), so on a
+     desktop there was no control anywhere that could ask a supplier or
+     mark one confirmed, and a Taken order could not be moved on at all.
+     The pair is what makes one block work in both homes, so the pair is
+     what is pinned. */
+  const taps = (h, sid) => ['ask', 'confirmed'].every((a) =>
+    new RegExp(`data-act="${a}" data-dlg="${a}" data-id="7" data-sid="${sid}"`).test(h));
   let n = need({ sup: ['S1', 'S2'] });
   t.check(n && n.chip === 'Not asked' && n.acts.length === 0 && taps(n.html, 'S1') && taps(n.html, 'S2'),
     `a draft nobody has asked for is Not asked, with Ask and Confirmed on the row for each supplier (${n && n.chip})`);
@@ -370,7 +390,16 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
   t.check(/if\(moved\)\{[\s\S]*?q\.stageLog\.push\(\{ status, at: Date\.now\(\), auto: !!\(opts && opts\.auto\) \}\);[\s\S]*?\}\s*q\.status = status;/.test(setter),
     'setSavedQuoteStatus appends to the stage log only on a real move, marking a step the app took itself');
-  const trail = extractFunction(src, 'orderTrail', 'index.html');
+  /* The taken moment moved one function along. It is the only fact the
+     trail answered that the five-dot track above it also needed, and the
+     two were answering differently -- the track said "Taken · not
+     recorded" over a trail that had just recorded it, because only the
+     trail carried the fall-back to the quote's own date. One derivation
+     now, read by both, so the dialog cannot contradict itself. The trail
+     still reads every one of these off the record; savedAt it reads
+     through orderTakenAt. */
+  const trail = extractFunction(src, 'orderTrail', 'index.html')
+    + extractFunction(src, 'orderTakenAt', 'index.html');
   ['q.savedAt', 'q.supplierConfirms', 'q.stageLog', 'it.receivedAt', 'q.pickingAssignedAt', 'q.workerAcceptedAt',
     'q.pickingDoneAt', 'q.carrier', 'q.announcedAt', 'q.invoicedTs', 'q.cancelledAt'].forEach((f) => {
     t.check(trail.includes(f), `the trail reads ${f} off the record`);
@@ -691,6 +720,26 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   const act = extractFunction(src, 'otDlgAct', 'index.html');
   t.check(/window\.open\(waComposeUrl/.test(act),
     'telling a client or a buyer opens WhatsApp rather than sending anything');
+  /* A MODAL OPENED FROM THIS DIALOG WOULD OPEN BEHIND IT. Every
+     .modal-overlay is z-index 100 and the dialog scrim is 120, so an act
+     with a window of its own has to stand this one down first -- "Decide"
+     on a short pick opened its modal underneath the dialog and its scrim,
+     and the press read as doing nothing at all. */
+  t.check(/\.ow-dlg-sc\{position:fixed;inset:0;z-index:120;/.test(src)
+    && /\.modal-overlay\{[\s\S]{0,200}?z-index:100;/.test(src),
+    'the dialog scrim really does outrank the modal overlays');
+  t.check(/if\(OT_ACTS_WITH_A_WINDOW\.includes\(a2\)\)\{ otDlgClose\(\); otAct\(a2, id, el\); break; \}/.test(act)
+    && /const OT_ACTS_WITH_A_WINDOW = \['shortpick', 'prepay', 'confirm', 'edit'\];/.test(src),
+    'so an act that answers in its own window closes the dialog first');
+  /* AND THE FOOTER KEEPS EVERY OTHER ACT. Dropping it whenever the
+     carrier form appeared took "Decide" off a short-picked order --
+     the one decision that has to be made before it can be invoiced --
+     and left the screen offering only to load it out. Two acts are
+     dropped and only two, each because the dialog already carries it:
+     'loaded' is the form's own button, 'open' is this dialog. */
+  t.check(/const footAct = act && act\.act !== 'loaded' && act\.act !== 'open' \? act : null;/
+    .test(extractFunction(src, 'otPreviewSpec', 'index.html')),
+    'and the footer drops only the two acts the dialog is already carrying');
   t.check(/nothing is sent until you press send/.test(extractFunction(src, 'otAnnounceSpec', 'index.html')),
     'and the announcement says so on the dialog that drafts it');
 }

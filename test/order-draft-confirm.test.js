@@ -505,9 +505,31 @@ const draft = (items) => {
   // the staff picker, so sharing it would have made the confirm act open
   // a staff picker.
   t.check(/if\(!orderDraftReady\(q\)\) return \{ act:'open', label:'Suppliers' \};/.test(code),
-    'an unconfirmed draft\'s act opens the row, where each supplier has its own Ask and Confirmed');
-  t.check(/data-act="\$\{act\}" data-id="\$\{q\.id\}" data-sid="\$\{esc\(sid\)\}"/.test(extractFunction(src, 'orderSupplierActsHTML', 'index.html')),
-    'and those taps carry the supplier, so one row can hold several');
+    'an unconfirmed draft\'s act goes to where each supplier has its own Ask and Confirmed');
+  /* TWO HOMES, ONE ACT. 'open' used to mean the phone's row and nothing
+     else, so on the console -- where that row is display:none -- the
+     board's own accent button did nothing at all and a Taken order could
+     never be moved on. It now means the row on the phone and the order's
+     own dialog on the console, which is where the console keeps what the
+     row keeps. Still not a pop-up asking the question a second way. */
+  t.check(/case 'loaded': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else \{ otOpenRow\(id\); otFocusLoad\(id\); \} break;/.test(src)
+    && /case 'open': if\(otConsoleShowing\(\)\) openOrderPreview\(id\); else otOpenRow\(id\); break;/.test(src),
+    'and it reaches that place on either screen');
+  /* AND THE PANEL, which is the only place a supplier's answer can be
+     TYPED. Ask and Confirmed are the two taps; "no stock until Friday"
+     is not a tap. The phone's row has carried the way in from the start;
+     the console had none, so a supplier who rang back with a problem
+     could not be recorded from a desk at all -- while orderNeedsYou goes
+     on reporting a Problem state nothing there could reach. */
+  t.check(/data-dlg="act" data-act2="confirm"/.test(extractFunction(src, 'otPreviewSpec', 'index.html')),
+    'and the order dialog carries the way to the panel where a problem is written down');
+
+  /* BOTH ROUTING KEYS. The board's listener reads data-act; the dialog
+     sits outside #tab-quote-saved and reads data-dlg, so a tap carrying
+     only one of them is dead in the other home -- which is exactly how
+     the console ended up with no way to ask a supplier. */
+  t.check(/data-act="\$\{act\}" data-dlg="\$\{act\}" data-id="\$\{q\.id\}" data-sid="\$\{esc\(sid\)\}"/.test(extractFunction(src, 'orderSupplierActsHTML', 'index.html')),
+    'and those taps carry the supplier, so one row can hold several — and both keys, so they work in either home');
   t.check(!/act:'assign', label:'Suppliers'/.test(code),
     'and does not share the assign act, which is wired to the staff picker');
   t.check(/case 'confirm': openSupplierConfirmModal\(id\); break;/.test(code),
