@@ -269,17 +269,34 @@ if (scope) {
   /* ONE BOX, and it is what ships. The pane had a second one and the two
      shared fupDrafts so they could not disagree; there is one now, and
      the send reads it rather than the builder. */
-  t.check(/<textarea class="om-box" id="msg_box"/.test(side)
+  /* The box itself is drawn by composerBoxHTML now -- one composer, shared
+     with the Quote screen's Sent lens -- so the textarea is checked
+     where it lives and the id this screen passes it is checked here. */
+  t.check(/<textarea class="om-box" id="\$\{boxId\}"/.test(extractFunction(src, 'composerBoxHTML', 'index.html'))
+    && /composerBoxHTML\('msg_box', body\)/.test(side)
     && /fupDrafts\[cid\] = box\.value/.test(side)
     && /fupDrafts\[cid\] != null\) return fupDrafts\[cid\]/.test(extractFunction(src, 'msgDraftFor', 'index.html')),
     'the message is editable, and what SENDS is what the owner sees — not a copy of it');
 
   /* The badge did not go dark, it went to the row that now owns the
      work: a debtor the money lens would ask today is a hub row, so the
-     count on the rail did not change when the screen went. */
+     count on the rail did not change when the screen went.
+
+     WHAT CHANGED IS WHAT ELSE IS IN IT. The badge was every hub row,
+     which counted a client the shop might LIKE to speak to beside one it
+     owes a word — a posting nomination, a held-back row, a fact that
+     belongs on the posting queue. None of those is an obligation, and a
+     badge that rises because a suggestion queue grew teaches people to
+     ignore badges, after which it cannot report the thing it exists for.
+     So it is money plus telling. The half this file owns is the money
+     half, and it is still read off the hub's own rows, built from this
+     derivation. */
   const badge = extractFunction(src, 'renderFollowUpBadge', 'index.html');
-  t.check(/followUpHubRows\(Date\.now\(\)\)\.length/.test(badge),
+  t.check(/rows\.filter\(r=> r\.kinds\.has\('money'\)\)\.length/.test(badge)
+    && /followUpHubRows\(now\)/.test(badge),
     'the rail count comes off the hub’s own rows, which are built from this derivation among others');
+  t.check(/money \+ telling/.test(badge) && !/rows\.length/.test(badge),
+    'and it counts obligations only — a nomination, a hold and a better-posted row are none of them a word owed');
   t.check(/renderFollowUpBadge\(\);/.test(extractFunction(src, 'refreshNavBadges', 'index.html')),
     'and refreshes with every other badge');
   t.check(/chaseAfterDays:d\.presetChaseAfterDays/.test(src) && /debtChases:d\.presetDebtChases\|\|\{\}/.test(src)

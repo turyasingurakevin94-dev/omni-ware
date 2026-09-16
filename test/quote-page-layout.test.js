@@ -308,16 +308,29 @@ const src = read('index.html');
      block and its pill row be dropped on the phone entirely rather
      than drawn a second time under the bar.
      
-     Three cells, not two: Building and Saved are the same two lenses
-     the console shows as pills, and Details is where the rail's cards
-     go on a screen with no room beside the list for them. The pane
-     switch is unchanged -- data-qtab is still what setQuoteTab reads. */
+     FOUR cells, and three of them are lenses: Building, Saved and Sent
+     are the same three the console shows as pills, and Details is where
+     the rail's cards go on a screen with no room beside the list for
+     them. Saved was drawn here and wired to nothing -- setQuoteTab
+     folded everything that was not 'details' into 'quote', so pressing
+     it lit Building and showed the document, and both lists were
+     unreachable on a phone. The bar is the phone's lens row now:
+     data-qtab still drives setQuoteTab, and setQuoteTab drives the
+     lens, so the pills and the bar cannot hold two ideas of which lens
+     is up. */
   const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>\s*<\/div>/.exec(src) || [''])[0];
   t.check(/<div class="q-phbar"[\s\S]*?id="q_tabbar"/.test(src),
     'the phone’s lenses sit in its own header, not inside the document');
-  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 3
-    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs) && /data-qtab="details"/.test(tabs),
-    'three cells — the two lenses the console shows as pills, and Details');
+  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 4
+    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs)
+    && /data-qtab="sent"/.test(tabs) && /data-qtab="details"/.test(tabs),
+    'four cells — the three lenses the console shows as pills, and Details');
+  /* A tab that names a lens must SET that lens. The bug this pins is the
+     one the bar shipped with: three of the four buttons did nothing. */
+  const setTab = extractFunction(src, 'setQuoteTab', 'index.html');
+  t.check(/Q_TAB_LENS\[t\]/.test(setTab) && /setQuoteLens\(lens\)/.test(setTab)
+    && /quote:'building', saved:'saved', sent:'sent'/.test(src),
+    'and each of the three drives the lens, so no cell on the phone is a button that does nothing');
   t.check(/id="q_tab_n_quote"/.test(tabs) && /id="q_tab_n_details"/.test(tabs) && /id="q_tab_dot"/.test(tabs),
     'each carrying its count, and Details a dot for a section that is warning');
   t.check(/\.q-tabbar\{display:none;\}/.test(src) || /,\s*\n?\s*\.q-tabbar,/.test(src),
@@ -604,6 +617,203 @@ const src = read('index.html');
     'so the meta block takes a row of its own rather than a sliver of one');
   t.check(/max-width:760px/.test(mq),
     'at the same width the columns below it collapse — the stage goes single-file all at once');
+}
+
+/* ---------- 2A · the Sent lens ---------------------------------------
+ *
+ * The third lens had a chip and no design, and the chip was hiding a
+ * distinction: SAVED is written and nobody has seen it, SENT is with the
+ * client waiting on a yes. Two piles, two jobs, two orderings -- Saved
+ * by what is at stake, Sent by a CLOCK.
+ *
+ * Four things are pinned here, and each is a bug this screen already
+ * had once.
+ */
+{
+  /* 2A.1 · ONE CLOCK, NOT TWO.
+     The board asks how long an order has sat in its lane; Sent asks how
+     long a quote has sat with a client. Same question, and a second
+     timer would be a second definition of "late" -- two definitions that
+     disagree on the day it matters. */
+  const age = extractFunction(src, 'stateAge', 'index.html');
+  const overdue = extractFunction(src, 'orderStageOverdue', 'index.html');
+  const sentAge = extractFunction(src, 'quoteSentAge', 'index.html');
+  t.check(/stateAge\(q\.stageEnteredAt, limitMin \* 60000, nowMs\)\.past/.test(overdue),
+    'the board’s stage flag is read off the one clock');
+  t.check(/stateAge\(q\.sentAt, quoteWaitDays\(\) \* 86400000\)/.test(sentAge),
+    'and so is the Sent lens’s — the only difference between them is the unit the limit is written in');
+  const clock = compileScope([age], {}, ['stateAge']);
+  const NOW = 1700000000000;
+  t.check(clock.stateAge(NOW - 15 * 86400000, 14 * 86400000, NOW).past === true
+    && clock.stateAge(NOW - 13 * 86400000, 14 * 86400000, NOW).past === false,
+    'it is past the limit only once the limit is actually passed');
+  /* A limit cannot be past on a clock that never started. Reporting an
+     unknown moment as "0 days old" is how a quote nobody stamped turns
+     into a quote sent today. */
+  t.check(clock.stateAge(null, 14 * 86400000, NOW).known === false
+    && clock.stateAge(null, 14 * 86400000, NOW).past === false
+    && clock.stateAge(null, 14 * 86400000, NOW).days === null,
+    'and an unknown entry moment is unknown, never nought');
+
+  /* 2A.2 · THE LIMIT IS CONFIGURATION, AND IT SAYS WHERE IT LIVES.
+     "Past its limit · 14 days" reads as the app’s own limit rather than
+     a threshold invented for this screen, which is only true if it IS
+     one -- set in Setup, beside the board’s stage limits. */
+  t.check(/id="pset_rule_qwait"/.test(src) && /id="preset_quote_wait_days"/.test(src),
+    'the wait is a setting in Setup, not a number in the code');
+  const limitsAt = src.indexOf('id="pset_rule_limits"');
+  const waitAt = src.indexOf('id="pset_rule_qwait"');
+  t.check(limitsAt > 0 && waitAt > limitsAt && waitAt - limitsAt < 3000,
+    'and it sits beside the board’s stage limits, where the same question is already answered once');
+  const wait = extractFunction(src, 'quoteWaitDays', 'index.html');
+  t.check(/presetQuoteWaitDays/.test(wait) && /QUOTE_WAIT_DEFAULT/.test(wait),
+    'one reader, falling back rather than obeying a nought');
+  const pane = extractFunction(src, 'quoteSentPaneHTML', 'index.html');
+  t.check(/Why \$\{f\.limit\} day/.test(pane) && /q_sent_limit_go/.test(pane)
+    && /not a threshold invented\s*\n?\s*for this screen/.test(pane),
+    'the screen argues the limit and carries the way to change it inside the sentence');
+
+  /* 2A.3 · NEXT IS ONE ACT PER ROW, AND NOTHING IS AN ACT INSIDE THE
+     LIMIT. A button offered on day three teaches somebody to chase on
+     day three, which is how a client stops answering at all. */
+  const next = extractFunction(src, 'quoteSentNext', 'index.html');
+  const acts = compileScope([next], {
+    data: { presetPriceReview: {} },
+  }, ['quoteSentNext']);
+  t.check(acts.quoteSentNext({ owed: 0, past: false, days: 3, q: {} }).act === 'wait',
+    'a quote still in time has earned nothing');
+  t.check(acts.quoteSentNext({ owed: 12000, past: false, days: 3, q: {} }).act === 'debt',
+    'a client who owes money is asked about the money first, however new the quote');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, moved: { up: 500 }, q: {} }).act === 'requote',
+    'a cost that has moved is a requote, not a reminder about a price the shop can no longer hold');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, q: { asks: [1, 2] } }).act === 'letgo',
+    'and asked twice past the limit is let go — a third message is not a sales technique');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, q: {} }).act === 'ask',
+    'everything else past the limit is asked again');
+
+  /* 2A.4 · ASK AGAIN IS THE MONEY QUEUE’S COMPOSER, not a second one.
+     The draft is editable and THE BOX IS WHAT SHIPS -- written once, so
+     neither screen can restate the promise in words of its own. */
+  const wire = extractFunction(src, 'renderQuoteLensPane', 'index.html');
+  t.check(/composerBoxHTML\('q_ask_box'/.test(pane) && /composerStampHTML\(\{yes:'q_ask_yes', no:'q_ask_no'\}/.test(pane),
+    'the follow-up is drawn by the shared composer, not by a second one written here');
+  t.check(/box \? box\.value : quoteAskDraft/.test(wire),
+    'and what ships is read off the box at the moment it is pressed, never the draft it opened with');
+  const act = extractFunction(src, 'quoteSentAct', 'index.html');
+  t.check(!/window\.open/.test(act.slice(act.indexOf("'letgo'"))),
+    'pressing Ask again opens the composer rather than firing a message nobody read');
+
+  /* 2A.5 · THE LENS IS DRAWN AT EVERY WIDTH.
+     The quote TABLE is inside @media (min-width: 821px) on purpose --
+     its desktop row and its phone card come from one template and the
+     console skin still owns the phone side. The Sent lens has no console
+     skin behind it, so scoping it there left the phone with an unstyled
+     stack: display:block, no grid, a 19px button. */
+  const styleStart = src.indexOf('<style>');
+  const ctx = (needle)=>{
+    const at = src.indexOf(needle);
+    if(at < 0) return null;
+    const seg = src.slice(styleStart, at).replace(/\/\*[\s\S]*?\*\//g, '');
+    const stack = []; let buf = '';
+    for(const ch of seg){
+      if(ch === '{'){ stack.push(buf.trim().split('\n').pop().trim()); buf = ''; }
+      else if(ch === '}'){ stack.pop(); buf = ''; }
+      else buf += ch;
+    }
+    return stack;
+  };
+  ['.om-srow{', '.om-grow{', '.om-av{', '.om-sent-kpis{', '.om-qrow{', '.om-qempty{', '.om-stamp{'].forEach(sel=>{
+    const st = ctx(sel);
+    t.check(st !== null && st.length === 0,
+      `${sel.slice(0, -1)} is written at every width — a list with no console skin behind it cannot live inside the desktop switch`);
+  });
+  t.check((ctx('.om-irow{') || []).join() === '@media (min-width: 821px)',
+    'while the quote table stays inside it, because its phone side is still the console’s');
+
+  /* 2A.6 · THE PHONE’S BAR IS THE PHONE’S LENS ROW, and it is restored
+     BELOW the lens engine. Restoring it above reached `quoteLens` before
+     its declaration ran: a ReferenceError at the top level, every `let`
+     after it left uninitialised, and the whole app failing to boot on one
+     line of session restore. */
+  const restoreAt = src.indexOf("sessionStorage.getItem('q_tab_lens')");
+  const lensDecl = src.indexOf("let quoteLens = 'building'");
+  t.check(restoreAt > 0 && lensDecl > 0 && restoreAt > lensDecl,
+    'the tab bar is restored after the lens it sets is declared — a `let` read early is a ReferenceError that takes the whole boot with it');
+}
+
+/* ---------- 1B · the Saved lens --------------------------------------
+ *
+ * SAVED WAITS ON YOU. Bundle 14 corrected the conflation this lens was
+ * built on: a quote nobody has seen is not waiting on a yes, and its act
+ * is therefore SEND. 1b was drawn before that correction and offers
+ * "Chase it" on one of its rows; that one thing is deliberately not
+ * built, because the bundle that ships 1b also rules it out.
+ */
+{
+  const pane = extractFunction(src, 'quoteSavedPaneHTML', 'index.html');
+  const nextFn = extractFunction(src, 'quoteSavedNext', 'index.html');
+  const waitFn = extractFunction(src, 'quoteSavedWait', 'index.html');
+
+  t.check(/Client<\/span>[\s\S]{0,200}Value<\/span>[\s\S]{0,200}Waiting<\/span>[\s\S]{0,200}You keep<\/span>[\s\S]{0,200}Next<\/span>/.test(pane),
+    '1b’s five columns, in 1b’s order');
+  t.check(/written and not yet sent/.test(pane) && /the client has not seen/.test(pane)
+    && !/waiting on a yes/.test(pane),
+    'and the correction bundle 14 makes — "waiting on a yes" is the Sent lens’s job, not this one’s');
+
+  /* THE WAITING CHIP IS A STATE, NOT A DATE. "3 days" and "19 days,
+     price stale" are two different jobs, and the second is the whole
+     reason to read this list before sending anything off it. */
+  const waits = compileScope([waitFn], {
+    data: { presetPriceReview: { staleDays: 20 } },
+    priceReviewStaleDays: ()=> 20,
+  }, ['quoteSavedWait']);
+  t.check(waits.quoteSavedWait({ owed: 250000, days: 5, stale: false }).cls === 'om-chip-bad'
+    && /debt first/.test(waits.quoteSavedWait({ owed: 250000, days: 5, stale: false }).text),
+    'a quote held behind a debt says so, rather than saying how old it is');
+  t.check(/price stale/.test(waits.quoteSavedWait({ owed: 0, days: 40, stale: true }).text),
+    'a quote past the shop’s own price-trust window says THAT');
+  t.check(waits.quoteSavedWait({ owed: 0, days: 16, stale: false }).cls === 'om-chip-caution',
+    'and one three quarters of the way there goes amber before it goes stale');
+  t.check(waits.quoteSavedWait({ owed: 0, days: 3, stale: false }).cls === 'om-chip-neutral',
+    'while a fresh one is plain — a list where every chip is coloured has no colour left to spend');
+
+  /* ONE ACT PER ROW, and the default act on this lens is SEND. */
+  const acts = compileScope([nextFn], {}, ['quoteSavedNext']);
+  t.check(acts.quoteSavedNext({ owed: 0, stale: false, q: { items: [1] } }).act === 'send',
+    'the default act on Saved is send — the thing standing between a written quote and a quote the client has seen');
+  t.check(acts.quoteSavedNext({ owed: 250000, stale: true, q: { items: [1] } }).act === 'debt',
+    'a client who owes is asked about the money first, whatever else the row says');
+  const rep = acts.quoteSavedNext({ owed: 0, stale: true, q: { items: [1] } });
+  t.check(rep.act === 'reprice' && /om-btn-p/.test(rep.cls),
+    'a quote whose figures are older than the shop trusts them is re-priced on the way out, in coral');
+  t.check(acts.quoteSavedNext({ owed: 0, stale: false, q: { items: [] } }).act === 'open',
+    'and a quote with nothing on it offers Open, because there is nothing to send');
+  t.check(!/Chase it/.test(pane),
+    'nothing on this lens offers to chase — you cannot chase somebody who has not seen it');
+
+  /* SEND IS THE WHOLE JOURNEY IN ONE PRESS, and it is answered where it
+     was started. Four steps between a list of quotes waiting to go and a
+     quote going out is how a list stops being worked. */
+  const act = extractFunction(src, 'quoteSavedAct', 'index.html');
+  t.check(/loadSavedQuote\(q\.id\)/.test(act) && /q_whatsapp_btn/.test(act)
+    && /setQuoteLens\('saved'\)/.test(act),
+    'Send reopens the document, presses the one hand-off this app has, and comes back to the list');
+  t.check(/data-stamp="sent"/.test(pane) && /data-stamp="not"/.test(pane)
+    && /cannot see WhatsApp/.test(pane),
+    'and the same question is asked on the list, in the same words — the app still cannot see WhatsApp');
+  t.check(/quotePendingStamp \?/.test(pane),
+    'only while an answer is actually outstanding');
+  t.check(/quotePendingStamp = id \|\| null;[\s\S]{0,400}renderQuoteLensPane\(\)/.test(src),
+    'the send tells the list about the question, not only the document’s rail');
+
+  /* THE TAIL. Ranked by what is at stake means the small money piles up
+     at the bottom -- countable rather than drawable, and openable,
+     because a list that permanently hides four records is a list with
+     four records missing. */
+  t.check(/QUOTE_SAVED_HEAD/.test(pane) && /more saved quote/.test(pane) && /Show all \$\{ranked\.length\}/.test(pane),
+    'the tail counts what it does not draw, and offers to draw it');
+  t.check(/q_saved_more/.test(extractFunction(src, 'renderQuoteLensPane', 'index.html')),
+    'and the offer is wired');
 }
 
 process.exit(t.done() ? 1 : 0);
