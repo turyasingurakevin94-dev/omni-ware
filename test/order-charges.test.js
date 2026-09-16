@@ -119,7 +119,16 @@ const eq = (got, want, msg)=> t.check(got === want, `${msg} (got ${got}, want ${
     'and a negative one adds nothing either — a discount is a decision about the price of the goods, not a charge');
 
   /* It is also refused at the door on the way in. */
-  const guard = (/ch\.value = Math\.max\(0, Number\(inp\.value\)\|\|0\);/).test(src);
+  /* THE CLAMP MOVED OFF THE WIDGET AND INTO THE HANDLER, and that is
+     the stronger place for it. The box used to be type="number"
+     min="0", so the browser refused a negative before the app saw it.
+     It is a text box now -- the money on this screen is shown grouped,
+     265,000 rather than 265000, and a number input cannot hold a value
+     with separators in it -- and a text box will happily accept "-50".
+     So the refusal is where the value is WRITTEN rather than where it
+     is typed, which is the only place that can promise it: qNum parses
+     what was typed, Math.max(0, …) is what reaches ch.value. */
+  const guard = (/ch\.value = Math\.max\(0, qNum\(inp\.value\)\);/).test(src);
   t.check(guard, 'the field that sets it cannot be typed below nothing');
 }
 

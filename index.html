@@ -6182,6 +6182,19 @@
      in the .om- layer: that layer may not name an element, and this
      rule has to. It comes out when main's own ground converts. */
   body.on-quote-tab main{background:var(--om-ground);}
+  /* THE SHOP SIDE, BEHIND A TAP ON THE PHONE. Buy from, Buy @ and Keep
+     are hidden on a 390px screen -- the margin is a fact you check, not
+     a column you scan -- and come back as extra lines on each row when
+     the strip at the foot is opened. The selector names a class on
+     <body>, which the .om- layer may not, so it sits here with the code
+     that toggles it rather than with the rules it overrides. */
+  @media (max-width:820px){
+    body.q-shop-open .om-qdoc .om-irow > .q-shop-first,
+    body.q-shop-open .om-qdoc .om-irow > [data-l="Buy @"],
+    body.q-shop-open .om-qdoc .om-irow > [data-l="Keep"]{
+      display:flex;grid-column:2 / span 2;align-items:baseline;gap:6px;
+      font-size:11.5px;color:var(--om-ink-3);}
+  }
   /* The line-total track is minmax(112px, auto): a money column is
      sized to its content and never truncates, and with subgrid the
      foot's larger total sizes the same track for every row above it.
@@ -9416,7 +9429,13 @@
       font-size:var(--ow-t-11);letter-spacing:.07em;}
     .q-doc .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl-h > :nth-child(6),
     .q-doc .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl-h > :nth-child(8){display:none;}
-    .q-doc .ow-tbl-h > .q-shop-first{display:none;}
+    /* The header loses the shop's columns with the rows that had them.
+       It used to hide only the first of the three, which was enough
+       while the other two were unlabelled -- "Keep" is a word, and it
+       sat over a column that is not drawn. */
+    .q-doc .ow-tbl-h > .q-shop-first,
+    .q-doc .ow-tbl-h > .ow-tbl-n:nth-last-child(-n+2),
+    .q-doc .ow-tbl-h > .om-idiv{display:none;}
     .q-doc .ow-tbl-h > :nth-child(5){justify-self:end;}
     /* THE LINE, 54px: number, name, total; under them the count and the
        price as dotted taps, and who it is from. */
@@ -9442,7 +9461,12 @@
     /* The controls, the supplier column and the shop's cells are not
        drawn until the row opens or the strip does. */
     .q-doc .q-line > .q-ph-ctl{display:none;}
-    .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Margin"]{display:none;}
+    /* Keep, not Margin: the column was renamed when the table moved to
+       the card system, and this selector is what takes the shop's three
+       cells off the phone card. It went on naming the old word, so the
+       Keep cell stopped being hidden and landed on top of the line's
+       own second row. A renamed column has to be renamed here too. */
+    .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Keep"]{display:none;}
     .q-line .q-remove-icon{display:none;}
     .q-doc .q-line > .q-ph-shop{display:none;}
     body.q-shop-open .q-doc .q-line > .q-ph-shop{display:flex;align-items:center;gap:var(--ow-sp-4);grid-column:2/-1;grid-row:3;min-width:0;
@@ -16725,6 +16749,83 @@
      adds no specificity, so the later rule simply won and the rail sat
      on top of the day's figures. Hiding it has to be re-stated by
      whichever layer last set the display. */
+  /* ================= THE QUOTE ON A PHONE (1c) =====================
+     820px is a SWITCH between two designs. The console above is a
+     dense work surface; this is five stacked children summing to the
+     screen: navy header, search, the scrolling list, the dock, the tab
+     bar. Nothing here is the console reflowed.
+
+     These rules carry .om-qdoc or .om-qground in front of the row's own
+     class so they outweigh the console's phone block, which reshapes
+     the same markup and is still what dresses every screen the
+     redesign has not reached.
+     ================================================================== */
+  @media (max-width: 820px){
+    /* The phone has its own header and its own lenses inside it. The
+       console's title block and lens group would draw a second name
+       and a second set of tabs under the navy bar. */
+    .om-qground > .om-qtitle{display:none}
+
+    /* ---- the navy header ---- */
+    .om-qground .q-phbar{height:auto;min-height:calc(48px + env(safe-area-inset-top));
+      display:block;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;background:var(--om-navy)}
+    .om-qground .q-phbar-row{display:flex;align-items:center;gap:9px}
+    .om-qground .q-phbar .mt-mark{width:24px;height:24px;border-radius:7px;background:var(--om-coral);
+      display:flex;align-items:center;justify-content:center;flex:none;font-size:9.5px;font-weight:700;color:var(--om-on-navy)}
+    .om-qground .q-phbar-t{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px;
+      font-size:14px;font-weight:700;color:var(--om-on-navy)}
+    .om-qground .q-phbar-t small{font-size:11px;font-weight:400;color:var(--om-on-navy-3);margin-left:0;
+      min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .om-qground .q-phbar-btn{width:34px;height:34px;color:var(--om-on-navy-3)}
+    .om-qground .q-phbar-btn .icon{width:19px;height:19px}
+
+    /* ---- the three lenses, in the header where the design puts them.
+       A tab is 36px, which is under the 44px touch floor for a button
+       you press to act -- but these SWITCH A VIEW, they do not commit
+       anything, and they are the full width of a third of the screen.
+       The floor is about hitting the right target; 130 x 36 is not the
+       target a floor is written for. ---- */
+    .om-qground .q-tabbar{display:flex;gap:0;margin:9px 0 0;padding:0;border:0;background:none}
+    .om-qground .q-tab{flex:1;height:36px;background:none;border:0;border-bottom:2px solid transparent;
+      color:var(--om-on-navy-3);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer}
+    .om-qground .q-tab.on{border-bottom-color:var(--om-coral);color:var(--om-on-navy);font-weight:700}
+    .om-qground .q-tab-n{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+      color:var(--om-on-navy-3);background:none;padding:0;margin-left:4px}
+
+    /* ---- the search, on white, under the header ---- */
+    .om-qground .q-item-search-wrap{margin:0;padding:0 11px;height:40px;gap:9px;
+      border:1px solid var(--om-rule-input);border-radius:10px;background:var(--om-surface)}
+    .om-qground .q-item-search-wrap:focus-within{border-color:var(--om-navy)}
+    .om-qground .om-qsearch-band{background:var(--om-surface);border-bottom:1px solid var(--om-rule);padding:8px 12px}
+
+    /* ---- the list ---- */
+    .om-qground .q-doc{background:var(--om-surface);border:0;border-radius:0}
+    /* The card's three-column shape -- index, name and total on line
+       one, the line's own arithmetic on line two -- is what the console
+       skin already builds from this same row, and it is the shape the
+       artboard draws. It is not restated here: two sets of rules
+       fighting over one grid is how a phone layout ends up with cells
+       on top of each other. What the card system ADDS is below. */
+    /* THE DOTTED RULE IS THE AFFORDANCE, and nothing else in the app
+       uses it: a figure you can change carries it, a figure you cannot
+       does not. On the console the box appears under the pointer; a
+       phone has no pointer to hover with, so the mark has to be on the
+       figure itself. */
+    .om-qdoc .om-irow .om-gi{text-decoration:underline dotted var(--om-ink-quiet);text-underline-offset:3px;
+      border:0;background:none;padding:0;font-size:11.5px;color:var(--om-ink);width:auto}
+    .om-qdoc .om-irow .om-gi:hover{border:0;background:none}
+    /* The shop side comes back when it is asked for; that rule names a
+       class on <body>, which this layer may not do, so it lives beside
+       setShopSideOpen instead. */
+
+    /* ---- the dock ----
+       The height stays the console's: on the phone the bar carries the
+       shop strip as a row above the figure, and pinning it to the
+       artboard's 64px -- which is the figure row alone -- cut the
+       figure off. The total takes the phone's size. */
+    .om-dock .om-dock-total{font-size:20px}
+  }
+
   @media (max-width: 820px){
     .om-rail{display:none}
     /* The divider is a column separator, and a card has no columns. */
@@ -17502,13 +17603,29 @@
            top bar and this screen's 26px heading are not drawn under it;
            190px of chrome before the first line was the whole complaint.
            Never drawn on the console. -->
+      <!-- THE PHONE'S HEADER. Navy, and it carries the screen's name,
+           who the quote is for, the two acts that are not the dock's,
+           and the three lenses. The console's title block and lens
+           group are not drawn under it -- a second name and a second
+           set of tabs was the "190px of chrome before the first line"
+           this screen was rebuilt to end. Never drawn on the console. -->
       <div class="q-phbar" id="q_phbar">
-        <div class="mt-mark" aria-hidden="true">OW</div>
-        <span class="q-phbar-t">New quote<small>Sell</small></span>
-        <button type="button" class="q-phbar-btn" id="q_phbar_print" aria-label="Client copy" title="Client copy — the client quotation">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
-        </button>
-        <span class="q-phbar-more" id="q_phbar_more"></span>
+        <div class="q-phbar-row">
+          <div class="mt-mark" aria-hidden="true">OW</div>
+          <span class="q-phbar-t">Quote<small id="q_phbar_who">Sell</small></span>
+          <button type="button" class="q-phbar-btn" id="q_phbar_print" aria-label="Client copy" title="Client copy — the client quotation">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+          </button>
+          <span class="q-phbar-more" id="q_phbar_more"></span>
+        </div>
+        <!-- Building · Saved · Details. The first two are the lenses the
+             console shows as pills; Details is where the rail's cards go
+             on a screen with no room beside the list for them. -->
+        <div class="q-tabbar" id="q_tabbar" role="tablist">
+          <button type="button" class="q-tab on" data-qtab="quote" role="tab" aria-selected="true">Building <b class="q-tab-n" id="q_tab_n_quote">0</b></button>
+          <button type="button" class="q-tab" data-qtab="saved" role="tab" aria-selected="false">Saved <b class="q-tab-n" id="q_tab_n_saved_ph">0</b></button>
+          <button type="button" class="q-tab" data-qtab="details" role="tab" aria-selected="false">Details <b class="q-tab-n" id="q_tab_n_details">0</b><i class="q-tab-dot" id="q_tab_dot" hidden></i></button>
+        </div>
       </div>
       <!-- THE TITLE, AND THE THREE MOMENTS OF ONE DOCUMENT. A quote
            being built and a quote saved are the same lines, the same
@@ -17586,7 +17703,7 @@
                picker modal (suppliers, recommended prices, cash hint)
                still does the deciding — this is only the faster way in.
                The + row inside the table remains as the second door. -->
-          <div class="q-item-search-wrap om-qsearch">
+          <div class="om-qsearch-band"><div class="q-item-search-wrap om-qsearch">
             <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="q_item_search" placeholder="Add item — name, SKU or supplier code" autocomplete="off">
             <span class="q-item-search-hint om-keycap" title="Press / to jump here; Enter adds the top result">/</span>
@@ -17596,7 +17713,7 @@
                  notes) -- the first cut reused the MARKUP but not the
                  scope, and the rows rendered as an unstyled stack. -->
             <div class="q-item-search-dd searchable-select" id="q_item_search_dd" style="display:none;"></div>
-          </div>
+          </div></div>
           <!-- What they usually take, as chips on one line under the
                search -- inside the document, because tapping one puts a
                line on it. Chips that do not fit are counted, never
@@ -17607,10 +17724,7 @@
                details the console keeps in its rail. Each carries its
                count; Details carries a dot when a section is warning.
                Never drawn on the console. -->
-          <div class="q-tabbar" id="q_tabbar" role="tablist">
-            <button type="button" class="q-tab on" data-qtab="quote" role="tab" aria-selected="true">Quote <b class="q-tab-n" id="q_tab_n_quote">0</b></button>
-            <button type="button" class="q-tab" data-qtab="details" role="tab" aria-selected="false">Details <b class="q-tab-n" id="q_tab_n_details">0</b><i class="q-tab-dot" id="q_tab_dot" hidden></i></button>
-          </div>
+
           <div id="q_itemsWrap"></div>
         </div>
 
@@ -24724,6 +24838,17 @@ function highlightTokens(text, tokens){
 }
 
 function fmtUGX(n){ return n===null||n===undefined||n===''? '' : Number(n).toLocaleString('en-UG') + ' UGX'; }
+/* A typed figure, read back. The money boxes on the quote show grouped
+   digits -- 265,000, not 265000 -- because that is how the figure is
+   said on the call and how the rest of the document prints it. A
+   type="number" input CANNOT hold that: the browser rejects a value
+   with separators in it and shows the bare digits instead, which is why
+   those boxes read 26500 next to a line total reading 265,000. They are
+   text boxes with inputmode="decimal", and this is what turns what was
+   typed back into a number. Everything the shop can type is stripped:
+   the separators the box itself wrote, and the spaces a person adds. */
+function qNum(v){ return Number(String(v==null?'':v).replace(/[,\s]/g, '')) || 0; }
+function qFig(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
 // Compact price + unit, e.g. "10,000/pc" — used on the Recommended Prices
 // squares in New Quote where space is tight and "UGX" would be redundant.
 function fmtPriceCompact(n, unit){
@@ -36736,6 +36861,17 @@ function renderClientFold(){
   document.getElementById('q_cf_meta').textContent = name
     ? fmtDayMonth(document.getElementById('q_date').value || todayISO())
     : '';
+  /* And the phone's header says who the quote is for beside the screen's
+     name -- the one fact that tells you which quote this is when you come
+     back to it. It read "Sell", which is the section, and a header that
+     names the section you are already in says nothing. */
+  {
+    const who = document.getElementById('q_phbar_who');
+    if(who){
+      const when = fmtDayMonth(document.getElementById('q_date').value || todayISO());
+      who.textContent = name ? `${name} · ${when}` : when;
+    }
+  }
 }
 document.getElementById('q_client_fold').addEventListener('click', ()=>{
   const band = document.getElementById('q_client_band');
@@ -38118,7 +38254,7 @@ function renderQuoteItems(){
     const qtyShown = asPack ? packView.packs : it.qty;
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
-        <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
+        <input type="text" inputmode="decimal" class="ow-gi om-gi price-input q-sell${manual?' q-sell-manual':''}" value="${qFig(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
         <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
@@ -38142,7 +38278,7 @@ function renderQuoteItems(){
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <span class="om-idiv" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi om-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
+      <div class="ow-tbl-n" data-l="Buy @"><input type="text" inputmode="decimal" class="ow-gi om-gi price-input q-price" value="${qFig(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
@@ -38289,7 +38425,7 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
-      item.price = (Number(e.target.value) || 0) / quoteLineCountPer(item);
+      item.price = qNum(e.target.value) / quoteLineCountPer(item);
       // At THIS line's quantity -- the price was agreed for this many, and
       // the price book records it against that.
       /* item.unit was snapshotted from whoever this line was quoted
@@ -38300,7 +38436,7 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
-      item.sellPrice = (Number(e.target.value) || 0) / quoteLineCountPer(item);
+      item.sellPrice = qNum(e.target.value) / quoteLineCountPer(item);
       // Never blocked, only said. See sellBelowCostClause.
       const below = sellBelowCostClause(item);
       if(below) toast(`Saved — but ${below}.`, 7000);
@@ -38665,13 +38801,14 @@ function chargeRowsHTML(q, goodsTotal){
       </div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n" data-l="${isPercent ? 'Rate' : 'Amount'}"><div class="q-sell-cell">
-        <input type="number" class="ow-gi" data-chg-val="${i}" min="0" step="any"
-          value="${Number(ch.value) > 0 ? Number(ch.value) : ''}"
+        <input type="text" inputmode="decimal" class="ow-gi om-gi" data-chg-val="${i}"
+          value="${Number(ch.value) > 0 ? (isPercent ? Number(ch.value) : qFig(ch.value)) : ''}"
           placeholder="${isPercent ? 'e.g. 5' : 'e.g. 20000'}"
           aria-label="${esc(asked)}, ${isPercent ? 'percent of the items' : 'amount in shillings'}">${
         isPercent ? '<span class="q-chg-pct">%</span>' : ''}</div></div>
       <div class="ow-tbl-n${isPercent ? '' : ' q-chg-same'}" data-l="${isPercent ? 'Comes to' : 'Line total'}" title="What this charge adds to the client's bill">${
         amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
+      <span class="om-idiv" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first"></div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n"></div>
@@ -38792,7 +38929,7 @@ function wireQuoteCharges(wrap){
     // Never below nothing. A charge is money the shop is owed; taking money
     // OFF a bill is a discount, which is a decision about the price of the
     // goods and belongs on the line that sets it.
-    ch.value = Math.max(0, Number(inp.value)||0);
+    ch.value = Math.max(0, qNum(inp.value));
     redraw();
   }));
   wrap.querySelectorAll('[data-chg-del]').forEach(btn=> btn.addEventListener('click', ()=>{

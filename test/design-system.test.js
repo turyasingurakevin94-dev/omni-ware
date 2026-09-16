@@ -1380,7 +1380,13 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        that appears under the pointer around a number inside a table
        row, which wants a softer corner than the 9px of a button that
        is always drawn. Specified as "steppers 7" in the quote handoff. */
-    const RADII = new Set(['2px', '3px', '6px', '7px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
+    /* 0 belongs in the set. On a 390px screen the document card runs to
+       both edges -- there is no ground beside it to round against -- so
+       the phone takes the corners off rather than drawing a 14px radius
+       against the screen edge. "No radius" is a decision the system
+       makes, and a set that cannot express it pushes the rule outside
+       the layer where nothing checks it. */
+    const RADII = new Set(['0', '2px', '3px', '6px', '7px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
     const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()));
     const bad = [...r].filter((x) => !RADII.has(x));
     t.check(bad.length === 0, bad.length ? `radii off the system: ${bad.join(' | ')}` : `${r.size} radii, all from the system`);
@@ -1439,8 +1445,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      the rail sat on top of the day's figures at phone width. A layer
      that sets display on the rail has to re-state the hiding. */
   {
-    const phone = /@media\s*\(max-width:\s*820px\)\s*\{([\s\S]*?)\n  \}/.exec(om);
-    t.check(!!phone && /\.om-rail\{[^}]*display:\s*none/.test(phone[1]),
+    /* The layer has more than one phone block now -- the quote brought
+       its own -- so the rule is looked for across all of them rather
+       than in whichever one happens to come first. */
+    const phone = [...om.matchAll(/@media\s*\(max-width:\s*820px\)\s*\{([\s\S]*?)\n  \}/g)]
+      .map((m) => m[1]).join('\n');
+    t.check(/\.om-rail\{[^}]*display:\s*none/.test(phone),
       'the OM layer hides the rail at the 820px switch, where the phone has its own chrome');
   }
 
