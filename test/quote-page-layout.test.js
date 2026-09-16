@@ -308,16 +308,29 @@ const src = read('index.html');
      block and its pill row be dropped on the phone entirely rather
      than drawn a second time under the bar.
      
-     Three cells, not two: Building and Saved are the same two lenses
-     the console shows as pills, and Details is where the rail's cards
-     go on a screen with no room beside the list for them. The pane
-     switch is unchanged -- data-qtab is still what setQuoteTab reads. */
+     FOUR cells, and three of them are lenses: Building, Saved and Sent
+     are the same three the console shows as pills, and Details is where
+     the rail's cards go on a screen with no room beside the list for
+     them. Saved was drawn here and wired to nothing -- setQuoteTab
+     folded everything that was not 'details' into 'quote', so pressing
+     it lit Building and showed the document, and both lists were
+     unreachable on a phone. The bar is the phone's lens row now:
+     data-qtab still drives setQuoteTab, and setQuoteTab drives the
+     lens, so the pills and the bar cannot hold two ideas of which lens
+     is up. */
   const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>\s*<\/div>/.exec(src) || [''])[0];
   t.check(/<div class="q-phbar"[\s\S]*?id="q_tabbar"/.test(src),
     'the phone’s lenses sit in its own header, not inside the document');
-  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 3
-    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs) && /data-qtab="details"/.test(tabs),
-    'three cells — the two lenses the console shows as pills, and Details');
+  t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 4
+    && /data-qtab="quote"/.test(tabs) && /data-qtab="saved"/.test(tabs)
+    && /data-qtab="sent"/.test(tabs) && /data-qtab="details"/.test(tabs),
+    'four cells — the three lenses the console shows as pills, and Details');
+  /* A tab that names a lens must SET that lens. The bug this pins is the
+     one the bar shipped with: three of the four buttons did nothing. */
+  const setTab = extractFunction(src, 'setQuoteTab', 'index.html');
+  t.check(/Q_TAB_LENS\[t\]/.test(setTab) && /setQuoteLens\(lens\)/.test(setTab)
+    && /quote:'building', saved:'saved', sent:'sent'/.test(src),
+    'and each of the three drives the lens, so no cell on the phone is a button that does nothing');
   t.check(/id="q_tab_n_quote"/.test(tabs) && /id="q_tab_n_details"/.test(tabs) && /id="q_tab_dot"/.test(tabs),
     'each carrying its count, and Details a dot for a section that is warning');
   t.check(/\.q-tabbar\{display:none;\}/.test(src) || /,\s*\n?\s*\.q-tabbar,/.test(src),
@@ -604,6 +617,128 @@ const src = read('index.html');
     'so the meta block takes a row of its own rather than a sliver of one');
   t.check(/max-width:760px/.test(mq),
     'at the same width the columns below it collapse — the stage goes single-file all at once');
+}
+
+/* ---------- 2A · the Sent lens ---------------------------------------
+ *
+ * The third lens had a chip and no design, and the chip was hiding a
+ * distinction: SAVED is written and nobody has seen it, SENT is with the
+ * client waiting on a yes. Two piles, two jobs, two orderings -- Saved
+ * by what is at stake, Sent by a CLOCK.
+ *
+ * Four things are pinned here, and each is a bug this screen already
+ * had once.
+ */
+{
+  /* 2A.1 · ONE CLOCK, NOT TWO.
+     The board asks how long an order has sat in its lane; Sent asks how
+     long a quote has sat with a client. Same question, and a second
+     timer would be a second definition of "late" -- two definitions that
+     disagree on the day it matters. */
+  const age = extractFunction(src, 'stateAge', 'index.html');
+  const overdue = extractFunction(src, 'orderStageOverdue', 'index.html');
+  const sentAge = extractFunction(src, 'quoteSentAge', 'index.html');
+  t.check(/stateAge\(q\.stageEnteredAt, limitMin \* 60000, nowMs\)\.past/.test(overdue),
+    'the board’s stage flag is read off the one clock');
+  t.check(/stateAge\(q\.sentAt, quoteWaitDays\(\) \* 86400000\)/.test(sentAge),
+    'and so is the Sent lens’s — the only difference between them is the unit the limit is written in');
+  const clock = compileScope([age], {}, ['stateAge']);
+  const NOW = 1700000000000;
+  t.check(clock.stateAge(NOW - 15 * 86400000, 14 * 86400000, NOW).past === true
+    && clock.stateAge(NOW - 13 * 86400000, 14 * 86400000, NOW).past === false,
+    'it is past the limit only once the limit is actually passed');
+  /* A limit cannot be past on a clock that never started. Reporting an
+     unknown moment as "0 days old" is how a quote nobody stamped turns
+     into a quote sent today. */
+  t.check(clock.stateAge(null, 14 * 86400000, NOW).known === false
+    && clock.stateAge(null, 14 * 86400000, NOW).past === false
+    && clock.stateAge(null, 14 * 86400000, NOW).days === null,
+    'and an unknown entry moment is unknown, never nought');
+
+  /* 2A.2 · THE LIMIT IS CONFIGURATION, AND IT SAYS WHERE IT LIVES.
+     "Past its limit · 14 days" reads as the app’s own limit rather than
+     a threshold invented for this screen, which is only true if it IS
+     one -- set in Setup, beside the board’s stage limits. */
+  t.check(/id="pset_rule_qwait"/.test(src) && /id="preset_quote_wait_days"/.test(src),
+    'the wait is a setting in Setup, not a number in the code');
+  const limitsAt = src.indexOf('id="pset_rule_limits"');
+  const waitAt = src.indexOf('id="pset_rule_qwait"');
+  t.check(limitsAt > 0 && waitAt > limitsAt && waitAt - limitsAt < 3000,
+    'and it sits beside the board’s stage limits, where the same question is already answered once');
+  const wait = extractFunction(src, 'quoteWaitDays', 'index.html');
+  t.check(/presetQuoteWaitDays/.test(wait) && /QUOTE_WAIT_DEFAULT/.test(wait),
+    'one reader, falling back rather than obeying a nought');
+  const pane = extractFunction(src, 'quoteSentPaneHTML', 'index.html');
+  t.check(/Why \$\{f\.limit\} day/.test(pane) && /q_sent_limit_go/.test(pane)
+    && /not a threshold invented\s*\n?\s*for this screen/.test(pane),
+    'the screen argues the limit and carries the way to change it inside the sentence');
+
+  /* 2A.3 · NEXT IS ONE ACT PER ROW, AND NOTHING IS AN ACT INSIDE THE
+     LIMIT. A button offered on day three teaches somebody to chase on
+     day three, which is how a client stops answering at all. */
+  const next = extractFunction(src, 'quoteSentNext', 'index.html');
+  const acts = compileScope([next], {
+    data: { presetPriceReview: {} },
+  }, ['quoteSentNext']);
+  t.check(acts.quoteSentNext({ owed: 0, past: false, days: 3, q: {} }).act === 'wait',
+    'a quote still in time has earned nothing');
+  t.check(acts.quoteSentNext({ owed: 12000, past: false, days: 3, q: {} }).act === 'debt',
+    'a client who owes money is asked about the money first, however new the quote');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, moved: { up: 500 }, q: {} }).act === 'requote',
+    'a cost that has moved is a requote, not a reminder about a price the shop can no longer hold');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, q: { asks: [1, 2] } }).act === 'letgo',
+    'and asked twice past the limit is let go — a third message is not a sales technique');
+  t.check(acts.quoteSentNext({ owed: 0, past: true, days: 20, q: {} }).act === 'ask',
+    'everything else past the limit is asked again');
+
+  /* 2A.4 · ASK AGAIN IS THE MONEY QUEUE’S COMPOSER, not a second one.
+     The draft is editable and THE BOX IS WHAT SHIPS -- written once, so
+     neither screen can restate the promise in words of its own. */
+  const wire = extractFunction(src, 'renderQuoteLensPane', 'index.html');
+  t.check(/composerBoxHTML\('q_ask_box'/.test(pane) && /composerStampHTML\(\{yes:'q_ask_yes', no:'q_ask_no'\}/.test(pane),
+    'the follow-up is drawn by the shared composer, not by a second one written here');
+  t.check(/box \? box\.value : quoteAskDraft/.test(wire),
+    'and what ships is read off the box at the moment it is pressed, never the draft it opened with');
+  const act = extractFunction(src, 'quoteSentAct', 'index.html');
+  t.check(!/window\.open/.test(act.slice(act.indexOf("'letgo'"))),
+    'pressing Ask again opens the composer rather than firing a message nobody read');
+
+  /* 2A.5 · THE LENS IS DRAWN AT EVERY WIDTH.
+     The quote TABLE is inside @media (min-width: 821px) on purpose --
+     its desktop row and its phone card come from one template and the
+     console skin still owns the phone side. The Sent lens has no console
+     skin behind it, so scoping it there left the phone with an unstyled
+     stack: display:block, no grid, a 19px button. */
+  const styleStart = src.indexOf('<style>');
+  const ctx = (needle)=>{
+    const at = src.indexOf(needle);
+    if(at < 0) return null;
+    const seg = src.slice(styleStart, at).replace(/\/\*[\s\S]*?\*\//g, '');
+    const stack = []; let buf = '';
+    for(const ch of seg){
+      if(ch === '{'){ stack.push(buf.trim().split('\n').pop().trim()); buf = ''; }
+      else if(ch === '}'){ stack.pop(); buf = ''; }
+      else buf += ch;
+    }
+    return stack;
+  };
+  ['.om-srow{', '.om-grow{', '.om-av{', '.om-sent-kpis{', '.om-qrow{', '.om-qempty{', '.om-stamp{'].forEach(sel=>{
+    const st = ctx(sel);
+    t.check(st !== null && st.length === 0,
+      `${sel.slice(0, -1)} is written at every width — a list with no console skin behind it cannot live inside the desktop switch`);
+  });
+  t.check((ctx('.om-irow{') || []).join() === '@media (min-width: 821px)',
+    'while the quote table stays inside it, because its phone side is still the console’s');
+
+  /* 2A.6 · THE PHONE’S BAR IS THE PHONE’S LENS ROW, and it is restored
+     BELOW the lens engine. Restoring it above reached `quoteLens` before
+     its declaration ran: a ReferenceError at the top level, every `let`
+     after it left uninitialised, and the whole app failing to boot on one
+     line of session restore. */
+  const restoreAt = src.indexOf("sessionStorage.getItem('q_tab_lens')");
+  const lensDecl = src.indexOf("let quoteLens = 'building'");
+  t.check(restoreAt > 0 && lensDecl > 0 && restoreAt > lensDecl,
+    'the tab bar is restored after the lens it sets is declared — a `let` read early is a ReferenceError that takes the whole boot with it');
 }
 
 process.exit(t.done() ? 1 : 0);

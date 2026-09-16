@@ -399,7 +399,13 @@ const stockMove = (before, after, whenDays) => {
      the send, the sentence saying the app cannot see WhatsApp, and the
      two stamps are one block in that order, so the question is asked
      every time and is never a peer of the send. */
-  t.check(/cannot see WhatsApp[\s\S]{0,400}id="msg_was_sent"[\s\S]{0,200}id="msg_not_sent"/.test(side),
+  /* The block is composerStampHTML now -- one composer, shared with the
+     Quote screen's Sent lens -- so the ORDER is checked inside it and
+     this screen is checked for passing its two ids to it, in the same
+     position, after the send. */
+  t.check(/cannot see WhatsApp[\s\S]{0,400}id="\$\{ids\.yes\}"[\s\S]{0,200}id="\$\{ids\.no\}"/
+      .test(extractFunction(src, 'composerStampHTML', 'index.html'))
+    && /id="msg_send"[\s\S]{0,1200}composerStampHTML\(\{yes:'msg_was_sent', no:'msg_not_sent'\}\)/.test(side),
     'and the send asks afterwards whether it went, rather than offering "I told them" as a button beside it');
   const sentFn = (side.match(/sent\.onclick = \(\)=>\{[\s\S]*?\n  \};/) || [''])[0];
   t.check(/recordFollowUpClient\(r\.customerId/.test(sentFn)

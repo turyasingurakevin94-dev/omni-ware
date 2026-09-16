@@ -13660,6 +13660,11 @@
     padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);
     background:var(--ow-paper-2);}
   .ow-dlg-sect{display:flex;flex-direction:column;gap:7px;min-width:0;}
+  /* A secondary way in, sized to its own words. The section is a
+     stretching column, so a bare button in it spans the whole width and
+     reads as the section's main act -- which this is not: the taps on
+     the rows above are. Same shape as the load form's own go row. */
+  .ow-dlg-sup-go{display:flex;}
   .ow-dlg-ln{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
   .ow-dlg-ln-n{flex:1;min-width:0;font-size:var(--ow-t-13);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -16311,7 +16316,11 @@
      needs a colour this list does not have is a control whose job has
      not been decided. */
   .om-btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
-  .om-btn-p{background:var(--om-coral-text);color:var(--om-on-navy)}
+    /* A button that sets display:inline-flex outranks the hidden
+     attribute, so a hidden .om-btn would draw anyway -- the same fault
+     the rail's badges had. */
+  .om-btn[hidden]{display:none}
+.om-btn-p{background:var(--om-coral-text);color:var(--om-on-navy)}
   .om-btn-p:hover{background:var(--om-coral-pressed)}
   .om-btn-s{background:var(--om-surface);border:1px solid var(--om-rule-btn);color:var(--om-ink)}
   .om-btn-s:hover{background:var(--om-inset)}
@@ -16721,36 +16730,6 @@
   .om-lensgroup{display:flex;align-items:center;gap:6px;background:var(--om-lens-track);border-radius:10px;padding:4px;flex:none}
   .om-lenschip{height:18px;padding:0 6px}
 
-  /* ---- the Saved lens ----------------------------------------------
-     The same screen, the same header, the same search; only the lens
-     changes. Ranked by what is at stake rather than by date, because
-     the question a saved quote asks is "which of these is worth a
-     phone call this morning", and that is not the newest one. */
-  .om-qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid var(--om-rule-inner)}
-  .om-qrow:hover{background:var(--om-hover)}
-  .om-qrow-h{background:var(--om-sunken);border-top:0}
-  .om-qrow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
-  .om-qfoot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--om-rule-inner);font-size:12.5px;color:var(--om-ink-3)}
-  /* An empty lens says what would fill it. "Not enough yet" is an
-     answer; a blank panel is not. */
-  .om-qempty{padding:26px 22px;text-align:center;color:var(--om-ink-3);font-size:13px;line-height:1.55}
-
-  /* ---- THE STAMP -----------------------------------------------------
-     THE APP CANNOT SEE WHATSAPP. Sending opens a deep link with the
-     quote in it and the app never learns what happened there -- so the
-     send is not a state the app may set for itself. It asks, and
-     nothing is recorded until the owner answers.
-     
-     This is the same card the Messages handoff draws under its send
-     button, in the same words, because it is the same promise: no
-     faked delivery state, and the screen does not pretend.
-     -------------------------------------------------------------------- */
-  .om-stamp{background:var(--om-surface);border:1px solid var(--om-rule-input);border-radius:11px;padding:10px 11px}
-  .om-stamp-row{display:flex;align-items:flex-start;gap:8px}
-  .om-stamp-t{font-size:12px;color:var(--om-note-ink);text-wrap:pretty}
-  .om-stamp-acts{margin-top:9px;display:flex;gap:7px}
-  .om-stamp-acts .om-btn{flex:1;height:34px;justify-content:center;font-size:12.5px}
-
   /* ---- the client strip --------------------------------------------
      Who it is for and what the books already hold on them, as cells of
      one card split by rules. Each is a label over a figure, so the
@@ -16810,6 +16789,188 @@
   .om-qground{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--om-ink)}
   .om-qpage{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px;align-items:start;margin:0 -18px}
   }
+
+  /* ---- the Saved lens ----------------------------------------------
+     The same screen, the same header, the same search; only the lens
+     changes. Ranked by what is at stake rather than by date, because
+     the question a saved quote asks is "which of these is worth a
+     phone call this morning", and that is not the newest one. */
+  .om-qrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 132px 96px 128px;align-items:center;column-gap:12px;padding:11px 14px;border-top:1px solid var(--om-rule-inner)}
+  .om-qrow:hover{background:var(--om-hover)}
+  .om-qrow-h{background:var(--om-sunken);border-top:0}
+  .om-qrow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
+  .om-qfoot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--om-rule-inner);font-size:12.5px;color:var(--om-ink-3)}
+  /* An empty lens says what would fill it. "Not enough yet" is an
+     answer; a blank panel is not. */
+  .om-qempty{padding:26px 22px;text-align:center;color:var(--om-ink-3);font-size:13px;line-height:1.55}
+
+  /* ---- THE STAMP -----------------------------------------------------
+     THE APP CANNOT SEE WHATSAPP. Sending opens a deep link with the
+     quote in it and the app never learns what happened there -- so the
+     send is not a state the app may set for itself. It asks, and
+     nothing is recorded until the owner answers.
+     
+     This is the same card the Messages handoff draws under its send
+     button, in the same words, because it is the same promise: no
+     faked delivery state, and the screen does not pretend.
+     -------------------------------------------------------------------- */
+  .om-stamp{background:var(--om-surface);border:1px solid var(--om-rule-input);border-radius:11px;padding:10px 11px}
+  .om-stamp-row{display:flex;align-items:flex-start;gap:8px}
+  .om-stamp-t{font-size:12px;color:var(--om-note-ink);text-wrap:pretty}
+  .om-stamp-acts{margin-top:9px;display:flex;gap:7px}
+  .om-stamp-acts .om-btn{flex:1;height:34px;justify-content:center;font-size:12.5px}
+
+  /* ---- THE SENT LENS IS NOT THE QUOTE TABLE ------------------------
+     Everything above is inside the 821px switch because the quote's
+     desktop row and its phone card come from ONE template and the
+     console skin still owns the phone side of it. The Sent lens has no
+     console skin behind it -- it is a new list, drawn for the first
+     time here -- so it is written at every width, with its own phone
+     design in the switch at the bottom of this block.
+     ------------------------------------------------------------------ */
+  /* ---- 2A * THE SENT LENS, "OUT WITH CLIENTS" ----------------------
+     Not the Saved table with a different filter. Saved is written and
+     nobody has seen it; Sent is with the client and waiting on a yes --
+     one pile waits on you, the other waits on them. So this list is
+     ordered by a CLOCK rather than by an amount, and split at the line
+     where waiting stops being normal.
+
+     WHAT IT SHARES WITH THE STAGE BOARD, AND WHAT IT MUST NOT. It shares
+     the idea -- a thing sat in one state longer than the shop allows --
+     and it shares the CLOCK (stateAge) and the SETTING (Setup, beside
+     the board's stage limits). It does NOT share the board's machinery:
+     no lanes, no cards, no per-step timers. The board's every figure --
+     live orders, cash to buy in, to invoice -- is derived over work the
+     shop is DOING; twelve unaccepted quotes in a lane would inflate all
+     three by work nobody commissioned. A yes turns the quote into an
+     order and it leaves this screen: Sent lists only what is
+     unanswered, the board only what was agreed, and neither ever shows
+     the same piece of work. */
+  .om-tbact{height:34px;padding:0 13px;font-size:13px;flex:none;margin-right:10px}
+  @media (max-width:820px){ .om-tbact{display:none} }
+
+  /* NOT ENOUGH YET IS A SENTENCE, NOT A FIGURE. Set in the mono face at
+     a figure's size it reads as a reading the shop can act on, which is
+     the opposite of what it says. */
+  .om-kpi-none{margin-top:3px;font-size:15px;font-weight:600;color:var(--om-ink-3)}
+  .om-sent-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .om-sent-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  /* THE SEARCH IS ON THE LIST IT FILTERS, because the app's top-bar box
+     is a screens-and-Manager box by its own design and indexes neither
+     clients nor items. A placeholder up there promising both would be a
+     sentence the app cannot stand behind. */
+  .om-sent-search{flex:1;min-width:0;position:relative;display:flex;align-items:center}
+  .om-sent-search .icon{position:absolute;left:12px;width:15px;height:15px;fill:none;stroke:var(--om-ink-3);stroke-width:2;stroke-linecap:round;pointer-events:none}
+  .om-sent-search input{width:100%;height:36px;padding:0 12px 0 34px;border:1px solid var(--om-rule);border-radius:10px;background:var(--om-field);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--om-ink)}
+  .om-sent-search input::placeholder{color:var(--om-ink-3)}
+  .om-sent-search input:focus{outline:none;border-color:var(--om-navy);background:var(--om-surface)}
+  .om-sent-card{overflow:hidden}
+  .om-sent-head{display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .om-sent-head-t{font-size:13.5px;font-weight:700}
+  /* THE BOUNDARY, WHERE SOMEBODY HUNTING A WON QUOTE WILL READ IT. */
+  .om-sent-head-s{font-size:11.5px;color:var(--om-ink-3);flex:1;min-width:0}
+  .om-sent-close{height:28px;padding:0 10px;font-size:11.5px;flex:none}
+
+  /* THE ROW. Six tracks: the avatar says the row's state before a word
+     of it is read, the name cell is the only one that may grow, and the
+     four figures are fixed so the column reads down. */
+  .om-srow{display:grid;grid-template-columns:30px minmax(0,1fr) 116px 92px 80px 104px;align-items:center;column-gap:10px;padding:9px 14px;border-bottom:1px solid var(--om-rule-inner);cursor:pointer}
+  .om-srow:hover{background:var(--om-sunken)}
+  .om-srow.om-on{background:var(--om-selected)}
+  .om-srow-h{padding:7px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);cursor:default}
+  .om-srow-h:hover{background:var(--om-sunken)}
+  .om-srow-h .om-lbl{font-size:10px;letter-spacing:0.07em;text-transform:uppercase}
+  .om-r{text-align:right}
+  .om-srow-b{min-width:0}
+  .om-srow-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Line two is not a caption. It carries the one fact that decides the
+     action -- money already owed, a cost that has moved, a chase already
+     made -- which is why the Next column can be one act per row. */
+  .om-srow-s{margin-top:2px;font-size:11px;color:var(--om-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .om-srow-v{font-size:13px;text-align:right}
+  .om-srow-w{text-align:right;font-size:12.5px;color:var(--om-ink-3)}
+  .om-srow-late{color:var(--om-bad-ink)}
+  .om-srow-k{text-align:right}
+  .om-srow-x{text-align:right}
+  .om-srow-dash{color:var(--om-ink-3)}
+  /* WAITING IS NOT A BUTTON. A row inside the limit has earned nothing,
+     and an act offered here would only teach somebody to chase on day
+     three, which is how a client stops answering at all. */
+  .om-srow-waiting{font-size:11.5px;color:var(--om-ink-3)}
+  .om-sent-act{height:28px;padding:0 10px;font-size:11.5px}
+  .om-sent-bad{background:var(--om-bad);border-color:var(--om-bad);color:var(--om-bad-ink)}
+  /* The tail: the rows nobody needs to act on are counted, not drawn,
+     with the two facts that say why they can be left alone. Dimmed, and
+     openable -- a list that permanently hides six records is a list with
+     six records missing. */
+  .om-srow-tail{opacity:.75;border-bottom:0}
+  .om-srow-tail .om-srow-n{font-weight:400}
+  .om-avatar-row{display:contents}
+  .om-av{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+  .om-av-bad{background:var(--om-bad);color:var(--om-bad-ink)}
+  .om-av-known{background:var(--om-studied);color:var(--om-studied-ink)}
+  .om-av-new{background:var(--om-neutral);color:var(--om-neutral-ink)}
+
+  /* THE GROUP LINE. Not a heading -- a reading: how many, worth how
+     much, and the one fact that says how bad it is. */
+  .om-grow{display:flex;align-items:center;gap:9px;padding:8px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner);border-bottom:1px solid var(--om-rule-inner)}
+  .om-grow-n{font-size:12.5px;font-weight:700}
+  .om-grow-sp{flex:1}
+  .om-grow-v{font-size:12.5px}
+  .om-grow-s{font-size:12px;color:var(--om-ink-3)}
+
+  .om-chip-bad{background:var(--om-bad);color:var(--om-bad-ink)}
+  .om-chip-good{background:var(--om-good);color:var(--om-good-ink)}
+  .om-chip-caution{background:var(--om-caution);color:var(--om-caution-ink)}
+  .om-chip-neutral{background:var(--om-neutral);color:var(--om-neutral-ink)}
+
+  /* ASKING AGAIN IS THE MONEY QUEUE'S COMPOSER, opened in place. */
+  .om-sent-ask{margin-bottom:12px;overflow:hidden}
+  .om-sent-ask-b{padding:0 14px 12px}
+  .om-sent-ask-tools{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap}
+  .om-sent-ask-tools .om-btn{height:28px;padding:0 10px;font-size:11.5px}
+  .om-sent-ask-send{height:40px;width:100%;margin-top:11px;justify-content:center}
+
+  /* WHY THIS MANY DAYS, argued from the shop's own figures on the screen
+     that acts on them -- and with the way to change the number inside
+     the sentence, because a limit named on a screen and changeable only
+     somewhere you must already know about is a limit nobody sets. */
+  .om-sent-why{margin-top:12px;display:flex;align-items:flex-start;gap:9px;padding:12px 14px}
+  .om-sent-why-b{flex:1;min-width:0;font-size:12.5px;color:var(--om-ink-2);line-height:1.55;text-wrap:pretty}
+  .om-linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--om-link);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .om-linkbtn:hover{color:var(--om-link-hover)}
+  @media (max-width:820px){
+    /* The phone is a separate design, not a reflow: three figures across
+       become one column, and the row's six tracks become a card that
+       keeps the avatar, the name and the act -- the three things a thumb
+       needs. The group lines stay: they are the whole point of the
+       list. */
+    .om-sent-kpis{grid-template-columns:minmax(0,1fr)}
+    .om-srow{grid-template-columns:30px minmax(0,1fr) auto;row-gap:7px}
+    .om-srow-h{display:none}
+    .om-srow-v{grid-column:3}
+    .om-srow-w{grid-column:2;text-align:left}
+    .om-srow-k{grid-column:3}
+    /* AN ACT IS A THUMB TARGET AND TAKES THE WIDTH; "waiting" is a word
+       about the row and stays ON it -- given a line of its own it reads
+       as a heading for whatever comes next. */
+    .om-srow-x{grid-column:1 / -1;text-align:left}
+    .om-srow-x-wait{grid-column:3;text-align:right;margin-top:-7px}
+    .om-sent-act{width:100%;justify-content:center;height:36px}
+    /* The tail's two empty cells are a dash each on a console, where they
+       hold a column open. On a phone there is no column to hold, so they
+       are two lines that say nothing. */
+    .om-srow-tail .om-srow-k, .om-srow-tail .om-srow-x{display:none}
+    /* The sentence that names the boundary goes under the title rather
+       than beside it: three words and a clause do not share 358px. */
+    .om-sent-head{flex-wrap:wrap;row-gap:3px}
+    .om-sent-head-t{flex:1 0 100%}
+    .om-sent-head-s{flex:1 0 100%}
+    .om-grow{flex-wrap:wrap;row-gap:4px}
+    .om-grow-sp{flex:1 0 100%;height:0}
+  }
+
+
 
   /* 820px IS A SWITCH BETWEEN TWO DESIGNS, NOT A REFLOW, and the rail
      belongs to only one of them. The phone has its own chrome -- a top
@@ -17638,6 +17799,13 @@
   <div class="tb-spacer"></div>
   <div class="order-status-bar" id="orderStatusBar" title="Click to view the Order tracking board"></div>
 
+  <!-- THE SCREEN'S OWN ACT, in the bar, where the design puts it. Drawn
+       only where it means something: on Quote, a lens away from the
+       document, "New quote" is the way back to building one. Everywhere
+       else the bar keeps its rule that what is here acts on the whole
+       shop, so the button is not drawn at all. -->
+  <button type="button" class="om-btn om-btn-p om-tbact" id="tbNewQuote" hidden>New quote</button>
+
   <button type="button" class="tb-top tb-iconbtn" id="assistantOpenBtn"
     title="Assistant (Ctrl+J)" aria-label="Assistant">
     <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -18129,12 +18297,20 @@
           </button>
           <span class="q-phbar-more" id="q_phbar_more"></span>
         </div>
-        <!-- Building · Saved · Details. The first two are the lenses the
-             console shows as pills; Details is where the rail's cards go
-             on a screen with no room beside the list for them. -->
+        <!-- THE PHONE'S LENS ROW. Building · Saved · Sent are the three
+             lenses the console shows as pills, and Details is where the
+             rail's cards go on a screen with no room beside the list for
+             them. The first three drive setQuoteLens; only Details is a
+             tab of this bar's own.
+
+             Saved was drawn here and wired to nothing -- setQuoteTab
+             folded everything that was not 'details' into 'quote', so
+             pressing Saved lit Building and showed the document. Both
+             lists were unreachable on a phone. -->
         <div class="q-tabbar" id="q_tabbar" role="tablist">
           <button type="button" class="q-tab on" data-qtab="quote" role="tab" aria-selected="true">Building <b class="q-tab-n" id="q_tab_n_quote">0</b></button>
           <button type="button" class="q-tab" data-qtab="saved" role="tab" aria-selected="false">Saved <b class="q-tab-n" id="q_tab_n_saved_ph">0</b></button>
+          <button type="button" class="q-tab" data-qtab="sent" role="tab" aria-selected="false">Sent <b class="q-tab-n" id="q_tab_n_sent_ph">0</b></button>
           <button type="button" class="q-tab" data-qtab="details" role="tab" aria-selected="false">Details <b class="q-tab-n" id="q_tab_n_details">0</b><i class="q-tab-dot" id="q_tab_dot" hidden></i></button>
         </div>
       </div>
@@ -18148,7 +18324,7 @@
            door to a place the rail already holds. -->
       <div class="om-qtitle">
         <div style="flex:1;min-width:0">
-          <div class="om-qtitle-t">Quote</div>
+          <div class="om-qtitle-t" id="q_title">Quote</div>
           <div class="om-qtitle-s" id="q_subtitle">Build the order live, on the call &middot; say the price, move to the next item</div>
         </div>
         <div class="om-lensgroup" id="q_lenses" role="tablist" aria-label="Quote lens">
@@ -20942,6 +21118,22 @@
                   </div>
                 </div>
                 <div class="pset-st form-grid" id="presetOrderLimitsWrap"></div>
+
+                <!-- THE SAME KIND OF NUMBER, ON THE DOCUMENT THAT COMES
+                     BEFORE THE BOARD. An order past its step limit and a
+                     quote the client has not answered are one question --
+                     how long is too long -- asked at two moments, so the
+                     second one is set here beside the first rather than
+                     invented on the screen that reads it. The Sent lens
+                     names this setting where it draws the line. -->
+                <div class="pset-rr" id="pset_rule_qwait" data-find="quote wait sent unanswered chase reply limit days out with clients">
+                  <div class="pset-rr-b"><div class="pset-rr-n">How long a sent quote may wait</div>
+                  <p class="pset-rr-d">A quote you have sent and the client has not answered is past its limit after this many days &mdash; the Sent lens groups them by it and puts those first. Nothing is chased for you; the line only says which ones have waited long enough to be worth a word.</p>
+                  </div>
+                  <div class="pset-rr-v">
+                    <div class="pset-rr-p"><input type="number" id="preset_quote_wait_days" min="1" step="1" placeholder="14"><span class="pset-rr-u">days</span></div>
+                  </div>
+                </div>
 
                 <label class="pset-toggle-row pset-sw" data-find="alert notification tell me late past limit">
                   <input type="checkbox" id="preset_stage_alerts">
@@ -24899,6 +25091,7 @@ async function loadData(shopId){
     // review's two settings need no column and no migration.
     presetPriceReview: presets.priceReview || {},
     presetFollowUp: presets.followUp || {},
+    presetQuoteWaitDays: presets.quoteWaitDays != null ? presets.quoteWaitDays : null,
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     // The shop default price rule: what effectiveMarkupRule falls back to
@@ -25321,7 +25514,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, msgHolds:d.presetMsgHolds||{}, tellSeen:d.presetTellSeen||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waPostsPerDay:d.presetWaPostsPerDay, waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, quoteWaitDays:d.presetQuoteWaitDays != null ? d.presetQuoteWaitDays : null, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, msgHolds:d.presetMsgHolds||{}, tellSeen:d.presetTellSeen||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waPostsPerDay:d.presetWaPostsPerDay, waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -33597,6 +33790,40 @@ function orderPurchaseLines(q){
     };
   });
 }
+/* ---- WHAT AN ORDER COST, as against what left the till -------------
+
+   orderPurchaseLines reports the quantity that has to be COLLECTED, and
+   wherever the supplier breaks no packs that is a whole pack: one kilo
+   of hinges from a man who sells the twenty-kilo box is twenty kilos of
+   cash. That is the right figure for the buying list, which is a person
+   walking to market with money, and the wrong one for an order, because
+   the other nineteen kilos go on the shelf. They are stock. They are not
+   this sale.
+
+   Charged to the order they read "Cost, as bought 230,000" against
+   "Client pays 12,000" and called an ordinary sale a 1,816% loss -- not
+   a stale figure but a wrong one, on the screen an owner opens to decide
+   whether an order is worth doing at all.
+
+   Three readings, one unit cost: what the buyer actually paid where a
+   line has come in, and today's cheapest where it has not. */
+function orderLineUnitCost(l){
+  return (l && (l.settled || l.received))
+    ? (Number(l.it && l.it.receivedPrice) || 0)
+    : (Number(l && l.unitCost) || 0);
+}
+/* The order's own goods, at the quantity the ORDER takes -- the figure
+   that may be set against what the client pays. */
+function orderOwnCost(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.quotedQty) || 0), 0);
+}
+/* And the rest of the pack, which is real money and belongs to the
+   shelf. Named rather than dropped: it is the difference between the two
+   figures above, and an owner who is not told about it cannot reconcile
+   the till. */
+function orderPackSurplusCash(lines){
+  return (lines || []).reduce((sum, l)=> sum + orderLineUnitCost(l) * (Number(l.surplus) || 0), 0);
+}
 function orderCashToBuy(q){
   return orderPurchaseLines(q).reduce((s,l)=> s + (l.lineCost || 0), 0);
 }
@@ -38758,6 +38985,54 @@ function ipLineBuyPrice(supplierId, refRow, qty, stockCost){
   return refRow ? Math.round(purchasePriceAtQty(refRow, qty)) : 0;
 }
 
+/* ============ A PRESS MUST SURVIVE THE REDRAW IT CAUSES ============
+
+   The quantity box commits on `change`, and `change` on a text field
+   fires when the field loses focus -- which, nine times in ten, is the
+   press on "Add to quote" taking the focus away from it. renderIpStage
+   then replaces every node in the sheet BETWEEN that press's mousedown
+   and its mouseup, so the browser is left with no element the two have
+   in common and fires no `click` at all:
+
+       mousedown -> ip_add_btn
+       change    -> ip_qty      (the sheet is rebuilt here)
+       mouseup   -> ip_add_btn  (a different node now)
+       ...and no click, ever
+
+   Nothing happened, nothing said why, and the owner pressed again. It
+   cost a silent press on every line of every quote, and it did the same
+   to the supplier radios and the Use -> cards, which are also pressed
+   with the quantity box still holding focus.
+
+   So a redraw asked for while a press is down waits for that press to
+   finish, and is released on the frame AFTER the pointer comes up --
+   the click is dispatched together with the mouseup, and redrawing
+   between those two is the same bug again. The add itself no longer
+   depends on the redraw having happened: it re-ranks the suppliers at
+   the quantity actually in the box, so the cost it records is right for
+   that quantity whether the sheet has caught up or not. */
+let ipStageRedrawHeld = false, ipStageRedrawWanted = false;
+function ipStageRedraw(){
+  if(ipStageRedrawHeld){ ipStageRedrawWanted = true; return; }
+  ipStageRedrawWanted = false;
+  renderIpStage();
+}
+document.addEventListener('pointerdown', (e)=>{
+  ipStageRedrawHeld = !!(e.target && e.target.closest && e.target.closest('#ip_stage_view'));
+}, true);
+function ipStageReleasePress(){
+  if(!ipStageRedrawHeld) return;
+  ipStageRedrawHeld = false;
+  requestAnimationFrame(()=>{
+    /* Not if the press closed the sheet -- the commonest outcome is
+       that the line went on the quote and there is no sheet to redraw. */
+    const modal = document.getElementById('itemPickerModal');
+    if(ipStageRedrawWanted && modal && modal.classList.contains('show')) ipStageRedraw();
+    else ipStageRedrawWanted = false;
+  });
+}
+document.addEventListener('pointerup', ipStageReleasePress, true);
+document.addEventListener('pointercancel', ipStageReleasePress, true);
 function renderIpStage(){
   const wrap = document.getElementById('ip_stage_view');
   const product = data.products.find(x=>x.id===ipProductId);
@@ -39135,7 +39410,7 @@ function renderIpStage(){
     radio.addEventListener('change', ()=>{
       ipSelectedSupplierId = radio.value;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   });
   // Re-resolves recommended prices, supplier-card prices and Buy @ for
@@ -39146,7 +39421,7 @@ function renderIpStage(){
     ipQtyRaw = Number(document.getElementById('ip_qty').value) || 1;
     ipQtyUnitMode = document.getElementById('ip_qty_unit').value;
     ipSelectedRecType = null;
-    renderIpStage();
+    ipStageRedraw();
   };
   wrap.querySelector('#ip_qty').addEventListener('change', handleQtyChange);
   wrap.querySelector('#ip_qty_unit').addEventListener('change', handleQtyChange);
@@ -39192,7 +39467,7 @@ function renderIpStage(){
       if(!item) return;
       ipSelectedSupplierId = item.dataset.id;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   }
   function ipSelectRecCard(card){
@@ -39236,12 +39511,21 @@ function renderIpStage(){
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
-    const buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
+    /* THE COST IS RE-RANKED AT THE QUANTITY IN THE BOX, not at the one
+       the sheet was last drawn for. refRow is a render-time closure, and
+       the redraw that would refresh it is deliberately held while this
+       press is down (see ipStageRedraw) -- so reading it here would
+       record a volume tier belonging to a different quantity, which is a
+       wrong figure rather than a stale screen. Same call the sheet
+       itself ranks with, so the two can only agree. */
+    const rankedNow = rankedPurchaseRowsAtQty(ipProductId, ipVariantIdx, qty);
+    const refNow = rankedNow.find(r=> r.supplierId===supplierId) || rankedNow[0] || refRow;
+    const buyPrice = ipLineBuyPrice(supplierId, refNow, qty, stockCost);
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
-      packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
+      packUnit: refNow ? (refNow.packUnit||'') : '', packQty: refNow ? (refNow.packQty||0) : '',
       /* How it was counted when it was chosen -- see quoteLinePack. */
       qtyIn: inPacks ? 'pack' : 'unit',
       qty, supplierId, supplierName: supplierName(supplierId),
@@ -39265,18 +39549,32 @@ function renderIpStage(){
    console keeps in its rail. Kept for the session; adding a line brings
    the quote back, because that is where the line went. */
 let quoteTab = 'quote', quoteLastCount = -1;
+/* THE PHONE'S BAR IS THE PHONE'S LENS ROW, and only Details is a tab of
+   its own. Three of its four buttons name a lens, so they set the lens
+   -- the console's pills and this bar are one control at two widths and
+   may not hold two different ideas of which lens is up. */
+const Q_TAB_LENS = { quote:'building', saved:'saved', sent:'sent' };
 function setQuoteTab(t){
+  const lens = Q_TAB_LENS[t];
   quoteTab = t === 'details' ? 'details' : 'quote';
   document.body.classList.toggle('q-tab-details', quoteTab === 'details');
+  if(lens && typeof setQuoteLens === 'function' && lens !== quoteLens) setQuoteLens(lens);
+  paintQuoteTabbar(t === 'details' ? 'details' : null);
+  try{ sessionStorage.setItem('q_tab', t === 'details' ? 'details' : 'quote'); }catch(e){}
+  try{ sessionStorage.setItem('q_tab_lens', lens || ''); }catch(e){}
+}
+/* Which button is lit, read off the lens rather than off the press, so
+   a lens changed from the console pills -- or by resolveTab('quote-saved')
+   -- lights the right one here too. */
+function paintQuoteTabbar(force){
+  const key = force || (typeof quoteLens !== 'undefined'
+    ? (quoteLens === 'building' ? 'quote' : quoteLens) : 'quote');
   document.querySelectorAll('#q_tabbar .q-tab').forEach(b=>{
-    const on = b.dataset.qtab === quoteTab;
+    const on = b.dataset.qtab === key;
     b.classList.toggle('on', on);
     b.setAttribute('aria-selected', String(on));
   });
-  try{ sessionStorage.setItem('q_tab', quoteTab); }catch(e){}
 }
-document.querySelectorAll('#q_tabbar .q-tab').forEach(b=> b.addEventListener('click', ()=> setQuoteTab(b.dataset.qtab)));
-try{ setQuoteTab(sessionStorage.getItem('q_tab') || 'quote'); }catch(e){ setQuoteTab('quote'); }
 /* Which line's controls are open on the phone, kept across redraws. */
 let quoteOpenLine = null;
 document.addEventListener('click', (e)=>{
@@ -39293,13 +39591,17 @@ document.addEventListener('click', (e)=>{
  * the search and the lens row stay where they are and only what is
  * under them changes.
  *
- * SENT HAS NOTHING BEHIND IT IN THIS APP, and that is stated rather
- * than papered over. Nothing records that a quote was sent: the
- * WhatsApp hand-off is a deep link the app cannot see, so a count here
- * would be a guess and a list would be fiction. The lens opens and
- * says what would fill it, which is this app's rule -- not enough is
- * an answer, and a screen that cannot derive a figure says so instead
- * of showing one.
+ * AND THE THIRD LENS IS A DIFFERENT JOB, not a filter on the first two.
+ * Saved is written and nobody has seen it -- it waits on YOU, and its
+ * act is send. Sent is with the client waiting on a yes -- it waits on
+ * THEM, and its acts are ask again, requote, let it go. Drawing Sent is
+ * what exposed that the two had been conflated: a quote nobody has seen
+ * is not waiting on a yes.
+ *
+ * Nothing arrives on Sent by itself. The WhatsApp hand-off is a deep
+ * link the app cannot see, so opening it is not sending: only the
+ * owner's answer afterwards stamps a quote sent. The count is a fact
+ * because somebody said so, never because the app assumed.
  * ================================================================== */
 let quoteLens = 'building';
 function quoteSavedRows(){
@@ -39353,6 +39655,49 @@ function quoteStampSent(went){
   renderQuoteRail();
   if(typeof setQuoteLens === 'function') setQuoteLens(quoteLens);
 }
+/* ==================================================================
+ * 2A * THE SENT LENS -- "OUT WITH CLIENTS"
+ *
+ * The third lens had a chip and no design, and the chip was hiding a
+ * distinction: SAVED is written and nobody has seen it, SENT is with the
+ * client and waiting on a yes. Two different piles, two different jobs.
+ * Saved is waiting on YOU. Sent is waiting on THEM, and the only thing
+ * this screen can do about it is say who has waited longest.
+ *
+ * So it is not the Saved table with a different filter. It is ordered
+ * LONGEST WAIT FIRST -- not by value, because the question a sent quote
+ * asks is "has this gone cold", and that is a clock, not an amount --
+ * and it is split at the line where waiting stops being normal.
+ *
+ * WHAT IT SHARES WITH THE STAGE BOARD, AND WHAT IT MUST NOT.
+ * It shares the IDEA: a thing sat in one state longer than it should,
+ * flagged against a limit the shop set. It shares the SETTING, which is
+ * why the limit is in Setup beside the step limits and not invented
+ * here. It does NOT share the board's machinery -- no stages, no cards,
+ * no per-step clocks -- because a quote has exactly one state here
+ * (asked, unanswered) and drawing stages over it would invent a
+ * progression the client is not making.
+ * ================================================================== */
+const QUOTE_WAIT_DEFAULT = 14;
+/* The one reader of the limit, and it reads it from the same place the
+   board reads its lane limits -- Setup. A number that decides which rows
+   are late is configuration, never code. */
+function quoteWaitDays(){
+  const n = Math.round(Number(data.presetQuoteWaitDays));
+  return n >= 1 ? n : QUOTE_WAIT_DEFAULT;
+}
+function quoteWaitIsSet(){
+  return Math.round(Number(data.presetQuoteWaitDays)) >= 1;
+}
+/* THE SAME CLOCK THE BOARD USES. Sent is a state with a limit on it,
+   exactly as Preparing is; the only difference is the unit the limit is
+   written in. stateAge owns both. */
+function quoteSentAge(q){
+  return stateAge(q.sentAt, quoteWaitDays() * 86400000);
+}
+function quoteSentDays(q){
+  return quoteSentAge(q).days;
+}
 function quoteSavedKept(q){
   /* Derived from the rows, never stored: what the client pays for the
      goods less what those goods cost the shop. Charges are left out
@@ -39363,10 +39708,212 @@ function quoteSavedKept(q){
     return n + qty * (quoteItemSellPrice(it) - (Number(it.price) || 0));
   }, 0);
 }
-function quoteLensPaneHTML(){
-  const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
-  const rows = quoteLens === 'sent' ? quoteSentRows() : quoteSavedRows();
-  if(quoteLens === 'sent' && !rows.length){
+/* Has the cost of anything on this quote moved since it was priced? The
+   price book already answers this for the quote being built ("cheaper
+   elsewhere"); here it is asked in the other direction, because a quote
+   sent three weeks ago at last month's cement is a promise the shop can
+   no longer keep at that margin. The biggest single rise is the one
+   reported -- it is the one that decides whether to requote. */
+function quoteCostMoved(q){
+  let worst = null;
+  (q.items || []).forEach(it=>{
+    if(!it.productId || !it.supplierId || it.supplierId === '__stock__') return;
+    const paid = Math.round(Number(it.price) || 0);
+    if(!(paid > 0)) return;
+    let best = null;
+    try{
+      best = rankedPurchaseRowsAtQty(it.productId, it.variantIdx == null ? null : it.variantIdx,
+        Number(it.qty) || 0).find(r=> r.purchasePrice != null) || null;
+    }catch(e){ return; }
+    if(!best) return;
+    const now = Math.round(best.purchasePrice);
+    if(!(now > paid)) return;
+    if(!worst || now - paid > worst.up) worst = { up: now - paid, it, now, paid };
+  });
+  return worst;
+}
+/* WHAT THE ROW'S SECOND LINE SAYS: what the quote is for, and then the
+   one fact that decides the action. In order, because only one fits and
+   the first that applies is the one that matters most -- money already
+   owed outranks a price that has moved, which outranks a chase already
+   made. */
+function quoteSentFact(r){
+  if(r.owed > 0) return `they also owe ${quoteFig(r.owed)}`;
+  if(r.moved) return `price has since risen ${quoteFig(r.moved.up)}`;
+  const asks = (r.q.asks || []).length;
+  if(asks >= 2) return `asked ${asks === 2 ? 'twice' : asks + ' times'}, no answer`;
+  if(asks === 1) return 'asked once, no answer';
+  if(r.priorOrders === 0) return 'first quote to them';
+  if(r.days === 0) return 'sent today';
+  return `${r.priorOrders} order${r.priorOrders===1?'':'s'} before this`;
+}
+function quoteFig(v){ return Number(Math.round(v)).toLocaleString('en-UG'); }
+/* WHAT THE QUOTE IS FOR, in the words of its own biggest line -- the one
+   that carries the most money, because that is the one the client will
+   remember it by. A quote with no single dominant line says how many
+   lines it has instead of naming one at random. */
+function quoteSentWhatFor(q){
+  const items = q.items || [];
+  if(!items.length) return 'no lines on it';
+  const ranked = items.map(it=>({ it, v: (Number(it.qty)||0) * quoteItemSellPrice(it) }))
+    .sort((a,b)=> b.v - a.v);
+  const top = ranked[0];
+  const all = ranked.reduce((t,x)=> t + x.v, 0);
+  if(items.length > 1 && (!all || top.v / all < 0.45)) return `${items.length} lines, mixed`;
+  const qty = Number(top.it.qty) || 0;
+  const unit = (top.it.unit || '').trim();
+  return `${top.it.productName}${qty ? `, ${quoteFig(qty)}${unit ? ' ' + unit : ''}` : ''}`
+    + (items.length > 1 ? ` &middot; ${items.length - 1} more` : '');
+}
+/* THE CONVERSIONS, over the shop's own last ninety days of sent quotes.
+   Every one of them can come back null, and null is drawn as "Not enough
+   yet" -- a rate off three quotes is a number that will be wrong in
+   public, and this screen argues from these figures. */
+const QUOTE_CONV_WINDOW_DAYS = 90;
+const QUOTE_CONV_MIN = 5;
+function quoteSentConversions(){
+  const limitMs = quoteWaitDays() * 86400000;
+  const from = Date.now() - QUOTE_CONV_WINDOW_DAYS * 86400000;
+  /* SETTLED EITHER WAY, and only those. A quote still out is not a
+     failure yet, so counting it as one would drag every rate down by
+     however busy this week was. */
+  const settled = (data.savedQuotes || []).filter(q=>
+    q.sentAt && q.sentAt >= from && (q.invoiced || q.letGoAt));
+  const rate = (rows)=>{
+    if(rows.length < QUOTE_CONV_MIN) return null;
+    return Math.round(rows.filter(q=> q.invoiced).length * 100 / rows.length);
+  };
+  const answeredIn = (q)=> Math.max(0, (Number(q.invoicedAtMs || q.letGoAt || 0) || 0) - q.sentAt);
+  const inAWeek = settled.filter(q=> answeredIn(q) > 0 && answeredIn(q) <= 7 * 86400000);
+  const pastLimit = settled.filter(q=> answeredIn(q) > limitMs);
+  return {
+    all: rate(settled), allOf: settled.length,
+    week: rate(inAWeek), weekOf: inAWeek.length,
+    late: rate(pastLimit), lateOf: pastLimit.length
+  };
+}
+function quoteSentFacts(){
+  const rows = quoteSentRows();
+  const limit = quoteWaitDays();
+  const late = rows.filter(q=> quoteSentAge(q).past);
+  return {
+    rows, limit, late,
+    waiting: rows.reduce((t,q)=> t + savedQuoteTotal(q), 0),
+    margin: rows.reduce((t,q)=> t + quoteSavedKept(q), 0),
+    lateSum: late.reduce((t,q)=> t + savedQuoteTotal(q), 0),
+    conv: quoteSentConversions()
+  };
+}
+/* THE ACT EACH ROW HAS EARNED -- one per row, never a menu of everything
+   possible, and never the same act repeated down the column.
+
+   Inside the limit a row has earned NOTHING, and it says "waiting" in
+   words rather than offering a button: an act here would only teach
+   somebody to chase on day three, which is how a client stops
+   answering at all. */
+function quoteSentNext(r){
+  if(r.owed > 0) return {act:'debt', label:'Open debt', cls:'om-btn-s om-sent-bad'};
+  if(!r.past) return {act:'wait', label:'waiting', cls:''};
+  /* The cost moved, so the document is wrong, not merely old. Sending a
+     reminder about a price the shop can no longer hold is worse than
+     silence. */
+  if(r.moved) return {act:'requote', label:'Requote', cls:'om-btn-s'};
+  /* Asked twice past the limit and still nothing. A third message is not
+     a sales technique. */
+  if((r.q.asks || []).length >= 2) return {act:'letgo', label:'Let it go', cls:'om-btn-g'};
+  return {act:'ask', label:'Ask again', cls:'om-btn-s'};
+}
+/* Rows the tail collapses into one line. Longest wait first means the
+   rows nobody needs to act on pile up at the BOTTOM, which is exactly
+   where a list should stop drawing them one by one. */
+const QUOTE_SENT_HEAD = 3;
+let quoteSentShowAll = false;
+let quoteSentQuery = '';
+let quoteSentPicked = null;
+/* Which follow-up is waiting on an answer about whether it went. The
+   same promise the first send makes: held in memory, not on the record,
+   because an unanswered question is a fact about this screen. */
+let quotePendingAsk = null;
+/* The words in the box, kept where the app keeps a draft, so the render
+   that follows a keystroke cannot hand back the words it opened with. */
+let quoteAskDraft = '';
+/* "sent over a week ago" is a sentence about the clock, so the box reads
+   it as one -- it is in the placeholder, so it has to work. Everything
+   else is matched against the name, the phone and the item names, which
+   are the three things somebody would actually have in their head. */
+function quoteSentMatch(r, qy){
+  if(!qy) return true;
+  const m = qy.match(/(?:over|more than|older than|past)\s+(?:a|an|one|(\d+))\s*(day|week|month)/);
+  if(m){
+    const n = Number(m[1]) || 1;
+    const mult = m[2] === 'week' ? 7 : m[2] === 'month' ? 30 : 1;
+    return (r.days || 0) > n * mult;
+  }
+  const hay = [r.who, (r.q.client && r.q.client.phone) || '',
+    ...(r.q.items || []).map(i=> i.productName || '')].join(' ').toLowerCase();
+  return qy.split(/\s+/).filter(Boolean).every(w=> hay.includes(w));
+}
+function quoteSentRanked(){
+  return quoteSentRows().map(q=>{
+    const nameLower = ((q.client && q.client.name) || '').trim().toLowerCase();
+    const customer = (data.customers || []).find(c=> String(c.id) === String(q.customerId))
+      || (nameLower ? (data.customers || []).find(c=> (c.name||'').trim().toLowerCase() === nameLower) : null);
+    const st = customer ? customerDebtStanding(customer) : null;
+    const age = quoteSentAge(q);
+    const value = savedQuoteTotal(q);
+    const kept = quoteSavedKept(q);
+    return {
+      q, customer,
+      owed: st ? st.owed : 0,
+      days: age.days, past: age.past,
+      who: ((q.client && q.client.name) || '').trim() || 'No name on it',
+      value, kept,
+      /* The share kept, not the shillings: a chip that says 12% tells you
+         a quote is thin before you spend a message chasing it, and the
+         shillings are already in the column beside it. */
+      keptPct: value > 0 ? Math.round(kept * 100 / value) : null,
+      moved: quoteCostMoved(q),
+      priorOrders: nameLower ? (data.savedQuotes || []).filter(x=>
+        !x.voided && String(x.id) !== String(q.id)
+        && ((x.client && x.client.name) || '').trim().toLowerCase() === nameLower).length : 0
+    };
+  /* Longest wait first, and that IS the ranking -- not value. A quote
+     three weeks out is the one to deal with whether it is for four
+     million or forty thousand. */
+  }).sort((a,b)=> (b.days||0) - (a.days||0) || b.value - a.value)
+    .map(r=> Object.assign(r, { next: quoteSentNext(r) }));
+}
+/* The avatar's tint is the row's state, so the column of them reads as
+   the shape of the list before a single word is. Past the limit is bad;
+   a client with orders behind them is studied; a first-time client is
+   plain, because there is nothing yet to know about them. */
+function quoteSentAvatar(r){
+  const words = String(r.who).split(/\s+/).filter(Boolean);
+  const ini = (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '?').slice(0,2)).toUpperCase();
+  const cls = r.past ? 'om-av-bad' : r.priorOrders > 0 ? 'om-av-known' : 'om-av-new';
+  return `<span class="om-av ${cls}">${esc(ini)}</span>`;
+}
+function quoteSentRowHTML(r){
+  const on = String(quoteSentPicked) === String(r.q.id) ? ' om-on' : '';
+  return `<div class="om-srow${on}" data-sent-row="${esc(String(r.q.id))}" role="button" tabindex="0">
+    ${quoteSentAvatar(r)}
+    <div class="om-srow-b">
+      <div class="om-srow-n">${esc(r.who)}</div>
+      <div class="om-srow-s">${quoteSentWhatFor(r.q)} &middot; ${esc(quoteSentFact(r))}</div>
+    </div>
+    <div class="om-fig om-srow-v">${quoteFig(r.value)}</div>
+    <div class="om-srow-w"><span class="om-fig${r.past ? ' om-srow-late' : ''}">${
+      r.days == null ? '&mdash;' : r.days === 0 ? 'today' : `${r.days} day${r.days===1?'':'s'}`}</span></div>
+    <div class="om-srow-k">${r.keptPct == null ? '<span class="om-srow-dash">&mdash;</span>'
+      : `<span class="om-chip ${r.keptPct < targetMarginPct() ? 'om-chip-caution' : 'om-chip-good'}">${r.keptPct}%</span>`}</div>
+    <div class="om-srow-x${r.next.act === 'wait' ? ' om-srow-x-wait' : ''}">${r.next.act === 'wait'
+      ? `<span class="om-srow-waiting">waiting</span>`
+      : `<button type="button" class="om-btn ${r.next.cls} om-sent-act" data-sent-act="${r.next.act}" data-saved-id="${esc(String(r.q.id))}">${r.next.label}</button>`}</div>
+  </div>`;
+}
+function quoteSentPaneHTML(){
+  const f = quoteSentFacts();
+  if(!f.rows.length){
     return `<div class="om-card"><div class="om-qempty">
       <b>Nothing has been stamped as sent.</b><br>
       Sending opens WhatsApp with the quote in it, and the app cannot see
@@ -39374,15 +39921,194 @@ function quoteLensPaneHTML(){
       went. Send one and answer the question that follows.
     </div></div>`;
   }
+  const qy = quoteSentQuery.trim().toLowerCase();
+  const all = quoteSentRanked();
+  const ranked = all.filter(r=> quoteSentMatch(r, qy));
+  const late = ranked.filter(r=> r.past);
+  const intime = ranked.filter(r=> !r.past);
+  const sum = (rs)=> rs.reduce((t,r)=> t + r.value, 0);
+  const pct = (v)=> v == null ? null : v + '%';
+
+  /* ASKING AGAIN IS THE MONEY QUEUE'S COMPOSER, not a second one: the
+     same box, the same "edit it -- the box is what ships", the same tone
+     tools, and the same stamp. Written once in composerBoxHTML and
+     composerStampHTML so neither screen can restate the promise in words
+     of its own. */
+  let ask = '';
+  if(quotePendingAsk){
+    const aq = (data.savedQuotes || []).find(x=> String(x.id) === String(quotePendingAsk));
+    const phone = aq ? ((aq.client && aq.client.phone) || '') : '';
+    const aname = aq ? (((aq.client && aq.client.name) || '').trim() || 'this client') : '';
+    ask = `<div class="om-card om-sent-ask">
+      <div class="om-sent-head">
+        <span class="om-sent-head-t">Ask again &mdash; ${esc(aname)}</span>
+        <span class="om-sent-head-s">${aq ? `${quoteSentDays(aq)} day${quoteSentDays(aq)===1?'':'s'} out &middot; ${quoteFig(savedQuoteTotal(aq))}` : ''}</span>
+        <button type="button" class="om-btn om-btn-g om-sent-close" id="q_ask_close">Close</button>
+      </div>
+      <div class="om-sent-ask-b">
+        ${composerBoxHTML('q_ask_box', quoteAskDraft, `<div class="om-sent-ask-tools">
+          <button type="button" class="om-btn om-btn-s" id="q_ask_shorter">Shorter</button>
+          <button type="button" class="om-btn om-btn-s" id="q_ask_firmer">Firmer</button>
+        </div>`)}
+        ${phone ? `<button type="button" class="om-btn om-btn-w om-sent-ask-send" id="q_ask_send">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Open WhatsApp with this
+        </button>` : `<div class="om-note om-note-warn"><b>No number on this quote.</b> WhatsApp needs one and there is none, so there is nothing to open. Put a number on the quote and this becomes a send &mdash; the words above keep.</div>`}
+        ${composerStampHTML({yes:'q_ask_yes', no:'q_ask_no'}, 'the follow-up')}
+      </div>
+    </div>`;
+  }
+
+  const kpis = `<div class="om-sent-kpis">
+    <div class="om-kpi">
+      <div class="om-lbl" style="font-size:10.5px">Waiting on a yes</div>
+      <div class="om-fig om-kpi-f">${quoteFig(f.waiting)}</div>
+      <div class="om-kpi-s">${f.rows.length} quote${f.rows.length===1?'':'s'} &middot; ${quoteFig(f.margin)} of margin in them</div>
+    </div>
+    <div class="om-kpi${f.conv.all == null ? '' : ' om-kpi-good'}">
+      <div class="om-lbl" style="font-size:10.5px${f.conv.all == null ? '' : ';color:var(--om-good-card-ink)'}">Sent quotes that became orders</div>
+      <div class="${f.conv.all == null ? 'om-kpi-none' : 'om-fig om-kpi-f'}"${
+        f.conv.all == null ? '' : ' style="color:var(--om-good-ink)"'}>${
+        f.conv.all == null ? 'Not enough yet' : f.conv.all + '%'}</div>
+      <div class="om-kpi-s"${f.conv.all == null ? '' : ' style="color:var(--om-good-card-ink)"'}>${
+        f.conv.all == null
+          ? `${f.conv.allOf} settled either way in ${QUOTE_CONV_WINDOW_DAYS} days &mdash; ${QUOTE_CONV_MIN} needed for a rate`
+          : f.conv.week == null
+            ? `${f.conv.allOf} settled in ${QUOTE_CONV_WINDOW_DAYS} days`
+            : `${pct(f.conv.week)} when answered inside a week`}</div>
+    </div>
+    <div class="om-kpi${f.late.length ? ' om-kpi-bad' : ''}">
+      <div class="om-lbl" style="font-size:10.5px${f.late.length ? ';color:var(--om-bad-card-ink)' : ''}">Past ${f.limit} days, no reply</div>
+      <div class="om-fig om-kpi-f">${f.late.length} quote${f.late.length===1?'':'s'}</div>
+      <div class="om-kpi-s"${f.late.length ? ' style="color:var(--om-bad-card-ink)"' : ''}>${f.late.length
+        ? `${quoteFig(f.lateSum)}${f.conv.late == null ? '' : ` &middot; these convert ${f.conv.late}% of the time`}`
+        : 'nothing has gone cold'}</div>
+    </div>
+  </div>`;
+
+  /* THE SEARCH IS ON THE LIST IT FILTERS. The app's top-bar box is a
+     screens-and-Manager box by its own design and indexes neither
+     clients nor items -- a placeholder there promising both would be the
+     one thing this app never does, which is say something it cannot
+     stand behind. So the box that promises clients, items and a stretch
+     of time sits on the list that holds them. */
+  const bar = `<div class="om-sent-bar">
+    <div class="om-sent-search">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="q_sent_search" value="${esc(quoteSentQuery)}" autocomplete="off"
+        placeholder="Client, item, or &ldquo;sent over a week ago&rdquo;">
+    </div>
+  </div>`;
+
+  if(!ranked.length){
+    return ask + kpis + bar + `<div class="om-card"><div class="om-qempty">
+      <b>Nothing sent matches that.</b><br>
+      ${f.rows.length} quote${f.rows.length===1?'':'s'} ${f.rows.length===1?'is':'are'} out with clients &mdash;
+      try a client&rsquo;s name, an item on the quote, or a stretch of time.
+    </div></div>`;
+  }
+
+  const grow = (chipCls, title, rows, tail)=> rows.length ? `<div class="om-grow">
+      <span class="om-chip ${chipCls}">${title}</span>
+      <span class="om-grow-n">${rows.length}</span>
+      <span class="om-grow-sp"></span>
+      <span class="om-fig om-grow-v">${quoteFig(sum(rows))}</span>
+      <span class="om-grow-s">&middot; ${tail}</span>
+    </div>` : '';
+
+  const oldest = late.length ? Math.max(...late.map(r=> r.days||0)) : 0;
+  const newestSpan = intime.length ? Math.max(...intime.map(r=> r.days||0)) : 0;
+
+  /* THE TAIL. The rows nobody needs to act on are counted, not drawn --
+     and counted with the two facts that say why they can be left alone:
+     none of them is worth much and none of them is old. */
+  const shown = quoteSentShowAll ? intime : intime.slice(0, QUOTE_SENT_HEAD);
+  const rest = intime.slice(shown.length);
+  let tailRow = '';
+  if(rest.length){
+    const top = Math.max(...rest.map(r=> r.value));
+    const lo = Math.min(...rest.map(r=> r.days||0));
+    const hi = Math.max(...rest.map(r=> r.days||0));
+    const round = Math.max(1000, Math.ceil(top / 100000) * 100000);
+    tailRow = `<div class="om-srow om-srow-tail" id="q_sent_more" role="button" tabindex="0">
+      <span></span>
+      <div class="om-srow-b">
+        <div class="om-srow-n">${rest.length} more sent ${hi <= 7 ? 'this week' : 'and still in time'}</div>
+        <div class="om-srow-s">all under ${quoteFig(round)} &middot; nothing to chase yet</div>
+      </div>
+      <div class="om-fig om-srow-v om-srow-dash">${quoteFig(sum(rest))}</div>
+      <div class="om-srow-w"><span class="om-fig om-srow-dash">${lo === hi ? `${hi} days` : `${lo}–${hi} days`}</span></div>
+      <div class="om-srow-k"><span class="om-srow-dash">&mdash;</span></div>
+      <div class="om-srow-x"><span class="om-srow-dash">&mdash;</span></div>
+    </div>`;
+  } else if(quoteSentShowAll && intime.length > QUOTE_SENT_HEAD){
+    tailRow = `<div class="om-srow om-srow-tail" id="q_sent_more" role="button" tabindex="0">
+      <span></span>
+      <div class="om-srow-b"><div class="om-srow-n">Show fewer</div></div>
+      <span></span><span></span><span></span><span></span>
+    </div>`;
+  }
+
+  /* WHY THIS MANY DAYS, argued from the shop's own figures on the screen
+     that acts on them -- and with the way to change the number in the
+     sentence, because a limit named on a screen and changeable only
+     somewhere you have to already know about is a limit nobody sets. */
+  const why = `<div class="om-card om-sent-why">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--om-ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    <div class="om-sent-why-b"><b>Why ${f.limit} day${f.limit===1?'':'s'} is the limit.</b>
+      ${f.conv.week != null && f.conv.late != null
+        ? `Of ${QUOTE_CONV_WINDOW_DAYS} days of sent quotes, the ones answered inside a week became orders
+           <b>${f.conv.week}%</b> of the time; past ${f.limit} days it is <b>${f.conv.late}%</b>.
+           So the top group is not simply the old one &mdash; it is the one where asking again is still worth
+           the message.`
+        : `This shop has not settled enough quotes yet for its own figures to say where the line falls
+           &mdash; ${f.conv.allOf} in the last ${QUOTE_CONV_WINDOW_DAYS} days, and ${QUOTE_CONV_MIN} are needed
+           before a rate means anything. Until then the limit is the one you set, and this sentence will
+           argue from your books the moment it can.`}
+      The ${f.limit} is the <i>Sent</i> stage limit, ${quoteWaitIsSet()
+        ? 'set in' : `the default until you set it in`}
+      <button type="button" class="om-linkbtn" id="q_sent_limit_go">Setup &rsaquo; Order tracking</button>
+      beside the board&rsquo;s stage limits, and measured by the same clock &mdash; not a threshold invented
+      for this screen.</div>
+  </div>`;
+
+  return ask + kpis + bar + `<div class="om-card om-sent-card">
+    <div class="om-sent-head">
+      <span class="om-sent-head-t">Who has not answered</span>
+      <span class="om-sent-head-s">a yes moves the quote to Order tracking, so nothing won is listed here</span>
+    </div>
+    <div class="om-srow om-srow-h">
+      <span></span>
+      <span class="om-lbl">Client, and what for</span>
+      <span class="om-lbl om-r">Value</span>
+      <span class="om-lbl om-r">Sent</span>
+      <span class="om-lbl om-r">You keep</span>
+      <span class="om-lbl om-r">Next</span>
+    </div>
+    ${grow('om-chip-bad', `Past its limit &middot; ${f.limit} days`, late,
+      `oldest ${oldest} day${oldest===1?'':'s'}`)}
+    ${late.map(quoteSentRowHTML).join('')}
+    ${grow('om-chip-neutral', 'Waiting, still in time', intime,
+      newestSpan ? `none over ${newestSpan} day${newestSpan===1?'':'s'}` : 'all sent today')}
+    ${shown.map(quoteSentRowHTML).join('')}
+    ${tailRow}
+  </div>` + why;
+}
+function quoteLensPaneHTML(){
+  if(quoteLens === 'sent') return quoteSentPaneHTML();
+  const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
+  const rows = quoteSavedRows();
   if(!rows.length){
     return `<div class="om-card"><div class="om-qempty">
-      <b>No quotes waiting on a yes.</b><br>
-      A quote you save and have not yet invoiced sits here, ranked by what is at stake.
+      <b>Nothing is written down and waiting to go.</b><br>
+      A quote you save and have not yet sent sits here until it goes out,
+      ranked by what is at stake.
     </div></div>`;
   }
   /* Ranked by what is at stake, not by date: the question a saved quote
-     asks is which one is worth a call this morning, and that is not the
-     newest one. */
+     asks is which one is worth finishing this morning, and that is not
+     the newest one. Saved is waiting on YOU -- which is why the act is
+     Open, not chase. */
   const ranked = rows.map(q=>({ q, value: savedQuoteTotal(q), kept: quoteSavedKept(q),
       owed: (function(){ const c = (data.customers||[]).find(c=> String(c.id)===String(q.customerId));
         const st = c ? customerDebtStanding(c) : null; return st ? st.owed : 0; })() }))
@@ -39391,19 +40117,9 @@ function quoteLensPaneHTML(){
     const who = ((r.q.client && r.q.client.name) || '').trim() || 'No name on it';
     const lines = (r.q.items || []).length;
     const what = (r.q.items || []).slice(0,3).map(i=> i.productName).join(', ');
-    /* On Sent, "waiting" is how long the CLIENT has had it -- which is
-       the figure that decides whether to chase -- not how long ago it
-       was written down. */
-    const waited = savedAgoLabel((quoteLens === 'sent' ? r.q.sentAt : null) || r.q.savedAt || r.q.date || '');
-    /* The action the row has earned. A client who owes you money is
-       asked about the money first -- a second quote to somebody already
-       behind is a bigger hole, not a bigger sale. */
+    const waited = savedAgoLabel(r.q.savedAt || r.q.date || '');
     const next = r.owed > 0
       ? { label:'Open debt', cls:'om-btn-s', tone:`background:var(--om-bad);color:var(--om-bad-ink)` }
-      /* A quote the client already has is waiting on them, so the act
-         it has earned is asking -- not opening it again. */
-      : quoteLens === 'sent'
-      ? { label:'Chase it', cls:'om-btn-s', tone:'' }
       : { label:'Open', cls:'om-btn-s', tone:'' };
     return `<div class="om-qrow" data-saved="${esc(String(r.q.id))}">
       <div class="om-t">
@@ -39422,13 +40138,12 @@ function quoteLensPaneHTML(){
     <div class="om-qrow om-qrow-h">
       <span class="om-lbl">Client</span>
       <span class="om-lbl" style="text-align:right">Value</span>
-      <span class="om-lbl">Waiting</span>
+      <span class="om-lbl">Written</span>
       <span class="om-lbl" style="text-align:right">You keep</span>
       <span class="om-lbl" style="text-align:right">Next</span>
     </div>${body}
-    <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} ${
-      quoteLens === 'sent' ? 'with the client' : 'saved and not yet ordered'}
-      &middot; <span class="om-fig">${n(total)}</span> waiting on a yes</div>
+    <div class="om-qfoot">${ranked.length} quote${ranked.length===1?'':'s'} written and not yet sent
+      &middot; <span class="om-fig">${n(total)}</span> the client has not seen</div>
   </div>`;
 }
 function renderQuoteLensPane(){
@@ -39443,32 +40158,227 @@ function renderQuoteLensPane(){
      that draws a document. A saved list has no one total to read out. */
   if(dock) dock.style.display = isBuilding ? '' : 'none';
   pane.innerHTML = isBuilding ? '' : quoteLensPaneHTML();
-  if(!isBuilding){
-    pane.querySelectorAll('[data-open-saved]').forEach(btn=> btn.addEventListener('click', ()=>{
-      loadSavedQuote(btn.dataset.openSaved);
-    }));
+  if(isBuilding) return;
+  pane.querySelectorAll('[data-open-saved]').forEach(btn=> btn.addEventListener('click', ()=>{
+    loadSavedQuote(btn.dataset.openSaved);
+  }));
+  pane.querySelectorAll('[data-sent-act]').forEach(btn=> btn.addEventListener('click', ()=>
+    quoteSentAct(btn.dataset.sentAct, btn.dataset.savedId)));
+  /* THE COMPOSER'S OWN WIRING. The box is what ships, so the send reads
+     the box at the moment it is pressed -- never the draft it opened
+     with. An edited message that goes as the original is the one thing a
+     composer must never do. */
+  {
+    const box = pane.querySelector('#q_ask_box');
+    if(box) box.addEventListener('input', ()=>{ quoteAskDraft = box.value; });
+    const sh = pane.querySelector('#q_ask_shorter');
+    if(sh && box) sh.addEventListener('click', ()=>{ box.value = msgShorter(box.value); quoteAskDraft = box.value; });
+    const fi = pane.querySelector('#q_ask_firmer');
+    if(fi && box) fi.addEventListener('click', ()=>{ box.value = msgFirmer(box.value); quoteAskDraft = box.value; });
+    const send = pane.querySelector('#q_ask_send');
+    if(send) send.addEventListener('click', ()=>{
+      const aq = (data.savedQuotes || []).find(x=> String(x.id) === String(quotePendingAsk));
+      window.open(waComposeUrl(aq ? ((aq.client && aq.client.phone) || '') : '',
+        box ? box.value : quoteAskDraft), '_blank');
+    });
+    const yes = pane.querySelector('#q_ask_yes');
+    if(yes) yes.addEventListener('click', ()=> quoteStampAsked(true));
+    const no = pane.querySelector('#q_ask_no');
+    if(no) no.addEventListener('click', ()=> quoteStampAsked(false));
+    const close = pane.querySelector('#q_ask_close');
+    if(close) close.addEventListener('click', ()=>{
+      quotePendingAsk = null; quoteAskDraft = ''; renderQuoteLensPane();
+      toast('Nothing recorded \u2014 the quote is still unanswered');
+    });
   }
+  /* The tail is countable AND openable. A list that permanently hides
+     six records is a list with six records missing. */
+  const more = pane.querySelector('#q_sent_more');
+  if(more){
+    const flip = ()=>{ quoteSentShowAll = !quoteSentShowAll; renderQuoteLensPane(); };
+    more.addEventListener('click', flip);
+    more.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); }
+    });
+  }
+  /* A row is selectable, which is the state the design names. Selecting
+     is all it does: the act is the button on the row, and a click that
+     quietly ran one would be an act nobody chose. */
+  pane.querySelectorAll('[data-sent-row]').forEach(row=>{
+    const pick = ()=>{
+      quoteSentPicked = String(quoteSentPicked) === row.dataset.sentRow ? null : row.dataset.sentRow;
+      renderQuoteLensPane();
+    };
+    row.addEventListener('click', (e)=>{ if(!e.target.closest('button')) pick(); });
+    row.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); }
+    });
+  });
+  const go = pane.querySelector('#q_sent_limit_go');
+  if(go) go.addEventListener('click', ()=> quoteSentOpenLimit());
+  const box = pane.querySelector('#q_sent_search');
+  if(box){
+    /* Redrawing on every keystroke removes the box the keystroke is on,
+       so the value and the caret are restored onto the new one. The list
+       under a search has to redraw as you type or the search is a form. */
+    box.addEventListener('input', ()=>{
+      quoteSentQuery = box.value;
+      quoteSentShowAll = false;
+      renderQuoteLensPane();
+      const again = document.getElementById('q_sent_search');
+      if(again){ again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+    });
+  }
+}
+/* THE SETTING, FROM THE SCREEN THAT OBEYS IT. A number named on a screen
+   and changeable only by somebody who already knows where it lives is a
+   number nobody changes. */
+function quoteSentOpenLimit(){
+  goToTab('presets');
+  setTimeout(()=>{
+    const row = document.getElementById('pset_rule_qwait');
+    if(!row) return;
+    const fold = row.closest('.pset-fold');
+    const head = fold && fold.querySelector('.pset-fold-h');
+    if(head && head.getAttribute('aria-expanded') !== 'true') head.click();
+    setTimeout(()=>{
+      row.scrollIntoView({block:'center', behavior:'smooth'});
+      const el = document.getElementById('preset_quote_wait_days');
+      if(el) el.focus();
+    }, 60);
+  }, 60);
+}
+/* THE FOUR ACTS A SENT ROW CAN EARN.
+ *
+ * Every one of them is a real change to the books or a real message --
+ * none is a status the app sets on its own behalf. Asking again opens
+ * WhatsApp and then asks whether it went, in the same words and for the
+ * same reason as the first send: the app cannot see the other side of a
+ * deep link. */
+function quoteSentAct(act, id){
+  const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+  if(!q) return;
+  const who = ((q.client && q.client.name) || '').trim();
+  if(act === 'debt'){
+    /* The money first. A second quote to somebody already behind is a
+       bigger hole, not a bigger sale -- so the row hands you the queue
+       that does the asking rather than another quote. */
+    goToTab('chase');
+    return;
+  }
+  if(act === 'requote'){
+    /* Not "send it again". The prices on it are older than the window
+       this shop trusts its own prices for, so the document is reopened
+       to be priced afresh. */
+    loadSavedQuote(q.id);
+    toast('Reopened to be priced again — the figures on it are older than your price-trust window');
+    return;
+  }
+  if(act === 'letgo'){
+    const days = quoteSentDays(q);
+    if(!confirm(`Let this one go?\n\n${who || 'This quote'} has had it ${days} day${days===1?'':'s'} without answering. `
+      + `It comes off the Sent list and stops counting as money waiting on a yes. `
+      + `The quote itself is kept — nothing is deleted.`)) return;
+    q.letGoAt = Date.now();
+    q.voided = true;
+    saveData();
+    toast('Let go — it is off the list and no longer counted as waiting');
+    renderQuoteRail();
+    setQuoteLens('sent');
+    return;
+  }
+  /* ASK AGAIN OPENS THE COMPOSER. It does not fire a message: a draft
+     nobody read is how a client is told the wrong figure, and the whole
+     contract of this app's one composer is that the box is what ships. */
+  quotePendingAsk = q.id;
+  quoteAskDraft = quoteAskDraftFor(q);
+  renderQuoteLensPane();
+  const box = document.getElementById('q_ask_box');
+  if(box) box.focus();
+}
+/* The words the follow-up opens with, from the quote's own facts -- a
+   starting point and nothing more. A quote whose cost has moved does not
+   promise a price it can no longer hold. */
+function quoteAskDraftFor(q){
+  const who = ((q.client && q.client.name) || '').trim();
+  const days = quoteSentDays(q);
+  const moved = quoteCostMoved(q);
+  return [
+    `Hi ${who ? '*' + who + '*' : 'there'}, following up on the quotation we sent you`
+      + (days ? ` ${days} day${days===1?'':'s'} ago` : '') + '.',
+    '',
+    moved
+      ? `It came to ${quoteFig(savedQuoteTotal(q))} UGX. ${moved.it.productName} has risen since then, `
+        + `so let us know soon if you still want it and we will confirm the figure.`
+      : `It comes to ${quoteFig(savedQuoteTotal(q))} UGX and the prices still hold.`,
+    '',
+    'Would you like us to go ahead?'
+  ].join('\n');
+}
+function quoteStampAsked(went){
+  const id = quotePendingAsk;
+  quotePendingAsk = null;
+  quoteAskDraft = '';
+  if(went && id){
+    const rec = (data.savedQuotes || []).find(q=> String(q.id) === String(id));
+    if(rec){ rec.askedAt = Date.now(); (rec.asks = rec.asks || []).push(Date.now()); saveData(); }
+    toast('Asked again — written on the quote');
+  } else if(!went){
+    toast('Nothing recorded — the quote is still unanswered');
+  }
+  renderQuoteLensPane();
+}
+/* The bar's own act, drawn only where it means something: on Quote, and
+   only when a lens other than Building is up. On Building you ARE on a
+   new quote, and a button offering the screen you are looking at is the
+   kind of thing people learn to ignore. */
+function paintTopbarQuoteAction(){
+  const b = document.getElementById('tbNewQuote');
+  if(!b) return;
+  const onQuote = (document.getElementById('tab-quote') || {}).style
+    && document.getElementById('tab-quote').style.display !== 'none';
+  b.hidden = !(onQuote && quoteLens !== 'building');
+}
+{
+  const b = document.getElementById('tbNewQuote');
+  /* It starts a quote, so it clears the one on the bench first -- landing
+     on Building with somebody else's half-built lines on it is how a
+     quote gets sent to the wrong client. */
+  if(b) b.addEventListener('click', ()=>{
+    if(data.quote && (data.quote.items||[]).length
+      && !confirm('Start a new quote? The one being built will be cleared.')) return;
+    data.quote = {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
+    saveData();
+    setQuoteLens('building');
+    renderQuoteAll();
+  });
 }
 function setQuoteLens(lens){
   quoteLens = lens;
-  /* The subtitle says where you are, because the lens row says WHICH and
-     the line under the name says WHAT OF IT -- on Saved that is the
-     position, which is the whole reason to open the lens. */
+  /* THE NAME CHANGES WITH THE LENS, because the job does. Building is a
+     document you are writing; Sent is a list of people who have not
+     answered. Calling both of them "Quote" made the third lens read as
+     a filter on the first, which is exactly the confusion 2A was drawn
+     to end -- Saved is written and nobody has seen it, Sent is with the
+     client and waiting on a yes. */
+  const t = document.getElementById('q_title');
   const sub = document.getElementById('q_subtitle');
+  const n = (v)=> Number(Math.round(v)).toLocaleString('en-UG');
+  if(t) t.textContent = lens === 'sent' ? 'Out with clients' : 'Quote';
   if(sub){
     if(lens === 'building'){
-      sub.textContent = 'Build the order live, on the call \u00b7 say the price, move to the next item';
+      sub.textContent = 'Build the order live, on the call · say the price, move to the next item';
     } else if(lens === 'saved'){
       const rows = quoteSavedRows();
       const total = rows.reduce((t,q)=> t + savedQuoteTotal(q), 0);
       sub.textContent = rows.length
-        ? `${rows.length} quote${rows.length===1?'':'s'} saved and not yet ordered \u00b7 ${Number(Math.round(total)).toLocaleString('en-UG')} waiting on a yes`
-        : 'Nothing saved and waiting on a yes';
+        ? `${rows.length} quote${rows.length===1?'':'s'} written and not yet sent · ${n(total)} the client has not seen`
+        : 'Nothing written and waiting to go';
     } else {
       const sent = quoteSentRows();
       const st = sent.reduce((t,q)=> t + savedQuoteTotal(q), 0);
       sub.textContent = sent.length
-        ? `${sent.length} quote${sent.length===1?'':'s'} with the client \u00b7 ${Number(Math.round(st)).toLocaleString('en-UG')} waiting on an answer`
+        ? `${sent.length} quote${sent.length===1?'':'s'} sent and unanswered · ${n(st)} waiting on a yes · longest wait first`
         : 'Nothing stamped as sent yet';
     }
   }
@@ -39478,6 +40388,8 @@ function setQuoteLens(lens){
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
   renderQuoteLensPane();
+  paintTopbarQuoteAction();
+  if(typeof paintQuoteTabbar === 'function') paintQuoteTabbar(quoteTab === 'details' ? 'details' : null);
 }
 {
   const host = document.getElementById('q_lenses');
@@ -39486,6 +40398,19 @@ function setQuoteLens(lens){
     if(b) setQuoteLens(b.dataset.qlens);
   });
 }
+/* THE PHONE'S BAR IS WIRED AND RESTORED HERE, below the lens engine, not
+   beside setQuoteTab. It sets a lens now, and a lens is a `let` further
+   down this file -- restoring the bar at its old place reached `quoteLens`
+   before the declaration ran, which is a ReferenceError at the top level
+   and therefore every `let` after it left uninitialised. The whole app
+   failed to boot on one line of restore. */
+document.querySelectorAll('#q_tabbar .q-tab').forEach(b=> b.addEventListener('click', ()=> setQuoteTab(b.dataset.qtab)));
+try{
+  const t = sessionStorage.getItem('q_tab');
+  const l = sessionStorage.getItem('q_tab_lens');
+  setQuoteTab(t === 'details' ? 'details'
+    : (l === 'saved' || l === 'sent') ? l : 'quote');
+}catch(e){ setQuoteTab('quote'); }
 
 /* A REDRAW THAT WAITS FOR THE EVENT THAT ASKED FOR IT.
  *
@@ -39526,10 +40451,10 @@ function renderQuoteItems(){
      board that has not moved past its first stage -- the closest honest
      reading this app has of "saved and not yet ordered", because a
      quote here becomes a Taken order the moment it is saved.
-     Sent has NO state behind it: nothing records that a quote was sent,
-     and the WhatsApp hand-off is a deep link the app cannot see. So it
-     says so rather than showing a figure it cannot stand behind -- this
-     app reports missing rather than scoring it as zero. */
+     Sent counts STAMPS, not hand-offs. The WhatsApp hand-off is a deep
+     link the app cannot see, so opening it is not sending -- only the
+     owner's answer afterwards puts a quote here, and the count is
+     therefore a fact rather than a guess. */
   {
     const bn = document.getElementById('q_lens_n_building');
     if(bn) bn.textContent = `${items.length} line${items.length===1?'':'s'}`;
@@ -39541,6 +40466,8 @@ function renderQuoteItems(){
     }
     const sp = document.getElementById('q_tab_n_saved_ph');
     if(sp) sp.textContent = String(quoteSavedRows().length);
+    const tp = document.getElementById('q_tab_n_sent_ph');
+    if(tp) tp.textContent = String(quoteSentRows().length);
     const tn = document.getElementById('q_lens_n_sent');
     if(tn){
       /* A real count now that a send is something the owner tells the
@@ -43324,7 +44251,13 @@ function orderTrackHTML(status){
    reason can be typed; the open row keeps a way to it. */
 function orderSupplierActsHTML(q, opts){
   const o = opts || {};
-  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
+  /* BOTH KEYS, because this block has two homes: the phone's own row,
+     read by the board's listener (data-act), and the order's dialog on
+     the console, read by the dialog's (data-dlg). orderLoadFormHTML
+     carries the pair for exactly the same reason. A block that carried
+     only one of them worked in one home and was dead in the other --
+     which is what left the console with no way to ask a supplier. */
+  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-dlg="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
   const rows = orderSupplierGroups(q).map(g=>{
     const sid = String(g.supplierId);
     const st = orderSupplierConfirmState(q, sid);
@@ -43579,13 +44512,23 @@ function orderWhoText(q){
 /* HOW IT GOT HERE. Derived from the timestamps the record already
    carries, plus the stage log this screen started writing. An order
    from before that says so rather than inventing a history. */
+/* WHEN IT WAS TAKEN, answered in one place. The trail has always fallen
+   back to the quote's own date when nothing stamped the moment, and the
+   five-dot track did not -- so one dialog said "Taken · not recorded" in
+   its track and "Taken at the desk · 08:00" three inches below it, about
+   the same order. Two answers to one question is worse than either. */
+function orderTakenAt(q){
+  const t = q && (q.savedAt || (q.date ? Date.parse(q.date + 'T08:00:00') : null));
+  const n = typeof t === 'number' ? t : Date.parse(t);
+  return n && !isNaN(n) ? n : null;
+}
 function orderTrail(q){
   const ev = [];
   const push = (at, what, auto)=>{
     const t = typeof at === 'number' ? at : Date.parse(at);
     if(t && !isNaN(t)) ev.push({ at:t, what, auto:!!auto });
   };
-  push(q.savedAt || (q.date ? q.date + 'T08:00:00' : null),
+  push(orderTakenAt(q),
     q.originAgentId ? 'Taken through the agents app' : q.originWa ? 'Taken from a WhatsApp chat' : q.counterSale ? 'Sold at the counter' : 'Taken at the desk');
   Object.entries(q.supplierConfirms || {}).forEach(([sid, rec])=>{
     if(!rec) return;
@@ -44124,7 +45067,7 @@ function otDlgFig(label, n){
 function otStageTimes(q){
   const at = {};
   (q.stageLog || []).forEach(e=>{ if(e && e.status && at[e.status] == null) at[e.status] = e.at; });
-  if(at.draft == null && q.savedAt) at.draft = q.savedAt;
+  if(at.draft == null) at.draft = orderTakenAt(q);
   at[q.status] = q.stageEnteredAt || at[q.status];
   return at;
 }
@@ -44168,9 +45111,30 @@ function otPreviewSpec(id){
      any stock line on it cannot have its margin worked out here, and
      says so rather than reporting the whole price as profit. */
   const buys = orderPurchaseLines(q);
-  const cost = buys.reduce((sum, l)=> sum + (l.settled || l.received
-    ? (Number(l.it.receivedQty) || 0) * (Number(l.it.receivedPrice) || 0)
-    : (l.lineCost || 0)), 0);
+  /* WHAT THIS ORDER COST, which is not what left the till.
+
+     orderPurchaseLines reports the quantity that has to be COLLECTED,
+     and that is a whole pack wherever the supplier breaks none: one kilo
+     of hinges from a man who sells the twenty-kilo box is twenty kilos
+     of cash. Right for the buying list, which is a man walking to market
+     with money. Wrong here, because the other nineteen kilos go on the
+     shelf -- they are stock, not this sale. Charging them to the order
+     read "Cost, as bought 230,000" against "Client pays 12,000" and
+     called an ordinary sale a 1,816% loss, which is not a stale figure
+     but a wrong one, on the screen an owner opens to decide whether an
+     order is worth doing.
+
+     So the order is costed at the quantity the ORDER takes, per unit, at
+     what the buyer actually paid where a line has come in and today's
+     cheapest where it has not. What the pack forced on top is real money
+     and is named below rather than dropped -- it is simply not this
+     order's. */
+  const cost = orderOwnCost(buys);
+  const overPack = buys.filter(l=> (Number(l.surplus) || 0) > 0);
+  const overPackCash = orderPackSurplusCash(buys);
+  const overPackNote = overPack.length
+    ? `${overPack.length} line${overPack.length === 1 ? ' comes' : 's come'} in a pack bigger than the order, so ${esc(fmtUGX(Math.round(overPackCash)))} more leaves the till than is costed here — that surplus goes on the shelf as stock. `
+    : '';
   const total = savedQuoteTotal(q);
   const margin = total - cost;
   const wholeCost = s.fromStock === 0 && !s.unpriced;
@@ -44184,7 +45148,40 @@ function otPreviewSpec(id){
      on an order waiting for transport is to load it out, not to tell the
      client something they already know — so "Send the client an update"
      steps down to a ghost and the dialog still spends its oxide once. */
-  const loading = !!act && act.act === 'loaded';
+  /* ASKED WHEREVER THE PHONE ASKS IT. The form used to appear only when
+     the stage's own act was "loaded", which needs pickingStatus 'done'
+     -- a picker on the worker app. A shop with nobody on that app packs
+     at the desk, and orderLoadFormHTML says so in its own words ("Not
+     packed yet. Loading it from here counts it as picked and packed"),
+     but the console never showed the form that says it: an order that no
+     phone had touched reached Preparing and stopped there for ever, with
+     a lane head reading "You pack it, then you mark it out" and nothing
+     on the screen to mark it out with. So the dialog now carries exactly
+     what the phone's row carries, and the block decides for itself what
+     to say. */
+  const loadHtml = orderLoadFormHTML(q);
+  /* THE FORM IS THE MOVE while it is still asking who is carrying it --
+     that is when the dialog's one oxide belongs to its button and "Send
+     the client an update" steps down to a ghost. An order already out
+     with somebody named gets the same block as a statement of fact, and
+     its move is Delivered, in the footer where it has always been. */
+  const loading = !!loadHtml && (q.status === 'preparing' || orderNeedsDelivery(q));
+  /* What the footer offers, and it is NOT simply "whatever the form is
+     not". Two acts are dropped and only two:
+
+       'loaded'  the form's own button IS that act, and two of them
+                 would be two ways to do one thing, one with no form
+                 attached;
+       'open'    it means "go to where the suppliers are", which on the
+                 console is this dialog -- a button that reopens what
+                 you are already looking at.
+
+     Everything else stays, whether or not the form is drawn. Dropping
+     the act whenever the form appeared took "Decide" off an order whose
+     pick came up short -- the one decision that has to be made before
+     that order can ever be invoiced -- and left the screen offering
+     only to load it out. */
+  const footAct = act && act.act !== 'loaded' && act.act !== 'open' ? act : null;
   const track = SQ_STATUS_ORDER.map((st, j)=>{
     const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
     const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
@@ -44234,7 +45231,29 @@ function otPreviewSpec(id){
       </div>
       <div class="ow-dlg-cols">
         <div class="ow-dlg-col">
-          ${loading ? `<div class="ow-dlg-sect ow-dlg-load">${orderLoadFormHTML(q)}</div>` : ''}
+          ${loadHtml ? `<div class="ow-dlg-sect ow-dlg-load">${loadHtml}</div>` : ''}
+          ${/* THE SUPPLIERS, WHERE THE CONSOLE CAN REACH THEM. One line
+               per supplier still to come back, with the two taps: Ask,
+               which opens their WhatsApp with this order's lines already
+               written, and Confirmed, which is the answer. The phone has
+               had these inside the order's row from the start; the
+               console had them nowhere, so a Taken order could not be
+               moved on from a desk at all. Same call, same buttons. */''}
+          ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="ow-dlg-sect">
+            <div class="ow-dlg-l">Suppliers</div>
+            <div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>
+            ${/* THE WAY TO THE PANEL, which is where a supplier's answer
+                 can be TYPED. Ask and Confirmed are the two taps; "no
+                 stock until Friday" is not a tap, and the panel is the
+                 only place in the app that takes it. The phone's row has
+                 carried this button from the start and the console had
+                 nothing, so a supplier who rang back with a problem
+                 could not be recorded from a desk at all -- while the
+                 board goes on reporting a Problem state that nothing
+                 there could ever reach. */''}
+            <div class="ow-dlg-sup-go"><button type="button" class="btn btn-ghost ow-sm" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button></div>
+            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there. Open Every supplier to write down what one of them actually said.</div>
+          </div>` : ''}
           <div class="ow-dlg-sect">
             <div class="ow-dlg-l">The lines</div>
             ${s.lines.map(l=> `<div class="ow-dlg-ln">
@@ -44271,9 +45290,9 @@ function otPreviewSpec(id){
             <div class="ow-dlg-hr"></div>
             ${wholeCost
               ? `<div class="ow-dlg-kv ${margin < 0 ? 'ow-bad' : 'ow-good'}"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">${esc(otFig(Math.round(margin)))}</span></div>
-                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price.</div>`
+                 <div class="ow-dlg-ln-s">${total > 0 ? `${(margin / total * 100).toFixed(1)}% on the quote. ` : ''}Cost is what the buyer actually paid where a line has come in, and today's cheapest supplier where it has not — not the list price. ${overPackNote}</div>`
               : `<div class="ow-dlg-kv"><span class="ow-dlg-kv-k">Margin</span><span class="ow-dlg-kv-v">not from here</span></div>
-                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated.</div>`}
+                 <div class="ow-dlg-ln-s">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf, and what those cost is kept with the stock lot rather than with the order. ` : ''}${s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin on this order cannot be worked out from what is here, so it is not stated. ${overPackNote}</div>`}
           </div>
           <div class="ow-dlg-hr"></div>
           <div class="ow-dlg-sect">
@@ -44284,10 +45303,16 @@ function otPreviewSpec(id){
           </div>
         </div>
       </div>`,
-    foot: `<div class="ow-dlg-n">Nothing here sends itself.${act ? ` ${esc(otMoveNote(q, act))}` : ''}</div>
+    foot: `<div class="ow-dlg-n">${esc([`Nothing here sends itself.`,
+      loading ? otMoveNote(q, { act:'loaded' }) : '',
+      footAct ? otMoveNote(q, footAct) : ''].filter(Boolean).join(' '))}</div>
       ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
-      ${q.announcedAt || q.status === 'draft' || (act && act.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
-      ${act && !loading ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(act.act)}" data-id="${q.id}">${esc(act.label)}</button>` : ''}`,
+      ${/* Announce steps back into the footer as a ghost whenever the
+           move itself has gone to the form above -- it used to be
+           suppressed BOTH ways at once on an order in Preparing, so the
+           only way to tell the group about it disappeared. */''}
+      ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
+      ${footAct ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>` : ''}`,
   };
 }
 /* What the footer's move will actually do, said before it is pressed. */
@@ -44297,7 +45322,13 @@ function otMoveNote(q, act){
   if(act.act === 'invoice') return 'Invoicing takes the goods off the shelf, raises each supplier bill and books what is unpaid to the client.';
   if(act.act === 'buying') return 'The buying list is where a line is checked in; the order moves itself when the last one is.';
   if(act.act === 'loaded') return 'Say who is carrying it in the form above; that is what puts it on the run.';
-  return 'Everything on this screen is a tap of yours.';
+  if(act.act === 'shortpick') return 'Deciding the short pick is what lets it be invoiced — amend the order to what was found, or bill it as ordered.';
+  if(act.act === 'release') return 'Putting it back in the queue drops the pick with it; the next free picker takes it.';
+  /* Nothing specific to say. Empty rather than a sentence, because the
+     footer can now carry two of these at once -- the form's and the
+     footer act's -- and "Everything on this screen is a tap of yours"
+     beside "Nothing here sends itself." is the same remark twice. */
+  return '';
 }
 
 /* ================= 2b · THE BUYING LIST =================
@@ -44338,10 +45369,23 @@ function otBuyingSpec(){
   const unpriced = [];
   orders.forEach(q=> orderUnpricedLines(q).forEach(line=> unpriced.push({ order:q, line })));
   const waiting = orders.length;
-  /* Lines nobody has been sent for. Nothing buys them until they are on
-     a stop, so they are the first thing in the dialog, not a footnote. */
+  /* LINES NOBODY IS OUT FOR. They are on the round below -- a stop was
+     planned for them the moment a price put them there -- and the thing
+     that has not happened is that somebody has been SENT to it. Saying
+     "on no stop" put this block in flat contradiction with the stop it
+     was drawn directly above, which listed the same line and said, in
+     its own words, "nobody sent yet". One fact, one answer.
+
+     A line with no price on file is a different fault with a different
+     remedy, and has its own block below ("Not on any stop"), so it is
+     taken out here rather than counted twice under a sentence that is
+     not true of it: there is no stop to send anybody to. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   const toCheck = stops.reduce((n, r)=> n + r.lines.filter(l=> !l.settled && !l.received).length, 0);
   /* THE ONE OXIDE. When somebody is out, the thing to do next is check in
      what they brought back — the whole trip at once, which is the act
@@ -44397,10 +45441,9 @@ function otBuyingSpec(){
     body: `<div class="ow-dlg-k">${cashPositionHTML(orders)}</div>
       ${stranded.length ? `<div class="ow-dlg-warn">
         <svg class="icon ow-i16" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/></svg>
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no trip</span> — ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}</span> — ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 4).join(', '))}${
-          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. Nobody buys them until they are on a stop.</div>
-        ${otDlgGhost('pickups', 'Add them to a stop')}
+          stranded.length > 4 ? ` and ${stranded.length - 4} more` : ''}. They are on the round below and nothing is bought until somebody goes: send someone at the stop, or mark the supplier as delivering.</div>
       </div>` : ''}
       ${stops.length ? `<div class="ow-dlg-rows">
         <div class="ow-dlg-hd ow-bl-r">
@@ -44486,8 +45529,16 @@ function otTripSpec(){
   const stops = p.runs.concat(p.noLocation);
   const cash = stops.reduce((s, r)=> s + r.total, 0);
   const lines = stops.reduce((s, r)=> s + r.lines.length, 0);
+  /* Same distinction the buying list draws: on the round, but with
+     nobody sent to it. The unpriced ones are on no stop at all and are
+     reported as such there, so they are not swept in here under a
+     sentence about stops that do not exist for them. */
+  const unpricedKeys = new Set();
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpricedKeys.add(`${q.id}:${l.it && l.it.lineId}`)));
   const stranded = [];
-  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=> stranded.push({ q, it })));
+  orders.forEach(q=> orderLinesWithNobodySent(q).forEach(it=>{
+    if(!unpricedKeys.has(`${q.id}:${it.lineId}`)) stranded.push({ q, it });
+  }));
   return {
     w: 760,
     title: "Plan today's trip",
@@ -44507,9 +45558,9 @@ function otTripSpec(){
         ? `Nowhere to go — all ${p.settled} bought-in line${p.settled === 1 ? '' : 's'} on this board ${p.settled === 1 ? 'has' : 'have'} already arrived.`
         : orders.length ? 'Nothing on the board has to be bought in.' : 'No order is waiting on goods.'}</div>`}
       ${stranded.length ? `<div class="ow-dlg-gap">
-        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">${stranded.length} line${stranded.length === 1 ? ' is' : 's are'} on no stop.</span> ${esc(
+        <div class="ow-dlg-warn-t"><span class="ow-dlg-warn-b">Nobody is out for ${stranded.length} line${stranded.length === 1 ? '' : 's'}.</span> ${esc(
           [...new Set(stranded.map(x=> `${supplierName(x.it.supplierId)} (#${x.q.id})`))].slice(0, 3).join(', '))}${
-          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — they will not be bought today unless a price puts them on one.</div>
+          stranded.length > 3 ? ` and ${stranded.length - 3} more` : ''} — the stops above are the plan, not somebody walking it. Send a buyer from the buying list.</div>
         ${otDlgGhost('buying', 'Open the buying list')}
       </div>` : ''}
     </div>`,
@@ -44640,6 +45691,10 @@ function openDeliveryRuns(){ otDlgOpen('runs', 0); }
 function openInvoiceDelivered(){ otDlgOpen('invoice', 0); }
 function openAnnounceDialog(id){ otAnnounceDraft = null; otDlgOpen('announce', Number(id)); }
 
+/* The acts that answer in a window of their own rather than on the
+   board. Listed because the dialog has to stand down for them; see the
+   'act' case below for why. */
+const OT_ACTS_WITH_A_WINDOW = ['shortpick', 'prepay', 'confirm', 'edit'];
 /* Everything a dialog can do, from one listener bound once. Each act
    redraws both the dialog and the board, because both are written from
    the same books and neither may be left saying what was true before. */
@@ -44651,8 +45706,43 @@ function otDlgAct(act, el){
     case 'close': otDlgClose(); break;
     case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
-    case 'act': otAct(el.dataset.act2, id, el); otDlgDraw(); break;
-    case 'cancel': cancelSavedQuote(id); otDlgDraw(); break;
+    /* AN ACT WITH A WINDOW OF ITS OWN CLOSES THIS ONE FIRST.
+
+       Every .modal-overlay in this file sits at z-index 100 and this
+       dialog sits at 120, so a modal opened from in here renders BEHIND
+       the dialog and its scrim: the press looks like it did nothing at
+       all. That is how "Decide" on a short pick behaved -- the one
+       decision that has to be made before the order can ever be
+       invoiced.
+
+       Closing rather than restacking, because it is also the right
+       screen: a decision taken in its own window belongs over the
+       board, not over an order dialog that will be stale by the time it
+       is answered. The same move 'whohas' already makes, one case
+       below. */
+    case 'act': {
+      const a2 = el.dataset.act2;
+      if(OT_ACTS_WITH_A_WINDOW.includes(a2)){ otDlgClose(); otAct(a2, id, el); break; }
+      otAct(a2, id, el);
+      otDlgDraw();
+      break;
+    }
+    /* THE SUPPLIER ACTS, in the dialog. The phone asks and confirms
+       inside the order's row; the console has no rows, so the order's
+       own dialog is where they are, and they come through here. Both
+       are redrawn: confirming the last supplier MOVES the order, and a
+       lane behind an open dialog must never still say Taken. */
+    case 'ask': case 'confirmed': case 'undoconfirm': otAct(act, id, el); after(); break;
+    case 'cancel': {
+      cancelSavedQuote(id);
+      /* Off the board, so off the screen. Leaving the dialog up over a
+         board that no longer lists the order invites a second act on
+         something that has already gone. A declined confirm changes
+         nothing, so the dialog stays and simply redraws. */
+      const gone = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+      if(gone && gone.voided) otDlgClose(); else otDlgDraw();
+      break;
+    }
     case 'announce': openAnnounceDialog(id); break;
     case 'tellclient': {
       if(!q) break;
@@ -44898,7 +45988,13 @@ function otDecisionActs(q, need){
   if(q.status === 'draft' && orderSupplierGroups(q).length) secondary = { act:'preview', label:'Suppliers' };
   else if(q.status !== 'draft' && q.status !== 'completed' && !q.announcedAt && primary.act !== 'announce') secondary = { act:'announce', label:'Announce' };
   else secondary = { act:'preview', label:'Open the order' };
-  if(secondary.act === primary.act) secondary = { act:'preview', label:'Open the order' };
+  /* TWO BUTTONS THAT SAY ONE WORD ARE ONE BUTTON AND A BUG. The guard
+     compared only the act, so a Taken order whose move is "Suppliers"
+     shipped with "Suppliers" beside "Suppliers" -- and the old repair
+     handed back another 'preview', which is the thing it was meant to
+     replace. A dock with nothing sensible to put second puts nothing
+     second: one decision, one button. */
+  if(secondary.act === primary.act || secondary.label === primary.label) secondary = null;
   return { primary, secondary };
 }
 
@@ -44951,7 +46047,7 @@ function otDockHTML(needs){
         </div>
         <div class="ow-ot-now-r">
           <span class="ow-ot-now-v" title="What the client pays">${esc(otFig(savedQuoteTotal(q)))}</span>
-          <span class="ow-ot-now-a">${btn(secondary, 'btn-ghost')}${btn(primary, 'btn-accent')}</span>
+          <span class="ow-ot-now-a">${secondary ? btn(secondary, 'btn-ghost') : ''}${btn(primary, 'btn-accent')}</span>
         </div>
       </div>
       <div class="ow-ot-peek">
@@ -45093,9 +46189,17 @@ function renderSavedQuotes(){
       rows = today;
     }
     const shown = rows.filter(q=> otOrderMatches(q, tokens));
-    return otLaneHTML(s, shown, { queued, tail,
-      invoiced: s === 'completed' ? rows.filter(q=> q.invoiced).length : 0,
-      searching: !!tokens.length && !shown.length && !!rows.length });
+    /* WHILE A SEARCH IS ON, A LANE COUNTS WHAT IT IS SHOWING. The other
+       four already did; Delivered added the earlier ones on top, and
+       they are not searched at all -- so a search that matched nothing
+       left a lane head reading 26 over the sentence "No order in this
+       lane matches the search". The strip is the count of the whole
+       board and stays one, deliberately; a lane head is a count of the
+       lane, and a lane showing nothing has nothing in it. */
+    const searching = !!tokens.length;
+    return otLaneHTML(s, shown, { queued, tail: searching ? 0 : tail,
+      invoiced: s === 'completed' ? shown.filter(q=> q.invoiced).length : 0,
+      searching: searching && !shown.length && !!rows.length });
   }).join(''));
 
   /* ---- THE PHONE'S OWN SCREEN, from the same derivations ---------- */
@@ -45186,11 +46290,27 @@ function otUnlinkChargeCost(btn){
   toast('Unlinked — the payment is still in the cash book, back under its own running cost');
 }
 
+/* WHICH OF THE TWO SCREENS IS ON.
+
+   Order tracking is two designs, not one reflowed (SKILL.md §1): above
+   820px the board and its dock, below it the phone's queue and rows.
+   Two acts -- "open it" and "say who has it" -- mean the ROW on the
+   phone and the order's own DIALOG on the console, and for a while they
+   only meant the row: on the console they marked a row open in a table
+   that is display:none there, so the board's own accent button did
+   nothing at all and a Taken order could never be moved on.
+
+   Read from the board's own computed display rather than from a width,
+   so this answer and the stylesheet's can never disagree. */
+function otConsoleShowing(){
+  const board = document.getElementById('ot_board');
+  return !!board && getComputedStyle(board).display !== 'none';
+}
 function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
   const sid = el && el.dataset ? el.dataset.sid : null;
   switch(act){
-    case 'open': otOpenRow(id); break;
+    case 'open': if(otConsoleShowing()) openOrderPreview(id); else otOpenRow(id); break;
     case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
     case 'announce': openAnnounceDialog(id); break;
     case 'ask': askOrderSupplier(id, sid); break;
@@ -45202,7 +46322,7 @@ function otAct(act, id, el){
     case 'buying': openBuyingList(); break;
     case 'pickups': openPickupRuns(); break;
     case 'runs': openDeliveryRuns(); break;
-    case 'loaded': otOpenRow(id); otFocusLoad(id); break;
+    case 'loaded': if(otConsoleShowing()) openOrderPreview(id); else { otOpenRow(id); otFocusLoad(id); } break;
     case 'loadgo': otLoadGo(id, el); break;
     case 'release': releaseOrderToQueue(id); break;
     case 'cancel': cancelSavedQuote(id); break;
@@ -46035,25 +47155,41 @@ window.addEventListener('resize', ()=>{
    the one that isn't. */
 function voidInvoicesWarning(quotes){
   if(!quotes || !quotes.length) return null;
-  const n = quotes.length;
+  /* NO DOCUMENT, NO QUESTION ABOUT ONE.
+
+     `voided` is also how a CANCELLED order leaves the board, and an
+     order cancelled in Taken or Buying has never been billed. Asked
+     about those, this wrote "Void INV-0001? Sarah Namono stops owing
+     164,000 UGX" -- a document that was never raised and a debt that
+     was never booked -- and it came up as a second dialog, directly
+     after the cancel question the board had already asked and answered.
+     Two dialogs for one act, the second of them untrue, on the ordinary
+     way to kill an order taken by mistake.
+
+     Voiding something that HAS been billed asks exactly as before, and
+     the figures below are read off the billed ones only, so a mixed
+     selection cannot report a balance no invoice carries. */
+  const billed = quotes.filter(q=> q && q.invoiced);
+  if(!billed.length) return null;
+  const n = billed.length;
   const it = n === 1 ? 'it' : 'them';
-  const owed = quotes.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
-  const held = quotes.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
+  const owed = billed.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
+  const held = billed.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
   const head = n === 1
-    ? `Void ${invoiceNumberLabel(quotes[0])}?`
+    ? `Void ${invoiceNumberLabel(billed[0])}?`
     : `Void ${n} invoices?`;
   /* One document is named to its customer, because that is who the shop
      is about to stop billing. Several are not: three invoices can all
      belong to one person, and "Customers stop owing" would be the dialog
      inventing a plurality it has not checked. */
-  const who = (quotes[0].client && quotes[0].client.name) || 'The customer';
+  const who = (billed[0].client && billed[0].client.name) || 'The customer';
   const stops = owed <= 0.5
     ? `Nothing is still owed on ${it}, so no balance changes.`
     : n === 1
       ? `${who} stops owing ${fmtUGX(Math.round(owed))}.`
       : `That takes ${fmtUGX(Math.round(owed))} off what customers owe you.`;
   const goods = `\n\nThe goods stay off the shelf — voiding cancels the bill, not the sale. If they never left the shop, undo the invoice instead.`;
-  const takings = quotes.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
+  const takings = billed.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
   const money = held > 0.5
     ? `\n\n${fmtUGX(Math.round(held))} already received stays recorded against ${it} and stays in the Cash Book. The register will keep saying so until ${
         takings === 1 ? 'the payment is' : 'those payments are'} removed.`
@@ -78996,6 +80132,7 @@ function renderPresets(){
   refreshPresetDatalists();
   renderPresetOrderLimits();
   renderPresetPriceReview();
+  renderPresetQuoteWait();
   renderPresetAgentDiscounts();
   renderPresetDefaultMarkup();
   renderPresetServices();
@@ -79258,6 +80395,27 @@ function renderPresetPriceReview(){
   });
   save('staleDays', stale);
   save('targetPerPeriod', target);
+}
+
+/* HOW LONG A SENT QUOTE MAY WAIT, set beside the board's step limits
+   because it is the same question one document earlier. Blank means the
+   fallback, and quoteWaitDays() is the single reader -- the Sent lens
+   never carries a number of its own. */
+function renderPresetQuoteWait(){
+  const el = document.getElementById('preset_quote_wait_days');
+  if(!el) return;
+  el.value = Number(data.presetQuoteWaitDays) >= 1 ? Math.round(Number(data.presetQuoteWaitDays)) : '';
+  if(el.dataset.wired) return;
+  el.dataset.wired = '1';
+  el.addEventListener('change', ()=>{
+    const n = Math.round(Number(el.value) || 0);
+    data.presetQuoteWaitDays = n >= 1 ? n : null;
+    saveData();
+    if(typeof setQuoteLens === 'function' && typeof quoteLens !== 'undefined' && quoteLens === 'sent') setQuoteLens('sent');
+    toast(n >= 1
+      ? `A sent quote is past its limit after ${n} day${n===1?'':'s'}`
+      : `Back to the default \u2014 ${QUOTE_WAIT_DEFAULT} days`);
+  });
 }
 document.getElementById('preset_cat_add').addEventListener('click', ()=>{
   const input = document.getElementById('preset_cat_new');
@@ -91848,12 +93006,43 @@ function dashAlerts(ctx){
    fact, and second copies drift), so the brief can never disagree with
    the books. */
 
-// The one stage-timer rule, shared by the Order Tracking board's flag,
-// its rail roll-up, and the morning brief — lifted out of
+/* THE ONE CLOCK.
+ *
+ * Two screens measure the same kind of thing: the Order tracking board
+ * asks how long an order has sat in its lane, and the Quote screen's
+ * Sent lens asks how long a quote has sat with a client who has not
+ * answered. Both are "a thing entered a state at a moment, and the shop
+ * set a limit on how long that state may last".
+ *
+ * They must not each own a timer. A second timer is a second definition
+ * of late, and two definitions of late disagree on the day it matters.
+ * So there is one function: it takes the moment the state was entered
+ * and the limit on that state, and it returns the age and whether the
+ * limit is past. The board's stage limits and the Sent lens's wait are
+ * both CONFIGURATION read into it -- neither is written in code.
+ *
+ * An unknown entry moment is not "0 days old": it is unknown, and
+ * `known` says so, because a limit cannot be past on a clock that never
+ * started.
+ */
+function stateAge(enteredAt, limitMs, nowMs){
+  const at = Number(enteredAt) || 0;
+  const now = Number(nowMs) || Date.now();
+  if(!at) return { ms:null, days:null, past:false, known:false };
+  const ms = Math.max(0, now - at);
+  return {
+    ms, days: Math.floor(ms / 86400000),
+    past: Number(limitMs) > 0 && ms > Number(limitMs),
+    known: true
+  };
+}
+// The board's use of it: a lane's limit is minutes in Presets, so the
+// only thing this adds is the unit. Shared by the Order Tracking board's
+// flag, its rail roll-up, and the morning brief -- lifted out of
 // renderSavedQuotes so the three can never drift apart.
 function orderStageOverdue(q, stageLimits, nowMs){
   const limitMin = Number((stageLimits||{})[q.status])||0;
-  return limitMin>0 && !!q.stageEnteredAt && (nowMs - q.stageEnteredAt) > limitMin*60000;
+  return stateAge(q.stageEnteredAt, limitMin * 60000, nowMs).past;
 }
 
 /* ---- Telling somebody an order has sat too long ---------------------
@@ -99166,11 +100355,7 @@ function renderMessageSide(r){
       ${msgPanelFormHTML(r)}
     </div>`}
     <div style="padding:12px 14px;border-top:1px solid var(--om-rule-inner)">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="om-lbl" style="font-size:10.5px">What will be sent</span>
-        <span style="font-size:11px;color:var(--om-ink-3);margin-left:auto">edit it &mdash; the box is what ships</span>
-      </div>
-      <textarea class="om-box" id="msg_box" rows="12" style="margin-top:8px">${esc(body)}</textarea>
+      ${composerBoxHTML('msg_box', body)}
       <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
         <span class="om-chip om-fig om-n" id="msg_wide" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
         <span class="om-chip" id="msg_fits" style="background:var(--om-neutral);color:var(--om-neutral-ink)"></span>
@@ -99201,14 +100386,7 @@ function renderMessageSide(r){
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Open WhatsApp with this
       </button>` : `<div class="om-note om-note-warn"><b>No number to send it to.</b> WhatsApp needs one and this account has none, so there is nothing to open. Put a number on ${esc(r.name)}&rsquo;s record and this becomes a send &mdash; the words above keep.</div>`}
-      <div style="margin-top:9px;display:flex;align-items:flex-start;gap:8px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none;margin-top:2px"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.6 6.6A18.5 18.5 0 0 0 2 12s3 8 10 8a9.1 9.1 0 0 0 5.4-1.6"/><path d="M1 1l22 22"/></svg>
-        <span style="flex:1;min-width:0;font-size:12px;line-height:1.55;color:var(--om-ink-2)">The app cannot see WhatsApp. When you come back, say whether it went &mdash; nothing is recorded until you do.</span>
-      </div>
-      <div style="margin-top:9px;display:flex;gap:8px">
-        <button type="button" class="om-btn om-btn-s" id="msg_was_sent" style="height:34px;flex:1;color:var(--om-good-ink)">It was sent</button>
-        <button type="button" class="om-btn om-btn-s" id="msg_not_sent" style="height:34px;flex:1;color:var(--om-bad-ink)">It was not</button>
-      </div>
+      ${composerStampHTML({yes:'msg_was_sent', no:'msg_not_sent'})}
     </div>
   </div>
 
@@ -100232,6 +101410,38 @@ function msgDraftFor(r){
    lines; firmer replaces the ask with a dated one. Both leave the
    figures and the invoice lines exactly as they were, because those are
    the part nobody may edit by accident. */
+/* ONE COMPOSER, TWO SCREENS.
+ *
+ * The money queue drafts a message to a customer; the Sent lens drafts a
+ * follow-up on a quote. They are the same act and they make the same
+ * promise, so they are not allowed to be two composers: the draft is
+ * editable, THE BOX IS WHAT SHIPS, the app cannot see WhatsApp, and
+ * nothing is recorded until the owner says whether it went.
+ *
+ * These two helpers are that contract as markup. Each screen wires its
+ * own ids to its own recording, because what gets written down differs
+ * -- a chase stamps a debt, a follow-up stamps a quote -- but neither
+ * screen may restate the promise in its own words, which is how two
+ * composers start.
+ */
+function composerBoxHTML(boxId, body, extra){
+  return `<div style="display:flex;align-items:center;gap:8px">
+      <span class="om-lbl" style="font-size:10.5px">What will be sent</span>
+      <span style="font-size:11px;color:var(--om-ink-3);margin-left:auto">edit it &mdash; the box is what ships</span>
+    </div>
+    <textarea class="om-box" id="${boxId}" rows="12" style="margin-top:8px">${esc(body)}</textarea>
+    ${extra || ''}`;
+}
+function composerStampHTML(ids, what){
+  return `<div style="margin-top:9px;display:flex;align-items:flex-start;gap:8px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none;margin-top:2px"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.6 6.6A18.5 18.5 0 0 0 2 12s3 8 10 8a9.1 9.1 0 0 0 5.4-1.6"/><path d="M1 1l22 22"/></svg>
+      <span style="flex:1;min-width:0;font-size:12px;line-height:1.55;color:var(--om-ink-2)">The app cannot see WhatsApp. When you come back, say whether ${esc(what || 'it')} went &mdash; nothing is recorded until you do.</span>
+    </div>
+    <div style="margin-top:9px;display:flex;gap:8px">
+      <button type="button" class="om-btn om-btn-s" id="${ids.yes}" style="height:34px;flex:1;color:var(--om-good-ink)">It was sent</button>
+      <button type="button" class="om-btn om-btn-s" id="${ids.no}" style="height:34px;flex:1;color:var(--om-bad-ink)">It was not</button>
+    </div>`;
+}
 function msgShorter(text){
   const keep = String(text||'').split('\n').filter(l=>{
     const t = l.trim();

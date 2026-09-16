@@ -227,4 +227,69 @@ const line = (over) => Object.assign(
     'so the cash the board says it needs counts the whole carton too');
 }
 
+/* ---------- 5. and the ORDER is not charged for the shelf ------------ */
+{
+  /* The fourth thing that follows from the same number, and the one that
+     was getting it wrong.
+
+     The order's dialog set "Cost, as bought" against "Client pays" to
+     state a margin, and took the cost from lineCost -- the whole carton,
+     because that is what the buyer carries money for. So a one-kilo line
+     filled from a twenty-kilo box read 230,000 against 12,000 and
+     reported a 1,816% loss on an ordinary sale, on the screen an owner
+     opens to decide whether an order is worth doing.
+
+     The carton is still bought, still billed to the supplier and still
+     shelved -- sections 1 to 4 above. It is simply not this order's
+     cost. Three readings of one unit cost, and the third is what keeps
+     the two figures reconcilable: cost + surplus = what left the till. */
+  const scope = compileScope(
+    ['orderLineUnitCost', 'orderOwnCost', 'orderPackSurplusCash']
+      .map((n) => extractFunction(src, n, 'index.html')),
+    {}, ['orderLineUnitCost', 'orderOwnCost', 'orderPackSurplusCash']);
+
+  // One kilo wanted; the supplier sells the 20kg box at 11,500 a kilo.
+  const packLine = { it: { lineId: 1 }, quotedQty: 1, qty: 20, surplus: 19, unitCost: 11500, lineCost: 230000 };
+  t.check(scope.orderOwnCost([packLine]) === 11500,
+    `the order is costed at the quantity the order takes (got ${scope.orderOwnCost([packLine])}, want 11500)`);
+  t.check(scope.orderPackSurplusCash([packLine]) === 218500,
+    `and the rest of the pack is named as the shelf's (got ${scope.orderPackSurplusCash([packLine])}, want 218500)`);
+  t.check(scope.orderOwnCost([packLine]) + scope.orderPackSurplusCash([packLine]) === packLine.lineCost,
+    'the two together are exactly what leaves the till — neither invented nor lost');
+
+  // A line that broke no pack is unchanged: cost is qty x unit cost.
+  const plain = { it: { lineId: 2 }, quotedQty: 10, qty: 10, surplus: 0, unitCost: 37000, lineCost: 370000 };
+  t.check(scope.orderOwnCost([plain]) === 370000 && scope.orderPackSurplusCash([plain]) === 0,
+    'an ordinary line reads exactly as it did, with nothing standing aside');
+
+  /* WHAT WAS PAID BEATS WHAT WAS QUOTED, the moment there is a receipt --
+     the same rule the dialog states in words underneath the figure. */
+  const received = { it: { lineId: 3, receivedQty: 20, receivedPrice: 10000 }, received: true, settled: true,
+    quotedQty: 1, qty: 20, surplus: 19, unitCost: 11500, lineCost: 230000 };
+  t.check(scope.orderLineUnitCost(received) === 10000,
+    'a received line costs at what the buyer actually paid');
+  t.check(scope.orderOwnCost([received]) === 10000 && scope.orderPackSurplusCash([received]) === 190000,
+    'and its surplus is valued at that same price, not at the quote');
+
+  /* A shortfall must not flatter the margin. The order still BILLS the
+     ordered quantity -- savedQuoteTotal is built from qty -- so costing
+     only what arrived would set six bags of cost against ten bags of
+     sale and report a margin the shop never earned. */
+  const short = { it: { lineId: 4, receivedQty: 6, receivedPrice: 37000 }, received: true, settled: false,
+    quotedQty: 10, qty: 6, surplus: 0, unitCost: 37000 };
+  t.check(scope.orderOwnCost([short]) === 370000,
+    `a short line is still costed against what the client is billed (got ${scope.orderOwnCost([short])}, want 370000)`);
+
+  // Nothing to cost is nothing, never NaN on a money line.
+  t.check(scope.orderOwnCost([]) === 0 && scope.orderOwnCost(null) === 0
+    && scope.orderPackSurplusCash(null) === 0 && scope.orderLineUnitCost(null) === 0,
+    'and an empty order costs nothing rather than reporting NaN where money goes');
+
+  const prev = extractFunction(src, 'otPreviewSpec', 'index.html');
+  t.check(/const cost = orderOwnCost\(buys\);/.test(prev) && /orderPackSurplusCash\(buys\)/.test(prev),
+    'the order dialog reads both from here rather than keeping its own arithmetic');
+  t.check(/goes on the shelf as stock/.test(prev),
+    'and says on the screen where the difference went');
+}
+
 process.exit(t.done() ? 1 : 0);

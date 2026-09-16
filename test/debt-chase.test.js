@@ -269,7 +269,11 @@ if (scope) {
   /* ONE BOX, and it is what ships. The pane had a second one and the two
      shared fupDrafts so they could not disagree; there is one now, and
      the send reads it rather than the builder. */
-  t.check(/<textarea class="om-box" id="msg_box"/.test(side)
+  /* The box itself is drawn by composerBoxHTML now -- one composer, shared
+     with the Quote screen's Sent lens -- so the textarea is checked
+     where it lives and the id this screen passes it is checked here. */
+  t.check(/<textarea class="om-box" id="\$\{boxId\}"/.test(extractFunction(src, 'composerBoxHTML', 'index.html'))
+    && /composerBoxHTML\('msg_box', body\)/.test(side)
     && /fupDrafts\[cid\] = box\.value/.test(side)
     && /fupDrafts\[cid\] != null\) return fupDrafts\[cid\]/.test(extractFunction(src, 'msgDraftFor', 'index.html')),
     'the message is editable, and what SENDS is what the owner sees — not a copy of it');
