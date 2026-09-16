@@ -292,7 +292,7 @@ const line = (over) => Object.assign({
         || !!(it.receivedAt && Number(it.receivedQty) > 0)),
       fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
       toast: (m) => { told.push(String(m)); },
-      saveData: () => {}, renderQuoteItems: () => {},
+      saveData: () => {}, renderQuoteItems: () => {}, redrawQuoteLines: () => {},
     }, ['onSellChange', 'setItem']);
 
     // Below cost: warned, and saved anyway.
