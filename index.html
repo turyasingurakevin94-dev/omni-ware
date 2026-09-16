@@ -6192,6 +6192,14 @@
      there were two, a <table> and a .qc-card stack built from the same
      variables, and the test that held them to saying the same thing was
      the only reason they did. */
+  /* ==================================================================
+     NEW QUOTE — THE CONSOLE.  1 layout · 2 the settle strip · 3 the
+     document's tracks and rows · 4 the cells · 5 the client band · 6 the
+     rail · 7 charges and credit · 8 the dock's figures.  The phone's own
+     design for this screen is one block, in the 820px media query below.
+     ================================================================== */
+
+  /* ---- 1. layout ---------------------------------------------------- */
   /* The search dropdown and each row's supplier picker hang below the
      panel's edge on a short quote; a clipping panel would cut them. */
   .q-doc{overflow:visible;}
@@ -6210,6 +6218,7 @@
      FOR the phone (see the note on #q_rail in the markup), so the rule
      that hides it has to say which width it means. */
   @media (min-width:821px){ #tab-quote > .ow-grid > .ow-side{display:none;} }
+  /* ---- 2. the settle strip ------------------------------------------ */
   /* WHAT IS LEFT TO SETTLE, ON ONE STRIP.
      These were two cards side by side, and they were drawn whether or not
      they had anything to say: on a quote where every line is already at
@@ -6233,8 +6242,7 @@
      with a long finding, to sit under the dock. */
   .q-adv-hd{flex:none;display:flex;align-items:flex-start;gap:var(--ow-sp-8);
     padding:var(--ow-sp-10) var(--ow-sp-12);min-width:0;}
-  .q-adv-hd .icon{margin-top:1px;}
-  .q-adv-hd .icon{width:16px;height:16px;flex:none;}
+  .q-adv-hd .icon{width:16px;height:16px;flex:none;margin-top:1px;}
   .q-adv-hd-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.07em;
     text-transform:uppercase;white-space:nowrap;}
   .q-adv-hd-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;
@@ -6308,6 +6316,7 @@
      shop's (who it comes from, what it costs us, what is kept). A
      border would have belonged to one side; the rule belongs to
      neither. */
+  /* ---- 3. the document: tracks, sides, rows -------------------------- */
   /* TRACK 7 IS A CHANNEL, AND THAT IS NOT THE SAME AS A TRACK.
      It was 1px wide, so with the table's 8px gap the shop's side began
      9px after the line and the client's figures ended 8px before it --
@@ -6318,7 +6327,17 @@
      on this app's scale, symmetric across a rule that belongs to neither
      side. The item column pays for it, because every other track is
      sized to a figure that must not be clipped. */
-  .q-doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 74px 58px 118px 130px 17px 156px 112px 66px;}
+  /* TWO TEXT COLUMNS SHARE THE SURPLUS; THE FIGURES NEVER GROW.
+     Item was the only flexible track, so every spare pixel on the screen
+     went to it and to nothing else. On a 1820px monitor that is a 721px
+     cell holding a 200px name -- an ocean of white after "Runners —
+     Masasi / 14"" -- while the client's prices were crushed into the
+     right third and Buy from, fixed at 156, still truncated "Mukwano
+     Building Supplies" to "Mukwano Building…".
+     Both columns of WORDS flex now, 1.3 to 1, and every figure column
+     stays exactly as wide as the figure it must never clip. Wider screen,
+     wider names on both sides of the rule; the numbers stay put. */
+  .q-doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1.3fr) 74px 58px 118px 130px 17px minmax(148px,1fr) 112px 66px;}
   .q-doc .q-tbl-rule{background:var(--ow-steel-100);align-self:stretch;justify-self:center;width:1px;
     margin:calc(var(--ow-sp-8) * -1) 0;}
   .q-doc .ow-tbl-h .q-tbl-rule{margin:calc(var(--ow-sp-8) * -1) 0;}
@@ -6432,6 +6451,64 @@
      runs the full height of the row. */
   .q-doc .q-shop-first{align-self:stretch;display:flex;flex-direction:column;
     justify-content:center;align-items:flex-start;gap:1px;min-width:0;}
+  /* KEEP SAYS "ELEVEN PER CENT". ELEVEN AGAINST WHAT?
+     A share with no baseline is not a reading, and the shop's own mark
+     -- presetTargetMarginPct, the same figure the market screen and the
+     buying screens measure against -- was nowhere on the one screen
+     where the price is actually set. The pill keeps the figure; a 3px
+     meter under it puts that figure in a POSITION, with the mark
+     notched on it. Colour and place say the same thing, which is what
+     this app requires of a status that matters.
+
+     The scale runs 0 to twice the mark, so the notch sits at the middle
+     and "short of it" and "past it" read as sides rather than as a
+     number to compare. A line at or over twice the mark pins full. */
+  .q-keep-cell{display:flex;flex-direction:column;align-items:flex-end;gap:var(--ow-sp-4);min-width:0;}
+  .q-mark-meter{position:relative;width:52px;height:3px;border-radius:var(--ow-r-pill);
+    background:var(--ow-steel-100);overflow:hidden;}
+  .q-mark-meter i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);
+    background:var(--ow-verdigris);}
+  .q-mark-meter.warn i{background:var(--ow-amber);}
+  .q-mark-meter.danger i{background:var(--ow-crimson);}
+  .q-mark-meter b{position:absolute;top:0;bottom:0;width:1px;background:var(--ow-ink-900);}
+
+  /* THE FLOOR, WHERE THE PRICE IS TYPED.
+     The commonest counter-move in a yard is "punguza" -- come down a
+     little -- and the screen could not answer it: the rep did the
+     arithmetic on the call or guessed. marginTargetPrice(cost, mark) is
+     the lowest price that still holds the shop's mark, and it is stated
+     under the box the rep is about to change.
+
+     Only on a line that is UNDER the mark. A line already holding it has
+     nothing to be told, and a caption on every row would mark nothing --
+     the same rule the shelf tag on the name is drawn by. */
+  .q-doc .q-floor{display:block;margin-top:2px;font-size:11px;font-weight:var(--ow-fw-600);
+    color:var(--ow-amber-ink);text-align:right;white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+  .q-doc .q-floor::before{content:"floor ";font-family:'Figtree',system-ui,sans-serif;
+    letter-spacing:0;font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+
+  /* THE GOODS, BEFORE THE THINGS THAT ARE NOT GOODS.
+     Drawn only when a charge or the terms follow it: with nothing after
+     it the subtotal IS what the client pays, and the dock says that. */
+  .q-doc .ow-tbl-r.q-goods-sub{background:var(--ow-steel-050);min-height:34px;}
+  .q-doc .q-goods-sub .q-sub-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+
+  /* WHEN THESE FIGURES WERE TRUE.
+     Iron sheet prices move in a week, and the document said nothing
+     about when the book it is quoting from was last written in. This is
+     the oldest price row behind any line on the quote -- amber once it
+     is older than the shop's own price-watch window. */
+  .q-doc .q-doc-foot{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:32px;
+    padding:var(--ow-sp-6) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
+    background:var(--ow-steel-050);font-size:var(--ow-t-11);color:var(--ow-ink-600);flex-wrap:wrap;}
+  .q-doc .q-doc-foot .ow-fig{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .q-doc .q-doc-foot .q-stale{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .q-doc .q-doc-foot .q-stale .ow-fig{color:var(--ow-amber-ink);}
+  .q-doc .q-doc-foot .q-foot-sp{flex:1;}
+
+  /* ---- 4. the cells: the gutter, the name, the typed figures --------- */
   /* The gutter: the line's number, and on hover the way to remove it. */
   .q-gutter{display:flex;align-items:center;justify-content:center;min-width:0;}
   .q-row-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);min-width:14px;text-align:center;}
@@ -6459,6 +6536,10 @@
   .q-qty-unit{flex:0 0 auto;font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
   .q-sell-cell{display:flex;align-items:center;gap:2px;min-width:0;justify-content:flex-end;width:100%;}
   .q-sell-cell .ow-gi{flex:1 1 auto;min-width:0;}
+  /* The box and the caption under it are one column, so the caption's
+     right edge is the BOX's right edge and not the cell's. */
+  .q-sell-stack{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:stretch;}
+  .q-sell-stack > .ow-gi{flex:none;width:100%;}
   /* Set by hand: underlined, not boxed in amber. Amber is this app's
      caution; a price the owner chose is not a caution, it is a decision,
      and the underline is a document's mark for "written in". */
@@ -6508,6 +6589,7 @@
     font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
   .q-foot-says b{color:var(--ow-ink-900);font-weight:var(--ow-fw-700);}
   .q-add-row-placeholder{grid-column:2/-1;color:var(--ink-soft);font-size:12px;cursor:pointer;min-width:0;}
+  /* ---- 5. the client band ------------------------------------------- */
   /* THE BAND. One client, one cell: the name and the number share it,
      the number in the figure face beside the name. The date follows,
      then the facts the books hold. The phone's fold is not drawn here. */
@@ -6563,11 +6645,13 @@
   /* What the line keeps, and the supplier under the name: both read on
      the phone, where the shop's columns are behind a tap. */
   .q-margin-pill .q-mp-kept,.q-item-sub .q-item-sup-ph{display:none;}
+  /* ---- 6. the rail (drawn on the phone's Details tab only) ----------- */
   /* The rail is one panel; each reading rules itself off with its header. */
   .q-rail-sec:empty{display:none;}
   .q-rail-sec + .q-rail-sec:not(:empty) > .ow-pan-h{border-top:1px solid var(--ow-rule-soft);}
   .q-rail-sec .ow-mini{padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-10);}
 
+  /* ---- 7. charges and credit terms, as rows of the document --------- */
   /* CHARGES ARE ROWS OF THE DOCUMENT, not a panel beneath it.
 
      They were a block under the table, and three things followed. Its
@@ -6711,67 +6795,7 @@
   .q-margin-pill.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .q-margin-pill.danger{background:var(--ow-crimson-soft);color:var(--danger);}
 
-  /* KEEP SAYS "ELEVEN PER CENT". ELEVEN AGAINST WHAT?
-     A share with no baseline is not a reading, and the shop's own mark
-     -- presetTargetMarginPct, the same figure the market screen and the
-     buying screens measure against -- was nowhere on the one screen
-     where the price is actually set. The pill keeps the figure; a 3px
-     meter under it puts that figure in a POSITION, with the mark
-     notched on it. Colour and place say the same thing, which is what
-     this app requires of a status that matters.
-
-     The scale runs 0 to twice the mark, so the notch sits at the middle
-     and "short of it" and "past it" read as sides rather than as a
-     number to compare. A line at or over twice the mark pins full. */
-  .q-keep-cell{display:flex;flex-direction:column;align-items:flex-end;gap:var(--ow-sp-4);min-width:0;}
-  .q-mark-meter{position:relative;width:52px;height:3px;border-radius:var(--ow-r-pill);
-    background:var(--ow-steel-100);overflow:hidden;}
-  .q-mark-meter i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);
-    background:var(--ow-verdigris);}
-  .q-mark-meter.warn i{background:var(--ow-amber);}
-  .q-mark-meter.danger i{background:var(--ow-crimson);}
-  .q-mark-meter b{position:absolute;top:0;bottom:0;width:1px;background:var(--ow-ink-900);}
-
-  /* THE FLOOR, WHERE THE PRICE IS TYPED.
-     The commonest counter-move in a yard is "punguza" -- come down a
-     little -- and the screen could not answer it: the rep did the
-     arithmetic on the call or guessed. marginTargetPrice(cost, mark) is
-     the lowest price that still holds the shop's mark, and it is stated
-     under the box the rep is about to change.
-
-     Only on a line that is UNDER the mark. A line already holding it has
-     nothing to be told, and a caption on every row would mark nothing --
-     the same rule the shelf tag on the name is drawn by. */
-  .q-doc .q-floor{display:block;margin-top:2px;font-size:11px;font-weight:var(--ow-fw-600);
-    color:var(--ow-amber-ink);text-align:right;white-space:nowrap;
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    letter-spacing:-.02em;}
-  .q-doc .q-floor::before{content:"floor ";font-family:'Figtree',system-ui,sans-serif;
-    letter-spacing:0;font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
-
-  /* THE GOODS, BEFORE THE THINGS THAT ARE NOT GOODS.
-     Drawn only when a charge or the terms follow it: with nothing after
-     it the subtotal IS what the client pays, and the dock says that. */
-  .q-doc .ow-tbl-r.q-goods-sub{background:var(--ow-steel-050);min-height:34px;}
-  .q-doc .q-goods-sub .q-sub-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
-
-  /* WHEN THESE FIGURES WERE TRUE.
-     Iron sheet prices move in a week, and the document said nothing
-     about when the book it is quoting from was last written in. This is
-     the oldest price row behind any line on the quote -- amber once it
-     is older than the shop's own price-watch window. */
-  .q-doc .q-doc-foot{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:32px;
-    padding:var(--ow-sp-6) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
-    background:var(--ow-steel-050);font-size:var(--ow-t-11);color:var(--ow-ink-600);flex-wrap:wrap;}
-  .q-doc .q-doc-foot .ow-fig{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .q-doc .q-doc-foot .q-stale{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
-  .q-doc .q-doc-foot .q-stale .ow-fig{color:var(--ow-amber-ink);}
-  .q-doc .q-doc-foot .q-foot-sp{flex:1;}
-
-
-
-
-
+  /* ---- 8. the dock's figures ---------------------------------------- */
   /* THE BAR'S THREE FIGURES: what the client pays, what it costs, what
      is kept -- once, ruled off from each other by hairlines. The first
      is the one said down the phone and leads at 22px; the shop's two
@@ -6839,9 +6863,8 @@
      Also reused by the Compare Prices search box (#cmp_suggestions) so its
      suggestions show a product thumbnail too. */
   #ip_list{max-height:380px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
-  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;}
+  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{display:flex;align-items:center;justify-content:space-between;gap:11px;padding:11px 13px;}
   #ip_list .ip-item-main, #cmp_suggestions .ip-item-main, .q-item-search-dd .ip-item-main{flex:1;min-width:0;}
-  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{gap:11px;}
   .ip-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .ip-thumb-placeholder{width:34px;height:34px;border-radius:6px;flex-shrink:0;border:1px dashed var(--line);background:#FCFBF9;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
   .ip-thumb-placeholder .icon{width:15px;height:15px;}
@@ -7092,8 +7115,7 @@
     #ip_stage_view .q-supplier-card.stock-card{padding:6px 12px;}
     #ip_stage_view .q-supplier-card.stock-card .q-sc-body{flex-wrap:wrap;}
     #ip_stage_view .q-supplier-card.stock-card .q-sc-top{flex:1 1 0;justify-content:flex-start;}
-    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{order:9;}
-    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{flex:1 1 100%;margin-left:0;white-space:normal;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);}
+    #ip_stage_view .q-supplier-card.stock-card .q-sc-prices{order:9;flex:1 1 100%;margin-left:0;white-space:normal;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);}
     .q-chosen-line{display:none;}
     .q-stage-sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:12px;padding:10px 14px;
       background:var(--ow-steel-050);border-radius:var(--ow-r-lg);min-width:0;}
@@ -36511,14 +36533,21 @@ function renderClientHistoryBox(){
     const sellNow = (q2.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
     const costNow = (q2.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*(Number(it.price)||0), 0);
     const nowPct = sellNow > 0 ? Math.round((sellNow - costNow) / sellNow * 1000) / 10 : null;
-    /* Amber only when THIS quote is a full point under their usual. A
+    /* THE BAND AND THE DOCK MUST NOT DISAGREE ABOUT ONE QUOTE.
+       A quote that keeps nothing is a LOSS, and §2 gives losses crimson;
+       amber is caution. The dock already reads it that way -- profit <= 0
+       is danger there -- and this cell was calling the same quote merely
+       thin, so a rep could read "-0.4%" in caution brown beside a red
+       figure on the bar about the same lines.
+       Under their usual by more than a point is the caution case. A
        rounding's worth of difference is not a warning, and a screen that
        warns about noise stops being read. */
-    const thin = nowPct != null && nowPct < kept.pct - 1;
+    const losing = nowPct != null && nowPct <= 0;
+    const thin = !losing && nowPct != null && nowPct < kept.pct - 1;
     const says = nowPct == null
       ? 'No lines priced yet'
       : `This quote ${nowPct}%`;
-    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Keeps &middot; last ${kept.counted}</span><span class="ow-cb-kv ow-fig">${kept.pct}%</span><span class="ow-cb-kx${thin ? ' ow-warn' : ''}" title="The share the shop kept across this client's last ${kept.counted} costed order${kept.counted===1?'':'s'}, against what this quote keeps on its goods">${esc(says)}</span></div>`);
+    cells.push(`<div class="ow-cb-kn"><span class="ow-cb-l">Keeps &middot; last ${kept.counted}</span><span class="ow-cb-kv ow-fig">${kept.pct}%</span><span class="ow-cb-kx${losing ? ' ow-bad' : thin ? ' ow-warn' : ''}" title=""The share the shop kept across this client's last ${kept.counted} costed order${kept.counted===1?'':'s'}, against what this quote keeps on its goods">${esc(says)}</span></div>`);
   }
   if(last){
     const when = savedAgoLabel(last.savedAt || last.date || '');
@@ -38021,10 +38050,14 @@ function renderQuoteItems(){
        short-of-it reads as a side, not as a number to compare. */
     const meterFill = Math.max(0, Math.min(100, (marginPct / (MARGIN_WARN_PCT * 2)) * 100));
     const manual = it.sellPrice!=null && it.sellPrice!=='';
+    /* The floor rides INSIDE the price cell, stacked under the box
+       itself rather than under the whole cell: a hand-set price carries
+       a 22px reset arrow after it, so a caption right-aligned to the
+       cell hung that far to the right of the figure it is about. */
     const sellCellHTML = `<div class="q-sell-cell">
-        <input type="text" inputmode="decimal" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" value="${qFigShow(Math.round(sell * per))}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
+        <span class="q-sell-stack"><input type="text" inputmode="decimal" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" value="${qFigShow(Math.round(sell * per))}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">${floorHTML}</span>
         <span class="q-ph-hint">each</span>${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
-      </div>${floorHTML}`;
+      </div>`;
 
     return `<div class="ow-tbl-r q-line${rowMarginClass}" data-line="${it.lineId}">
       <div class="ow-tbl-c q-gutter">
@@ -38676,7 +38709,7 @@ function chargeRowsHTML(q, goodsTotal){
       <div class="ow-tbl-n${isPercent ? '' : ' q-chg-same'}" data-l="${isPercent ? 'Comes to' : 'Line total'}" title="What this charge adds to the client's bill">${
         amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
       <span class="q-tbl-rule" aria-hidden="true"></span>
-      <div class="ow-tbl-c q-shop-first q-doc-side">Charged on</div>
+      <div class="ow-tbl-c q-shop-first q-doc-side">${isPercent ? '% of the items' : 'A charge'}</div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n"></div>
     </div>`;
@@ -38761,7 +38794,7 @@ function creditOfferChipHTML(q){
   const offer = orderCreditOffer(q);
   if(!offer) return '';
   const term = offer.days > 0 ? `${offer.days} days` : 'your terms';
-  return `<button type="button" class="q-chg-sug" data-cr-on="1" title="Put this order on credit — ${esc(term)} at ${esc(String(offer.pct))}%">On credit<b>+${esc(String(offer.pct))}%</b></button><span class="q-cr-says">on ${esc(term)} they pay ${esc(fmtUGX(offer.total)).replace(/ /g, '&nbsp;')}</span>`;
+  return `<button type="button" class="q-chg-sug" data-cr-on="1" title="Put this order on credit — ${esc(term)} at ${esc(String(offer.pct))}%">On credit<b>+${esc(String(offer.pct))}%</b></button><span class="q-cr-says">makes&nbsp;it ${esc(fmtUGX(offer.total)).replace(/ /g, '&nbsp;')}</span>`;
 }
 
 function wireQuoteCharges(wrap){

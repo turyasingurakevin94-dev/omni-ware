@@ -223,7 +223,14 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
      each gained the difference at 118. What is being asserted is the
      same thing -- that a six-digit carton price and its reset arrow fit
      without the cell clipping -- measured against the tracks that exist. */
-  t.check(/--ow-tbl-cols:26px minmax\(0,1fr\) 74px 58px 118px/.test(src),
+  /* The item track's flex FACTOR is no longer 1: it and Buy from share
+     the surplus 1.3 to 1, because item alone taking every spare pixel
+     left a 721px cell holding a 200px name on a wide screen while the
+     supplier's name truncated. None of that touches what this assertion
+     is about, which is the three fixed tracks after it -- so it pins
+     those, and pins that item is still a flexible minmax rather than
+     being nailed to a width. */
+  t.check(/--ow-tbl-cols:26px minmax\(0,[\d.]+fr\) 74px 58px 118px/.test(src),
     'and the Qty track holds the count, Unit the word beside it, Price each a six-digit carton price and its reset arrow');
 }
 
