@@ -1501,7 +1501,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        makes, and a set that cannot express it pushes the rule outside
        the layer where nothing checks it. */
     const RADII = new Set(['0', '2px', '3px', '6px', '7px', '8px', '9px', '10px', '11px', '14px', '18px', '26px', '999px']);
-    const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()));
+    /* A per-corner radius is FOUR radii, and each has to be on the
+       system -- `0 0 14px 14px` is a card whose bottom corners are
+       rounded and whose top ones are not, which is one declaration
+       making two decisions the system already allows. Reading the
+       whole value as one string failed it as if 14px had been
+       invented. Split, then judge each part. */
+    const r = new Set([...om.matchAll(/border-radius:\s*([^;}]+)/g)]
+      .flatMap((m) => m[1].trim().split(/\s+/)));
     const bad = [...r].filter((x) => !RADII.has(x));
     t.check(bad.length === 0, bad.length ? `radii off the system: ${bad.join(' | ')}` : `${r.size} radii, all from the system`);
 

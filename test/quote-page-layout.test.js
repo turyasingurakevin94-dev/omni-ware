@@ -372,6 +372,35 @@ const src = read('index.html');
     'name and price cells included, so the row lays out like every other suggestion row');
 }
 
+/* ---------- 7b. a card may not clip the picker it hosts -------------- *
+ *
+ * THE FAULT THIS CATCHES SHIPPED, and it looked like a dead screen:
+ * neither the client nor the product could be chosen. Both dropdowns
+ * were built, populated and positioned correctly -- the JS was never
+ * wrong -- and the CARD around them was `overflow:hidden`, so a 116px
+ * client list rendered inside a 62px strip and 104px of the product
+ * list fell outside the document card. Nothing threw. Nothing logged.
+ * The rows were in the DOM the whole time.
+ *
+ * overflow:hidden was there for a good reason -- to clip the table
+ * inside the card's 14px corners -- which is why it needs a test rather
+ * than a memory: the next person to want rounded corners on a card will
+ * reach for exactly the same declaration. Corners are clipped on the
+ * child that paints to the edge instead.
+ */
+{
+  const rule = (name) => (new RegExp('\\.' + name + '\\{([^}]*)\\}').exec(src) || ['', ''])[1];
+  [['om-qclient', 'the client autocomplete'],
+   ['om-qdoc', 'the product search results'],
+  ].forEach(([cls, what]) => {
+    t.check(!/overflow:\s*hidden/.test(rule(cls)),
+      `.${cls} does not clip ${what} it hosts`);
+  });
+  /* And the corner is still clipped, on the one child that paints to it. */
+  t.check(/\.om-qdoc \.om-addrow\{[^}]*border-radius:\s*0 0 14px 14px/.test(src),
+    'the card keeps its bottom corners, clipped on the row that reaches them');
+}
+
 /* ---------- 8. the phone bar respects the bottom nav ----------------- */
 {
   t.check(/\.q-stickybar\{left:0;bottom:calc\(var\(--mobile-bottomnav-h\) \+ env\(safe-area-inset-bottom, 0px\)\)/.test(src),

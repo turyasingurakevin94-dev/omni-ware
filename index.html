@@ -16747,13 +16747,23 @@
      Who it is for and what the books already hold on them, as cells of
      one card split by rules. Each is a label over a figure, so the
      three facts read at the same speed as the two fields. */
-  .om-qclient{display:flex;align-items:stretch;overflow:hidden;margin:0 0 12px}
+  /* NO overflow:hidden ON A CARD THAT HOSTS A PICKER. It was here to
+     clip the cells inside the card's 14px corners, and it also clipped
+     the client autocomplete -- a 116px dropdown inside a 62px strip,
+     rendered, populated and invisible. The JS was never wrong: typing a
+     name built the rows and the card cut them off, which looks exactly
+     like a dead field. Corners are clipped on the children that paint
+     to an edge instead; see .om-addrow. */
+  .om-qclient{display:flex;align-items:stretch;margin:0 0 12px}
   .om-qclient-cell{padding:11px 14px;min-width:0;border-left:1px solid var(--om-rule-inner)}
   .om-qclient-cell:first-child{border-left:0}
   .om-qclient-v{margin-top:2px;display:flex;align-items:baseline;gap:7px}
 
   /* ---- the document card and its front door ------------------------ */
-  .om-qdoc{overflow:hidden}
+  .om-qdoc{overflow:visible}
+  /* The one child that paints to the card's bottom edge, so a hover or a
+     charge row's tint cannot square the corner off. */
+  .om-qdoc .om-addrow{border-radius:0 0 14px 14px}
   .om-qsearch-wrap{padding:11px 14px;display:flex;align-items:center;gap:10px}
   .om-qsearch{display:flex;align-items:center;gap:9px;flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid var(--om-rule-input);border-radius:10px;background:var(--om-surface)}
   .om-qsearch:focus-within{border-color:var(--om-navy)}
@@ -16858,9 +16868,19 @@
        does not. On the console the box appears under the pointer; a
        phone has no pointer to hover with, so the mark has to be on the
        figure itself. */
-    .om-qdoc .om-irow .om-gi{text-decoration:underline dotted var(--om-ink-quiet);text-underline-offset:3px;
-      border:0;background:none;padding:0;font-size:11.5px;color:var(--om-ink);width:auto}
-    .om-qdoc .om-irow .om-gi:hover{border:0;background:none}
+    /* ONLY WHILE THE ROW IS CLOSED. An open row is not a sentence with
+       two figures in it -- it is a 32px stepper, a x, and a bordered
+       price field, which is the whole point of opening it. Flattening
+       its boxes let the quantity input size to its own content, which
+       took 256px of a 328px strip, collapsed the price cell to 14px and
+       pushed its "each" hint left ON TOP OF the + button. The stepper
+       was visible, enabled, and could not be tapped: the hint was
+       swallowing the press. Found by driving it, not by looking -- the
+       two sit within 20px and the overlap does not read as one. */
+    .om-qdoc .om-irow:not(.q-open) .om-gi{text-decoration:underline dotted var(--om-ink-quiet);
+      text-underline-offset:3px;border:0;background:none;padding:0;font-size:11.5px;
+      color:var(--om-ink);width:auto}
+    .om-qdoc .om-irow:not(.q-open) .om-gi:hover{border:0;background:none}
     /* The shop side comes back when it is asked for; that rule names a
        class on <body>, which this layer may not do, so it lives beside
        setShopSideOpen instead. */
@@ -38799,6 +38819,34 @@ document.addEventListener('click', (e)=>{
   document.querySelectorAll('#q_itemsWrap .q-line.q-open').forEach(r=> r.classList.remove('q-open'));
   quoteOpenLine = null;
 });
+/* A REDRAW THAT WAITS FOR THE EVENT THAT ASKED FOR IT.
+ *
+ * Every box on a quote line redraws the table when it is committed, and
+ * the table is redrawn by replacing its innerHTML -- which removes the
+ * very input the change event is still being dispatched on. Chrome
+ * refuses: "NotFoundError: the node to be removed is no longer a child
+ * of this node. Perhaps it was moved in a 'blur' event handler?" It
+ * threw on every quantity and every price anyone typed.
+ *
+ * Nothing was lost -- the figure, the line total, the dock and the
+ * stored value all came out right, because the throw lands after the
+ * work is done -- but an uncaught error on the most-used interaction on
+ * the screen is noise that will one day hide a real one, and this app's
+ * rule is that a failure names itself rather than being shouted into a
+ * console nobody has open.
+ *
+ * So the redraw happens in the next task, when the dispatch has
+ * finished and the input may be replaced. Coalesced, because two boxes
+ * committed together (a tab from quantity to price) asked for two
+ * redraws and only the last one could win anyway.
+ */
+let quoteRedrawPending = false;
+function redrawQuoteLines(){
+  if(quoteRedrawPending) return;
+  quoteRedrawPending = true;
+  setTimeout(()=>{ quoteRedrawPending = false; renderQuoteItems(); }, 0);
+}
+
 function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
@@ -39073,7 +39121,7 @@ function renderQuoteItems(){
         }
       }
       item.qty = newQty;
-      saveData(); renderQuoteItems();
+      saveData(); redrawQuoteLines();
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
@@ -39084,7 +39132,7 @@ function renderQuoteItems(){
          against; setLineSupplier may since have moved it to a supplier
          who prices in something else. */
       syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty, {unit: item.unit});
-      saveData(); renderQuoteItems();
+      saveData(); redrawQuoteLines();
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
@@ -39092,13 +39140,13 @@ function renderQuoteItems(){
       // Never blocked, only said. See sellBelowCostClause.
       const below = sellBelowCostClause(item);
       if(below) toast(`Saved — but ${below}.`, 7000);
-      saveData(); renderQuoteItems();
+      saveData(); redrawQuoteLines();
     });
     const resetBtn = row.querySelector('.q-sell-reset');
     if(resetBtn){
       resetBtn.addEventListener('click', ()=>{
         delete item.sellPrice;
-        saveData(); renderQuoteItems();
+        saveData(); redrawQuoteLines();
       });
     }
     const supSearchEl = row.querySelector('.q-supplier-search');
@@ -39128,11 +39176,11 @@ function renderQuoteItems(){
       if(!el) return;
       item.supplierId = el.dataset.id;
       item.supplierName = supplierName(item.supplierId);
-      saveData(); renderQuoteItems();
+      saveData(); redrawQuoteLines();
     });
     row.querySelector('.q-remove-icon').addEventListener('click', ()=>{
       data.quote.items = data.quote.items.filter(x=>x.lineId!==lineId);
-      saveData(); renderQuoteItems();
+      saveData(); redrawQuoteLines();
     });
   });
 
