@@ -1,0 +1,295 @@
+# Suggestions for Claude Design — what the Sell-section handoff does not draw
+
+This paper is written to be fed back into Claude Design. It is the list of
+screens, dialogs, popups and states that `design_handoff_sell_section/`
+**references but never draws**, plus the migration path for the rest of the app.
+
+The handoff draws four screens at two sizes each (1440×900 and 390×844) and is
+pixel-specified. Building them surfaced the gaps below: every one is something a
+row, a button or a sentence in the handoff promises, and which therefore has to
+exist before the section is finished. Where the handoff already settles a
+question, this paper does not re-open it — it only names what is missing and
+what the missing thing has to satisfy.
+
+Each item gives: **what triggers it**, **what it must contain**, **the states it
+has**, and **the constraint it must not break**. The vocabulary is the card
+idiom already specified in the handoff's README (warm ground `#f6f5f2`, navy
+`#17223c`, coral `#ef4b39` fill-only / `#c2311f` text-safe, IBM Plex Sans +
+Mono, the four state tints), which is implemented in the app as the `.om-`
+layer. Nothing here needs a new token.
+
+---
+
+## 1. The dialogs every screen points at
+
+The handoff's own rule is *"No modal for reading — modals only for destructive
+confirmation."* That leaves two classes of thing undrawn: the small **entry**
+dialogs (which are not reading and not destructive), and the **confirmations**.
+
+### 1.1 Record a payment — the most-referenced undrawn thing
+
+Reached from Invoices' detail panel, Customers' detail panel, and the Agents
+settlement. Three entry points, one dialog.
+
+- **Must contain:** which invoice (or which account, when opened from a
+  customer), the amount still due as the anchor figure, the amount being paid,
+  the date, the cash account it lands in, and a reference.
+- **The arithmetic must be visible, not implied:** still due → amount paid →
+  what remains, as three figures that update as the amount is typed. A payment
+  dialog that shows only an input is the one place a shop most needs to see the
+  subtraction.
+- **States:** part payment (the common case — leaves a balance, row becomes
+  `part`), settling exactly (row becomes `paid`), overpayment (must be refused
+  or explicitly turned into a credit — say which, do not silently accept), and
+  paying an already-settled invoice (refuse, and say it is settled).
+- **Constraint:** every payment lands in the Cash Book. The dialog names the
+  account it will land in *before* it is confirmed, because that entry is what
+  the books are reconciled against.
+
+### 1.2 Record a settlement (Agents)
+
+Reached from the agent panel's caution block. The same shape as 1.1, with the
+one rule the handoff is emphatic about: **the figure owed is at the shop price,
+never the client price.** The dialog must show both — *"they collected
+1,775,000 from their clients; 1,420,000 of that is yours"* — because the whole
+class of error this screen exists to prevent is charging an agent their own
+client price. Do not draw a single ambiguous "amount owed".
+
+### 1.3 New customer
+
+Top-bar secondary action on Customers. Name, phone, area, and the **credit
+limit** — which is the field that matters, because the over-limit block on the
+detail panel and the blocked-credit rule at the point of sale both read it. A
+new customer with no limit set needs a stated default, visible in the form.
+
+### 1.4 Invite an agent
+
+Top-bar secondary action on Agents. Name, phone, and **terms** (`prepay` or
+`credit`) — the pill the list's last column shows. If `credit`, it needs the
+same limit question as 1.3.
+
+### 1.5 Hold new orders (Agents) — destructive, so a confirmation
+
+The handoff gives this as a secondary action beside `Record a settlement` and
+never says what it does at the point of pressing. It stops an agent trading, so
+it needs a confirmation that names the consequence: how many orders are open
+right now, what happens to them, and whether the agent's app tells them why.
+An agent who finds their app dead with no reason will phone the shop.
+
+### 1.6 Void, and undo invoice — two confirmations, deliberately not one
+
+The app already treats these as different acts and the confirmations must keep
+them different, because they are not interchangeable:
+
+- **Void** cancels the paper. Goods went, money already received stays in the
+  Cash Book, the customer stops owing for it.
+- **Undo invoice** says it should never have been raised. Stock returns to the
+  shelf, payments and their Cash Book entries reverse, the purchase invoices it
+  raised are removed, and the order returns to Order tracking.
+
+Each confirmation must **enumerate what it is about to remove** — the figures
+and the record counts, not a generic "are you sure". Voiding must re-sync the
+customer's debt; after the Debtors cut there is one list to re-render rather
+than two, and the confirmation is where that is now visible.
+
+### 1.7 Broadcast (Messages)
+
+Top-bar secondary action, and the handoff defines it in one clause — *"a post
+sent once to a picked list"* — then never draws it. It needs:
+
+- **The list picker**, which is the whole screen: who is being written to, and
+  on what basis (a lens over customers — everyone, everyone owing, everyone who
+  bought a given product, the three past buyers of an idle line).
+- **The same mono box** as the single composer, with the same law: the box is
+  what ships.
+- **The count, stated plainly** before sending — *"this opens WhatsApp 23
+  times"* — because the app cannot batch-send and must not look as if it can.
+- **A per-recipient stamp**, or an explicit decision that a broadcast is
+  stamped once for the whole run. The handoff's attribution loop depends on the
+  stamp, so this cannot be left unanswered.
+
+### 1.8 Sort (Customers) and the overflow menus
+
+`Sort` sits on the Customers list header; an overflow `⋯` sits at the end of
+Invoices' action row. Both are undrawn. They are menus, not modals — one
+elevation, the handoff's card radius, and each item says what will happen.
+Sort's options should be the orderings a shop actually asks in: oldest money
+first (the default the Owing lens already uses), largest first, and by name.
+
+---
+
+## 2. Lenses that are named but never drawn
+
+Each of these is a tab with a count in the drawn frames, and no drawn content.
+They need rows, a group structure, and — the part most often missed — **an empty
+state**.
+
+| Screen | Undrawn lens | What it has to answer |
+| --- | --- | --- |
+| Invoices | **Voided 3** | A struck-through register. What was voided, when, by whom, and what it was worth. Kept, never deleted. |
+| Customers | **Best 20** | Ranked by what? The handoff implies margin, not turnover — draw the distinction, because the biggest buyer is usually not the best one. |
+| Customers | **Gone quiet 7** | Partially specified (*"bought 9.1m before, nothing in 90 days"*). Needs the row, and the reading: which of them went quiet **because** of a debt. |
+| Agents | **Last month / Year** | Same grid, different window. The question is whether the waterfall and the KPIs re-scale, and whether "Owed to the shop" is period-scoped or always current. It should be always current — money owed is not a monthly fact. |
+| Messages | **Sent 184** | The archive. Needs the reply state per row, and it is the source of the reply-rate figures the other panels quote. |
+| Messages | **Waiting on a reply 21** | Drawn as a dimmed group inside the To-send list, but not as its own lens body. |
+
+---
+
+## 3. The states no frame shows
+
+The app's own laws require these, and the handoff draws none of them. They are
+the highest-value thing on this list, because a screen that is only drawn full
+is a screen that will ship broken.
+
+1. **Empty.** Each of the four screens, with nothing in it, naming the next
+   action. *"No invoice is overdue."* is a different sentence from *"You have
+   not raised an invoice yet"* and both need drawing. The rule is that not
+   enough is an answer: an empty screen that says so and names what to do beats
+   one that pretends.
+2. **One row.** Grouped lists with a single row look wrong in a way that only
+   shows when drawn — a group header, one row, and a subtotal that equals it.
+3. **Failure.** A figure the screen cannot derive must say so rather than show
+   zero. Draw the row that says *"the ledger and the balance disagree"* rather
+   than a silent number — the `customerDebtDrift` check already has a
+   check-passed chip drawn, so its failed twin is missing.
+4. **Loading.** What the list is while its figures are still being computed.
+5. **Truncated.** The handoff specifies overflow rows (*"five more about
+   money"*, *"+9 agents"*) but only draws one. Draw the case where a group is
+   almost entirely collapsed, and the case where the overflow row's subtotal is
+   most of the group's.
+6. **Over-limit at the point of sale.** The Customers panel promises *"New
+   credit sales are blocked for this account until it comes under 2,000,000"*.
+   The refusal itself — on the quote screen, at the moment of adding a credit
+   sale — is not drawn, and it is a rule rather than a dismissible warning. It
+   needs the figure that would clear it and the one action that clears it.
+
+---
+
+## 4. Things the handoff removes without drawing the replacement
+
+### 4.1 The Purchases register
+
+The README lists *purchase invoices → Invoices (`invSide='buys'`)* as a merge
+**already done** and therefore not this pass's work. But the Invoices frame
+replaces the Sales/Purchases lens pair with **Needs attention / All / Voided**,
+and shows purchase invoices only as `PINV` pills on the sales row and as the
+*Bought to fill it* block on the panel.
+
+That loses a screen that is currently doing real work: the buying side's own
+checks band — the same delivery billed twice, a line priced above anything ever
+paid that supplier, a bill with no delivery behind it, money paid out beyond
+what was billed — and the bill panel that shows a bill's lines against what the
+same goods last cost from the same supplier.
+
+**Suggestion:** draw either (a) a fourth Invoices lens for the buying side that
+keeps the checks band in the new vocabulary, or (b) the bill's own detail panel,
+reached by clicking a `PINV` pill, carrying those four checks. Option (b) is
+more in the spirit of *one register, one piece of money* and needs one frame.
+Whichever is chosen, the four checks must survive — a checking screen whose
+silence cannot be read is worse than none.
+
+### 4.2 Statements — reached, never drawn
+
+Invoices' `Send statement` and Customers' `Send statement` both reach the
+existing `customerStatementBlockHTML()`, built from the debt log so credit
+sales are not counted twice. The handoff is explicit that this block already
+exists and keeps its row. What is undrawn is the **send**: a statement is a
+document, and sending it is the same WhatsApp hand-off as everything else on
+Messages, which means it needs the box, the deep link and the stamp.
+
+### 4.3 Setup — the two values Messages reads
+
+The Posting lens reads a **cap** (3 a day) and a **send window** (9–11am), and
+says both live in Setup. The Setup rows that hold them are not drawn.
+
+### 4.4 Today — the unstamped-post row
+
+*"Today shows one row while the day's post is unstamped, deep-linking into the
+composer."* Undrawn. It is one row, and it needs the dot rule already specified
+for the phone tab bar (read off the count Today already rendered, not reckoned
+again).
+
+---
+
+## 5. What the settled rail map still needs on the screen side
+
+The rail itself is **done** — `.design/briefs/rail-map.md` settles the map and the
+navy column is built, Sell 6 with the badge on Order tracking. (That brief also
+supersedes the Sell bundle's own frames, which draw Sell 5 with the badge on
+Quote.) Two of the ten absorptions are implemented with this section: Debtors →
+Customers, and WhatsApp + Follow-ups → Messages.
+
+What is **not** drawn is the receiving end of the other absorptions. A rail row
+disappearing is only half a cut; the screen that took the work needs a frame
+showing where it went:
+
+| Absorption | The undrawn screen-side work |
+| --- | --- |
+| Creditors → Suppliers | Suppliers needs the "who to pay first" lens, with the aging bar Customers uses |
+| Compare prices → Pricing | Pricing needs the rival-price view |
+| Money's Pricing + Price registry → one Pricing row | one screen out of two |
+| Media → Products | the product record needs the photo wall |
+| Consignment → Inventory | Inventory needs a consignment lens |
+| Sales + Purchase analytics → Analysis | Analysis needs both, and a statement about what it does with each |
+| Fastener guide → The shop | the shop screen needs the guide |
+
+Each needs what the four in this bundle got: a frame at 1440, a frame at 390,
+and the cut argued with what is lost, what absorbs it, and which searched-for
+words still reach the work.
+
+**One observation the rail brief raises and nobody has drawn:** `renderCreditorsList`
+sits beside `renderDebtorsList` exactly as Suppliers sits beside Customers. The
+Debtors argument — one list, two renderers, a synchronisation bug waiting —
+applies to Creditors unchanged. If the Debtors cut is right, this one is too.
+
+## 6. Sizes the handoff does not cover
+
+The frames are 1440×900 and 390×844, and the README says the desktop should
+fill its viewport while the phone is a separate design. Two gaps:
+
+- **821–1023px.** The app switches design at 820px, so this band gets the
+  desktop design at half its drawn width. The detail column is fixed at 390px
+  and the rail at 236px, which leaves under 400px for a list whose widest grid
+  is 58 + 190 + 108 + 112 + 76 plus gaps. Draw what gives way first: most
+  likely the detail column becomes a drill-in rather than a column.
+- **Above ~1700px.** The prose blocks need a measure or they run to 180
+  characters. The card layer sets one at 76ch; confirm that is the intent.
+
+---
+
+## 7. The migration, and where it actually stands
+
+The card idiom is already spreading, so this is a status rather than a proposal.
+**Built:** the rail, and the Quote page. **Built by this section:** Invoices,
+Customers, Messages and Sales agents. That leaves the rest of the app on the
+console (steel/oxide, Inter, hairlines).
+
+The order to continue in, because it follows the money and each step reuses what
+the last one built:
+
+1. **Today** and **Order tracking** — both have handoff bundles in
+   `.design/handoffs/` already, and both are screens the Sell four link into.
+   Doing these makes the whole Sell loop one language.
+2. **Suppliers** and **Sourcing** (Buy) — the `design_handoff_buy_section`
+   bundle exists, and they reuse the register, the grouped list and the detail
+   panel almost unchanged from Invoices.
+3. **Catalogue** — `design_handoff_catalogue_and_rail` exists; this is the
+   largest group and needs the thumbnail and price-card work the Posting lens
+   introduces.
+4. **Cash book** and **Statements** (Money), which need the figure treatment and
+   little else, and have no bundle yet.
+5. **Insight** and **Setup** last, being the least-visited, and with no bundle
+   yet.
+
+Four of the six bundles that exist are unbuilt, and two sections — Money and
+Insight — have no bundle at all. Those two are the gap worth filling next in
+design, independent of everything above.
+
+When the conversion completes, the console's `--ow-*` tokens go with the screens
+they clothe and the app's colour count **falls** rather than rises, which is the
+outcome `test/design-system.test.js` is written to reward. Until then the two
+gates in that file read two disjoint slices of the stylesheet and neither can
+drift into the other.
+
+What should **not** happen is a partial conversion inside one screen. A screen is
+on one system or the other.
