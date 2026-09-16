@@ -90,6 +90,60 @@ const track = extractFunction(src, 'otTrackHTML', 'index.html');
     'and the primary cannot be pressed until somebody is named — which is where the paragraph explaining that went');
 }
 
+/* ---------- 4b. the footer carries a form, not just a select -------- */
+{
+  /* The handoff drew this footer holding ONE select. It holds up to
+     four controls: hired transport asks for a driver, a vehicle and a
+     number on top of the choice, the client's own person for a name and
+     a number. Sharing the remainder equally wrapped them into a 248px
+     column of three unlabelled boxes with the actions floating beside
+     the middle one.
+
+     Two changes that pay for each other, and only in the arm that
+     carries the form. */
+  t.check(/\.om-od-load\{[^}]*flex-wrap:nowrap/.test(src),
+    'the form is one row rather than a wrapping column');
+  t.check(/om-od-more/.test(prev) && /data-dlg="more"/.test(prev),
+    'the two quiet acts fold behind a menu, which buys back the width they held');
+  t.check(/\.om-menu\{/.test(src) && /om-menu-w om-od-more-w/.test(prev),
+    "and it is the card system's own menu rather than a second one grown here");
+  /* THE CAPTIONS CAME BACK. They were hidden to save height, which left
+     "Kasule" and a clipped "07…" standing in for them -- a placeholder
+     is a hint, not a label, and it goes as soon as anything is typed. */
+  t.check(/\.om-od-flabel\{display:block/.test(src) && !/\.om-od-flabel\{display:none/.test(src),
+    'every box in the row has a caption');
+  ['overflow:hidden', 'text-overflow:ellipsis', 'white-space:nowrap'].forEach((d) =>
+    t.check(new RegExp(`\\.om-od-flabel\\{[^}]*${d.replace('-', '\\-')}`).test(src),
+      `and a caption too long for its field truncates with ${d}`));
+  /* A SELECT CLIPS WITH NO ELLIPSIS AND NO TOOLTIP, so a narrow one
+     reads as a different carrier rather than as a cut one. Its floor is
+     what it takes to read the value it is showing; the typed fields
+     give way instead, because their value scrolls. */
+  const floor = /\.om-od-field\{[^}]*min-width:(\d+)px/.exec(src);
+  const hired = /\.om-od-hired\{[^}]*min-width:(\d+)px/.exec(src);
+  t.check(!!floor && !!hired && Number(floor[1]) > Number(hired[1]),
+    `the select's floor is higher than a typed field's (${floor && floor[1]} vs ${hired && hired[1]})`);
+  t.check(!/\.om-od-sel\{[^}]*min-width:200px/.test(src),
+    "and it no longer claims the 200px it held when it was the footer's only control");
+  /* The move never folds -- it is the one thing to do next -- but with
+     four controls beside it, it spends its words rather than the
+     select's legibility. Only on the console: the phone stacks the
+     fields full width, so there is no row to run out of. */
+  const label = extractFunction(src, 'otLoadGoLabel', 'index.html');
+  t.check(/if\(!otConsoleShowing\(\)\) return long;/.test(label),
+    'the shortened move is a console answer to a console problem');
+  t.check(/carrierAsks\(otCarrierKindNow\(q\)\)\.what/.test(label),
+    'and it is spent on the one carrier that asks for a fourth field, derived rather than guessed');
+  /* 820px is a switch. In one hand height is the cheap dimension, so
+     the same two acts stand in the open at thumb size and the ··· goes. */
+  const om = src.slice(src.indexOf('THE OM LAYER'));
+  const fone = [...om.matchAll(/@media\s*\(max-width:820px\)\s*\{([\s\S]*?)\n  \}/g)].map((m) => m[1]).join('\n');
+  t.check(/\.om-od-more\{display:none\}/.test(fone) && /\.om-od-f \.om-menu\{[^}]*position:static/.test(fone),
+    'the phone unfolds them instead of hiding them behind a menu it has no need of');
+  t.check(/\.om-od-f \.om-menu-i\{[^}]*height:44px/.test(fone),
+    'at a thumb-sized target');
+}
+
 /* ---------- 5. rule 1: a move back is an event, not an erasure ------- */
 {
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');

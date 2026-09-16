@@ -17769,7 +17769,11 @@
   .om-od-f{padding:11px 16px;border-top:1px solid var(--om-rule-inner);display:flex;
     align-items:center;gap:10px;flex-wrap:wrap;background:var(--om-surface)}
   .om-od-f-s{flex:1;min-width:200px;font-size:11.5px;color:var(--om-ink-2);line-height:1.5}
-  .om-od-sel{flex:1;min-width:200px;box-sizing:border-box;height:38px;padding:0 11px;
+  /* The select fills its FIELD. It used to claim `flex:1;min-width:200px`
+     from when it was the only control in the footer and its own direct
+     child -- inside a 169px field that overflowed the field and pushed
+     itself a row off the others' baseline. */
+  .om-od-sel{width:100%;box-sizing:border-box;height:38px;padding:0 11px;
     border:1px solid var(--om-rule-input);border-radius:9px;background:var(--om-surface);
     font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:13px;color:var(--om-ink)}
   .om-od-div{width:1px;height:24px;background:var(--om-rule-inner);flex:none}
@@ -17780,12 +17784,50 @@
   /* The carrier form, in the card system's clothes. Same call, same
      data-car contract, same reader -- carrierFormHTML is parameterised
      by its class names precisely so a second form never has to exist. */
-  .om-od-load{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;flex:1;min-width:200px}
-  .om-od-field{display:flex;flex-direction:column;gap:4px;flex:1 1 180px;min-width:0}
-  .om-od-flabel{display:none}
+  /* ONE ROW, AND THE FORM GETS THE WIDTH.
+
+     The footer was drawn holding a single select, and it has to carry
+     four: hired transport asks for a driver, a vehicle and a number,
+     the client's own person for a name and a number. Sharing the
+     remainder equally wrapped them into a 248px column of three
+     unlabelled boxes with the actions floating beside the middle one.
+
+     Two changes, and they pay for each other. The quiet acts fold
+     behind a ··· , which buys back the ~215px Announce and Hold or
+     cancel were holding; and the fields are sized to what they
+     actually hold rather than to each other -- a telephone number is
+     never as wide as a name. Only where the form is in the footer:
+     everywhere else the footer is the handoff's, do · tell · stop in
+     the open.
+
+     And the captions come back. They were hidden to save the height,
+     which left "Kasule" and a clipped "07…" standing in for them --
+     a placeholder is a hint, not a label, and it goes as soon as
+     anything is typed. */
+  .om-od-load{display:flex;align-items:flex-end;gap:10px;flex-wrap:nowrap;flex:1;min-width:0}
+  /* The select's floor is what it takes to READ the value it is
+     showing -- a select clips with no ellipsis and no tooltip, so a
+     narrow one reads as a different carrier rather than as a cut one.
+     The text fields give way instead: they are typed into, and their
+     value scrolls. */
+  .om-od-field{display:flex;flex-direction:column;gap:5px;flex:1 1 200px;min-width:142px}
+  /* Name and vehicle share a class in the form's markup, so they are
+     told apart by what they hold: a driver's name carries the longest
+     caption in the row and a number plate the shortest. */
+  .om-od-hired{flex:1 1 120px;min-width:94px}
+  .om-od-hired:has([data-car="name"]){flex:1 1 152px}
+  .om-od-phone{flex:0 1 128px;min-width:100px}
+  .om-od-flabel{display:block;font-size:10px;font-weight:600;letter-spacing:0.07em;
+    text-transform:uppercase;color:var(--om-ink-3);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .om-od-in{box-sizing:border-box;width:100%;height:38px;padding:0 11px;border:1px solid var(--om-rule-input);
     border-radius:9px;background:var(--om-surface);font-family:'IBM Plex Sans',system-ui,sans-serif;
     font-size:13px;color:var(--om-ink)}
+  /* The fold. Reusing the card system's own menu rather than growing a
+     second one -- it opens UPWARD here because the footer is the last
+     thing in the card. */
+  .om-od-more{height:38px;padding:0 10px;font-size:15px;letter-spacing:0.08em;flex:none}
+  .om-od-f .om-menu{top:auto;bottom:calc(100% + 6px)}
 
   /* ---- GOING BACK: the reasons, what it changes, and the client -----
      Backwards is not a drag. It is an explicit act with a reason,
@@ -17857,6 +17899,20 @@
     /* A hairline drawn between two full-width buttons is a hairline
        across the sheet. The grouping is the stacking order instead. */
     .om-od-div{display:none}
+    /* THE FOLD IS A DESKTOP ANSWER TO A DESKTOP PROBLEM. It buys back
+       the width Announce and Hold or cancel were holding in a 688px
+       row; in one hand the row is already a column and height is the
+       cheap dimension, so the same two acts stand in the open as
+       thumb-sized rows and the ··· goes. Same markup, two designs. */
+    .om-od-load{flex-wrap:wrap}
+    .om-od-field,.om-od-hired,.om-od-phone{flex:1 1 100%;min-width:0}
+    .om-od-more{display:none}
+    .om-od-more-w{display:contents}
+    .om-od-f .om-menu{display:flex;flex-direction:column;gap:8px;position:static;
+      min-width:0;padding:0;border:0;background:none;box-shadow:none;flex:1 1 100%}
+    .om-od-f .om-menu-i{box-sizing:border-box;height:44px;border:1px solid var(--om-rule-btn);
+      border-radius:9px;text-align:center;font-size:14px;font-weight:600;background:var(--om-surface)}
+    .om-od-f .om-menu-i-bad{border:0;background:none;color:var(--om-ink-3)}
     .om-od-r-s{flex:1 1 100%}
   }
 
@@ -45726,6 +45782,11 @@ function otDlgDraw(){
   el.querySelector('#ot_dlg_s').innerHTML = spec.sub || '';
   el.querySelector('#ot_dlg_c').innerHTML = spec.chip || '';
   el.querySelector('#ot_dlg_a').innerHTML = spec.act || '';
+  /* WHAT IS HALF-TYPED SURVIVES THE REDRAW. The body is replaced
+     wholesale, so a driver's name typed into the footer's form dies
+     with it -- and every act in this dialog redraws. Carried across in
+     the same store the phone's rows use. */
+  carrierDraftsFrom(el).forEach((v, k)=> otLoadDrafts.set(k, v));
   el.querySelector('#ot_dlg_b').innerHTML = spec.body;
   el.querySelector('#ot_dlg_f').innerHTML = spec.foot || '';
   el.hidden = false;
@@ -45977,22 +46038,40 @@ function otPreviewSpec(id){
         </div>
       </div>
 
+      ${/* THE ACTION FOOTER, grouped as do · tell · stop.
+
+           It has two shapes because it carries two different things.
+           With no form in it there is room for all three in the open,
+           which is the handoff's. With the carrier form in it there is
+           not -- four controls and three buttons do not fit 688px --
+           so the two quiet acts fold behind a ··· and the fields take
+           the width that buys back. The move never folds: it is the one
+           thing to do next, and it keeps its words. */''}
       <div class="om-od-f">
         ${loading
           ? `${carrierFormHTML(q, OM_LOAD_CLS, otLoadDrafts.get(q.id))}
              <button type="button" class="om-btn om-btn-p" data-act="loadgo" data-dlg="loadgo" data-id="${q.id}"
                ${orderCarrierChosen(q) ? '' : 'disabled aria-disabled="true" title="Say who is carrying it first"'}>${
-               omIcon('truck', 16)}${q.status === 'pending_delivery' ? 'That is who has it' : 'Loaded, it has gone'}</button>`
-          : footAct
-            ? `<span class="om-od-f-s">${esc(otMoveNote(q, footAct) || '')}</span>
-               <button type="button" class="om-btn om-btn-p" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>`
-            : '<span class="om-od-f-s"></span>'}
-        <span class="om-od-div"></span>
-        ${q.status === 'draft' && orderSupplierGroups(q).length
-          ? `<button type="button" class="om-btn om-btn-s" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button>` : ''}
-        ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? ''
-          : `<button type="button" class="om-btn om-btn-s" data-dlg="announce" data-id="${q.id}">Announce</button>`}
-        <button type="button" class="om-btn om-btn-g" data-dlg="cancel" data-id="${q.id}">Hold or cancel</button>
+               omIcon('truck', 16)}<span class="om-od-go-t">${esc(otLoadGoLabel(q))}</span></button>
+             <span class="om-menu-w om-od-more-w">
+               <button type="button" class="om-btn om-btn-g om-od-more" data-dlg="more"
+                 aria-haspopup="true" aria-expanded="false" aria-label="Announce, hold or cancel"
+                 title="Announce, hold or cancel">&middot;&middot;&middot;</button>
+               <span class="om-menu" id="ot_dlg_more" role="menu">
+                 ${q.announcedAt ? '' : `<button type="button" class="om-menu-i" role="menuitem" data-dlg="announce" data-id="${q.id}">Announce to the sales group</button>`}
+                 <button type="button" class="om-menu-i om-menu-i-bad" role="menuitem" data-dlg="cancel" data-id="${q.id}">Hold or cancel</button>
+               </span>
+             </span>`
+          : `${footAct
+              ? `<span class="om-od-f-s">${esc(otMoveNote(q, footAct) || '')}</span>
+                 <button type="button" class="om-btn om-btn-p" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>`
+              : '<span class="om-od-f-s"></span>'}
+             <span class="om-od-div"></span>
+             ${q.status === 'draft' && orderSupplierGroups(q).length
+               ? `<button type="button" class="om-btn om-btn-s" data-dlg="act" data-act2="confirm" data-id="${q.id}">Every supplier</button>` : ''}
+             ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? ''
+               : `<button type="button" class="om-btn om-btn-s" data-dlg="announce" data-id="${q.id}">Announce</button>`}
+             <button type="button" class="om-btn om-btn-g" data-dlg="cancel" data-id="${q.id}">Hold or cancel</button>`}
       </div>
     </div>`,
   };
@@ -46027,6 +46106,35 @@ function otPackWord(lines){
   if(names.length === 1) return names[0];
   return `${names.length} of the lines`;
 }
+/* WHICH CARRIER THE FORM IS CURRENTLY SHOWING, read the way
+   carrierFormHTML itself picks it -- the draft first, then the agent
+   default -- so the footer and the form can never disagree about how
+   many fields are in the row. */
+function otCarrierKindNow(q){
+  const d = (q && otLoadDrafts.get(q.id)) || {};
+  const kinds = carrierKindsFor(q);
+  const auto = q && q.deliveryMode === 'agent_pickup' ? 'agent' : '';
+  const chosen = d.kind === 'staff' && d.staffId ? 'staff' : (kinds.indexOf(d.kind) > -1 ? d.kind : auto);
+  return chosen;
+}
+/* THE MOVE'S WORDS, and how much room is left for them. Hired transport
+   is the one carrier that asks for four things -- a driver, a vehicle
+   and a number on top of the choice -- and four controls plus a
+   nineteen-character button do not fit 688px without squeezing the
+   select below what it takes to read its own value. So that one case
+   spends the words rather than the legibility: the truck and "Loaded"
+   beside a form headed "Who is carrying it" is not ambiguous. */
+function otLoadGoLabel(q){
+  const long = q && q.status === 'pending_delivery' ? 'That is who has it' : 'Loaded, it has gone';
+  /* Only on the console. Spending the words buys width in a ROW, and
+     the phone has no row to run out of -- it stacks the fields full
+     width, so the long label costs it nothing. Read off the board's own
+     computed display rather than a width, so this and the stylesheet
+     can never disagree about which screen is on. */
+  if(!otConsoleShowing()) return long;
+  return carrierAsks(otCarrierKindNow(q)).what ? (q && q.status === 'pending_delivery' ? 'That is who' : 'Loaded') : long;
+}
+
 /* WHETHER THERE IS ANYBODY TO LOAD IT OUT WITH. The paragraph that used
    to explain that loading counts as packing is gone; the rule lives in
    the shape instead -- the primary cannot be pressed until this is true,
@@ -46570,6 +46678,16 @@ function otDlgAct(act, el){
        pressing it opens the sheet that asks why -- it never moves the
        order on its own. Forward stays a button; backwards is a
        decision. */
+    /* THE FOLD. Toggled in place rather than through a redraw: a redraw
+       rebuilds the carrier form, and half a driver's name typed into it
+       is not worth a menu opening. */
+    case 'more': {
+      const m = document.getElementById('ot_dlg_more');
+      if(!m) break;
+      const on = m.classList.toggle('om-on');
+      el.setAttribute('aria-expanded', on ? 'true' : 'false');
+      break;
+    }
     case 'backpick':
       /* Already on the sheet: this is changing your mind about the
          destination, not starting again -- so the reason you have
@@ -46697,6 +46815,16 @@ document.getElementById('otDlg').addEventListener('click', (e)=>{
   const t = e.target;
   if(!t || !t.closest) return;
   const b = t.closest('[data-dlg]');
+  /* One press anywhere else shuts the fold. Without this it stays open
+     over whatever the next press was meant to reach. */
+  if(!b || b.dataset.dlg !== 'more'){
+    const m = document.getElementById('ot_dlg_more');
+    if(m && m.classList.contains('om-on')){
+      m.classList.remove('om-on');
+      const more = document.querySelector('#otDlg .om-od-more');
+      if(more) more.setAttribute('aria-expanded', 'false');
+    }
+  }
   if(b){ otDlgAct(b.dataset.dlg, b); return; }
 });
 document.getElementById('otDlg').addEventListener('mousedown', (e)=>{
@@ -46719,6 +46847,14 @@ document.getElementById('otDlg').addEventListener('change', (e)=>{
     go.disabled = !on;
     go.setAttribute('aria-disabled', String(!on));
     if(on) go.removeAttribute('title');
+    /* And the words follow the row: choosing hired transport adds a
+       fourth control, which is the case the long label does not fit. */
+    const t = go.querySelector('.om-od-go-t');
+    const q = (data.savedQuotes || []).find(x=> String(x.id) === String((sel.closest('[data-load]') || {}).dataset && sel.closest('[data-load]').dataset.load));
+    if(t && q){
+      otLoadDrafts.set(q.id, readCarrierForm(sel.closest('[data-load]')));
+      t.textContent = otLoadGoLabel(q);
+    }
   }
 });
 document.addEventListener('keydown', (e)=>{

@@ -738,8 +738,15 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
        waiting on a carrier the filled button is the form's own move,
        and when it is not it is the stage's. Never both, which the
        shape below pins rather than the count. */
-    t.check(/\$\{loading\s*\?\s*`[\s\S]*?om-btn-p[\s\S]*?:\s*footAct\s*\?\s*`[\s\S]*?om-btn-p[\s\S]*?`\s*:\s*'<span class="om-od-f-s"><\/span>'\}/.test(prev),
+    /* The footer has two shapes, one per arm of the same ternary: with
+       the carrier form in it the filled button is the form's own move
+       and the quiet acts fold behind a menu; with no form there is room
+       for do · tell · stop in the open and the filled button is the
+       stage's. Never both, which is what the shape pins. */
+    t.check(/\$\{loading\s*\?\s*`[\s\S]*?om-btn-p[\s\S]*?om-od-more[\s\S]*?`\s*:\s*`\$\{footAct[\s\S]*?om-btn-p[\s\S]*?Hold or cancel<\/button>`\}/.test(prev),
       'the preview chooses between its two filled buttons rather than drawing both');
+    t.check(!/om-od-more/.test(prev.split('${loading')[1].split(': `${footAct')[1] || ''),
+      'and only the arm that carries the form folds anything away');
     [['otPreviewSpec', prev, 2], ['otMoveBackSpec', back, 1]].forEach(([n, fn, arms]) => {
       const filled = (fn.match(/om-btn-p/g) || []).length;
       t.check(filled === arms, `${n} spends the card system's accent once per arm (${filled})`);
