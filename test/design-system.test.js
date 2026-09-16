@@ -1619,4 +1619,26 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   t.check(!/\.ow-/.test(om), 'and none of them styles a console component');
 }
 
+/* ---------- the figure row fills the width it is given --------------- */
+{
+  /* .om-kpis was repeat(4,minmax(0,1fr)) -- four columns whatever the
+     screen had -- so the two lenses that draw THREE cards left the
+     fourth column standing empty and their row stopped a quarter short
+     of the edge, which reads as a card that failed to load rather than
+     as a row of three.
+
+     How many cards a screen has is the SCREEN's decision: Invoices,
+     Customers, Agents and Posting say four, Money and Telling say
+     three. Saying it in the stylesheet as well was one place too many
+     for it to be said, and the two places said different things. The
+     row sizes itself to what is in it now, so no screen can get this
+     wrong again — which is why this is asserted here, in the layer's own
+     gate, rather than on any one screen. */
+  const rule = (/\.om-kpis\{([^}]*)\}/.exec(om) || [])[1] || '';
+  t.check(/grid-auto-flow:column/.test(rule) && /grid-auto-columns:minmax\(0,1fr\)/.test(rule),
+    'the figure row sizes itself to however many cards it holds, so three fill the width as evenly as four');
+  t.check(!/grid-template-columns/.test(rule),
+    'and it does not also declare a count of its own — two places to say how many cards there are is one too many');
+}
+
 process.exit(t.done() ? 1 : 0);

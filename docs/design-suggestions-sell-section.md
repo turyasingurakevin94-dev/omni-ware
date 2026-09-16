@@ -1070,3 +1070,18 @@ rule above satisfies 4a and 2a exactly and contradicts only turn 1's — which t
 turn-4 handoff explicitly marks as superseded. Nothing is lost by the inactive
 chips going quiet: the rail badge counts money plus telling whatever lens is
 open, and the Money card names what the other lens holds.
+
+#### 8.19b The figure row fills the width it is given
+
+`.om-kpis` was `repeat(4, minmax(0,1fr))` — four columns whatever the screen had.
+Invoices, Customers, Agents and Posting draw four cards, so nobody noticed; the
+two lenses that draw **three** left the fourth column standing empty and their
+row stopped a quarter short of the edge, out of line with the list and the
+panels beneath it. That does not read as a row of three, it reads as a card that
+failed to load.
+
+How many cards a screen has is the screen's own decision, and the stylesheet was
+a second place for it to be said — so the two places came to say different
+things. The row sizes itself to what is in it now (`grid-auto-flow: column` over
+`grid-auto-columns: minmax(0,1fr)`), which is asserted in the layer's own gate
+rather than on any one screen, so no screen can get this wrong again.

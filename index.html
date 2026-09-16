@@ -17167,7 +17167,17 @@
   /* At most one card tinted bad and one tinted good. A strip where every
      card is coloured says nothing, which is the same argument the
      console's metric strip carries against per-tile borders. */
-  .om-kpis{flex:none;padding:14px 22px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  /* THE ROW SIZES ITSELF TO WHAT IS IN IT. This was
+     repeat(4,minmax(0,1fr)) -- four columns whatever the screen had --
+     so the two lenses that draw THREE cards left the fourth column
+     standing empty and their row stopped a quarter short of the edge,
+     which reads as a card that failed to load rather than as a row of
+     three. Every frame draws its cards filling the width, and how many
+     there are is the screen's own decision: Invoices, Customers, Agents
+     and Posting say four, Money and Telling say three. Declaring the
+     count here as well was one place too many for it to be said, and the
+     two said different things. */
+  .om-kpis{flex:none;padding:14px 22px 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:12px}
   .om-kpi{background:var(--om-surface);border:1px solid var(--om-rule);border-radius:14px;padding:12px 14px;min-width:0}
   .om-kpi-f{margin-top:3px;font-size:20px}
   .om-kpi-s{margin-top:1px;font-size:11.5px;color:var(--om-ink-3)}
