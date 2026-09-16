@@ -388,8 +388,19 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
 /* ---------- 11. the stage log, written once and read honestly --------- */
 {
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
-  t.check(/if\(moved\)\{[\s\S]*?q\.stageLog\.push\(\{ status, at: Date\.now\(\), auto: !!\(opts && opts\.auto\) \}\);[\s\S]*?\}\s*q\.status = status;/.test(setter),
+  t.check(/if\(moved\)\{[\s\S]*?q\.stageLog\.push\(Object\.assign\(\{ status, at, auto: !!\(opts && opts\.auto\) \},[\s\S]*?\)\);[\s\S]*?\}\s*q\.status = status;/.test(setter),
     'setSavedQuoteStatus appends to the stage log only on a real move, marking a step the app took itself');
+  /* A MOVE BACK IS AN EVENT, NOT AN ERASURE. It appends like any other
+     move and carries where it came FROM, why, and who -- it never edits
+     the entry for the stage being left. Overwriting that stamp would
+     make the record say the goods never went out, and the hour they
+     spent on the road would vanish, which is exactly the hour somebody
+     rings up about. */
+  t.check(/const back = SQ_STATUS_ORDER\.indexOf\(status\) < SQ_STATUS_ORDER\.indexOf\(from\);/.test(setter)
+    && /back \? \{ from, back:true, reason: \(opts && opts\.reason\) \|\| '', who: \(opts && opts\.who\) \|\| '' \} : \{\}/.test(setter),
+    'and a backward one carries where it came from, why, and who — the earlier stamp is never touched');
+  t.check(!/stageLog\s*\[[^\]]*\]\s*=/.test(src) && !/\.at\s*=\s*Date\.now/.test(setter),
+    'nothing anywhere writes over an entry that is already in the log');
   /* The taken moment moved one function along. It is the only fact the
      trail answered that the five-dot track above it also needed, and the
      two were answering differently -- the track said "Taken · not
@@ -713,8 +724,28 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   t.check(/\$\{out \? otDlgPrimary\([\s\S]{0,200}?: stops\.length \? otDlgPrimary\([^)]*\) : ''\}/
     .test(extractFunction(src, 'otBuyingSpec', 'index.html')),
     'and the buying list chooses between its two rather than drawing both');
-  t.check(/ow-ink/.test(extractFunction(src, 'otPreviewSpec', 'index.html')),
-    "and the preview's own move is ink, because its oxide is already spent on telling the client");
+  /* THE PREVIEW IS THE FIRST SCREEN CONVERTED TO THE CARD SYSTEM, so
+     it no longer spends the console's oxide at all: its one filled
+     button is .om-btn-p, the card system's own accent, and everything
+     beside it is a secondary or a ghost. The rule the old assertion
+     protected -- one filled button in the dialog -- is what is checked
+     now, in the vocabulary the dialog actually uses. */
+  {
+    const prev = extractFunction(src, 'otPreviewSpec', 'index.html');
+    const back = extractFunction(src, 'otMoveBackSpec', 'index.html');
+    /* The preview writes it twice and they are the two arms of one
+       ternary, exactly as the buying list does: when the order is
+       waiting on a carrier the filled button is the form's own move,
+       and when it is not it is the stage's. Never both, which the
+       shape below pins rather than the count. */
+    t.check(/\$\{loading\s*\?\s*`[\s\S]*?om-btn-p[\s\S]*?:\s*footAct\s*\?\s*`[\s\S]*?om-btn-p[\s\S]*?`\s*:\s*'<span class="om-od-f-s"><\/span>'\}/.test(prev),
+      'the preview chooses between its two filled buttons rather than drawing both');
+    [['otPreviewSpec', prev, 2], ['otMoveBackSpec', back, 1]].forEach(([n, fn, arms]) => {
+      const filled = (fn.match(/om-btn-p/g) || []).length;
+      t.check(filled === arms, `${n} spends the card system's accent once per arm (${filled})`);
+      t.check(!/btn-accent|ow-ink/.test(fn), `${n} writes none of the console's own button classes`);
+    });
+  }
   /* NOTHING SENDS ITSELF. Every dialog that reaches outside the shop
      opens a window for the owner to press send in; none of them posts. */
   const act = extractFunction(src, 'otDlgAct', 'index.html');
@@ -737,9 +768,9 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
      and left the screen offering only to load it out. Two acts are
      dropped and only two, each because the dialog already carries it:
      'loaded' is the form's own button, 'open' is this dialog. */
-  t.check(/const footAct = act && act\.act !== 'loaded' && act\.act !== 'open' \? act : null;/
+  t.check(/const footAct = act && !loading && act\.act !== 'loaded' && act\.act !== 'open' \? act : null;/
     .test(extractFunction(src, 'otPreviewSpec', 'index.html')),
-    'and the footer drops only the two acts the dialog is already carrying');
+    'and the footer drops only the acts the dialog is already carrying');
   t.check(/nothing is sent until you press send/.test(extractFunction(src, 'otAnnounceSpec', 'index.html')),
     'and the announcement says so on the dialog that drafts it');
 }

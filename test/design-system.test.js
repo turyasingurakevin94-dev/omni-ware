@@ -1525,11 +1525,27 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
     /* ONE elevation, and it is the hairline's shadow rather than a lift:
        a card in this system does not float. The lens pill's is the same
-       geometry at a higher alpha because it sits on a tinted track. */
+       geometry at a higher alpha because it sits on a tinted track.
+
+       A DIALOG IS THE EXCEPTION, and the only one: a card sits ON the
+       ground, a dialog sits OVER a screen that is still there behind
+       it, and a card's shadow at that job reads as a rectangle that
+       failed to load. It is a token like the others, so there are three
+       values in the layer and not one hand-written shadow.
+
+       A RING IS NOT DEPTH. `0 0 0 3px` has no offset and no blur: it
+       draws a band around the element, which is how the stage track
+       says which dot is the current one and which one you have picked
+       to go back to. It cannot be an `outline` -- that is spoken for by
+       :focus-visible, and a dot would then wear two rings when tabbed
+       to. Allowed by shape rather than by listing every colour, and the
+       colour still has to be a token, which the hex check above
+       enforces on the same declaration. */
     const sh = new Set([...om.matchAll(/box-shadow:\s*([^;}]+)/g)].map((m) => m[1].trim()));
-    const allowed = new Set(['var(--om-shadow)', 'var(--om-shadow-lens)', 'none']);
-    const badSh = [...sh].filter((x) => !allowed.has(x));
-    t.check(badSh.length === 0, badSh.length ? `depth is one elevation: ${badSh.join(' | ')}` : 'one elevation, referenced as a token');
+    const allowed = new Set(['var(--om-shadow)', 'var(--om-shadow-lens)', 'var(--om-shadow-dialog)', 'none']);
+    const isRing = (x) => /^0 0 0 \d+px var\(--om-[a-z0-9-]+\)$/.test(x);
+    const badSh = [...sh].filter((x) => !allowed.has(x) && !isRing(x));
+    t.check(badSh.length === 0, badSh.length ? `depth is one elevation: ${badSh.join(' | ')}` : 'one elevation and rings, every one a token');
   }
 
   /* ---- money is a component ---- */
