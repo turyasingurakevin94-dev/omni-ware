@@ -668,3 +668,41 @@ Knowing deviations:
 - **The state chip never reads "sent" in the outbox.** Every row there is owed a
   word *now*; a row saying "sent" in a list of things to write contradicts the
   list it is in. What has gone is what the Waiting and Sent lenses are for.
+
+### 8.15 The fidelity pass, and one fault that was on every card screen
+
+Read back against the frames after the shared layer had changed underneath them.
+Four things were wrong and are fixed:
+
+- **The card header swallowed its last control.** `.om-card-h` was `nowrap`, so
+  when the title, the note, the search and two buttons ran past the card's width
+  the last button simply vanished past the edge — no ellipsis, no marker, no way
+  to know a control had ever been there. It wraps now, the way the console's
+  `.btn-row` already did. The three headers that were wrapping were then trimmed
+  to fit on one line, each by dropping something said twice (the agent count is
+  on the two group rows immediately below it; the terms are in the TERMS column
+  and in the chip beside the title).
+- **Three search fields had collapsed to a bare magnifier**, on Invoices,
+  Customers and Agents, for the same reason Messages' had: `flex:1` with a zero
+  basis against a `flex:1` spacer leaves no width to grow into. Each has a real
+  basis now.
+- **The Invoices panel's customer block** is the frame's shape: *Send statement*
+  as an action in the card header, and two figures side by side — what they owe
+  against what they are worth — rather than a column of label-and-value rows.
+  The credit limit is not in the frame and is kept, as a line rather than a
+  third tile: a limit is a rule, not a figure of the same kind as the two above.
+- **The Agents panel was missing the sentence under the waterfall.** The bars say
+  *where* the money went; the frame's line says *whose* it was — two markups sit
+  on one order, the shop's on its own cost and the agent's on top of the shop's
+  price, and the owner's actual question is which of the two is bigger. It is
+  derived from the same five figures the bars are drawn from, so the words and
+  the lengths cannot disagree, and an agent selling under the shop's price gets
+  its own sentence rather than being described as a share of a gap that does not
+  exist.
+
+Deviations left standing on these three, all for the same reason: **the search
+and the primary button stay in each card's header**, where the frames put them
+in the app's top bar. That bar is shared by all 41 screens and is not a screen's
+to furnish — the Quote screen set the precedent — and it is what makes these
+headers tight. If the top bar is ever made per-screen, all four card screens get
+a line of width back.

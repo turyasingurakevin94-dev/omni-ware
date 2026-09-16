@@ -17112,8 +17112,22 @@
      group's figure in the header above it. */
   .om-orow{display:flex;align-items:center;gap:9px;padding:8px 14px;border-bottom:1px solid var(--om-rule-inner);background:var(--om-sunken);font-size:12px;color:var(--om-ink-3);cursor:pointer}
   .om-orow:hover{background:var(--om-hover)}
-  .om-card-h{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px}
+  /* WRAPS RATHER THAN SWALLOWS. A header holding a name, a note, a
+     search and two buttons runs out of room before the card does, and
+     with nowrap the last button simply vanished past the edge -- no
+     ellipsis, no marker, no way to know a control was ever there. It
+     drops to a second line instead, which is the same rule the console's
+     .btn-row already follows. */
+  .om-card-h{flex:none;display:flex;align-items:center;gap:10px;row-gap:8px;flex-wrap:wrap;padding:10px 14px}
   .om-card-t{font-size:13.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* The line beside a card's name: what this list is, in a few words.
+     It is the part that gives way when the header runs out of room. */
+  .om-card-s{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:var(--om-ink-3)}
+  /* Two figures read as one judgement: what they owe against what they
+     are worth. A column of label-and-value rows makes them read as two
+     of a list instead. */
+  .om-pair{margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .om-pcell{background:var(--om-sunken);border-radius:11px;padding:9px 10px}
   .om-cols{flex:none;display:grid;align-items:center;column-gap:10px;padding:7px 14px;background:var(--om-sunken);border-top:1px solid var(--om-rule-inner)}
   .om-col{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--om-ink-3)}
 
@@ -18341,7 +18355,7 @@
               <span class="om-pill om-p-paid">paid</span>
               <span class="om-pill om-p-owed">owed</span>
               <span style="flex:1"></span>
-              <div class="om-find" style="max-width:260px">
+              <div class="om-find" style="flex:1 1 220px;min-width:150px;max-width:260px">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input id="inv_doc_search" class="om-find-i an-sel" placeholder="Invoice no., customer, supplier or amount" aria-label="Search invoices">
               </div>
@@ -18832,8 +18846,13 @@
         <div class="om-body" id="msg_queue_body">
           <div class="om-card om-list">
             <div class="om-card-h">
-              <span class="om-card-t" id="msg_card_t">The outbox</span>
-              <span class="om-t" id="msg_card_n" style="font-size:11.5px;color:var(--om-ink-3)">grouped by why you are writing</span>
+              <!-- The NAME does not give way and the description does.
+                   .om-card-t truncates, which is right for a title that
+                   can be a customer's name; here it is the screen's own
+                   word for what it is showing, and clipping it to
+                   "Waiting on a re..." leaves the reader guessing. -->
+              <span class="om-card-t" id="msg_card_t" style="flex:none">The outbox</span>
+              <span class="om-t om-card-s" id="msg_card_n">grouped by why you are writing</span>
               <span style="flex:1"></span>
               <!-- A REAL BASIS, not flex:1 against a flex:1 spacer. With
                    basis 0 the field's hypothetical size is nothing and the
@@ -19116,10 +19135,14 @@
         <div class="om-body">
           <div class="om-card om-list">
             <div class="om-card-h">
-              <span class="om-card-t" id="cust_card_t">Who to ask first &mdash; oldest money, largest first</span>
-              <span class="om-fig om-n" id="cust_card_n" style="font-size:11.5px;color:var(--om-ink-3)"></span>
+              <!-- NAME, then the ordering rule beside it in the grey the
+                   frame gives it. One sentence carrying both made a 310px
+                   title that pushed New customer off the end of the row. -->
+              <span class="om-card-t" id="cust_card_t" style="flex:none">Who to ask first</span>
+              <span class="om-t om-card-s" id="cust_card_r">oldest money, largest first</span>
+              <span class="om-fig om-n" id="cust_card_n" style="font-size:11.5px;color:var(--om-ink-3);flex:none"></span>
               <span style="flex:1"></span>
-              <div class="om-find" style="max-width:240px">
+              <div class="om-find" style="flex:1 1 210px;min-width:150px;max-width:240px">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input id="c_search" class="om-find-i" type="search" placeholder='Name, phone, or "owes over 1m"' aria-label="Search customers" autocomplete="off">
               </div>
@@ -19578,14 +19601,29 @@
         <div class="om-body">
           <div class="om-card om-list" id="agRosterPan">
             <div class="om-card-h">
-              <span class="om-card-t">The roster</span>
+              <!-- "Who sells", after the frame's own "Who sells, and on
+                   what terms". The second half is dropped rather than
+                   truncated: this header also carries a search and a
+                   button the frame puts in the app's top bar, and the
+                   terms are said twice already -- by the TERMS column and
+                   by the chip beside this. A title clipped to "Who sells,
+                   and on wha..." would say less than the short one. -->
+              <span class="om-card-t" style="flex:none">Who sells</span>
               <!-- The standing clarification, because the two words are
                    confused on every sales screen in every shop: margin is
-                   the SHOP's and commission is the AGENT's. -->
-              <span class="om-chip" style="background:var(--om-agent);color:var(--om-agent-ink)">margin is yours &middot; commission is theirs</span>
-              <span class="om-fig om-n" id="agRosterN" style="font-size:11.5px;color:var(--om-ink-3)"></span>
+                   the SHOP's and commission is the AGENT's. It is the
+                   thing on this row that gives way, being the one part
+                   that is a reminder rather than a control or a count. -->
+              <span class="om-chip" style="background:var(--om-agent);color:var(--om-agent-ink);flex:none">margin yours &middot; commission theirs</span>
+              <!-- THE COUNT IS NOT ON THIS ROW, and that is not a loss:
+                   the two group headers immediately below it say "1
+                   agent" and "3 agents", so a third count in the header
+                   was the same fact printed twice in one card. The
+                   element stays for the renderer that fills it, off
+                   screen, rather than growing a branch around it. -->
+              <span class="om-fig om-n" id="agRosterN" hidden></span>
               <span style="flex:1"></span>
-              <div class="om-find" style="max-width:230px">
+              <div class="om-find" style="flex:0 1 190px;min-width:130px;max-width:210px">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--om-ink-3);flex:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input class="om-find-i" id="ag_search" type="search" placeholder='Agent, order no., or "owes the shop"' aria-label="Search agents" autocomplete="off">
               </div>
@@ -44940,6 +44978,10 @@ function renderInvoiceSide(q){
   const total = savedQuoteTotal(q), paid = Number(q.amountPaid)||0, due = invoiceBalanceDue(q);
   const st = invStateOf(q), od = invoiceDaysOverdue(q);
   const cust = invCustomerOf(q);
+  /* What they are worth, off the same reading the Customers register
+     ranks on -- one arithmetic, so the two screens cannot disagree about
+     the same customer. */
+  const bought = cust ? (customerBookRow(cust).spend || 0) : 0;
   const raised = q.invoicedAt || q.date || '';
   const dueISO = invoiceDueISO(q);
   const fmtD = (iso)=> iso ? new Date(iso+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
@@ -45023,18 +45065,36 @@ function renderInvoiceSide(q){
   </div>
 
   <div class="om-card">
-    <div class="om-card-h"><span class="om-card-t">This customer&rsquo;s account</span></div>
+    <div class="om-card-h">
+      <span class="om-card-t">This customer&rsquo;s account</span>
+      <span style="flex:1"></span>
+      <button type="button" class="om-btn om-btn-s" id="inv_pan_statement" style="height:28px;padding:0 9px;font-size:12px">Send statement
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
     <div style="padding:0 14px 12px">
-      <div class="om-drow" style="border-top:0;padding-top:0">
-        <span style="flex:1;font-size:12.5px;color:var(--om-ink-2)">Owes in all</span>
-        <span class="om-fig" style="font-size:12.5px">${esc(fmtUGX(Math.round(invCustomerOwes(q))))}</span>
+      <!-- TWO FIGURES SIDE BY SIDE: what they owe and what they are
+           worth. A column of label-and-value rows made those read as
+           two of a list; they are the two halves of one judgement and
+           the frame sets them as a pair. -->
+      <div class="om-pair">
+        <div class="om-pcell">
+          <div class="om-lbl" style="font-size:10px">Owes in all</div>
+          <div class="om-fig om-n" style="font-size:15px;color:var(--om-bad-ink)">${esc(fmtUGX(Math.round(invCustomerOwes(q))))}</div>
+        </div>
+        <div class="om-pcell">
+          <div class="om-lbl" style="font-size:10px">Bought in ${CUST_WINDOW_DAYS} days</div>
+          <div class="om-fig om-n" style="font-size:15px">${esc(fmtUGX(Math.round(bought)))}</div>
+        </div>
       </div>
-      <div class="om-drow">
-        <span style="flex:1;font-size:12.5px;color:var(--om-ink-2)">Credit limit</span>
-        <span class="om-fig" style="font-size:12.5px;color:var(--om-ink-3)">${cust && cust.creditLimit!=null?esc(fmtUGX(Math.round(cust.creditLimit))):'none set'}</span>
-      </div>
-      <div style="margin-top:9px" class="om-read">${esc(invCustomerHistorySentence(q))}</div>
-      <div style="margin-top:8px"><a href="#" class="om-read" id="inv_pan_statement" style="color:var(--om-link);font-weight:600;text-decoration:none">Send statement</a></div>
+      <!-- THE LIMIT IS NOT IN THE FRAME and is kept, because it is the
+           shop's own guard on this customer and the panel above it is
+           where credit is actually being weighed. A line rather than a
+           third tile: a limit is a rule, not a figure of the same kind
+           as the two above. -->
+      <div class="om-read" style="margin-top:9px">${cust && cust.creditLimit!=null
+        ? `Their limit is <b class="om-fig om-n">${esc(fmtUGX(Math.round(cust.creditLimit)))}</b>.`
+        : 'No credit limit set for them.'} ${esc(invCustomerHistorySentence(q))}</div>
     </div>
   </div>`;
 
@@ -53072,6 +53132,28 @@ function agentWaterfallHTML(w, opts){
     + row('Client paid', 100, 0, '--om-agent-ink', money(w.clientPaid));
 }
 
+/* THE FIVE BARS IN ONE SENTENCE, because a waterfall says WHERE the
+   money went and not WHOSE it was. Two markups sit on one order -- the
+   shop's on its own cost, and the agent's on top of the shop's price --
+   and the question the owner is actually asking is which of the two is
+   bigger. Derived from the same five figures the bars are drawn from, so
+   the words and the lengths cannot disagree.
+
+   An agent selling UNDER the shop's price is its own sentence: there is
+   no gap to divide, and calling a loss a share of one would be a lie
+   about the direction of the money. */
+function agentSplitSentence(w){
+  if(!(w.clientPaid > 0) || !(w.billed > 0)) return '';
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  const pct = (n, of)=> of > 0 ? (100 * n / of).toFixed(1).replace(/\.0$/,'') + '%' : '—';
+  if(w.theyKept < -0.5){
+    return `<div class="om-read" style="margin-top:10px">They are selling <b>under</b> your price: the client paid ${money(w.clientPaid)} for goods you billed at ${money(w.billed)}. Your own ${pct(w.youKept, w.billed)} is intact &mdash; the shortfall is theirs, and it comes out of what they owe you, never out of your margin.</div>`;
+  }
+  const gap = w.clientPaid - w.cost;
+  const theirs = w.theyKept > w.youKept;
+  return `<div class="om-read" style="margin-top:10px">They mark up <b>${pct(w.theyKept, w.billed)}</b> on top of your <b>${pct(w.youKept, w.billed)}</b>. The client pays ${money(w.clientPaid)} for goods that cost you ${money(w.cost)}, and ${gap > 0 ? `the larger half of that gap is <b>${theirs ? 'theirs' : 'yours'}</b>` : 'there is no gap to divide'}.</div>`;
+}
+
 function renderAgentSide(a){
   const el = document.getElementById('ag_side');
   if(!el) return;
@@ -53104,6 +53186,7 @@ function renderAgentSide(a){
     <div style="padding:12px 14px">
       <div class="om-lbl" style="font-size:10.5px;margin-bottom:4px">Where the money went</div>
       ${agentWaterfallHTML(w)}
+      ${agentSplitSentence(w)}
     </div>
     ${s.owed > 0 ? `<div style="padding:0 14px 12px"><div class="om-note om-note-warn">
       <b>Owes the shop ${money(s.owed)}.</b> At your price on ${s.orders - s.live} delivered order${(s.orders-s.live)===1?'':'s'}, not the ${money(clientSide)} their clients paid. Their margin is not yours to collect.
@@ -55459,11 +55542,19 @@ function renderCustomers(filter=''){
      total, which reads as the whole book when a filter is on. */
   const countEl = document.getElementById('cust_card_n');
   if(countEl) countEl.textContent = rows.length !== all.length ? rows.length + ' of ' + all.length : String(all.length);
+  /* The NAME of the list, and separately the rule it is ordered by. The
+     rule is the part that gives way when the header runs out of room. */
+  const LENS_WORDS = {
+    owing: ['Who to ask first', 'oldest money, largest first'],
+    best:  ['Who is worth most', 'ranked by what you kept, not by what they spent'],
+    quiet: ['Gone quiet', 'bought before, nothing lately'],
+    all:   ['Everyone on the book', 'by name'],
+  };
+  const words = LENS_WORDS[custLens] || LENS_WORDS.all;
   const title = document.getElementById('cust_card_t');
-  if(title) title.textContent = custLens === 'owing' ? 'Who to ask first — oldest money, largest first'
-    : custLens === 'best' ? 'Ranked by what you kept, not by what they spent'
-    : custLens === 'quiet' ? 'Bought before, nothing lately'
-    : 'Everyone on the book';
+  if(title){ title.textContent = words[0]; title.title = words[0]; }
+  const rule = document.getElementById('cust_card_r');
+  if(rule){ rule.textContent = words[1]; rule.title = words[1]; }
 
   /* THE EMPTY LIST IS A VALUE, NOT AN EARLY RETURN. It used to return
      here, which meant a filter that emptied the register also dropped the
