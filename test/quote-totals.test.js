@@ -106,7 +106,12 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * mistakable for the price.
  */
 {
-  t.check(/Costs you<\/div>\s*<div class="qp-cost-v">\$\{fmtUGX\(grandBuy\)\}/.test(bar),
+  /* Matched on the hook class and the figure rather than the exact
+     class attribute: the dock moved onto the card system and every cell
+     gained a .om- class beside the one the render finds it by. What
+     these checks claim is which figure is where and how it is worked
+     out, and none of that changed. */
+  t.check(/Costs you<\/div>\s*<div class="[^"]*\bqp-cost-v\b[^"]*"[^>]*>\$\{fmtUGX\(grandBuy\)\}/.test(bar),
     'the cost is still on the page, on the bar, named as the shop’s');
   /* The label gained a qualifier once charges existed -- "You keep on the
      items" -- because what a delivery costs the shop is not known until
@@ -156,7 +161,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   t.check(/Client pays<span class="qp-says-n">/.test(bar), 'the summary opens with the client’s figure');
   /* pays = grandSell + charges. The bar is read out mid-call, so it is
      the one place the figure must be the whole bill. */
-  t.check(/qp-says-value\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
+  t.check(/\bqp-says-value\b[^"]*\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
     'and that figure is the whole bill — goods, charges and the price of waiting');
   /* It used to be one of four equal cells labelled "Total sell" -- the
      jargon on a screen whose whole job is a sentence somebody speaks. */
@@ -170,14 +175,14 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      the client across the counter cannot read. */
   t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\}<\/div>/.test(bar),
     'with what the shop keeps beside it, quieter, and said to be about the items when a charge is uncosted beside it');
-  t.check(/<div class="qp-cost">[\s\S]{0,200}?Costs you<\/div>/.test(bar),
+  t.check(/<div class="[^"]*\bqp-cost\b[^"]*"[^>]*>[\s\S]{0,200}?Costs you<\/div>/.test(bar),
     'and the cost, as its own figure — the bar is the account now, not a glance at half of one');
   /* The finbar used to sit ABOVE the items so the total stayed on
      screen; the real fix is stronger — the whole summary now rides a
      bar fixed to the viewport bottom (#q_stickybar), fused with the
      quote's actions, so it can NEVER scroll away however long the quote
      grows. The items panel therefore no longer contains it. */
-  t.check(/<div class="q-stickybar" id="q_stickybar">\s*<div class="qp-finbar" id="q_finbar">/.test(src),
+  t.check(/<div class="[^"]*\bq-stickybar\b[^"]*" id="q_stickybar">\s*<div class="qp-finbar" id="q_finbar">/.test(src),
     'the summary rides the sticky bar at the viewport bottom');
   const panel = (/<div class="panel qp-panel qp-items-panel">[\s\S]*?<\/div>\n        <\/div>/.exec(src) || [''])[0];
   t.check(!/id="q_finbar"/.test(panel),
@@ -214,7 +219,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      figure. The figure now takes the pill's own class, so grey on an
      empty quote is the SAME decision as the grey pill rather than a
      second one that happens to match. */
-  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>/.test(bar),
+  t.check(/<div class="[^"]*\bqp-keep-v\b[^"]*"[^>]*><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>/.test(bar),
     'and the keep figure takes the pill’s reading rather than working out a second one');
   t.check(/\.qp-shopline b\.quiet\{color:var\(--ink-soft\);\}/.test(src),
     'so "You keep 0" goes grey with it rather than reporting zero in profit-green');

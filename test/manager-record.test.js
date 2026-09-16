@@ -197,6 +197,12 @@ const src = read('index.html');
     'the phone\'s title bar knows the console\'s page header — the idiom Today was rebuilt with');
   t.check(/page-head/.test(sel),
     'and still knows the old one, because thirty-nine screens still use it');
+  /* And the card system's, which is the third shape in the file while
+     the redesign lands screen by screen. A converted header whose class
+     is not listed here leaves the phone's title bar EMPTY, and nothing
+     else in the app says so. */
+  t.check(/om-qtitle-t/.test(sel),
+    'and the card system\'s, so a converted screen still names itself on the phone');
 
   /* Every selector the function offers, reduced to what has to be
      PRESENT in a section for it to match. Derived from the function

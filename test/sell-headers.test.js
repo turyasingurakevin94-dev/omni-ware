@@ -37,7 +37,19 @@ const { read, extractFunction, createReporter } = require('./_extract');
 const t = createReporter('sell headers');
 const src = read('index.html');
 
-const SELL = ['quote', 'quote-saved', 'invoices', 'customers', 'followups', 'agents', 'whatsapp'];
+/* QUOTE IS NOT ON THIS LIST ANY MORE, and that is the redesign rather
+   than a gap. This file holds the SELL screens to the console header --
+   .ow-ph, its title, its one-line sub, its spacer and the "i" that folds
+   the longer explanation. Quote has been rebuilt on the card system,
+   whose title block is a 24px name over one 13px line and has no "i" at
+   all: what the paragraph used to explain is said by the screen itself
+   now, per line, in the Cheaper-elsewhere card and the price on the row.
+   
+   A screen may be on one system or the other, never half of each, so
+   quote leaves this list and joins the check below it. The rest of Sell
+   is still the console's and is still held to it. */
+const SELL = ['quote-saved', 'invoices', 'customers', 'followups', 'agents', 'whatsapp'];
+const CARD_SYSTEM = ['quote'];
 const sectionOf = (tab) => {
   const i = src.indexOf(`<section id="tab-${tab}"`);
   const next = src.slice(i + 10).search(/<section id="tab-/);
@@ -102,6 +114,23 @@ const sectionOf = (tab) => {
   });
 }
 
+/* ---------- 2b. the converted screens carry the other system ---------- */
+{
+  CARD_SYSTEM.forEach((tab) => {
+    const sec = sectionOf(tab);
+    t.check(/<div class="om-qtitle">/.test(sec), `${tab} has the card system's title block`);
+    t.check(/<div class="om-qtitle-t">/.test(sec), `${tab} names itself in it`);
+    t.check(/<div class="om-qtitle-s">/.test(sec), `${tab} says in one line what it is`);
+    /* And it is NOT wearing both. A screen carrying the console header
+       and the card title block would draw two names, one above the
+       other, which is what a half-finished conversion looks like. */
+    t.check(!/<div class="ow-ph">/.test(sec),
+      `${tab} does not also carry the console header — a screen is on one system or the other`);
+    t.check(!/ow-ph-help/.test(sec),
+      `and has no "i" bubble: the card system explains per line, not in a folded paragraph`);
+  });
+}
+
 /* ---------- 3. the rules in the old prose survived ---------- */
 {
   const kept = [
@@ -111,8 +140,6 @@ const sectionOf = (tab) => {
       "the agent privacy rule"],
     ['whatsapp', "counted live from the shop's own records",
       'the derived-never-invented claim, on the screen that most needs it'],
-    ['quote', 'shows the cheapest supplier and a suggested price',
-      'what each line of a quote is telling you'],
     ['quote-saved', 'how it got here',
       'what opening a row shows, which nobody would guess from the table'],
     /* Follow-ups moved up from the list below. It was one line because

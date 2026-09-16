@@ -126,9 +126,17 @@ const src = read('index.html');
 
 /* ---------- 2. the inline search is the front door ------------------- */
 {
-  t.check(/<div class="q-item-search-wrap">[\s\S]{0,400}?id="q_item_search"/.test(src),
+  t.check(/<div class="[^"]*\bq-item-search-wrap\b[^"]*">[\s\S]{0,400}?id="q_item_search"/.test(src),
     'a permanent search field sits at the top of the items panel');
-  const panel = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+/* THE SLICES MATCH ON THE HOOK, NOT THE WHOLE CLASS ATTRIBUTE.
+   The quote was rebuilt on the card system, so the document card, the
+   dock and their controls each carry a .om- class beside the one the
+   render and the wiring find them by. Three region slices keyed on the
+   exact attribute text and matched nothing the moment a class was
+   added -- which failed nineteen checks at once and said nothing true
+   about any of them. What this file actually claims is WHERE things
+   are and WHICH words they carry, and none of that moved. */
+  const panel = (/<div class="[^"]*\bq-doc\b[^"]*">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
   t.check(/q_item_search/.test(panel),
     'above the items, inside the document');
   const wiring = extractFunction(src, 'renderQuoteItemSearchDd', 'index.html');
@@ -162,14 +170,14 @@ const src = read('index.html');
 
 /* ---------- 3. the sticky bar is the money and the actions ----------- */
 {
-  const bar = (/<div class="q-stickybar" id="q_stickybar">[\s\S]*?<\/section>/.exec(src) || [''])[0];
+  const bar = (/<div class="[^"]*\bq-stickybar\b[^"]*" id="q_stickybar">[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="q_finbar"/.test(bar) && /id="q_save_btn"/.test(bar),
     'totals and Save share the bar — the figure read aloud sits beside the act that follows it');
   t.check(/id="q_print_quote_btn"/.test(bar) && /id="q_whatsapp_btn"/.test(bar),
     'with the frequent outputs one press away');
   t.check(/id="q_more_menu"[\s\S]*?id="q_print_btn"[\s\S]*?id="q_clear_btn"/.test(bar),
     'and the occasional ones — supplier copy, clear — behind the ⋯ menu');
-  t.check(/class="qbar-save" id="q_save_btn"/.test(bar),
+  t.check(/class="[^"]*\bqbar-save\b[^"]*" id="q_save_btn"/.test(bar),
     'Save is the one filled button; everything else is quiet');
   /* Clear is destructive mid-call: it gets distance (the menu) AND keeps
      its question. */
@@ -203,7 +211,7 @@ const src = read('index.html');
   t.check(!/q_more_menu/.test(barRow), 'the ⋯ menu is cut out before the row is measured');
   t.check(!/>\s*Client copy\s*<\/button>/.test(barRow),
     'and Client copy has no words on the bar itself — it is not drawn there');
-  t.check(/class="qbar-btn q-print-owner" id="q_print_quote_btn"/.test(bar) && /\.q-print-owner\{display:none;\}/.test(src),
+  t.check(/class="[^"]*\bq-print-owner\b[^"]*" id="q_print_quote_btn"/.test(bar) && /\.q-print-owner\{display:none;\}/.test(src),
     'the print button owns its behaviour and is never drawn');
 
   const btnRule = (/\.qbar-btn\{[^}]*\}/.exec(src) || [''])[0];
@@ -240,8 +248,8 @@ const src = read('index.html');
      ow-table.test.js and design-system.test.js hold both to the mono
      face with tabular-nums. What this file pins is that the row really
      uses them. */
-  t.check(/class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(src)
-    && /class="ow-gi qty-input q-qty"/.test(src) && /class="ow-gi price-input q-price"/.test(src),
+  t.check(/class="[^"]*\bq-line-total\b[^"]*">\$\{fmtUGX\(lineSell\)\}/.test(src)
+    && /class="[^"]*\bq-qty\b[^"]*"/.test(src) && /class="[^"]*\bq-price\b[^"]*"/.test(src),
     'every figure in the grid sits in tabular digits — the cells and the inputs are the layer’s');
   t.check(/\.ow-gi\{[^}]*border:1px solid transparent[^}]*background:transparent/.test(src),
     'inputs rest quiet on the row — an editable document, not a form grid');
@@ -284,13 +292,13 @@ const src = read('index.html');
   /* The usual-buys chips are INSIDE the document now, under the search:
      tapping one puts a line on it, so it belongs where the lines are.
      The cut is counted on the last chip rather than scrolled off. */
-  const doc = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
-  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
+  const doc = (/<div class="[^"]*\bq-doc\b[^"]*">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+  t.check(/id="q_item_search_dd"[\s\S]*?<div class="[^"]*\bq-client-usual\b[^"]*" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
     'the usual-buys chips sit inside the document, between the search and the lines');
   /* THE PHONE'S TWO TABS sit between them: the quote, and the details the
      console keeps in its rail. The chips are still above the lines; the
      tab bar is not drawn at all on the console. */
-  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-tabbar" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
+  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="[^"]*\bq-tabbar\b[^"]*" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
     'with the phone’s Quote / Details tabs between the chips and the lines');
   const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>/.exec(src) || [''])[0];
   t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 2 && /data-qtab="quote"/.test(tabs) && /data-qtab="details"/.test(tabs),
@@ -426,7 +434,7 @@ const src = read('index.html');
      also what lets the phone drop the pill: at 390px the bar has about
      150 pixels for the money, and the two together need closer to 180. */
   const bar2 = extractFunction(src, 'renderQuoteFinbar', 'index.html');
-  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b><span class="qp-margin-pill-lg \$\{pillClass\}">/.test(bar2),
+  t.check(/<div class="[^"]*\bqp-keep-v\b[^"]*"[^>]*><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>[\s\S]{0,200}?class="[^"]*\bqp-margin-pill-lg\b[^"]*\$\{pillClass\}">/.test(bar2),
     'the keep figure carries the same reading as the pill, not just the sign of the profit');
   t.check(!/style="color:/.test(bar2),
     'and takes it from a class rather than an inline colour, so a rule can reach it');

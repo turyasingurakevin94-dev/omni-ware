@@ -174,7 +174,14 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   const rows = extractFunction(src, 'renderQuoteItems', 'index.html');
   t.check(/const asPack = !!\(packView && packView\.whole\);\s*const per = asPack \? packView\.packQty : 1;/.test(rows),
     'the row is drawn in packs exactly when the line is counted in packs');
-  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qtyShown\}"/.test(rows),
+  /* Matched on the HOOK and the VALUE rather than the whole class list:
+     the claim is that the box counting the line carries qtyShown, not
+     that it wears a particular set of style classes. The row gained
+     .om-gi when the table moved to the card system, and a test that
+     fails on a restyle while the arithmetic is untouched is a test that
+     will be edited without being read. q-qty is the class the row's
+     own wiring finds the box by, so it is the one worth pinning. */
+  t.check(/class="[^"]*\bq-qty\b[^"]*"[^>]*value="\$\{qtyShown\}"/.test(rows),
     'the quantity box shows the count in that unit — 1, not 100');
   t.check(/<span class="q-qty-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
     'with the unit beside it, so "1" reads as "1 Ctn"');

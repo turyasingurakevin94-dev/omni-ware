@@ -6174,6 +6174,14 @@
   /* The search dropdown and each row's supplier picker hang below the
      panel's edge on a short quote; a clipping panel would cut them. */
   .q-doc{overflow:visible;}
+  /* THE CONVERTED SCREEN'S GROUND. The card system's ground is #f6f5f2
+     and it belongs to the page, not to a box on it -- painting the
+     section left a warm rectangle floating on the console's grey. main
+     is shared by every screen, so the rule is scoped to the quote being
+     open, and it sits HERE, beside the screen it clothes, rather than
+     in the .om- layer: that layer may not name an element, and this
+     rule has to. It comes out when main's own ground converts. */
+  body.on-quote-tab main{background:var(--om-ground);}
   /* The line-total track is minmax(112px, auto): a money column is
      sized to its content and never truncates, and with subgrid the
      foot's larger total sizes the same track for every row above it.
@@ -16342,6 +16350,11 @@
     /* ---- the quote table ---- */
     --om-charge:#fbfaf8;          /* charge and credit-terms rows     */
     --om-sug-rule:#e6e4df;        --om-sug-rule-hover:#c9c6bf;
+    /* The quote's caution card: the tint IS the ground here, so it
+       needs a border and a tile of its own, and an ink that clears on
+       the tint rather than on the softer card fill. */
+    --om-caution-rule:#f6e2b8;    --om-caution-tile:#ffeccd;
+    --om-caution-tint-ink:#6b5a33;
     --om-rail-hover:rgba(255,255,255,.07);
     --om-rail-on:rgba(255,255,255,.13);
 
@@ -16620,6 +16633,15 @@
   .om-dock-cell{padding:0 22px;border-left:1px solid var(--om-rule-inner)}
   .om-dock-first{padding:0 22px 0 0}
   .om-dock-total{font-size:22px;white-space:nowrap}
+  /* THE SEND BUTTON KEEPS ITS WORDS. The console dock dropped "Send on
+     WhatsApp" to a bare icon below 1460px -- "the figures or the three
+     words, not both" -- because its cells were wider than the space it
+     had. The card dock's cells are 22px of padding around three figures
+     and its buttons are 42px, which is why the artboard can draw the
+     label at 1440. An icon alone is a guess about what a button does,
+     and this one leaves the app. */
+  .om-dock .qbar-wa .qbar-l{display:inline}
+  .om-dock .qbar-wa{padding:0 14px}
 
   /* ---- the page geometry the table needs ---------------------------
      The grid's floor is 799px: 535px of fixed money tracks, 64px of
@@ -16640,6 +16662,56 @@
      layout: it says "this screen already uses the new page padding",
      and it comes out the day main's padding becomes 22px for everyone.
      ------------------------------------------------------------------ */
+  /* ---- the title block and its lenses ------------------------------
+     Saved quotes is a lens, not a screen: a quote being built and a
+     quote saved are one document at two moments -- same lines, same
+     client, same arithmetic, same file. */
+  .om-qtitle{flex:none;padding:18px 22px 0;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .om-qtitle-t{font-size:24px;font-weight:700;letter-spacing:-0.02em}
+  .om-qtitle-s{margin-top:3px;font-size:13px;color:var(--om-ink-3)}
+  .om-lensgroup{display:flex;align-items:center;gap:6px;background:var(--om-lens-track);border-radius:10px;padding:4px;flex:none}
+  .om-lenschip{height:18px;padding:0 6px}
+
+  /* ---- the client strip --------------------------------------------
+     Who it is for and what the books already hold on them, as cells of
+     one card split by rules. Each is a label over a figure, so the
+     three facts read at the same speed as the two fields. */
+  .om-qclient{display:flex;align-items:stretch;overflow:hidden;margin:0 0 12px}
+  .om-qclient-cell{padding:11px 14px;min-width:0;border-left:1px solid var(--om-rule-inner)}
+  .om-qclient-cell:first-child{border-left:0}
+  .om-qclient-v{margin-top:2px;display:flex;align-items:baseline;gap:7px}
+
+  /* ---- the document card and its front door ------------------------ */
+  .om-qdoc{overflow:hidden}
+  .om-qsearch-wrap{padding:11px 14px;display:flex;align-items:center;gap:10px}
+  .om-qsearch{display:flex;align-items:center;gap:9px;flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid var(--om-rule-input);border-radius:10px;background:var(--om-surface)}
+  .om-qsearch:focus-within{border-color:var(--om-navy)}
+  .om-keycap{font-size:10.5px;font-weight:600;color:var(--om-ink-3);background:var(--om-field);border:1px solid var(--om-rule-input);border-radius:6px;padding:2px 6px;flex:none}
+  /* This client's own repeat lines, with the quantities they usually
+     take. Suggested from history, never from a catalogue dump. */
+  .om-qusual{padding:0 14px 10px;display:flex;align-items:center;gap:7px;overflow:hidden}
+
+  /* ---- the right column --------------------------------------------
+     Four cards, top to bottom by urgency. Cheaper elsewhere wears the
+     caution tint as its own ground because it is the only one that
+     asks for a decision; the rest state a fact and are cards. */
+  .om-qrail{width:310px;flex:none;display:flex;flex-direction:column;gap:12px}
+  .om-card-caution{background:var(--om-caution);border:1px solid var(--om-caution-rule);border-radius:14px;padding:13px 14px}
+  .om-card-caution .om-qr-sub{color:var(--om-caution-tint-ink)}
+  .om-qr{padding:13px 14px}
+  .om-qr-h{display:flex;align-items:center;gap:8px}
+  .om-qr-t{font-size:13.5px;font-weight:700}
+  .om-qr-n{margin-left:auto;height:19px;padding:0 7px}
+  .om-ctile{width:26px;height:26px;border-radius:8px;background:var(--om-caution-tile);color:var(--om-caution-ink);display:flex;align-items:center;justify-content:center;flex:none}
+  .om-qr-row{display:flex;align-items:baseline;gap:8px}
+  /* A GAPPED COLUMN CHARGES FOR ITS EMPTY CHILDREN. An empty card still
+     takes a border, a padding and a gap on each side, so a quote with
+     no warnings would draw four blank boxes down the rail. */
+  .om-qrail > :empty{display:none}
+  .om-qr-sub{font-size:11.5px;color:var(--om-ink-3)}
+
+  /* The warm ground, on the screens that have been converted. */
+  .om-qground{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--om-ink)}
   .om-qpage{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px;align-items:start;margin:0 -18px}
   }
 
@@ -17338,7 +17410,7 @@
     </section>
 
     <!-- NEW QUOTE -->
-    <section id="tab-quote">
+    <section id="tab-quote" class="om-qground">
       <!-- THE PHONE'S BAR. 48px of navy: the mark, the screen's name,
            Client copy and the ⋯ -- which the dock hands up here so the
            dock's one line is the figure and the two acts. The app's own
@@ -17353,15 +17425,30 @@
         </button>
         <span class="q-phbar-more" id="q_phbar_more"></span>
       </div>
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">New quote</h1>
-        <p class="ow-ph-sub">Build the order live, on the call.</p>
-        <p class="ow-ph-help">Build the client's order live on the call. Each item shows the cheapest supplier and a suggested price.</p>
-        <span class="ow-ph-sp"></span>
-        <button type="button" class="btn ow-sm" id="qn_track_orders_btn">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-          Order tracking
-        </button>
+      <!-- THE TITLE, AND THE THREE MOMENTS OF ONE DOCUMENT. A quote
+           being built and a quote saved are the same lines, the same
+           client, the same arithmetic and the same file -- so Saved is
+           a lens on this screen rather than a second screen with its
+           own list. The Order-tracking button that used to sit here is
+           gone: the board is a rail row of its own, and a button to it
+           from the screen that creates its first stage was a second
+           door to a place the rail already holds. -->
+      <div class="om-qtitle">
+        <div style="flex:1;min-width:0">
+          <div class="om-qtitle-t">Quote</div>
+          <div class="om-qtitle-s">Build the order live, on the call &middot; say the price, move to the next item</div>
+        </div>
+        <div class="om-lensgroup" id="q_lenses" role="tablist" aria-label="Quote lens">
+          <button type="button" class="om-lens om-on" data-qlens="building" role="tab" aria-selected="true">Building
+            <span class="om-chip om-lenschip" id="q_lens_n_building" style="background:var(--om-neutral);color:var(--om-neutral-ink)">0 lines</span>
+          </button>
+          <button type="button" class="om-lens" data-qlens="saved" role="tab" aria-selected="false">Saved
+            <span class="om-chip om-lenschip" id="q_lens_n_saved" style="background:var(--om-bad);color:var(--om-bad-ink)">0</span>
+          </button>
+          <button type="button" class="om-lens" data-qlens="sent" role="tab" aria-selected="false">Sent
+            <span class="om-chip om-lenschip" id="q_lens_n_sent" style="background:var(--om-neutral);color:var(--om-neutral-ink)">0</span>
+          </button>
+        </div>
       </div>
       <!-- WHO IT IS FOR, and what the books already know about them.
 
@@ -17372,7 +17459,7 @@
            fills the facts the moment a known name is typed. Out of the
            header on purpose: who the quote is for is the first thing you
            fill in, not a caption on the screen's name. -->
-      <div class="ow-cb q-band" id="q_client_band">
+      <div class="ow-cb q-band om-card om-qclient" id="q_client_band">
         <!-- THE PHONE FOLDS THE BAND TO ONE LINE. Who it is for, their
              number, and the one fact that says how established they are
              -- on a 48px line with a chevron. Tapping it opens the
@@ -17389,7 +17476,7 @@
              one cell. The number is the thing WhatsApp sends to, so it
              stays a field of its own, in the figure face beside the
              name rather than in a column of its own. -->
-        <div class="ow-cb-f ow-cb-f-name q-client-ac-wrap">
+        <div class="ow-cb-f ow-cb-f-name q-client-ac-wrap om-qclient-cell">
           <label class="ow-cb-l" for="q_client_name">Client</label>
           <div class="q-client-cell">
             <input type="text" class="ow-cb-in" id="q_client_name" placeholder="e.g. Sarah Namono" autocomplete="off">
@@ -17397,7 +17484,7 @@
           </div>
           <div class="q-client-ac-dropdown" id="q_client_ac_dropdown" style="display:none;"></div>
         </div>
-        <div class="ow-cb-f ow-cb-f-dt">
+        <div class="ow-cb-f ow-cb-f-dt om-qclient-cell">
           <label class="ow-cb-l" for="q_date">Date</label>
           <input type="date" class="ow-cb-in" id="q_date">
         </div>
@@ -17409,15 +17496,15 @@
 
       <div class="ow-grid om-qpage">
         <!-- ============ THE DOCUMENT ============ -->
-        <div class="ow-pan q-doc">
+        <div class="ow-pan q-doc om-card om-qdoc">
           <!-- The document's own front door: search, type, pick. The
                picker modal (suppliers, recommended prices, cash hint)
                still does the deciding — this is only the faster way in.
                The + row inside the table remains as the second door. -->
-          <div class="q-item-search-wrap">
+          <div class="q-item-search-wrap om-qsearch">
             <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="q_item_search" placeholder="Add item — search name, SKU or supplier code…" autocomplete="off">
-            <span class="q-item-search-hint" title="Press / to jump here; Enter adds the top result">/</span>
+            <input type="text" id="q_item_search" placeholder="Add item — name, SKU or supplier code" autocomplete="off">
+            <span class="q-item-search-hint om-keycap" title="Press / to jump here; Enter adds the top result">/</span>
             <span class="q-search-n" id="q_search_n"></span>
             <!-- searchable-select: membership in the scope that styles
                  suggestion rows everywhere else (hover, sid, variant
@@ -17430,7 +17517,7 @@
                line on it. Chips that do not fit are counted, never
                dropped: the last chip says how many. renderClientUsualBuys
                keeps its id and its render. -->
-          <div class="q-client-usual" id="q_client_usual"></div>
+          <div class="q-client-usual om-qusual" id="q_client_usual"></div>
           <!-- THE PHONE'S TWO TABS, under the search: the quote, and the
                details the console keeps in its rail. Each carries its
                count; Details carries a dot when a section is warning.
@@ -17448,23 +17535,28 @@
              phone. Nothing is computed for the rail -- each panel reads
              a derivation another screen already owns. See
              renderQuoteRail. -->
-        <div class="ow-side" id="q_rail">
+        <div class="ow-side om-qrail" id="q_rail">
           <!-- ONE panel, four readings, each ruled off by its own 34px
                header. Four separate panels spent three gaps and six
                hairlines saying nothing the headers do not. "This client"
                draws only when it has more to say than the band already
                does: a warning about the standing, or what this quote
                takes the balance to. -->
-          <div class="ow-pan">
-            <!-- The phone's Details pane opens with the client's facts;
-                 the console has them on the band and never draws this. -->
-            <div class="q-rail-sec q-rail-facts" id="q_rail_facts"></div>
-            <div class="q-rail-sec" id="q_rail_client"></div>
-            <div class="q-rail-sec" id="q_rail_cheaper"></div>
-            <div class="q-rail-sec" id="q_rail_stock"></div>
-            <div class="q-rail-sec" id="q_rail_with"></div>
-            <div class="q-rail-sec" id="q_rail_last"></div>
-          </div>
+          <!-- FOUR CARDS, TOP TO BOTTOM BY URGENCY, not four sections of
+               one panel. Cheaper elsewhere is the only one that asks for
+               a DECISION -- it offers a switch -- so it is the only one
+               that wears its state as its ground; the rest state a fact
+               and are plain cards. A card with nothing to say is not
+               drawn at all, so a quote with no warnings is a short
+               column rather than a stack of empty boxes. -->
+          <!-- The phone's Details pane opens with the client's facts;
+               the console has them on the band and never draws this. -->
+          <div class="q-rail-sec q-rail-facts om-card om-qr" id="q_rail_facts"></div>
+          <div class="q-rail-sec om-card om-qr" id="q_rail_client"></div>
+          <div class="q-rail-sec om-card-caution" id="q_rail_cheaper"></div>
+          <div class="q-rail-sec om-card om-qr" id="q_rail_stock"></div>
+          <div class="q-rail-sec om-card om-qr" id="q_rail_with"></div>
+          <div class="q-rail-sec om-card om-qr" id="q_rail_last"></div>
         </div>
       </div>
 
@@ -17475,7 +17567,7 @@
            figure and the actions share one bar that never scrolls away.
            Fixed to the viewport, shown only while this tab is active
            (body.on-quote-tab, set by the tab switch). -->
-      <div class="q-stickybar" id="q_stickybar">
+      <div class="q-stickybar om-dock" id="q_stickybar">
         <div class="qp-finbar" id="q_finbar"></div>
         <!-- THE SHOP SIDE, BEHIND A TAP ON THE PHONE. The bar carries the
              figure the client is waiting to hear; what it costs and what
@@ -17500,14 +17592,14 @@
                the word is what tells WhatsApp from Client copy at a
                glance. The phone drops the word and keeps the mark: the
                aria-label carries the same name, so it reads once. -->
-          <button class="qbar-btn qbar-wa" id="q_whatsapp_btn" aria-label="Send on WhatsApp" title="WhatsApp — open a chat with the client's quote pre-filled (their number, no cost or margin)">
+          <button class="qbar-btn qbar-wa om-btn om-btn-s" id="q_whatsapp_btn" aria-label="Send on WhatsApp" title="WhatsApp — open a chat with the client's quote pre-filled (their number, no cost or margin)">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             <span class="qbar-l">Send on WhatsApp</span>
           </button>
           <!-- The occasional actions live one press away, and the
                destructive one gets distance AND keeps its confirm. -->
           <div class="q-more-wrap">
-            <button class="qbar-btn q-more-btn" id="q_more_btn" aria-label="More actions" title="More actions — client copy, supplier copy, clear the quote" aria-haspopup="true" aria-expanded="false">
+            <button class="qbar-btn q-more-btn om-btn om-btn-s" id="q_more_btn" aria-label="More actions" title="More actions — client copy, supplier copy, clear the quote" aria-haspopup="true" aria-expanded="false">
               <svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
             </button>
             <div class="q-more-menu" id="q_more_menu" style="display:none;">
@@ -17537,7 +17629,7 @@
               </button>
             </div>
           </div>
-          <button class="qbar-save" id="q_save_btn" title="Save this quote (Ctrl+S)">
+          <button class="qbar-save om-btn om-btn-p" id="q_save_btn" title="Save this quote (Ctrl+S)">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
             Save quote
           </button>
@@ -31867,7 +31959,14 @@ const MMS_BAR_TABS = ['dashboard', 'quote', 'cashbook', 'manager'];
    One name on screen at any moment, and always one. */
 let mtTitleEl = null, mtTitleName = '', mtTitleShown = false;
 function updateMobileTopbarTitle(tab){
-  mtTitleEl = document.querySelector('#tab-'+tab+' .page-head h1, #tab-'+tab+' .ow-ph-t');
+  /* Three header shapes now, because the app is mid-redesign: the
+     original .page-head h1, the console's .ow-ph-t, and the card
+     system's .om-qtitle-t. A screen whose header has been converted but
+     whose name is not listed here shows a BLANK bar on the phone, which
+     is exactly what happened to the quote the day its header changed --
+     the only symptom is an empty strip nobody thinks to look at on a
+     desktop. Widen this whenever a screen changes systems. */
+  mtTitleEl = document.querySelector('#tab-'+tab+' .page-head h1, #tab-'+tab+' .ow-ph-t, #tab-'+tab+' .om-qtitle-t');
   mtTitleName = mtTitleEl ? mtTitleEl.textContent : '';
   const el = document.getElementById('mobileTopbarTitle');
   /* Cleared and re-decided rather than carried over: a new screen starts
@@ -32001,9 +32100,12 @@ document.getElementById('mmsClearBtn').addEventListener('click', ()=>{
 document.getElementById('ot_back_to_new_quote_btn').addEventListener('click', ()=>{
   goToTab('quote');
 });
-document.getElementById('qn_track_orders_btn').addEventListener('click', ()=>{
-  goToTab('quote-saved');
-});
+/* The quote screen's Order-tracking button is gone from the console:
+   the board is a rail row, and a second door to it from the screen that
+   creates its first stage is the "two homes, neither real" fault this
+   app's rail was rebuilt to end. The PHONE keeps the route, because the
+   rail is not drawn there -- it goes straight to the board now rather
+   than reaching through a button that no longer exists. */
 
 // The nav flyout machinery lived here: position:fixed submenus placed by
 // JS, with hover timers and outside-click handling. The regroup made it
@@ -37830,6 +37932,30 @@ function renderQuoteItems(){
   const items = data.quote.items;
   const tabN = document.getElementById('q_tab_n_quote');
   if(tabN) tabN.textContent = String(items.length);
+  /* THE LENS COUNTS, DERIVED AND NOT INVENTED.
+     Building is this document's own lines. Saved is every quote on the
+     board that has not moved past its first stage -- the closest honest
+     reading this app has of "saved and not yet ordered", because a
+     quote here becomes a Taken order the moment it is saved.
+     Sent has NO state behind it: nothing records that a quote was sent,
+     and the WhatsApp hand-off is a deep link the app cannot see. So it
+     says so rather than showing a figure it cannot stand behind -- this
+     app reports missing rather than scoring it as zero. */
+  {
+    const bn = document.getElementById('q_lens_n_building');
+    if(bn) bn.textContent = `${items.length} line${items.length===1?'':'s'}`;
+    const sn = document.getElementById('q_lens_n_saved');
+    if(sn){
+      const saved = (data.savedQuotes||[]).filter(q=> !q.voided && (!q.status || q.status==='draft')).length;
+      sn.textContent = String(saved);
+      sn.hidden = !saved;
+    }
+    const tn = document.getElementById('q_lens_n_sent');
+    if(tn){
+      tn.textContent = '—';
+      tn.title = 'Nothing records that a quote was sent yet — the WhatsApp hand-off is a link the app cannot see, so a count here would be a guess.';
+    }
+  }
   if(quoteLastCount >= 0 && items.length > quoteLastCount) setQuoteTab('quote');
   quoteLastCount = items.length;
   const supplierDisplayLabel = (selectedId, item)=> selectedId==='__stock__'
@@ -37920,7 +38046,7 @@ function renderQuoteItems(){
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span><span class="ow-tbl-s q-item-sup-ph" title="${esc(supLabel)}">· ${esc(supLabel)}</span>${consignTag}</span>
       </div>
-      <div class="q-ph-ctl"><div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><button type="button" class="q-rstp" data-stp="-1" aria-label="One less">&minus;</button><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span><button type="button" class="q-rstp" data-stp="1" aria-label="One more">+</button></div>${
+      <div class="q-ph-ctl"><div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><button type="button" class="q-rstp" data-stp="-1" aria-label="One less">&minus;</button><input type="number" class="ow-gi om-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span><button type="button" class="q-rstp" data-stp="1" aria-label="One more">+</button></div>${
         /* A count in cartons is a count in cartons: no "= 200 Pair"
            under it. The pack size is in the unit's tooltip for anyone
            who wants it. Only the OLD reading -- a line written before
@@ -37931,7 +38057,7 @@ function renderQuoteItems(){
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <span class="om-idiv" aria-hidden="true"></span>
       <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
+      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi om-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
@@ -38204,7 +38330,7 @@ function renderQuoteRail(){
         body += `<p class="ow-mini">${band==='severe' ? 'Past sixty days' : 'Past thirty days'} on the oldest unpaid invoice${standing.oldestLabel ? ' ('+esc(standing.oldestLabel)+')' : ''}. Ask for something on account before more goes out on credit.</p>`;
       }
     }
-    clientEl.innerHTML = body ? `<div class="ow-pan-h"><span class="ow-pan-t">This client</span></div>` + body : '';
+    clientEl.innerHTML = body ? `<div class="om-qr-h"><span class="om-qr-t">This client</span></div>` + body : '';
   }
 
   /* ---- cheaper elsewhere ---- */
@@ -38221,7 +38347,7 @@ function renderQuoteRail(){
       if(!(bestPrice < paying)) return null;
       return { it, idx, qty, bestPrice, less: paying-bestPrice, kept: (paying-bestPrice)*qty, supplierId: best.supplierId };
     }).filter(Boolean);
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Cheaper elsewhere</span>${bought.length ? `<span class="ow-pan-n">${cheaper.length} of ${bought.length}</span>` : ''}</div>`;
+    const head = `<div class="om-qr-h"><span class="om-qr-t">Cheaper elsewhere</span>${bought.length ? `<span class="om-chip om-qr-n" style="background:var(--om-neutral);color:var(--om-neutral-ink)">${cheaper.length} of ${bought.length}</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and the price book says who else sells it, at this quantity.</p>`;
     else if(!bought.length) body = `<p class="ow-mini">Every line is from the shelf — nothing to buy in.</p>`;
@@ -38263,8 +38389,8 @@ function renderQuoteRail(){
           rows.push({ c, idx, line: it });
         });
     });
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Goes with it</span>${
-      rows.length ? `<span class="ow-pan-n">${rows.length}</span>` : ''}</div>`;
+    const head = `<div class="om-qr-h"><span class="om-qr-t">Goes with it</span>${
+      rows.length ? `<span class="om-chip om-qr-n" style="background:var(--om-neutral);color:var(--om-neutral-ink)">${rows.length}</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and what you have written down about it sits beside it.</p>`;
     else if(!rows.length) body = `<p class="ow-mini">Nothing written down for these lines yet.</p>`;
@@ -38319,7 +38445,7 @@ function renderQuoteRail(){
 
   /* ---- stock to cover it ---- */
   {
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span>${items.length ? `<span class="ow-pan-n">${items.length} line${items.length===1?'':'s'}</span>` : ''}</div>`;
+    const head = `<div class="om-qr-h"><span class="om-qr-t">Stock to cover it</span>${items.length ? `<span class="om-chip om-qr-n" style="background:var(--om-neutral);color:var(--om-neutral-ink)">${items.length} line${items.length===1?'':'s'}</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and the shelf count sits beside it.</p>`;
     else {
@@ -38384,7 +38510,7 @@ function renderQuoteRail(){
     if(!last){ lastEl.innerHTML = ''; }
     else {
       const lines = last.items || [];
-      const head = `<div class="ow-pan-h"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">${esc(fmtDayMonth(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
+      const head = `<div class="om-qr-h"><span class="om-qr-t">Last order</span><span class="om-chip om-qr-n" style="background:var(--om-neutral);color:var(--om-neutral-ink)">${esc(fmtDayMonth(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
       const body = lines.slice(0, 3).map(it=>{
         const q2 = quoteLineQtyText(it);
         return `<div class="ow-sr"><span class="ow-sr-k" title="${esc(it.productName)}">${esc(it.productName)} · ${esc(q2.text)}</span><span class="ow-sr-v">${n((Number(it.qty)||0) * quoteItemSellPrice(it))}</span></div>`;
@@ -38649,18 +38775,21 @@ function renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditTota
   else if(grandSell<=0 || profit<=0) pillClass = 'danger';
   else if(marginPct < 10) pillClass = 'warn';
   bar.innerHTML = `
-    <div class="qp-says">
-      <div class="qp-says-label">Client pays<span class="qp-says-n">${(data.quote.items||[]).length ? ` · ${data.quote.items.length} line${data.quote.items.length===1?'':'s'}` : ''}</span></div>
-      <div class="qp-says-value${empty ? ' quiet' : ''}">${fmtUGX(pays)}</div>
+    <div class="qp-says om-dock-first">
+      <div class="qp-says-label om-lbl" style="font-size:10.5px">Client pays<span class="qp-says-n">${(data.quote.items||[]).length ? ` · ${data.quote.items.length} line${data.quote.items.length===1?'':'s'}` : ''}</span></div>
+      <div class="qp-says-value om-fig om-dock-total${empty ? ' quiet' : ''}">${fmtUGX(pays)}</div>
     </div>
     <div class="qp-shop">
-      <div class="qp-cost">
-        <div class="qp-says-label">Costs you</div>
-        <div class="qp-cost-v">${fmtUGX(grandBuy)}</div>
+      <div class="qp-cost om-dock-cell">
+        <div class="qp-says-label om-lbl" style="font-size:10.5px">Costs you</div>
+        <div class="qp-cost-v om-fig" style="font-size:15px;font-weight:500;color:var(--om-ink-3);white-space:nowrap">${fmtUGX(grandBuy)}</div>
       </div>
-      <div class="qp-shopline">
-        <div class="qp-says-label">You keep${charges > 0 || credit > 0 ? ' on the items' : ''}</div>
-        <div class="qp-keep-v"><b class="${pillClass}">${fmtUGX(profit)}</b><span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span></div>
+      <div class="qp-shopline om-dock-cell" style="display:flex;align-items:center;gap:9px">
+        <div>
+          <div class="qp-says-label om-lbl" style="font-size:10.5px">You keep${charges > 0 || credit > 0 ? ' on the items' : ''}</div>
+          <div class="qp-keep-v om-fig" style="font-size:15px;white-space:nowrap"><b class="${pillClass}">${fmtUGX(profit)}</b></div>
+        </div>
+        <span class="qp-margin-pill-lg om-chip ${pillClass}">${Math.round(marginPct)}%</span>
       </div>
     </div>
   `;
@@ -38711,7 +38840,7 @@ document.getElementById('q_phbar_print').addEventListener('click', ()=>{
 });
 document.getElementById('q_track_orders_phone').addEventListener('click', ()=>{
   document.getElementById('q_more_menu').style.display = 'none';
-  document.getElementById('qn_track_orders_btn').click();
+  goToTab('quote-saved');
 });
 document.getElementById('q_shop_toggle').addEventListener('click', ()=>{
   setShopSideOpen(!document.body.classList.contains('q-shop-open'));

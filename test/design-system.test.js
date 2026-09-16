@@ -1228,8 +1228,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      suggestion chip's border at rest and under the pointer; a chip that
      adds a line in one press is not a button and should not wear one's
      weight. */
-  t.check(colours.length <= 70,
-    `the palette holds ${colours.length} colours (ceiling 70)`);
+  /* 73, not 70: the quote's Cheaper-elsewhere card is the one place the
+     caution TINT is the card's own ground rather than a chip on white.
+     That needs three values the tinted-chip pair cannot supply -- a
+     border that reads against the tint, a tile one step deeper for the
+     icon, and an ink that clears 4.5:1 on the tint itself rather than
+     on the softer card fill. It is the only card in the system that
+     asks for a decision instead of stating a fact, which is why it is
+     the only one that wears its state. */
+  t.check(colours.length <= 73,
+    `the palette holds ${colours.length} colours (ceiling 73)`);
 
   /* ---- THE CORAL RULE, which is the one a reviewer cannot see ----
      #ef4b39 under white is 3.1:1 and fails at every size this app uses.
@@ -1287,6 +1295,8 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     [['--om-tile-se-ink', '--om-tile-se'], ['--om-agent-ink', '--om-agent'],
      ['--om-good-pressed', '--om-tile-ca'], ['--om-tile-mo-ink', '--om-studied-card'],
      ['--om-tile-in-ink', '--om-tile-in'], ['--om-ink-3', '--om-track'],
+     /* and the quote's caution card, where the tint is the ground */
+     ['--om-caution-tint-ink', '--om-caution'], ['--om-caution-ink', '--om-caution-tile'],
     ].forEach(([i, g]) => {
       const r = ratio(v(i), v(g));
       t.check(r >= 4.5, `${r}:1 — rail tile ${i} on ${g} (needs 4.5)`);
