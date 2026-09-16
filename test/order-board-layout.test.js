@@ -168,7 +168,17 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
     stageEnteredAt: NOW - 3600000, items: [] }, over);
   const need = (o, over) => scope.orderNeedsYou(q(o), over || fine);
 
-  const taps = (h, sid) => new RegExp(`data-act="ask" data-id="7" data-sid="${sid}"`).test(h) && new RegExp(`data-act="confirmed" data-id="7" data-sid="${sid}"`).test(h);
+  /* BOTH ROUTING KEYS, because this block has two homes. It used to be
+     pinned as `data-act` alone, which was true while the supplier taps
+     only ever appeared in the phone's row -- and that was the whole
+     defect: the console reads `data-dlg` (the order's dialog is outside
+     #tab-quote-saved, so the board's listener never sees it), so on a
+     desktop there was no control anywhere that could ask a supplier or
+     mark one confirmed, and a Taken order could not be moved on at all.
+     The pair is what makes one block work in both homes, so the pair is
+     what is pinned. */
+  const taps = (h, sid) => ['ask', 'confirmed'].every((a) =>
+    new RegExp(`data-act="${a}" data-dlg="${a}" data-id="7" data-sid="${sid}"`).test(h));
   let n = need({ sup: ['S1', 'S2'] });
   t.check(n && n.chip === 'Not asked' && n.acts.length === 0 && taps(n.html, 'S1') && taps(n.html, 'S2'),
     `a draft nobody has asked for is Not asked, with Ask and Confirmed on the row for each supplier (${n && n.chip})`);
@@ -370,7 +380,16 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
   t.check(/if\(moved\)\{[\s\S]*?q\.stageLog\.push\(\{ status, at: Date\.now\(\), auto: !!\(opts && opts\.auto\) \}\);[\s\S]*?\}\s*q\.status = status;/.test(setter),
     'setSavedQuoteStatus appends to the stage log only on a real move, marking a step the app took itself');
-  const trail = extractFunction(src, 'orderTrail', 'index.html');
+  /* The taken moment moved one function along. It is the only fact the
+     trail answered that the five-dot track above it also needed, and the
+     two were answering differently -- the track said "Taken · not
+     recorded" over a trail that had just recorded it, because only the
+     trail carried the fall-back to the quote's own date. One derivation
+     now, read by both, so the dialog cannot contradict itself. The trail
+     still reads every one of these off the record; savedAt it reads
+     through orderTakenAt. */
+  const trail = extractFunction(src, 'orderTrail', 'index.html')
+    + extractFunction(src, 'orderTakenAt', 'index.html');
   ['q.savedAt', 'q.supplierConfirms', 'q.stageLog', 'it.receivedAt', 'q.pickingAssignedAt', 'q.workerAcceptedAt',
     'q.pickingDoneAt', 'q.carrier', 'q.announcedAt', 'q.invoicedTs', 'q.cancelledAt'].forEach((f) => {
     t.check(trail.includes(f), `the trail reads ${f} off the record`);

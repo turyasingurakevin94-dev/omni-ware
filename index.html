@@ -36823,6 +36823,54 @@ function ipLineBuyPrice(supplierId, refRow, qty, stockCost){
   return refRow ? Math.round(purchasePriceAtQty(refRow, qty)) : 0;
 }
 
+/* ============ A PRESS MUST SURVIVE THE REDRAW IT CAUSES ============
+
+   The quantity box commits on `change`, and `change` on a text field
+   fires when the field loses focus -- which, nine times in ten, is the
+   press on "Add to quote" taking the focus away from it. renderIpStage
+   then replaces every node in the sheet BETWEEN that press's mousedown
+   and its mouseup, so the browser is left with no element the two have
+   in common and fires no `click` at all:
+
+       mousedown -> ip_add_btn
+       change    -> ip_qty      (the sheet is rebuilt here)
+       mouseup   -> ip_add_btn  (a different node now)
+       ...and no click, ever
+
+   Nothing happened, nothing said why, and the owner pressed again. It
+   cost a silent press on every line of every quote, and it did the same
+   to the supplier radios and the Use -> cards, which are also pressed
+   with the quantity box still holding focus.
+
+   So a redraw asked for while a press is down waits for that press to
+   finish, and is released on the frame AFTER the pointer comes up --
+   the click is dispatched together with the mouseup, and redrawing
+   between those two is the same bug again. The add itself no longer
+   depends on the redraw having happened: it re-ranks the suppliers at
+   the quantity actually in the box, so the cost it records is right for
+   that quantity whether the sheet has caught up or not. */
+let ipStageRedrawHeld = false, ipStageRedrawWanted = false;
+function ipStageRedraw(){
+  if(ipStageRedrawHeld){ ipStageRedrawWanted = true; return; }
+  ipStageRedrawWanted = false;
+  renderIpStage();
+}
+document.addEventListener('pointerdown', (e)=>{
+  ipStageRedrawHeld = !!(e.target && e.target.closest && e.target.closest('#ip_stage_view'));
+}, true);
+function ipStageReleasePress(){
+  if(!ipStageRedrawHeld) return;
+  ipStageRedrawHeld = false;
+  requestAnimationFrame(()=>{
+    /* Not if the press closed the sheet -- the commonest outcome is
+       that the line went on the quote and there is no sheet to redraw. */
+    const modal = document.getElementById('itemPickerModal');
+    if(ipStageRedrawWanted && modal && modal.classList.contains('show')) ipStageRedraw();
+    else ipStageRedrawWanted = false;
+  });
+}
+document.addEventListener('pointerup', ipStageReleasePress, true);
+document.addEventListener('pointercancel', ipStageReleasePress, true);
 function renderIpStage(){
   const wrap = document.getElementById('ip_stage_view');
   const product = data.products.find(x=>x.id===ipProductId);
@@ -37200,7 +37248,7 @@ function renderIpStage(){
     radio.addEventListener('change', ()=>{
       ipSelectedSupplierId = radio.value;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   });
   // Re-resolves recommended prices, supplier-card prices and Buy @ for
@@ -37211,7 +37259,7 @@ function renderIpStage(){
     ipQtyRaw = Number(document.getElementById('ip_qty').value) || 1;
     ipQtyUnitMode = document.getElementById('ip_qty_unit').value;
     ipSelectedRecType = null;
-    renderIpStage();
+    ipStageRedraw();
   };
   wrap.querySelector('#ip_qty').addEventListener('change', handleQtyChange);
   wrap.querySelector('#ip_qty_unit').addEventListener('change', handleQtyChange);
@@ -37257,7 +37305,7 @@ function renderIpStage(){
       if(!item) return;
       ipSelectedSupplierId = item.dataset.id;
       ipSelectedRecType = null;
-      renderIpStage();
+      ipStageRedraw();
     });
   }
   function ipSelectRecCard(card){
@@ -37301,12 +37349,21 @@ function renderIpStage(){
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
-    const buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
+    /* THE COST IS RE-RANKED AT THE QUANTITY IN THE BOX, not at the one
+       the sheet was last drawn for. refRow is a render-time closure, and
+       the redraw that would refresh it is deliberately held while this
+       press is down (see ipStageRedraw) -- so reading it here would
+       record a volume tier belonging to a different quantity, which is a
+       wrong figure rather than a stale screen. Same call the sheet
+       itself ranks with, so the two can only agree. */
+    const rankedNow = rankedPurchaseRowsAtQty(ipProductId, ipVariantIdx, qty);
+    const refNow = rankedNow.find(r=> r.supplierId===supplierId) || rankedNow[0] || refRow;
+    const buyPrice = ipLineBuyPrice(supplierId, refNow, qty, stockCost);
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
-      packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
+      packUnit: refNow ? (refNow.packUnit||'') : '', packQty: refNow ? (refNow.packQty||0) : '',
       /* How it was counted when it was chosen -- see quoteLinePack. */
       qtyIn: inPacks ? 'pack' : 'unit',
       qty, supplierId, supplierName: supplierName(supplierId),
@@ -41083,7 +41140,13 @@ function orderTrackHTML(status){
    reason can be typed; the open row keeps a way to it. */
 function orderSupplierActsHTML(q, opts){
   const o = opts || {};
-  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
+  /* BOTH KEYS, because this block has two homes: the phone's own row,
+     read by the board's listener (data-act), and the order's dialog on
+     the console, read by the dialog's (data-dlg). orderLoadFormHTML
+     carries the pair for exactly the same reason. A block that carried
+     only one of them worked in one home and was dead in the other --
+     which is what left the console with no way to ask a supplier. */
+  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-dlg="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
   const rows = orderSupplierGroups(q).map(g=>{
     const sid = String(g.supplierId);
     const st = orderSupplierConfirmState(q, sid);
@@ -41338,13 +41401,23 @@ function orderWhoText(q){
 /* HOW IT GOT HERE. Derived from the timestamps the record already
    carries, plus the stage log this screen started writing. An order
    from before that says so rather than inventing a history. */
+/* WHEN IT WAS TAKEN, answered in one place. The trail has always fallen
+   back to the quote's own date when nothing stamped the moment, and the
+   five-dot track did not -- so one dialog said "Taken · not recorded" in
+   its track and "Taken at the desk · 08:00" three inches below it, about
+   the same order. Two answers to one question is worse than either. */
+function orderTakenAt(q){
+  const t = q && (q.savedAt || (q.date ? Date.parse(q.date + 'T08:00:00') : null));
+  const n = typeof t === 'number' ? t : Date.parse(t);
+  return n && !isNaN(n) ? n : null;
+}
 function orderTrail(q){
   const ev = [];
   const push = (at, what, auto)=>{
     const t = typeof at === 'number' ? at : Date.parse(at);
     if(t && !isNaN(t)) ev.push({ at:t, what, auto:!!auto });
   };
-  push(q.savedAt || (q.date ? q.date + 'T08:00:00' : null),
+  push(orderTakenAt(q),
     q.originAgentId ? 'Taken through the agents app' : q.originWa ? 'Taken from a WhatsApp chat' : q.counterSale ? 'Sold at the counter' : 'Taken at the desk');
   Object.entries(q.supplierConfirms || {}).forEach(([sid, rec])=>{
     if(!rec) return;
@@ -41883,7 +41956,7 @@ function otDlgFig(label, n){
 function otStageTimes(q){
   const at = {};
   (q.stageLog || []).forEach(e=>{ if(e && e.status && at[e.status] == null) at[e.status] = e.at; });
-  if(at.draft == null && q.savedAt) at.draft = q.savedAt;
+  if(at.draft == null) at.draft = orderTakenAt(q);
   at[q.status] = q.stageEnteredAt || at[q.status];
   return at;
 }
@@ -41943,7 +42016,32 @@ function otPreviewSpec(id){
      on an order waiting for transport is to load it out, not to tell the
      client something they already know — so "Send the client an update"
      steps down to a ghost and the dialog still spends its oxide once. */
-  const loading = !!act && act.act === 'loaded';
+  /* ASKED WHEREVER THE PHONE ASKS IT. The form used to appear only when
+     the stage's own act was "loaded", which needs pickingStatus 'done'
+     -- a picker on the worker app. A shop with nobody on that app packs
+     at the desk, and orderLoadFormHTML says so in its own words ("Not
+     packed yet. Loading it from here counts it as picked and packed"),
+     but the console never showed the form that says it: an order that no
+     phone had touched reached Preparing and stopped there for ever, with
+     a lane head reading "You pack it, then you mark it out" and nothing
+     on the screen to mark it out with. So the dialog now carries exactly
+     what the phone's row carries, and the block decides for itself what
+     to say. */
+  const loadHtml = orderLoadFormHTML(q);
+  /* THE FORM IS THE MOVE while it is still asking who is carrying it --
+     that is when the dialog's one oxide belongs to its button and "Send
+     the client an update" steps down to a ghost. An order already out
+     with somebody named gets the same block as a statement of fact, and
+     its move is Delivered, in the footer where it has always been. */
+  const loading = !!loadHtml && (q.status === 'preparing' || orderNeedsDelivery(q));
+  /* What the footer offers. Never the form's own act -- the form's
+     button IS that act, and two of them would be two ways to do one
+     thing, one of which has no form attached. And never 'open', which
+     means "go to where the suppliers are": on the phone that is the
+     row and on the console it is this dialog, so in here it is a button
+     that reopens what you are already looking at. The suppliers are
+     below; the footer says nothing about them. */
+  const footAct = act && !loading && act.act !== 'open' ? act : null;
   const track = SQ_STATUS_ORDER.map((st, j)=>{
     const cls = j < i ? 'ow-on' : j === i ? 'ow-now' : '';
     const when = j < i ? otWhen(at[st]) : j === i ? `now · since ${otWhen(q.stageEnteredAt)}` : 'not yet';
@@ -41993,7 +42091,19 @@ function otPreviewSpec(id){
       </div>
       <div class="ow-dlg-cols">
         <div class="ow-dlg-col">
-          ${loading ? `<div class="ow-dlg-sect ow-dlg-load">${orderLoadFormHTML(q)}</div>` : ''}
+          ${loadHtml ? `<div class="ow-dlg-sect ow-dlg-load">${loadHtml}</div>` : ''}
+          ${/* THE SUPPLIERS, WHERE THE CONSOLE CAN REACH THEM. One line
+               per supplier still to come back, with the two taps: Ask,
+               which opens their WhatsApp with this order's lines already
+               written, and Confirmed, which is the answer. The phone has
+               had these inside the order's row from the start; the
+               console had them nowhere, so a Taken order could not be
+               moved on from a desk at all. Same call, same buttons. */''}
+          ${q.status === 'draft' && orderSupplierGroups(q).length ? `<div class="ow-dlg-sect">
+            <div class="ow-dlg-l">Suppliers</div>
+            <div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>
+            <div class="ow-dlg-ln-s">It moves itself to Buying the moment the last one is confirmed. Nothing is sent by this list — Ask opens WhatsApp and you press send there.</div>
+          </div>` : ''}
           <div class="ow-dlg-sect">
             <div class="ow-dlg-l">The lines</div>
             ${s.lines.map(l=> `<div class="ow-dlg-ln">
@@ -42043,10 +42153,15 @@ function otPreviewSpec(id){
           </div>
         </div>
       </div>`,
-    foot: `<div class="ow-dlg-n">Nothing here sends itself.${act ? ` ${esc(otMoveNote(q, act))}` : ''}</div>
+    foot: `<div class="ow-dlg-n">Nothing here sends itself.${
+      loading ? ` ${esc(otMoveNote(q, { act:'loaded' }))}` : footAct ? ` ${esc(otMoveNote(q, footAct))}` : ''}</div>
       ${otDlgGhost('cancel', 'Hold or cancel', ` data-id="${q.id}"`)}
-      ${q.announcedAt || q.status === 'draft' || (act && act.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
-      ${act && !loading ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(act.act)}" data-id="${q.id}">${esc(act.label)}</button>` : ''}`,
+      ${/* Announce steps back into the footer as a ghost whenever the
+           move itself has gone to the form above -- it used to be
+           suppressed BOTH ways at once on an order in Preparing, so the
+           only way to tell the group about it disappeared. */''}
+      ${q.announcedAt || q.status === 'draft' || (footAct && footAct.act === 'announce') ? '' : otDlgGhost('announce', 'Announce', ` data-id="${q.id}"`)}
+      ${footAct ? `<button type="button" class="btn ow-sm ow-ink" data-dlg="act" data-act2="${esc(footAct.act)}" data-id="${q.id}">${esc(footAct.label)}</button>` : ''}`,
   };
 }
 /* What the footer's move will actually do, said before it is pressed. */
@@ -42411,6 +42526,12 @@ function otDlgAct(act, el){
     case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
     case 'act': otAct(el.dataset.act2, id, el); otDlgDraw(); break;
+    /* THE SUPPLIER ACTS, in the dialog. The phone asks and confirms
+       inside the order's row; the console has no rows, so the order's
+       own dialog is where they are, and they come through here. Both
+       are redrawn: confirming the last supplier MOVES the order, and a
+       lane behind an open dialog must never still say Taken. */
+    case 'ask': case 'confirmed': case 'undoconfirm': otAct(act, id, el); after(); break;
     case 'cancel': cancelSavedQuote(id); otDlgDraw(); break;
     case 'announce': openAnnounceDialog(id); break;
     case 'tellclient': {
@@ -42657,7 +42778,13 @@ function otDecisionActs(q, need){
   if(q.status === 'draft' && orderSupplierGroups(q).length) secondary = { act:'preview', label:'Suppliers' };
   else if(q.status !== 'draft' && q.status !== 'completed' && !q.announcedAt && primary.act !== 'announce') secondary = { act:'announce', label:'Announce' };
   else secondary = { act:'preview', label:'Open the order' };
-  if(secondary.act === primary.act) secondary = { act:'preview', label:'Open the order' };
+  /* TWO BUTTONS THAT SAY ONE WORD ARE ONE BUTTON AND A BUG. The guard
+     compared only the act, so a Taken order whose move is "Suppliers"
+     shipped with "Suppliers" beside "Suppliers" -- and the old repair
+     handed back another 'preview', which is the thing it was meant to
+     replace. A dock with nothing sensible to put second puts nothing
+     second: one decision, one button. */
+  if(secondary.act === primary.act || secondary.label === primary.label) secondary = null;
   return { primary, secondary };
 }
 
@@ -42710,7 +42837,7 @@ function otDockHTML(needs){
         </div>
         <div class="ow-ot-now-r">
           <span class="ow-ot-now-v" title="What the client pays">${esc(otFig(savedQuoteTotal(q)))}</span>
-          <span class="ow-ot-now-a">${btn(secondary, 'btn-ghost')}${btn(primary, 'btn-accent')}</span>
+          <span class="ow-ot-now-a">${secondary ? btn(secondary, 'btn-ghost') : ''}${btn(primary, 'btn-accent')}</span>
         </div>
       </div>
       <div class="ow-ot-peek">
@@ -42945,11 +43072,27 @@ function otUnlinkChargeCost(btn){
   toast('Unlinked — the payment is still in the cash book, back under its own running cost');
 }
 
+/* WHICH OF THE TWO SCREENS IS ON.
+
+   Order tracking is two designs, not one reflowed (SKILL.md §1): above
+   820px the board and its dock, below it the phone's queue and rows.
+   Two acts -- "open it" and "say who has it" -- mean the ROW on the
+   phone and the order's own DIALOG on the console, and for a while they
+   only meant the row: on the console they marked a row open in a table
+   that is display:none there, so the board's own accent button did
+   nothing at all and a Taken order could never be moved on.
+
+   Read from the board's own computed display rather than from a width,
+   so this answer and the stylesheet's can never disagree. */
+function otConsoleShowing(){
+  const board = document.getElementById('ot_board');
+  return !!board && getComputedStyle(board).display !== 'none';
+}
 function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
   const sid = el && el.dataset ? el.dataset.sid : null;
   switch(act){
-    case 'open': otOpenRow(id); break;
+    case 'open': if(otConsoleShowing()) openOrderPreview(id); else otOpenRow(id); break;
     case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
     case 'announce': openAnnounceDialog(id); break;
     case 'ask': askOrderSupplier(id, sid); break;
@@ -42961,7 +43104,7 @@ function otAct(act, id, el){
     case 'buying': openBuyingList(); break;
     case 'pickups': openPickupRuns(); break;
     case 'runs': openDeliveryRuns(); break;
-    case 'loaded': otOpenRow(id); otFocusLoad(id); break;
+    case 'loaded': if(otConsoleShowing()) openOrderPreview(id); else { otOpenRow(id); otFocusLoad(id); } break;
     case 'loadgo': otLoadGo(id, el); break;
     case 'release': releaseOrderToQueue(id); break;
     case 'cancel': cancelSavedQuote(id); break;
