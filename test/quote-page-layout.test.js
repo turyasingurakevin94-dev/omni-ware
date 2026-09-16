@@ -443,7 +443,12 @@ const src = read('index.html');
     'the two-cell box is not drawn on the phone; the strip carries the figures');
   t.check(/figs\.innerHTML = `· costs you <b class="qp-sf-c">/.test(bar2) && /you keep <b class="qp-sf-k">/.test(bar2),
     'and the strip is written by the same render as the bar, from the same figures');
-  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Margin"\]\{display:none;\}/.test(src)
+  /* The third cell was [data-l="Margin"] and is [data-l="Keep"] -- the
+     column was renamed to the word the document uses. The rule is
+     otherwise the one it always was, and the thing it protects is
+     unchanged: the shop's cost and margin are not on screen with the
+     phone facing the client until the strip is opened. */
+  t.check(/\.q-doc \.q-line > \.q-shop-first,\.q-doc \.q-line > \[data-l="Buy @"\],\.q-doc \.q-line > \[data-l="Keep"\]\{display:none;\}/.test(src)
     && /body\.q-shop-open \.q-doc \.q-line > \.q-ph-shop\{display:flex;/.test(src),
     'a line’s shop side is not drawn until the strip opens it');
   const toggle = extractFunction(src, 'setShopSideOpen', 'index.html');

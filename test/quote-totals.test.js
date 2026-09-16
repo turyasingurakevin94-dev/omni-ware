@@ -115,22 +115,37 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\}<\/div>[\s\S]{0,200}?\$\{fmtUGX\(profit\)\}/.test(bar),
     'and so is what is left over, said to be about the items once it is only about them');
   /* A rule between the client's columns and the shop's, so no cost
-     figure sits in the run of client figures. */
-  /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
-     divider is the same rule on the same class, carried through the
-     header, every row and the foot. */
-  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
-    'the shop’s columns start behind a divider');
-  t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
+     figure sits in the run of client figures.
+
+     WAS: `border-left` on .q-shop-first, checked on the header cell,
+     every row and both document rows. The rule is still there and still
+     asserted -- but it is a GRID TRACK now, not a border on a cell, and
+     that is the point of the change rather than an incidental rewrite.
+     A border belongs to the cell that carries it, so the divider said
+     "the supplier column is different"; the document actually has two
+     SIDES -- five columns the client is buying against, three the shop
+     is buying on -- and a 1px track between them belongs to neither and
+     runs the full height of the row. The handoff draws it that way.
+
+     So: the track exists in the column definition, and every row that
+     spans the document emits a cell for it. A row that skipped it would
+     not merely lose a line, it would shift every cell after it one
+     column to the left, which is the failure this now catches and the
+     border version could not. */
+  t.check(/--ow-tbl-cols:[^;]*\b1px\b/.test(src),
+    'the shop’s columns start behind a divider, and it is a track of its own');
+  t.check(/\.q-doc \.q-tbl-rule\{[\s\S]{0,160}?background:/.test(src),
     'which is a real rule, not just a class name');
-  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
-    'and every row honours it');
+  const ruleCells = (t2) => (t2.match(/class="q-tbl-rule"/g) || []).length;
+  t.check(/<div class="ow-tbl-c q-shop-first">Buy from<\/div>/.test(items)
+    && ruleCells(items) === 2,
+    'and the header and every line honour it (header + row = ' + ruleCells(items) + ')');
   /* The divider runs the length of the document: the header, every
-     line, every charge, and the credit row all carry the class. The
-     foot that used to carry it is gone, so the document ends at the
-     add row and the rule ends with it. */
-  t.check(/<div class="ow-tbl-c q-shop-first"><\/div>/.test(extractFunction(src, 'chargeRowsHTML', 'index.html'))
-    && /<div class="ow-tbl-c q-shop-first"><\/div>/.test(extractFunction(src, 'creditRowHTML', 'index.html')),
+     line, every charge, and the credit row. The foot that used to carry
+     it is gone, so the document ends at the add row and the rule ends
+     with it. */
+  t.check(ruleCells(extractFunction(src, 'chargeRowsHTML', 'index.html')) === 1
+    && ruleCells(extractFunction(src, 'creditRowHTML', 'index.html')) === 1,
     'and a charge and the credit row carry the divider too, so the rule runs the length of the document');
 
   // The supplier copy is the shop's own document and must keep the cost.
@@ -223,9 +238,19 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'there is no second template for the phone');
   t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
     'the one row carries the client’s line total under its column name, which is the phone’s label');
-  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
+  /* WAS: Qty, Price each, Supplier, Buy @, Margin. Two of those columns
+     were renamed to the words the handoff's document uses, and one was
+     added. "Supplier" became "Buy from" and "Margin" became "Keep"
+     because both of the old words named the shop's RECORD of the thing
+     rather than the act: the rep is choosing who to buy from and reading
+     what the shop keeps, and those are the words said on the call. Unit
+     came out of the quantity cell into a column, so it needs a label
+     like any other cell that becomes a line on the card. */
+  ['Qty', 'Unit', 'Price each', 'Buy from', 'Buy @', 'Keep'].forEach((l) => {
     t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
   });
+  t.check(!/data-l="Supplier"/.test(items) && !/data-l="Margin"/.test(items),
+    'and the two words the document does not use are gone from the row');
   t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');
 }
 

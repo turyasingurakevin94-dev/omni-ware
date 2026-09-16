@@ -259,7 +259,12 @@ const add = (from, verb, to, qty, per, sizes)=> fns.addProductLink(from, verb, t
 
 /* ---- 9. the counters that now read a rule ---------------------------- */
 {
-  t.check(/id="q_rail_with"/.test(src), 'the quote rail has a place for what goes with a line');
+  /* WAS: id="q_rail_with", in the 304px rail beside the document. The
+     rail is gone from the console -- two of its four panels were the
+     document repeating itself -- and what goes with a line is one of the
+     two readings that survived, as a card under the table. Same render,
+     same wiring, new home. */
+  t.check(/id="q_adv_with"/.test(src), 'the quote has a place for what goes with a line');
   t.check(/pairCompanionsFor\(it\.productId, it\.variantIdx, Number\(it\.qty\)\|\|0,/.test(src),
     'and fills it through the one reading');
   t.check(/data-with="\$\{esc\(c\.productId\)\}"/.test(src), 'each companion offers itself as a line');

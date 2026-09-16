@@ -201,8 +201,17 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   t.check(/\(!asPack && packView\) \? `<span class="q-qty-pack"/.test(rows)
     && !/asPack \? `<span class="q-qty-pack"/.test(rows),
     'a carton count carries no "= 200 Pair" caption under it');
-  t.check(/--ow-tbl-cols:30px minmax\(0,1fr\) 88px 116px/.test(src),
-    'and the Qty track is wide enough for a count and its unit, Price each for a six-digit carton price and its reset arrow');
+  /* WAS: `30px minmax(0,1fr) 88px 116px` -- Qty at 88 because the unit
+     rode inside the quantity cell, and Price each at 116.
+
+     The unit is a COLUMN now (the document's own "Ctn" heading), so Qty
+     no longer has to be wide enough to hold a count AND a word: it is 74
+     for the count and its steppers, 58 for the unit beside it, and Price
+     each gained the difference at 118. What is being asserted is the
+     same thing -- that a six-digit carton price and its reset arrow fit
+     without the cell clipping -- measured against the tracks that exist. */
+  t.check(/--ow-tbl-cols:26px minmax\(0,1fr\) 74px 58px 118px/.test(src),
+    'and the Qty track holds the count, Unit the word beside it, Price each a six-digit carton price and its reset arrow');
 }
 
 /* ---- 4 & 5. the habit, and the list, say it the way it was bought ------ */

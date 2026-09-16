@@ -6187,6 +6187,21 @@
   /* The search dropdown and each row's supplier picker hang below the
      panel's edge on a short quote; a clipping panel would cut them. */
   .q-doc{overflow:visible;}
+  /* The document takes the whole content width. The rail that used to
+     hold the right 304px is gone from the console -- see the comment on
+     #q_rail in the markup -- and what it held that was worth keeping is
+     either on a row, in the client strip, or in .q-advice below. */
+  #tab-quote > .ow-grid{grid-template-columns:minmax(0,1fr);}
+  #tab-quote > .ow-grid > .ow-side{display:none;}
+  /* Build, check, act -- left to right, in the order the work meets
+     them. 1.5fr / 1fr because the first card carries prose and two
+     buttons and the second is usually one sentence and a count. */
+  .q-advice{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+    gap:var(--ow-sp-16);align-items:start;margin-top:var(--ow-sp-16);}
+  .q-advice .q-adv-card:empty{display:none;}
+  /* A card that has something to act on spans the row when it is the
+     only one with anything to say. */
+  .q-advice .q-adv-card{min-width:0;}
   /* The line-total track is minmax(112px, auto): a money column is
      sized to its content and never truncates, and with subgrid the
      foot's larger total sizes the same track for every row above it.
@@ -6198,7 +6213,48 @@
      reset arrow, so Price each is sized for that: money never truncates,
      and a box that showed "1650" of 165,000 was a wrong figure, not a
      short one. */
-  .q-doc .ow-tbl{--ow-tbl-cols:30px minmax(0,1fr) 88px 116px minmax(112px,auto) 156px 88px 76px;}
+  /* The handoff's ten tracks. Unit came out of the quantity cell into a
+     column of its own, and track 7 is a 1px RULE -- not a border on a
+     cell, a track -- which is what splits the client's side of the
+     document (what they are buying and what it costs them) from the
+     shop's (who it comes from, what it costs us, what is kept). A
+     border would have belonged to one side; the rule belongs to
+     neither. */
+  .q-doc .ow-tbl{--ow-tbl-cols:26px minmax(0,1fr) 74px 58px 118px 130px 1px 156px 112px 66px;}
+  .q-doc .q-tbl-rule{background:var(--ow-steel-100);align-self:stretch;width:1px;
+    margin:calc(var(--ow-sp-8) * -1) 0;}
+  .q-doc .ow-tbl-h .q-tbl-rule{margin:calc(var(--ow-sp-8) * -1) 0;}
+  /* The unit is a column on the console. It stays inside the quantity
+     stepper on the phone, where it is the affordance that says what you
+     are counting in, so it is hidden here and shown again below 820. */
+  .q-doc .q-line .q-qty-unit{display:none;}
+  .q-doc .q-unit-cell{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  /* What the shelf holds for this line, said on the line. It was a
+     panel in the rail saying the same thing one column further away
+     from the decision. Amber because it is a thing to do, not a fact. */
+  .q-doc .q-shelf-tag{display:inline-flex;align-items:center;height:20px;padding:0 var(--ow-sp-8);
+    margin-top:3px;border-radius:var(--ow-r-pill);background:var(--ow-amber-soft);
+    color:var(--ow-amber-ink);font-size:11px;font-weight:var(--ow-fw-700);white-space:nowrap;}
+  .q-doc .q-cheapest{margin-top:1px;font-size:11px;font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
+  /* A charge and the credit terms are DOCUMENT rows: part of what the
+     client pays, so they sit in the same table as the goods rather than
+     in a footer under it. The shop's side of such a row has no supplier
+     and no margin -- it says what kind of row it is instead. */
+  .q-doc .q-doc-side{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  /* THE FIGURES YOU CAN CHANGE SAY SO, AT REST.
+     Quantity, price each, buy @, and a charge's amount are the four
+     things a rep edits on a call. Until now they announced themselves
+     only on hover, which a rep who has never used the screen never
+     discovers, and never at all on a touch screen -- there is no hover
+     on a phone, so the affordance did not exist there.
+
+     A dashed underline is the document's own mark for a blank to be
+     filled. It is scoped to .q-doc deliberately: it means "this figure
+     is yours to change", and if every .ow-gi in the app wore it the mark
+     would stop meaning anything. On focus it goes solid, which is the
+     difference between "you can write here" and "you are writing here". */
+  .q-doc .ow-gi{border-bottom:1px dashed var(--ow-steel-400);}
+  .q-doc .ow-gi:focus{border-bottom-style:solid;}
   .q-doc .ow-tbl-h,.q-doc .ow-tbl-r,.q-doc .ow-tbl-f{gap:var(--ow-sp-8);}
   .q-doc .ow-tbl-r{padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);min-height:42px;}
   .q-doc .ow-tbl-r:hover{background:var(--ow-paper-2);}
@@ -6206,8 +6262,18 @@
      no cost figure can be read as a price. Stretched to the row and
      carried through the header and the foot, so it reads as one line
      down the document rather than a mark on each row. */
-  .q-doc .q-shop-first{align-self:stretch;display:flex;align-items:center;min-width:0;
-    border-left:1px solid var(--ow-rule);padding-left:var(--ow-sp-8);}
+  /* The shop's side of the row: who it comes from, and whether that is
+     already the best price the book knows at this quantity.
+
+     The border-left is GONE. It was this cell's own attempt to draw the
+     line between the client's side of the document and the shop's, and
+     a border belongs to the cell that carries it -- so the divider
+     started at the supplier and said "this column is different" rather
+     than "these five columns are one side and those three are the
+     other". Track 7 is a 1px rule that belongs to neither side, and it
+     runs the full height of the row. */
+  .q-doc .q-shop-first{align-self:stretch;display:flex;flex-direction:column;
+    justify-content:center;align-items:flex-start;gap:1px;min-width:0;}
   /* The gutter: the line's number, and on hover the way to remove it. */
   .q-gutter{display:flex;align-items:center;justify-content:center;min-width:0;}
   .q-row-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);min-width:14px;text-align:center;}
@@ -9196,6 +9262,10 @@
     #q_item_search{font-size:16px;}
     .q-item-search-hint{display:none;}
     .q-client-usual.show{display:none;}
+    /* The advice is a COLUMN on the phone. Two tracks of a 358px body
+       gives each card 170px, which wraps "Cheaper elsewhere" onto two
+       lines before it has said anything. */
+    .q-advice{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);margin-top:var(--ow-sp-12);}
     #q_itemsWrap{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
     /* The empty document names the next act and offers the usuals as
        lines a thumb can take. The keyboard hint is a desk's. */
@@ -9408,7 +9478,7 @@
     .q-rail-sec .ow-mini,.q-rail-sec .q-rail-note{padding:9px 16px 11px;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;border-top:0;}
     /* Cheaper elsewhere is a row a thumb can take; the console's note is not drawn. */
     .q-rail-sec .q-rail-ph{display:flex;width:100%;text-decoration:none;margin:0;cursor:pointer;}
-    #q_rail_cheaper .q-rail-note{display:none;}
+    #q_adv_cheaper .q-rail-note{display:none;}
     .q-rail-sec .q-rail-ph .ow-sr-v.ow-warn{color:var(--ow-amber-ink);}
     /* A line the shelf cannot cover reads in crimson, with what to do. */
     .q-rail-in{display:inline;margin-left:3px;color:inherit;}
@@ -9419,10 +9489,14 @@
     .q-doc .ow-tbl-h{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:0 var(--ow-sp-8);align-items:center;
       height:28px;padding:0 16px;background:var(--ow-paper-2);border-top:0;border-bottom:1px solid var(--ow-rule-soft);
       font-size:var(--ow-t-11);letter-spacing:.07em;}
-    .q-doc .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl-h > :nth-child(6),
-    .q-doc .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl-h > :nth-child(8){display:none;}
+    /* Qty, Unit, Price each, the rule, and all three of the shop's
+       columns. The console has ten tracks; the phone header keeps two --
+       the item and what the line comes to. */
+    .q-doc .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl-h > :nth-child(5),
+    .q-doc .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl-h > :nth-child(8),
+    .q-doc .ow-tbl-h > :nth-child(9),.q-doc .ow-tbl-h > :nth-child(10){display:none;}
     .q-doc .ow-tbl-h > .q-shop-first{display:none;}
-    .q-doc .ow-tbl-h > :nth-child(5){justify-self:end;}
+    .q-doc .ow-tbl-h > :nth-child(6){justify-self:end;}
     /* THE LINE, 54px: number, name, total; under them the count and the
        price as dotted taps, and who it is from. */
     .q-doc .ow-tbl-r.q-line{display:grid;grid-template-columns:22px minmax(0,1fr) auto;column-gap:var(--ow-sp-8);row-gap:1px;
@@ -9447,7 +9521,14 @@
     /* The controls, the supplier column and the shop's cells are not
        drawn until the row opens or the strip does. */
     .q-doc .q-line > .q-ph-ctl{display:none;}
-    .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Margin"]{display:none;}
+    .q-doc .q-line > .q-shop-first,.q-doc .q-line > [data-l="Buy @"],.q-doc .q-line > [data-l="Keep"]{display:none;}
+    /* The rule is a console track. Below 820 the row is a card and there
+       is no second side to divide off. */
+    .q-doc .q-line > .q-tbl-rule,.q-doc .ow-tbl-h .q-tbl-rule{display:none;}
+    /* And the unit goes back inside the stepper, where it says what the
+       number in the box is counting. */
+    .q-doc .q-line .q-qty-unit{display:inline;}
+    .q-doc .q-ph-ctl > .q-unit-cell{display:none;}
     .q-line .q-remove-icon{display:none;}
     .q-doc .q-line > .q-ph-shop{display:none;}
     body.q-shop-open .q-doc .q-line > .q-ph-shop{display:flex;align-items:center;gap:var(--ow-sp-4);grid-column:2/-1;grid-row:3;min-width:0;
@@ -16995,12 +17076,23 @@
           <div id="q_itemsWrap"></div>
         </div>
 
-        <!-- ============ THE CONTEXT RAIL ============
-             Three readings of what the books already hold about this
-             quote: beside the work on the console, below it on the
-             phone. Nothing is computed for the rail -- each panel reads
-             a derivation another screen already owns. See
-             renderQuoteRail. -->
+        <!-- ============ WHAT THE BOOKS SAY ABOUT THIS QUOTE ============
+             This was a 304px rail of four panels beside the document.
+             Two of them were the document repeating itself: "Stock to
+             cover it" said of a line what the line can say on itself,
+             and "Last order" said what the client strip already states.
+             Those two are gone -- the shelf is a tag on the row, the
+             last order is a cell of the strip -- and the table took the
+             304px back.
+
+             What is left is the two readings that are genuinely ABOUT
+             the quote rather than in it, and they read left to right
+             under the document, in the order the work meets them:
+             build, check, act. See renderQuoteRail, which still fills
+             them, and q_advice below, which is where they are drawn.
+
+             This container survives for the phone's Details pane and
+             for the client's standing, which has no other home. -->
         <div class="ow-side" id="q_rail">
           <!-- ONE panel, four readings, each ruled off by its own 34px
                header. Four separate panels spent three gaps and six
@@ -17013,12 +17105,20 @@
                  the console has them on the band and never draws this. -->
             <div class="q-rail-sec q-rail-facts" id="q_rail_facts"></div>
             <div class="q-rail-sec" id="q_rail_client"></div>
-            <div class="q-rail-sec" id="q_rail_cheaper"></div>
-            <div class="q-rail-sec" id="q_rail_stock"></div>
-            <div class="q-rail-sec" id="q_rail_with"></div>
-            <div class="q-rail-sec" id="q_rail_last"></div>
           </div>
         </div>
+      </div>
+      <!-- THE ADVICE ROW. Two cards, full content width, under the
+           document. "Goes with it" is the only one of the four that ever
+           says something the document does not already say, so it is the
+           one that carries buttons; "Cheaper elsewhere" is a read-out of
+           the sweep and is usually a reassurance ("0 of 2"). A third
+           card joins them only when a line is short and the shop has
+           written down what it uses instead. -->
+      <div class="q-advice" id="q_advice">
+        <div class="ow-pan q-adv-card" id="q_adv_with"></div>
+        <div class="ow-pan q-adv-card" id="q_adv_cheaper"></div>
+        <div class="ow-pan q-adv-card" id="q_adv_swap"></div>
       </div>
 
       <!-- The money and the actions, fused and always at hand. The total
@@ -37455,6 +37555,27 @@ function renderQuoteItems(){
     const per = asPack ? packView.packQty : 1;
     const countUnit = asPack ? packView.packUnit : (it.unit || '');
     const qtyShown = asPack ? packView.packs : it.qty;
+    /* WHAT THE SHELF HOLDS FOR THIS LINE, on the line. This was a panel
+       in the rail -- one column away from the decision it informs -- and
+       it is a property of the row, so it belongs on the row. Said only
+       when the shelf cannot cover the count: a line the shelf covers has
+       nothing to report, and a tag on every row would mark nothing. */
+    const shelfQty = it.productId ? getStockQty(it.productId, it.variantIdx==null?null:it.variantIdx) : 0;
+    const fromShelf = it.supplierId === '__stock__';
+    const shortBy = qty - shelfQty;
+    const shelfTag = (it.productId && shortBy > 0)
+      ? `<span class="q-shelf-tag">${Number(shelfQty).toLocaleString('en-UG')} on the shelf &middot; ${
+          fromShelf ? `${Number(shortBy).toLocaleString('en-UG')} short` : `buy ${Number(shortBy).toLocaleString('en-UG')} in`}</span>`
+      : '';
+    /* And whether the supplier on the row is already the best price the
+       book knows at THIS quantity. The rail's "cheaper elsewhere" asks
+       the same question of the same function; this says the answer where
+       the supplier is chosen, and the card below says it for the quote. */
+    const bestAtQty = (it.productId && !fromShelf)
+      ? (rankedPurchaseRowsAtQty(it.productId, it.variantIdx==null?null:it.variantIdx, qty).find(r=> r.purchasePrice!=null) || null)
+      : null;
+    const cheapestSub = (bestAtQty && String(bestAtQty.supplierId)===String(it.supplierId))
+      ? `<span class="q-cheapest">Cheapest that has it</span>` : '';
     const manual = it.sellPrice!=null && it.sellPrice!=='';
     const sellCellHTML = `<div class="q-sell-cell">
         <input type="number" class="ow-gi price-input q-sell${manual?' q-sell-manual':''}" min="0" step="any" value="${Math.round(sell * per)}" aria-label="Price each" title="${manual?'Set by hand — the arrow puts the suggested price back':'Suggested price — edit to override'}${countUnit ? ` — per ${esc(countUnit)}` : ''}">
@@ -37468,7 +37589,7 @@ function renderQuoteItems(){
       </div>
       <div class="ow-tbl-c q-name-cell">
         <span class="ow-tbl-p" title="${esc(it.productName)}">${esc(it.productName)}</span>
-        <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span><span class="ow-tbl-s q-item-sup-ph" title="${esc(supLabel)}">· ${esc(supLabel)}</span>${consignTag}</span>
+        <span class="q-item-sub"><span class="ow-tbl-s q-item-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</span><span class="ow-tbl-s q-item-sup-ph" title="${esc(supLabel)}">· ${esc(supLabel)}</span>${consignTag}</span>${shelfTag}
       </div>
       <div class="q-ph-ctl"><div class="ow-tbl-n" data-l="Qty"><div class="q-qty-cell"><button type="button" class="q-rstp" data-stp="-1" aria-label="One less">&minus;</button><input type="number" class="ow-gi qty-input q-qty" min="0" step="any" value="${qtyShown}" aria-label="Quantity${countUnit ? ` in ${esc(countUnit)}` : ''}"><span class="q-qty-unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : (countUnit ? `Counted in ${esc(countUnit)}` : '')}">${esc(countUnit)}</span><button type="button" class="q-rstp" data-stp="1" aria-label="One more">+</button></div>${
         /* A count in cartons is a count in cartons: no "= 200 Pair"
@@ -37477,11 +37598,13 @@ function renderQuoteItems(){
            the choice was recorded, with a remainder -- still says what
            the document will fold it into. */
         (!asPack && packView) ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
+      <div class="ow-tbl-c q-unit-cell" data-l="Unit" title="${asPack ? `${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}` : ''}">${esc(countUnit)}</div>
       <span class="q-ph-x">&times;</span><div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div></div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
-      <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
+      <span class="q-tbl-rule" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first" data-l="Buy from">${supplierPickerHTML}${cheapestSub}</div>
       <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
-      <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
+      <div class="ow-tbl-n" data-l="Keep"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%<span class="q-mp-kept">${lineSell - lineCost > 0 ? ` · ${esc(fmtUGX(lineSell - lineCost))}` : ' · nothing kept'}</span></span></div>
       <!-- THE PHONE'S SECOND LINE: the count and the price as dotted
            taps that open the row's controls, and who it is from. And a
            third line, behind the shop strip, saying what the shop pays
@@ -37551,11 +37674,13 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-gutter"></div>
       <div class="ow-tbl-c">Item</div>
       <div class="ow-tbl-n">Qty</div>
+      <div class="ow-tbl-c">Unit</div>
       <div class="ow-tbl-n">Price each</div>
       <div class="ow-tbl-n">Line total</div>
-      <div class="ow-tbl-c q-shop-first">Supplier</div>
+      <span class="q-tbl-rule" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first">Buy from</div>
       <div class="ow-tbl-n">Buy @</div>
-      <div class="ow-tbl-n">Margin</div>
+      <div class="ow-tbl-n">Keep</div>
     </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}
   </div>`;
 
@@ -37716,11 +37841,17 @@ function renderQuoteItems(){
    must never do. */
 function renderQuoteRail(){
   const clientEl = document.getElementById('q_rail_client');
-  const cheaperEl = document.getElementById('q_rail_cheaper');
-  const withEl = document.getElementById('q_rail_with');
-  const stockEl = document.getElementById('q_rail_stock');
-  const lastEl = document.getElementById('q_rail_last');
-  if(!clientEl || !cheaperEl || !withEl || !stockEl || !lastEl) return;
+  /* These two moved out of the rail and under the document -- see the
+     comment on #q_rail. They keep their render and their wiring; only
+     the element they are written into changed. */
+  const cheaperEl = document.getElementById('q_adv_cheaper');
+  const withEl = document.getElementById('q_adv_with');
+  /* What the shop uses instead of a line the shelf cannot cover. This
+     was the tail of the "Stock to cover it" panel, and it is the one
+     part of that panel the row's own tag cannot carry: a tag states the
+     shortfall, it cannot offer a swap. */
+  const swapEl = document.getElementById('q_adv_swap');
+  if(!clientEl || !cheaperEl || !withEl || !swapEl) return;
   /* Whether any section is warning -- a cheaper supplier, a line the
      shelf cannot cover -- for the dot on the phone's Details tab. */
   let railWarn = false;
@@ -37865,12 +37996,14 @@ function renderQuoteRail(){
     });
   }
 
-  /* ---- stock to cover it ---- */
+  /* ---- what the shop uses instead ----
+     The shelf count itself is on the row now, as a tag, which is where
+     the decision about it is made. What a tag cannot do is OFFER
+     something, so the substitute the owner has already written down for
+     a line the shelf cannot cover is drawn here, and nowhere else. */
   {
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Stock to cover it</span>${items.length ? `<span class="ow-pan-n">${items.length} line${items.length===1?'':'s'}</span>` : ''}</div>`;
     let body = '';
-    if(!items.length) body = `<p class="ow-mini">Add a line and the shelf count sits beside it.</p>`;
-    else {
+    if(items.length){
       const rows = items.map(it=>{
         const qty = Number(it.qty)||0;
         const shelf = it.productId ? getStockQty(it.productId, it.variantIdx==null?null:it.variantIdx) : 0;
@@ -37879,10 +38012,8 @@ function renderQuoteRail(){
         const short = it.supplierId==='__stock__' && shelf < qty;
         return { it, qty, shelf, short };
       });
-      body = rows.map(r=> `<div class="ow-sr${r.short ? ' q-sr-short' : ''}"><span class="ow-sr-k" title="${esc(r.it.productName)}">${esc(r.it.productName)}</span><span class="ow-sr-v">${n(r.qty)} / ${r.short ? '<span class="ow-fig ow-warn">'+n(r.shelf)+'</span><span class="ow-u q-rail-in">order in</span>' : n(r.shelf)}</span></div>`).join('');
       const shorts = rows.filter(r=>r.short);
       if(shorts.length) railWarn = true;
-      if(shorts.length) body += `<p class="ow-mini">${shorts.map(r=> esc(r.it.productName)+' is <span class="ow-fig ow-warn">'+n(r.qty-r.shelf)+' short</span> on the shelf').join('; ')}. Order the balance with this quote or the delivery splits.</p>`;
       /* A line the shelf cannot cover, and something the owner has
          already written down as its swap. Offered as a swap of the
          line, at the quantity already quoted -- never applied. */
@@ -37893,10 +38024,14 @@ function renderQuoteRail(){
         body += `<div class="q-rail-note"><b>${esc(sub.label)}</b> is what you wrote down instead of ${esc(r.it.productName)}, and the shelf has <span class="ow-fig">${n(sub.stock)}</span>.<div><button type="button" class="q-rail-act" data-swap="${r.it.lineId}" data-sid="${esc(sub.productId)}" data-sv="${sub.variantIdx == null ? '' : sub.variantIdx}" data-sp="${sub.price}">Swap line ${rows.indexOf(r)+1} to ${esc(briefShortName(sub.label))}</button></div></div>`;
       });
     }
-    stockEl.innerHTML = head + body;
+    /* No head and no card at all when there is nothing to offer: an
+       empty panel saying "nothing to swap" is a row of chrome reporting
+       that the shop is fine, which the quote already implies. */
+    swapEl.innerHTML = body
+      ? `<div class="ow-pan-h"><span class="ow-pan-t">What you use instead</span></div>` + body : '';
     /* The swap keeps the quantity and changes what the line IS: the
        product, its size, its name, its unit and both its figures. */
-    stockEl.querySelectorAll('.q-rail-act').forEach(btn=>{
+    swapEl.querySelectorAll('.q-rail-act').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const it = data.quote.items.find(x=> String(x.lineId) === String(btn.dataset.swap));
         if(!it) return;
@@ -37921,30 +38056,22 @@ function renderQuoteRail(){
     });
   }
 
-  /* ---- last order ----
-     What this client took last time, line by line, as the books wrote
-     it: the same filtered list the band counts, the figure the client
-     was actually billed. Three lines, and how many more. */
-  {
-    const orders = nameLower ? data.savedQuotes.filter(q=>
-      !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId) : [];
-    const last = orders.reduce((best,q)=> (!best || String(q.savedAt||'') > String(best.savedAt||'')) ? q : best, null);
-    if(!last){ lastEl.innerHTML = ''; }
-    else {
-      const lines = last.items || [];
-      const head = `<div class="ow-pan-h"><span class="ow-pan-t">Last order</span><span class="ow-pan-n">${esc(fmtDayMonth(String(last.savedAt || last.date || '').slice(0,10)))}</span></div>`;
-      const body = lines.slice(0, 3).map(it=>{
-        const q2 = quoteLineQtyText(it);
-        return `<div class="ow-sr"><span class="ow-sr-k" title="${esc(it.productName)}">${esc(it.productName)} · ${esc(q2.text)}</span><span class="ow-sr-v">${n((Number(it.qty)||0) * quoteItemSellPrice(it))}</span></div>`;
-      }).join('') + (lines.length > 3 ? `<p class="ow-mini">${lines.length - 3} more line${lines.length - 3 === 1 ? '' : 's'} on it.</p>` : '');
-      lastEl.innerHTML = head + body;
-    }
-  }
+  /* ---- last order: DELETED, and this is where it was ----
+     It drew the client's previous order line by line in a panel beside
+     the document. The client strip states that order -- its date, its
+     figure and what was on it -- three columns to the left of where
+     this panel sat, and a fact said twice is a fact the reader has to
+     check against itself. The strip won because it is on screen before
+     the first line is added, which is when the question ("what did they
+     take last time?") is actually asked.
+
+     Nothing else read this. renderClientHistoryBox owns the fact now.
+     See the handoff's decision 1. */
 
   /* The phone's Details tab: how many sections have something to say,
      and whether any of it is a warning. */
   const tabN = document.getElementById('q_tab_n_details');
-  if(tabN) tabN.textContent = String([clientEl, cheaperEl, stockEl, withEl, lastEl].filter(el=> el.innerHTML.trim()).length);
+  if(tabN) tabN.textContent = String([clientEl, cheaperEl, swapEl, withEl].filter(el=> el && el.innerHTML.trim()).length);
   const dot = document.getElementById('q_tab_dot');
   if(dot) dot.hidden = !railWarn;
 }
@@ -38001,6 +38128,7 @@ function chargeRowsHTML(q, goodsTotal){
         <span class="q-item-sub"><span class="ow-tbl-s q-item-unit">Charge${isPercent ? ' &middot; % of items' : ''}</span></span>
       </div>
       <div class="ow-tbl-n"></div>
+      <div class="ow-tbl-c"></div>
       <div class="ow-tbl-n" data-l="${isPercent ? 'Rate' : 'Amount'}"><div class="q-sell-cell">
         <input type="number" class="ow-gi" data-chg-val="${i}" min="0" step="any"
           value="${Number(ch.value) > 0 ? Number(ch.value) : ''}"
@@ -38009,7 +38137,8 @@ function chargeRowsHTML(q, goodsTotal){
         isPercent ? '<span class="q-chg-pct">%</span>' : ''}</div></div>
       <div class="ow-tbl-n${isPercent ? '' : ' q-chg-same'}" data-l="${isPercent ? 'Comes to' : 'Line total'}" title="What this charge adds to the client's bill">${
         amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
-      <div class="ow-tbl-c q-shop-first"></div>
+      <span class="q-tbl-rule" aria-hidden="true"></span>
+      <div class="ow-tbl-c q-shop-first q-doc-side">Charged on</div>
       <div class="ow-tbl-n"></div>
       <div class="ow-tbl-n"></div>
     </div>`;
@@ -38070,13 +38199,15 @@ function creditRowHTML(q, cash){
         esc(fmtUGX(cash)).replace(/ /g, '&nbsp;')}</span></span>
     </div>
     <div class="ow-tbl-n"></div>
+    <div class="ow-tbl-c"></div>
     <div class="ow-tbl-n" data-l="Rate"><div class="q-sell-cell">
       <input type="number" class="ow-gi" data-cr-pct="1" min="0" step="any" value="${Number(t.pct)}"
         aria-label="What the credit on this order costs, as a percent">
       <span class="q-chg-pct">%</span></div></div>
     <div class="ow-tbl-n" data-l="Comes to" title="What waiting for this money adds to the client's bill">${
       amount > 0 ? `<span class="ow-fig">${esc(fmtUGX(amount))}</span>` : '<span class="ow-fig" style="color:var(--ow-ink-400);">&mdash;</span>'}</div>
-    <div class="ow-tbl-c q-shop-first"></div>
+    <span class="q-tbl-rule" aria-hidden="true"></span>
+    <div class="ow-tbl-c q-shop-first q-doc-side">Terms</div>
     <div class="ow-tbl-n"></div>
     <div class="ow-tbl-n"></div>
   </div>`;
