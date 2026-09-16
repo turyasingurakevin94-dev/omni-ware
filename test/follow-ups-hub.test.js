@@ -527,8 +527,20 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
     'the counts that would read 0 are folded into one sentence, and named only when they are not 0');
   t.check(/om-kpi-w/.test(kpis) && !/om-kpi-f[\s\S]{0,400}Everything else is clear/.test(kpis),
     'and that card carries a reading rather than a figure — a 0 on it would put back what it was made to remove');
-  t.check(/>\$\{rows\.length\}</.test(kpis),
+  /* AND IT IS COUNTED WHERE IT IS SHOWN. This read `rows.length` — every
+     hub row — which was right while Telling was a lens over those same
+     rows: whichever of the two you opened, the whole count was in front
+     of you. Telling ranks on the opposite of what Money ranks on, so it
+     has an engine and a body of its own now, and the card was left
+     reporting a number no list on the screen draws: 3 over a list of 1.
+     A figure and the rows beneath it disagreeing about the same thing is
+     the Debtors bug this app was rebuilt to remove. It is the money
+     queue's own count, and the claim it was making is unchanged — one
+     row a person, however many reasons they have. */
+  t.check(/>\$\{money\.length\}</.test(kpis),
     'the obligation is counted once, as people rather than as reasons — the lens above says which kind it is');
+  t.check(/telling\.length \? `\$\{telling\.length\} worth telling, on the Telling lens`/.test(kpis),
+    'and the words the other lens holds are NAMED on the card beside it, so "everything else is clear" is never said over three unsent messages');
   t.check(/Worth telling/.test(extractDeclaration(src, 'FUP_WHY', 'index.html')),
     'the absorbed screen’s name is still spoken, on the lens that narrows the queue by why');
 }
