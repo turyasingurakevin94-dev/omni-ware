@@ -114,6 +114,16 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
      set is the genuinely bad case rather than a busy one. */
   t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : ''\)/.test(render),
     'crimson only on the tile that is genuinely bad, and only when it is not empty');
+  /* A LANE HEAD IS A COUNT OF THE LANE, and while a search is on that is
+     what the lane is showing. Four of the five already were; Delivered
+     added the earlier ones on top, and those are never searched -- so a
+     search matching nothing left a head reading 26 directly above the
+     sentence "No order in this lane matches the search". The strip
+     stays a count of the whole board, which is the opposite rule and
+     the one above pins it. */
+  t.check(/tail: searching \? 0 : tail,/.test(render)
+    && /invoiced: s === 'completed' \? shown\.filter\(q=> q\.invoiced\)\.length : 0,/.test(render),
+    'and a lane counts what it is showing once a search narrows it, the earlier ones included');
   t.check(!/'ow-warn'/.test(render.slice(render.indexOf('put(strip,'), render.indexOf('put(dock,'))),
     'and nothing else in the strip is tinted at all');
   /* AND IT SAYS SO WHEN IT CANNOT SAY. With no stage limit set in

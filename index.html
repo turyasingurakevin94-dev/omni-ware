@@ -42607,7 +42607,16 @@ function otDlgAct(act, el){
        are redrawn: confirming the last supplier MOVES the order, and a
        lane behind an open dialog must never still say Taken. */
     case 'ask': case 'confirmed': case 'undoconfirm': otAct(act, id, el); after(); break;
-    case 'cancel': cancelSavedQuote(id); otDlgDraw(); break;
+    case 'cancel': {
+      cancelSavedQuote(id);
+      /* Off the board, so off the screen. Leaving the dialog up over a
+         board that no longer lists the order invites a second act on
+         something that has already gone. A declined confirm changes
+         nothing, so the dialog stays and simply redraws. */
+      const gone = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
+      if(gone && gone.voided) otDlgClose(); else otDlgDraw();
+      break;
+    }
     case 'announce': openAnnounceDialog(id); break;
     case 'tellclient': {
       if(!q) break;
@@ -43054,9 +43063,17 @@ function renderSavedQuotes(){
       rows = today;
     }
     const shown = rows.filter(q=> otOrderMatches(q, tokens));
-    return otLaneHTML(s, shown, { queued, tail,
-      invoiced: s === 'completed' ? rows.filter(q=> q.invoiced).length : 0,
-      searching: !!tokens.length && !shown.length && !!rows.length });
+    /* WHILE A SEARCH IS ON, A LANE COUNTS WHAT IT IS SHOWING. The other
+       four already did; Delivered added the earlier ones on top, and
+       they are not searched at all -- so a search that matched nothing
+       left a lane head reading 26 over the sentence "No order in this
+       lane matches the search". The strip is the count of the whole
+       board and stays one, deliberately; a lane head is a count of the
+       lane, and a lane showing nothing has nothing in it. */
+    const searching = !!tokens.length;
+    return otLaneHTML(s, shown, { queued, tail: searching ? 0 : tail,
+      invoiced: s === 'completed' ? shown.filter(q=> q.invoiced).length : 0,
+      searching: searching && !shown.length && !!rows.length });
   }).join(''));
 
   /* ---- THE PHONE'S OWN SCREEN, from the same derivations ---------- */
@@ -43741,25 +43758,41 @@ window.addEventListener('resize', ()=>{
    the one that isn't. */
 function voidInvoicesWarning(quotes){
   if(!quotes || !quotes.length) return null;
-  const n = quotes.length;
+  /* NO DOCUMENT, NO QUESTION ABOUT ONE.
+
+     `voided` is also how a CANCELLED order leaves the board, and an
+     order cancelled in Taken or Buying has never been billed. Asked
+     about those, this wrote "Void INV-0001? Sarah Namono stops owing
+     164,000 UGX" -- a document that was never raised and a debt that
+     was never booked -- and it came up as a second dialog, directly
+     after the cancel question the board had already asked and answered.
+     Two dialogs for one act, the second of them untrue, on the ordinary
+     way to kill an order taken by mistake.
+
+     Voiding something that HAS been billed asks exactly as before, and
+     the figures below are read off the billed ones only, so a mixed
+     selection cannot report a balance no invoice carries. */
+  const billed = quotes.filter(q=> q && q.invoiced);
+  if(!billed.length) return null;
+  const n = billed.length;
   const it = n === 1 ? 'it' : 'them';
-  const owed = quotes.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
-  const held = quotes.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
+  const owed = billed.reduce((sum, q)=> sum + invoiceBalanceDue(q), 0);
+  const held = billed.reduce((sum, q)=> sum + (Number(q.amountPaid)||0), 0);
   const head = n === 1
-    ? `Void ${invoiceNumberLabel(quotes[0])}?`
+    ? `Void ${invoiceNumberLabel(billed[0])}?`
     : `Void ${n} invoices?`;
   /* One document is named to its customer, because that is who the shop
      is about to stop billing. Several are not: three invoices can all
      belong to one person, and "Customers stop owing" would be the dialog
      inventing a plurality it has not checked. */
-  const who = (quotes[0].client && quotes[0].client.name) || 'The customer';
+  const who = (billed[0].client && billed[0].client.name) || 'The customer';
   const stops = owed <= 0.5
     ? `Nothing is still owed on ${it}, so no balance changes.`
     : n === 1
       ? `${who} stops owing ${fmtUGX(Math.round(owed))}.`
       : `That takes ${fmtUGX(Math.round(owed))} off what customers owe you.`;
   const goods = `\n\nThe goods stay off the shelf — voiding cancels the bill, not the sale. If they never left the shop, undo the invoice instead.`;
-  const takings = quotes.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
+  const takings = billed.reduce((c, q)=> c + ((q.payments && q.payments.length) || 0), 0);
   const money = held > 0.5
     ? `\n\n${fmtUGX(Math.round(held))} already received stays recorded against ${it} and stays in the Cash Book. The register will keep saying so until ${
         takings === 1 ? 'the payment is' : 'those payments are'} removed.`

@@ -210,4 +210,49 @@ if (fns) {
   confirmAnswer = true;
 }
 
+/* ---------- the ask itself: no document, no question about one ------- */
+{
+  /* `voided` is also how a CANCELLED order leaves the board, and an
+     order cancelled in Taken or Buying has never been billed. Asked
+     about one of those, this wrote "Void INV-0001? Nakato stops owing
+     164,000 UGX" -- naming a document that was never raised and a debt
+     that was never booked -- and it arrived as a SECOND dialog, straight
+     after the cancel question the board had already asked and answered.
+     Two dialogs for one act, and the second of them untrue.
+
+     What it must still do, unchanged, is ask about a real invoice. */
+  const NAMES2 = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderCreditTerms', 'orderCreditCharge',
+    'savedQuoteCashTotal', 'orderChargesTotal', 'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue',
+    'voidInvoicesWarning'];
+  let warn = null, e2 = null;
+  try {
+    warn = compileScope(NAMES2.map((n) => extractFunction(src, n, 'index.html')),
+      { data: store, invoiceNumberLabel: (q) => `INV-${String(q.id).padStart(4, '0')}`,
+        fmtUGX: (n) => `${Number(n).toLocaleString('en-US')} UGX` }, NAMES2).voidInvoicesWarning;
+  } catch (e) { e2 = e; }
+  t.check(!!warn, `voidInvoicesWarning compiles${e2 ? ` (${e2.message})` : ''}`);
+
+  if (warn) {
+    const order = (over) => Object.assign({ id: 1, client: { name: 'Nakato' }, amountPaid: 0, payments: [],
+      items: [{ qty: 4, sellPrice: 41000 }] }, over || {});
+    t.check(warn([order()]) === null,
+      'an order that was never billed raises no question about voiding an invoice');
+    t.check(warn([order(), order({ id: 2 })]) === null, 'nor do several of them');
+    t.check(warn([]) === null && warn(null) === null, 'and nothing to void asks nothing');
+
+    const real = warn([order({ invoiced: true })]);
+    t.check(typeof real === 'string' && /INV-0001/.test(real) && /Nakato stops owing/.test(real),
+      'a real invoice is still named, with who stops owing what');
+    t.check(/goods stay off the shelf/.test(real),
+      'and still says voiding cancels the bill rather than the sale');
+
+    /* A MIXED SELECTION READS OFF THE BILLED ONES. Counting the rest
+       would report a balance no invoice carries -- the same invention,
+       one selection wider. */
+    const mixed = warn([order(), order({ id: 2, invoiced: true }), order({ id: 3 })]);
+    t.check(typeof mixed === 'string' && /INV-0002/.test(mixed),
+      'and a mix asks about the one that exists, not about all three');
+  }
+}
+
 process.exit(t.done() ? 1 : 0);
