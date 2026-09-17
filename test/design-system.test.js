@@ -147,7 +147,13 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .info-banner.warn's was #FFF6E8 -- two hand-written caution
        creams one rgb unit apart, which no eye has ever told apart.
        They are one cream now. */
-    'distinct colours': [103, /#[0-9A-Fa-f]{6}\b/g],
+    /* 102, not 103: the buying list's verdict block carried #BFD9D1 and
+       #E7C3BF, two hand-written keylines that existed only to edge a
+       tinted panel saying the same three figures the round's own strip
+       says. The panel went when the list became a set of place cards;
+       one of its two keylines was already spent elsewhere, the other
+       was not. */
+    'distinct colours': [102, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

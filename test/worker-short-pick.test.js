@@ -655,16 +655,20 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
     {
       const admin = read('index.html');
 
-      t.check(/<p class="ps-credit" id="pickShortCredit" style="display:none;"><\/p>/.test(admin),
+      t.check(/<p class="ow-pk-n" id="pickShortCredit" hidden><\/p>/.test(admin),
         'the modal has somewhere to say it, hidden until there is something to say');
-      t.check(/const owed = paid - amendedTotal;/.test(admin),
+      t.check(/const owed = paid - c\.picked\.total;/.test(admin),
         'which is what has been paid less what the amended order comes to');
       // Scoped to the line it guards. `if(owed > 0){` on its own also matches
       // the agent-prepayment path further up the file, so the bare pattern
       // passes even with this one's guard removed.
-      t.check(/if\(owed > 0\)\{\s*[\r\n]+\s*creditEl\.textContent =/.test(admin),
+      /* AND ONLY AGAINST THE CHOICE THAT WOULD CREATE IT. The credit
+         exists if the order is amended down; standing by the ordered
+         quantities creates none, so saying it there is a warning about
+         something that is not going to happen. */
+      t.check(/if\(owed > 0 && pendingShortPick === 'picked'\)\{\s*[\r\n]+\s*creditEl\.textContent =/.test(admin),
         'and it only appears when that is money the shop would be holding');
-      t.check(/creditEl\.style\.display = 'none';/.test(admin),
+      t.check(/creditEl\.hidden = true;/.test(admin),
         'and is hidden again otherwise, rather than left over from a previous order');
 
       // The clamp this is compensating for, so the reason stays pinned to
@@ -681,8 +685,8 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
 
       // Oxide, not the amber the shortfall itself uses: the shortfall is a
       // decision to take, this is a consequence to carry away.
-      t.check(/\.ps-credit\{[^}]*background:var\(--ow-oxide-soft\);color:var\(--ow-oxide-deep\);/.test(admin),
-        'and it is coloured apart from the shortfall lines above it');
+      t.check(/\.ow-pk-n\{[^}]*background:var\(--ow-oxide-soft\);color:var\(--ow-oxide-deep\);/.test(admin),
+        'and it is coloured apart from the two choices above it');
     }
 
     process.exit(t.done() ? 1 : 0);

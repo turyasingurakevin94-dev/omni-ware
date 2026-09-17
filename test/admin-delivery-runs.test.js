@@ -303,21 +303,27 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     esc: (s2) => String(s2 == null ? '' : s2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     otFig: (n) => Number(n || 0).toLocaleString('en-US'),
     otDayName: () => 'Monday',
-    otDlgGhost: (a, label) => `<button data-dlg="${a}">${label}</button>`,
-    otDlgPrimary: (a, label) => `<button class="btn-accent" data-dlg="${a}">${label}</button>`,
+    /* The third argument is the button's own data and title, which is
+       where the runs dialog now says what closing a run does. A stub
+       that dropped it hid that from every assertion below. */
+    otDlgGhost: (a, label, ds) => `<button data-dlg="${a}"${ds || ''}>${label}</button>`,
+    otDlgPrimary: (a, label, ds) => `<button class="btn-accent" data-dlg="${a}"${ds || ''}>${label}</button>`,
   }, ['otRunsSpec']).otRunsSpec();
 
   let out = spec();
   const html = out.body;
-  const groups = (html.match(/class="ow-dlg-g"/g) || []).length;
+  /* ONE CARD PER PLACE. A delivery round is the same object as a buying
+     round pointed the other way, so it wears the buying list's card and
+     the two screens are one thing to learn. */
+  const groups = (html.match(/class="ow-sc"/g) || []).length;
 
   t.check(groups === 4,
-    `one group per place plus the two that are not places (got ${groups}: Ntinda, Nakawa, collected, no-address)`);
+    `one card per place plus the two that are not places (got ${groups}: Ntinda, Nakawa, collected, no-address)`);
   t.check(/Nakawa/.test(html),
     'a place with a single order gets a group of its own -- it is still somewhere somebody has to drive to');
   t.check(html.indexOf('Ntinda') < html.indexOf('Nakawa'),
     'with the fullest run first, since that is the one worth planning around');
-  t.check(/Collecting from the shop/.test(html) && /No address/.test(html),
+  t.check(/Collecting from the shop/.test(html) && /No place on file/.test(html),
     'and the two non-places are named as what they are rather than drawn as runs');
   t.check(html.indexOf('Collecting from the shop') > html.indexOf('Nakawa'),
     'after every real destination');
@@ -325,9 +331,18 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     `the header counts what is out (${out.sub})`);
   t.check(/2 runs/.test(out.sub), 'and how many runs it is on');
 
-  // The per-run figure an admin plans from.
-  t.check(/with nobody carrying/.test(html),
-    'a run says how many of it still have nobody driving');
+  /* The per-run figure an admin plans from, said twice over on the card
+     and never twice in the same words: a run nobody is on says so where
+     the driver's name would be, and every card's own state line counts
+     how many of it are actually out. A run WITH a driver that still has
+     orders on nobody keeps the count beside the name. */
+  t.check(/Nobody is carrying it/.test(html) && !/Nobody is carrying it · /.test(html),
+    'a run nobody is on says so once, where the driver would be named');
+  t.check(/0 of 2 are out/.test(html),
+    'and the card counts how many of it are actually out');
+  t.check(/r\.drivers\.length && r\.unassigned \? `\$\{r\.unassigned\} with nobody carrying/
+    .test(extractFunction(src, 'otRunsSpec', 'index.html')),
+    'while a run that HAS a driver and orders on nobody keeps that count beside the name');
   /* ONE OXIDE, AND IT NAMES WHAT IT WILL DO. "Close run 1" closes the
      fullest run, and says how many orders that is before it is pressed
      -- never a button that acts on a number the owner has to count. */
@@ -335,8 +350,14 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     'and the footer offers exactly one primary, naming how many it closes');
   t.check((out.foot.match(/btn-accent/g) || []).length === 1,
     'exactly one -- two accents in a dialog and neither of them means anything');
+  /* Said ON the button rather than as a standing sentence beside it. It
+     is true every time and news once, so it belongs where it is read at
+     the moment it matters — on the act, and again in the confirm that
+     act raises. */
   t.check(/not invoiced/.test(out.foot),
-    'with the footer saying where a closed order actually goes');
+    'with the act saying where a closed order actually goes');
+  t.check(/not invoiced/.test(extractFunction(src, 'otDlgAct', 'index.html')),
+    'and saying it again in the confirm, which is the last moment to stop');
 
   // Names come from customer records and agent-typed addresses, so they are
   // whatever somebody typed.

@@ -797,8 +797,9 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
     'and there is exactly one shell in the markup for all six of them');
   /* EXACTLY ONE OXIDE PER DIALOG. otDlgPrimary is the only thing that
      writes btn-accent, so counting its calls per spec counts the
-     accents. The preview's is "Send the client an update", which is why
-     its footer's move is drawn in ink instead. */
+     accents. The preview spends its one on THE MOVE: an order waiting
+     to be asked about is not waiting to be told about, so telling the
+     client stepped down to the ghost it always was. */
   /* The buying list is the one spec that writes it twice, and they are
      the two arms of one ternary: when somebody is out, the thing to do
      next is check in what they brought back; when nobody is, it is to
@@ -813,8 +814,16 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
   t.check(/\$\{out \? otDlgPrimary\([\s\S]{0,200}?: stops\.length \? otDlgPrimary\([^)]*\) : ''\}/
     .test(extractFunction(src, 'otBuyingSpec', 'index.html')),
     'and the buying list chooses between its two rather than drawing both');
-  t.check(/ow-ink/.test(extractFunction(src, 'otPreviewSpec', 'index.html')),
-    "and the preview's own move is ink, because its oxide is already spent on telling the client");
+  {
+    /* The inversion, pinned both ways round: the move wears the accent
+       and the message is a ghost. It used to be the other way, which put
+       the oxide on the one button that changes nothing. */
+    const prev = extractFunction(src, 'otPreviewSpec', 'index.html');
+    t.check(/otDlgPrimary\('act'/.test(prev),
+      "the preview spends its accent on the stage's own move");
+    t.check(/otDlgGhost\('tellclient'/.test(prev) && !/otDlgPrimary\('tellclient'/.test(prev),
+      'and telling the client is the ghost beside it');
+  }
   /* NOTHING SENDS ITSELF. Every dialog that reaches outside the shop
      opens a window for the owner to press send in; none of them posts. */
   const act = extractFunction(src, 'otDlgAct', 'index.html');

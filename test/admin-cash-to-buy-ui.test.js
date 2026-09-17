@@ -78,7 +78,6 @@ const scope = compileScope([
   extractFunction(src, 'cashOnHandFor', 'index.html'),
   extractFunction(src, 'cashOnHandByAccount', 'index.html'),
   extractFunction(src, 'cashPositionForBuying', 'index.html'),
-  extractFunction(src, 'cashPositionHTML', 'index.html'),
   extractFunction(src, 'orderBoardCashToBuy', 'index.html'),
   /* The row now says whose the goods are as well as where they are, so
      the reading behind that comes with it. */
@@ -169,7 +168,7 @@ const scope = compileScope([
   otFig: (n) => Number(n || 0).toLocaleString('en-US'),
   OT_TICK: '<svg data-i="tick"></svg>',
 }, ['orderBoardCashToBuy', 'orderCashStripHTML', 'otBuyingSpec',
-  'cashOnHandFor', 'cashOnHandByAccount', 'cashPositionForBuying', 'cashPositionHTML',
+  'cashOnHandFor', 'cashOnHandByAccount', 'cashPositionForBuying',
   'orderPurchaseLines', 'orderCashToBuy', 'orderUnpricedLines', 'beingPreparedOrders',
   'buyingListRuns', 'orderLineIsBoughtIn', 'quoteClientName']);
 
@@ -236,7 +235,12 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   const orders = scope.beingPreparedOrders();
   const bannerTotal = scope.orderBoardCashToBuy(orders).total;
   openBuyingList();
-  const listTotal = figures(modal.html)[0];
+  /* The round's cost is the strip's first cell now, not a tinted block's
+     first figure. Bare, like every other figure in the dialog: the unit
+     is said once by the money component, not on every number. */
+  const stripCells = [...modal.html.matchAll(/class="ow-sc-c-v[^"]*">([\d,]+)</g)]
+    .map((m) => Number(m[1].replace(/,/g, '')));
+  const listTotal = stripCells[0];
   const stripTotal = orders
     .map((q) => figures(scope.orderCashStripHTML(q)).pop() || 0)
     .reduce((a, b) => a + b, 0);
@@ -482,15 +486,20 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     'the suppliers are no longer cards in a sideways track');
   t.check(!/wireRunCarousel\('/.test(src),
     'and no screen opens one at all — one fix, three screens, rather than a copy each');
-  t.check(/class="ow-dlg-g"/.test(modal.html) && /Stop 1 · /.test(modal.html),
-    'the round is a group per stop, numbered in the order it is worth walking');
-  t.check(/class="ow-dlg-g-v"/.test(modal.html) && /Cash for this stop/.test(modal.html),
+  /* A BUYING ROUND IS A SET OF PLACES somebody drives to, so the object
+     on the screen is the place: one card per stop, numbered in the order
+     it is worth walking, holding everything that stop needs. The rows
+     under a group head were a table of the same thing, which is what
+     made the supplier repeat on every line. */
+  t.check(/class="ow-sc"/.test(modal.html) && /class="ow-sc-no">1</.test(modal.html),
+    'the round is a card per stop, numbered in the order it is worth walking');
+  t.check(/class="ow-sc-v">/.test(modal.html) && /to carry/.test(modal.html),
     'each carrying what that stop costs to walk into');
 
-  // The row still carries everything the card did.
-  t.check(/class="ow-dlg-r ow-bl-r"/.test(modal.html), 'the lines are rows on one grid');
-  t.check(/class="ow-dlg-v ow-dlg-rt"/.test(modal.html) && /class="ow-dlg-m ow-dlg-rt"/.test(modal.html),
-    'still showing what each line costs and how much of it there is');
+  // The line still carries everything the row did.
+  t.check(/class="ow-sc-r"/.test(modal.html), 'the lines are rows inside their own stop');
+  t.check(/class="ow-sc-r-q"/.test(modal.html) && / · [\d,]+</.test(modal.html),
+    'still showing how much of it there is and what it costs');
   t.check(/class="ow-dlg-ck bl-receive"/.test(modal.html), 'and still offering to receive it');
 
   /* IN THE UNIT THE LINE WAS CHOSEN IN. A line chosen as 2 Ctn is on the
@@ -500,15 +509,15 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     unit: 'Pair', packUnit: 'Ctn', packQty: 100, qtyIn: 'pack', qty: 200, price: 2150 })] })];
   data.prices = [price({ id: 1, supplierId: 'S1', wholesale: 2150, retail: 2400, packQty: 100, packUnit: 'Ctn', unit: 'Pair' })];
   openBuyingList();
-  const qtyCell = (modal.html.match(/class="ow-dlg-m ow-dlg-rt">([^<]*)/) || [])[1];
-  t.check(/>2 Ctn</.test(modal.html) && !/200 Pair/.test(modal.html),
+  const qtyCell = (modal.html.match(/class="ow-sc-r-q">([^<]*)/) || [])[1];
+  t.check(/>2 Ctn · /.test(modal.html) && !/200 Pair/.test(modal.html),
     `a carton line is listed as 2 Ctn (${qtyCell})`);
   /* At the carton price: 2 Ctn of 100 Pair at 2,150 is 430,000, and the
      cost column is what will actually be handed over. The old card said
      the per-carton price beside the quantity; the row says the line's
      own cost, which is the figure the buyer counts out. */
   t.check(/>430,000</.test(modal.html),
-    `costed at the carton price, 200 × 2,150 = 430,000 (${(modal.html.match(/class="ow-dlg-v ow-dlg-rt">([^<]*)/) || [])[1]})`);
+    `costed at the carton price, 200 × 2,150 = 430,000 (${qtyCell})`);
 
   /* Every branch of that control, not just the common one. Blanking the
      shortfall test still leaves a plain "Receive" on an unreceived line,
@@ -585,8 +594,13 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   data.savedQuotes = [order()];
   openBuyingList();
 
-  t.check(/class="bl-verdict/.test(modal.html), 'the cash answer is its own block');
-  const figs = [...modal.html.matchAll(/class="bl-fig-label">([^<]+)</g)].map((m) => m[1]);
+  /* THE CASH ANSWER IS THE ROUND'S OWN STRIP. It was a tinted block at
+     the top of the body saying the same three figures the strip says, in
+     the same order — two readings of one number on one screen. The block
+     went; the reading stayed, and with it everything the block was
+     carrying that the figures alone do not say. */
+  t.check(/class="ow-sc-fig"/.test(modal.html), 'the cash answer is the round\'s own strip');
+  const figs = [...modal.html.matchAll(/class="ow-mt-l">([^<]+)</g)].map((m) => m[1]);
   t.check(figs.length === 3, `three figures, side by side (${figs.join(' / ')})`);
   t.check(/To buy/.test(figs[0]) && /On hand/.test(figs[1]),
     'the cost and the money it comes out of, in that order');
@@ -599,29 +613,30 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(pos.short > 0, `the fixture is short of cash, which is what makes this readable (${pos.short})`);
   t.check(figs[2] === 'Short by',
     `so the third figure is named as a shortfall, not as money left over (${figs[2]})`);
-  t.check(/class="bl-verdict short"/.test(modal.html), 'and the block carries the shortfall state');
-  t.check(/Not enough for everything on this board/.test(modal.html),
-    'with the verdict saying which way it went');
-  t.check(/class="bl-fig strong"/.test(modal.html),
-    'the answer drawn larger than the two figures it is derived from');
+  /* NEVER COLOUR ALONE. The old block told a shortfall from a surplus by
+     going red, with the figure's own label saying which it was; the
+     strip keeps the label doing that work and adds the crimson on top.
+     A red-blind owner reads the word either way. */
+  t.check(/class="ow-sc-c-v ow-bad"/.test(modal.html), 'a shortfall is crimson');
+  t.check(figs[2] === 'Short by' && !/Left after/.test(modal.html),
+    'and named, so the colour is never the only thing carrying it');
 
-  /* Colour carries the verdict, and is the reason it can never be
-     mistaken for a supplier card. */
-  const verdictCss = (/\.bl-verdict\{[\s\S]*?\}/.exec(src) || [''])[0];
-  t.check(/verdigris-soft/.test(verdictCss),
-    'a good answer is tinted, not grey — grey is what made it look like another container');
-  t.check(/\.bl-verdict\.short\{background:var\(--ow-crimson-soft\)/.test(src),
-    'and a bad one is red');
-  t.check(!/\.bl-verdict\{[^}]*ow-steel-050/.test(src),
-    'neither state uses the neutral grey the run cards sit on');
+  /* The strip is not a tinted panel. That block was tinted because it
+     had to be told apart from the grey supplier cards under it; there
+     are no supplier cards any more, and depth in this app is
+     hairlines. */
+  const stripCss = (/\.ow-sc-fig\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/border-bottom:1px solid var\(--ow-rule-soft\)/.test(stripCss) && !/background:/.test(stripCss),
+    'edged with a hairline rather than tinted, because nothing under it is a card of details');
 
   // The split is kept, because money in the bank does not buy cement for
-  // cash -- but it is no longer the biggest thing in the block.
-  t.check(/class="bl-verdict-accounts"/.test(modal.html), 'the account split is still shown');
-  const accountsAt = modal.html.indexOf('bl-verdict-accounts');
-  const figsAt = modal.html.indexOf('bl-verdict-figs');
-  t.check(figsAt > -1 && accountsAt > figsAt,
-    'below the figures rather than above them, which is the demotion the report asked for');
+  // cash -- but it sits under the money it qualifies, not in a band of
+  // its own.
+  t.check(/class="ow-sc-acc"/.test(modal.html), 'the account split is still shown');
+  const accountsAt = modal.html.indexOf('ow-sc-acc');
+  const onHandAt = modal.html.indexOf('>On hand<');
+  t.check(onHandAt > -1 && accountsAt > onHandAt,
+    'inside the On hand cell, which is the figure it is a breakdown of');
 }
 
 /* ---------- 12. and when there is nothing left to buy ----------------- */
@@ -644,13 +659,13 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   ] })];
   openBuyingList();
 
-  t.check(/class="bl-verdict done"/.test(modal.html),
+  t.check(/class="ow-sc-done"/.test(modal.html),
     'a board with nothing left to buy gets its own state');
   t.check(/Nothing left to buy/.test(modal.html),
     'and says that, rather than pronouncing on whether it can afford nothing');
-  t.check(!/bl-fig-label/.test(modal.html),
-    'the three figures are gone — subtracting nothing from the float says nothing');
-  t.check(/on hand/.test(modal.html),
+  t.check((modal.html.match(/class="ow-mt-l">/g) || []).length === 1,
+    'two of the three figures are gone — subtracting nothing from the float says nothing');
+  t.check(/On hand/.test(modal.html),
     'while what the shop is holding is still worth a glance');
 
   /* The stop with nothing left to spend on it. It is still LISTED --
@@ -658,8 +673,8 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
      a line a walking round would drop -- and it costs nothing, because
      nothing is left to spend there. What it does not do is offer to send
      anybody: there is nothing to fetch. */
-  t.check(/Stop 1 · /.test(modal.html), 'the stop is still listed, so its receipts can still be undone');
-  t.check(/class="ow-dlg-g-v">0</.test(modal.html),
+  t.check(/class="ow-sc-no">1</.test(modal.html), 'the stop is still listed, so its receipts can still be undone');
+  t.check(/class="ow-sc-v">0 <span/.test(modal.html),
     'costing nothing, because nothing is left to buy there');
   t.check(!/data-dlg="sendstop"/.test(modal.html),
     'with nobody offered to be sent, because there is nothing to fetch');
@@ -673,7 +688,8 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   openBuyingList();
   t.check(/data-dlg="sendstop"/.test(modal.html),
     'one line still to come keeps the stop live');
-  t.check(!/bl-verdict done/.test(modal.html) && /bl-fig-label/.test(modal.html),
+  t.check(!/ow-sc-done/.test(modal.html)
+    && (modal.html.match(/class="ow-mt-l">/g) || []).length === 3,
     'and the figures come back, because there is buying left to afford');
 
   data.savedQuotes = [order()];

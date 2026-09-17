@@ -842,9 +842,13 @@ const trip = (over) => Object.assign({
   /* On the stop head now, beside Send someone, because the round is
      walked by place: one press makes the supplier-delivery trip for
      every supplier at that stop. */
-  t.check(/otDlgGhost\('bringstop', 'They are delivering', ` data-stop="\$\{esc\(String\(run\.key\)\)\}"`\)/.test(code)
+  /* "They deliver", not "They are delivering": the stop is a card now
+     and its foot holds both ways of getting the goods, so the label is
+     as short as it can be while still saying which way round it is. */
+  t.check(/otDlgGhost\('bringstop', 'They deliver', ` data-stop=/.test(code)
+       && /otDlgGhost\('sendstop', 'Send someone', ` data-stop=/.test(code)
        && /createCollectionTripFromRun\(run, bring \? \{ supplierDelivers:true \} : undefined\)/.test(code),
-    'the run head offers "they’re delivering" beside "send someone"');
+    'the stop card offers "they deliver" beside "send someone"');
   /* And pressing it makes a SUPPLIER trip -- an ordinary one would put
      the run straight back on the send-somebody list. One call site
      serves both buttons now, so the flag is read off `bring` rather

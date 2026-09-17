@@ -33,3 +33,11 @@ build Menu.dc.html      frame 680 420 0 body_menu.html   _op.css _cut.css
 build Short.dc.html   frame 560 286 0 body_short.html  _op.css _cut.css
 build Buying.dc.html  frame 900 464 0 body_buying.html _op.css _cut.css
 build Runs.dc.html    frame 900 456 0 body_runs.html   _op.css _cut.css
+# ...and what actually shipped, photographed out of the running app at the
+# same sizes, so the drawing and the build can be held side by side.
+build ShipOrder.dc.html  frame 680 478 0 body_ship_Order.html  _cut.css
+build ShipBusy.dc.html   frame 680 463 0 body_ship_Busy.html   _cut.css
+build ShipMenu.dc.html   frame 680 478 0 body_ship_Menu.html   _cut.css
+build ShipShort.dc.html  frame 560 273 0 body_ship_Short.html  _cut.css
+build ShipBuying.dc.html frame 900 440 0 body_ship_Buying.html _cut.css
+build ShipRuns.dc.html   frame 900 417 0 body_ship_Runs.html   _cut.css
