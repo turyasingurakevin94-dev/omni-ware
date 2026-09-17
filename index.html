@@ -13989,12 +13989,25 @@
   .ow-dlg-h{flex:none;height:56px;display:flex;align-items:center;gap:var(--ow-sp-10);
     padding:0 var(--ow-sp-10) 0 var(--ow-sp-20);
     border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
-  .ow-dlg-t{min-width:0;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);
+  /* Both truncate, but not at the same rate: the sub is context and the
+     title is identity, so the sub gives way first and the name is cut
+     only when there is nothing left of it to give. */
+  .ow-dlg-t{min-width:0;flex-shrink:1;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);
     letter-spacing:-.01em;color:var(--ow-ink-900);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-dlg-s{min-width:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  .ow-dlg-s{min-width:0;flex-shrink:40;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
     color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* AN IDENTIFIER IS NOT CONTEXT. #367 cut to #36 is a different order, so
+     it is pinned the way money is — it never shrinks and never
+     ellipsises, whatever the width. Everything else in the head gives way
+     around it. */
+  .ow-dlg-id{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);white-space:nowrap;}
+  /* An empty slot still costs a gap, and three of them at 390px is thirty
+     pixels the name could have had. */
+  .ow-dlg-id:empty,.ow-dlg-slot:empty,.ow-dlg-s:empty{display:none;}
   .ow-dlg-sp{flex:1;}
   /* The head's chip and act slots are containers, so what a spec puts in
      them sits in the head's own row rather than stacking inside a span. */
@@ -14166,6 +14179,7 @@
     .ow-dlg-r .ow-dlg-rt{grid-column:2;text-align:left;}
     .ow-dlg-ck{grid-column:1;grid-row:1/span 3;align-self:start;width:24px;height:24px;}
     .ow-dlg-r .ow-dlg-v{grid-column:3;grid-row:1;text-align:right;}
+
   }
   /* The footer's actions are 34px, not the 28px a header's ghost is:
      these are the buttons that do the thing. A height in context rather
@@ -14441,6 +14455,69 @@
   .ow-pk-n{font-size:var(--ow-t-12);line-height:1.45;padding:var(--ow-sp-8) var(--ow-sp-10);
     border-radius:var(--ow-r);background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
   .ow-pk-n[hidden]{display:none;}
+
+  /* ==================================================================
+     ...AND THE SAME SIX SCREENS ONE-HANDED.
+
+     Its own block, and it sits BELOW the components it switches: a media
+     query carries no extra specificity, so the same selector written
+     later in the file wins whatever the screen is.
+     ================================================================== */
+  @media (max-width:820px){
+    /* THE JOURNEY, ONE-HANDED. 210px of spine beside a table is half a
+       390px screen, so the spine stops being a side and becomes the top:
+       where the order has reached, then what is on it. The rail down the
+       left goes with it — a stage's own dot is enough once the stages
+       are not a column. */
+    /* The head keeps its one line: a name and a close, with the sub
+       giving way. Wrapping it puts the close button on a row of its
+       own, which reads as a second bar. */
+    .ow-dlg-h{flex-wrap:nowrap;height:56px;padding:0 var(--ow-sp-6) 0 var(--ow-sp-16);}
+    .ow-op{flex-direction:column;}
+    .ow-op-sp{width:auto;padding:var(--ow-sp-12) var(--ow-sp-16);
+      border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-op-s{min-height:0;padding:0 0 0 22px;}
+    .ow-op-s:not(.ow-now){display:none;}
+    .ow-op-s::after{display:none;}
+    .ow-op-s.ow-now{padding-bottom:0;}
+    .ow-op-lh{padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
+    .ow-op-lh .ow-op-r-q{display:none;}
+    .ow-op-r-l{padding:var(--ow-sp-8) var(--ow-sp-16);}
+    .ow-op-r-q{width:auto;}
+    .ow-op-r-v{width:auto;min-width:88px;}
+    .ow-op-sum{padding:var(--ow-sp-6) var(--ow-sp-16);}
+    .ow-op-mn{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .ow-op-c{padding-right:var(--ow-sp-10);}
+    .ow-op-c + .ow-op-c{padding-left:var(--ow-sp-10);}
+
+    /* A round is read one place at a time. Three columns of cards at
+       390px is three columns of ellipsis. */
+    .ow-sc-g{grid-template-columns:1fr;padding:var(--ow-sp-12);}
+    .ow-sc-fig{flex-wrap:wrap;padding:var(--ow-sp-12) var(--ow-sp-16);}
+    /* min-width:0, because the app's phone rule gives every button
+       calc(50% - 3px) against a 6px gap — two of them in an 8px-gap row
+       miss sharing it by two pixels, and each takes a row of its own. */
+    .ow-sc-f .btn.ow-sm,.ow-sc-acts .btn.ow-sm{min-width:0;min-height:var(--ow-tap);
+      box-sizing:border-box;white-space:nowrap;}
+    /* The round's two acts share a line rather than taking one each: the
+       spacer that holds them right on a wide strip is what was breaking
+       the row here. */
+    .ow-sc-fig .ow-dlg-sp{display:none;}
+    .ow-sc-fig .btn.ow-sm{flex:1 1 0;justify-content:center;min-width:0;
+      min-height:var(--ow-tap);box-sizing:border-box;}
+    .ow-sc-r{min-height:var(--ow-tap);}
+
+    /* Two choices side by side in a hand is two truncated figures, and a
+       figure that decides something never truncates. */
+    .ow-pk{flex-direction:column;}
+    .ow-pk-b{padding:var(--ow-sp-12);}
+
+    /* The ··· spans the width, under the head. top:auto would put it at
+       the flex container's origin — over the head it hangs from — because
+       an absolutely-positioned child of a flex box is not a flex item. */
+    .ow-mn-pop{left:var(--ow-sp-12);right:var(--ow-sp-12);width:auto;}
+    .ow-mn-i{height:var(--ow-tap);}
+  }
 
 
 
@@ -21194,6 +21271,7 @@
   <div class="ow-dlg ow-dlg-w760" role="dialog" aria-modal="true" aria-labelledby="ot_dlg_t">
     <div class="ow-dlg-h">
       <span class="ow-dlg-t" id="ot_dlg_t"></span>
+      <span class="ow-dlg-id" id="ot_dlg_i"></span>
       <span class="ow-dlg-s" id="ot_dlg_s"></span>
       <span class="ow-dlg-sp"></span>
       <span class="ow-dlg-slot" id="ot_dlg_c"></span>
@@ -42705,8 +42783,16 @@ function otDlgDraw(){
   if(!spec){ otDlgClose(); return; }
   const paper = el.querySelector('.ow-dlg');
   paper.className = `ow-dlg ow-dlg-w${spec.w || 760}`;
-  el.querySelector('#ot_dlg_t').innerHTML = spec.title;
-  el.querySelector('#ot_dlg_s').innerHTML = spec.sub || '';
+  const head = el.querySelector('#ot_dlg_t');
+  head.innerHTML = spec.title;
+  /* Anything that can be cut carries the whole of itself on hover: a
+     truncated name with no way to read it is a name the screen has
+     lost. */
+  head.title = head.textContent;
+  el.querySelector('#ot_dlg_i').innerHTML = spec.id || '';
+  const subEl = el.querySelector('#ot_dlg_s');
+  subEl.innerHTML = spec.sub || '';
+  subEl.title = subEl.textContent;
   el.querySelector('#ot_dlg_c').innerHTML = spec.chip || '';
   el.querySelector('#ot_dlg_a').innerHTML = spec.act || '';
   const body = el.querySelector('#ot_dlg_b');
@@ -42882,7 +42968,8 @@ function otPreviewSpec(id){
     w: 680,
     flat: true,
     title: esc(quoteClientName(q)),
-    sub: esc([`#${q.id}`, place].filter(Boolean).join(' · ')),
+    id: esc(`#${q.id}`),
+    sub: esc(place || ''),
     /* The head carries identity and quiet ICON acts. A head with a
        worded button in it is carrying the body's work. */
     act: `${s.lines.length ? `<button type="button" class="ow-dlg-x" id="opChitBtn" data-dlg="chit" data-id="${q.id}"
@@ -43064,7 +43151,7 @@ function otBuyingSpec(){
     </div>`).join('')}${unpriced.length > 4 ? `<div class="ow-sc-r"><span class="ow-sc-r-n">and ${unpriced.length - 4} more</span></div>` : ''}</div>
     <div class="ow-sc-f">
       <span class="ow-sc-st ow-warn">Not in the cash above</span>
-      ${otDlgGhost('comparePrices', 'Add a price')}
+      ${otDlgGhost('addprice', 'Add a price')}
     </div>
   </div>` : '';
   return {
@@ -43381,6 +43468,10 @@ function otDlgAct(act, el){
       if(m) m.hidden = !m.hidden;
       break;
     }
+    /* A line with no supplier price is on no stop, and the place a price
+       gets onto it is Compare prices. The card says so; this is what
+       makes the saying a door rather than a label. */
+    case 'addprice': otDlgClose(); goToTab('compare'); break;
     case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
     /* Editing the lines leaves this screen for the quote editor, so the
