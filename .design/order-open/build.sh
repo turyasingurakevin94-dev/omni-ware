@@ -32,5 +32,5 @@ build NowBuying.dc.html frame 980 654 0 body_now_buying.html _cut.css
 build NowRuns.dc.html   frame 800 168 0 body_now_runs.html   _cut.css
 build Menu.dc.html      frame 680 446 0 body_menu.html   _op.css _cut.css
 build Short.dc.html     frame 560 300 0 body_short.html  _op.css _cut.css
-build Buying.dc.html    frame 900 522 0 body_buying.html _op.css _cut.css
+build Buying.dc.html    frame 900 452 0 body_buying.html _op.css _cut.css
 build Runs.dc.html      frame 760 150 0 body_runs.html   _op.css _cut.css

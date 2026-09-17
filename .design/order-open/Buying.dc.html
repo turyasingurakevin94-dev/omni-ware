@@ -363,9 +363,45 @@
     .m-i .n{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
       font-size:11px;color:var(--ow-ink-600);}
     .m-sep{height:1px;background:var(--ow-rule-soft);margin:4px 5px;}
+
+    /* ---- the buying list as STOPS, not rows -------------------------
+       A buying round is a set of PLACES somebody drives to, so the
+       object on the screen is the place. Everything a stop needs — what
+       it costs, what is on it, whether anybody has been sent — is inside
+       its own card, which is what kills the repeated supplier column,
+       the amber band about lines with nobody on them, and the footer
+       sentence about what this dialog does not do. */
+    .b-grid{flex:1;min-height:0;padding:18px;background:var(--ow-steel-050);
+      display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .b-card{min-width:0;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);padding:13px 14px 12px;display:flex;flex-direction:column;}
+    .b-top{display:flex;align-items:center;gap:8px;}
+    .b-no{width:20px;height:20px;border-radius:50%;flex:none;background:var(--ow-steel-950);
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;}
+    .b-place{min-width:0;font-size:14px;line-height:20px;font-weight:700;letter-spacing:-.005em;
+      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-sup{margin-top:2px;font-size:11.5px;line-height:16px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-cash{margin-top:10px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:20px;line-height:25px;font-weight:600;color:var(--ow-ink-900);}
+    .b-cash span{font-family:'Figtree',system-ui,sans-serif;font-size:11px;font-weight:500;
+      letter-spacing:0;color:var(--ow-ink-600);margin-left:5px;}
+    .b-items{margin-top:10px;display:flex;flex-direction:column;gap:2px;}
+    .b-i{display:flex;align-items:center;gap:8px;height:26px;}
+    .b-i .nm{flex:1;min-width:0;font-size:12.5px;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-i .q{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11.5px;color:var(--ow-ink-600);}
+    .b-foot{margin-top:auto;padding-top:11px;display:flex;align-items:center;gap:8px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .b-foot .st{flex:1;min-width:0;font-size:11.5px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-foot .st.go{color:var(--ow-verdigris);font-weight:600;}
   </style>
 </helmet>
-<div class="frame" style="width:900px;height:522px;">
+<div class="frame" style="width:900px;height:452px;">
   <div class="paper">
     <div class="k-h">
       <span class="t">Buying list</span>
@@ -381,41 +417,48 @@
       <span class="sp"></span>
       <button type="button" class="btn sm">How to cover it</button>
     </div>
-    <div class="k-warn">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path></svg>
-      <span><b>4 lines</b> are on no stop</span>
-      <span class="sp"></span>
-      <button type="button" class="btn xs">Add them to a stop</button>
-    </div>
-    <div class="k-th"><span style="flex:1;">Item</span><span class="q">Qty</span><span class="v">Cost</span></div>
 
-    <div class="k-stop">
-      <span class="n">1 &middot; Nakawa</span>
-      <span class="who">Nakawa Hardware Wholesalers</span>
-      <span class="sp"></span>
-      <span class="v">376,500</span>
-      <button type="button" class="btn xs">Send someone</button>
-    </div>
-    <div class="k-r"><span class="mk"></span><span class="nm">Cement (Tororo 50kg)</span><span class="q">20 Bag</span><span class="v">144,000</span></div>
-    <div class="k-r"><span class="mk"></span><span class="nm">Steel Nails 3 inch</span><span class="q">15 Kg</span><span class="v">232,500</span></div>
+    <div class="b-grid">
+      <div class="b-card">
+        <div class="b-top"><span class="b-no">1</span><span class="b-place">Nakawa</span></div>
+        <div class="b-sup">Nakawa Hardware Wholesalers</div>
+        <div class="b-cash">376,500<span>to carry</span></div>
+        <div class="b-items">
+          <div class="b-i"><span class="mk"></span><span class="nm">Cement (Tororo 50kg)</span><span class="q">20 Bag</span></div>
+          <div class="b-i"><span class="mk"></span><span class="nm">Steel Nails 3 inch</span><span class="q">15 Kg</span></div>
+        </div>
+        <div class="b-foot">
+          <span class="st">Nobody sent</span>
+          <button type="button" class="btn xs">Send someone</button>
+        </div>
+      </div>
 
-    <div class="k-stop">
-      <span class="n">2 &middot; Ben Kiwanuka St</span>
-      <span class="who">Mukwano Building Supplies</span>
-      <span class="sp"></span>
-      <span class="v">200,250</span>
-      <button type="button" class="btn xs">Send someone</button>
-    </div>
-    <div class="k-r"><span class="mk"></span><span class="nm">PVC Pipe 1 inch</span><span class="q">18 Pc</span><span class="v">200,250</span></div>
+      <div class="b-card">
+        <div class="b-top"><span class="b-no">2</span><span class="b-place">Ben Kiwanuka St</span></div>
+        <div class="b-sup">Mukwano Building Supplies</div>
+        <div class="b-cash">200,250<span>to carry</span></div>
+        <div class="b-items">
+          <div class="b-i"><span class="mk"></span><span class="nm">PVC Pipe 1 inch</span><span class="q">18 Pc</span></div>
+        </div>
+        <div class="b-foot">
+          <span class="st">Nobody sent</span>
+          <button type="button" class="btn xs">Send someone</button>
+        </div>
+      </div>
 
-    <div class="k-stop">
-      <span class="n">3 &middot; Industrial Area</span>
-      <span class="who">Kirinya Steel &amp; Hardware Ltd</span>
-      <span class="sp"></span>
-      <span class="v">50,000</span>
-      <button type="button" class="btn xs">Send someone</button>
+      <div class="b-card">
+        <div class="b-top"><span class="b-no">3</span><span class="b-place">Industrial Area</span></div>
+        <div class="b-sup">Kirinya Steel &amp; Hardware Ltd</div>
+        <div class="b-cash">50,000<span>to carry</span></div>
+        <div class="b-items">
+          <div class="b-i"><span class="mk"></span><span class="nm">Barbed Wire</span><span class="q">2 Roll</span></div>
+        </div>
+        <div class="b-foot">
+          <span class="st go">They are delivering</span>
+          <button type="button" class="btn xs">Undo</button>
+        </div>
+      </div>
     </div>
-    <div class="k-r"><span class="mk"></span><span class="nm">Barbed Wire</span><span class="q">2 Roll</span><span class="v">50,000</span></div>
 
     <div class="k-f">
       <span class="k-c" style="border-right:0;padding-right:0;margin-right:0;"><span class="l">Cash to carry</span><span class="v">626,750</span></span>
@@ -426,7 +469,7 @@
   </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"$preview":{"width":900,"height":522}}'>
+<script data-dc-script data-props='{"$preview":{"width":900,"height":452}}'>
 class Component extends DCLogic {
   renderVals() { return {}; }
 }
