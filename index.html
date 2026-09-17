@@ -664,6 +664,12 @@
     all:unset;cursor:pointer;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;
     text-align:center;
   }
+  /* `all:unset` above, and every size modifier below, set display — and
+     an author rule that sets display beats the user agent's
+     [hidden]{display:none}. So a button told to hide stayed on screen: a
+     control that cannot act, sitting exactly where one that can would
+     be. Said once, here, for the whole family. */
+  .btn[hidden]{display:none;}
   .btn-primary{background:var(--navy);color:#fff;}
   .btn-primary:hover{background:#2A3648;}
   .btn-accent{background:var(--accent);color:#fff;}
@@ -8855,9 +8861,14 @@
   .markup-cell .mk-key{color:var(--ink-soft);font-weight:700;font-size:10.5px;text-transform:uppercase;width:16px;flex-shrink:0;}
 
   /* Modal */
+  /* 130, over the board's own dialog at 120. A modal is almost always
+     opened FROM that dialog -- "Decide" on a short pick, "Record
+     payment" on an unpaid agent order, the supplier panel -- and at 100
+     it rendered BEHIND it: the decision was invisible, and a click aimed
+     at it landed on the dialog's scrim and threw the dialog away. */
   .modal-overlay{
     position:fixed;inset:0;background:rgba(20,26,33,0.55);display:flex;align-items:flex-start;
-    justify-content:center;padding:48px 20px;z-index:100;overflow-y:auto;
+    justify-content:center;padding:48px 20px;z-index:130;overflow-y:auto;
     opacity:0;visibility:hidden;transition:opacity .15s ease;
   }
   .modal-overlay.show{opacity:1;visibility:visible;}
@@ -35303,7 +35314,11 @@ function wireBuyingListReceiving(){
     });
   });
   // Check in what came back. The one act that puts goods on the shelf.
-  document.querySelectorAll('#ot_dlg_b [data-confirm]').forEach(btn=>{
+  /* #otDlg, not #ot_dlg_b: the dialog's own accent — "Check in 3 items",
+     the one act this screen advertises as its primary move — lives in
+     the FOOT, and a query scoped to the body never reached it, so the
+     button did nothing at all. */
+  document.querySelectorAll('#otDlg [data-confirm]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.confirm);
       if(!trip) return;
@@ -42451,7 +42466,16 @@ function otLoadGo(id, el){
   const form = el && el.closest ? el.closest('.ow-tbl-x, .ow-dlg-load') : null;
   const car = readCarrierForm(form ? form.querySelector('[data-load]') : null);
   car.by = '';
-  if(loadOrder(id, car)) otLoadDrafts.delete(id);
+  const went = loadOrder(id, car);
+  if(went) otLoadDrafts.delete(id);
+  /* A REJECTED LOAD KEEPS WHAT WAS TYPED. loadOrder refuses until the
+     transport is named, and the redraw that followed rebuilt the form
+     from otLoadDrafts — which is only ever harvested from the board's
+     rows, never from the dialog — so a plate and a phone number read
+     off somebody's WhatsApp were wiped by the toast telling you what
+     was missing. */
+  else if(form) otLoadDrafts.set(id, car);
+  return went;
 }
 function otFocusLoad(id){
   const f = document.querySelector(`#savedQuotesWrap [data-load="${id}"]`);
@@ -42915,6 +42939,18 @@ function otPreviewSpec(id){
      line under it. The old dialog floated both above everything as a
      paragraph, which put "Roto Industry · not asked" a screen away from
      Taken, the only stage it was about. */
+  /* WHERE BACK ACTUALLY GOES. An order steps OVER Buying in both
+     directions when it has nothing coming in — which is true of every
+     order that has reached Preparing — so "step back to Buying" landed
+     in Taken, two lanes away, and the backward step also clears the
+     pick. The menu now names the lane the order will really arrive in,
+     and says when that throws picking away. */
+  const back = (()=>{
+    if(i <= 0) return null;
+    let j = i - 1;
+    if(SQ_STATUS_ORDER[j] === 'awaiting_goods' && !orderAwaitsGoods(q)) j -= 1;
+    return j < 0 ? null : SQ_STATUS_ORDER[j];
+  })();
   const w = orderWho(q);
   const whoChip = !w.html && w.main ? w.main : '';
   const whoLine = w.html ? orderWhoText(q) : (w.sub || '');
@@ -42932,7 +42968,11 @@ function otPreviewSpec(id){
      carries the agent's name and not the end client's, and a portal
      order was placed by somebody who has already seen every price on it
      — and both used to be paragraphs floating above the whole dialog,
-     a screen away from Taken, the one stage they are about. */
+     a screen away from the stage in hand. They ride the CURRENT stage,
+     not Taken: the narrow design shows only the stage the order is at,
+     and pinned to Taken they vanished on a phone the moment the order
+     moved — taking with them the warning that the name on the order is
+     the agent's and not the client's. */
   const origin = `${q.originAgentId ? `<span class="ow-cp" title="The name on this order is the agent's, not the end client's">Agent order</span>` : ''}${
     q.originPortal ? `<span class="ow-cp" title="Placed by the customer on the portal, so they have already seen every price on it">Placed on the portal</span>` : ''}`;
   const spine = SQ_STATUS_ORDER.map((st, j)=>{
@@ -42944,7 +42984,7 @@ function otPreviewSpec(id){
       ${bucket[j].map(e=> `<span class="ow-op-e"><em class="ow-op-ts">${esc(otWhen(e.at))}</em> ${esc(e.what)}</span>`).join('')}
       ${j === i && whoLine ? `<span class="ow-op-e">${esc(whoLine)}</span>` : ''}
       ${j === i && whoChip ? `<span class="ow-cp${act ? ' ow-mg' : ''}">${esc(whoChip)}</span>` : ''}
-      ${j === 0 ? origin : ''}
+      ${j === i ? origin : ''}
     </div>`;
   }).join('');
   /* THE MARK, three shapes and three grounds — never colour alone.
@@ -42952,7 +42992,13 @@ function otPreviewSpec(id){
      amber + bar = less came than was asked for. */
   const mark = (l)=>{
     if(l.short) return `<span class="ow-op-mk ow-warn" title="Less came than was asked for"><svg class="icon ow-i11" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span>`;
-    const inYard = l.fromStock || !!l.receivedAt || (!l.unpriced && l.source && l.picked != null);
+    /* l.line is the raw item; orderPreviewLines has no receivedAt of its
+       own, so reading l.receivedAt was permanently false and a line
+       checked in from the buying list kept the hollow ring that says
+       "still with a supplier" — the dialog contradicting itself on the
+       one stage where that question is the whole point. */
+    const inYard = l.fromStock || !!(l.line && l.line.receivedAt)
+      || (!l.unpriced && l.source && l.picked != null);
     return inYard
       ? `<span class="ow-op-mk ow-on" title="It is here"><svg class="icon ow-i11" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg></span>`
       : `<span class="ow-op-mk" title="Still with a supplier"></span>`;
@@ -42978,8 +43024,9 @@ function otPreviewSpec(id){
     /* THE ···: the moves that are not made every time. They were footer
        buttons and body prose on a dialog already carrying its own act,
        so the screen offered five things and meant one. */
-    menu: `${i > 0 ? `<button type="button" class="ow-mn-i" role="menuitem" data-dlg="act" data-act2="prev" data-id="${q.id}">
-        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Step back to ${esc(OT_LANE_NAME[SQ_STATUS_ORDER[i - 1]])}</button>` : ''}
+    menu: `${back ? `<button type="button" class="ow-mn-i" role="menuitem" data-dlg="act" data-act2="prev" data-id="${q.id}">
+        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Step back to ${esc(OT_LANE_NAME[back])}${
+          back === 'draft' && i > 1 ? '<span class="ow-mn-n">clears the pick</span>' : ''}</button>` : ''}
       ${q.status === 'draft' ? '' : `<button type="button" class="ow-mn-i" role="menuitem" data-dlg="announce" data-id="${q.id}">
         <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"/></svg>Announce to the group${q.announcedAt ? '<span class="ow-mn-n">sent</span>' : ''}</button>`}
       <button type="button" class="ow-mn-i" role="menuitem" data-dlg="act" data-act2="edit" data-id="${q.id}">
@@ -43325,7 +43372,13 @@ function otRunsSpec(){
     .concat(d.unknown.length ? [{ run: null, place: 'No place on file',
       orders: d.unknown, value: worth(d.unknown), unit: 'held',
       who: 'Nowhere to send it yet', warn: true, bad: true }] : []);
-  const needsYou = orders.filter(orderNeedsDelivery).length + d.unknown.length;
+  /* THE UNION, not the sum. An order with no place on file AND nobody
+     carrying it is ONE thing needing you, and it satisfies both tests —
+     added together it counted twice, so the strip read "Needs you 2"
+     over "Orders 1" and the foot read "-1 of 1 order on somebody". */
+  const needsYouSet = new Set(orders.filter(orderNeedsDelivery).map(q=> q.id));
+  d.unknown.forEach(q=> needsYouSet.add(q.id));
+  const needsYou = needsYouSet.size;
   const card = (g, n)=>{
     const done = g.orders.filter(q=> !orderNeedsDelivery(q)).length;
     const waiting = g.orders.find(orderNeedsDelivery);
@@ -43472,7 +43525,12 @@ function otDlgAct(act, el){
        gets onto it is Compare prices. The card says so; this is what
        makes the saying a door rather than a label. */
     case 'addprice': otDlgClose(); goToTab('compare'); break;
-    case 'loadgo': otLoadGo(id, el); renderSavedQuotes(); otDlgDraw(); break;
+    case 'loadgo': {
+      /* Redraw only when it went. A refusal leaves the form exactly as
+         the owner typed it, with the toast saying what is missing. */
+      if(!otLoadGo(id, el)) break;
+      renderSavedQuotes(); otDlgDraw(); break;
+    }
     case 'chit': { const chit = document.getElementById('opChitBtn'); if(chit) printPackingChit(chit.dataset.id); break; }
     /* Editing the lines leaves this screen for the quote editor, so the
        dialog goes with it — a fixed pop-up left open over the page it

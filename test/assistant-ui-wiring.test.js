@@ -48,9 +48,17 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const panelZ = winningDeclaration(src, 'assistantPanel', 'z-index');
   t.check(panelZ && Number(panelZ.value) === 80,
     `the panel sits at 80 — above every tab (topbar 60, tb-menu 70) (got ${panelZ && panelZ.value})`);
+  /* The relationship, not the number. Modals moved from 100 to 130 to
+     clear the order board's own dialog at 120 — a modal is almost always
+     opened FROM that dialog, and underneath it the decision was
+     invisible and a click aimed at it threw the dialog away. The panel
+     only has to stay below them, which it does by more than it did. */
   const modalZ = winningDeclaration(src, 'itemPickerModal', 'z-index');
-  t.check(modalZ && Number(modalZ.value) === 100 && Number(panelZ.value) < Number(modalZ.value),
-    'and below every modal, so a dialog opened after a tool’s render still lands on top');
+  const dialogZ = /\.ow-dlg-sc\{[^}]*z-index:\s*(\d+)/.exec(src);
+  t.check(modalZ && Number(panelZ.value) < Number(modalZ.value),
+    `and below every modal, so a dialog opened after a tool’s render still lands on top (panel ${panelZ && panelZ.value} < modal ${modalZ && modalZ.value})`);
+  t.check(!!dialogZ && Number(modalZ.value) > Number(dialogZ[1]),
+    `and a modal clears the order board's own dialog, which opens most of them (modal ${modalZ && modalZ.value} > dialog ${dialogZ && dialogZ[1]})`);
   t.check(/@media \(max-width:820px\)\{\s*\n\s*\.assistant-panel\{\s*\n\s*inset:0;/.test(src),
     'on a phone it becomes the full-screen sheet, the More sheet’s own pattern');
   const backdrop = (/\['supplierModal','productModal'[\s\S]{0,400}?\]\.forEach/.exec(src) || [''])[0];
