@@ -271,14 +271,24 @@
       background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
       box-shadow:var(--ow-lift);display:flex;flex-direction:column;overflow:hidden;}
 
-    /* ---- head: who, where it is, and the three quiet acts ----------- */
-    .d-h{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px 0 20px;
+    /* ---- head: who, where it is, and the three quiet acts -----------
+       ONE HEAD. Pass 1 made the two boxes the same height on the same
+       ground, but their children were still two components with
+       opposite rules: the order truncated its NAME and pinned its id,
+       the buying list pinned its TITLE and truncated its sub. So a
+       string too long on one screen ellipsised, and on the next pushed
+       the close button off the edge. Both truncate now, and whichever
+       is longer gives way first. The exception is an identifier — #365
+       cut to #36 is a different order, so it is pinned the way money
+       is. The phone's head is the same two children at its own scale. */
+    .d-h,.k-h{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px 0 20px;
       border-bottom:1px solid var(--ow-rule-soft);}
-    .d-h .nm{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ow-ink-900);
-      min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .d-h .id{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;
-      color:var(--ow-ink-600);flex:none;}
-    .d-h .sp{flex:1;}
+    .d-h .nm,.k-h .t,.p-h .nm{min-width:0;font-size:17px;font-weight:700;letter-spacing:-.01em;
+      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .d-h .id,.k-h .s,.p-h .id{min-width:0;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:12.5px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .d-h .id,.p-h .id{flex:none;}
+    .d-h .sp,.k-h .sp{flex:1;}
     .d-ic{width:32px;height:32px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
       justify-content:center;color:var(--ow-ink-600);flex:none;}
     .d-ic .icon{width:17px;height:17px;}
@@ -336,8 +346,14 @@
     .d-mn{flex:none;padding:14px 20px 16px;border-top:1px solid var(--ow-rule);
       background:var(--ow-paper-2);display:flex;flex-direction:column;gap:10px;}
     .d-mn-r{display:flex;align-items:stretch;}
-    .d-c{flex:1 1 0;min-width:0;padding-right:14px;border-right:1px solid var(--ow-rule-soft);}
-    .d-c + .d-c{padding-left:16px;}
+    /* A hairline between two cells sits centred in its gutter, so the
+       two paddings match. They did not: the money block was 14 to the
+       right of the rule and 16 to the left, the phone 10 and 12, while
+       the buying strip was a symmetric 18/18. One gutter for the wide
+       design, 18/18, and the phone keeps a tighter one — 11/11 — for
+       the same reason it keeps everything else tighter. */
+    .d-c{flex:1 1 0;min-width:0;padding-right:18px;border-right:1px solid var(--ow-rule-soft);}
+    .d-c + .d-c{padding-left:18px;}
     .d-c:last-child{border-right:0;padding-right:0;}
     /* The label on a figure is the house's own metric label (.ow-mt-l):
        11px, 600, .09em, upper. It was plain here and plain on the phone,
@@ -396,10 +412,10 @@
       display:flex;flex-direction:column;}
     .p-h{height:54px;flex:none;display:flex;align-items:center;gap:9px;padding:0 6px 0 16px;
       border-bottom:1px solid var(--ow-rule-soft);}
-    .p-h .nm{font-size:17px;font-weight:700;letter-spacing:-.01em;min-width:0;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .p-h .id{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;
-      color:var(--ow-ink-600);flex:none;}
+    /* The head's two children are the wide design's, in _op.css. Only
+       the sub's size is the phone's own: 13px, half a point up, because
+       12.5 reads thin next to a 17px name at arm's length. */
+    .p-h .id{font-size:13px;}
     .p-h .sp{flex:1;}
     .p-ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
       color:var(--ow-ink-600);flex:none;}
@@ -428,8 +444,8 @@
     .p-mn{flex:none;padding:14px 16px 16px;border-top:1px solid var(--ow-rule);
       background:var(--ow-paper-2);display:flex;flex-direction:column;gap:10px;}
     .p-mn .row{display:flex;align-items:stretch;}
-    .p-mn .c{flex:1 1 0;min-width:0;padding-right:10px;border-right:1px solid var(--ow-rule-soft);}
-    .p-mn .c + .c{padding-left:12px;}
+    .p-mn .c{flex:1 1 0;min-width:0;padding-right:11px;border-right:1px solid var(--ow-rule-soft);}
+    .p-mn .c + .c{padding-left:11px;}
     .p-mn .c:last-child{border-right:0;padding-right:0;}
     .p-mn .c .l{display:block;font-size:11px;line-height:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
     .p-mn .c .v{display:block;margin-top:2px;font-family:var(--mono);font-variant-numeric:tabular-nums;
