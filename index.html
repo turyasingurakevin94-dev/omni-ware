@@ -40166,7 +40166,12 @@ function announceOrderMove(q, status){
      the old lane vocabulary and must never be scrolled by a move here.
      It flashes for a breath and is brought into view; nothing scrolls
      sideways, because nothing on this screen does. */
-  const row = document.querySelector(`#savedQuotesWrap .ow-ot-r[data-id="${q.id}"]`);
+  /* The CARD on the console, the row on the phone. The row lives in
+     #savedQuotesWrap, which the console keeps at display:none, so the
+     flash that says "it moved, and here is where to" was being played to
+     a hidden element every time. */
+  const row = document.querySelector(`.ow-ot-card[data-id="${q.id}"]`)
+    || document.querySelector(`#savedQuotesWrap .ow-ot-r[data-id="${q.id}"]`);
   if(!row) return;
   row.classList.remove('ow-ot-moved');
   void row.offsetWidth;   // restart the flash when two moves land in one breath
@@ -40865,9 +40870,11 @@ function stepSavedQuoteStatus(id, dir){
       : stale.length
         ? `The quote changed after ${stale.length===1 ? supplierName(stale[0].supplierId)+' confirmed' : stale.length+' suppliers confirmed'} — ask again at the new terms`
         : `${left.length} supplier${left.length===1?'':'s'} still to confirm — ask ${left.length===1?'them':'each of them'} before the group is told`, 5000);
-    /* Opens the ROW rather than a panel: the suppliers and their two
-       taps are on it, which is where the next thing anybody does is. */
-    otOpenRow(id);
+    /* Opens the PANEL, where the suppliers and their two taps are. It
+       used to open the row, and the row lives in a container the console
+       keeps at display:none — so the refusal named a screen the person
+       being refused could not get to. */
+    openSupplierConfirmModal(id);
     return;
   }
   if(dir>0 && toStatus==='preparing' && agentPaymentBlocksPreparing(q)){
@@ -40903,8 +40910,11 @@ function stepSavedQuoteStatus(id, dir){
          carrying it -- the transport by name and phone, one of ours, the
          client's person. The row's own form is where that is said, so
          the refusal opens the row rather than only refusing. */
-      toast('Say who is carrying it — open the row and tap Loaded', 5000);
-      otOpenRow(id);
+      toast('Say who is carrying it — the form is on the order', 5000);
+      /* The order's own dialog, whose `loading` branch inlines that very
+         form. "Open the row and tap Loaded" was an instruction the
+         console cannot be given: its rows are the phone's. */
+      openOrderPreview(id);
       return;
     }
     /* Entering Preparing needs nobody. The order joins the pickers'
@@ -44154,7 +44164,16 @@ function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
   const sid = el && el.dataset ? el.dataset.sid : null;
   switch(act){
-    case 'open': otOpenRow(id); break;
+    /* THE SUPPLIER PANEL, which has always existed and always worked.
+       This act used to expand the order's row in #savedQuotesWrap — a
+       container the console keeps at display:none (it is the phone's own
+       screen), so on a desktop the one red button on a Taken order
+       mutated a Set, re-rendered an invisible subtree, and changed no
+       pixels. The row's own "Every supplier" ghost was the only door to
+       the panel, and it is inside that same hidden container: on a
+       desktop there was no route at all to confirm a supplier, and an
+       order cannot leave Taken until they have all confirmed. */
+    case 'open': openSupplierConfirmModal(id); break;
     case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
     case 'announce': openAnnounceDialog(id); break;
     case 'ask': askOrderSupplier(id, sid); break;
@@ -44166,7 +44185,11 @@ function otAct(act, id, el){
     case 'buying': openBuyingList(); break;
     case 'pickups': openPickupRuns(); break;
     case 'runs': openDeliveryRuns(); break;
-    case 'loaded': otOpenRow(id); otFocusLoad(id); break;
+    /* The order's own dialog, whose `loading` branch inlines this very
+       form. otFocusLoad reaches into #savedQuotesWrap, and scrollIntoView
+       and .focus() on a display:none element are both no-ops — so from
+       the dock, on a desktop, "Who has it" did nothing. */
+    case 'loaded': openOrderPreview(id); break;
     case 'loadgo': otLoadGo(id, el); break;
     case 'release': releaseOrderToQueue(id); break;
     case 'cancel': cancelSavedQuote(id); break;
