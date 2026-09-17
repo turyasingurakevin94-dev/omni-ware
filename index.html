@@ -14342,14 +14342,23 @@
     background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
     box-shadow:var(--ow-lift);padding:5px;display:flex;flex-direction:column;gap:1px;}
   .ow-mn-pop[hidden]{display:none;}
-  .ow-mn-i{display:flex;align-items:center;gap:var(--ow-sp-10);height:34px;padding:0 9px;
-    border:0;background:none;cursor:pointer;border-radius:var(--ow-r-sm);
-    font-size:var(--ow-t-13);color:var(--ow-ink-900);white-space:nowrap;width:100%;
-    text-align:left;font-family:inherit;}
+  /* A WARNING IS NOT A TAG. The right-hand slot is for a short mono fact
+     — "sent", "1" — and prose put there ran straight out of the
+     popover: "Step back to Taken" and "clears the pick" together are
+     half as wide again as the menu. What the move will COST goes under
+     its name, where it has a line of its own. */
+  .ow-mn-i{display:flex;align-items:center;gap:var(--ow-sp-10);min-height:34px;
+    padding:var(--ow-sp-6) 9px;border:0;background:none;cursor:pointer;
+    border-radius:var(--ow-r-sm);font-size:var(--ow-t-13);color:var(--ow-ink-900);
+    width:100%;text-align:left;font-family:inherit;}
+  .ow-mn-t{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .ow-mn-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mn-s{font-size:var(--ow-t-11);line-height:1.35;color:var(--ow-amber-ink);}
   .ow-mn-i:hover{background:var(--ow-steel-050);}
   .ow-mn-i:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
   .ow-mn-i .ow-i14{color:var(--ow-ink-600);}
-  .ow-mn-i .ow-mn-n{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  .ow-mn-i .ow-mn-n{flex:none;align-self:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-mn-sep{height:1px;background:var(--ow-rule-soft);margin:var(--ow-sp-4) 5px;}
 
@@ -42287,11 +42296,19 @@ function orderActSpec(q){
   }
   if(q.status === 'preparing'){
     if(orderHasPickShortfall(q)) return { act:'shortpick', label:'Decide' };
-    /* Packed: the row's act opens the Loaded form in the row; the form's
-       own button is the move. Never a pop-up. */
-    if(q.pickingStatus === 'done') return { act:'loaded', label:'Loaded' };
     if(orderNeedsWorker(q)) return { act:'release', label:'Back to the queue' };
-    return q.announcedAt ? null : { act:'announce', label:'Announce' };
+    /* SENDING IT OUT, at every point in Preparing rather than only once
+       a picker has marked the pick done. Before this the board could not
+       move an order to Out at all unless that flag was set — a pick done
+       on paper, or by somebody whose phone never showed it, left the
+       order stuck in Preparing with no control that could move it.
+
+       It is still the Loaded FORM that moves it, not a bare step: "out
+       for delivery" begins when something is actually out, and the form
+       is where who is carrying it gets named. A move without that fills
+       the runs screen with orders nobody is carrying. The label says
+       what it does rather than what the record calls it. */
+    return { act:'loaded', label:'Send it out' };
   }
   if(q.status === 'pending_delivery'){
     if(orderNeedsDelivery(q)) return { act:'loaded', label:'Who has it' };
@@ -43223,15 +43240,19 @@ function otPreviewSpec(id){
        buttons and body prose on a dialog already carrying its own act,
        so the screen offered five things and meant one. */
     menu: `${back ? `<button type="button" class="ow-mn-i" role="menuitem" data-dlg="act" data-act2="prev" data-id="${q.id}">
-        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Step back to ${esc(OT_LANE_NAME[back])}${
-          back === 'draft' && i > 1 ? '<span class="ow-mn-n">clears the pick</span>' : ''}</button>` : ''}
+        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+        <span class="ow-mn-t"><span class="ow-mn-l">Step back to ${esc(OT_LANE_NAME[back])}</span>${
+          back === 'draft' && i > 1 ? '<span class="ow-mn-s">clears the pick</span>' : ''}</span></button>` : ''}
       ${q.status === 'draft' ? '' : `<button type="button" class="ow-mn-i" role="menuitem" data-dlg="announce" data-id="${q.id}">
-        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"/></svg>Announce to the group${q.announcedAt ? '<span class="ow-mn-n">sent</span>' : ''}</button>`}
+        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"/></svg>
+        <span class="ow-mn-t"><span class="ow-mn-l">Announce to the group</span></span>${q.announcedAt ? '<span class="ow-mn-n">sent</span>' : ''}</button>`}
       <button type="button" class="ow-mn-i" role="menuitem" data-dlg="act" data-act2="edit" data-id="${q.id}">
-        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Edit the lines<span class="ow-mn-n">${s.lines.length}</span></button>
+        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+        <span class="ow-mn-t"><span class="ow-mn-l">Edit the lines</span></span><span class="ow-mn-n">${s.lines.length}</span></button>
       <div class="ow-mn-sep"></div>
       <button type="button" class="ow-mn-i" role="menuitem" data-dlg="cancel" data-id="${q.id}">
-        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>Cancel the order</button>`,
+        <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        <span class="ow-mn-t"><span class="ow-mn-l">Cancel the order</span></span></button>`,
     body: `<div class="ow-op">
       <div class="ow-op-sp">${spine}</div>
       <div class="ow-op-r">${asking ? otSupplierPaneHTML(q) : `
