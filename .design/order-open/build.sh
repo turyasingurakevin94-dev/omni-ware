@@ -34,3 +34,5 @@ build Menu.dc.html      frame 680 446 0 body_menu.html   _op.css _cut.css
 build Short.dc.html     frame 560 300 0 body_short.html  _op.css _cut.css
 build Buying.dc.html    frame 900 452 0 body_buying.html _op.css _cut.css
 build Runs.dc.html      frame 900 388 0 body_runs.html   _op.css _cut.css
+build AltA.dc.html      frame 680 690 0 body_alta.html _op.css _cut.css
+build AltB.dc.html      frame 680 420 0 body_altb.html _op.css _cut.css
