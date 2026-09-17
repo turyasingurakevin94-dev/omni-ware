@@ -375,10 +375,11 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const panel = extractFunction(src, 'orderOutPanelHTML', 'index.html');
   t.check(/list \|\| pendingDeliveryOrders\(\)/.test(panel) && /deliveryRuns\(orders\)/.test(panel),
     'the rail panel reads the delivery runs over the orders out for delivery, where the question is asked');
-  /* The cash to buy in sits on the strip, read over both working stages:
-     the money to go and buy belongs beside the orders waiting for it. */
-  t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
-    'and the cash to buy in is on the strip, over the stages still buying');
+  /* The cash to buy in sits on the Buying lane's own banner: the money
+     to go and buy belongs beside the orders waiting for it, which on a
+     lane board is the lane they are standing in. */
+  t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'and the cash to buy in is on the lane of the stage still buying');
   t.check(/case 'runs': openDeliveryRuns\(\); break;/.test(code), "tapping the Out lane's act opens the runs");
   /* SIX DIALOGS, ONE SHELL. The runs no longer have a modal of their
      own: they are a spec poured into the board's one dialog, which is

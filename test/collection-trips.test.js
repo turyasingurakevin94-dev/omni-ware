@@ -432,14 +432,13 @@ const trip = (over) => Object.assign({
     'a trip somebody is already out on cannot be assigned');
   t.check(/filter\(s=> !s\.unavailable/.test(fn),
     'to somebody actually available');
-  /* pendingAssign is gone with the order-stage flow that owned it. The
-     two forward steps that used to open this modal ask for nobody now: a
-     picker takes the next order from the queue on their phone, and an
-     order goes out on "Loaded, it has gone" with the carrier named in the
-     row. A trip is the one thing left that is assigned from a modal, so
-     the modal has one caller and nothing to be tripped up by. */
-  t.check(!/pendingAssign/.test(src),
-    'and nothing is left of the order-stage flow that used to share this modal');
+  /* pendingAssign belongs to the order-stage flow, which shares this
+     modal: the board's forward arrow opens it to name a picker or a
+     driver. The trip path must not be tripped up by that, so it clears
+     the variable rather than reading it -- the rows here carry their own
+     handler and never fall through to the order one. */
+  t.check(/pendingAssign = null;/.test(fn),
+    'the trip path clears the order-stage flow that shares this modal, rather than inheriting it');
   t.check(/trip\.status = 'assigned';[\s\S]*?trip\.assignedAt = /.test(fn),
     'and picking a row assigns with a timestamp');
   t.check(/openAssignTripModal\(btn\.dataset\.assign\)/.test(src) && !/const pick = prompt\(/.test(src),

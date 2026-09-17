@@ -75,13 +75,13 @@ const shared = read('shared-worker.js');
 
 /* ---------- 3. and the phone is what picks it up ---------------------- */
 {
-  /* The board no longer writes an assignment at all -- the modal that did
-     is gone from this flow, and with it the pop-up on every order. What
-     puts an order on a phone is the worker taking it, or being handed it
-     when they finish the last one. Both write the same fields the modal
-     used to, which is why nothing downstream had to change. */
-  t.check(!/openAssignStaffModal/.test(admin),
-    'the assign-staff pop-up is gone from the order flow rather than left sitting there unused');
+  /* The lane board's forward arrow asks who, through the modal this flow
+     has always used. The worker taking the next order off the queue on
+     their phone still works and writes the same fields -- the two are
+     the same assignment made from two ends, which is why nothing
+     downstream had to change. */
+  t.check(/order\.pickingStatus = 'awaiting_accept';/.test(extractFunction(admin, 'openAssignStaffModal', 'index.html')),
+    'the assign-staff pop-up puts the order on a phone the same way the queue does');
 
   const take = extractFunction(shared, 'takeNextOrder', 'shared-worker.js');
   ["pickingStatus = 'in_progress'", 'pickCursor = 0', 'pickingAssignedAt', 'workerAcceptedAt'].forEach((bit) => {

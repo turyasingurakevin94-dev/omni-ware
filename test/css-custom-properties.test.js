@@ -120,11 +120,25 @@ t.check(problems.length === 0,
   const admin = read('index.html');
   t.check(!/var\(--accent-deep\)/.test(admin),
     'index.html does not reach for --accent-deep, which only worker.html defines');
-  // The lane board's assign pill, which this once pinned, went with the
-  // board: its act is one of the layer's .btn buttons now. The token it
-  // hovered to is still the one every accent button uses.
-  t.check(/--ow-oxide-deep:#[0-9A-Fa-f]{6};/.test(admin), 'and --ow-oxide-deep is defined');
-  t.check(!/\.sq-assign-btn/.test(admin), 'the assign pill is gone rather than left as an orphaned rule');
+  // The selector is grouped -- .sq-confirm-btn shares the pill's look while
+  // deliberately NOT sharing its class, because the board wires every
+  // .sq-assign-btn to the assign-staff modal. What is pinned is the
+  // guarantee, not the punctuation: whatever else rides along, the Assign
+  // button itself still hovers to this token.
+  t.check(/\.sq-assign-btn:hover(?:,\s*\.[a-zA-Z0-9_-]+:hover)*\{background:var\(--ow-oxide-deep\);\}/.test(admin),
+    'the Assign button hovers to --ow-oxide-deep, the hover every other accent button here uses');
+  t.check(/--ow-oxide-deep:#[0-9A-Fa-f]{6};/.test(admin), 'and that one is defined');
+}
+
+/* ---------- and the button still has a background at rest ------------- */
+{
+  const admin = read('index.html');
+  const rest = admin.match(/\.sq-assign-btn(?:,\s*\.[a-zA-Z0-9_-]+)*\{[^}]*background:var\((--[a-zA-Z0-9-]+)\)/);
+  t.check(!!rest, 'the resting state paints a background from a token');
+  if (rest) {
+    t.check(new RegExp(`(?:^|[;{\\s])${rest[1]}\\s*:`, 'm').test(admin),
+      `and ${rest[1]} is defined in index.html`);
+  }
 }
 
 process.exit(t.done() ? 1 : 0);

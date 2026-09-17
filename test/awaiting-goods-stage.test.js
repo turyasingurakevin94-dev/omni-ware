@@ -207,8 +207,11 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   t.check(/const outstanding = received \? shortfall : qty;/.test(extractFunction(src, 'orderPurchaseLines', 'index.html')),
     'without counting a collected line twice — what is left to spend is the shortfall, which is nothing when it all arrived');
 
-  t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
-    'and the money to go and buy is on the strip, read over both working stages');
+  /* The board is lanes again, so the figure sits on the lane it is about
+     rather than on a strip over the whole screen: Buying carries the
+     banner, beside the orders the money is waiting on. */
+  t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\)/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
+    'and the money to go and buy is on the Buying lane, beside the orders waiting for it');
   t.check(/buyingListRuns\(live\)/.test(extractFunction(src, 'orderBoardCashToBuy', 'index.html')),
     "as the buying list's own runs, so the strip and the list cannot disagree");
 }
@@ -292,7 +295,7 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   const ours = scope.orderTripsRowHTML(order);
   t.check(/Abudu/.test(ours) && /out collecting/.test(ours), 'a worker out is named, with what they are doing');
   t.check(!/Nobody sent/.test(ours), 'and nothing is reported as unarranged once it is on a list');
-  t.check((ours.match(/ow-ot-gr-trip/g) || []).length === 1,
+  t.check((ours.match(/sq-goods-row trip/g) || []).length === 1,
     'one journey covering two of this order\'s lines is ONE row — printing it twice would read as two people out');
   t.check(/2 items of this order/.test(ours),
     'saying how much of THIS order it covers, since a run carries other orders too');

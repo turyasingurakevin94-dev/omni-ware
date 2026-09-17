@@ -113,8 +113,8 @@ const sectionOf = (tab) => {
       'the derived-never-invented claim, on the screen that most needs it'],
     ['quote', 'shows the cheapest supplier and a suggested price',
       'what each line of a quote is telling you'],
-    ['quote-saved', 'how it got here',
-      'what opening a row shows, which nobody would guess from the table'],
+    ['quote-saved', 'each prints on its own A5 page',
+      'the printing behaviour nobody would guess'],
     /* Follow-ups moved up from the list below. It was one line because
        there was one thing to say -- "clients who asked to be kept
        posted". The screen now has a rule worth stating and no room in a

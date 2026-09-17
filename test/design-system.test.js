@@ -123,7 +123,26 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        .bl-send's filled button, each of which carried an elevation of
        its own. Depth on this app is hairlines; two fewer shadows is the
        gain, and this is where it is locked in. */
-    'shadows': [54, /box-shadow:\s*([^;}]+)/g],
+    /* 56, and the two are BOUGHT rather than leaked. Order tracking is
+       the lane board again -- five steps and the orders standing at
+       each -- and that screen spends exactly two marks that nothing
+       else in the file draws:
+
+         the lane flash    an inset ring in the lane's own colour, the
+                           answer to a rail click. Without it, clicking
+                           a step on a wide board slides the strip and
+                           says nothing about which lane arrived.
+         the badge ring    `0 0 0 2px var(--panel)`, one declaration
+                           worn by both rail badges. A knockout, not a
+                           lift: it punches the count and the chase
+                           figure out of the node they overlap.
+
+       Neither is depth, which is what the law above is about -- no
+       elevation came back with the board. The resting `inset 0 0 0 0
+       transparent` the lane used to declare, purely to transition out
+       of, did NOT: that one was a distinct shadow spent on nothing
+       being drawn, and it is gone for good. */
+    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -715,13 +734,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-py-rz', 'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-db-go', 'ow-db-rl'],
     },
-    /* Order tracking. The lane board -- the step rail, the lanes, the
-       cards with six controls, the select-all/print row -- became a
-       console: a strip, a queue of what needs the owner, one table
-       grouped by stage with rows that open in place, and a rail.
-       Sourcing was the last screen wearing .sq-board/.sq-col/.sq-card
-       and it has now converted too, so the ~330 lines of lane CSS are
-       out of the file entirely rather than kept alive for one caller. */
+    /* Order tracking is NOT in this list, and that is the entry.
+
+       It was converted to the layer when the lane board became a
+       console; the shop asked for the board back -- five steps across
+       the top, the orders standing at each one below, and an arrow
+       either side of a card to move it a step. So the screen wears
+       .sq-board/.sq-col/.sq-card/.sq-stepper again and the lane CSS is
+       back in the file with it. It is the one screen left on that
+       vocabulary: sourcing, which used to share it, has converted, so
+       nothing here is kept alive for a second caller.
+
+       Naming it CONVERTED would make this file assert the opposite of
+       what ships. When it goes back on the layer, its entry comes back
+       with it. */
     /* Sourcing. Five lanes for a question that crosses all five: a thing
        priced and ready to list and a thing nobody has touched in three
        weeks are the same work -- the owner's -- and they sat two columns
@@ -808,25 +834,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: ['stOverview', 'stBreakevenHTML', 'stTrendChartHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
                     'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
-    },
-    'quote-saved': {
-      retired: ['sq-board-tools', 'sq-select-all-label', 'panel', 'qp-panel', 'sq-board', 'sq-col', 'sq-stepper',
-                'sq-card', 'sq-goods-row', 'sq-cash', 'sq-assignee-row', 'sq-meta', 'empty'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-f', 'ow-f-in', 'ow-strip', 'ow-grid', 'ow-sec', 'ow-seg', 'ow-pan',
-             'ow-tbl', 'ow-side'],
-      renders: ['renderSavedQuotes', 'orderRowHTML', 'orderTrackHTML', 'orderWhoHTML', 'orderActHTML', 'orderRowBodyHTML',
-                'otQueueRowHTML', 'orderTripPanelHTML', 'orderOutPanelHTML', 'orderLatePanelHTML',
-                /* The Loaded form, in the open row -- the one place this
-                   screen takes typing rather than only reading, so its
-                   fields are held to the layer's like everything else. */
-                'orderLoadFormHTML'],
-      rendersUses: ['ow-mt', 'ow-cp', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-x', 'ow-trk', 'ow-sr',
-                    'ow-empty', 'ow-seg-b'],
-      /* The Loaded form's own field classes are not named here on purpose:
-         orderLoadFormHTML hands them to carrierFormHTML (shared-worker.js)
-         as a set, so the phone and the console ask the same question from
-         one template. What this list can see is what the screen writes
-         itself, and that is what it holds to. */
     },
     /* FORECASTS — the three screens that answer "what is coming".
 

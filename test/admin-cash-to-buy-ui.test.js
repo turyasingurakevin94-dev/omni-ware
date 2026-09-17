@@ -349,8 +349,12 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(cash.unpriced === 1, 'a line nothing can price is counted apart');
   t.check(cash.total === 2000,
     'and is not counted into the figure -- a total that silently includes zero for it is worse than one that says so');
-  t.check(/with no price on file/.test(extractFunction(src, 'renderSavedQuotes', 'index.html')),
-    'and the strip names it under the figure');
+  /* The lane board says it on the banner the Buying lane carries, which
+     is the control that sends somebody to the buying list -- so the
+     count of what could not be priced travels with the figure it is
+     missing from. */
+  t.check(/with no supplier price/.test(extractFunction(src, 'cashToBuyBannerHTML', 'index.html')),
+    'and the lane\'s banner names it under the figure');
 
   openBuyingList();
   t.check(/Nails/.test(modal.html) && /Not on any stop/.test(modal.html),

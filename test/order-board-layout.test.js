@@ -1,23 +1,21 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Order tracking as a console.
+ * The Order Tracking board: a step rail driving a scroll-snap strip.
  *
- * The lane board this replaced said one fact three times (the top bar,
- * the step rail, the lane heads), scrolled sideways past its fifth lane,
- * put six controls on every card and had nowhere that said what needed
- * the owner. The console has a strip, a queue of what needs a decision,
- * one table grouped by stage with rows that open in place, and a rail
- * for the day's buying and delivering. The sourcing funnel keeps the
- * lane board and its .sq-* vocabulary, by design.
+ * The board was written as grid-template-columns:repeat(4,...) when there
+ * were four stages. Awaiting Goods made it five, and the count was baked
+ * into three separate places:
  *
- * What is pinned here is the shape that must not drift: the search
- * lives outside what the render rewrites; one listener does everything;
- * the strip counts the whole board and never a filter; the queue is the
- * named derivations, longest waiting first; a figure is never a warning;
- * the table groups off SQ_STATUS_ORDER; the overdue rule is the one line
- * the morning brief also reads; a move says where it went; and the stage
- * log is written where a status changes and read back honestly.
+ *   - the grid, so the fifth column wrapped to a row below the whole board
+ *   - the phone filter, four hand-written [data-active-step] rules, so
+ *     tapping the new step showed every column stacked
+ *   - the stepper's connector line, inset 12.5% a side -- half of a quarter
+ *
+ * Everything here asserts the shape that cannot break that way again: the
+ * strip takes its column count from the markup, the filter is one class
+ * the renderer sets from SQ_STATUS_ORDER, and the connector is drawn per
+ * step. A sixth stage should require NO layout change at all.
  *
  * Run: node test/order-board-layout.test.js   (or: npm test)
  */
@@ -25,819 +23,292 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('order board layout');
 const src = read('index.html');
-const section = (/<section id="tab-quote-saved"[\s\S]*?<\/section>/.exec(src) || [''])[0];
-const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
-const layer = src.slice(src.indexOf('THE OW LAYER'), src.lastIndexOf('</style>'));
-const phone = layer.slice(layer.indexOf('THE PHONE.'));
-const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
-const SQ_STATUS_ORDER_NAMES = JSON.parse(
-  (/const SQ_STATUS_ORDER = (\[[^\]]*\]);/.exec(src) || ['', '[]'])[1].replace(/'/g, '"'));
 
-/* ---------- 1. the shape ---------------------------------------------- */
+/* ---------- 1. the strip cannot wrap --------------------------------- */
 {
-  /* FOUR FIGURES AND THE DAY, not five figures.
-
-     The strip was five equal tiles, one of them "Needs you" -- a count
-     of the queue printed directly above the queue, which says its own
-     count in its own head. It is four now (live, cash to buy in, past
-     the stage limit, to invoice) and the fifth cell is the day: where
-     the buying round goes, what it costs to carry, and what is out.
-     That cell is what the 304px right rail used to be a column of, at
-     the width it actually needs and none of the height it did not. */
-  t.check(/<div class="ow-strip ow-ot-strip" id="ot_strip"><\/div>/.test(section), 'the strip has its mount');
-  t.check(/id="ot_dock"/.test(section) && /id="ot_board"/.test(section),
-    'and so do the queue that serves one decision at a time, and the board');
-  /* THE PHONE IS A DIFFERENT SCREEN (SKILL.md §1). Five lanes in one
-     hand is five columns of nothing, so below 820px the board and the
-     dock are gone and the phone keeps exactly what it had: the queue as
-     cards, the stage lens, the orders as cards, the day's rail under
-     them. Both shapes are written from the same derivations in one
-     render, so they cannot come to say different things. */
-  t.check(/id="ot_needs"/.test(section) && /id="ot_seg"/.test(section) && /id="ot_rail"/.test(section),
-    "and so do the phone's own queue, lens and rail");
-  t.check(/<div class="ow-ot-fone">/.test(section) && /\.ow-ot-board,\.ow-ot-dock,\.ow-ot-day\{display:none;\}/.test(phone)
-       && /\.ow-ot-fone\{display:block;\}/.test(phone) && /\.ow-ot-fone\{display:none;\}/.test(desk),
-    'and 820px is the switch between them, not a reflow of one');
-  t.check(/<div class="ow-pan"><div class="ow-tbl ow-ot" id="savedQuotesWrap"><\/div><\/div>/.test(section),
-    'the table keeps the wrap id eight test files compile against, inside a panel');
-  t.check(!/sq-board|sq-stepper|sq-card|sq-col|sqStepperMount|sq_select_all|sq_print_selected/.test(section),
-    'and none of the lane vocabulary is in the markup');
-  t.check(!/sq-(board|stepper|card|col|check|goods-row|cash|assignee)/.test(render), 'nor in what the render emits');
-  t.check(/id="ot_search"/.test(section) && section.indexOf('id="ot_search"') < section.indexOf('id="ot_strip"'),
-    'the search sits in the page header');
-  t.check(!/ot_search'\)\.(value =|innerHTML)/.test(render) && /searchTokens\(\(el\('ot_search'\) \|\| \{\}\)\.value\)/.test(render),
-    'outside anything the render rewrites -- it only reads it, so typing never loses the caret');
+  const board = (/\.sq-board\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/grid-auto-flow:column/.test(board),
+    'columns flow sideways from the markup — the track count is not declared anywhere');
+  t.check(/grid-auto-columns:minmax\(270px,1fr\)/.test(board),
+    '1fr expands them on a wide screen, 270px holds the floor on a narrow one');
+  t.check(/overflow-x:auto/.test(board),
+    'and past the floor the strip scrolls rather than wrapping');
+  /* NO snap, and its absence is load-bearing: Chrome re-snaps
+     PROGRAMMATIC scroll positions to the snap grid, and the grid only
+     knows lane-starts-at-board-edge -- so with snap on, clicking a rail
+     node had its under-the-node alignment yanked straight back to an
+     edge. Verified live: with snap, scrollLeft = 100 read back 0. */
+  t.check(!/scroll-snap/.test(board) && !/scroll-snap-align/.test((/\.sq-col\{[\s\S]*?\}/.exec(src)||[''])[0]),
+    'with no scroll-snap anywhere on the strip — snap re-snaps programmatic alignment to the edges');
+  t.check(!/grid-template-columns:repeat\(\d/.test(src.replace(/\/\*[\s\S]*?\*\//g, '').split('.sq-board')[1] || ''),
+    'no fixed track count survives anywhere near the board');
+  /* The regression itself, by name -- scoped to the board's own rule,
+     because .cs-stats legitimately uses the same four-track pattern for
+     a row of four stat boxes that really is four boxes. */
+  t.check(!/\.sq-board\{[^}]*repeat\(/.test(src),
+    'the four-track grid that wrapped Step 5 is gone');
 }
 
-/* ---------- 2. one listener, bound once ------------------------------- */
+/* ---------- 2. the phone filter cannot forget a stage ---------------- */
 {
-  const bound = (src.match(/document\.getElementById\('tab-quote-saved'\)\.addEventListener\('click'/g) || []).length;
-  t.check(bound === 1, `one delegated listener on the section, bound once at parse time (${bound})`);
-  t.check(!/addEventListener/.test(render), 'and the render binds nothing -- an act never depends on which render last wired it');
-  t.check(/const act = t\.closest\('\[data-act\]'\);\s*if\(act\)\{ otAct\(act\.dataset\.act, Number\(act\.dataset\.id\), act\); return; \}/.test(src),
-    'every act is a data-act the listener dispatches, with the element so a supplier act knows its supplier');
-  t.check(/if\(t\.closest\('a, button, input, select, label'\)\) return;/.test(src),
-    'and a control inside a row never opens the row by accident');
-  const dispatch = extractFunction(src, 'otAct', 'index.html');
-  /* 'assign' and 'assigndelivery' are gone with the pop-up they opened.
-     A picker is not assigned from here at all now -- the order joins the
-     pickers' queue and the next free one takes it from their phone -- and
-     a driver is named by loading the order out, which is 'loaded' (open
-     the row's form) and 'loadgo' (the form's own button). 'release' is
-     the way back to the queue for an order held by somebody whose phone
-     cannot show it. */
-  /* qnext/qprev/qjump step the dock's queue; invoicepick opens the
-     invoice dialog off the Delivered lane's own head, which is where
-     "Invoice all delivered" went when it stopped being a header button
-     that billed everything without saying which. */
-  ['open', 'leave', 'announce', 'ask', 'confirmed', 'undoconfirm', 'confirm', 'next', 'prev', 'buying', 'pickups', 'runs',
-    'loaded', 'loadgo', 'release', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete',
-    'qnext', 'qprev', 'qjump', 'invoicepick'].forEach((a) => {
-    t.check(new RegExp(`case '${a}':`).test(dispatch), `otAct knows ${a}`);
-  });
+  t.check(!/data-active-step="draft"/.test(src) && !/data-active-step="preparing"/.test(src),
+    'no CSS rule names an individual status — the list that forgot awaiting_goods is gone');
+  t.check(/\.sq-board \.sq-col:not\(\.is-active-step\)\{display:none;\}/.test(src),
+    'one class hides the inactive columns, whatever statuses exist');
+  t.check(/class="sq-col\$\{status===sqActiveMobileStep\?' is-active-step':''\}"/.test(src),
+    'and the renderer sets it from the same array that builds the columns');
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check((render.match(/SQ_STATUS_ORDER\.map\(/g) || []).length >= 2,
+    'both the rail and the board are driven off SQ_STATUS_ORDER, never a literal list');
 }
 
-/* ---------- 3. the strip counts the whole board ----------------------- */
+/* ---------- 3. the connector follows the step count ------------------ */
 {
-  t.check(render.indexOf('put(strip,') > 0 && render.indexOf('otOrderMatches(q, tokens)') > render.indexOf('put(strip,'),
-    'the strip is computed before the search narrows anything');
-  t.check(/const quotes = allQuotes\.filter\(q=>!quoteAgedOffBoard\(q\) && !q\.voided\);/.test(render),
-    'over the live orders: not aged off, not cancelled');
-  t.check(/orderBoardCashToBuy\(beingPreparedOrders\(\)\)/.test(render),
-    "the cash to buy in is the buying list's own figure, over both working stages");
-  t.check(/deliveryRuns\(pendingDeliveryOrders\(\)\)/.test(render), "and out-for-delivery is the delivery runs' own clustering");
-  /* A FIGURE IS A SIZE, NOT A WARNING. The strip used to tint two tiles
-     amber for having anything in them at all -- "Needs you" and "To
-     invoice" -- which marked the ordinary state of a working shop. Both
-     are ink now. The one tile that carries colour is Past stage limit,
-     and it is crimson, because an order past the limit the shop itself
-     set is the genuinely bad case rather than a busy one. */
-  t.check(/tile\('Past stage limit', anyLimit \? String\(late\.length\) : '—', late\.length \? 'ow-bad' : '',/.test(render),
-    'crimson only on the tile that is genuinely bad, and only when it is not empty');
-  const stripAt = render.lastIndexOf('put(strip,');
-  const stripSrc = render.slice(stripAt, render.indexOf('put(dock,', stripAt));
-  t.check(!/'ow-warn'/.test(stripSrc),
-    'and nothing else in the strip is tinted at all');
-  /* AND IT SAYS SO WHEN IT CANNOT SAY. With no stage limit set in
-     Presets there is no such thing as past one, so the tile shows a dash
-     rather than a zero that reads as "none are late". */
-  t.check(/anyLimit \? String\(late\.length\) : '—'/.test(render),
-    'a shop with no limits set gets a dash, not a zero it has not earned');
-  /* A FIGURE ON ITS OWN IS NOT A READING, which is what the fourth
-     argument is. On an ordinary morning three of these four tiles read
-     "0", "0" and "—", and a tile that says nothing on an ordinary
-     morning is furniture. Each carries a second line now: what the
-     figure rests on when there is one, and what the zero MEANS when
-     there is not. The old assertion pinned the tile call at three
-     arguments, which is the only reason it had to change; the argument
-     it was making -- crimson on exactly one tile, and only when that
-     tile is not empty -- is unchanged and still checked above. */
-  const tiles = stripSrc.match(/tile\(/g) || [];
-  t.check(tiles.length === 4, `four tiles and the day, not five figures (${tiles.length})`);
-  ['nothing confirmed to pay for', 'nothing delivered to bill', 'every lane inside its limit', 'no limits set']
-    .forEach((say) => {
-      t.check(stripSrc.includes(say), `an empty tile says what the zero means: "${say}"`);
-    });
-  t.check(/tile\('On the board', String\(quotes\.length\)/.test(render) && /const boardValue = quotes\.reduce/.test(render),
-    'and the count of live orders carries what they are worth, which is the question behind the count');
+  t.check(/\.sq-stepper-step \+ \.sq-stepper-step::before\{/.test(src),
+    'each step after the first draws its own segment back to the previous node');
+  // Checked against the CODE, not the comment that explains the history.
+  const uncommented = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  t.check(!/12\.5%/.test(uncommented),
+    'the 12.5% insets — four steps baked into a line — are gone');
 }
 
-/* ---------- 4. the queue: named derivations, longest first ------------ */
+/* ---------- 4. the rail is the board's own top row ------------------- */
 {
-  const NOW = Date.now();
-  const env = {
-    data: { staff: [{ id: 'W1', name: 'Musa' }], agents: [{ id: 'A1', name: 'Peter', paymentTerm: 'prepay' }] },
-    esc: (s) => String(s == null ? '' : s),
-    fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-    supplierName: (id) => ({ S1: 'Roofings', S2: 'Hima' })[id] || String(id),
-    staffName: (id) => ({ W1: 'Musa' })[id] || 'somebody',
-    orderSupplierGroups: (q) => (q.sup || []).map((sid) => ({ supplierId: sid, lines: [] })),
-    orderSupplierConfirmState: (q, sid) => Object.assign({ state: 'pending', askedAt: null, at: null, note: '' }, (q.states || {})[sid] || {}),
-    orderDraftReady: (q) => (q.sup || []).every((sid) => ((q.states || {})[sid] || {}).state === 'confirmed'),
-    agentPaymentBlocksPreparing: (q) => !!q.unpaid,
-    invoiceBalanceDue: (q) => q.total || 0,
-    orderGoodsProgress: (q) => q.goods || { received: 0, total: 0, short: 0 },
-    orderLinesWithNobodySent: (q) => q.nobody || [],
-    orderShortLines: (q) => q.shortLines || [],
-    quoteLineShortfall: (l) => l.short || 0,
-    orderHasPickShortfall: (q) => !!q.pickShort,
-    pickShortfallLabel: () => 'Picked short — 2 of 5 found',
-    orderNeedsWorker: (q) => q.status === 'preparing' && !!q.assignedWorkerId && q.pickingStatus === 'stranded',
-    workerPickQueue: () => [],
-    goodsBlockPreparing: (q) => !!q.goodsOut,
-    orderIncomingLines: (q) => q.incoming || [],
-    orderNeedsDelivery: (q) => q.status === 'pending_delivery' && !q.assignedDeliveryId,
-    deliveryIsSelfCarried: (q) => q.assignedDeliveryId === '__agent__',
-    deliveryAssigneeLabel: (q) => (q.assignedDeliveryId === '__agent__' ? 'Agent pickup' : 'Kasule'),
-    itemPickAnswered: (it) => !!it.pickStatus,
-    orderGoodsRowHTML: () => '<div class="ow-ot-gr">2 of 3 items in</div>',
-    orderTripsRowHTML: () => '',
-    invoiceNumberLabel: (q) => 'INV-' + q.id,
-    savedQuoteTotal: (q) => q.total || 0,
-    quoteClientName: (q) => (q.client && q.client.name) || 'Unnamed client',
-    SQ_BOARD_HIDE_AFTER_MS: 86400000,
-  };
-  const scope = compileScope([
-    extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html'),
-    ...['otStageShort', 'otDuration', 'otWhen', 'otStageSince', 'otStaffGone', 'orderSupplierActsHTML', 'orderNeedsYou',
-      'orderActSpec', 'orderWho', 'orderWhoText', 'orderWhoHTML'].map((n) => extractFunction(src, n, 'index.html')),
-  ], env, ['orderNeedsYou', 'orderActSpec', 'orderWho', 'otDuration']);
-  const late = () => true, fine = () => false;
-  const q = (over) => Object.assign({ id: 7, status: 'draft', client: { name: 'Musa Hardware' }, total: 851000,
-    stageEnteredAt: NOW - 3600000, items: [] }, over);
-  const need = (o, over) => scope.orderNeedsYou(q(o), over || fine);
-
-  const taps = (h, sid) => new RegExp(`data-act="ask" data-id="7" data-sid="${sid}"`).test(h) && new RegExp(`data-act="confirmed" data-id="7" data-sid="${sid}"`).test(h);
-  let n = need({ sup: ['S1', 'S2'] });
-  t.check(n && n.chip === 'Not asked' && n.acts.length === 0 && taps(n.html, 'S1') && taps(n.html, 'S2'),
-    `a draft nobody has asked for is Not asked, with Ask and Confirmed on the row for each supplier (${n && n.chip})`);
-  t.check(n && /Roofings/.test(n.html) && /Hima/.test(n.html) && !/Roofings/.test(n.say), 'the lines name who is to be asked, and the sentence does not say it twice');
-  t.check(n && /not asked yet/.test(n.html) && /Ask</.test(n.html), 'each line says where the asking has got to');
-  n = need({ sup: ['S1'], states: { S1: { state: 'pending', askedAt: NOW - 7200000 } } });
-  t.check(n && n.chip === 'Supplier silent' && /Roofings/.test(n.say) && /2 h/.test(n.say) && /Ask again/.test(n.html),
-    `asked and unanswered is Supplier silent, saying who and for how long, with Ask again (${n && n.say})`);
-  n = need({ sup: ['S1'], states: { S1: { state: 'problem', note: 'no stock' } } });
-  t.check(n && n.chip === 'Problem' && n.tone === 'ow-warn' && /no stock/.test(n.say) && taps(n.html, 'S1'),
-    'a problem outranks the count and carries the note');
-  n = need({ sup: ['S1'], states: { S1: { state: 'stale' } } });
-  t.check(n && n.chip === 'Quote changed' && n.tone === 'ow-warn' && /Ask again/.test(n.html), 'a confirmation the quote moved under is Quote changed');
-  n = need({ sup: ['S1', 'S2', 'S3'] });
-  t.check(n && (n.html.match(/data-act="ask"/g) || []).length === 2 && /and 1 more/.test(n.html) && /data-act="open"/.test(n.html),
-    'the queue shows two suppliers and counts the rest, with the row as the way to them');
-  n = need({ sup: ['S1'], states: { S1: { state: 'confirmed' } } });
-  t.check(n && n.chip === 'Ready' && n.acts[0].act === 'leave' && n.acts[0].label === 'Move on' && n.tone === '',
-    'every supplier back is Ready, with the move as the act, and no amber -- nothing is wrong');
-  n = need({ sup: [] });
-  t.check(n && n.chip === 'Ready' && /shelf/.test(n.say) && n.acts[0].act === 'leave' && n.acts[0].label === 'To the pickers',
-    'and an order with nothing to buy waits for one tap -- it has no answer to leave on, and a saved quote can still be a quote');
-  n = need({ sup: ['S1'], states: { S1: { state: 'confirmed' } }, unpaid: true, originAgentId: 'A1' });
-  t.check(n && n.chip === 'Agent unpaid' && n.acts[0].act === 'prepay' && /851,000/.test(n.say),
-    'a prepay agent who has not paid is asked for the money first, with the figure');
-  n = need({ status: 'awaiting_goods', nobody: [{ supplierId: 'S2' }], goods: { received: 0, total: 1, short: 0 } });
-  t.check(n && n.chip === 'Nobody sent to buy' && n.acts[0].act === 'buying' && /Hima/.test(n.say),
-    'a line on no trip is Nobody sent to buy, naming the supplier, with the buying list as the act');
-  n = need({ status: 'awaiting_goods', goods: { received: 1, total: 1, short: 1 }, shortLines: [{ short: 20, unit: 'bags', productName: 'Cement' }] });
-  t.check(n && n.chip === 'Short delivery' && n.tone === 'ow-warn' && /20 bags/.test(n.say) && /Cement/.test(n.say),
-    'a short delivery is named with the number and the item');
-  n = need({ status: 'awaiting_goods', goods: { received: 0, total: 2, short: 0 } });
-  t.check(n === null, 'goods on their way need nothing from the owner');
-  /* Nobody on a preparing order is not the owner's problem any more: it
-     is in the pickers' queue on every worker's phone, and the next free
-     one takes it. So the queue says nothing about it at all. */
-  n = need({ status: 'preparing' });
-  t.check(n === null, 'an order waiting for the next free picker needs nothing from the owner');
-  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickShort: true });
-  t.check(n && n.chip === 'Short pick' && n.tone === 'ow-warn' && n.acts[0].act === 'shortpick', 'a short pick is a decision');
-  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'in_progress' });
-  t.check(n === null, 'an order being picked needs nothing');
-  // Packed: the pick is over, the goods are on the floor, and the one
-  // thing left is saying who took them.
-  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'done', pickingDoneAt: NOW - 3600000 });
-  t.check(n && n.chip === 'Packed' && n.acts[0].act === 'loaded' && /Musa/.test(n.say) && /1 h/.test(n.say),
-    'a packed order says who packed it and when, and its act is Loaded');
-  // Held by somebody whose phone cannot show it -- the one stranding the
-  // board still has to offer a way out of.
-  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'stranded' });
-  t.check(n && n.acts[0].act === 'release' && /queue/.test(n.say),
-    'an order held by somebody whose phone is not showing it goes back to the queue');
-  // Why an order is NOT in that queue, when it is not.
-  n = need({ status: 'preparing', goodsOut: true, incoming: [{}, {}] });
-  t.check(n && n.chip === 'Goods not in' && n.acts[0].act === 'buying' && /2 lines/.test(n.say),
-    'and an order no picker is offered says why — the goods are still at a supplier');
-  n = need({ status: 'preparing', unpaid: true, originAgentId: 'A1' });
-  t.check(n && n.chip === 'Agent unpaid' && n.acts[0].act === 'prepay',
-    'as does one waiting on an agent who pays first');
-  n = need({ status: 'pending_delivery' });
-  t.check(n && n.chip === 'Nobody named' && n.acts[0].act === 'loaded', 'an order out with nobody named asks who has it');
-  n = need({ status: 'pending_delivery', assignedDeliveryId: 'D1' });
-  t.check(n === null, 'an order out with somebody needs nothing until the call comes');
-  n = need({ status: 'completed', invoiced: false });
-  t.check(n && n.chip === 'Not invoiced' && n.acts[0].act === 'invoice' && /851,000/.test(n.say) && /Musa Hardware/.test(n.say),
-    'delivered and not invoiced says what invoicing will book, and on whom');
-  t.check(n && /ow-ot-fig/.test(n.say) && !/ow-bad|ow-crimson|ow-warn/.test(n.say), 'the figure in a queue row is a size, not a warning');
-  n = need({ status: 'completed', invoiced: true });
-  t.check(n === null, 'and an invoiced order is done with');
-  n = need({ status: 'pending_delivery', assignedDeliveryId: 'D1' }, late);
-  t.check(n && /^Waiting/.test(n.chip) && n.tone === 'ow-warn' && n.acts[0].act === 'next',
-    "past its limit with nothing else wrong, an order waits amber with the stage's own act");
-
-  t.check(/\.filter\(x=> x\.need\)\.sort\(\(a, b\)=> since\(a\.q, b\.q\)\)/.test(render), 'and the queue is sorted longest waiting first, whatever the reason');
-  const act = scope.orderActSpec(q({ status: 'pending_delivery', assignedDeliveryId: 'D1', deliveryMode: 'agent_pickup' }));
-  t.check(act && act.label === 'Collected' && act.primary, "an agent's own pickup is Collected, not Delivered");
-  t.check(scope.otDuration(2 * 86400000 + 3 * 3600000) === '2 d 3 h' && scope.otDuration(4 * 3600000 + 600000) === '4 h 10 m'
-    && scope.otDuration(25 * 60000) === '25 m', 'a duration reads as the board says it');
+  /* The rail owns the panel's full width; Select all / Print live on a
+     slim toolbar row OUTSIDE the panel. The first cut put them on the
+     rail's own row, which squeezed five steps into whatever the print
+     button left over. */
+  t.check(/<div id="sqStepperMount"><\/div>\s*<div id="savedQuotesWrap">/.test(src),
+    'the rail mounts inside the panel, full width, directly above the board');
+  t.check(/class="sq-board-tools">\s*<label class="sq-select-all-label">/.test(src),
+    'with Select all and Print on their own row outside the panel');
+  t.check(!/<h2 style="margin-bottom:0;">Order tracking<\/h2>/.test(src),
+    'and the third restatement of the page title inside the panel is gone');
+  // Sticky at every width, below whichever topbar the width shows.
+  const stepper = (/\.sq-stepper\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/position:sticky/.test(stepper) && /top:var\(--topbar-h\)/.test(stepper),
+    'the rail sticks below the desktop topbar');
+  t.check(/\.sq-stepper\{top:var\(--mobile-topbar-h\);\}/.test(src),
+    'and below the mobile one on a phone');
+  /* The column heads must NOT be sticky, and the constraint is physical:
+     overflow-x:auto makes .sq-board a scroll container, and sticky pins
+     against the NEAREST scrolling ancestor -- so a sticky head answers
+     to the board, which never scrolls vertically, and simply sat
+     displaced over the first card of every column. The rail lives
+     outside the strip and carries the same names and counts. */
+  const colHead = (/\.sq-col-head\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(!/position:sticky/.test(colHead) && !/--sq-rail-h/.test(colHead),
+    'column heads stay in flow — sticky cannot work inside the scroll container');
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(!/--sq-rail-h/.test(render),
+    'and nothing measures a rail height nothing reads');
+  /* The connector segments span between node EDGES. Centre-to-centre
+     they crossed the neighbouring circle -- and no z-index can fix that,
+     because each step is its own stacking context, so a later step's
+     ::before paints over the whole of an earlier sibling, node and all. */
+  t.check(/right:calc\(50% \+ 16px\);width:calc\(100% - 32px\)/.test(src),
+    'the connector stops at the node edges instead of running through the circles');
 }
 
-/* ---------- 5. a figure is a size, the accent appears once ------------ */
+/* ---------- 5. what needs chasing, from the rail --------------------- */
 {
-  const qrow = extractFunction(src, 'otQueueRowHTML', 'index.html');
-  t.check(/class="ow-ot-qw-s">#\$\{q\.id\} · \$\{esc\(fmtUGX\(savedQuoteTotal\(q\)\)\)\}/.test(qrow) && !/ow-bad|ow-crimson/.test(qrow),
-    "a queue row's money is ink, never crimson");
-  const row = extractFunction(src, 'orderRowHTML', 'index.html');
-  t.check(/<div class="ow-tbl-n" data-l="Client pays"/.test(row) && !/ow-tbl-n[^>]*ow-(bad|warn)/.test(row),
-    'and so is the table\'s "Client pays" column');
-  const act = extractFunction(src, 'orderActHTML', 'index.html');
-  t.check(/const accent = !!\(open && a\.primary\);/.test(act) && /\$\{accent \? 'btn-accent' : 'btn-ghost'\}/.test(act),
-    "the accent lands on the open row's own act, and only when that act is the stage's real move");
-  t.check(!/btn-accent/.test(qrow) && !/btn-accent/.test(section), 'nowhere else on the screen');
-}
-
-/* ---------- 6. the table groups off the one list ---------------------- */
-{
-  t.check(/SQ_STATUS_ORDER\.forEach\(s=>\{ byStage\[s\] = quotes\.filter\(q=> q\.status === s\)\.sort\(since\); \}\);/.test(render),
-    'the groups come from SQ_STATUS_ORDER, each longest waiting first');
-  t.check(/const shownStages = otStageLens === 'all' \? SQ_STATUS_ORDER : \[otStageLens\];/.test(render),
-    'and the lens narrows to one of them, never to a literal list');
-  t.check(!/\['draft'/.test(render), 'no stage list is written out by hand');
-  t.check(/if\(!SQ_STATUS_ORDER\.includes\(otStageLens\)\) otStageLens = 'all';/.test(render),
-    'a lens that names a stage that no longer exists falls back to All');
-  t.check(/class="ow-tbl-g">\$\{esc\(otStageShort\(s\)\)\} <span class="ow-ot-gn">\$\{rows\.length\}<\/span><span class="ow-tbl-gs">\$\{esc\(OT_STAGE_SENTENCE\[s\] \|\| ''\)\}/.test(render),
-    'each group head carries the stage, its count and its one sentence');
-}
-
-/* ---------- 7. the overdue rule, read in three places ----------------- */
-{
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
   t.check(/const orderIsOverdue = \(q\)=> orderStageOverdue\(q, stageLimits, Date\.now\(\)\);/.test(render),
-    'the overdue rule is one helper -- shared with the morning brief via orderStageOverdue');
-  t.check(/orderRowHTML\(q, orderIsOverdue\)/.test(render), 'read by the row');
-  t.check(/orderNeedsYou\(q, orderIsOverdue\)/.test(render), 'by the queue');
-  t.check(/orderLatePanelHTML\(quotes, orderIsOverdue\)/.test(render), 'and by the rail, so the three can never disagree');
-  const late = extractFunction(src, 'orderLatePanelHTML', 'index.html');
-  t.check(/No stage limits set/.test(late) && /Nothing past its limit/.test(late),
-    'and an empty panel tells the two silences apart -- no limit set, or nothing past one');
+    'the overdue rule is one helper — shared with the morning brief via orderStageOverdue');
+  t.check(/const overdue = orderIsOverdue\(q\);/.test(render),
+    'read by the card flag');
+  t.check(/group\.filter\(q=> orderIsOverdue\(q\) \|\| orderNeedsSomebody\(q\)\)\.length/.test(render),
+    'and by the rail roll-up, so the two can never disagree');
+  t.check(/orderNeedsWorker\(q\) \|\| orderNeedsDelivery\(q\)/.test(render),
+    'with an order waiting on a person counted alongside one past its limit');
+  t.check(/sq-stepper-warn/.test(render) && /need\$\{warn===1\?'s':''\} chasing/.test(render),
+    'shown as the amber marker with a title that says what it means');
 }
 
-/* ---------- 8. a move says where it went ------------------------------ */
+/* ---------- 6. a move says where it went ----------------------------- */
+/*
+ * Run, not read: the whole point is behaviour the admin sees.
+ * setSavedQuoteStatus gave no feedback at all -- the card vanished from
+ * one column and reappeared in another that could be off-screen.
+ */
 {
-  const run = (over) => {
-    const calls = { toasts: [], classes: [], scrolls: [] };
-    const row = { classList: { add: (c) => calls.classes.push(c), remove: () => {} }, offsetWidth: 1,
-      scrollIntoView: (o) => calls.scrolls.push(o) };
-    const scope = compileScope([extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
-      extractFunction(src, 'announceOrderMove', 'index.html')], Object.assign({
+  const makeAnnounce = (reduced, phone) => {
+    const calls = { toasts: [], pulses: [], scrolls: [] };
+    const stepEl = {
+      classList: { add: (c) => calls.pulses.push(c), remove: () => {} },
+      offsetWidth: 26,
+    };
+    const colEl = { scrollIntoView: (o) => calls.scrolls.push(o) };
+    const scope = compileScope([
+      extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
+      extractFunction(src, 'announceOrderMove', 'index.html'),
+    ], {
       toast: (m) => calls.toasts.push(m),
-      matchMedia: () => ({ matches: false }),
-      document: { querySelector: () => row },
-      setTimeout: () => 0,
-    }, over || {}), ['announceOrderMove']);
+      matchMedia: (q) => ({ matches: /reduce/.test(q) ? reduced : phone }),
+      document: { querySelector: (sel) => /sq-stepper-step/.test(sel) ? stepEl : colEl },
+    }, ['announceOrderMove']);
     return { scope, calls };
   };
-  const a = run();
-  a.scope.announceOrderMove({ id: 7, client: { name: 'Musa Hardware' } }, 'preparing');
-  t.check(a.calls.toasts[0] === 'Musa Hardware → Preparing',
-    `the toast names the order and the stage, without the "Step 3." prefix (${a.calls.toasts[0]})`);
-  t.check(a.calls.classes.includes('ow-ot-moved'), 'the row it became flashes');
-  t.check(a.calls.scrolls.length === 1 && a.calls.scrolls[0].behavior === 'smooth' && a.calls.scrolls[0].block === 'nearest'
-    && !('inline' in a.calls.scrolls[0]),
-    'and is brought into view -- never sideways, because nothing on this screen scrolls sideways');
-  const b = run({ matchMedia: () => ({ matches: true }) });
-  b.scope.announceOrderMove({ id: 7, client: {} }, 'completed');
-  t.check(b.calls.toasts[0] === 'Order → Delivered', 'an order with no client name is still announced, not skipped');
-  t.check(!b.calls.classes.includes('ow-ot-moved') && b.calls.scrolls[0].behavior === 'auto',
-    'reduced motion keeps the toast, drops the flash, and jumps instead of sliding');
-  const c = run({ document: { querySelector: () => null } });
-  c.scope.announceOrderMove({ id: 9, client: { name: 'X' } }, 'draft');
-  t.check(c.calls.toasts.length === 1 && c.calls.scrolls.length === 0,
-    'a move made while the board is not drawn still says so, and touches nothing');
-  t.check(/#savedQuotesWrap \.ow-ot-r\[data-id=/.test(extractFunction(src, 'announceOrderMove', 'index.html')),
-    'the row is found on the ORDERS board -- the sourcing funnel keeps the lanes and must never be scrolled by a move here');
+
+  const { scope, calls } = makeAnnounce(false, false);
+  scope.announceOrderMove({ client: { name: 'Musa Hardware' } }, 'preparing');
+  /* "Preparing", not "Being Prepared": the stage NAMES were rewritten to
+     what the desk calls them after this board was first written, and
+     that rename is not part of the board coming back. The prefix strip
+     is what this line is actually pinning. */
+  t.check(calls.toasts[0] === 'Musa Hardware → Preparing',
+    `the toast names the order and the destination, without the "Step 3." prefix (${calls.toasts[0]})`);
+  t.check(calls.pulses.includes('pulse'), 'the destination rail node pulses');
+  t.check(calls.scrolls.length === 1 && calls.scrolls[0].behavior === 'smooth',
+    'and the strip slides the destination column into view');
+
+  const anon = makeAnnounce(false, false);
+  anon.scope.announceOrderMove({ client: {} }, 'completed');
+  t.check(anon.calls.toasts[0] === 'Order → Delivered',
+    'an order with no client name is still announced, not skipped');
+
+  /* Reduced motion gets the same information without the motion: the
+     toast still fires, the pulse does not, the scroll jumps. */
+  const rm = makeAnnounce(true, false);
+  rm.scope.announceOrderMove({ client: { name: 'A' } }, 'preparing');
+  t.check(rm.calls.toasts.length === 1 && !rm.calls.pulses.includes('pulse')
+    && rm.calls.scrolls[0].behavior === 'auto',
+    'reduced motion keeps the toast, drops the pulse, and jumps instead of sliding');
+
+  // On a phone the rail filters rather than scrolls, so no scrollIntoView.
+  const ph = makeAnnounce(false, true);
+  ph.scope.announceOrderMove({ client: { name: 'A' } }, 'preparing');
+  t.check(ph.calls.scrolls.length === 0, 'and a phone board is never scrolled sideways by a move');
+
+  // Wired where the status actually changes, so every path announces.
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
   t.check(/const moved = q\.status!==status;/.test(setter) && /if\(moved\) announceOrderMove\(q, status\);/.test(setter),
-    'called from setSavedQuoteStatus when the status really changed -- the assign modal and prepay paths land there too');
+    'called from setSavedQuoteStatus when the status really changed — the assign modal and prepay paths land there too');
   t.check(!/announceOrderMove/.test(extractFunction(src, 'stepSavedQuoteStatus', 'index.html')),
     'and not duplicated in the arrow handler on top of it');
 }
 
-/* ---------- 9. the timer ---------------------------------------------- */
+/* ---------- 7. the strip's affordances ------------------------------- */
 {
-  const timer = (/setInterval\(\(\)=>\{\s*const tab = document\.getElementById\('tab-quote-saved'\);[\s\S]*?\}, 60000\);/.exec(src) || [''])[0];
-  t.check(/if\(tab && tab\.style\.display !== 'none' && !otTyping\(\)\) renderSavedQuotes\(\);/.test(timer),
-    'the board redraws itself every minute while it is showing, so a wait crosses its limit on its own');
-  /* ...unless somebody is typing into a row's Loaded form, where a redraw
-     mid-word would take the caret with it. What is typed survives a
-     redraw either way (otLoadDrafts), so this is about the caret, not the
-     characters -- and it is the same lesson the search box learned by
-     living outside what the render rewrites. */
-  const typing = extractFunction(src, 'otTyping', 'index.html');
-  t.check(/document\.activeElement/.test(typing) && /\[data-load\]/.test(typing),
-    'and holds off while a carrier field has the caret');
-  t.check(/carrierDraftsFrom\(wrap\)\.forEach\(\(v, k\)=> otLoadDrafts\.set\(k, v\)\);/.test(render),
-    'while what was typed survives every redraw, typed into or not');
-  t.check(/if\(!document\.hidden\) runStageAlerts\(\);/.test(timer),
-    'and the stage alerts ride the same timer whatever screen is open');
-  t.check(/const otOpenRows = new Set\(\);/.test(src) && /otOpenRows\.has\(q\.id\)/.test(extractFunction(src, 'orderRowHTML', 'index.html')),
-    'a row the owner opened stays open across that redraw');
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  // Edge fades only where something is clipped.
+  t.check(/classList\.toggle\('can-left', boardEl\.scrollLeft > 4\)/.test(render)
+    && /classList\.toggle\('can-right',/.test(render),
+    'the fades follow which edge is clipping');
+  t.check(/\.sq-board\.can-right\{[^}]*mask-image/.test(src),
+    'drawn as a mask, so a board that fits whole carries none');
+  /* Drag-to-pan must never eat a click on something clickable. */
+  t.check(/closest\('\.sq-card'\) \|\| e\.target\.closest\('button'\) \|\| e\.target\.closest\('input'\) \|\| e\.target\.closest\('label'\)/.test(render),
+    'panning never starts from a card, a button, a checkbox or its label');
+  t.check(/Math\.abs\(dx\) > 4/.test(render),
+    'and a 4px threshold keeps an ordinary click an ordinary click');
+  // The rail scrubs the strip on desktop and filters on the phone.
+  t.check(/const isPhoneBoard = \(\)=> matchMedia\('\(max-width: 820px\)'\)\.matches;/.test(render),
+    'one predicate decides which, at the same 820px the stylesheet uses');
+  t.check(/if\(!isPhoneBoard\(\)\)\{\s*const col = boardEl\.querySelector/.test(render),
+    'clicking a step slides the strip only when it is a strip');
+  /* A scrubber puts the thing you touched UNDER your finger.
+     scrollIntoView(start) slid the lane to the board's far-left edge,
+     away from the cursor that asked for it. */
+  t.check(/const nodeX = step\.getBoundingClientRect\(\)\.left - boardRect\.left;/.test(render)
+    && /Math\.max\(0, Math\.min\(colLeft - nodeX, boardEl\.scrollWidth - boardEl\.clientWidth\)\)/.test(render),
+    'a clicked step pulls its lane under the node, clamped to what the strip can scroll');
+  t.check(!/scrollIntoView\(\{behavior: reducedMotion \? 'auto' : 'smooth', inline:'start'/.test(render),
+    'and the far-edge scrollIntoView is gone from the click path');
+  t.check(/col\.classList\.add\('lane-flash'\)/.test(render) && /if\(!reducedMotion\)\{/.test(render),
+    'the lane answers with a one-breath flash — skipped under reduced motion');
+  t.check(/--lane-accent:\$\{SQ_STATUSES\[status\]\.color\}/.test(render),
+    "in the step's own colour, carried by the lane");
+  // Roving arrows across the rail.
+  t.check(/e\.key!=='ArrowRight' && e\.key!=='ArrowLeft'/.test(render),
+    'arrow keys walk the rail');
+  /* The rail is cleared with the board on the empty branches. Run, not
+     read: a mutant hollowed clearRail out to a no-op and the previous
+     assertion — "it exists and is called twice" — was satisfied by the
+     empty shell. */
+  {
+    const mount = { innerHTML: 'stale rail from the last render' };
+    const emptied = compileScope([
+      'const clearRail = ' + (/const clearRail = \(\)=>\{[^\n]*\};/.exec(render) || [''])[0].slice('const clearRail = '.length),
+    ], { document: { getElementById: (id) => id === 'sqStepperMount' ? mount : null } }, ['clearRail']);
+    emptied.clearRail();
+    t.check(mount.innerHTML === '',
+      `an emptied board empties the rail rather than keeping stale counts (${JSON.stringify(mount.innerHTML)})`);
+    t.check((render.match(/clearRail\(\);/g) || []).length === 2,
+      'from both empty branches — no orders at all, and none still active');
+  }
 }
 
-/* ---------- 10. the phone --------------------------------------------- */
-{
-  t.check(/\.ow-ot \.ow-tbl-a \.btn\.ow-sm\{[^}]*min-height:var\(--ow-tap\)/.test(phone), "a row's act is a thumb high");
-  t.check(/\.ow-ot-qa \.btn\.ow-sm\{[^}]*min-height:var\(--ow-tap\)/.test(phone), "and so is a queue row's");
-  t.check(/\.ow-ot-more\{display:none;\}/.test(phone) && /\.ow-ot-needs\.ow-open \.ow-ot-more\{display:grid;\}/.test(phone),
-    'the queue shows three rows and folds the rest');
-  t.check(/\.ow-ot-qmore\{display:none;\}/.test(desk) && /\.ow-ot-qmore\{display:flex/.test(phone),
-    'behind a control the console never needs');
-  t.check(/class="ow-ot-q\$\{i >= 3 \? ' ow-ot-more' : ''\}\$\{need\.html \? ' ow-ot-q-sup' : ''\}"/.test(extractFunction(src, 'otQueueRowHTML', 'index.html'))
-    && /data-act="needsmore"/.test(render) && /and \$\{needs\.length - 3\} more/.test(render),
-    'and the control says how many are folded rather than hiding them silently');
-  t.check(/\.ow-ot-r\.ow-open \+ \.ow-tbl-x\{display:flex;flex-direction:column/.test(phone),
-    'an open row stacks its two halves on the phone');
-}
-
-/* ---------- 11. the stage log, written once and read honestly --------- */
-{
-  const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
-  t.check(/if\(moved\)\{[\s\S]*?q\.stageLog\.push\(\{ status, at: Date\.now\(\), auto: !!\(opts && opts\.auto\) \}\);[\s\S]*?\}\s*q\.status = status;/.test(setter),
-    'setSavedQuoteStatus appends to the stage log only on a real move, marking a step the app took itself');
-  const trail = extractFunction(src, 'orderTrail', 'index.html');
-  ['q.savedAt', 'q.supplierConfirms', 'q.stageLog', 'it.receivedAt', 'q.pickingAssignedAt', 'q.workerAcceptedAt',
-    'q.pickingDoneAt', 'q.carrier', 'q.announcedAt', 'q.invoicedTs', 'q.cancelledAt'].forEach((f) => {
-    t.check(trail.includes(f), `the trail reads ${f} off the record`);
-  });
-  t.check(!/Math\.random|invent/.test(trail), 'and invents nothing');
-  t.check(/were not written down/.test(extractFunction(src, 'orderTrailHTML', 'index.html')),
-    'an order from before the log says so rather than showing a history it does not have');
-  const sync = (/savedQuotes: d\.savedQuotes\.map\(q=>\(\{[\s\S]*?\}\)\),/.exec(src) || [''])[0];
-  ['stageLog:q.stageLog||null', 'announcedAt:q.announcedAt||null', 'cancelledAt:q.cancelledAt||null',
-    'carrier:q.carrier||null', 'pickingDoneAt:q.pickingDoneAt||null'].forEach((k) => {
-    t.check(sync.includes(k), `the sync literal carries ${k.split(':')[0]} -- a key missing there is dropped on save`);
-  });
-}
-
-/* ---------- 12. the stages, named as the shop names them -------------- */
-{
-  const statuses = extractDeclaration(src, 'SQ_STATUSES', 'index.html');
-  ['Step 1. Taken', 'Step 2. Buying', 'Step 3. Preparing', 'Step 4. Out for delivery', 'Step 5. Delivered'].forEach((l) => {
-    t.check(statuses.includes(`label:'${l}'`), `${l}`);
-  });
-  t.check(/'draft','awaiting_goods','preparing','pending_delivery','completed'/.test(extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html')),
-    'and the keys every derivation reads are untouched');
-  const short = extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html');
-  t.check(/draft:'Taken'/.test(short) && /pending_delivery:'Out for delivery'/.test(short) && /completed:'Delivered'/.test(short),
-    'the short labels say the same words');
-  t.check(!/Awaiting Goods|Being Prepared|Pending Delivery/.test(section + render), 'and the old names are gone from the screen');
-}
-
-/* ---------- 13. the caret survives the redraw ------------------------- */
+/* ---------- 8. the strip keeps its place --------------------------- */
 /*
- * Reported from the live shop, on the Loaded form: you type, and mid-word
- * the box goes dead and the next letters vanish.
- *
- * The values were already carried across a redraw (otLoadDrafts), so the
- * text on screen looked right -- what was lost was the FOCUS. The board
- * replaces its whole wrap, so the box being typed into is a new element
- * and the old one's focus dies with it; every keystroke after that landed
- * on the page and was thrown away. What made it constant rather than rare
- * is that this render has some twenty callers, one of them a background
- * refresh every thirty seconds: pause to read a number plate off a lorry,
- * and the field dies under your hands.
- *
- * Two halves, and both are needed. The caret is given back after the
- * rewrite, which covers all twenty callers at once; and the background
- * refresh holds off while the form is in use, because an OPEN dropdown
- * cannot be given back -- no page can reopen a native select, so the list
- * of who is carrying the order shut itself while it was being read.
+ * The 60s poll re-renders the board by replacing its HTML, and a fresh
+ * element starts at scrollLeft 0 -- so an admin reading Completed was
+ * yanked back to Drafts every minute, which was reported from the
+ * running shop within hours of the strip landing.
  */
 {
-  // Snapshot BEFORE the wrap is rewritten, restore AFTER -- restoring
-  // first would put the caret into elements about to be destroyed.
-  const iSnap = render.indexOf('otFocusSnapshot()');
-  const iWrite = render.indexOf('wrap.innerHTML =');
-  const iBack = render.indexOf('otRestoreFocus(');
-  t.check(iSnap > -1 && iWrite > -1 && iBack > -1 && iSnap < iWrite && iWrite < iBack,
-    'the render notes where the caret was, rewrites the board, then puts it back');
-
-  // compileScope binds each env value as a variable at compile time, so the
-  // fake document is MUTATED between cases rather than replaced.
-  const doc = { activeElement: null, querySelector: () => null };
-  const scope = compileScope(
-    ['otFocusSnapshot', 'otRestoreFocus'].map((n) => extractFunction(src, n, 'index.html')),
-    { document: doc }, ['otFocusSnapshot', 'otRestoreFocus'],
-  );
-  // A field in a row's Loaded form, with a caret parked mid-word.
-  const form = { dataset: { load: '7' } };
-  const typing = { tagName: 'INPUT', dataset: { car: 'name' }, selectionStart: 3, selectionEnd: 3,
-    closest: (s) => (s === '#savedQuotesWrap [data-load]' ? form : null) };
-  doc.activeElement = typing;
-  const snap = scope.otFocusSnapshot();
-  t.check(snap && snap.id === '7' && snap.car === 'name' && snap.start === 3,
-    'it records which order, which field, and where in it the caret was');
-
-  // The element the redraw built in its place.
-  const rebuilt = { focused: 0, range: null, focus(){ this.focused++; }, setSelectionRange(a, b){ this.range = [a, b]; } };
-  let asked = null;
-  doc.activeElement = {};
-  doc.querySelector = (s) => { asked = s; return rebuilt; };
-  scope.otRestoreFocus(snap);
-  t.check(asked === '#savedQuotesWrap [data-load="7"] [data-car="name"]',
-    'and finds the same field on the board the redraw just built');
-  t.check(rebuilt.focused === 1 && rebuilt.range && rebuilt.range[0] === 3,
-    'giving back the focus AND the caret -- a caret slammed to the end is its own kind of broken when correcting a middle letter');
-
-  // Nothing to restore is not an error, and neither is a field that is gone.
-  let threw = false;
-  try {
-    scope.otRestoreFocus(null);
-    doc.querySelector = () => null;
-    scope.otRestoreFocus(snap);
-    doc.activeElement = { tagName: 'DIV', dataset: {}, closest: () => null };
-    t.check(scope.otFocusSnapshot() === null, 'and focus outside the form is nothing to carry');
-  } catch (e) { threw = true; }
-  t.check(!threw, 'a missing snapshot or a field that no longer exists is not an error');
-
-  // The other half: the refresh keeps its hands off an entry in progress,
-  // but cannot be held off for good by focus somebody parked and left.
-  /* The guard started here, on this form. It is app-wide now -- every
-     screen has controls a redraw would replace, and a dropdown shutting
-     itself while it is being read is the same fault wherever it happens
-     -- so what is pinned is the general one. */
-  const poll = src.slice(src.indexOf('if(document.querySelector(\'.ap-confirm-pending\')) return;'));
-  t.check(/if\(owControlInUse\(\) && Date\.now\(\) - lastUserInputAt < 60000\) return;/.test(poll.slice(0, 1600)),
-    'the background refresh defers while a control is being used, and only while it is actually being used');
-  const inUse = extractFunction(src, 'owControlInUse', 'index.html');
-  t.check(/tag === 'select'/.test(inUse) && /isContentEditable/.test(inUse),
-    'an open dropdown counts -- it keeps the focus for as long as its list is open');
-  t.check(/\['button','submit','reset','checkbox','radio','file'\]/.test(inUse),
-    'a button or a tick does not, holding no unsaved words');
-  t.check(/\['input','change','keydown','pointerdown','focusin','scroll'\]/.test(src),
-    "and the clock it reads is armed by opening a control, not only by typing into one -- a dropdown being read fires no input event at all");
-  t.check(/closest\('#savedQuotesWrap \[data-load\]'\)/.test(extractFunction(src, 'otTyping', 'index.html')),
-    "while the board's own minute timer still asks the narrower question about its own form");
-
-  /* And where the owner had scrolled to. A rebuilt element starts at the
-     beginning, so a table scrolled sideways to read the far columns comes
-     back at the first one, hiding the thing being read.
-
-     THIS USED TO PIN A DIFFERENT ANSWER, and it is worth saying what it
-     meant. It asserted that the background refresh snapshotted every
-     scroller by its INDEX PATH just before its own goToTab and put them
-     back after it. That was true and it was not enough, twice over: the
-     refresh is one redraw of many — the board alone rebuilds from a
-     sixty-second timer and from some twenty actions, and renderSavedQuotes
-     replaces the row's table outright — and an index path is exactly what
-     a refresh that brought new rows changes, so it held the place when
-     nothing had happened and lost it when something had.
-
-     What is pinned now: the place is remembered as it is scrolled, under a
-     name a rebuild cannot change, and given back after ANY redraw. */
-  const pollFn = extractFunction(src, 'pollForUpdatesNow', 'index.html');
-  const iRedraw = pollFn.indexOf('goToTab(currentActiveTab)');
-  const iPutBack = pollFn.indexOf('owScrollGiveBack()');
-  t.check(iRedraw > -1 && iPutBack > iRedraw,
-    'the refresh redraws and then puts every scroller back, in that order — called straight out rather than left to a frame, so it never shows the screen at the start of itself first');
-  t.check(/if\(window\.scrollX !== pageX \|\| window\.scrollY !== pageY\) window\.scrollTo\(pageX, pageY\);/.test(pollFn),
-    'and the page itself does not move under a refresh nobody asked for');
-  t.check(/new MutationObserver\(\(\)=>\{[\s\S]{0,200}owScrollGiveBack\(\)[\s\S]{0,80}\}\)\.observe\(document\.body, \{ childList:true, subtree:true \}\)/.test(src),
-    'every OTHER redraw is caught by the screen being rebuilt — nothing has to call it, and forty renderers would each have had to remember');
-  t.check(/if\(owScrollDue \|\| !owScrollMem\.size\) return;/.test(src),
-    'one pass per frame however many renderers fired, and no pass at all until something has been scrolled');
-  const back = extractFunction(src, 'owScrollGiveBack', 'index.html');
-  t.check(/if\(el\.scrollLeft \|\| el\.scrollTop\) return;/.test(back),
-    'and it only ever writes to a scroller sitting at the very beginning — which is what a rebuilt one looks like, and means it can never argue with a place somebody chose');
-  const roots = extractFunction(src, 'owScrollRoots', 'index.html');
-  t.check(/tab-' \+ currentActiveTab/.test(roots) && /modal-overlay\.show/.test(roots),
-    'the sweep is the screen being looked at and any open modal — all forty sections are in the document at once, and the other thirty-nine are not worth walking');
-
-  /* Driven: the name survives a rebuild that the old index path did not. */
-  {
-    const NAMES = ['owScrollClasses', 'owScrollMark', 'owScrollKey', 'owScrollRoots', 'owScrollGiveBack'];
-    const body = { tagName: 'BODY', className: '', children: [], parentElement: null };
-    const mk = (tag, cls, over) => Object.assign({ tagName: tag, className: cls, dataset: {},
-      children: [], parentElement: null, scrollLeft: 0, scrollTop: 0,
-      scrollWidth: 0, clientWidth: 0, scrollHeight: 0, clientHeight: 0 }, over || {});
-    const join = (parent, kid) => { kid.parentElement = parent; parent.children.push(kid); return kid; };
-
-    // A row keyed by its order, a table inside it, and a NEW row arriving
-    // above — the case an index path gets wrong.
-    const build = (extraRowFirst) => {
-      const sec = mk('SECTION', '', { id: 'tab-quote-saved' });
-      sec.parentElement = body;
-      if (extraRowFirst) join(sec, mk('DIV', 'ow-ot-r', { dataset: { id: '9' } }));
-      const row = join(sec, mk('DIV', 'ow-ot-r', { dataset: { id: '7' } }));
-      const tbl = join(row, mk('DIV', 'ow-tbl-s', { scrollWidth: 400, clientWidth: 300 }));
-      sec.querySelectorAll = () => [row, tbl].concat(extraRowFirst ? [sec.children[0]] : []);
-      return { sec, tbl };
-    };
-
-    const owScrollMem = new Map();
-    const first = build(false);
-    const later = build(true);
-    let root = first.sec;
-    const env = { OW_SCROLL_LOUD: /^(ow-open|ow-on|ow-here|show|open|active|focused|selected|panning|editing|dragging|can-left|can-right|lane-flash|collected|got)$/,
-      currentActiveTab: 'quote-saved',
-      document: { body,
-      getElementById: (id) => (id === 'tab-quote-saved' ? root : null),
-      querySelectorAll: () => [] }, owScrollMem };
-    const sc = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
-
-    t.check(src.includes("const OW_SCROLL_LOUD = " + String(env.OW_SCROLL_LOUD) + ";"),
-      'the set of classes a screen flips as it works is the one this test drives');
-
-    const k1 = sc.owScrollKey(first.tbl);
-    const k2 = sc.owScrollKey(later.tbl);
-    t.check(k1 === k2 && /\[7\]/.test(k1),
-      `the scroller is named by the record it belongs to, so a new row above it is still the same scroller (${k1})`);
-    t.check(!/:0|:1/.test(k1), 'and the name carries no sibling index that a new row would shift');
-    t.check(/ow-tbl-s/.test(k1) && !/ow-open/.test(sc.owScrollKey(
-      Object.assign(first.tbl, { className: 'ow-tbl-s ow-open' }))),
-      'a class the screen flips as it works is not part of the name — expanding a row must not rename its table');
-
-    first.tbl.className = 'ow-tbl-s';
-    owScrollMem.set(k1, { l: 92, t: 0 });
-    root = later.sec;                       // what the rebuild handed back
-    sc.owScrollGiveBack();
-    t.check(later.tbl.scrollLeft === 92, 'and the place is given back to the rebuilt one');
-    later.tbl.scrollLeft = 40;
-    sc.owScrollGiveBack();
-    t.check(later.tbl.scrollLeft === 40, 'while one already somewhere is left exactly where it is');
-  }
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(/let sqBoardScrollLeft = 0;/.test(src),
+    'the scroll position lives outside the render, like the active step does');
+  t.check(/sqBoardScrollLeft = boardEl\.scrollLeft; updateEdgeFades\(\);/.test(render),
+    'written by the scroll listener as the admin moves');
+  t.check(/if\(sqBoardScrollLeft\) boardEl\.scrollLeft = sqBoardScrollLeft;/.test(render),
+    'and put back after every render, so the poll stops teleporting the board');
+  /* lastIndexOf: the string also appears inside the scroll listener,
+     which sits earlier in the source than the restore. The call that
+     matters is the immediate one at the end of the wiring. */
+  t.check(render.indexOf('boardEl.scrollLeft = sqBoardScrollLeft') < render.lastIndexOf('updateEdgeFades();'),
+    'restored before the fades are computed, so they describe the restored position');
 }
 
-/* ---------- the board itself: five lanes, and one decision at a time --
- *
- * The console this replaced said where an order was three times -- a
- * strip tile, a stage cell and a table group -- and asked the owner to
- * read a list to find out. A stage is a POSITION, and a position is read
- * at a glance. So: five lanes, one card per order, oldest at the top of
- * its lane, and above them a queue that serves ONE decision at a time
- * out of however many are waiting. A list of twenty decisions is not
- * twenty decisions; it is a reason to make none.
+/* ---------- 9. one number, said once --------------------------------- */
+{
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(/sq-col-title">\$\{esc\(ORDER_STATUS_SHORT_LABELS\[status\]\)\}/.test(render),
+    'the column head carries the short name — the rail directly above already numbers it');
+  t.check(!/sq-col-title">\$\{esc\(SQ_STATUSES\[status\]\.label\)\}/.test(render),
+    'not the "Step N." long label that restated the rail in caps');
+  /* The sell total moved from mid-meta-row to the name row: who and how
+     much are the two facts a board is scanned for. */
+  t.check(/sq-client-total" title="What the client pays">\$\{fmtUGX\(savedQuoteTotal\(q\)\)\}/.test(render),
+    'the total sits right-aligned on the name row');
+  t.check(!/ICON_MONEY\}\$\{fmtUGX\(savedQuoteTotal\(q\)\)/.test(extractFunction(src, 'orderMetaRowHTML', 'index.html')),
+    'and is gone from the meta row, where it read like a timestamp');
+}
+
+/* ---------- 10. lanes ------------------------------------------------ */
+/*
+ * Cards floating on the panel white were grouped by nothing but a 9px
+ * dot, so five columns read as one loose scatter. The column is a quiet
+ * contained lane; the cards, the banners and the count pill sit white on
+ * top of it. Contrast between the layers is the whole point, so the
+ * assertions here are about things DIFFERING.
  */
 {
-  const board = extractFunction(src, 'otLaneHTML', 'index.html');
-  const card = extractFunction(src, 'otCardHTML', 'index.html');
-  const dock = extractFunction(src, 'otDockHTML', 'index.html');
-  const rule = extractDeclaration(src, 'OT_LANE_RULE', 'index.html');
-  const empty = extractDeclaration(src, 'OT_LANE_EMPTY', 'index.html');
-  const laneAct = extractDeclaration(src, 'OT_LANE_ACT', 'index.html');
-  const laneMoney = extractDeclaration(src, 'OT_LANE_MONEY', 'index.html');
-
-  /* The lanes ARE the pipeline, off the one constant every other screen
-     reads it from -- so a stage added to SQ_STATUS_ORDER is a lane, and
-     cannot be a lane this screen forgot. */
-  t.check(/SQ_STATUS_ORDER\.map\(s=>\{/.test(render) && /put\(board, SQ_STATUS_ORDER/.test(render),
-    'the board is drawn off SQ_STATUS_ORDER, not a second list of stages');
-  SQ_STATUS_ORDER_NAMES.forEach((st) => {
-    t.check(new RegExp(`${st}:`).test(rule), `${st} says what moves an order out of it`);
-    t.check(new RegExp(`${st}:`).test(empty), `and what would put one in it when it is empty`);
-  });
-  t.check(/Nothing preparing\. Orders arrive here when the last line is checked in\./.test(empty),
-    'an empty lane names the next action rather than being a blank column');
-
-  /* THE RULE IS STILL SAID; THE LANE NO LONGER SPENDS 40px SAYING IT.
-     `.ow-ot-lh-w` gave every lane two lines of room for a sentence that
-     is read once and then never again -- five lanes, forty pixels, for
-     the life of the shop. The sentence itself has not gone anywhere: it
-     is the lane head's own title, and it is written out stage by stage
-     in the page's "i". What the freed line carries instead is read every
-     time the board is: how much money is standing in this lane. */
-  t.check(!/ow-ot-lh-w/.test(src), 'the lane no longer prints its rule on itself');
-  t.check(/<div class="ow-ot-lh" title="\$\{esc\(rule\)\}">/.test(board),
-    'the rule is the lane head\'s title');
-  const help = (/<p class="ow-ph-help">Every order from saved quote[\s\S]*?<\/p>/.exec(section) || [''])[0];
-  ['suppliers answer, then it moves itself', 'moves on when the last line is checked in',
-   'you pack it, then mark it out', 'the run closes it on delivery', 'today only; older sit in money']
-    .forEach((say) => {
-      t.check(help.toLowerCase().includes(say), `and the page's "i" still says it in words: "${say}"`);
-    });
-  SQ_STATUS_ORDER_NAMES.forEach((st) => {
-    t.check(new RegExp(`${st}:`).test(laneMoney), `${st} says what the money standing in it IS`);
-  });
-  t.check(/const value = orders\.reduce\(\(t, q\)=> t \+ savedQuoteTotal\(q\), 0\);/.test(board)
-       && /orders\.length\s*\n?\s*\? `<span class="ow-ot-lh-f">/.test(board),
-    'the money line is summed from the lane\'s own cards');
-  t.check(/: '';/.test(board.slice(board.indexOf('const money'))),
-    'and an empty lane prints no figure at all -- a zero is a figure, and there is none');
-  t.check(/\.ow-ot-lh-m\{[^}]*min-height:16px/.test(desk),
-    'the line holds its height whether the lane has money in it or not, so five lanes start level');
-
-  /* Each lane's action is the dialog that lane is the reason for, and
-     only where there is one: Taken and Preparing have nothing to open. */
-  t.check(/awaiting_goods: \{ act:'buying'/.test(laneAct) && /pending_delivery: \{ act:'runs'/.test(laneAct)
-       && /completed: \{ act:'invoicepick'/.test(laneAct),
-    'Buying opens the buying list, Out the runs, Delivered the invoicing');
-  t.check(!/draft:|preparing:/.test(laneAct),
-    'and the two lanes with nothing to open carry no button at all');
-  /* A MARK, NOT A WORD -- and the word is still there for anyone who
-     needs it. At 228px "Buying list" was a third of the lane head, and
-     the dialog it opens is named after the lane it sits on. */
-  t.check(/icon:'<svg class="icon ow-i14"/.test(laneAct),
-    'each lane act carries its own mark, sized on the svg because the layer may not name .icon');
-  t.check(/title="\$\{esc\(act\.label\)\}" aria-label="\$\{esc\(act\.label\)\}">\$\{act\.icon\}/.test(board),
-    'and the word rides on it as both a title and an aria-label, so an icon-only button is never unnamed');
-
-  /* MONEY NEVER TRUNCATES; THE NAME GIVES WAY. "1,240,00" is a tenth of
-     "1,240,000" and looks entirely plausible. */
-  t.check(/\.ow-ot-card-v\{[^}]*white-space:nowrap/.test(desk) && !/\.ow-ot-card-v\{[^}]*text-overflow/.test(desk),
-    'the money on a card is nowrap and never ellipsised');
-  t.check(/\.ow-ot-card-c\{[^}]*min-width:0[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/.test(desk),
-    'and the client name truncates with all three declarations and a min-width that lets it');
-  /* THE NAME KEEPS ITS OWN LINE. The card was drawn at 1680, where a
-     lane is 282px and the client's name still gets sixteen characters
-     beside the money. It has to work from 1440 (README), where a lane is
-     228px and the same two items leave the name six -- "Ssekitoleko
-     Hardware" as "Ssekit…", which reads as a different customer rather
-     than as a truncation, which is the exact fault this app's truncation
-     rule exists to stop. So the money drops to a line of its own with
-     the age at the far end of it. */
-  t.check(/<span class="ow-ot-card-h">\s*<span class="ow-ot-card-c">\$\{esc\(quoteClientName\(q\)\)\}<\/span>\s*<\/span>/.test(card),
-    'the first line of a card is the client and nothing else');
-  t.check(/<span class="ow-ot-card-g">\s*<span class="ow-ot-card-v">/.test(card)
-       && /\.ow-ot-card-g\{[^}]*justify-content:space-between/.test(desk),
-    'and the money shares its line with the age alone, at opposite ends');
-
-  /* THE EDGE IS A POINTER, NOT A STATE. Every card in the queue used to
-     carry an oxide edge -- six at once on a working morning, beside the
-     dock's own oxide card and its oxide button. "A device that marks
-     everything marks nothing", and §2 spends the accent ONCE per screen.
-     So the chip on the third line says "one of the six", which is a
-     state, and the edge says which one the dock is standing on, which is
-     a pointer -- and a pointer is navy. */
-  t.check(/class="ow-ot-card\$\{now \? ' ow-now' : ''\}"/.test(card),
-    'the navy edge is on the one the dock is standing on');
-  /* AND THE CHIP SAYS WHICH DECISION. It read "Needs you" on every card
-     in the queue — the same two words the dock's count has just said,
-     spending 68px of a 228px lane to say them, which left the line
-     beside it truncating on every card on the board. It carries the
-     queue's own word now ("Not asked", "Packed", "Not invoiced"), which
-     is the same string the dock is showing, so the two can never come to
-     describe one order differently. */
-  t.check(/\$\{chip \? `<span class="ow-ot-card-t" title="One of the queue above">\$\{esc\(chip\)\}<\/span>` : ''\}/.test(card),
-    'and every other order waiting on you carries the queue\'s own word for what it needs');
-  t.check(/const queued = new Map\(needs\.map\(x=> \[x\.q\.id, x\.need\.chip\]\)\);/.test(render),
-    'which is the chip the queue itself derived, not a second reading of the same order');
-  t.check(/const w = orderWho\(q\);/.test(card) && !/orderWhoText\(q\)/.test(card),
-    'and the line under it is the fact alone — orderWhoText joins the basis on, which is two ellipses at 228px');
-  t.check(/chip \? \(w\.sub \|\| w\.main\) : w\.main/.test(card),
-    'and where the chip has said the fact, that line carries what it rests on instead of saying it twice');
-  /* ONE WORD, ONE BUTTON. A draft with suppliers that have not been asked
-     drew a ghost "Suppliers" beside an oxide "Suppliers" -- the same word
-     twice, in two weights, doing two different things. The guard existed;
-     it compared the act, and these are two acts with one name. */
-  t.check(/if\(secondary\.act === primary\.act \|\| secondary\.label === primary\.label\)/.test(
-    extractFunction(src, 'otDecisionActs', 'index.html')),
-    'the dock never draws two buttons with the same word on them');
-  t.check(/\.ow-ot-card\.ow-now\{border:2px solid var\(--ow-steel-950\)/.test(desk)
-       && !/\.ow-ot-card\.ow-now\{[^}]*oxide/.test(desk),
-    'the edge is navy and never the accent');
-  t.check(/otCardHTML\(q, o\.queued && o\.queued\.get\(q\.id\), o\.now === q\.id\)/.test(board),
-    'and the lane is told both, separately');
-  t.check(/const nowId = needs\.length \? \(needs\[otQIndex\] \|\| needs\[0\]\)\.q\.id : 0;/.test(render)
-       && render.indexOf('const nowId') > render.indexOf('put(dock,', render.indexOf('const needs')),
-    "read after the dock draws, which is where the index is wrapped back into range");
-
-  /* The lanes scroll, the screen does not. Without the row constraint the
-     auto row sizes to its tallest lane and the rest clip below the panel
-     with no scrollbar -- there is none on something never told it was
-     too tall. */
-  t.check(/grid-template-rows:minmax\(0,1fr\)/.test(desk),
-    'the board grid pins its row, or the lanes clip unreachably');
-  t.check(/\.ow-ot-cards\{[^}]*overflow:hidden auto/.test(desk),
-    'and a lane body says both axes, never overflow-y alone, which adds a stray horizontal bar');
-
-  /* ONE DECISION. The dock draws the longest-waiting one, names the two
-     behind it, and steps -- and its primary is the decision itself, not
-     a word like Submit. */
-  t.check(/otQIndex/.test(dock) && /needs\[otQIndex\]/.test(dock),
-    'the dock draws one of the queue at a time, by index');
-  t.check(/data-act="qprev"/.test(dock) && /data-act="qnext"/.test(dock) && /data-act="qjump"/.test(dock),
-    'with a way forward, a way back, and a way to the one named after it');
-  /* THE QUEUE, SAID ONCE. The dock drew its order in an oxide-edged card
-     beside a 300px "Behind it" panel naming two more -- and underneath,
-     on the board, every one of those orders already had a card. Three
-     copies of one queue on one screen, and 300px spent so that "Nothing
-     else behind it." could have somewhere to be printed. The panel's one
-     real job -- naming the one after this, so a queue you cannot see the
-     end of is a queue somebody believes -- is a sentence in the head,
-     and it is still the thing you click to jump. */
-  t.check(!/ow-ot-peek/.test(src), 'and no panel restating the queue the board is already showing');
-  t.check(/class="ow-ot-dk-x" title="Waiting \$\{esc\(otAge\(nxt\.q\)\)\}">Then <button type="button" class="ow-ot-dk-j" data-act="qjump"/.test(dock),
-    'the one after this is named in the head, and the name is the jump');
-  /* Its age is the title, not the sentence. At 1280 the clause gives way
-     first and a cut age ("waiting 1…") is a figure that reads as a
-     shorter wait than it is — the same fault as a cut price. What gives
-     way instead is the client's name, which is the only thing on the
-     line that can be cut and still be honest. */
-  t.check(!/waiting \$\{esc\(otAge\(nxt\.q\)\)\}\./.test(dock),
-    'and its age rides in the title, where a narrow screen cannot slice a figure in half');
-  t.check(/\.ow-ot-dk-s\{flex:1 1 auto;\}/.test(desk) && /\.ow-ot-dk-x\{flex:0 1 auto;\}/.test(desk),
-    'and on a narrow laptop the generic half gives way first, never the half naming an order');
-  t.check(!/\.ow-ot-now\{[^}]*border:1px solid var\(--ow-oxide\)/.test(desk),
-    'the one being decided is the dock\'s body, not a second bordered card inside it');
-  t.check(/\$\{otQIndex \+ 1\} of \$\{needs\.length\}/.test(dock),
-    'saying where in the queue it has got to');
-  t.check(/Nothing is waiting on a decision/.test(dock),
-    'and an empty queue says so rather than drawing an empty card');
-  /* THE ACCENT APPEARS ONCE. The dock's primary is the decision; the
-     ghost beside it is a real second act, never a button that does
-     nothing. */
-  const primaries = (dock.match(/btn-accent/g) || []).length;
-  t.check(primaries === 1, `the dock spends the accent exactly once (${primaries})`);
-  t.check(/btn\(primary, 'btn-accent'\)/.test(dock) && /btn\(secondary, 'btn-ghost'\)/.test(dock),
-    'and it is the primary the decision named, with a real second act beside it');
-  t.check(/const primary = \(need\.acts && need\.acts\[0\]\) \|\| orderActSpec\(q\)/.test(
-    extractFunction(src, 'otDecisionActs', 'index.html')),
-    "and that primary is the stage's own act, not a label invented for the dock");
-
-  /* A card opens the order. Everything else on this screen is a lane
-     head or the dock -- a card carries no controls of its own, which is
-     what the six-buttons-per-card board was rebuilt to stop. */
-  t.check(/data-act="preview"/.test(card),
-    'a card opens the order preview');
-  t.check((card.match(/data-act=/g) || []).length === 1,
-    'and carries nothing else to press -- six controls on every card is what this board replaced');
+  const lane = (/\.sq-col\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:var\(--ow-steel-050\)/.test(lane) && /border-radius:12px/.test(lane),
+    'the column is a contained lane');
+  const card = (/\.sq-card\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:#fff/.test(card),
+    'with the cards white on top of it, not steel on steel');
+  const banner = (/\.sq-cash\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:var\(--panel\)/.test(banner) && !/background:var\(--ow-steel-050\)/.test(banner),
+    'and the banners white too — steel on a steel lane is an invisible container');
+  t.check(/\.sq-col-empty\{[^}]*text-align:center/.test(src) && !/\.sq-col-empty\{[^}]*dashed/.test(src),
+    'an empty lane is its own quiet ground — the dashed stand-in box is gone');
 }
 
-/* ---------- the dialogs: one object, one accent each ------------------ */
+/* ---------- 11. one rhythm, quiet controls --------------------------- */
 {
-  const names = ['otPreviewSpec', 'otBuyingSpec', 'otTripSpec', 'otRunsSpec', 'otAnnounceSpec', 'otInvoiceSpec'];
-  const dialogs = extractDeclaration(src, 'OT_DIALOGS', 'index.html');
-  names.forEach((n) => t.check(dialogs.includes(n), `${n} is in the one dialog table`));
-  t.check(/id="otDlg"/.test(src) && (src.match(/class="ow-dlg-sc"/g) || []).length === 1,
-    'and there is exactly one shell in the markup for all six of them');
-  /* EXACTLY ONE OXIDE PER DIALOG. otDlgPrimary is the only thing that
-     writes btn-accent, so counting its calls per spec counts the
-     accents. The preview spends its one on THE MOVE: an order waiting
-     to be asked about is not waiting to be told about, so telling the
-     client stepped down to the ghost it always was. */
-  /* The buying list is the one spec that writes it twice, and they are
-     the two arms of one ternary: when somebody is out, the thing to do
-     next is check in what they brought back; when nobody is, it is to
-     get somebody out. Never both, which is what the shape below pins. */
-  const ARMS = { otBuyingSpec: 2 };
-  names.forEach((n) => {
-    const fn = extractFunction(src, n, 'index.html');
-    t.check(!/btn-accent/.test(fn), `${n} does not write the accent itself`);
-    const accents = (fn.match(/otDlgPrimary\(/g) || []).length;
-    t.check(accents <= (ARMS[n] || 1), `${n} spends the accent at most once (${accents})`);
-  });
-  t.check(/\$\{out \? otDlgPrimary\([\s\S]{0,200}?: stops\.length \? otDlgPrimary\([^)]*\) : ''\}/
-    .test(extractFunction(src, 'otBuyingSpec', 'index.html')),
-    'and the buying list chooses between its two rather than drawing both');
-  {
-    /* The inversion, pinned both ways round: the move wears the accent
-       and the message is a ghost. It used to be the other way, which put
-       the oxide on the one button that changes nothing. */
-    const prev = extractFunction(src, 'otPreviewSpec', 'index.html');
-    /* ONE call site, and what it spends the accent on is worked out from
-       the stage rather than written twice: the move out of Taken, the
-       move out of Preparing (who is carrying it) and the move out of Out
-       are three different buttons and one `primary`. */
-    t.check((prev.match(/otDlgPrimary\(/g) || []).length === 1
-      && /otDlgPrimary\(primary\.act, primary\.label, primary\.ds, primary\.ico\)/.test(prev),
-      "the preview spends its accent on the stage's own move, from one place");
-    t.check(/const primary = loading\s*\?\s*\{ act:'loadgo'/.test(prev),
-      'and while the question is who carries it, that move IS the accent');
-    t.check(/otDlgGhost\('tellclient'/.test(prev) && !/otDlgPrimary\('tellclient'/.test(prev),
-      'and telling the client is the ghost beside it');
-  }
-  /* NOTHING SENDS ITSELF. Every dialog that reaches outside the shop
-     opens a window for the owner to press send in; none of them posts. */
-  const act = extractFunction(src, 'otDlgAct', 'index.html');
-  t.check(/window\.open\(waComposeUrl/.test(act),
-    'telling a client or a buyer opens WhatsApp rather than sending anything');
-  t.check(/nothing is sent until you press send/.test(extractFunction(src, 'otAnnounceSpec', 'index.html')),
-    'and the announcement says so on the dialog that drafts it');
+  t.check(/\.sq-card-meta-rows\{display:flex;flex-direction:column;gap:4px/.test(src),
+    'one gap governs the card’s stack of rows');
+  t.check(!/\.sq-goods-row\{[^}]*margin-top/.test(src) && !/\.sq-assignee-row\{[^}]*margin-top/.test(src),
+    'and the rows no longer each carry their own margin on top of it');
+  t.check(/\.sq-card-check\{[^}]*opacity:\.55/.test(src)
+    && /\.sq-card:hover \.sq-card-check, \.sq-card-check:checked\{opacity:1;\}/.test(src),
+    'the checkbox rests quiet and wakes on hover — and is always full when actually checked');
+  t.check(/\.sq-card \.st-status-pill\{text-transform:none/.test(src),
+    'status pills inside a card drop the uppercase shout, without touching the pill anywhere else');
 }
 
 process.exit(t.done() ? 1 : 0);
