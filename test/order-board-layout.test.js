@@ -819,8 +819,15 @@ const SQ_STATUS_ORDER_NAMES = JSON.parse(
        and the message is a ghost. It used to be the other way, which put
        the oxide on the one button that changes nothing. */
     const prev = extractFunction(src, 'otPreviewSpec', 'index.html');
-    t.check(/otDlgPrimary\('act'/.test(prev),
-      "the preview spends its accent on the stage's own move");
+    /* ONE call site, and what it spends the accent on is worked out from
+       the stage rather than written twice: the move out of Taken, the
+       move out of Preparing (who is carrying it) and the move out of Out
+       are three different buttons and one `primary`. */
+    t.check((prev.match(/otDlgPrimary\(/g) || []).length === 1
+      && /otDlgPrimary\(primary\.act, primary\.label, primary\.ds, primary\.ico\)/.test(prev),
+      "the preview spends its accent on the stage's own move, from one place");
+    t.check(/const primary = loading\s*\?\s*\{ act:'loadgo'/.test(prev),
+      'and while the question is who carries it, that move IS the accent');
     t.check(/otDlgGhost\('tellclient'/.test(prev) && !/otDlgPrimary\('tellclient'/.test(prev),
       'and telling the client is the ghost beside it');
   }

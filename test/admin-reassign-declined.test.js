@@ -224,9 +224,19 @@ const shared = read('shared-worker.js');
      pop-up that asks for a driver and then moves the order by itself. */
   t.check(/case 'loaded': openOrderPreview\(id\); break;/.test(admin),
     'wired to the form on the order rather than to a pop-up over it');
-  t.check(/\$\{loading \? `<div class="ow-dlg-k ow-dlg-load">\$\{orderLoadFormHTML\(q\)\}<\/div>` : ''\}/
-    .test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
+  const prevSpec = extractFunction(admin, 'otPreviewSpec', 'index.html');
+  t.check(/\(loading \|\| gone\) \? `<div class="ow-op-lh">/.test(prevSpec)
+    && /gone \? otGoneePaneHTML\(q\) : otLoadPaneHTML\(q\)/.test(prevSpec),
     'and that dialog is what inlines the form, so the act lands on it');
+  /* And the form is still a form: named boxes the owner fills, sitting
+     on the order, with the dialog's own act as the move. Not a prompt(),
+     and not a bare step that moves the order with nobody named. */
+  const pane = extractFunction(admin, 'otLoadPaneHTML', 'index.html');
+  t.check(/data-load="\$\{q\.id\}"/.test(pane) && /data-car="kind"/.test(pane)
+    && /box\('phone', 'Phone'/.test(pane),
+    'the pane is boxes on the order, not a prompt');
+  t.check(/const car = readCarrierForm\(root\);/.test(extractFunction(admin, 'otLoadGo', 'index.html')),
+    'and the move reads what those boxes say');
   t.check(!/prompt\(/.test(extractFunction(admin, 'otDlgAct', 'index.html')),
     'with nothing asked through a browser prompt');
   // A third carrier that is not a person of ours: hired transport, named
