@@ -26,5 +26,5 @@ build Main.dc.html   app 1440 900 1 body_board.html _extra_board.css _dlg.css _o
 build Back.dc.html   app 1440 900 1 body_board.html _extra_board.css _dlg.css _ov_back.html
 build Undo.dc.html   app 1440 900 1 body_board_moved.html _extra_board.css _dlg.css _ov_undo.html
 build Cancel.dc.html app 1440 900 1 body_board.html _extra_board.css _dlg.css _ov_cancel.html
-build Spec.dc.html   spec 1120 520 0 body_spec.html _dlg.css _extra_spec.css
+build Spec.dc.html   spec 1120 716 0 body_spec.html _dlg.css _extra_spec.css
 build Phone.dc.html  ph    390 844 0 body_phone.html _extra_phone.css _ov_phone.css _ov_phone.html
