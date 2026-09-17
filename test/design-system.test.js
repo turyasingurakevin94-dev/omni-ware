@@ -933,7 +933,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'deb-card-prog'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
              'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
-      renders: 'renderInvoices',
+      /* FIVE NAMED FUNCTIONS NOW, not one. The screen grew a third lens
+         -- a sale beside the bills it raised -- and the chip, the
+         progress bar, the range-and-order and the row's acts were
+         lifted out of renderInvoices so the two lenses cannot disagree
+         about one pile of money. A spec still naming only renderInvoices
+         would have policed the register while the lens beside it, which
+         draws the same table from the same helpers, went unchecked: the
+         assertion's meaning ("this screen is built on the layer") is
+         unchanged, and what changed is how many functions that screen
+         is now spread across. */
+      renders: ['renderInvoices', 'renderInvoicesPaired', 'invPairRailHTML',
+                'invStatusChip', 'invProgressCell'],
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
                     'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],

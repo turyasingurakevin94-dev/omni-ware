@@ -43,7 +43,10 @@ const inv = (total, paid, extra) => Object.assign({
 }, extra || {});
 
 const render = (/function renderInvoices[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const cell = (/const progressCell = \(q\)=>\{[\s\S]*?\n  \};/.exec(render) || [''])[0];
+/* The bar left renderInvoices when the paired lens arrived: both
+   lenses draw it, so one function owns it and both call that. The
+   check below is unchanged -- only where it looks. */
+const cell = (/\nfunction invProgressCell\(q\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 
 /* ---------- 1. the ordinary sum -------------------------------------- */
 if (scope) {
@@ -155,9 +158,14 @@ if (scope) {
      row. The assertion moves to what can still go wrong: that the bar
      is emitted once, from the status cell, and that the cell is
      labelled so the card it becomes says what the figure is. */
-  t.check(/<div class="ow-tbl-c inv-c-st" data-l="Status">[\s\S]{0,120}?progressCell\(q\)/.test(render),
+  /* invProgressCell, not progressCell: the cell became a named function
+     beside the renderer when a second lens arrived that draws the same
+     bar. "Emitted exactly once" is asked of THIS renderer, which is
+     what it always meant -- the paired lens calling the same function
+     is the opposite of a second template to drift from. */
+  t.check(/<div class="ow-tbl-c inv-c-st" data-l="Status">[\s\S]{0,120}?invProgressCell\(q\)/.test(render),
     'the bar lives in the status cell of the one row template, labelled so the phone card names it');
-  t.check((render.match(/progressCell\(q\)/g) || []).length === 1,
+  t.check((render.match(/invProgressCell\(q\)/g) || []).length === 1,
     'and is emitted exactly once — there is no second template to drift from');
   /* And the three reasons it can give were hover-only titles, which is
      to say invisible on the phone. They are rows of the register now,
