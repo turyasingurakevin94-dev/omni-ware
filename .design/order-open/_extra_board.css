@@ -1,0 +1,96 @@
+    /* ==================================================================
+       C · THE BOARD, CORRECTED.  Same five lanes, same mental model.
+       What changes: the lane teaching-sentences go behind the "i", the
+       dock stops printing a second copy of a card that is already on the
+       board (it points at it instead), and no cell on the strip is
+       allowed to be a zero.
+       1140 wide.  69 header · 76 strip · 72 decision · 577 board.
+       ================================================================== */
+    .st{display:flex;height:64px;margin-bottom:12px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
+    .st-c{flex:1 1 0;min-width:0;padding:13px 16px 14px;display:flex;flex-direction:column;gap:4px;
+      border-left:1px solid var(--ow-rule-soft);}
+    .st-c:first-child{border-left:0;}
+    .st-c .l{font-size:11px;line-height:13px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
+    .st-c .v{display:flex;align-items:baseline;gap:7px;height:20px;min-width:0;}
+    .st-c .n{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:18px;line-height:20px;font-weight:700;color:var(--ow-ink-900);}
+    .st-c .s{font-size:11px;line-height:14px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .st-c .s em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-weight:600;}
+    .st-day{flex:0 0 360px;display:flex;align-items:center;gap:12px;padding:0 16px;
+      border-left:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .st-day .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+    .st-day .l{font-size:11px;line-height:13px;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ow-ink-600);}
+    .st-day .r{font-size:11.5px;line-height:15px;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .st-day .b{display:flex;gap:8px;flex:none;}
+
+    /* ---- the decision: ONE line, fused above the lane that owns it ---- */
+    .dk{height:60px;margin-bottom:12px;padding:0 16px;background:var(--ow-paper);
+      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+      display:flex;align-items:center;gap:16px;}
+    .dk-l{flex:none;display:flex;align-items:center;gap:7px;padding-right:16px;
+      border-right:1px solid var(--ow-rule-soft);align-self:stretch;}
+    .dk-l .l{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-900);}
+    .dk-l .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;
+      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-oxide-soft);
+      color:var(--ow-oxide-deep);display:inline-flex;align-items:center;}
+    .dk-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+    .dk-t .h{display:flex;align-items:baseline;gap:8px;min-width:0;}
+    .dk-t .nm{font-size:13px;line-height:17px;font-weight:700;color:var(--ow-ink-900);flex:none;}
+    .dk-t .id{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ow-ink-600);}
+    .dk-t .mt{font-size:11.5px;line-height:17px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dk-t .ag{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11.5px;font-weight:600;color:var(--ow-crimson);flex:none;}
+    .dk-t .s{font-size:12px;line-height:16px;color:var(--ow-ink-900);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .dk-a{flex:none;display:flex;align-items:center;gap:8px;}
+    .dk-p{flex:none;display:flex;align-items:center;gap:2px;padding-left:12px;
+      border-left:1px solid var(--ow-rule-soft);align-self:stretch;}
+    .dk-p .c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
+      color:var(--ow-ink-600);padding:0 4px;align-self:center;white-space:nowrap;}
+
+    /* ---- the board ---- */
+    .bd{display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:12px;height:577px;}
+    .ln{min-width:0;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
+      border-radius:var(--ow-r-lg);display:flex;flex-direction:column;overflow:hidden;}
+    .ln-h{height:54px;flex:none;padding:8px 10px 0;border-bottom:1px solid var(--ow-rule-soft);}
+    .ln-h .r1{display:flex;align-items:center;gap:7px;height:24px;}
+    .ln-h .nm{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-900);}
+    .ln-h .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--ow-ink-900);}
+    .ln-h .sp{flex:1;}
+    .ln-h .btn-ic{width:24px;height:24px;}
+    .ln-h .btn-ic .icon{width:14px;height:14px;}
+    .ln-h .r2{height:15px;font-size:11.5px;line-height:15px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ln-h .r2 em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-weight:600;}
+    .ln-c{flex:1;min-height:0;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+
+    .cd{display:block;width:100%;height:94px;padding:9px 10px;text-align:left;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+    .cd.now{border-color:var(--ow-steel-950);box-shadow:0 0 0 1px var(--ow-steel-950);}
+    .cd .c1{display:block;height:18px;font-size:13.5px;line-height:18px;font-weight:600;
+      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cd .c2{display:flex;align-items:baseline;gap:8px;height:17px;margin-top:3px;}
+    .cd .fg{flex:1;min-width:0;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:13px;line-height:17px;font-weight:600;color:var(--ow-ink-900);
+      white-space:nowrap;}
+    .cd .ag{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:11.5px;line-height:17px;font-weight:600;color:var(--ow-ink-600);}
+    .cd .c2b{display:flex;align-items:center;gap:6px;height:16px;margin-top:3px;}
+    .cd .id{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
+      line-height:16px;color:var(--ow-ink-600);}
+    .cd .pl{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cd .ag.ow-bad{color:var(--ow-crimson);}
+    .cd .ag.ow-warn{color:var(--ow-amber-ink);}
+    .cd .c3{display:flex;align-items:center;gap:5px;height:16px;margin-top:4px;}
+    .cd .c3 .ow-cp{height:16px;padding:0 5px;font-size:10.5px;}
+    .cd .wt{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
