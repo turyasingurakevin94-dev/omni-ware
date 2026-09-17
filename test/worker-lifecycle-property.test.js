@@ -122,6 +122,8 @@ const scope = compileScope(SOURCES.concat(['function __setMyStaff(s){ myStaff = 
   // The board's refusal to send an order out by the arrow says so and
   // opens the row where the Loaded form is; both are DOM work.
   otOpenRow: () => {},
+  openSupplierConfirmModal: () => {},
+  openOrderPreview: () => {},
   /* The supplier gate on leaving Taken is order-draft-confirm.test.js's
      business, held open here -- the arrow reaches it now that entering
      Being Prepared no longer diverts to a picker, and a closed gate would

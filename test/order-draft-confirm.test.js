@@ -79,6 +79,10 @@ const scope = compileScope([
   // sales group was told.
   shareOrderToSalesGroup: (q) => { calls.announced.push(q.id); },
   otOpenRow: (id) => { calls.rowOpened = id; },
+  /* Where a refusal now sends you. The row it used to open is the
+     phone's screen, hidden on a console. */
+  openSupplierConfirmModal: (id) => { calls.panelOpened = id; },
+  openOrderPreview: (id) => { calls.dialogOpened = id; },
   toast: (m) => { calls.toasts.push(String(m)); },
   supplierName: (id) => 'Supplier ' + id,
   quoteClientName: (q) => (q && q.client && q.client.name) || 'Walk-in',
@@ -407,8 +411,12 @@ const draft = (items) => {
   scope.stepSavedQuoteStatus(500, 1);
   eq(q.status, 'draft', 'an unconfirmed order does not leave Draft');
   eq(calls.announced.length, 0, 'so the sales group is not told');
-  eq(calls.rowOpened, 500,
-    'and the row opens — the suppliers and their two taps are on it, which is where the next thing anybody does is');
+  /* The PANEL opens, not the row. The row it used to open lives in
+     #savedQuotesWrap — the phone's own order screen, which the console
+     keeps at display:none — so on a desktop this refusal named a screen
+     the person being refused could not get to. */
+  eq(calls.panelOpened, 500,
+    'and the supplier panel opens — their two taps are on it, which is where the next thing anybody does is');
   t.check(/still to confirm/.test(calls.toasts.join(' ')), 'the refusal says what is missing');
 }
 {

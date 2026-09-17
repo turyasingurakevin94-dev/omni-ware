@@ -68,6 +68,8 @@ const env = {
   // they are so the gate itself is what is measured.
   toast: (m) => { calls.toasts.push(String(m)); },
   otOpenRow: (id) => { calls.openedRow = id; },
+  openSupplierConfirmModal: (id) => { calls.openedPanel = id; },
+  openOrderPreview: (id) => { calls.openedDialog = id; },
 };
 
 const NAMES = ['agentPaymentBlocksPreparing', 'quoteAgedOffBoard', 'setSavedQuoteStatus', 'stepSavedQuoteStatus'];
@@ -285,7 +287,10 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
   stepSavedQuoteStatus(1, +1);
   t.check(status() === 'preparing', `shop delivery is not sent out by the arrow (status ${status()})`);
   t.check(/Loaded/.test(calls.toasts.join(' ')), 'the refusal names the tap that does it');
-  t.check(calls.openedRow === 1, 'and opens the row, where that form is');
+  /* ...and opens the ORDER, whose dialog inlines that form. It used to
+     open the row, which on a console is inside a display:none container
+     — so the refusal pointed at a form nobody could see. */
+  t.check(calls.openedDialog === 1, 'and opens the order, where that form is');
 
   // Self-pickup has no carrier to name -- it uses the shared sentinel.
   reset(mkQuote({ status: 'preparing', deliveryMode: 'agent_pickup' }));

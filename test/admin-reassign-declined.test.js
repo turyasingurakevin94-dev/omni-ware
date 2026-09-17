@@ -214,8 +214,21 @@ const shared = read('shared-worker.js');
   t.check(/if\(orderNeedsDelivery\(q\)\) return \{ main: otStaffGone\(q\.assignedDeliveryId\) \? 'Driver no longer on staff' : 'Nobody named as carrying it'/.test(who)
     && /Going out with \$\{deliveryAssigneeLabel\(q\)\}/.test(who),
     'and the "going out with" reading is its exact opposite');
-  t.check(/case 'loaded': otOpenRow\(id\); otFocusLoad\(id\); break;/.test(admin),
-    'wired to the form in the row rather than to a pop-up over it');
+  /* THE FORM, NEVER A PROMPT — the rule is unchanged; where the form
+     lives moved. It used to be the row's, and the act opened the row.
+     But #savedQuotesWrap is the PHONE's screen (.ow-ot-fone is
+     display:none above 820px), so on a console that opened nothing and
+     otFocusLoad focused a hidden field. The order's own dialog inlines
+     that same orderLoadFormHTML in its `loading` branch, which is where
+     the act goes now: still the form, still on the order, still never a
+     pop-up that asks for a driver and then moves the order by itself. */
+  t.check(/case 'loaded': openOrderPreview\(id\); break;/.test(admin),
+    'wired to the form on the order rather than to a pop-up over it');
+  t.check(/\$\{loading \? `<div class="ow-dlg-k ow-dlg-load">\$\{orderLoadFormHTML\(q\)\}<\/div>` : ''\}/
+    .test(extractFunction(admin, 'otPreviewSpec', 'index.html')),
+    'and that dialog is what inlines the form, so the act lands on it');
+  t.check(!/prompt\(/.test(extractFunction(admin, 'otDlgAct', 'index.html')),
+    'with nothing asked through a browser prompt');
   // A third carrier that is not a person of ours: hired transport, named
   // on the note. Without it, every hired lorry had to be recorded as
   // somebody on the payroll or as nobody at all.
