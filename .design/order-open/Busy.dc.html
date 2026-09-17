@@ -161,102 +161,6 @@
     .meter i.good{background:var(--ow-verdigris);}
     .meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ow-ink-900);border-radius:1px;}
     /* ==================================================================
-       C · THE BOARD, CORRECTED.  Same five lanes, same mental model.
-       What changes: the lane teaching-sentences go behind the "i", the
-       dock stops printing a second copy of a card that is already on the
-       board (it points at it instead), and no cell on the strip is
-       allowed to be a zero.
-       1140 wide.  69 header · 76 strip · 72 decision · 577 board.
-       ================================================================== */
-    .st{display:flex;height:64px;margin-bottom:12px;background:var(--ow-paper);
-      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);overflow:hidden;}
-    .st-c{flex:1 1 0;min-width:0;padding:13px 16px 14px;display:flex;flex-direction:column;gap:4px;
-      border-left:1px solid var(--ow-rule-soft);}
-    .st-c:first-child{border-left:0;}
-    .st-c .l{font-size:11px;line-height:13px;font-weight:600;letter-spacing:.07em;
-      text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
-    .st-c .v{display:flex;align-items:baseline;gap:7px;height:20px;min-width:0;}
-    .st-c .n{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-      font-size:18px;line-height:20px;font-weight:700;color:var(--ow-ink-900);}
-    .st-c .s{font-size:11px;line-height:14px;color:var(--ow-ink-600);min-width:0;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .st-c .s em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;
-      letter-spacing:-.02em;font-weight:600;}
-    .st-day{flex:0 0 360px;display:flex;align-items:center;gap:12px;padding:0 16px;
-      border-left:1px solid var(--ow-rule);background:var(--ow-paper-2);}
-    .st-day .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
-    .st-day .l{font-size:11px;line-height:13px;font-weight:600;letter-spacing:.07em;
-      text-transform:uppercase;color:var(--ow-ink-600);}
-    .st-day .r{font-size:11.5px;line-height:15px;color:var(--ow-ink-900);
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .st-day .b{display:flex;gap:8px;flex:none;}
-
-    /* ---- the decision: ONE line, fused above the lane that owns it ---- */
-    .dk{height:60px;margin-bottom:12px;padding:0 16px;background:var(--ow-paper);
-      border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
-      display:flex;align-items:center;gap:16px;}
-    .dk-l{flex:none;display:flex;align-items:center;gap:7px;padding-right:16px;
-      border-right:1px solid var(--ow-rule-soft);align-self:stretch;}
-    .dk-l .l{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-900);}
-    .dk-l .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;
-      height:18px;padding:0 6px;border-radius:var(--ow-r-sm);background:var(--ow-oxide-soft);
-      color:var(--ow-oxide-deep);display:inline-flex;align-items:center;}
-    .dk-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
-    .dk-t .h{display:flex;align-items:baseline;gap:8px;min-width:0;}
-    .dk-t .nm{font-size:13px;line-height:17px;font-weight:700;color:var(--ow-ink-900);flex:none;}
-    .dk-t .id{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ow-ink-600);}
-    .dk-t .mt{font-size:11.5px;line-height:17px;color:var(--ow-ink-600);min-width:0;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .dk-t .ag{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-      font-size:11.5px;font-weight:600;color:var(--ow-crimson);flex:none;}
-    .dk-t .s{font-size:12px;line-height:16px;color:var(--ow-ink-900);min-width:0;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .dk-a{flex:none;display:flex;align-items:center;gap:8px;}
-    .dk-p{flex:none;display:flex;align-items:center;gap:2px;padding-left:12px;
-      border-left:1px solid var(--ow-rule-soft);align-self:stretch;}
-    .dk-p .c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;
-      color:var(--ow-ink-600);padding:0 4px;align-self:center;white-space:nowrap;}
-
-    /* ---- the board ---- */
-    .bd{display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:12px;height:577px;}
-    .ln{min-width:0;background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
-      border-radius:var(--ow-r-lg);display:flex;flex-direction:column;overflow:hidden;}
-    .ln-h{height:54px;flex:none;padding:8px 10px 0;border-bottom:1px solid var(--ow-rule-soft);}
-    .ln-h .r1{display:flex;align-items:center;gap:7px;height:24px;}
-    .ln-h .nm{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-900);}
-    .ln-h .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--ow-ink-900);}
-    .ln-h .sp{flex:1;}
-    .ln-h .btn-ic{width:24px;height:24px;}
-    .ln-h .btn-ic .icon{width:14px;height:14px;}
-    .ln-h .r2{height:15px;font-size:11.5px;line-height:15px;color:var(--ow-ink-600);
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .ln-h .r2 em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;
-      letter-spacing:-.02em;font-weight:600;}
-    .ln-c{flex:1;min-height:0;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
-
-    .cd{display:block;width:100%;height:94px;padding:9px 10px;text-align:left;
-      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
-    .cd.now{border-color:var(--ow-steel-950);box-shadow:0 0 0 1px var(--ow-steel-950);}
-    .cd .c1{display:block;height:18px;font-size:13.5px;line-height:18px;font-weight:600;
-      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .cd .c2{display:flex;align-items:baseline;gap:8px;height:17px;margin-top:3px;}
-    .cd .fg{flex:1;min-width:0;font-family:var(--mono);font-variant-numeric:tabular-nums;
-      letter-spacing:-.02em;font-size:13px;line-height:17px;font-weight:600;color:var(--ow-ink-900);
-      white-space:nowrap;}
-    .cd .ag{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-      font-size:11.5px;line-height:17px;font-weight:600;color:var(--ow-ink-600);}
-    .cd .c2b{display:flex;align-items:center;gap:6px;height:16px;margin-top:3px;}
-    .cd .id{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;
-      line-height:16px;color:var(--ow-ink-600);}
-    .cd .pl{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--ow-ink-600);
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .cd .ag.ow-bad{color:var(--ow-crimson);}
-    .cd .ag.ow-warn{color:var(--ow-amber-ink);}
-    .cd .c3{display:flex;align-items:center;gap:5px;height:16px;margin-top:4px;}
-    .cd .c3 .ow-cp{height:16px;padding:0 5px;font-size:10.5px;}
-    .cd .wt{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--ow-ink-600);
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    /* ==================================================================
        THE ORDER, OPENED.  680 wide, not 900 — the width is the argument.
 
        What went: eleven blocks of prose that are true, read once, and
@@ -371,281 +275,267 @@
     .d-f{height:60px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px 0 14px;
       border-top:1px solid var(--ow-rule);}
     .d-f .sp{flex:1;}
+    /* Standalone frames, sized like the captures beside them so the two
+       can be laid side by side and read at the same scale. */
+    .frame{background:var(--ow-steel-050);display:flex;align-items:flex-start;justify-content:center;}
+    .paper{width:100%;height:100%;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);display:flex;flex-direction:column;overflow:hidden;}
+    .shot{width:100%;height:100%;display:block;}
+
+    .k-h{height:48px;flex:none;display:flex;align-items:center;gap:10px;padding:0 8px 0 18px;
+      border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+    .k-h .t{font-size:14.5px;font-weight:700;color:var(--ow-ink-900);white-space:nowrap;}
+    .k-h .s{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+      color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .k-h .sp{flex:1;}
+
+    /* one strip of figures, hairlines between, crimson only on the bad one */
+    .k-fig{height:58px;flex:none;display:flex;align-items:center;padding:0 18px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .k-c{padding-right:18px;margin-right:18px;border-right:1px solid var(--ow-rule-soft);}
+    .k-c:last-of-type{border-right:0;}
+    .k-c .l{display:block;font-size:10.5px;line-height:13px;font-weight:600;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;}
+    .k-c .v{display:block;margin-top:2px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:17px;line-height:21px;font-weight:600;color:var(--ow-ink-900);}
+    .k-c .v.ow-bad{color:var(--ow-crimson);}
+    .k-fig .sp{flex:1;}
+
+    .k-warn{height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px 0 18px;
+      background:var(--ow-amber-faint);border-bottom:1px solid var(--ow-amber-soft);
+      font-size:12.5px;color:var(--ow-amber-ink);}
+    .k-warn .sp{flex:1;}
+    .k-warn b{font-weight:700;}
+
+    .k-th{height:30px;flex:none;display:flex;align-items:center;gap:12px;padding:0 18px 0 46px;
+      font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ow-ink-600);border-bottom:1px solid var(--ow-rule-soft);}
+    .k-th .q{width:74px;text-align:right;flex:none;}
+    .k-th .v{width:96px;text-align:right;flex:none;}
+    .k-stop{height:42px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px 0 18px;
+      background:var(--ow-steel-050);border-bottom:1px solid var(--ow-rule-soft);}
+    .k-stop .n{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+      color:var(--ow-ink-900);white-space:nowrap;}
+    .k-stop .who{font-size:12px;color:var(--ow-ink-600);min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .k-stop .sp{flex:1;}
+    .k-stop .v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:13px;font-weight:600;color:var(--ow-ink-900);flex:none;}
+    .k-r{height:40px;flex:none;display:flex;align-items:center;gap:12px;padding:0 18px;
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .k-r .nm{flex:1;min-width:0;font-size:13px;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .k-r .q{width:74px;text-align:right;flex:none;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;font-size:12px;color:var(--ow-ink-600);}
+    .k-r .v{width:96px;text-align:right;flex:none;font-family:var(--mono);
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;font-weight:600;}
+    .k-f{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;
+      border-top:1px solid var(--ow-rule);background:var(--ow-paper-2);margin-top:auto;}
+    .k-f .sp{flex:1;}
+    .k-f .n{font-size:11.5px;color:var(--ow-ink-600);white-space:nowrap;}
+
+    /* ---- the short line: the decision is two numbers, so show two ---- */
+    .s-b{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;}
+    .s-fact{margin:0;font-size:14px;line-height:19px;color:var(--ow-ink-900);}
+    .s-fact b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;}
+    .s-pick{display:flex;gap:10px;}
+    .s-opt{flex:1 1 0;min-width:0;padding:12px 14px;border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);background:var(--ow-paper);display:flex;flex-direction:column;gap:4px;
+      text-align:left;}
+    .s-opt.on{border:2px solid var(--ow-steel-950);padding:11px 13px;background:var(--ow-steel-050);}
+    .s-opt .h{display:flex;align-items:center;gap:8px;}
+    .s-opt .h span{font-size:13px;font-weight:600;color:var(--ow-ink-900);}
+    .s-opt .dot{width:15px;height:15px;border-radius:50%;flex:none;box-sizing:border-box;
+      border:1.5px solid var(--ow-steel-100);background:var(--ow-paper);}
+    .s-opt.on .dot{border:5px solid var(--ow-steel-950);}
+    .s-opt .v{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:19px;line-height:24px;font-weight:600;color:var(--ow-ink-900);}
+    .s-opt .w{font-size:11.5px;line-height:16px;color:var(--ow-ink-600);}
+
+    /* ---- the "..." menu ---- */
+    .m-pop{position:absolute;top:50px;right:46px;width:214px;z-index:10;background:var(--ow-paper);
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);box-shadow:var(--ow-lift);
+      padding:5px;display:flex;flex-direction:column;gap:1px;}
+    .m-i{display:flex;align-items:center;gap:10px;height:34px;padding:0 9px;border-radius:var(--ow-r-sm);
+      font-size:13px;color:var(--ow-ink-900);white-space:nowrap;width:100%;text-align:left;}
+    .m-i:hover{background:var(--ow-steel-050);}
+    .m-i .icon{width:15px;height:15px;color:var(--ow-ink-600);flex:none;}
+    .m-i .n{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11px;color:var(--ow-ink-600);}
+    .m-sep{height:1px;background:var(--ow-rule-soft);margin:4px 5px;}
+
+    /* ---- the buying list as STOPS, not rows -------------------------
+       A buying round is a set of PLACES somebody drives to, so the
+       object on the screen is the place. Everything a stop needs — what
+       it costs, what is on it, whether anybody has been sent — is inside
+       its own card, which is what kills the repeated supplier column,
+       the amber band about lines with nobody on them, and the footer
+       sentence about what this dialog does not do. */
+    .b-grid{flex:1;min-height:0;padding:18px;background:var(--ow-steel-050);
+      display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:12px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .b-card{min-width:0;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);padding:13px 14px 12px;display:flex;flex-direction:column;}
+    .b-top{display:flex;align-items:center;gap:8px;}
+    .b-no{width:20px;height:20px;border-radius:50%;flex:none;background:var(--ow-steel-950);
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;}
+    .b-place{min-width:0;font-size:14px;line-height:20px;font-weight:700;letter-spacing:-.005em;
+      color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-sup{margin-top:2px;font-size:11.5px;line-height:16px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-cash{margin-top:10px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em;font-size:20px;line-height:25px;font-weight:600;color:var(--ow-ink-900);}
+    .b-cash span{font-family:'Figtree',system-ui,sans-serif;font-size:11px;font-weight:500;
+      letter-spacing:0;color:var(--ow-ink-600);margin-left:5px;}
+    .b-items{margin-top:10px;display:flex;flex-direction:column;gap:2px;}
+    .b-i{display:flex;align-items:center;gap:8px;height:26px;}
+    .b-i .nm{flex:1;min-width:0;font-size:12.5px;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-i .q{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:11.5px;color:var(--ow-ink-600);}
+    .b-foot{margin-top:auto;padding-top:11px;display:flex;align-items:center;gap:8px;
+      border-top:1px solid var(--ow-rule-soft);}
+    .b-foot .st{flex:1;min-width:0;font-size:11.5px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .b-foot .st.go{color:var(--ow-verdigris);font-weight:600;}
+
+    /* The runs dialog is the same object as the buying list, pointed the
+       other way: a round of PLACES, with orders on each and somebody
+       carrying them. Same card, so the two screens are one thing to
+       learn. `.b-no.warn` is the run that is not a run yet. */
+    .b-no.warn{background:var(--ow-amber);}
+    .b-sup.warn{color:var(--ow-amber-ink);font-weight:600;}
+    .b-i .who{flex:none;font-size:11.5px;color:var(--ow-ink-600);}
+
+    /* ==================================================================
+       TWO OTHER WAYS, both drawn at 680 so they can be held against the
+       one already on the canvas.
+       ------------------------------------------------------------------
+       A · GOODS FIRST. The thing being tracked is stuff on a shelf, so
+       the quantity is the biggest element on the screen and every line is
+       a tile you could read across a yard. Costs height; earns it on an
+       order anybody has to walk around with.
+       ================================================================== */
+    .g-trk{height:60px;flex:none;padding:14px 20px 0;border-bottom:1px solid var(--ow-rule-soft);}
+    .g-bar{display:flex;align-items:center;gap:6px;}
+    .g-bar i{width:13px;height:13px;border-radius:50%;flex:none;box-sizing:border-box;
+      border:2px solid var(--ow-steel-100);background:var(--ow-paper);}
+    .g-bar i.done{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+    .g-bar i.now{background:var(--ow-steel-950);border-color:var(--ow-steel-950);
+      box-shadow:0 0 0 3px rgba(22,32,60,.13);}
+    .g-bar b{flex:1;height:2px;background:var(--ow-steel-100);border-radius:1px;}
+    .g-bar b.done{background:var(--ow-verdigris);}
+    .g-now{margin-top:9px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ow-ink-600);}
+    .g-now strong{font-size:12.5px;font-weight:700;color:var(--ow-ink-900);}
+
+    .g-list{flex:1;min-height:0;padding:14px 20px;display:flex;flex-direction:column;gap:8px;
+      background:var(--ow-steel-050);}
+    .g-t{display:flex;align-items:center;gap:14px;height:72px;flex:none;padding:0 16px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .g-q{width:74px;flex:none;text-align:right;}
+    .g-q b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      letter-spacing:-.03em;font-size:24px;line-height:27px;font-weight:600;color:var(--ow-ink-900);}
+    .g-q span{display:block;font-size:11px;line-height:14px;color:var(--ow-ink-600);}
+    .g-tx{flex:1;min-width:0;}
+    .g-tx b{display:block;font-size:14px;line-height:19px;font-weight:600;color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .g-tx span{display:block;margin-top:2px;font-size:11.5px;line-height:16px;color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .g-v{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:14px;font-weight:600;color:var(--ow-ink-900);}
+
+    /* ------------------------------------------------------------------
+       B · THE JOURNEY. The stage track and "how it got here" are the same
+       object seen twice, so draw it once, down the side, and the history
+       stops being a section of its own.
+       ------------------------------------------------------------------ */
+    .j-b{flex:1;min-height:0;display:flex;}
+    .j-spine{width:210px;flex:none;padding:16px 0 16px 20px;border-right:1px solid var(--ow-rule-soft);
+      background:var(--ow-paper-2);}
+    .j-s{position:relative;padding:0 0 0 26px;min-height:54px;}
+    .j-s::before{content:"";position:absolute;left:0;top:2px;width:13px;height:13px;border-radius:50%;
+      box-sizing:border-box;border:2px solid var(--ow-steel-100);background:var(--ow-paper);}
+    .j-s::after{content:"";position:absolute;left:6px;top:17px;bottom:-2px;width:2px;background:var(--ow-steel-100);}
+    .j-s:last-child::after{display:none;}
+    .j-s:last-child{min-height:16px;}
+    .j-s.done::before{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+    .j-s.done::after{background:var(--ow-verdigris);}
+    .j-s.now::before{background:var(--ow-steel-950);border-color:var(--ow-steel-950);
+      box-shadow:0 0 0 3px rgba(22,32,60,.13);}
+    .j-s .n{display:block;font-size:12.5px;line-height:17px;font-weight:600;color:var(--ow-ink-600);}
+    .j-s.done .n,.j-s.now .n{color:var(--ow-ink-900);}
+    .j-s .t{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;
+      font-size:10.5px;line-height:15px;color:var(--ow-ink-600);}
+    .j-s .w{display:inline-flex;margin-top:5px;}
+    .j-r{flex:1;min-width:0;display:flex;flex-direction:column;}
+    .j-s.now{padding-bottom:12px;}
+
+    /* The spine carries the events too, which is what lets "how it got
+       here" stop being a section of its own: a stage and what happened
+       inside it are one thing, drawn once. */
+    .j-e{display:block;margin-top:4px;font-size:11px;line-height:15px;color:var(--ow-ink-600);}
+    .j-e em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+    /* "1 of 2 Roll" is a quantity that has to fit whole: a wrapped one
+       reads as two figures. */
+    .j-r .d-ln-h .q,.j-r .d-r .q{width:92px;}
   </style>
 </helmet>
-<div class="app" style="width:1440px;height:900px;">
-  <header class="topbar">
-    <div class="brand"><div class="brand-mark">OW</div><div class="tag">OMNI-WARE</div></div>
-    <div class="tb-where"><span class="g">Sell</span><span class="sep">/</span><span>Order tracking</span></div>
-    <div class="tb-search">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
-      <span>Search screens, or ask the Manager</span><span class="tb-kbd">Ctrl K</span>
-    </div>
-    <div class="tb-sp"></div>
-    <button type="button" class="tb-ic on" aria-label="Messages"><svg class="icon" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"></path></svg></button>
-    <button type="button" class="tb-ic" aria-label="Settings"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"></circle><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.8 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.4 1Z"></path></svg></button>
-  </header>
-  <nav class="sidebar" aria-label="Main">
-    <div class="navl">
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"></rect><rect x="13" y="3" width="8" height="5" rx="1.5"></rect><rect x="13" y="10" width="8" height="11" rx="1.5"></rect><rect x="3" y="14" width="8" height="7" rx="1.5"></rect></svg><span class="nav-label">Dashboard</span></button>
-      <div class="nav-section-label">Sell</div>
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 13h6M9 17h6"></path></svg><span class="nav-label">New quote</span></button>
-      <button type="button" class="nav-b active" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11.5 11.5 14 17 8.5"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="nav-label">Order tracking</span><b class="nav-badge">6</b></button>
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 17h8M8 13h4"></path></svg><span class="nav-label">Invoices</span></button>
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="nav-label">Customers</span></button>
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"></path></svg><span class="nav-label">Messages</span><b class="nav-badge">13</b></button>
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M17 11h4M19 9v4"></path></svg><span class="nav-label">Sales agents</span></button>
-      <div class="nav-section-label">Elsewhere</div>
-      <button type="button" class="nav-b"><span class="nav-sq">Bu</span><span class="nav-label">Buy</span><span class="nav-g"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></span></button>
-      <button type="button" class="nav-b"><span class="nav-sq">Ca</span><span class="nav-label">Catalogue</span><span class="nav-g"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></span></button>
-      <button type="button" class="nav-b"><span class="nav-sq">Mo</span><span class="nav-label">Money</span><span class="nav-g"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></span></button>
-      <button type="button" class="nav-b"><span class="nav-sq">In</span><span class="nav-label">Insight</span><span class="nav-g"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></span></button>
-      <button type="button" class="nav-b"><span class="nav-sq">Se</span><span class="nav-label">Setup</span><span class="nav-g"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></span></button>
-    </div>
-    <div class="nav-foot">
-      <button type="button" class="nav-b"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg><span class="nav-label">Sign out</span></button>
-    </div>
-  </nav>
-  <main class="main">
-    <div class="ow-ph">
-      <div>
-        <div class="ow-ph-h"><h1 class="ow-ph-t">Order tracking</h1><button type="button" class="ow-i" aria-label="What this screen is for">i</button></div>
-        <p class="ow-ph-sub"><b>11</b> live &middot; <b>6</b> need you &middot; <b>3</b> past their limit &middot; 10,628,000 UGX on the board</p>
-      </div>
-      <span class="ow-ph-sp"></span>
-      <label class="ow-f"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="text" placeholder="Client, order number or item" aria-label="Search orders"></label>
-      <button type="button" class="btn"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>New quote</button>
-    </div>
-
-    <!-- Four figures and the day. No cell may be a zero or a dash: a
-         tile that says nothing on a normal day is furniture. -->
-    <div class="st">
-      <div class="st-c">
-        <span class="l">On the board</span>
-        <span class="v"><span class="n">11</span><span class="s"><em>10,628,000</em> UGX</span></span>
-      </div>
-      <div class="st-c">
-        <span class="l">Needs you</span>
-        <span class="v"><span class="n">6</span><span class="s">oldest <em>1d 4h</em></span></span>
-      </div>
-      <div class="st-c">
-        <span class="l">To buy in</span>
-        <span class="v"><span class="n">2,340,000</span><span class="s">6 lines</span></span>
-      </div>
-      <div class="st-c">
-        <span class="l">Past its limit</span>
-        <span class="v"><span class="n">3</span><span class="s"><em>#365 #366 #364</em></span></span>
-      </div>
-      <div class="st-day">
-        <span class="tx">
-          <span class="l">Today</span>
-          <span class="r">No trip planned &middot; 6 lines</span>
-          <span class="r">1 out &middot; 15:00 run has 3</span>
-        </span>
-        <span class="b">
-          <button type="button" class="btn xs">Plan trip</button>
-          <button type="button" class="btn xs">Runs</button>
-        </span>
-      </div>
-    </div>
-
-    <!-- ONE DECISION, ONE LINE. It no longer prints a second copy of the
-         card: the card it is talking about wears a navy edge in the lane
-         below, so the strip and the board are one object, not two. -->
-    <div class="dk">
-      <span class="dk-l"><span class="l">Needs you</span><span class="n">6</span></span>
-      <span class="dk-t">
-        <span class="h">
-          <span class="nm">A99 Trade Center</span>
-          <span class="id">#365</span>
-          <span class="mt">Trade Center &middot; 1 line, 1 to buy in</span>
-          <span class="ag">1d 4h</span>
-        </span>
-        <span class="s">No supplier asked yet &mdash; and one message carries <b>#366</b> too.</span>
-      </span>
-      <span class="dk-a">
-        <button type="button" class="btn btn-accent sm"><svg class="icon" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"></path></svg>Ask Roto Industry &middot; 2 orders</button>
-        <button type="button" class="btn sm">Open</button>
-      </span>
-      <span class="dk-p">
-        <span class="c">1 of 6</span>
-        <button type="button" class="btn-ic bare" aria-label="Previous decision"><svg class="icon" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"></path></svg></button>
-        <button type="button" class="btn-ic bare" aria-label="Next decision"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg></button>
-      </span>
-    </div>
-
-    <div class="bd">
-      <!-- TAKEN -->
-      <section class="ln">
-        <div class="ln-h">
-          <div class="r1"><span class="nm">Taken</span><span class="n">4</span><span class="sp"></span></div>
-          <div class="r2"><em>5,325,000</em> quoted</div>
-        </div>
-        <div class="ln-c">
-          <button type="button" class="cd now">
-            <span class="c1" title="A99 Trade Center">A99 Trade Center</span>
-            <span class="c2"><span class="fg">125,000</span><span class="ag ow-bad">1d 4h</span></span>
-            <span class="c2b"><span class="id">#365</span><span class="pl">Trade Center</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="No supplier asked yet">not asked yet</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Adinan">Adinan</span>
-            <span class="c2"><span class="fg">1,425,000</span><span class="ag ow-bad">1d 4h</span></span>
-            <span class="c2b"><span class="id">#366</span><span class="pl">Industrial Area</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="No supplier asked yet">not asked yet</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Kato Construction Ltd">Kato Construction Ltd</span>
-            <span class="c2"><span class="fg">3,480,000</span><span class="ag">5h 12m</span></span>
-            <span class="c2b"><span class="id">#371</span><span class="pl">Nakawa</span></span>
-            <span class="c3"><span class="wt" title="2 of 3 suppliers confirmed &middot; Uganda Baati silent">2 of 3 confirmed</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Namirembe Hardware">Namirembe Hardware</span>
-            <span class="c2"><span class="fg">295,000</span><span class="ag">2h 40m</span></span>
-            <span class="c2b"><span class="id">#372</span><span class="pl">Bwaise</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="Both suppliers confirmed &middot; move it on">all confirmed</span></span>
-          </button>
-        </div>
-      </section>
-
-      <!-- BUYING -->
-      <section class="ln">
-        <div class="ln-h">
-          <div class="r1"><span class="nm">Buying</span><span class="n">2</span><span class="sp"></span>
-            <button type="button" class="btn-ic" aria-label="Open the buying list"><svg class="icon" viewBox="0 0 24 24"><path d="M3 5h2l2.6 10.4a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.5L21 8H6"></path><circle cx="10" cy="20" r="1.3"></circle><circle cx="17" cy="20" r="1.3"></circle></svg></button>
-          </div>
-          <div class="r2"><em>1,120,000</em> to pay</div>
-        </div>
-        <div class="ln-c">
-          <button type="button" class="cd">
-            <span class="c1" title="Mukwaya &amp; Sons">Mukwaya &amp; Sons</span>
-            <span class="c2"><span class="fg">760,000</span><span class="ag ow-warn">22h 10m</span></span>
-            <span class="c2b"><span class="id">#368</span><span class="pl">Kisenyi</span></span>
-            <span class="c3"><span class="wt" title="Trip out with Ojok &middot; 2 of 4 lines checked in">2 of 4 checked in</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Bright Star Hardware">Bright Star Hardware</span>
-            <span class="c2"><span class="fg">640,000</span><span class="ag">6h 05m</span></span>
-            <span class="c2b"><span class="id">#369</span><span class="pl">Ndeeba</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="3 lines are on no buying trip">3 lines, no trip</span></span>
-          </button>
-        </div>
-      </section>
-
-      <!-- PREPARING -->
-      <section class="ln">
-        <div class="ln-h">
-          <div class="r1"><span class="nm">Preparing</span><span class="n">3</span><span class="sp"></span></div>
-          <div class="r2"><em>2,755,000</em> to pack</div>
-        </div>
-        <div class="ln-c">
-          <button type="button" class="cd">
-            <span class="c1" title="Ronald &middot; 7th Street">Ronald &middot; 7th Street</span>
-            <span class="c2"><span class="fg">190,000</span><span class="ag ow-bad">1d 5h</span></span>
-            <span class="c2b"><span class="id">#364</span><span class="pl">Industrial Area</span></span>
-            <span class="c3"><span class="wt" title="Top of the queue &middot; next free picker takes it">top of the queue</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Ssekitoleko Hardware">Ssekitoleko Hardware</span>
-            <span class="c2"><span class="fg">2,150,000</span><span class="ag ow-warn">8h 30m</span></span>
-            <span class="c2b"><span class="id">#367</span><span class="pl">Kireka</span></span>
-            <span class="c3"><span class="wt" title="Musoke picking &middot; 3 of 5 lines answered">Musoke &middot; 3 of 5</span></span>
-          </button>
-          <button type="button" class="cd">
-            <span class="c1" title="Nakato Builders">Nakato Builders</span>
-            <span class="c2"><span class="fg">415,000</span><span class="ag">3h 15m</span></span>
-            <span class="c2b"><span class="id">#370</span><span class="pl">Nansana</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="Packed by Achen &middot; waiting for the transport">packed, no lorry</span></span>
-          </button>
-        </div>
-      </section>
-
-      <!-- OUT -->
-      <section class="ln">
-        <div class="ln-h">
-          <div class="r1"><span class="nm">Out</span><span class="n">1</span><span class="sp"></span>
-            <button type="button" class="btn-ic" aria-label="What is going the same way"><svg class="icon" viewBox="0 0 24 24"><path d="M3 16V7a1 1 0 0 1 1-1h10v10"></path><path d="M14 9h4l3 3.5V16h-3"></path><circle cx="7.5" cy="17.5" r="1.8"></circle><circle cx="17" cy="17.5" r="1.8"></circle></svg></button>
-          </div>
-          <div class="r2"><em>1,060,000</em> in transit</div>
-        </div>
-        <div class="ln-c">
-          <button type="button" class="cd">
-            <span class="c1" title="Kyeyune Metals">Kyeyune Metals</span>
-            <span class="c2"><span class="fg">1,060,000</span><span class="ag">4h 20m</span></span>
-            <span class="c2b"><span class="id">#362</span><span class="pl">Mukono</span></span>
-            <span class="c3"><span class="wt" title="On the road with Opio &middot; due at the client 13:30">Opio &middot; due 13:30</span></span>
-          </button>
-        </div>
-      </section>
-
-      <!-- DELIVERED -->
-      <section class="ln">
-        <div class="ln-h">
-          <div class="r1"><span class="nm">Delivered</span><span class="n">1</span><span class="sp"></span>
-            <button type="button" class="btn-ic" aria-label="Make the invoice"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 17h8M8 13h4"></path></svg></button>
-          </div>
-          <div class="r2"><em>88,000</em> to invoice</div>
-        </div>
-        <div class="ln-c">
-          <button type="button" class="cd">
-            <span class="c1" title="Ggaba Road Traders">Ggaba Road Traders</span>
-            <span class="c2"><span class="fg">88,000</span><span class="ag">2h 05m</span></span>
-            <span class="c2b"><span class="id">#361</span><span class="pl">Katwe</span></span>
-            <span class="c3"><span class="ow-cp ow-mg">Needs you</span><span class="wt" title="Delivered, not invoiced">not invoiced</span></span>
-          </button>
-        </div>
-      </section>
-    </div>
-  </main>
-  <div class="scrim"></div>
-  <div class="dlg" style="top:166px;" role="dialog" aria-modal="true" aria-labelledby="d_t">
+<div class="frame" style="width:680px;height:520px;">
+  <div class="paper">
     <div class="d-h">
-      <span class="nm" id="d_t">Ssekitoleko Hardware</span>
+      <span class="nm">Ssekitoleko Hardware</span>
       <span class="id">#367 &middot; Kireka</span>
       <span class="sp"></span>
-      <span class="ow-cp ow-warn">Preparing &middot; 8h 30m</span>
       <button type="button" class="d-ic" aria-label="Print the packing list"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"></path><rect x="3" y="9" width="18" height="7" rx="1.6"></rect><path d="M6 16h12v5H6z"></path></svg></button>
       <button type="button" class="d-ic" aria-label="Other moves"><svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="19" cy="12" r="1.4"></circle></svg></button>
       <button type="button" class="d-ic" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
     </div>
-    <div class="d-trk">
-      <div class="trk">
-        <div class="trk-s done"><span class="n">Taken</span><span class="t">Mon 09:12</span></div>
-        <div class="trk-s done"><span class="n">Buying</span><span class="t">Mon 14:40</span></div>
-        <div class="trk-s now"><span class="n">Preparing</span><span class="t">today 06:05</span></div>
-        <div class="trk-s"><span class="n">Out</span></div>
-        <div class="trk-s"><span class="n">Delivered</span></div>
+    <div class="j-b">
+      <div class="j-spine">
+        <div class="j-s done">
+          <span class="n">Taken</span>
+          <span class="t">Mon 09:12</span>
+          <span class="j-e">Taken at the desk</span>
+          <span class="j-e"><em>11:30</em> Mukwano confirmed</span>
+        </div>
+        <div class="j-s done">
+          <span class="n">Buying</span>
+          <span class="t">Mon 14:40</span>
+          <span class="j-e"><em>06:05</em> last line checked in</span>
+        </div>
+        <div class="j-s now">
+          <span class="n">Preparing</span>
+          <span class="t">today 06:05 &middot; 8h 30m</span>
+          <span class="j-e"><em>13:20</em> Musoke started picking</span>
+          <span class="w"><span class="ow-cp ow-warn">1 came up short</span></span>
+        </div>
+        <div class="j-s"><span class="n">Out</span></div>
+        <div class="j-s"><span class="n">Delivered</span></div>
       </div>
-      <div class="d-who">
-        <span class="ow-cp">Musoke &middot; 3 of 5 picked</span>
-        <span class="ow-cp ow-warn">1 came up short</span>
+      <div class="j-r">
+        <div class="d-ln">
+          <div class="d-ln-h"><span style="flex:1;">Item</span><span class="q">Qty</span><span class="v">Client pays</span></div>
+          <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Cement (Tororo 50kg)</span><span class="q">40 Bag</span><span class="v">1,640,000</span></div>
+          <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Iron sheets &mdash; G28</span><span class="q">6 Pc</span><span class="v">225,000</span></div>
+          <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Steel nails 3&quot;</span><span class="q">10 Kg</span><span class="v">90,000</span></div>
+          <div class="d-r"><span class="mk short" title="Came up short &mdash; 1 of 2 found"><svg class="icon" viewBox="0 0 24 24"><path d="M6 12h12"></path></svg></span><span class="nm">Barbed wire</span><span class="q">1 of 2 Roll</span><span class="v">156,000</span></div>
+          <div class="d-r"><span class="mk" title="Not picked yet"></span><span class="nm">PVC pipe 1&quot;</span><span class="q">1 Pc</span><span class="v">39,000</span></div>
+          <div class="d-sum">5 from stock &middot; 1 came up short</div>
+        </div>
+        <div class="d-mn">
+          <div class="d-mn-r">
+            <div class="d-c"><span class="l">Client pays</span><span class="v">2,150,000</span></div>
+            <div class="d-c"><span class="l">Cost</span><span class="v">1,806,000</span></div>
+            <div class="d-c"><span class="l">Margin</span><span class="v ow-good">344,000</span></div>
+          </div>
+          <div class="d-mtr">
+            <div class="meter"><i class="good" style="width:80%;"></i><b style="left:50%;"></b></div>
+            <span class="cap"><b>16.0%</b> &middot; floor 10%</span>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="d-ln">
-      <div class="d-ln-h"><span style="flex:1;">Item</span><span class="q">Qty</span><span class="v">Client pays</span></div>
-      <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Cement (Tororo 50kg)</span><span class="q">40 Bag</span><span class="v">1,640,000</span></div>
-      <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Iron sheets &mdash; G28, 3m box profile</span><span class="q">6 Pc</span><span class="v">225,000</span></div>
-      <div class="d-r"><span class="mk in" title="Picked"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"></path></svg></span><span class="nm">Steel nails 3&quot;</span><span class="q">10 Kg</span><span class="v">90,000</span></div>
-      <div class="d-r"><span class="mk short" title="Came up short &mdash; 1 of 2 found"><svg class="icon" viewBox="0 0 24 24"><path d="M6 12h12"></path></svg></span><span class="nm">Barbed wire</span><span class="q">2 Roll</span><span class="v">156,000</span></div>
-      <div class="d-r"><span class="mk" title="Not picked yet"></span><span class="nm">PVC pipe 1&quot;</span><span class="q">1 Pc</span><span class="v">39,000</span></div>
-      <div class="d-sum">5 from stock &middot; 1 came up short</div>
-    </div>
-    <div class="d-mn">
-      <div class="d-mn-r">
-        <div class="d-c"><span class="l">Client pays</span><span class="v">2,150,000</span></div>
-        <div class="d-c"><span class="l">Cost, as bought</span><span class="v">1,806,000</span></div>
-        <div class="d-c"><span class="l">Margin</span><span class="v ow-good">344,000</span></div>
-      </div>
-      <div class="d-mtr">
-        <div class="meter"><i class="good" style="width:80%;"></i><b style="left:50%;"></b></div>
-        <span class="cap"><b>16.0%</b> &middot; floor 10%</span>
-      </div>
-    </div>
-    <button type="button" class="d-more">
-      <span>How it got here</span><span class="n">5</span><span class="sp"></span>
-      <svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg>
-    </button>
     <div class="d-f">
       <span class="sp"></span>
       <button type="button" class="btn sm">Tell the client</button>
@@ -654,7 +544,7 @@
   </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+<script data-dc-script data-props='{"$preview":{"width":680,"height":520}}'>
 class Component extends DCLogic {
   renderVals() { return {}; }
 }
