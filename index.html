@@ -14468,6 +14468,75 @@
   .ow-pk-n[hidden]{display:none;}
 
   /* ==================================================================
+     THE SUPPLIER, AT THE STAGE WHERE IT IS TRUE.
+
+     Taken is the stage where an order waits on PEOPLE, so at Taken the
+     dialog's right-hand pane stops being a list of lines and becomes a
+     set of suppliers — because the question the screen is being asked
+     has changed. "What is on it" is the Buying question; "who has it,
+     and have they said yes" is this one.
+
+     Each supplier is the same card the buying round uses (.ow-sc): a
+     place, what it is worth, what is on it, its state, and one act.
+     Three screens, one card.
+
+     This replaces a red button that expanded a row inside the phone's
+     own screen — a container the console keeps at display:none — so on
+     a desktop there was no way to confirm a supplier at all, and an
+     order cannot leave Taken until they all have.
+     ================================================================== */
+  /* One column: a supplier card carries the lines we are asking them
+     for, so it is wide, and the pane beside a 210px spine is 470. */
+  .ow-sp-g{grid-template-columns:1fr;}
+  /* THE MARK, three shapes and three grounds, never colour alone: a
+     NUMBER while we are still asking, a TICK once they have said yes,
+     a BANG when they have said no. */
+  .ow-sp-no.ow-on{background:var(--ow-verdigris);}
+  .ow-sp-no.ow-bad{background:var(--ow-crimson);}
+  /* The card's state line already has ow-on for good and ow-warn for
+     caution; a supplier who has said NO is the third case, and it is not
+     caution — it is the thing holding the order up. */
+  .ow-sc-st.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  /* WORD FOR WORD WHAT THE MESSAGE SAYS. Two readings of one order on
+     one screen is how somebody rings a supplier and quotes a figure the
+     message never carried, so the line carries the count in the unit it
+     was chosen in AND the price it was quoted at. */
+  .ow-sp-ea{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  /* What they said, typed in when they said it. The reason matters more
+     than the refusal: "no stock till Friday" and "the price is 12,000
+     now" lead to completely different fixes, and by the time anybody
+     reads the card the call is forgotten. */
+  .ow-sp-why{margin-top:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-10);
+    border-radius:var(--ow-r);background:var(--ow-crimson-soft);color:var(--ow-crimson);
+    font-size:var(--ow-t-12);line-height:1.45;}
+  /* Asked, and nothing back. Amber, because it is not a problem yet — it
+     is a thing that is taking too long. */
+  .ow-sp-wait{margin-top:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-10);
+    border-radius:var(--ow-r);background:var(--ow-amber-faint);color:var(--ow-amber-ink);
+    font-size:var(--ow-t-12);line-height:1.45;}
+  /* Asked in the card rather than through window.prompt: nothing else in
+     this file uses a browser dialog, and a native prompt on a phone is an
+     unstyled box that blocks the whole page. */
+  .ow-sp-ask{margin-top:var(--ow-sp-8);display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .ow-sp-in{flex:1;min-width:0;height:32px;padding:0 var(--ow-sp-10);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+    font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-sp-in:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-1px;}
+  /* THE ANSWER, and the only place on this screen that spends the
+     accent. Once a supplier has been asked, the next thing anybody does
+     is record what they said — so the accent sits on the card whose turn
+     it is, and every other card's acts are ghosts. */
+  .ow-sp-ans{display:flex;align-items:center;gap:var(--ow-sp-8);flex:none;}
+  /* No number on file is the ordinary case, not an edge one: nine of this
+     shop's forty-four suppliers have none. Said on the card, before the
+     button, because the surprise is otherwise at the far end — WhatsApp
+     opens its contact picker instead of their chat, and somebody who was
+     not expecting that assumes the button is broken. */
+  .ow-sp-nn{display:flex;align-items:center;gap:5px;margin-top:var(--ow-sp-6);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
+  /* ==================================================================
      ...AND THE SAME SIX SCREENS ONE-HANDED.
 
      Its own block, and it sits BELOW the components it switches: a media
@@ -42912,6 +42981,107 @@ function otSayToClient(q){
     : q.status === 'completed' ? 'The invoice has not been raised yet.' : 'Nothing is owed before delivery.');
   return bits.join(' ');
 }
+/* THE SUPPLIERS, AS THE STAGE'S OWN PANE.
+
+   One card per supplier, the buying round's card pointed at people
+   instead of places: who, what we are asking them for word for word as
+   the message says it, what it costs, where the asking has got to, and
+   the one act.
+
+   The accent sits on whosever turn it is. Before anybody has been asked
+   the only meaningful act is "Ask them"; once they have been asked, the
+   next thing anybody does is record what they said. Every other card's
+   acts are ghosts, so the screen still spends its oxide once. */
+function otSupplierPaneHTML(q){
+  const groups = orderSupplierGroups(q);
+  const states = groups.map(g=> orderSupplierConfirmState(q, g.supplierId));
+  const asked = states.filter(st=> st.state === 'confirmed' || st.askedAt).length;
+  const yes = states.filter(st=> st.state === 'confirmed').length;
+  const pay = groups.reduce((t, g)=> t + g.lines.reduce((n, it)=>
+    n + (Number(it.qty) || 0) * (Number(it.price) || 0), 0), 0);
+  /* WHOSE TURN IT IS: the first supplier that still needs something
+     doing. That card gets the accent; the rest are ghosts. */
+  const turn = groups.findIndex((g, i)=> states[i].state !== 'confirmed');
+  const card = (g, i)=>{
+    const sid = String(g.supplierId);
+    const st = states[i];
+    const mine = i === turn;
+    const P = mine ? otDlgPrimary : otDlgGhost;
+    const ds = ` data-sid="${esc(sid)}" data-id="${q.id}"`;
+    const act = (a, label, primary)=> (primary ? otDlgPrimary : otDlgGhost)(
+      'act', label, ` data-act2="${a}"${ds}`);
+    let mark = String(i + 1), markCls = '', state = 'Not asked', stateCls = '', band = '', acts;
+    if(st.state === 'confirmed'){
+      mark = OT_TICK; markCls = ' ow-sp-no ow-on';
+      state = `Confirmed ${otWhen(st.at)}`; stateCls = ' ow-on';
+      acts = act('undoconfirm', 'Undo');
+    } else if(st.state === 'problem'){
+      mark = '!'; markCls = ' ow-sp-no ow-bad';
+      state = 'Problem'; stateCls = ' ow-bad';
+      band = st.note ? `<div class="ow-sp-why">${esc(st.note)}</div>` : '';
+      acts = act('ask', 'Ask again', mine) + act('confirmed', 'They confirmed');
+    } else if(st.state === 'stale'){
+      mark = '!'; markCls = ' ow-sp-no ow-bad';
+      state = 'Ask again'; stateCls = ' ow-bad';
+      band = `<div class="ow-sp-why">Confirmed ${esc(savedAgoLabel(st.at))}, but the items, quantities or prices have changed since.</div>`;
+      acts = act('ask', 'Ask again', mine) + act('confirmed', 'They confirmed');
+    } else if(st.askedAt){
+      state = `Asked ${otDuration(Date.now() - st.askedAt)} ago`;
+      /* The band is a NUDGE, not a restatement: the foot already says
+         how long ago, so saying it again over a fresh ask is two
+         readings of one fact. It appears once the ask has gone quiet
+         for an hour, which is when it becomes news. */
+      if(Date.now() - st.askedAt > 3600000)
+        band = `<div class="ow-sp-wait">Nothing back yet &mdash; ask again if they are slow.</div>`;
+      acts = act('confirmed', 'They confirmed', mine) + otDlgGhost('why', 'Problem', ds);
+    } else {
+      acts = act('ask', 'Ask them', mine);
+    }
+    /* The reason, asked in the card. It replaces the acts while it is
+       open, because the question on screen is now what they said. */
+    if(String(supplierConfirmWhyFor) === sid){
+      band = `<div class="ow-sp-ask">
+        <input type="text" class="ow-sp-in" id="ot_why_in" data-sid="${esc(sid)}"
+          placeholder="What did they say? e.g. no stock till Friday" aria-label="What the supplier said">
+        <button type="button" class="btn btn-accent ow-sm" data-dlg="whysave"${ds}>Save</button>
+        <button type="button" class="btn btn-ghost ow-sm" data-dlg="whycancel">Cancel</button>
+      </div>`;
+      acts = '';
+      state = 'What did they say?';
+    }
+    const place = supplierLocationFor(sid);
+    const shop = (data.suppliers || []).find(x=> String(x.id) === sid);
+    const where = [place, shop && shop.shopNo ? `Shop ${shop.shopNo}` : ''].filter(Boolean).join(' · ');
+    const rows = g.lines.map(it=>{
+      const q2 = quoteLineQtyText(it), ea = quoteLineEach(it, Number(it.price) || 0);
+      const nm = it.productName || 'Item';
+      return `<div class="ow-sc-r">
+        <span class="ow-sc-r-n" title="${esc(nm)}">${esc(nm)}</span>
+        <span class="ow-sc-r-q">${esc(q2.text)}</span>
+        <span class="ow-sp-ea">@ ${esc(otFig(ea.price))}${ea.unit ? '/' + esc(ea.unit) : ''}</span>
+      </div>`;
+    }).join('');
+    const cost = g.lines.reduce((n, it)=> n + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
+    return `<div class="ow-sc">
+      <div class="ow-sc-t"><span class="ow-sc-no${markCls}">${mark}</span><span class="ow-sc-p" title="${esc(supplierName(sid))}">${esc(supplierName(sid))}</span></div>
+      ${where ? `<div class="ow-sc-s" title="${esc(where)}">${esc(where)}</div>` : ''}
+      <div class="ow-sc-v">${esc(otFig(Math.round(cost)))} <span class="ow-sc-u">to pay them</span></div>
+      <div class="ow-sc-i">${rows}</div>
+      ${band}
+      ${!supplierWaNumber(sid) ? `<div class="ow-sp-nn"><svg class="icon ow-i12" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 16.5v.5"/></svg>No WhatsApp number on file &mdash; the message opens for you to pick the chat</div>` : ''}
+      <div class="ow-sc-f">
+        <span class="ow-sc-st${stateCls}">${esc(state)}</span>
+        ${acts ? `<span class="ow-sp-ans">${acts}</span>` : ''}
+      </div>
+    </div>`;
+  };
+  return `<div class="ow-sc-fig">
+      <span class="ow-sc-c"><span class="ow-mt-l">Asked</span><span class="ow-sc-c-v">${asked} of ${groups.length}</span></span>
+      <span class="ow-sc-c"><span class="ow-mt-l">Confirmed</span><span class="ow-sc-c-v${yes < groups.length ? ' ow-bad' : ' ow-good'}">${yes}</span></span>
+      <span class="ow-sc-c"><span class="ow-mt-l">To pay them</span><span class="ow-sc-c-v">${esc(otFig(Math.round(pay)))}</span></span>
+    </div>
+    <div class="ow-sc-g ow-sp-g">${groups.map(card).join('')}</div>`;
+}
 function otPreviewSpec(id){
   const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
   if(!q) return null;
@@ -42961,6 +43131,11 @@ function otPreviewSpec(id){
     if(SQ_STATUS_ORDER[j] === 'awaiting_goods' && !orderAwaitsGoods(q)) j -= 1;
     return j < 0 ? null : SQ_STATUS_ORDER[j];
   })();
+  /* AT TAKEN THE QUESTION IS WHO HAS THE GOODS, not where they are. So
+     while an order is waiting on suppliers its right-hand pane is the
+     suppliers; the moment the last one confirms the order moves itself
+     and the pane goes back to being the lines. */
+  const asking = q.status === 'draft' && orderSupplierGroups(q).length > 0;
   const w = orderWho(q);
   const whoChip = !w.html && w.main ? w.main : '';
   const whoLine = w.html ? orderWhoText(q) : (w.sub || '');
@@ -43046,7 +43221,7 @@ function otPreviewSpec(id){
         <svg class="icon ow-i14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>Cancel the order</button>`,
     body: `<div class="ow-op">
       <div class="ow-op-sp">${spine}</div>
-      <div class="ow-op-r">
+      <div class="ow-op-r">${asking ? otSupplierPaneHTML(q) : `
         <div class="ow-op-lh"><span style="flex:1">Item</span><span class="ow-op-r-q">Qty</span><span class="ow-op-r-v">Client pays</span></div>
         <div class="ow-op-ln">
           ${loading ? `<div class="ow-dlg-k ow-dlg-load">${orderLoadFormHTML(q)}</div>` : ''}
@@ -43075,14 +43250,19 @@ function otPreviewSpec(id){
                </div>`
             : `<div class="ow-op-cap ow-wrap">${s.fromStock ? `${s.fromStock} line${s.fromStock === 1 ? ' comes' : 's come'} off our own shelf — what those cost is kept with the stock lot. ` : ''}${
                  s.unpriced ? `${s.unpriced} line${s.unpriced === 1 ? ' has' : 's have'} no supplier price on file. ` : ''}The margin cannot be worked out from what is here.</div>`}
-        </div>
+        </div>`}
       </div>
     </div>`,
     /* One ghost and one accent. The move IS the accent: an order waiting
-       to be asked about is not waiting to be told about. */
-    foot: `<span class="ow-dlg-sp"></span>
+       to be asked about is not waiting to be told about.
+
+       While the suppliers are being asked there is no manual move to
+       make — the order leaves Taken by itself when the last one
+       confirms — so the foot says that and the accent sits on the
+       supplier card whose turn it is. */
+    foot: `${asking ? `<div class="ow-dlg-n">The order leaves Taken by itself when the last supplier confirms.</div>` : '<span class="ow-dlg-sp"></span>'}
       ${otDlgGhost('tellclient', 'Tell the client', ` data-id="${q.id}"`)}
-      ${act && !loading ? otDlgPrimary('act', act.label, ` data-act2="${esc(act.act)}" data-id="${q.id}"`) : ''}`,
+      ${act && !loading && !asking ? otDlgPrimary('act', act.label, ` data-act2="${esc(act.act)}" data-id="${q.id}"`) : ''}`,
   };
 }
 /* The footer's move used to carry a sentence saying what it would do —
@@ -43526,6 +43706,23 @@ function otDlgAct(act, el){
   const after = ()=>{ renderSavedQuotes(); otDlgDraw(); };
   switch(act){
     case 'close': otDlgClose(); break;
+    /* What the supplier said, asked in the card. Opening the field is
+       its own act rather than a state the answer buttons carry, because
+       the reason is the thing worth having and a refusal recorded
+       without one is a card nobody can act on later. */
+    case 'why': supplierConfirmWhyFor = el.dataset.sid; otDlgDraw(); {
+      const f = document.getElementById('ot_why_in');
+      if(f) f.focus();
+    } break;
+    case 'whycancel': supplierConfirmWhyFor = null; otDlgDraw(); break;
+    case 'whysave': {
+      const f = document.getElementById('ot_why_in');
+      supplierConfirmWhyFor = null;
+      setOrderSupplierConfirm(id, el.dataset.sid, 'problem', f ? f.value.trim() : '');
+      renderSavedQuotes();
+      otDlgDraw();
+      break;
+    }
     case 'menu': {
       const m = document.getElementById('ot_dlg_m');
       if(m) m.hidden = !m.hidden;
@@ -43664,6 +43861,25 @@ document.getElementById('otDlg').addEventListener('click', (e)=>{
      hide the very screen the move is being judged from. */
   const m = document.getElementById('ot_dlg_m');
   if(m && !m.hidden && !t.closest('.ow-mn-pop')) m.hidden = true;
+});
+/* Enter saves, Escape backs out — the two keys anybody types in a
+   one-field form, and without them the field is mouse-only. */
+document.getElementById('otDlg').addEventListener('keydown', (e)=>{
+  const f = e.target;
+  if(!f || !f.classList || !f.classList.contains('ow-sp-in')) return;
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const sid = f.dataset.sid;
+    supplierConfirmWhyFor = null;
+    setOrderSupplierConfirm(otDlgNow ? otDlgNow.id : 0, sid, 'problem', f.value.trim());
+    renderSavedQuotes();
+    otDlgDraw();
+  } else if(e.key === 'Escape'){
+    e.preventDefault();
+    e.stopPropagation();
+    supplierConfirmWhyFor = null;
+    otDlgDraw();
+  }
 });
 document.getElementById('otDlg').addEventListener('mousedown', (e)=>{
   if(e.target && e.target.id === 'otDlg') otDlgClose();
