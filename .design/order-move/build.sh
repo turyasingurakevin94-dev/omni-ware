@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+OUT=.
+mkdir -p "$OUT"
+build(){ local out="$1" rootcls="$2" w="$3" h="$4" rail="$5" body="$6"; shift 6
+  { echo '<!doctype html>'; echo '<html lang="en">'; echo '<head>'
+    echo '  <meta charset="utf-8">'; echo '  <script src="./support.js"></script>'
+    echo '</head>'; echo '<body>'; echo '<x-dc>'; echo '<helmet>'
+    echo '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=Archivo+Black&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">'
+    echo '  <style>'; cat _chrome.css
+    for f in "$@"; do case "$f" in *.css) cat "$f";; esac; done
+    echo '  </style>'; echo '</helmet>'
+    echo "<div class=\"$rootcls\" style=\"width:${w}px;height:${h}px;\">"
+    [ "$rail" = "1" ] && cat _rail.html
+    [ "$body" = "-" ] || cat "$body"
+    for f in "$@"; do case "$f" in *.html) cat "$f";; esac; done
+    echo '</div>'; echo '</x-dc>'
+    echo "<script data-dc-script data-props='{\"\$preview\":{\"width\":${w},\"height\":${h}}}'>"
+    echo 'class Component extends DCLogic {'; echo '  renderVals() { return {}; }'; echo '}'
+    echo '</script>'; echo '</body>'; echo '</html>'
+  } > "$OUT/$out"
+  echo "built $out  ($(wc -c < "$OUT/$out") bytes)"
+}
+build Main.dc.html   app 1440 900 1 body_board.html _extra_board.css _dlg.css _ov_main.html
+build Back.dc.html   app 1440 900 1 body_board.html _extra_board.css _dlg.css _ov_back.html
+build Undo.dc.html   app 1440 900 1 body_board_moved.html _extra_board.css _dlg.css _ov_undo.html
+build Cancel.dc.html app 1440 900 1 body_board.html _extra_board.css _dlg.css _ov_cancel.html
+build Spec.dc.html   spec 1120 520 0 body_spec.html _dlg.css _extra_spec.css
+build Phone.dc.html  ph    390 844 0 body_phone.html _extra_phone.css _ov_phone.css _ov_phone.html
