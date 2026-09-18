@@ -4677,8 +4677,7 @@ function orderStatusInfo(o){
 // rest) -- the flag alone used to be the only one set, which is exactly
 // what left settled orders reading as unpaid.
 function orderBalanceInfo(o){
-  const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
-  const balance = o.agentPaymentStatus==='paid' ? 0 : Math.max(0, shopTotal - (Number(o.amountPaid)||0));
+  const balance = orderOwedAmount(o);
   return balance<=0
     ? { cls:'settled', icon:ICON_CHECK, text:'Settled with the shop' }
     : { cls:'due', icon:null, text:`Balance owed to shop: ${fmtUGX(balance)}` };
@@ -7618,8 +7617,28 @@ function openNewClientPanel(prefillName, onDone, { makeActive = true } = {}){
    this prompt with a reminder, no state changes. Mobile Money is the new
    path: a real MTN/Airtel "request to pay" push to the agent's phone,
    confirmed automatically once they approve it there. */
+/**
+ * What this agent still owes the shop on one order. THE one figure -- the
+ * row's balance, both payment modals and the amount MoMo actually charges
+ * all read it, so what the agent consents to and what leaves their phone
+ * cannot be different numbers.
+ *
+ * It used to be the order's whole value: `amountPaid` was never subtracted
+ * here, only in `orderBalanceInfo` beside it. So a part-paid order offered
+ * "1,200,000 owed to the shop", the agent approved that, and
+ * agent-initiate-momo-payment charged the 400,000 that was actually left --
+ * correct money, a figure they had never been shown. The server had already
+ * learned this (its own comment records charging the settled part twice);
+ * the screen had not.
+ *
+ * sellPrice, not agentSellPrice: what the client pays the agent is the
+ * agent's own business and is `orderTotal`. Either signal settles the
+ * order -- the flag, or amountPaid covering the total.
+ */
 function orderOwedAmount(o){
-  return (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+  if(!o || o.agentPaymentStatus==='paid') return 0;
+  const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+  return Math.max(0, shopTotal - (Number(o.amountPaid)||0));
 }
 function openPaymentChoiceModal(order){
   const owed = orderOwedAmount(order);

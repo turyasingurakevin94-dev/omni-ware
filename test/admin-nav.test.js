@@ -345,7 +345,14 @@ const INDEX = railIndex();
        screen that took the work. These are the words the retired row
        carried, and they are on the row that took it. */
     const inv = INDEX.find((x) => x.tab === 'invoices') || { keywords: '' };
-    ['supplier', 'payables', 'goods received', 'purchase'].forEach((w) => {
+    /* `pinv` is here because it is what is PRINTED on the paper -- the
+       prefix purchaseInvoiceNumberLabel() puts on every supplier bill, and
+       what the Cash Book's own row parser reads to tell one document from
+       another. Somebody holding the bill types what is on it. The prose
+       words reached the register from the day of the merge; the document's
+       own name did not, which made the merge honest to a reader of this
+       test and not to a person at the counter. */
+    ['supplier', 'payables', 'goods received', 'purchase', 'pinv'].forEach((w) => {
       t.check(inv.keywords.includes(w),
         `and "${w}" still reaches the register, from the row that took the work`);
     });

@@ -33,8 +33,25 @@ function read(rel) {
 // the keyword, turning an async function into one whose `await`s no longer
 // parse.
 function extractFunction(src, name, where) {
-  const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(src);
+  const decl = '(?:async\\s+)?function\\s+' + name + '\\s*\\(';
+  const m = new RegExp(decl).exec(src);
   if (!m) throw new Error(`could not find ${name}() in ${where}`);
+
+  // Two declarations of one name is a FORK, and taking the first silently
+  // pins whichever copy happens to come earlier in the file. That is
+  // survivable today; it is not survivable during a migration, where the
+  // rule being moved out lives in both the old file and the new module at
+  // once and the suite would keep proving the old one while the app runs
+  // the new one -- green the whole way, checking the wrong code.
+  //
+  // So it throws, and the suite names what has forked instead of hiding it.
+  const all = src.match(new RegExp(decl, 'g'));
+  if (all && all.length > 1) {
+    throw new Error(
+      `${name}() is declared ${all.length} times in ${where} -- ` +
+      'extraction would silently pin the first. Name the copies apart, or ' +
+      'delete the one that is no longer the rule.');
+  }
 
   // Find the brace that opens the BODY, not simply the first one after the
   // name. A TypeScript return annotation can carry braces of its own --
