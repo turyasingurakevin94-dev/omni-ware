@@ -142,7 +142,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        transparent` the lane used to declare, purely to transition out
        of, did NOT: that one was a distinct shadow spent on nothing
        being drawn, and it is gone for good. */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
+    /* 60. Order tracking was restored to the lane board it was on 2 Sep,
+       on the shop's instruction, and the board and its three run dialogs
+       came back with the four marks only they draw: the overdue flag's
+       lift, the carousel card's, the floating arrow on the carousel's
+       nav, and the lane's resting `inset 0 0 0 0 transparent` that the
+       flash transitions out of. Three of the four ARE elevation, which
+       the law above is about, and they are here because the screen they
+       belong to is here -- not because depth was reconsidered. Nothing
+       outside this board and its dialogs may spend one. */
+    'shadows': [60, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -172,7 +181,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        says. The panel went when the list became a set of place cards;
        one of its two keylines was already spent elsewhere, the other
        was not. */
-    'distinct colours': [102, /#[0-9A-Fa-f]{6}\b/g],
+    /* 108, for the same restoration and no other reason. Six hexes come
+       back with the lane board: the pickups pill's four purples, the
+       invoice icon's own amber, and the buying list's verdict keyline.
+       The purple is outside the palette and always was -- it is the
+       clearest thing this ceiling is carrying, and it is carried because
+       the screen was asked for as it was, not because the palette grew.
+       No new screen may spend any of the six. */
+    'distinct colours': [108, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

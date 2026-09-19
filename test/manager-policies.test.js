@@ -96,7 +96,7 @@ const { ASSISTANT_TOOLS: T, standingPoliciesData, deriveMoveOutcome } = scope.na
   eq(byKey['P2::1'].cover_days, 21, 'a variant rule under its composite key');
   eq(byKey['P2::1'].item, 'Hoe — Big', 'named for a person, not keyed for a machine');
   eq(pol.stages.limits.length, 1, 'a zero minutes limit is no limit — only real limits are listed');
-  eq(pol.stages.limits[0].label, 'Step 3. Preparing', 'with the board’s own label');
+  eq(pol.stages.limits[0].label, 'Step 3. Being Prepared', 'with the board’s own label');
 
   t.check(T.standing_policies && T.standing_policies.confirm === false,
     'standing_policies answers freely — it reads and nothing more');
@@ -173,7 +173,7 @@ const { ASSISTANT_TOOLS: T, standingPoliciesData, deriveMoveOutcome } = scope.na
   t.check(/stage must be one of/.test(threw || ''), 'an invented stage is refused with the real ones listed');
   const out = T.set_stage_limit.run({ stage: 'preparing', minutes: 120 });
   eq(data.presetOrderStageLimits.preparing, 120, 'the limit lands on the board’s own preset');
-  eq(out.stage, 'Step 3. Preparing', 'answered with the human label');
+  eq(out.stage, 'Step 3. Being Prepared', 'answered with the human label');
   t.check(/alerts are OFF/i.test(out.note || ''),
     'and with alerts off the answer says the board flags on screen only — never a claim of pushes that will not come');
   t.check(T.set_stage_limit.confirm === true, 'stage policy goes through a card');

@@ -69,6 +69,11 @@ const env = {
   toast: (m) => { calls.toasts.push(String(m)); },
   otOpenRow: (id) => { calls.openedRow = id; },
   openSupplierConfirmModal: (id) => { calls.openedPanel = id; },
+  /* The board asks who is picking or carrying again, through the modal
+     the forward arrow has always opened. Stubbed, not exercised: whose
+     order it becomes is assign-staff's business, and this file is about
+     the stage and the pick. */
+  openAssignStaffModal: (id, toStatus, role) => { calls.assignAsked = { id, toStatus, role }; },
   openOrderPreview: (id) => { calls.openedDialog = id; },
 };
 
@@ -228,23 +233,23 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
   t.check(status() === 'draft' && calls.prompted === 1,
     `an unpaid prepay agent's order can't start being prepared (status ${status()}, prompted ${calls.prompted})`);
 
-  // Past the payment gate, the step lands on the worker-assignment gate --
-  // so "proceeded" means the prepay prompt didn't fire and the picker did.
-  // Past the payment gate the step lands, because nothing else asks --
-  // so "proceeded" is now the order actually being in Being Prepared.
+  /* Past the payment gate, the step lands on the WORKER-ASSIGNMENT gate,
+     which is the board's own: the arrow asks who is picking it before it
+     moves. So "cleared the gate" is the prepay prompt not firing and the
+     picker being asked instead. */
   reset(mkQuote({ originAgentId: 'AG1', agentPaymentStatus: 'paid' }), PREPAY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && status() === 'preparing',
-    'once paid it clears the payment gate and enters Being Prepared');
+  t.check(calls.prompted === null && !!calls.assignAsked,
+    'once paid it clears the payment gate and is asked who is picking it');
 
   reset(mkQuote({ originAgentId: 'AG1', agentPaymentStatus: 'unpaid' }), ONDELIVERY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && status() === 'preparing',
+  t.check(calls.prompted === null && !!calls.assignAsked,
     'a pay-on-delivery agent is never held at this gate');
 
   reset(mkQuote(), PREPAY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && status() === 'preparing',
+  t.check(calls.prompted === null && !!calls.assignAsked,
     "a shop's own order (no agent) is never held at this gate");
 }
 {
@@ -267,30 +272,26 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
 
 /* ---------- 4. what each forward step asks for ------------------------ */
 {
-  /* Entering 'preparing' asks for nobody. The order goes in unassigned and
-     joins the pickers' queue on every worker's phone; the next free one
-     takes it. This used to open a pop-up and hold the move until somebody
-     was chosen, which put the choice on the person with the least
-     information and cost a tap on every order. */
+  /* Entering 'preparing' ASKS WHO IS PICKING IT, and holds the move until
+     somebody is chosen: openAssignStaffManual writes the worker and calls
+     setSavedQuoteStatus itself. The order does not enter the stage on the
+     arrow alone, so nothing is in Being Prepared with nobody on it. */
   reset(mkQuote({ status: 'draft' }));
   stepSavedQuoteStatus(1, +1);
-  t.check(status() === 'preparing' && !data.savedQuotes[0].assignedWorkerId,
-    `entering Preparing advances with nobody on it (status ${status()})`);
-  t.check(!data.savedQuotes[0].pickingStatus,
-    'and no pick is pretended, which is what puts it in the queue');
+  t.check(status() === 'draft' && !!calls.assignAsked,
+    `entering Preparing asks who is picking it first (status ${status()})`);
+  t.check(calls.assignAsked.toStatus === 'preparing' && calls.assignAsked.role === 'worker',
+    'and asks for a picker, for the stage it is moving into');
 
-  /* Shop delivery refuses, and says where the move actually lives. "Out
-     for delivery" has to mean something is out; the arrow cannot know who
-     took it, and the shop rings that person by name and number when the
-     customer asks. So the move belongs to Loaded, which carries them. */
+  /* Shop delivery asks WHO IS CARRYING IT, through the same modal, and
+     holds the move until somebody is named -- including "the client is
+     sending their own person", which is why the delivery role offers a
+     row the picker role does not. */
   reset(mkQuote({ status: 'preparing', deliveryMode: 'shop_delivery' }));
   stepSavedQuoteStatus(1, +1);
-  t.check(status() === 'preparing', `shop delivery is not sent out by the arrow (status ${status()})`);
-  t.check(/Loaded/.test(calls.toasts.join(' ')), 'the refusal names the tap that does it');
-  /* ...and opens the ORDER, whose dialog inlines that form. It used to
-     open the row, which on a console is inside a display:none container
-     — so the refusal pointed at a form nobody could see. */
-  t.check(calls.openedDialog === 1, 'and opens the order, where that form is');
+  t.check(status() === 'preparing', `shop delivery is not sent out by the arrow alone (status ${status()})`);
+  t.check(calls.assignAsked.toStatus === 'pending_delivery' && calls.assignAsked.role === 'delivery',
+    'it asks for a driver, for the stage it is moving into');
 
   // Self-pickup has no carrier to name -- it uses the shared sentinel.
   reset(mkQuote({ status: 'preparing', deliveryMode: 'agent_pickup' }));

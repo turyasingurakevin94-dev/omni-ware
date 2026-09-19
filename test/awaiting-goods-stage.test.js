@@ -55,16 +55,16 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
      stage on the wrong side of Being Prepared would be describing a
      delivery to the customer rather than one from the supplier. */
   const statuses = extractDeclaration(src, 'SQ_STATUSES', 'index.html');
-  /* Named as the desk names them since the board became a console --
-     Taken, Buying, Preparing, Out for delivery, Delivered. The keys are
-     untouched, every derivation reads them; only the words moved. */
-  t.check(/awaiting_goods:\s*\{ label:'Step 2\. Buying'/.test(statuses),
-    'and is numbered as the second step, named for what happens in it');
-  t.check(/preparing:\s*\{ label:'Step 3\. Preparing'/.test(statuses)
-    && /completed:\s*\{ label:'Step 5\. Delivered'/.test(statuses),
+  /* The stage names came back with the board: Draft, Awaiting Goods,
+     Being Prepared, Pending Delivery, Completed. The keys are untouched
+     and every derivation reads them; only the words moved, twice. */
+  t.check(/awaiting_goods:\s*\{ label:'Step 2\. Awaiting Goods'/.test(statuses),
+    'and is numbered as the second step, named for what it is waiting on');
+  t.check(/preparing:\s*\{ label:'Step 3\. Being Prepared'/.test(statuses)
+    && /completed:\s*\{ label:'Step 5\. Completed'/.test(statuses),
     'with everything after it renumbered rather than left claiming the old place');
-  t.check(/awaiting_goods:'Buying'/.test(extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html')),
-    'and a short label for the lens and the top bar, which read that list rather than the long one');
+  t.check(/awaiting_goods:'Awaiting Goods'/.test(extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html')),
+    'and a short label for the step rail and the top bar, which read that list rather than the long one');
 }
 
 /* ---------- 2. what "still out" means -------------------------------- */

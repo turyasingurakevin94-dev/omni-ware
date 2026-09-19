@@ -152,11 +152,7 @@ const src = read('index.html');
 
   const { scope, calls } = makeAnnounce(false, false);
   scope.announceOrderMove({ client: { name: 'Musa Hardware' } }, 'preparing');
-  /* "Preparing", not "Being Prepared": the stage NAMES were rewritten to
-     what the desk calls them after this board was first written, and
-     that rename is not part of the board coming back. The prefix strip
-     is what this line is actually pinning. */
-  t.check(calls.toasts[0] === 'Musa Hardware → Preparing',
+  t.check(calls.toasts[0] === 'Musa Hardware → Being Prepared',
     `the toast names the order and the destination, without the "Step 3." prefix (${calls.toasts[0]})`);
   t.check(calls.pulses.includes('pulse'), 'the destination rail node pulses');
   t.check(calls.scrolls.length === 1 && calls.scrolls[0].behavior === 'smooth',
@@ -164,7 +160,7 @@ const src = read('index.html');
 
   const anon = makeAnnounce(false, false);
   anon.scope.announceOrderMove({ client: {} }, 'completed');
-  t.check(anon.calls.toasts[0] === 'Order → Delivered',
+  t.check(anon.calls.toasts[0] === 'Order → Completed',
     'an order with no client name is still announced, not skipped');
 
   /* Reduced motion gets the same information without the motion: the

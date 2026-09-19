@@ -170,14 +170,17 @@ const allPicks = (q, v) => q.items.every((it) => it.pickStatus === v);
   t.check(allPicks(q, 'done'), 'and its ticks stand');
 }
 
-/* ---------- 6. forward, into a stage that asks for nobody -------------- */
+/* ---------- 6. forward, into a stage that asks who is picking ---------- */
 /*
- * This used to open a pop-up asking who would pick it, and hold the move
- * until somebody was chosen. Nothing asks now: the order enters Preparing
- * unassigned, joins the pickers' queue (workerPickQueue, shared-worker.js)
- * and the next free picker takes it from their own phone. The pop-up was
- * the tap and the interruption the owner asked to lose, and it was also
- * the only thing making an unassigned order look like a problem.
+ * The board asks. The arrow opens the assign-staff modal and HOLDS the
+ * move until somebody is chosen; that modal writes the worker, sets
+ * pickingStatus to 'awaiting_accept' and calls setSavedQuoteStatus
+ * itself. So the step alone must not advance the order, and must not
+ * invent a worker or a pick on the way past.
+ *
+ * (An unassigned order in Preparing is still a thing the worker app
+ * understands -- workerPickQueue, shared-worker.js -- it is simply not
+ * how the board puts one there.)
  */
 {
   seen.assignPrompted = false;
@@ -185,10 +188,10 @@ const allPicks = (q, v) => q.items.every((it) => it.pickStatus === v);
   q.items.forEach((it) => { it.pickStatus = null; it.pickedQty = null; });
   scope.stepSavedQuoteStatus(900, 1);
 
-  t.check(!seen.assignPrompted, 'moving forward into preparing asks for nobody');
-  t.check(q.status === 'preparing', 'the order advances unassigned, into the pickers\' queue');
+  t.check(seen.assignPrompted, 'moving forward into preparing asks who is picking it');
+  t.check(q.status === 'draft', 'and holds the order where it is until somebody is chosen');
   t.check(!q.assignedWorkerId && !q.pickingStatus,
-    'with no worker on it and no pick pretended — which is exactly what puts it in that queue');
+    'with no worker on it and no pick pretended — the modal writes both, not the step');
 }
 
 /* ---------- 7. the helper leaves the assignment to its caller ---------- */

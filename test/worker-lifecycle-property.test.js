@@ -123,6 +123,9 @@ const scope = compileScope(SOURCES.concat(['function __setMyStaff(s){ myStaff = 
   // opens the row where the Loaded form is; both are DOM work.
   otOpenRow: () => {},
   openSupplierConfirmModal: () => {},
+  /* The forward arrow opens the assign-staff modal again, so the walk
+     has to supply one. Assigning is modelled by adminAssigns below. */
+  openAssignStaffModal: () => {},
   openOrderPreview: () => {},
   /* The supplier gate on leaving Taken is order-draft-confirm.test.js's
      business, held open here -- the arrow reaches it now that entering

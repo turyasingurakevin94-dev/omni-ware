@@ -493,9 +493,9 @@ const trip = (over) => Object.assign({
      going to finish. */
   t.check(/data-void="\$\{esc\(t\.id\)\}"/.test(src) && /Call off<\/button>/.test(src),
     'the strip offers a way to call one off');
-  /* The buying list lives in the board's one dialog now, so the strip's
-     acts are bound inside that body rather than a modal of its own. */
-  t.check(/#ot_dlg_b \[data-void\]/.test(src) && /voidCollectionTrip\(trip\.id\)/.test(src),
+  /* The buying list is its own modal again, so the strip's acts are
+     bound inside #buyingListBody rather than the board's dialog. */
+  t.check(/#buyingListBody \[data-void\]/.test(src) && /voidCollectionTrip\(trip\.id\)/.test(src),
     'and it is wired to the model rather than being decoration');
   /* Confirmed first, naming what happens: somebody may already be on
      their way, and the lines returning to the list is the easy part to

@@ -7325,9 +7325,14 @@
   .receipt .r-foot{font-size:10.5px;margin-top:8px;}
 
   /* Saved quotes list (screen) */
+  .q-saved-hint{margin:4px 0 14px;font-size:12.5px;color:var(--ink-soft);}
   .sq-select-all-label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-soft);font-weight:600;cursor:pointer;}
+  .sq-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .sq-row:last-child{border-bottom:none;}
+  .sq-info{flex:1 1 220px;min-width:0;}
   .sq-client{font-size:13.5px;font-weight:700;color:var(--ink);}
   .sq-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .sq-actions{display:flex;gap:6px;flex-shrink:0;}
 
   /* Saved quotes — status board (cards grouped into columns).
 
@@ -7365,10 +7370,7 @@
   }
   .sq-stepper-step{
     all:unset;box-sizing:border-box;position:relative;z-index:1;flex:1 1 0;min-width:0;
-    /* 10px, not 4: the chase pill hangs 6px below the node, and at 4 the
-       label started 2px inside it -- the stage name clipped by the badge
-       that is about it. */
-    display:flex;flex-direction:column;align-items:center;gap:10px;padding:2px 2px 4px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px;padding:2px 2px 4px;cursor:pointer;
   }
   /* The connector, drawn per step rather than as one bar with hardcoded
      12.5% insets -- those were half of a quarter, i.e. four steps baked
@@ -7399,14 +7401,8 @@
   .sq-stepper-step.active .sq-stepper-count{background:var(--pill-accent,var(--ink));}
   /* Orders in this step needing a person or past their stage limit --
      "what needs chasing" answerable from the rail without reading a card. */
-  /* BOTTOM LEFT, opposite the count. Both badges sat on the right in the
-     first cut, and on a 26px node two 15px pills on the same side covered
-     the step number between them -- at 390px the number was gone
-     entirely. Opposite corners keep all three readings: which step this
-     is, how many are standing in it, and how many of those need
-     chasing. */
   .sq-stepper-warn{
-    position:absolute;bottom:-6px;left:-8px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
+    position:absolute;bottom:-6px;right:-8px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
     background:var(--ow-amber-soft);color:var(--warn-ink);font-family:'IBM Plex Mono',monospace;
     font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;
     gap:1px;box-shadow:0 0 0 2px var(--panel);
@@ -7443,15 +7439,10 @@
      straight back to an edge. Free scroll, drag-to-pan and the rail are
      the navigation, which is also how every kanban the admin has used
      before behaves. */
-  /* The resting state used to be a declared `inset 0 0 0 0 transparent`,
-     purely so the flash below could transition out of something. It
-     spent a whole distinct shadow on nothing being drawn. The flash is
-     added and removed by the render on a timer either way, so the lane
-     rests with no shadow at all and the ring fades on opacity. */
   .sq-col{
     display:flex;flex-direction:column;min-width:0;
     background:var(--ow-steel-050);border-radius:12px;padding:8px 8px 10px;
-    transition:box-shadow .25s ease;
+    box-shadow:inset 0 0 0 0 transparent;transition:box-shadow .25s ease;
   }
   /* The answer to a rail click: the lane that just slid under the node
      acknowledges itself in the step's own colour, then lets go. */
@@ -7490,7 +7481,7 @@
   .sq-overdue-flag{
     position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;
     background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;
-    animation:sq-blink 1.1s ease-in-out infinite;
+    box-shadow:0 1px 4px rgba(20,30,40,0.25);animation:sq-blink 1.1s ease-in-out infinite;
   }
   .sq-overdue-flag .icon{width:13px;height:13px;stroke-width:2.6;}
   @keyframes sq-blink{
@@ -7629,26 +7620,31 @@
     display:flex;align-items:flex-start;gap:5px;margin-top:8px;font-size:11px;color:var(--ow-crimson);
   }
   .sq-cash-gap .icon{width:13px;height:13px;flex-shrink:0;margin-top:1px;}
+  /* The delivery-runs banner borrows the cash banner's shape on purpose --
+     same place on the column, same job, so it reads as the same control
+     one step along. Verdigris rather than oxide: this one is a plan, not
+     a bill. */
   /* A pill on the column head rather than a banner in the column: it
      costs no vertical space at all, and the count keeps it from being a
      mystery button. */
-  /* Neutral, not the purple it wore in September. The palette has no
-     purple, and a whole hue family for one pill on one lane head is the
-     twenty-fourth colour the system exists to refuse. The cash banner
-     below it is already the amber on this lane; this is an affordance,
-     so it is the ground and the rule. */
   .sq-pickups-icon{
     all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
-    padding:2px 8px 2px 6px;border-radius:999px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
-    color:var(--ow-ink-600);flex-shrink:0;
+    padding:2px 8px 2px 6px;border-radius:999px;background:#F1ECF7;border:1px solid #D6CBE4;
+    color:#5B4A7A;flex-shrink:0;
   }
   .sq-pickups-icon .icon{width:13px;height:13px;}
   .sq-pickups-icon b{font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
-  .sq-pickups-icon:hover{background:var(--ow-steel-100);}
+  .sq-pickups-icon:hover{background:#E7DEF2;}
   .sq-pickups-icon:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   /* The count no longer pushes to the right edge on its own -- the icon
      sits beside it, so the pair is what gets pushed. */
   .sq-col-head .sq-col-count{margin-left:auto;}
+  /* One supplier block per stop inside a place card. */
+  .pr-supplier{margin-top:10px;padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+  .pr-supplier:first-of-type{border-top:none;padding-top:0;}
+  .pr-supplier-head{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin-bottom:5px;}
+  .pr-supplier-head b{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .pr-supplier-head .icon{width:14px;height:14px;color:var(--ink-soft);}
   .sq-cash.sq-runs{border-color:var(--line);background:var(--panel);}
   .sq-cash.sq-runs .sq-cash-top .icon{color:var(--ow-verdigris);}
   /* "5 orders" is a count, not money: mono buys it no column to line up
@@ -7668,6 +7664,346 @@
   .sq-cash-note{
     display:block;margin-top:7px;font-size:11px;color:var(--ink-soft);
   }
+  /* ---- The buying list, the runs, and the plan (restored verbatim from
+     8dd8749^, the last state of the lane board) ---- */
+  .bl-top{display:flex;align-items:baseline;gap:10px;padding:0 0 12px;border-bottom:1px solid var(--line);}
+  .bl-top-label{font-size:12.5px;color:var(--ink-soft);}
+  .bl-top-fig{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+
+  /* One card per place, slid through sideways. A cluster is a trip, and
+     trips get compared with each other -- so they sit side by side and one
+     gesture moves between them, rather than stacking into a document. */
+  .dr-carousel{position:relative;margin:14px 0 6px;}
+  .dr-track{
+    display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding:2px 2px 10px;scroll-behavior:smooth;
+    scrollbar-width:thin;
+  }
+  .dr-track:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
+  .dr-card{
+    flex:0 0 clamp(230px, 72%, 290px);scroll-snap-align:start;
+    display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;box-shadow:0 1px 2px rgba(20,30,40,0.05);
+  }
+  .dr-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dr-card.collected{background:var(--ow-verdigris-soft);border-color:#BFD9D1;}
+  .dr-card.unknown{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
+  .dr-card-head{display:flex;align-items:center;gap:7px;min-width:0;}
+  .dr-card-head .icon{width:15px;height:15px;color:var(--ow-verdigris);flex-shrink:0;}
+  .dr-card.unknown .dr-card-head .icon{color:var(--ow-crimson);}
+  .dr-card-rank{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
+    color:var(--ink-soft);background:var(--ow-steel-050);
+    padding:1px 6px;border-radius:99px;flex-shrink:0;
+  }
+  .dr-card-name{
+    font-size:14px;font-weight:700;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .dr-card-figs{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    margin:7px 0 0;padding-bottom:8px;border-bottom:1px solid var(--ow-rule-soft);
+  }
+  .dr-card-count{
+    font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ow-verdigris);
+  }
+  .dr-card.unknown .dr-card-count{color:var(--ow-crimson);}
+  .dr-card-total{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .dr-card-note{
+    display:flex;align-items:flex-start;gap:5px;margin:8px 0 0;
+    font-size:11px;line-height:1.4;color:var(--ow-amber-ink);
+  }
+  .dr-card-note.split{color:var(--ink-soft);}
+  .dr-card-note.quiet{color:var(--ink-soft);}
+  .dr-card-note .icon{width:12px;height:12px;flex-shrink:0;margin-top:1px;}
+  .dr-orders{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;}
+  .dr-order{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:7px 0;border-top:1px solid var(--ow-rule-soft);
+  }
+  .dr-order:first-child{border-top:0;}
+  .dr-order-main{min-width:0;}
+  /* Wraps rather than truncates. The line reads "<product> · <qty>
+     <unit>", so the ellipsis fell on the quantity -- "Chrome Pipe —
+     19mm - Light · 40…" tells somebody standing in a shop everything
+     except how many to ask for, which is the one thing they came with.
+     Two lines of text is cheaper than a second trip. */
+  .dr-order-name{
+    font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.35;
+    overflow-wrap:anywhere;
+  }
+  .dr-order-sub{font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .dr-order-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
+  .dr-order-value{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .dr-driver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink-soft);}
+  .dr-driver .icon{width:12px;height:12px;flex-shrink:0;}
+  .dr-driver.none{color:var(--ow-crimson);}
+  .dr-nav{
+    all:unset;cursor:pointer;position:absolute;top:calc(50% - 22px);z-index:2;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    box-shadow:0 2px 8px rgba(20,30,40,0.16);
+  }
+  .dr-nav.prev{left:-6px;} .dr-nav.next{right:-6px;}
+  .dr-nav .icon{width:16px;height:16px;}
+  .dr-nav:hover{background:var(--ow-steel-050);}
+  .dr-nav:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dr-nav:disabled{opacity:0.3;cursor:default;box-shadow:none;}
+  .dr-hint{margin:2px 0 0;font-size:11.5px;color:var(--ow-ink-400);}
+  @media (max-width:520px){
+    .dr-card{flex-basis:86%;}
+    .dr-nav{display:none;}
+  }
+  /* Cash position. Sits between the total and the supplier runs because it
+     is the question you ask after seeing the total and before setting off. */
+  /* THE VERDICT, and the only tinted block on the screen.
+
+     Grey was doing two jobs here: it wrapped the cash answer AND every
+     supplier run below it, so at a glance the most important thing on
+     the modal looked like one more container of details. Colour now
+     carries the meaning -- green when the money covers the buying, red
+     when it does not -- and the supplier cards are plain white, so the
+     two can never be mistaken for each other. */
+  .bl-verdict{
+    margin:12px 0 6px;padding:13px 15px;border-radius:12px;
+    background:var(--ow-verdigris-soft);border:1px solid #BFD9D1;
+  }
+  .bl-verdict.short{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
+  /* Cost, money and gap on one line, because a gap means nothing
+     without the two numbers it came from. */
+  .bl-verdict-figs{display:flex;align-items:flex-end;flex-wrap:wrap;gap:6px 14px;}
+  .bl-fig{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .bl-fig-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .bl-fig-val{
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:700;color:var(--ink);line-height:1.1;
+  }
+  /* The answer is bigger than the two figures it is drawn from. */
+  .bl-fig.strong .bl-fig-val{font-size:19px;}
+  .bl-verdict.short .bl-fig.strong .bl-fig-val{color:var(--ow-crimson);}
+  .bl-verdict:not(.short) .bl-fig.strong .bl-fig-val{color:var(--good);}
+  .bl-fig-op{font-size:11px;color:var(--ink-soft);padding-bottom:3px;}
+  .bl-verdict-say{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11px;}
+  .bl-verdict-main{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink);}
+  .bl-verdict-main .icon{width:16px;height:16px;flex-shrink:0;color:var(--good);}
+  .bl-verdict.short .bl-verdict-main .icon{color:var(--ow-crimson);}
+  /* The split, kept and demoted. True -- money in the bank does not buy
+     cement from a yard that wants cash -- but not the headline it was
+     laid out as. */
+  .bl-verdict-accounts{
+    display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;padding-top:9px;
+    border-top:1px solid rgba(20,30,40,0.08);
+  }
+  .bl-cash-acct{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
+  .bl-cash-acct .icon{width:13px;height:13px;flex-shrink:0;}
+  .bl-cash-acct b{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .bl-cash-plan{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:7px 12px;}
+  .bl-cash-plan .icon{width:15px;height:15px;}
+  .bl-cash-note{margin-top:8px;font-size:11.5px;color:var(--ow-amber-ink);}
+  .bl-run{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .bl-run:last-of-type{border-bottom:0;}
+  .bl-run-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;}
+  .bl-run-head .icon{width:16px;height:16px;color:var(--ink-soft);flex-shrink:0;align-self:center;}
+  .bl-run-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .bl-run-loc{font-size:11.5px;color:var(--ow-ink-400);}
+  .bl-run-total{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  /* The lines, as a list. They were a five-column fixed table, which is
+     what made a run need the full width of the modal -- and on a phone
+     those columns collided at 331px and needed a minimum width and a
+     sideways scroll of their own before they could be read. A list has
+     no columns to collide, so the card is free to be narrow enough to
+     sit in the track with its neighbours. */
+  /* A supplier card in the shared run track. Wider than the pickup and
+     delivery cards because each line here carries a figure and a control
+     rather than just a name. */
+  .bl-card{flex-basis:clamp(268px, 80%, 340px);padding:13px 14px;}
+  .bl-card-head{display:flex;align-items:flex-start;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--line);}
+  .bl-card-who{display:flex;align-items:flex-start;gap:7px;min-width:0;flex:1;}
+  .bl-card-who .icon{width:16px;height:16px;flex-shrink:0;color:var(--ink-soft);margin-top:2px;}
+  .bl-card-name-wrap{min-width:0;}
+  .bl-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;}
+  .bl-card-loc{font-size:11.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .bl-card-total{
+    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;
+  }
+  .bl-card-foot{display:flex;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line);}
+
+  .bl-items{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;}
+  .bl-item-row{padding:8px 0;border-top:1px solid var(--ow-rule-soft);}
+  .bl-item-row:first-child{border-top:none;}
+  .bl-item-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .bl-item-line.sub{margin-top:3px;}
+  .bl-item-cost{
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:700;color:var(--ink);flex-shrink:0;
+  }
+  .bl-item-qty{font-size:11.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .bl-item-each{color:var(--ow-ink-400);}
+  .bl-item-act{display:flex;gap:6px;flex-shrink:0;}
+  /* A line already collected reads as done rather than as still to do --
+     it stays on the list because the trip is the trip, but it is no
+     longer money to take or a shop to visit. */
+  /* Somebody has been sent for this. Shown under the run rather than on a
+     screen of its own, because this is where the question "has anyone
+     gone yet" is asked -- and the answer belongs beside the list they
+     would otherwise send a second person with. */
+  .bl-send{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
+    justify-content:center;gap:6px;flex:1 1 auto;
+    padding:8px 11px;border-radius:8px;font-size:11.5px;font-weight:700;
+    background:var(--accent);color:#fff;white-space:nowrap;
+  }
+  .bl-send:hover{background:var(--ow-oxide-deep);}
+  .bl-send svg{width:13px;height:13px;}
+  .bl-send:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* The quieter of the two: sending somebody is the shop spending an
+     errand, so it keeps the filled button. This one only records what
+     the supplier is already doing. */
+  .bl-bringing{
+    all:unset;box-sizing:border-box;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;
+    padding:8px 11px;border-radius:8px;border:1px solid var(--line);
+    font-size:11.5px;font-weight:600;color:var(--ink-soft);
+  }
+  .bl-bringing:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .bl-bringing:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* Not a red "somebody is out with our money" trip -- a supplier
+     delivery is somebody else's errand, so it reads as steady rather
+     than as something to chase. */
+  .bl-trip.by-supplier{background:var(--ow-steel-050);border-color:var(--line);}
+  .bl-trips{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;}
+  /* Wraps in two bands rather than one row: the strip now lives inside a
+     ~300px card instead of the full width of the modal, and a row of
+     icon + status + name + count + two buttons cannot be read at that
+     width -- the name broke over two lines with "1 line" stranded
+     underneath it. So the words take the first band and the controls
+     take the second, full width, where they are also easier to hit. */
+  .bl-trip{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;
+    background:var(--ow-steel-050);border:1px solid var(--line);font-size:12px;
+  }
+  .bl-trip svg{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
+  .bl-trip-body{flex:1 1 60%;min-width:0;}
+  .bl-trip-top{display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap;}
+  .bl-trip-who{color:var(--ink-soft);}
+  .bl-trip-count{color:var(--ow-ink-400);font-size:11px;}
+  /* The controls, on their own line and sharing it. */
+  .bl-trip .bl-trip-act, .bl-trip .bl-trip-void{flex:1 1 auto;text-align:center;}
+  .bl-trip-hint{flex:1 1 100%;font-size:11px;color:var(--ink-soft);line-height:1.4;}
+  /* A run with nothing left to spend on it. Quietened rather than
+     hidden: it stays on the board because the order is still being
+     prepared, but it is no longer a shop to visit or money to carry. */
+  .bl-card.done{background:var(--ow-steel-050);}
+  .bl-card-done{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.5px;
+    text-transform:uppercase;color:var(--good);}
+  .bl-verdict.done{background:var(--ow-steel-050);border-color:var(--ow-rule-soft);}
+  .bl-verdict.done .bl-verdict-say{margin-top:0;}
+  .bl-verdict-onhand{margin-left:auto;font-family:'IBM Plex Mono',monospace;
+    font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink-soft);}
+  .bl-trip-short{font-size:11.5px;color:var(--ow-amber-ink);font-weight:600;margin-top:2px;}
+  /* Quieter than the shortfall above it on purpose: a short delivery is
+     a problem, an errand to ask a price is a bonus. It must not compete
+     with the line that needs acting on. */
+  .bl-trip-ask{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  /* Back and waiting to be checked in is the one state somebody has to
+     act on, so it is the one that carries colour. */
+  .bl-trip.collected{background:var(--ow-amber-soft);border-color:rgba(180,130,20,0.28);}
+  .bl-trip-act{
+    all:unset;box-sizing:border-box;cursor:pointer;padding:5px 10px;border-radius:6px;
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;
+  }
+  /* Deliberately the quietest control on the strip. Calling a trip off
+     is the rare answer, and it sits next to Check in, which is the
+     common one -- a mis-tap there loses somebody's recorded delivery. */
+  .bl-trip-void{
+    all:unset;box-sizing:border-box;cursor:pointer;padding:5px 8px;border-radius:6px;
+    font-size:11px;font-weight:600;color:var(--ink-soft);opacity:.65;white-space:nowrap;
+  }
+  /* Somebody is out and the board has forgotten why. Amber rather than
+     red: nothing is broken, but it is the one thing on this screen that
+     will not resolve itself. */
+  .bl-stranded{margin-top:14px;border:1px solid var(--ow-amber);border-radius:10px;overflow:hidden;}
+  .bl-stranded-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:9px 11px;background:var(--ow-amber-soft);color:var(--warn-ink);font-size:12px;}
+  .bl-stranded-head svg{width:15px;height:15px;flex-shrink:0;}
+  .bl-stranded-head span{flex:1 1 100%;font-weight:500;opacity:.85;}
+  .bl-stranded .bl-trips{margin:0;padding:8px 10px;}
+  .bl-trip-void:hover{opacity:1;color:var(--danger);}
+  .bl-trip-void:focus-visible{outline:2px solid var(--danger);outline-offset:1px;opacity:1;}
+  .bl-trip-act:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .bl-trip-act.primary{background:var(--accent);color:#fff;border-color:transparent;}
+  .bl-trip-act.primary:hover{background:var(--ow-oxide-deep);}
+  .bl-trip-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .bl-received{background:var(--ow-steel-050);}
+  .bl-received .bl-item{color:var(--ink-soft);}
+  .bl-recd{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--good);font-weight:600;margin-top:2px;}
+  .bl-recd svg{width:12px;height:12px;flex-shrink:0;}
+  /* Something arrived but not all of it: still live work, so it keeps
+     the ordinary row weight rather than the greyed-out finished look,
+     and carries a warning stripe so it is findable in a long run. */
+  .bl-short{background:var(--ow-amber-soft);box-shadow:inset 3px 0 0 var(--ow-amber);}
+  .bl-owed{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--warn-ink);font-weight:600;margin-top:2px;}
+  .bl-owed svg{width:12px;height:12px;flex-shrink:0;}
+  .bl-paid{font-size:11.5px;color:var(--ink-soft);font-style:italic;}
+  .bl-receive, .bl-undo{
+    all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:700;
+    padding:5px 10px;border-radius:6px;white-space:nowrap;
+  }
+  .bl-receive{background:var(--accent);color:#fff;}
+  .bl-receive:hover{background:var(--ow-oxide-deep);}
+  .bl-undo{color:var(--ink-soft);border:1px solid var(--line);}
+  .bl-undo:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .bl-receive:focus-visible, .bl-undo:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .bl-lines td.r,.bl-lines th.r{padding-left:6px;}
+  .bl-lines th{
+    text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--ow-ink-400);padding:0 0 5px;
+  }
+  .bl-lines th.r,.bl-lines td.r{text-align:right;}
+  .bl-lines td{padding:6px 0;border-top:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .bl-lines tbody tr:first-child td{border-top:0;}
+  .bl-item{font-weight:700;color:var(--ink);}
+  .bl-for{font-size:11.5px;color:var(--ow-ink-400);}
+  .bl-moved{
+    display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ow-amber-ink);margin-top:1px;
+  }
+  .bl-moved .icon{width:12px;height:12px;flex-shrink:0;transform:rotate(90deg);}
+  .bl-lines td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .bl-lines td.num.soft{color:var(--ink-soft);}
+  /* The same rule for the schedule tables -- the loan's payment-by-payment
+     agreement, and the asset depreciation beside it. .dr-lines had no
+     styling at all, so seven columns of "20,000,000 UGX" wrapped: all 84
+     cells of a twelve-row schedule broke across two lines, "20,000,000"
+     above and "UGX" below, and the rows stood 55px instead of 28.
+
+     A figure split over two lines reads as two facts. Money does not
+     wrap; the table scrolls sideways instead, because a schedule this
+     wide cannot be made narrow without taking a column away. */
+  .dr-lines{overflow-x:auto;}
+  .dr-lines td, .dr-lines th{white-space:nowrap;}
+  .dr-lines td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .bl-gap{
+    display:flex;gap:9px;margin-top:14px;padding:11px 13px;border-radius:9px;
+    background:var(--ow-crimson-soft);color:var(--ow-crimson);font-size:12.5px;
+  }
+  .bl-gap .icon{width:16px;height:16px;flex-shrink:0;}
+  .bl-gap-list{margin-top:3px;font-weight:400;}
+  .bl-gap-note{margin-top:5px;font-size:11.5px;opacity:.85;font-weight:400;}
   /* The buying list. Wider than a decision modal because it is a working
      document -- read standing up, in a shop, against what is on the shelf. */
   .modal-wide{max-width:680px;width:100%;}
@@ -8848,7 +9184,7 @@
      card, so nothing is hidden from either kind of user. */
   .sq-card-icons{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;opacity:.55;transition:opacity .15s ease;}
   .sq-card:hover .sq-card-icons, .sq-card:focus-within .sq-card-icons{opacity:1;}
-  .sq-invoice-btn{border-color:var(--accent);color:var(--ow-amber-ink);}
+  .sq-invoice-btn{border-color:var(--accent);color:#b97a12;}
   .sq-invoice-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
   .sq-invoice-btn.is-invoiced{border-color:var(--good);color:var(--good);background:var(--good-bg);}
   .sq-invoice-btn.is-invoiced:hover{background:var(--good);color:#fff;}
@@ -18315,9 +18651,8 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">Order tracking</h1>
         <p class="ow-ph-sub">Every order, from saved quote to delivered.</p>
-        <p class="ow-ph-help">Five steps across the top, and the orders standing at each one below. Tap a step to jump the board to that lane; on a phone it shows that lane on its own. A card carries the client, the money, where it is going and who has it, and the arrows on either side of it move the order back a step or forward one. Come back and edit a saved quote, or select several to print together — each prints on its own A5 page.</p>
+        <p class="ow-ph-help">Come back and edit a saved quote, track it through prep and delivery, or select several to print together — each prints on its own A5 page.</p>
         <span class="ow-ph-sp"></span>
-        <label class="ow-f ow-ph-f"><span class="ow-f-in"><svg class="icon ow-f-i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" class="ow-f-v ow-f-t" id="ot_search" placeholder="Client, order number or item" autocomplete="off" aria-label="Search orders"></span></label>
         <button type="button" class="btn ow-sm" id="ot_back_to_new_quote_btn" title="Shortcut: press Q">
           <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
           New quote
@@ -21838,6 +22173,58 @@
 
 <!-- THE SUPPLIER'S ACCOUNT -->
 <!-- COVERING THE SHORTFALL -->
+<!-- THE MORNING'S BUYING ROUND -->
+<div class="modal-overlay" id="buyingListModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Buying list</h2>
+      <button class="modal-close" id="buyingListClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="buyingListBody"></div>
+  </div>
+</div>
+
+<!-- WHAT IS GOING THE SAME WAY -->
+<div class="modal-overlay" id="deliveryRunsModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Going the same way</h2>
+      <button class="modal-close" id="deliveryRunsClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="deliveryRunsBody"></div>
+  </div>
+</div>
+
+<!-- WHERE THE BUYING TRIP GOES -->
+<div class="modal-overlay" id="pickupRunsModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Where to buy from</h2>
+      <button class="modal-close" id="pickupRunsClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="pickupRunsBody"></div>
+  </div>
+</div>
+
+<!-- WHAT IS ACTUALLY ON AN ORDER -->
+<div class="modal-overlay" id="orderPreviewModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="orderPreviewTitle">Order</h2>
+      <button class="modal-close" id="orderPreviewClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="orderPreviewBody"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="shortfallPlanModal">
   <div class="modal modal-wide">
     <div class="modal-head">
@@ -23976,16 +24363,16 @@ function seedData(){
    in Shafik's shop -- their card even told them to go and get it from
    there, which is a different job in a different part of town. */
 const SQ_STATUSES = {
-  draft:            { label:'Step 1. Taken',             color:'#9AA4AC' },
-  awaiting_goods:   { label:'Step 2. Buying',            color:'#8A6FC4' },
-  preparing:        { label:'Step 3. Preparing',         color:'#D9922B' },
-  pending_delivery: { label:'Step 4. Out for delivery',  color:'#2F7FBF' },
-  completed:        { label:'Step 5. Delivered',         color:'#3A9A5C' }
+  draft:            { label:'Step 1. Draft',             color:'#9AA4AC' },
+  awaiting_goods:   { label:'Step 2. Awaiting Goods',    color:'#8A6FC4' },
+  preparing:        { label:'Step 3. Being Prepared',    color:'#D9922B' },
+  pending_delivery: { label:'Step 4. Pending Delivery',  color:'#2F7FBF' },
+  completed:        { label:'Step 5. Completed',         color:'#3A9A5C' }
 };
 const SQ_STATUS_ORDER = ['draft','awaiting_goods','preparing','pending_delivery','completed'];
 // Short labels for the fixed top-right reminder bar (SQ_STATUSES' own labels
 // carry a "Step N." prefix meant for the board columns, not this compact view).
-const ORDER_STATUS_SHORT_LABELS = {draft:'Taken', awaiting_goods:'Buying', preparing:'Preparing', pending_delivery:'Out for delivery', completed:'Delivered'};
+const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', awaiting_goods:'Awaiting Goods', preparing:'Being Prepared', pending_delivery:'Pending Delivery', completed:'Completed'};
 
 /* ---------------- The sourcing funnel ----------------
    An item a client asked for that the shop does not sell, and how far the
@@ -34830,6 +35217,10 @@ function orderPreviewLines(q){
     return {
       name: it.productName || 'Item',
       unit: it.unit || '',
+      /* The line itself, so a reader can count it in the unit it was
+         CHOSEN in. This field post-dates the board and is kept: the
+         picking chit says "2 Ctn", not the pieces behind it, and a
+         picker sent for the wrong count is the fault it exists to stop. */
       line: it,
       qty, sell, lineTotal: qty * sell,
       picked, short: picked != null && picked < qty,
@@ -35006,7 +35397,6 @@ function orderPreviewHTML(q){
       ${location ? `<span class="op-fact">${esc(location)}</span>` : ''}
       ${q.client && q.client.phone ? `<span class="op-fact">${esc(q.client.phone)}</span>` : ''}
       ${q.originAgentId ? `<span class="op-fact agent">Agent order — the name is the agent's, not the end client's</span>` : ''}
-      ${q.originPortal ? `<span class="op-fact">Placed by the customer on the portal — they have already seen every price on it</span>` : ''}
       ${who.length ? `<span class="op-fact">${who.join(' · ')}</span>` : ''}
     </div>
 
@@ -35094,7 +35484,7 @@ function cashToBuyBannerHTML(group){
   </button>`;
 }
 function orderCashStripHTML(q){
-  if((q.status !== 'preparing' && q.status !== 'awaiting_goods') || q.voided) return '';
+  if(q.status !== 'preparing' || q.voided) return '';
   const lines = orderPurchaseLines(q);
   if(!lines.length) return '';
   const priced = lines.filter(l=>l.lineCost!=null);
@@ -35132,12 +35522,6 @@ function orderCashStripHTML(q){
 function openShortfallPlan(){
   const orders = beingPreparedOrders();
   const pos = cashPositionForBuying(orders);
-  /* NOTHING LEFT TO BUY IS NOT AN AFFORDABILITY VERDICT. Once every line
-     is in, "TO BUY 0 from ON HAND 1,150,000 leaves 1,150,000 · enough on
-     hand for everything" is true the way "you can afford to buy no
-     cement" is true. The screen is finished; it says so and gets out of
-     the way, keeping only what the shop is holding. */
-  const nothingToBuy = !(pos.needed > 0);
   const ranked = orderBuyingPriority(orders);
   const plan = buyingPlanWithin(pos.onHand, ranked);
   const debts = collectableDebts();
@@ -35695,13 +36079,19 @@ function setLineSupplier(it, supplierId){
    the price both open on what was expected, and both can be corrected,
    because the two things a delivery gets wrong are how much came and
    what it cost. */
+/* Restored to September's markup, but NOT to September's logic. The old
+   version wrote the receipt against whoever the line was quoted on; this
+   one asks where the goods actually came from when today's cheapest is
+   somebody else, and bills them. Reverting that would move money to the
+   wrong supplier, which is not a look this screen can be restored to.
+   Only the selectors changed: the list is its own modal again. */
 function wireBuyingListReceiving(){
   const findLine = (orderId, lineId)=>{
     const q = data.savedQuotes.find(x=> String(x.id) === String(orderId));
     const it = q && (q.items||[]).find(x=> String(x.lineId) === String(lineId));
     return { q, it };
   };
-  document.querySelectorAll('#ot_dlg_b .bl-receive').forEach(btn=>{
+  document.querySelectorAll('#buyingListBody .bl-receive').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const { q, it } = findLine(btn.dataset.order, btn.dataset.line);
       if(!q || !it) return;
@@ -35797,11 +36187,37 @@ function wireBuyingListReceiving(){
   // Give it to a worker, through the same modal every other assignment
   // uses -- a numbered prompt() was the first version, and typing "2" to
   // mean a person is how the wrong person gets sent.
-  document.querySelectorAll('#ot_dlg_b [data-assign]').forEach(btn=>{
+  // Send someone for a whole run.
+  document.querySelectorAll('#buyingListBody .bl-send').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.run);
+      if(!run) return;
+      const trip = createCollectionTripFromRun(run);
+      if(!trip){ toast('Everything on this run is already on somebody\'s list'); return; }
+      saveData();
+      openBuyingList();
+      toast(`Trip made for ${supplierName(run.supplierId)} — ${trip.lines.length} line${trip.lines.length===1?'':'s'}. Assign somebody to it.`, 5000);
+    });
+  });
+  /* The supplier is bringing it. Same trip, same check-in, nobody of
+     ours sent -- so the lines stop appearing on the "send someone" list
+     without anybody having to remember they are already spoken for. */
+  document.querySelectorAll('#buyingListBody [data-bringing]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.bringing);
+      if(!run) return;
+      const trip = createCollectionTripFromRun(run, {supplierDelivers:true});
+      if(!trip){ toast('Everything on this run is already on somebody\'s list'); return; }
+      saveData();
+      openBuyingList();
+      toast(`${supplierName(run.supplierId)} is delivering ${trip.lines.length} line${trip.lines.length===1?'':'s'} — check them in when they arrive.`, 5000);
+    });
+  });
+  document.querySelectorAll('#buyingListBody [data-assign]').forEach(btn=>{
     btn.addEventListener('click', ()=> openAssignTripModal(btn.dataset.assign));
   });
   // Tell the supplier what somebody is coming for, or what to bring.
-  document.querySelectorAll('#ot_dlg_b [data-tell]').forEach(btn=>{
+  document.querySelectorAll('#buyingListBody [data-tell]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.tell);
       if(!trip) return;
@@ -35816,7 +36232,7 @@ function wireBuyingListReceiving(){
     });
   });
   // Call one off.
-  document.querySelectorAll('#ot_dlg_b [data-void]').forEach(btn=>{
+  document.querySelectorAll('#buyingListBody [data-void]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.void);
       if(!trip) return;
@@ -35838,7 +36254,7 @@ function wireBuyingListReceiving(){
      the one act this screen advertises as its primary move — lives in
      the FOOT, and a query scoped to the body never reached it, so the
      button did nothing at all. */
-  document.querySelectorAll('#otDlg [data-confirm]').forEach(btn=>{
+  document.querySelectorAll('#buyingListModal [data-confirm]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.confirm);
       if(!trip) return;
@@ -35862,7 +36278,7 @@ function wireBuyingListReceiving(){
         (res.missing || advanced.length) ? 7000 : 4000);
     });
   });
-  document.querySelectorAll('#ot_dlg_b .bl-undo').forEach(btn=>{
+  document.querySelectorAll('#buyingListBody .bl-undo').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const { q, it } = findLine(btn.dataset.undo, btn.dataset.line);
       if(!q || !it) return;
@@ -35877,6 +36293,10 @@ function wireBuyingListReceiving(){
     });
   });
 }
+document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
+document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
+document.getElementById('pickupRunsClose').addEventListener('click', ()=>closeModal('pickupRunsModal'));
+document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
 // Dismissing the one in front brings the next reminder up, rather than
 // leaving rent that is already late to wait until tomorrow.
@@ -40605,7 +41025,12 @@ function autoAdvanceNote(moved){
     : ` · ${moved.length} orders are now ready to prepare`;
 }
 
-function setSavedQuoteStatus(id, status, opts){
+/* THE ONE THING NOT RESTORED WITH THE REST OF THIS SCREEN. A move out of
+   Draft used to hand the order to the sales group from in here, which
+   opens a WhatsApp window on its own. The app has a permanent law that
+   NOTHING SENDS ITSELF -- every send is an owner's tap -- so the hand-off
+   stays the tap it became and no status change carries one. */
+function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
@@ -40633,21 +41058,14 @@ function setSavedQuoteStatus(id, status, opts){
     q.pickingStatus = 'done';
   }
   const moved = q.status!==status;
-  if(moved){
-    q.stageEnteredAt = Date.now();
-    /* How it got here. Kept on the record from this build on, so the
-       open row can show the moves rather than only the toasts nobody
-       re-reads; `auto` marks a step the app took itself. */
-    if(!Array.isArray(q.stageLog)) q.stageLog = [];
-    q.stageLog.push({ status, at: Date.now(), auto: !!(opts && opts.auto) });
-  }
+  if(moved) q.stageEnteredAt = Date.now();
   q.status = status;
   saveData();
   renderSavedQuotes();
   /* Where it went, said out loud -- see announceOrderMove. Here rather
      than in the arrow handlers, because this is the one place a status
-     actually changes: the move out of Taken, Loaded and the agent-prepay
-     path land here too, and their moves were just as silent. */
+     actually changes: the assign-staff modal and the agent-prepay path
+     land here too, and their moves were just as silent. */
   if(moved) announceOrderMove(q, status);
 }
 
@@ -41456,10 +41874,6 @@ function stepSavedQuoteStatus(id, dir){
       : stale.length
         ? `The quote changed after ${stale.length===1 ? supplierName(stale[0].supplierId)+' confirmed' : stale.length+' suppliers confirmed'} — ask again at the new terms`
         : `${left.length} supplier${left.length===1?'':'s'} still to confirm — ask ${left.length===1?'them':'each of them'} before the group is told`, 5000);
-    /* Opens the PANEL, where the suppliers and their two taps are. It
-       used to open the row, and the row lives in a container the console
-       keeps at display:none — so the refusal named a screen the person
-       being refused could not get to. */
     openSupplierConfirmModal(id);
     return;
   }
@@ -41485,37 +41899,25 @@ function stepSavedQuoteStatus(id, dir){
   }
   if(dir>0){
     const role = STAGE_ASSIGNMENT_ROLE[toStatus];
-    // A self-pickup agent order has no carrier to name -- the same
-    // '__agent__' sentinel loadOrder (shared-worker.js) writes for it.
+    // A self-pickup agent order has no shop delivery staff to assign --
+    // skip the picker and use the same '__agent__' sentinel
+    // finishPreparingOrder() (shared-worker.js) uses for the same case.
     if(role==='delivery' && q.deliveryMode==='agent_pickup'){
       q.assignedDeliveryId = '__agent__';
-    } else if(role==='delivery'){
-      /* OUT FOR DELIVERY BEGINS WHEN SOMETHING IS OUT. The arrow used to
-         open a pop-up asking for a driver and then move the order; the
-         move now belongs to Loaded (loadOrder), which carries who is
-         carrying it -- the transport by name and phone, one of ours, the
-         client's person. The row's own form is where that is said, so
-         the refusal opens the row rather than only refusing. */
-      /* Names the tap that does it, which is the form's own button —
-         the dialog opens with that form already in it. */
-      toast('Say who is carrying it — name the transport, then Loaded, it has gone', 6000);
-      /* The order's own dialog, whose `loading` branch inlines that very
-         form. "Open the row and tap Loaded" was an instruction the
-         console cannot be given: its rows are the phone's. */
-      openOrderPreview(id);
-      return;
+    } else if(role){
+      openAssignStaffModal(id, toStatus, role); return;
     }
-    /* Entering Preparing needs nobody. The order joins the pickers'
-       queue (workerPickQueue) and the next free picker takes it from
-       their phone; the pop-up that stood here was the tap and the
-       interruption the owner asked to lose. */
   } else {
     // Moving backward out of a role-gated step retires that assignment --
     // an order sent back from Pending Delivery to Being Prepared isn't
     // "being delivered" by anyone anymore, so that badge shouldn't follow
-    // it back, and nor should the carrier note it came with.
+    // it back. Re-entering the step forward again will prompt afresh.
     const leavingRole = STAGE_ASSIGNMENT_ROLE[q.status];
     if(leavingRole) q[STAGE_ASSIGNMENT_FIELD[leavingRole]] = null;
+    /* The carrier note goes with the driver. It did not exist when this
+       board was drawn, so there is nothing here to restore -- but an
+       order pulled back out of Pending Delivery that still says who was
+       carrying it is a row stating something untrue about where it is. */
     if(leavingRole==='delivery') q.carrier = null;
     // The pick belongs to the stage, not to the order, so stepping across
     // Being Prepared in either direction has to retire it the same way. Left
@@ -41574,10 +41976,7 @@ function openAssignStaffModal(orderId, toStatus, role){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   document.getElementById('assignStaffModalTitle').textContent = `Assign ${STAFF_ROLE_LABELS[role]}`;
   document.getElementById('assignStaffHint').textContent = candidates.length
-    /* The SHORT label. SQ_STATUSES' own carries a "Step 3." prefix meant
-       for the rail, and inside a sentence it reads as a stray figure --
-       announceOrderMove strips it for the same reason. */
-    ? `Choose who's moving "${q ? (q.client.name||'this order') : 'this order'}" to ${ORDER_STATUS_SHORT_LABELS[toStatus] || SQ_STATUSES[toStatus].label}.`
+    ? `Choose who's moving "${q ? (q.client.name||'this order') : 'this order'}" to ${SQ_STATUSES[toStatus].label}.`
     : `Nobody on the delivery list is free — but "${q ? (q.client.name||'this order') : 'this order'}" can still go out with the client's own person.`;
   const listWrap = document.getElementById('assignStaffList');
   listWrap.innerHTML = `<div class="assign-staff-list">${candidates.map(s=>`
@@ -44460,10 +44859,314 @@ const OT_DIALOGS = {
 
 /* The four openers the board and the rest of the app already call, now
    pointed at the one shell. */
-function openOrderPreview(orderId){ otDlgOpen('preview', Number(orderId)); }
-function openBuyingList(){ otDlgOpen('buying', 0); }
-function openPickupRuns(){ otDlgOpen('trip', 0); }
-function openDeliveryRuns(){ otDlgOpen('runs', 0); }
+function openOrderPreview(orderId){
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(orderId));
+  if(!q) return;
+  document.getElementById('orderPreviewTitle').textContent =
+    `${(q.client && q.client.name) || 'Unnamed client'} — ${ORDER_STATUS_SHORT_LABELS[q.status] || ''}`;
+  document.getElementById('orderPreviewBody').innerHTML = orderPreviewHTML(q);
+  const chit = document.getElementById('opChitBtn');
+  if(chit) chit.addEventListener('click', ()=> printPackingChit(chit.dataset.id));
+  openModal('orderPreviewModal');
+}
+function openBuyingList(){
+  const orders = beingPreparedOrders();
+  const runs = buyingListRuns(orders);
+  const total = runs.reduce((s,r)=>s+r.total, 0);
+  const unpriced = [];
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpriced.push({order:q, line:l})));
+
+  /* One supplier, one card, and the cards slide sideways -- the same
+     shape Pickup Runs and Delivery Runs already use for exactly this
+     thought. Stacking them was this screen's own invention: three
+     suppliers meant three full-width blocks and a scroll to see whether
+     there was a fourth, while the two neighbouring screens answered the
+     same question in one gesture.
+
+     The lines were a five-column table, which is what forced that
+     width. A table also cannot fit a phone -- its columns collided at
+     331px and needed a minimum width and a sideways scroll of their own
+     to be readable at all. A list of lines has no columns to collide,
+     so the card can be narrow enough to sit in a track. */
+  const runHTML = (r)=>{
+    const sup = data.suppliers.find(s=>s.id===r.supplierId);
+    const canSend = r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId));
+    /* Every line paid for and on the shelf. The total is genuinely zero
+       -- there is nothing left to spend here -- but "0 UGX" as the
+       headline figure of a supplier card reads as a price, and a shop
+       glancing at it sees a run worth nothing rather than a run that is
+       finished. */
+    const done = r.lines.length > 0 && r.lines.every(l=> l.settled);
+    return `<article class="dr-card bl-card${done ? ' done' : ''}">
+      <header class="bl-card-head">
+        <div class="bl-card-who">
+          ${ICON_STORE}
+          <div class="bl-card-name-wrap">
+            <div class="bl-card-name">${esc(supplierName(r.supplierId))}</div>
+            ${sup && sup.location ? `<div class="bl-card-loc">${esc(sup.location)}${sup.shopNo ? ' · Shop ' + esc(sup.shopNo) : ''}</div>` : ''}
+          </div>
+        </div>
+        <div class="bl-card-total">${done ? '<span class="bl-card-done">All in</span>' : fmtUGX(r.total)}</div>
+      </header>
+      ${blRunTripsHTML(r)}
+      <ul class="bl-items">${r.lines.map(l=>{
+        const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
+        const exp = quoteLineExpected(l.it);
+        /* A receipt that did not match what was sent for is the whole
+           reason for writing one down, so the line says which way. */
+        const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
+        const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
+        /* Received in full is finished business; received short is not.
+           The row used to draw both the same way -- struck through,
+           "paid", Undo only -- so the one case that still needed
+           somebody to act looked exactly like the case that needed
+           nobody. */
+        return `<li class="bl-item-row ${l.settled ? 'bl-received' : (l.shortfall ? 'bl-short' : '')}">
+          <div class="bl-item-line">
+            <div class="bl-item">${esc(l.it.productName || 'Item')}</div>
+            <div class="bl-item-cost">${l.settled ? `<span class="bl-paid">paid</span>` : fmtUGX(l.lineCost)}</div>
+          </div>
+          <div class="bl-item-line sub">
+            <div class="bl-item-qty">${esc(l.shortfall || l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}
+              <span class="bl-item-each">@ ${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</span></div>
+            <div class="bl-item-act">${l.shortfall
+              ? `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive rest</button>
+                 <button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
+              : l.received
+                ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
+                : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</div>
+          </div>
+          ${l.movedFrom
+            ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
+            : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
+          ${l.received ? `<div class="bl-recd">${ICON_CHECK}${Number(l.it.receivedQty)} received${
+            shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
+            paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}
+          ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${l.shortfall}${l.it.unit ? ' ' + esc(l.it.unit) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}
+        </li>`;
+      }).join('')}</ul>
+      ${/* One journey, one job. Offered only while something on this run
+           is not already on somebody's list -- a second trip for the
+           same carton sends two people for one thing. */
+        canSend ? `<footer class="bl-card-foot">
+          <button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>
+          <button type="button" class="bl-bringing" data-bringing="${esc(r.supplierId)}" title="This supplier is delivering — nobody of ours goes out">They’re delivering</button>
+        </footer>` : ''}
+    </article>`;
+  };
+
+  document.getElementById('buyingListBody').innerHTML = `
+    <div class="bl-top">
+      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} being prepared</span>
+      <span class="bl-top-fig">${fmtUGX(total)}</span>
+    </div>
+    ${cashPositionHTML(orders)}
+    ${runs.length ? `
+    <div class="dr-carousel">
+      <button type="button" class="dr-nav prev" id="bl_prev" aria-label="Previous supplier">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="dr-track" id="bl_track" tabindex="0" role="group" aria-label="Suppliers to buy from, scroll sideways">
+        ${runs.map(runHTML).join('')}
+      </div>
+      <button type="button" class="dr-nav next" id="bl_next" aria-label="Next supplier">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p class="dr-hint">Slide sideways for the next supplier${runs.length>1 ? ' — the biggest bills come first' : ''}.</p>`
+      : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
+    ${blStrandedTripsHTML(runs)}
+    ${unpriced.length ? `<div class="bl-gap">
+      ${ICON_WARN}
+      <div><b>${unpriced.length} line${unpriced.length===1?'':'s'} with no supplier price on file</b>
+        <div class="bl-gap-list">${unpriced.map(u=>`${esc(u.line.it.productName||'Item')} — ${esc(quoteClientName(u.order))}`).join('<br>')}</div>
+        <div class="bl-gap-note">Not counted in the total above. Add a price in Compare Prices and it will appear here.</div>
+      </div>
+    </div>` : ''}`;
+  // Wired here rather than delegated, because the body is replaced on every
+  // open and a listener bound to the old markup would be thrown away with it.
+  const planBtn = document.getElementById('bl_plan_btn');
+  if(planBtn) planBtn.addEventListener('click', openShortfallPlan);
+  // The same carousel the other two run modals use, wired the same way.
+  if(runs.length) wireRunCarousel('bl_track', 'bl_prev', 'bl_next');
+  wireBuyingListReceiving();
+  openModal('buyingListModal');
+}
+function openPickupRuns(){
+  const orders = beingPreparedOrders();
+  const { runs, noLocation, unpriced, settled } = pickupRuns(orders);
+
+  const lineRow = (l)=>`<li class="dr-order">
+    <div class="dr-order-main">
+      <div class="dr-order-name">${esc(l.it.productName || 'Item')} · ${l.qty}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</div>
+      <div class="dr-order-sub">for ${esc(quoteClientName(l.order))}${l.movedFrom
+        ? ` · cheaper here than ${esc(supplierName(l.movedFrom))}` : ''}</div>
+    </div>
+    <div class="dr-order-side">
+      <span class="dr-order-value">${fmtUGX(l.lineCost)}</span>
+    </div>
+  </li>`;
+
+  const supplierBlock = (s, lines)=>`
+    <div class="pr-supplier">
+      <div class="pr-supplier-head">${ICON_STORE}<span>${esc(s.name)}</span><b>${fmtUGX(Math.round(s.total))}</b></div>
+      <ul class="dr-orders">${lines.filter(l=> String(l.best.supplierId)===String(s.supplierId)).map(lineRow).join('')}</ul>
+    </div>`;
+
+  const placeCard = (r, i)=>`
+    <article class="dr-card" tabindex="0" aria-label="${esc(r.label)}, ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}">
+      <header class="dr-card-head">
+        <span class="dr-card-rank">${i+1}</span>
+        ${ICON_PIN}
+        <span class="dr-card-name" title="${esc(r.label)}">${esc(r.label)}</span>
+      </header>
+      <div class="dr-card-figs">
+        <span class="dr-card-count">${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'} · ${r.lines.length} line${r.lines.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(Math.round(r.total))}</span>
+      </div>
+      ${r.suppliers.length > 1
+        ? `<p class="dr-card-note">${ICON_ROUTE}One trip here covers ${r.suppliers.length} suppliers${r.orderCount>1 ? ` and ${r.orderCount} orders` : ''}</p>`
+        : ''}
+      ${r.suppliers.map(s=> supplierBlock(s, r.lines)).join('')}
+    </article>`;
+
+  const asideCard = (kind, icon, title, note, body)=>`
+    <article class="dr-card ${kind}" tabindex="0" aria-label="${esc(title)}">
+      <header class="dr-card-head">${icon}<span class="dr-card-name">${esc(title)}</span></header>
+      ${body}
+      <p class="dr-card-note quiet">${esc(note)}</p>
+    </article>`;
+
+  const cards = runs.map(placeCard)
+    .concat(noLocation.length ? [asideCard('unknown', ICON_WARN, 'No location on file',
+      'Add a location on the supplier record and these join a cluster instead of standing alone.',
+      `<div class="dr-card-figs">
+        <span class="dr-card-count">${noLocation.length} supplier${noLocation.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(Math.round(noLocation.reduce((s,r)=>s+r.total,0)))}</span>
+      </div>
+      ${noLocation.map(r=> r.suppliers.map(s=> supplierBlock(s, r.lines)).join('')).join('')}`)] : [])
+    .concat(unpriced.length ? [asideCard('unknown', ICON_WARN, 'No price on file',
+      'Nothing ranked a supplier for these, so there is nowhere to send anybody. Add a purchase price and they join a trip.',
+      `<ul class="dr-orders">${unpriced.map(u=>`<li class="dr-order">
+        <div class="dr-order-main">
+          <div class="dr-order-name">${esc(u.line.it.productName || 'Item')} · ${u.line.qty}${u.line.it.unit ? ` ${esc(u.line.it.unit)}` : ''}</div>
+          <div class="dr-order-sub">for ${esc(quoteClientName(u.order))}</div>
+        </div>
+      </li>`).join('')}</ul>`)] : []);
+
+  const totalCash = runs.reduce((s,r)=> s + r.total, 0) + noLocation.reduce((s,r)=> s + r.total, 0);
+  document.getElementById('pickupRunsBody').innerHTML = `
+    ${/* Only when there is a journey to describe. "0 places to reach ·
+         0 UGX to spend" over an empty list is a heading for nothing,
+         and it sat directly above the sentence explaining that there is
+         nowhere to go -- saying it twice, the second time in figures. */
+      cards.length ? `<div class="bl-top">
+      <span class="bl-top-label">${runs.length} place${runs.length===1?'':'s'} to reach</span>
+      <span class="bl-top-fig">${fmtUGX(Math.round(totalCash))} to spend</span>
+    </div>` : ''}
+    ${cards.length ? `
+    <div class="dr-carousel">
+      <button type="button" class="dr-nav prev" id="pk_prev" aria-label="Previous place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="dr-track" id="pk_track" tabindex="0" role="group" aria-label="Pickup clusters, scroll sideways">
+        ${cards.join('')}
+      </div>
+      <button type="button" class="dr-nav next" id="pk_next" aria-label="Next place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the places worth the most stops come first' : ''}.</p>`
+    : `<p class="preset-hint">${settled
+        ? `Nowhere to go — all ${settled} bought-in line${settled===1?'':'s'} on this board ${settled===1?'has':'have'} already arrived.`
+        : 'Nothing on the board has to be bought in.'}</p>`}`;
+
+  /* pk_, not pr_. This carousel shipped with the same ids as Payroll's
+     month stepper: two elements share a name, getElementById answers
+     with the first, and one of the two goes unreachable in silence. The
+     sideways track is restored; the collision is not. */
+  wireRunCarousel('pk_track', 'pk_prev', 'pk_next');
+  openModal('pickupRunsModal');
+}
+function openDeliveryRuns(){
+  const orders = pendingDeliveryOrders();
+  const { runs, collected, unknown } = deliveryRuns(orders);
+
+  const orderRow = (q)=>{
+    const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : '';
+    return `<li class="dr-order">
+      <div class="dr-order-main">
+        <div class="dr-order-name">${esc(quoteClientName(q))}</div>
+        <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}</div>
+      </div>
+      <div class="dr-order-side">
+        <span class="dr-order-value">${fmtUGX(savedQuoteTotal(q))}</span>
+        ${driver
+          ? `<span class="dr-driver">${ICON_TRUCK}${esc(driver)}</span>`
+          : `<span class="dr-driver none" title="Nobody is delivering this order">${ICON_WARN}Nobody yet</span>`}
+      </div>
+    </li>`;
+  };
+
+  const placeCard = (r, i)=>`
+    <article class="dr-card" tabindex="0" aria-label="${esc(r.label)}, ${r.orders.length} order${r.orders.length===1?'':'s'}">
+      <header class="dr-card-head">
+        <span class="dr-card-rank">${i+1}</span>
+        ${ICON_PIN}
+        <span class="dr-card-name" title="${esc(r.label)}">${esc(r.label)}</span>
+      </header>
+      <div class="dr-card-figs">
+        <span class="dr-card-count">${r.orders.length} order${r.orders.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(r.value)}</span>
+      </div>
+      ${r.unassigned ? `<p class="dr-card-note">${ICON_WARN}${r.unassigned} with nobody on ${r.unassigned===1?'it':'them'}${r.orders.length>1 ? ' — one driver could take the whole run' : ''}</p>` : ''}
+      ${r.drivers.length > 1 ? `<p class="dr-card-note split">${ICON_TRUCK}Split across ${r.drivers.length} drivers, for one place</p>` : ''}
+      <ul class="dr-orders">${r.orders.map(orderRow).join('')}</ul>
+    </article>`;
+
+  const asideCard = (kind, icon, title, note, rows)=>`
+    <article class="dr-card ${kind}" tabindex="0" aria-label="${esc(title)}, ${rows.length}">
+      <header class="dr-card-head">
+        ${icon}
+        <span class="dr-card-name">${esc(title)}</span>
+      </header>
+      <div class="dr-card-figs">
+        <span class="dr-card-count">${rows.length} order${rows.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(rows.reduce((s,q)=>s+savedQuoteTotal(q),0))}</span>
+      </div>
+      <p class="dr-card-note quiet">${esc(note)}</p>
+      <ul class="dr-orders">${rows.map(orderRow).join('')}</ul>
+    </article>`;
+
+  const cards = runs.map(placeCard)
+    .concat(collected.length ? [asideCard('collected', ICON_STORE, 'Being collected',
+      'The agent is picking these up. Nothing to drive, and nothing missing.', collected)] : [])
+    .concat(unknown.length ? [asideCard('unknown', ICON_WARN, 'No address yet',
+      'A shop order takes its location from the customer record; an agent order takes the address the agent typed.', unknown)] : []);
+
+  document.getElementById('deliveryRunsBody').innerHTML = `
+    <div class="bl-top">
+      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} waiting to go out</span>
+      <span class="bl-top-fig">${runs.length} place${runs.length===1?'':'s'}</span>
+    </div>
+    ${cards.length ? `
+    <div class="dr-carousel">
+      <button type="button" class="dr-nav prev" id="dr_prev" aria-label="Previous place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="dr-track" id="dr_track" tabindex="0" role="group" aria-label="Delivery clusters, scroll sideways">
+        ${cards.join('')}
+      </div>
+      <button type="button" class="dr-nav next" id="dr_next" aria-label="Next place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the fullest runs come first' : ''}.</p>`
+    : `<p class="preset-hint">Nothing is waiting to go out.</p>`}`;
+
+  wireRunCarousel('dr_track', 'dr_prev', 'dr_next');
+  openModal('deliveryRunsModal');
+}
 function openInvoiceDelivered(){ otDlgOpen('invoice', 0); }
 function openAnnounceDialog(id){ otAnnounceDraft = null; otDlgOpen('announce', Number(id)); }
 
@@ -44929,6 +45632,119 @@ let sqActiveMobileStep = 'draft'; // which .sq-col the phone step-switcher curre
    admin reading Completed was yanked back to Drafts every minute. Written
    by the scroll listener, put back after every render. */
 let sqBoardScrollLeft = 0;
+function cashPositionHTML(orders){
+  const pos = cashPositionForBuying(orders);
+  const short = pos.short > 0;
+  /* Nothing left to buy is a different answer, not a very good one.
+     Once every line is in, the block read "TO BUY 0 from 1,150,000
+     leaves 1,150,000 · Enough on hand for everything on this board" --
+     an affordability verdict on a bill of nothing, which is true the way
+     "you can afford to buy no cement" is true. The screen is finished;
+     it should say so and get out of the way. */
+  const nothingToBuy = !(pos.needed > 0);
+  if(nothingToBuy){
+    return `<div class="bl-verdict done">
+      <div class="bl-verdict-say">
+        <span class="bl-verdict-main">${ICON_CHECK}<span>Nothing left to buy — everything on this board is in</span></span>
+        <span class="bl-verdict-onhand">${fmtUGX(pos.onHand)} on hand</span>
+      </div>
+      ${pos.unpricedLines ? `<div class="bl-cash-note">${pos.unpricedLines} unpriced line${pos.unpricedLines===1?'':'s'} still have no supplier price, so they are not counted here.</div>` : ''}
+    </div>`;
+  }
+  /* THE ANSWER FIRST, and the two numbers it is made of beside it.
+
+     What this screen is really asked is "can we afford the buying?", and
+     the answer used to be the third thing on it: the cost sat in a
+     header, the money sat in a card of account chips, and the verdict
+     sat under those chips as a sentence. Three places for one thought,
+     with the account split -- true but secondary -- given the most room.
+
+     So the cost, the money and the gap stand together as one line of
+     figures, because a gap only means anything next to the two numbers
+     it came from. The verdict says which way it went, in colour: this
+     block is the only tinted thing on the screen, so it can never be
+     mistaken for another supplier card. Grey for a good answer was the
+     other half of that problem -- it made the verdict look like one more
+     container rather than the point of the screen. */
+  return `<div class="bl-verdict${short?' short':' ok'}">
+    <div class="bl-verdict-figs">
+      <div class="bl-fig">
+        <span class="bl-fig-label">To buy</span>
+        <b class="bl-fig-val">${fmtUGX(pos.needed)}</b>
+      </div>
+      <span class="bl-fig-op">from</span>
+      <div class="bl-fig">
+        <span class="bl-fig-label">On hand</span>
+        <b class="bl-fig-val">${fmtUGX(pos.onHand)}</b>
+      </div>
+      <span class="bl-fig-op">leaves</span>
+      <div class="bl-fig strong">
+        <span class="bl-fig-label">${short ? 'Short by' : 'Left after'}</span>
+        <b class="bl-fig-val">${fmtUGX(short ? pos.short : pos.after)}</b>
+      </div>
+    </div>
+    <div class="bl-verdict-say">
+      <span class="bl-verdict-main">${short ? ICON_WARN : ICON_CHECK}<span>${short
+        ? 'Not enough for everything on this board'
+        : 'Enough on hand for everything on this board'}</span></span>
+      <button type="button" class="btn btn-ghost bl-cash-plan" id="bl_plan_btn"
+        title="${short ? 'What to do about the shortfall' : 'Which orders to buy for first'}">
+        ${ICON_PLAN}<span>${short ? 'How to cover it' : 'What to buy first'}</span>
+      </button>
+    </div>
+    ${/* Still here, still true, and now plainly secondary: 600,000 in the
+         bank does not buy cement from a yard that wants cash this
+         morning, so the split has to be readable -- it just is not the
+         headline it was laid out as. */''}
+    <div class="bl-verdict-accounts">
+      ${pos.byAccount.map(a=>`<span class="bl-cash-acct">
+        ${ {cash:ICON_CASH, momo:ICON_MOMO, bank:ICON_BANK}[a.key] || ICON_WALLET }
+        <span class="bl-cash-acct-label">${esc(a.label)}</span><b>${fmtUGX(a.amount)}</b>
+      </span>`).join('')}
+    </div>
+    ${pos.unpricedLines ? `<div class="bl-cash-note">${pos.unpricedLines} unpriced line${pos.unpricedLines===1?'':'s'} not counted above, so the real need may be higher.</div>` : ''}
+  </div>`;
+}
+function wireRunCarousel(trackId, prevId, nextId){
+  const track = document.getElementById(trackId);
+  const prev = document.getElementById(prevId);
+  const next = document.getElementById(nextId);
+  if(track && prev && next){
+    const step = ()=>{
+      const card = track.querySelector('.dr-card');
+      // The gap is part of the stride; without it every tap drifts a few
+      // pixels short and by the fourth one a card is half off the edge.
+      const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 0;
+      return card ? card.getBoundingClientRect().width + gap : track.clientWidth;
+    };
+    // Aimed at a card index rather than nudged by a card's width. A drag or
+    // a trackpad flick leaves the track a few pixels off a boundary, and a
+    // purely relative scroll carries that error forward until a card sits
+    // half off the edge. Rounding to the nearest card first means every tap
+    // lands flush however the track was last moved.
+    //
+    // scrollBy rather than scrollTo: with scroll-snap-type on this track,
+    // scrollTo is overridden by the snap engine and goes nowhere.
+    const nav = (dir)=>{
+      const s = step();
+      if(!s) return;
+      const target = (Math.round(track.scrollLeft / s) + dir) * s;
+      track.scrollBy({ left: target - track.scrollLeft, behavior: 'smooth' });
+    };
+    prev.addEventListener('click', ()=>nav(-1));
+    next.addEventListener('click', ()=>nav(1));
+    // Both ends are dead ends, and a control that does nothing should look
+    // like it. Recomputed on scroll rather than counted, so it stays right
+    // however the track is moved -- button, wheel, drag or keyboard.
+    const syncEnds = ()=>{
+      const max = track.scrollWidth - track.clientWidth;
+      prev.disabled = track.scrollLeft <= 1;
+      next.disabled = track.scrollLeft >= max - 1;
+    };
+    track.addEventListener('scroll', syncEnds);
+    syncEnds();
+  }
+}
 function renderSavedQuotes(){
   ensureQuote();
   updateOrderStatusBar();
@@ -44941,15 +45757,11 @@ function renderSavedQuotes(){
   let backfilled = false;
   allQuotes.forEach(q=>{ if(!q.stageEnteredAt){ q.stageEnteredAt = Date.now(); backfilled = true; } });
   if(backfilled) saveData();
-  /* Voided orders are off the board for good. That rule post-dates the
-     lane board and is kept: a cancelled order is not a stage. */
+  /* !q.voided came AFTER this board was drawn, with cancelling. Every
+     derivation in the app reads a voided order as "not an order", and a
+     cancelled one standing in a lane is the board stating something
+     untrue -- so the one condition stays. */
   const quotes = allQuotes.filter(q=>!quoteAgedOffBoard(q) && !q.voided);
-  /* The search narrows what the board SHOWS, counts included, so the
-     rail and the lanes can never disagree about how many are there.
-     Its input lives outside what this render rewrites, so typing
-     never loses the caret. */
-  const tokens = searchTokens((document.getElementById('ot_search')||{}).value);
-  const shownQuotes = tokens.length ? quotes.filter(q=> otOrderMatches(q, tokens)) : quotes;
   /* The rail is cleared on the empty branches too, or it would keep the
      counts of whatever the board showed last. */
   const clearRail = ()=>{ const m = document.getElementById('sqStepperMount'); if(m) m.innerHTML = ''; };
@@ -44988,7 +45800,13 @@ function renderSavedQuotes(){
       <div class="sq-card-top">
         <input type="checkbox" class="sq-check sq-card-check" data-id="${q.id}">
         <div class="sq-card-info">
-          <div class="sq-client"><span class="sq-client-name">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}</span><span class="sq-client-total" title="What the client pays">${fmtUGX(savedQuoteTotal(q))}</span></div>
+          <div class="sq-client"><span class="sq-client-name">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}${
+              /* The portal did not exist when this card was drawn, and a
+                 flag nothing renders is a flag that does not do its job:
+                 an order the customer placed themselves has already had
+                 every price on it seen, which changes how it is handled.
+                 Same pill as the agent's, for the same reason. */
+              q.originPortal ? ` <span class="st-status-pill agent" title="Placed by the customer on the portal, so they have already seen every price on it">Placed on the portal</span>` : ''}</span><span class="sq-client-total" title="What the client pays">${fmtUGX(savedQuoteTotal(q))}</span></div>
           ${location ? `<div class="sq-location-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(location)}</span></div>` : ''}
           <div class="sq-card-meta-rows">
             ${orderMetaRowHTML(q)}
@@ -45035,7 +45853,7 @@ function renderSavedQuotes(){
      stage limit or waiting on a person -- so the question the admin
      visits this page to ask is answered before a single card is read. */
   const pillsHtml = `<div class="sq-stepper" role="tablist" aria-label="Order tracking steps">${SQ_STATUS_ORDER.map((status,i)=>{
-    const group = shownQuotes.filter(q=>q.status===status);
+    const group = quotes.filter(q=>q.status===status);
     const count = group.length;
     const warn = group.filter(q=> orderIsOverdue(q) || orderNeedsSomebody(q)).length;
     const active = status===sqActiveMobileStep;
@@ -45050,7 +45868,7 @@ function renderSavedQuotes(){
   }).join('')}</div>`;
 
   const boardHtml = `<div class="sq-board" data-active-step="${sqActiveMobileStep}">${SQ_STATUS_ORDER.map(status=>{
-    const group = shownQuotes.filter(q=>q.status===status);
+    const group = quotes.filter(q=>q.status===status);
     return `
       <div class="sq-col${status===sqActiveMobileStep?' is-active-step':''}" data-status="${status}" style="--lane-accent:${SQ_STATUSES[status].color};">
         <div class="sq-col-head">
@@ -45066,7 +45884,7 @@ function renderSavedQuotes(){
           status==='awaiting_goods' ? cashToBuyBannerHTML(group) : ''}
         ${status==='pending_delivery' ? deliveryRunsBannerHTML(group) : ''}
         <div class="sq-col-body">
-          ${group.length===0 ? `<div class="sq-col-empty">${tokens.length ? 'Nothing here matches the search' : 'No quotes here'}</div>` : group.map(cardHTML).join('')}
+          ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}
         </div>
       </div>`;
   }).join('')}</div>`;
@@ -45215,9 +46033,9 @@ function renderSavedQuotes(){
   // does not reset how long the order has been waiting to go out.
   wrap.querySelectorAll('.sq-assign-delivery-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'pending_delivery', 'delivery')));
   wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
-  /* [data-trip-gap] is NOT wired here. The screen-level delegated
-     listener already sends it to the buying list, and binding it a
-     second time per render opened that dialog twice on one click. */
+  // Straight to where somebody gets sent, rather than telling the admin
+  // to go and find it.
+  wrap.querySelectorAll('[data-trip-gap]').forEach(btn=>btn.addEventListener('click', openBuyingList));
   /* The eye, and only the eye. The card body opened the preview too for a
      while, and on a board that is dragged, selected and stepped through
      it meant the panel appeared on clicks nobody meant as a request to
@@ -45389,7 +46207,6 @@ document.getElementById('tab-quote-saved').addEventListener('click', (e)=>{
     renderSavedQuotes();
   }
 });
-document.getElementById('ot_search').addEventListener('input', ()=> renderSavedQuotes());
 /* The carrier kind decides which of the other fields are asked. */
 document.getElementById('tab-quote-saved').addEventListener('change', (e)=>{
   const sel = e.target && e.target.closest ? e.target.closest('[data-car="kind"]') : null;

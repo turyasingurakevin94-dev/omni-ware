@@ -224,26 +224,24 @@ const reset = () => {
     'and nothing to buy says which of the two silences it is');
   t.check(/case 'pickups': openPickupRuns\(\); break;/.test(src), 'and opens the panel');
 
-  /* THE CAROUSEL IS GONE, AND SO IS THE ID CLASH IT CARRIED.
+  /* THE CAROUSEL IS BACK; THE ID CLASH IT CARRIED IS NOT.
 
-     The buying round, the delivery runs and the buying list were three
-     sideways tracks sharing one implementation (wireRunCarousel) and
-     three id prefixes, and the reason this block existed at all is that
-     one of those prefixes -- pr_ -- belonged to PAYROLL's month stepper,
-     so the arrows in this modal silently wired somebody else's buttons.
-     All three screens are hairline rows in the board's one dialog now:
-     the round is read down the page, so there is no track, no prefix and
-     no clash. What is kept from the old block is the half that was never
-     about the carousel: Payroll still owns pr_prev and pr_next, and
-     nothing else in the file may take them. */
+     The buying round, the delivery runs and the buying list are three
+     sideways tracks sharing one implementation (wireRunCarousel), which
+     is the shape this screen was restored to. The reason this block
+     exists is that one of the three prefixes -- pr_ -- belonged to
+     PAYROLL's month stepper, so the arrows in this modal silently wired
+     somebody else's buttons. This round uses pk_ now. Payroll still owns
+     pr_prev and pr_next, and nothing else in the file may take them. */
   const payroll = (/<section id="tab-payroll"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="pr_prev"/.test(payroll) && /id="pr_next"/.test(payroll),
     'pr_prev and pr_next belong to Payroll’s month stepper');
   t.check((src.match(/\sid="pr_prev"/g) || []).length === 1
     && (src.match(/\sid="pr_next"/g) || []).length === 1,
     'and to it alone — two elements sharing an id made one of them unreachable, silently');
-  t.check(!/wireRunCarousel\('/.test(src),
-    'and no screen opens a sideways track any more — the round is a list you read down');
+  const pickup = extractFunction(src, 'openPickupRuns', 'index.html');
+  t.check(/wireRunCarousel\('pk_track', 'pk_prev', 'pk_next'\)/.test(pickup),
+    'and the round opens its sideways track on ids of its own, not on Payroll’s');
 }
 
 /* ---------- a shop you have no reason to enter is not a stop ---------
