@@ -96724,6 +96724,9 @@ let fupHeldOpen = false;
    -- and only the answering happens on the inbox screen, which owns the
    composer. */
 let msgOpenConv = null;
+/* And which promise is open. The diary opens in place like everything
+   else on this screen. */
+let msgOpenProm = null;
 /* A worth-telling line is OFF by default because its natural form is
    the picture -- EXCEPT where it is the only thing the shop has to say.
    With nothing else on the row the digest was a greeting and a sign-off
@@ -97102,6 +97105,38 @@ function fupRowValue(row, nowMs){
    the same six columns and the same rail. The furniture does not move
    because the filter did: that was the whole fault of the three lenses
    this screen replaced. */
+/* EVERY DAY SOMEBODY HAS NAMED, whether or not it has come.
+
+   These people are deliberately NOT in the day's queue: a client who
+   named Friday is not owed a word on Tuesday, and followUpReasons is
+   right to leave them alone. But they are the shop's diary, and a diary
+   that only shows a date on the morning it falls due is one nobody can
+   plan with. So the lane reads the promise book directly. */
+function msgPromisedLane(nowMs){
+  const out = new Map();
+  const today = fupDayISO(nowMs);
+  try{
+    (fupChaseNow().promised || []).forEach(r=> out.set(String(r.id), {
+      id: r.id, name: r.name, named: r.promise && r.promise.promisedOn,
+      debt: Math.round(r.debt || 0), broken: r.brokenPromises || 0, about: 'money past your terms',
+    }));
+  }catch(err){ /* no chase book */ }
+  try{
+    followUpsAll().forEach(f=>{
+      if(!followUpIsOpen(f) || !f.promisedOn) return;
+      const key = String(f.customerId);
+      const c = (data.customers||[]).find(x=> String(x.id) === key);
+      const cur = out.get(key);
+      if(cur){ if(!cur.named || f.promisedOn < cur.named) cur.named = f.promisedOn; return; }
+      out.set(key, { id: f.customerId, name: c ? c.name : 'a client', named: f.promisedOn,
+        debt: 0, broken: 0, about: followUpSubject(f).label,
+        lastAt: (followUpLastContact(f) || {}).at });
+    });
+  }catch(err){ /* no follow-ups */ }
+  return [...out.values()].filter(r=> r.named)
+    .sort((a,b)=> String(a.named).localeCompare(String(b.named)))
+    .map(r=> Object.assign(r, { due: r.named <= today, late: r.named < today }));
+}
 function msgLaneRow(o){
   return `<div class="ow-q${o.open ? ' ow-open' : ''}">
     <button type="button" class="ow-q-r${o.cls ? ' ' + o.cls : ''}" ${o.act || ''} aria-expanded="${o.open ? 'true' : 'false'}">
@@ -97112,7 +97147,7 @@ function msgLaneRow(o){
       <span class="ow-mq-cps">${o.chips}</span>
       <span class="ow-q-v${o.bad ? ' ow-bad' : ''}"><span class="ow-q-f">${esc(o.v)}</span><span class="ow-q-b">${esc(o.b)}</span></span>
       <span class="ow-mq-u ${o.untilCls || ''}">${esc(o.until)}</span>
-      <span class="ow-mq-st${o.stateCls || ''}">${esc(o.state)}</span>
+      <span class="ow-mq-st${o.open ? ' ow-on' : (o.stateCls || '')}">${o.open ? 'open' : esc(o.state)}</span>
     </button>
     <button type="button" class="ow-q-card${o.cls ? ' ' + o.cls : ''}" ${o.act || ''}>
       <span class="ow-q-cm">${o.chips}
@@ -97195,6 +97230,44 @@ function msgLaneHTML(lane, nowMs){
         <span class="ow-mq-bs">so it asks rather than assumes &mdash; a post counts neither way until you stamp it</span></div></div>`;
   }
 
+  if(lane === 'promised'){
+    const list = msgPromisedLane(nowMs);
+    if(!list.length) return pan('They promised', 'nobody has named a day',
+      'By the day they named &mdash; not by what they owe', '', '', '')
+      + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nobody has named a day.</b><br>A day written down against a client &mdash; from a chase, or from their own record &mdash; lands here and waits for the day to decide it.</div></div>`;
+    const due = list.filter(r=> r.due).length;
+    const body = list.map(r=>{
+      const gate = fupPromiseHTML(r.named, r.lastAt, nowMs);
+      const days = Math.round((Date.parse(r.named + 'T00:00:00') - Date.parse(fupDayISO(nowMs) + 'T00:00:00')) / 86400000);
+      return msgLaneRow({
+        act: `data-cust="${esc(String(r.id))}"`, cls: 'msg-prom-pick',
+        open: String(msgOpenProm) === String(r.id),
+        mark: `<span class="ow-mq-av">${esc(fupInitials(r.name))}</span>`,
+        name: r.name, sub: `named ${fmtShortDate(r.named)} \u00b7 ${esc(r.about)}`,
+        chips: r.late ? '<span class="ow-cp ow-bad">the day passed</span>'
+          : r.due ? '<span class="ow-cp ow-warn">due today</span>'
+          : '<span class="ow-cp">a day ahead</span>',
+        v: r.debt ? fmtUGX(r.debt) : '\u2014', b: r.debt ? 'owed' : 'nothing owed', bad: !!r.debt,
+        until: r.late ? Math.abs(days) + 'd late' : r.due ? 'today' : days + ' days',
+        untilCls: r.due || r.late ? 'ow-warn' : '',
+        state: r.late ? 'broke it' : 'promised',
+        stateCls: r.late ? ' ow-bad' : ' ow-warn',
+        x: String(msgOpenProm) === String(r.id) && gate ? `<div class="ow-mq-x">
+            <div class="ow-mq-l1">${gate.track}</div>
+            <div class="ow-mq-l2">${gate.hold || `<div class="ow-mq-hold"><span class="ow-mq-ht"><svg class="ow-mq-hti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.2 1.9"/></svg>The day they named has passed.</span><p class="ow-mq-hp">Nothing landed, so this one is <b class="ow-mq-hb">owed a word</b> again &mdash; it is in <b class="ow-mq-hb">To message</b> with the words already written.</p></div>`}
+              <p class="ow-mq-l" style="margin-top:12px;">If something changed</p>
+              <div class="ow-mq-acts">
+                <button type="button" class="btn btn-accent fup-pay" data-cust="${esc(String(r.id))}">Receive a payment</button>
+                <button type="button" class="btn btn-ghost ow-sm fup-promise" data-cust="${esc(String(r.id))}">They named a new day</button>
+              </div>
+              <p class="ow-mq-p">Recording the money is the act on this lane &mdash; not a message. It posts to the Cash Book and clears their oldest invoice first.</p>
+            </div></div>` : '',
+      });
+    }).join('');
+    return pan('They promised', `${list.length} ${list.length === 1 ? 'date' : 'dates'} \u00b7 ${due ? due + ' fall due today' : 'none fall due today'}`,
+      'By the day they named &mdash; not by what they owe', 'Who, and what they said', 'Due', body);
+  }
+
   const lanes = msgLanes(nowMs);
   const list = lane === 'inbox' ? lanes.waiting : lanes.back;
   const title = lane === 'inbox' ? 'Waiting on you' : 'Came back';
@@ -97228,13 +97301,63 @@ function msgLaneHTML(lane, nowMs){
     'Who, and what they asked for', 'Waiting', body);
 }
 
+/* THE PROMISE, DRAWN, AND THE MESSAGE IT HOLDS BACK.
+
+   Every other lane on this screen says do this. This one mostly says
+   leave it alone, which is the hardest thing for software to say well --
+   so the screen is built around the refusal rather than hiding it. A
+   chase that lands before the day somebody named loses the customer as
+   well as the money.
+
+   The track is the shape a row of equal boxes cannot draw: a progression
+   with a gate in it and a branch that leaves the line. Node fill is a
+   second, silent channel -- solid means the app watched it happen,
+   outlined means somebody wrote it down. Nothing is ever marked kept by
+   hand: the day decides, and the books are read on every open. */
+function fupPromiseHTML(named, lastAt, nowMs){
+  if(!named) return null;
+  const today = fupDayISO(nowMs);
+  const late = named < today;
+  const last = lastAt ? { at: lastAt } : null;
+  const node = (cls, glyph, label, sub, subCls)=> `<div class="ow-mq-tn">
+    <span class="ow-mq-td ${cls}">${glyph}</span>
+    <span class="ow-mq-tl">${esc(label)}</span>
+    <span class="ow-mq-ts ${subCls || ''}">${sub}</span></div>`;
+  const tick = '<svg class="ow-mq-tdi" viewBox="0 0 24 24"><path d="M4 12.5l5.5 5.5L20 6.5"/></svg>';
+  const pen = '<svg class="ow-mq-tdi" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>';
+  const send = '<svg class="ow-mq-tdi" viewBox="0 0 24 24"><path d="M21 3L3 10.5l7 3 3 7z"/><path d="M21 3l-11 11"/></svg>';
+  const track = `<div class="ow-mq-trk">
+    <div class="ow-mq-tr" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+      ${node('ow-on', send, last ? fupDay(last.at) : 'you asked', last ? 'you told<br>them' : 'nothing sent yet')}
+      ${node('', pen, 'they named', esc(fmtShortDate(named)) + '<br>written down')}
+      ${node(late ? 'ow-bad' : 'ow-warn', late ? tick : '?', late ? 'the day passed' : 'the day', late ? 'and nothing<br>came' : 'they named<br>it', late ? 'ow-bad' : '')}
+      ${node('ow-good', tick, 'kept it', 'the money<br>lands')}
+    </div>
+    <div class="ow-mq-tb" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+      <div class="ow-mq-tbc" style="grid-column:3;"><span class="ow-mq-tbs"></span>
+        <span class="ow-cp ow-bad">broke it</span></div>
+    </div>
+  </div>
+  <p class="ow-mq-p"><b class="ow-mq-pb">You do not decide this one; the day does.</b>
+    The books are read every time this screen opens &mdash; if the money lands, the row leaves by itself.
+    Nothing here is marked kept by hand.</p>`;
+  if(late) return { track, hold: null, late: true, named };
+  const hold = `<div class="ow-mq-hold">
+    <span class="ow-mq-ht"><svg class="ow-mq-hti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.2 1.9"/></svg>Nothing is being sent to them today.</span>
+    <p class="ow-mq-hp">They named <b class="ow-mq-hb">${esc(fmtShortDate(named))}</b>, and that day is not over.
+      A chase that arrives before the day somebody named loses the customer as well as the money.</p>
+    <p class="ow-mq-hp">If nothing has landed by then, this row moves itself to
+      <b class="ow-mq-hb">To message</b> as <b class="ow-mq-hb">broke a promise</b> &mdash; carrying the words below.</p>
+  </div>`;
+  return { track, hold, late: false, named };
+}
 function renderFollowUpsContact(){
   const wrap = document.getElementById('fup_contact_list');
   if(!wrap) return;
   const now = fupPass ? fupPass.now : Date.now();
   /* The three lanes the merge brought in are their own row sets, drawn
      in the same panel with the same columns and the same rail. */
-  if(fupWhy === 'inbox' || fupWhy === 'back' || fupWhy === 'post'){
+  if(fupWhy === 'inbox' || fupWhy === 'back' || fupWhy === 'post' || fupWhy === 'promised'){
     fupSetHTML(wrap, msgLaneHTML(fupWhy, now));
     renderMessagesSide(now, []);
     return;
@@ -97341,6 +97464,12 @@ function renderFollowUpsContact(){
     const cid = String(row.customerId);
     const cust = row.customer;
     const ticks = fupTickState(cid, row);
+    /* A day they named, and whether it has passed. Everything this row
+       does differently hangs off that one fact. */
+    const promDays = row.items.map(i=> i.followUp && i.followUp.promisedOn).filter(Boolean).sort();
+    const promLast = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
+      .sort((a,b)=> new Date(a.at) - new Date(b.at))[0];
+    const prom = fupPromiseHTML(promDays[0], promLast && promLast.at, now);
     const edit = (id, what)=> !!(fupEditing && String(fupEditing.id) === String(id) && fupEditing.what === what);
     /* The card renders the SHORT form -- the name is on the line above
        it -- while the message keeps the full one, because it goes to
@@ -97497,12 +97626,14 @@ function renderFollowUpsContact(){
         ${cust ? `<button type="button" class="btn btn-ghost ow-sm fup-record" data-cust="${esc(cid)}">Their follow-up list</button>` : ''}
       </div>
       <div class="ow-mq-l1">
+      ${prom ? prom.track : ''}
       ${facts ? `<div class="fup-w-facts">${facts}</div>` : ''}
       ${items}${account}${telling}${quiet}
       </div>
       <div class="ow-mq-l2">
+      ${prom && prom.hold ? prom.hold : ''}
       <div class="fup-w-msg">
-        <div class="ow-msg-h"><span class="ow-msg-t">The message</span>
+        <div class="ow-msg-h"><span class="ow-msg-t">${prom && prom.hold ? 'What it would say' : 'The message'}</span>
           <span class="ow-msg-to">${row.phone ? 'to WhatsApp ' + esc(row.phone) + ' — edit it before you send' : 'no number to send it to — copy it instead'}</span></div>
         <textarea class="ow-msg fup-msg" id="fup_msg" data-cust="${esc(cid)}" rows="${lines}">${esc(draft)}</textarea>
         <p class="ow-msg-n">${waiting
@@ -97518,7 +97649,7 @@ function renderFollowUpsContact(){
              <button type="button" class="btn btn-ghost ow-sm fup-copy" data-cust="${esc(cid)}">Copy</button>
              ${fupDrafts[cid] != null ? `<button type="button" class="btn btn-ghost ow-sm fup-reset" data-cust="${esc(cid)}">Put the wording back</button>` : ''}
              <span class="fup-sp"></span>
-             ${row.phone ? `<button type="button" class="btn btn-accent fup-send" data-cust="${esc(cid)}">Send on WhatsApp</button>` : ''}`}
+             ${row.phone ? `<button type="button" class="btn ${prom && prom.hold ? 'btn-ghost ow-sm' : 'btn-accent'} fup-send" data-cust="${esc(cid)}">${prom && prom.hold ? 'Send it anyway' : 'Send on WhatsApp'}</button>` : ''}`}
       </div>
       </div>
     </div>`;
@@ -97569,10 +97700,16 @@ function renderFollowUpSummary(){
   if(!el) return;
   const now = fupPass ? fupPass.now : Date.now();
   const rows = fupHubRowsNow();
-  const lenses = rows.map(fupRowLenses);
   const lanes = msgLanes(now);
   const post = msgPostLane();
-  const nPromised = lenses.filter(s=> s.has('promised')).length;
+  /* Counted off the same list the lane opens. A tile that says three and
+     opens two is worse than no tile, and these two used to read from two
+     different books: the tile from the day's queue, the lane from the
+     promise book. The promise book is the one that holds every day
+     somebody has named, so the tile reads it too. */
+  const promised = msgPromisedLane(now);
+  const nPromised = promised.length;
+  const nDue = promised.filter(r=> r.due).length;
   const oldest = lanes.waiting.concat(lanes.back)
     .reduce((m,a)=> a.waited != null && a.waited > m ? a.waited : m, 0);
   const wait = (m)=> typeof waFmtWait === 'function' ? waFmtWait(m) : Math.round(m) + ' min';
@@ -97593,7 +97730,7 @@ function renderFollowUpSummary(){
       lanes.back.length ? 'a reply wanting an act' : 'no replies today',
       lanes.back.length ? 'ow-good' : '')}
     ${tile('They promised', 'promised', nPromised,
-      nPromised ? 'a day they named' : 'none due today')}
+      nPromised ? (nDue ? nDue + ' fall due today' : 'none fall due today') : 'nobody has named a day')}
     ${tile('To post', 'post', `${post.postedToday}<span class="ow-u">of ${post.cap}</span>`,
       post.picks.length ? `${post.picks.length} nominated today` : 'nothing nominated')}
   </div>`;
@@ -97975,6 +98112,13 @@ function wireFollowUpsScreen(){
     /* A question is answered in the chat it arrived in, with the thread
        in front of you -- this screen ranks the asking, the inbox holds
        the conversation. */
+    const promPick = e.target.closest('.msg-prom-pick');
+    if(promPick){
+      const id = promPick.dataset.cust;
+      msgOpenProm = String(msgOpenProm) === String(id) ? null : id;
+      renderFollowUpsContact();
+      return;
+    }
     const convPick = e.target.closest('.msg-conv-pick');
     if(convPick){
       const id = convPick.dataset.conv;

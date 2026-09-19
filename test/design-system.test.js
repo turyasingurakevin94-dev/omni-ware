@@ -620,6 +620,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    the merge brought in. They draw markup, so the ratchet follows
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
+                'msgThreadHTML', 'fupPromiseHTML',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],
@@ -642,6 +643,8 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
                     'ow-q', 'ow-q-r', 'ow-q-x', 'ow-q-card', 'ow-q-v', 'ow-q-f', 'ow-q-b',
                     'ow-mq', 'ow-mq-h', 'ow-mq-n', 'ow-mq-s', 'ow-mq-band', 'ow-mq-quiet',
+                    'ow-mq-chat', 'ow-mq-bub', 'ow-mq-wait', 'ow-mq-trk', 'ow-mq-tn',
+                    'ow-mq-td', 'ow-mq-tl', 'ow-mq-ts', 'ow-mq-hold', 'ow-mq-ht', 'ow-mq-hp',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-msg',
                     'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
                     'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',

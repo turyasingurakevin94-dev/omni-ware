@@ -644,6 +644,8 @@ const stockMove = (before, after, whenDays) => {
   const all = extractFunction(src, 'renderFollowUpsAll', 'index.html');
   const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
   const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+  /* The three lanes that are not follow-ups draw their own rows. */
+  const lane = extractFunction(src, 'msgLaneHTML', 'index.html');
 
   /* Counted, not merely present -- the argument for counting is
      unchanged, and it is why this still asserts a number rather than a
@@ -706,8 +708,23 @@ const stockMove = (before, after, whenDays) => {
      to open what it counted: "Money 15" that opens fourteen rows is
      worse than no tile. Both figures and filter go through fupRowLenses,
      which is one reading of one row -- so they cannot drift. */
-  t.check(/fupRowLenses/.test(summary) && /fupRowLenses/.test(contact),
-    'and the figure on a tile is the number of clients its own filter opens, through one shared reading');
+  /* ONE BOOK PER LANE, still. fupRowLenses was that shared reading while
+     every tile counted the same list of clients. The five lanes read
+     five different books now -- the inbox and the replies from the
+     conversations, the diary from the promise book, the posts from the
+     day's picks -- so the claim is enforced per lane instead of once:
+     the figure on a tile and the rows its filter opens come from the
+     SAME call. msgPromisedLane is the one that had to be fixed for it;
+     the tile was counting the day's queue while the lane opened the
+     promise book, and it read 0 over a list of 1. */
+  t.check(/msgLanes\(/.test(summary) && /msgLanes\(/.test(lane),
+    'the inbox and reply tiles are counted off the same call their filter opens');
+  t.check(/msgPromisedLane\(/.test(summary) && /msgPromisedLane\(/.test(lane),
+    'and the diary tile reads the promise book, which is the list its filter opens');
+  t.check(/msgPostLane\(/.test(summary) && /msgPostLane\(/.test(lane),
+    'and the post tile reads the day’s picks, which is the list its filter opens');
+  t.check(/fupRowLenses/.test(contact),
+    'and the person lanes still filter through one reading of one row');
   t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
     'and the strip and the queue are drawn from the same hub rows, computed once per render');
 
@@ -739,7 +756,12 @@ const stockMove = (before, after, whenDays) => {
     'no phone number is named where the number would be, in the caution ink');
   t.check(/no number to send it to/.test(contact),
     'and again on the line that says where the message is going');
-  t.check(/\$\{row\.phone \? `<button type="button" class="btn btn-accent fup-send"/.test(contact),
+  /* The button's own class is conditional now -- on the lane where a day
+     has been named it steps down to a ghost "Send it anyway", because a
+     chase that lands before the day somebody named loses the customer as
+     well as the money. What has not changed, and is what this line has
+     always been about, is the outer condition: no number, no button. */
+  t.check(/\$\{row\.phone \? `<button type="button" class="btn \$\{prom && prom\.hold \? 'btn-ghost ow-sm' : 'btn-accent'\} fup-send"/.test(contact),
     'and Send is withheld rather than offered and then failing — which is what makes the other two lines an explanation');
 
   // Close is routine housekeeping. Painted in --accent it was a red, which
