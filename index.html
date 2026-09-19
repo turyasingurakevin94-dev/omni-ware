@@ -8462,6 +8462,17 @@
      of the screen. align-items:flex-end matches .ow-ph, so a field with
      a longer label still sits on the same baseline as its neighbours. */
   .fup-rules{display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex:none;margin-left:auto;}
+  /* The rules moved off the header and into the Register's rail, where
+     they are read. Three fields abreast is a header shape; 304px is a
+     column, so they stack and each takes the full width. */
+  .ow-side .fup-rules{flex-direction:column;align-items:stretch;margin-left:0;
+    gap:var(--ow-sp-8);padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .ow-side .fup-rules .ow-f{width:100%;}
+  .ow-side .fup-rules .ow-f-in{width:100%;}
+  /* A migration path is one unbroken token and the rail is 304px: left
+     alone it runs off the edge, and a failure that names itself has to
+     be readable to be worth naming. */
+  .ow-side .ow-empty,.ow-side .ow-mini{overflow-wrap:anywhere;}
 
   /* ---- the client being worked ---- */
   .fup-work{display:flex;flex-direction:column;min-height:0;}
@@ -96708,6 +96719,11 @@ const fupTicks = Object.create(null);
    rather than dropped, but not taking a column from the work. Opening it
    is a deliberate act, so the set is closed until somebody asks. */
 let fupHeldOpen = false;
+/* Which inbound conversation is open in the queue. A question is read
+   where it is ranked -- the thread opens IN PLACE like every other row
+   -- and only the answering happens on the inbox screen, which owns the
+   composer. */
+let msgOpenConv = null;
 /* A worth-telling line is OFF by default because its natural form is
    the picture -- EXCEPT where it is the only thing the shop has to say.
    With nothing else on the row the digest was a greeting and a sign-off
@@ -97087,8 +97103,8 @@ function fupRowValue(row, nowMs){
    because the filter did: that was the whole fault of the three lenses
    this screen replaced. */
 function msgLaneRow(o){
-  return `<div class="ow-q">
-    <button type="button" class="ow-q-r${o.cls ? ' ' + o.cls : ''}" ${o.act || ''}>
+  return `<div class="ow-q${o.open ? ' ow-open' : ''}">
+    <button type="button" class="ow-q-r${o.cls ? ' ' + o.cls : ''}" ${o.act || ''} aria-expanded="${o.open ? 'true' : 'false'}">
       <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
       <span class="ow-mq-who">${o.mark}
         <span class="ow-mq-b"><span class="ow-mq-n">${esc(o.name)}</span>
@@ -97104,7 +97120,45 @@ function msgLaneRow(o){
       <p class="ow-q-ct">${esc(o.name)}</p>
       <span class="ow-q-cv${o.bad ? ' ow-bad' : ''}">${esc(o.v)}<span class="ow-q-b">${esc(o.b)}</span></span>
     </button>
-    <div class="ow-q-x"></div>
+    <div class="ow-q-x">${o.x || ''}</div>
+  </div>`;
+}
+/* THE CONVERSATION, SHOWN AS ONE. Their words are the only text on this
+   screen that is not derived from the books, so the bubbles say which
+   side each came from and the wait is stated rather than implied. */
+function msgThreadHTML(a, nowMs){
+  const { msgs } = msgInboxSource();
+  const thread = (msgs || []).filter(m=> m.conversation_id === a.conv.id)
+    .sort((x,y)=> String(x.sent_at).localeCompare(String(y.sent_at))).slice(-6);
+  const hhmm = (iso)=> String(iso||'').length > 15 ? String(iso).slice(11,16) : '';
+  const bubbles = thread.map(m=> `<span class="ow-mq-bub ${m.direction === 'in' ? 'ow-in' : 'ow-out'}">${
+    esc(m.body || ('[' + (m.msg_type||'message') + ']'))}<time class="ow-mq-bubt">${
+    m.direction === 'in' ? '' : 'you &middot; '}${esc(hhmm(m.sent_at))}</time></span>`).join('');
+  const wait = typeof waFmtWait === 'function' ? waFmtWait(a.waited) : Math.round(a.waited) + ' min';
+  return `<div class="ow-mq-x">
+    <div class="ow-mq-l1">
+      <p class="ow-mq-l">The conversation</p>
+      <div class="ow-mq-chat">${bubbles}
+        <span class="ow-mq-wait"><i class="ow-mq-waiti"></i>Waiting ${esc(wait)}. Nothing has gone back.</span>
+      </div>
+      <p class="ow-mq-p">The shop&rsquo;s own words are on the dark side, theirs on the light.
+        <b>Nothing here is priced yet</b> &mdash; reading an ask into products and today&rsquo;s prices is the
+        inbox&rsquo;s own job, and the price in a reply is the price you are held to.</p>
+    </div>
+    <div class="ow-mq-l2">
+      <p class="ow-mq-l">What you can do</p>
+      <div class="ow-mq-ra">
+        <button type="button" class="ow-mq-rab fup-open-chat" data-conv="${esc(String(a.conv.id))}">
+          <b class="ow-mq-rabt">Answer on WhatsApp</b>
+          <i class="ow-mq-rabs">opens the chat with the thread and the priced reply in front of you</i></button>
+        ${a.customerId != null ? `<button type="button" class="ow-mq-rab fup-held-promise" data-cust="${esc(String(a.customerId))}">
+          <b class="ow-mq-rabt">Write down a day</b>
+          <i class="ow-mq-rabs">moves them to They promised</i></button>` : ''}
+      </div>
+      <p class="ow-mq-p">${a.customer
+        ? 'A customer you already sell to, so their account and their usual order are on the reply.'
+        : 'No name on this number yet. Answering it from the inbox is what puts one there.'}</p>
+    </div>
   </div>`;
 }
 const MSG_PROD_MARK = `<span class="ow-mq-pic"><svg class="ow-mq-pici" viewBox="0 0 24 24"><path d="M3 8.5h18M3 15.5h18"/><path d="M6.5 4.5v15M12 4.5v15M17.5 4.5v15"/></svg></span>`;
@@ -97159,7 +97213,9 @@ function msgLaneHTML(lane, nowMs){
   const body = list.map(a=>{
     const owed = a.customer && typeof customerDebt === 'function' ? Math.round(customerDebt(a.customer.id) || 0) : 0;
     return msgLaneRow({
-      act: `data-conv="${esc(String(a.conv.id))}"`, cls: 'fup-open-chat',
+      act: `data-conv="${esc(String(a.conv.id))}"`, cls: 'msg-conv-pick',
+      x: String(msgOpenConv) === String(a.conv.id) ? msgThreadHTML(a, nowMs) : '',
+      open: String(msgOpenConv) === String(a.conv.id),
       mark: `<span class="ow-mq-av">${esc(fupInitials(a.name))}</span>`,
       name: a.name, sub: a.said || 'no words in the message',
       chips: `<span class="ow-cp">${a.customer ? 'a customer you know' : 'no name on this number'}</span>`
@@ -97675,11 +97731,17 @@ function renderFollowUpsAll(filter){
      left this one with an empty right half and put the measurement where
      the eye looks for work. Nothing on either side is an act, so there
      is no accent anywhere on this view. */
-  fupSetHTML(wrap, `<div class="ow-grid"><div class="ow-stack"><div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Every follow-up ever taken</span>
-      <span class="ow-pan-n">${openTotal} open · ${all.length - openTotal} closed</span></div>
+  fupSetHTML(wrap, `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Everything that went out</span>
+      <span class="ow-pan-n">${openTotal} open · ${all.length - openTotal} closed</span>
+      <span class="ow-pan-sp"></span>
+      <span class="ow-pan-note">Newest first &mdash; the register is the history, the score measures it</span></div>
     ${bar}${body}
-  </div></div><div class="ow-side">${renderFollowUpScore()}</div></div>`);
+  </div>`);
+  /* The score goes in the screen's own rail rather than a second one of
+     this view's making: one grid, one rail, on both views. */
+  const scorePan = document.getElementById('fup_score_pan');
+  if(scorePan) scorePan.innerHTML = renderFollowUpScore();
 }
 
 /* ================= The rules, and whether any of it works ============
@@ -97814,11 +97876,13 @@ function renderFollowUps(){
        not a queue at all. Not written while somebody is typing in one --
        a value replaced under the caret is a figure that fights back. */
     const chaseCfg = fupChaseNow();
-    const moneyLens = fupTab === 'contact' && fupWhy === 'money';
     [['fup_chase_after', chaseCfg.graceDays], ['fup_chase_rest', chaseCfg.restDays]].forEach(([id, v])=>{
       const box = document.getElementById(id);
       const field = document.getElementById(id + '_f');
-      if(field) field.hidden = !moneyLens;
+      /* They live on the Register now, which is the page where every
+         rule of this screen is written down -- so they are always
+         readable there rather than appearing with one lens. */
+      if(field) field.hidden = false;
       if(box && document.activeElement !== box) box.value = v;
     });
     const nC = document.getElementById('fupSegContact');
@@ -97911,6 +97975,13 @@ function wireFollowUpsScreen(){
     /* A question is answered in the chat it arrived in, with the thread
        in front of you -- this screen ranks the asking, the inbox holds
        the conversation. */
+    const convPick = e.target.closest('.msg-conv-pick');
+    if(convPick){
+      const id = convPick.dataset.conv;
+      msgOpenConv = String(msgOpenConv) === String(id) ? null : id;
+      renderFollowUpsContact();
+      return;
+    }
     const chat = e.target.closest('.fup-open-chat');
     if(chat){
       const id = chat.dataset.conv;

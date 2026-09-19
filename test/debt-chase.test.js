@@ -371,10 +371,23 @@ if (scope) {
   const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(/id="fup_chase_after"/.test(sec) && /id="fup_chase_rest"/.test(sec)
     && /class="fup-rules"/.test(sec),
-    'the two rules the queue obeys are fields in the header, grouped with the rule that was already there');
+    'the two rules the queue obeys are still fields in this screen’s own markup, grouped with the rule that was already there');
+  /* WHERE THOSE FIELDS LIVE, AND WHY IT MOVED.
+
+     They were in the header, shown only while the Money lens was open,
+     for two reasons: they decide nothing under any other lens, and three
+     rule fields do not fit a phone header. Both reasons were about the
+     HEADER. The Messages console took them out of it and put them on the
+     Register, in the panel headed "The rules this screen obeys" -- the
+     page that already existed to write every rule of this screen down.
+
+     So they are always readable there, which is strictly more than
+     appearing under one lens, and the header they did not fit is no
+     longer where they are. They are still static markup, which is what
+     lets their listeners bind once at parse time; that has not moved. */
   const render = extractFunction(src, 'renderFollowUps', 'index.html');
-  t.check(/fupTab === 'contact' && fupWhy === 'money'/.test(render) && /field\.hidden = !moneyLens/.test(render),
-    'and they are on screen only while the lens they decide is the one being read');
+  t.check(/field\.hidden = false/.test(render) && /fup_chase_after/.test(render) && /fup_chase_rest/.test(render),
+    'and they are always readable on the Register, the view that owns every rule of this screen');
   /* The layer's own field paints, so [hidden] alone could not hide it --
      the trap css-class-hooks exists for, and the companion it demands. */
   t.check(src.indexOf('.ow-f[hidden]{display:none;}') > src.indexOf('.ow-f{display:flex'),

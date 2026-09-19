@@ -470,8 +470,16 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
   eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
+  /* STILL THE REGISTER'S RAIL, drawn beside the history it measures --
+     but the rail is the SCREEN's now, not one this view builds for
+     itself. The Messages console stands one .ow-grid and one .ow-side in
+     the markup for both views, so the furniture cannot move when the
+     view changes; renderFollowUpsAll fills the table and puts the score
+     in that rail instead of nesting a second grid inside the first. The
+     claim is unchanged: not a tab of its own, and beside the history. */
   const all0 = extractFunction(src, 'renderFollowUpsAll', 'index.html');
-  t.check(/ow-side/.test(all0) && /renderFollowUpScore\(\)/.test(all0),
+  t.check(/fup_score_pan/.test(all0) && /renderFollowUpScore\(\)/.test(all0)
+    && /id="fup_score_pan"/.test(sec) && /class="ow-side"/.test(sec),
     'and it is the register’s rail, drawn beside the history it measures rather than in a tab of its own');
   const score = extractFunction(src, 'renderFollowUpScore', 'index.html');
   t.check(/briefsSentTable/.test(score) && /0091_briefs_sent\.sql/.test(score),

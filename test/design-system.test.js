@@ -595,7 +595,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
                 'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill',
                 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
+      /* THE LAYOUT IS THE SCREEN'S SKELETON NOW, not something a renderer
+         draws. One .ow-grid and one .ow-side stand in the markup on both
+         views, so the furniture cannot move when a filter changes -- which
+         is precisely what the three lenses this screen replaced got wrong.
+         The renderers fill the two holes; they no longer decide the shape.
+         .ow-stack went with the split it belonged to. */
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
+             'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
              'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-u'],
       /* AND WORTH TELLING'S BUILDERS, which outlived its screen.
          That entry said the same brief was drawn three times -- a row in
@@ -633,7 +640,6 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          the queue is the layer's component, not a fourteenth variant of
          it, and .ow-q-x is the expansion that proves it opens in place. */
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid', 'ow-side', 'ow-stack',
                     'ow-q', 'ow-q-r', 'ow-q-x', 'ow-q-card', 'ow-q-v', 'ow-q-f', 'ow-q-b',
                     'ow-mq', 'ow-mq-h', 'ow-mq-n', 'ow-mq-s', 'ow-mq-band', 'ow-mq-quiet',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-msg',
