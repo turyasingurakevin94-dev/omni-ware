@@ -620,7 +620,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    the merge brought in. They draw markup, so the ratchet follows
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
-                'msgThreadHTML', 'fupPromiseHTML',
+                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],

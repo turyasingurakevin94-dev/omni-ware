@@ -17365,7 +17365,7 @@
   .ow-mq-fni{font-style:normal;font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
   .ow-mq-fv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);
-    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+    font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;flex:none;}
   .ow-mq-fv.ow-bad{color:var(--ow-crimson);}
   .ow-mq-fs{width:96px;flex:none;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-mq-p{margin:var(--ow-sp-8) 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
@@ -96737,6 +96737,9 @@ let msgOpenConv = null;
 /* And which promise is open. The diary opens in place like everything
    else on this screen. */
 let msgOpenProm = null;
+/* And which post. Same rule as everywhere else on this screen: the row
+   opens where it is ranked. */
+let msgOpenPost = null;
 /* A worth-telling line is OFF by default because its natural form is
    the picture -- EXCEPT where it is the only thing the shop has to say.
    With nothing else on the row the digest was a greeting and a sign-off
@@ -97207,6 +97210,55 @@ function msgThreadHTML(a, nowMs){
   </div>`;
 }
 const MSG_PROD_MARK = `<span class="ow-mq-pic"><svg class="ow-mq-pici" viewBox="0 0 24 24"><path d="M3 8.5h18M3 15.5h18"/><path d="M6.5 4.5v15M12 4.5v15M17.5 4.5v15"/></svg></span>`;
+/* WHAT A POST WOULD ACTUALLY SAY, AND WHAT IT IS WORTH.
+
+   The post rows carried a caret and nothing behind it -- a mark
+   pointing at nothing. This is the other half of a row on this lane:
+   the arithmetic the pick was ranked on, and the words that would go
+   out, at the width they go out in.
+
+   The honest part is at the bottom. The app cannot see the shop's
+   Status, so it never records a post by watching one -- it hands the
+   words over and asks afterwards. A post counts neither way until the
+   owner says it went. */
+function msgPostOpenHTML(p, i){
+  const fig = (n)=> Number(Math.round(Number(n) || 0)).toLocaleString('en-UG');
+  const lift = typeof WA_LIFT_DAYS === 'number' ? WA_LIFT_DAYS : 7;
+  const fact = (name, sub, val, basis)=> `<div class="ow-mq-f">
+    <span class="ow-mq-fn" title="${esc(name)}">${esc(name)}${sub ? ` <i class="ow-mq-fni">&middot; ${esc(sub)}</i>` : ''}</span>
+    <span class="ow-mq-fv">${esc(val)}</span><span class="ow-mq-fs">${esc(basis)}</span></div>`;
+  const facts = [
+    p.qty != null ? fact('On the shelf', p.unit ? 'per ' + p.unit : '', fig(p.qty), fig(p.price) + ' each') : '',
+    p.marginUnit != null ? fact('You keep', 'a ' + (p.unit || 'unit'),
+      fmtUGX(p.marginUnit), fig(p.price) + ' less ' + fig(p.cost)) : '',
+    p.expectedUnits != null ? fact('Expected in ' + lift + ' days', 'from this shop\u2019s own posts',
+      fig(p.expectedUnits), p.est && p.est.pooled ? 'the median' : 'its own history') : '',
+    p.cappedBy != null ? fact('Held back by the shelf', 'the estimate stops there',
+      fig(p.cappedBy), 'is all there is') : '',
+  ].filter(Boolean).join('');
+  const caption = typeof waCaption === 'function'
+    ? waCaption(p, typeof printedShopName === 'function' ? printedShopName() : '', data.presetWaPhone || '')
+    : '';
+  return `<div class="ow-mq-x">
+    <div class="ow-mq-l1">
+      <p class="ow-mq-l">Why this one</p>
+      ${facts || '<p class="ow-mq-p">The signal put it up, but the books cannot value it yet &mdash; no cost on the last purchase, so there is no margin to state.</p>'}
+      <p class="ow-mq-p">Every figure is read from this shop&rsquo;s own shelf and its own posts.
+        <b class="ow-mq-pb">An expectation is not a promise</b> &mdash; it is the median of what happened
+        the last times something like this went out.</p>
+    </div>
+    <div class="ow-mq-l2">
+      <p class="ow-mq-l">What will be posted</p>
+      <div class="ow-msg">${esc(caption)}</div>
+      <div class="ow-mq-send">
+        <button type="button" class="btn btn-accent msg-post-open" data-pick="${esc(String(i))}">Open WhatsApp with this</button>
+        <span class="ow-mq-note">The card and the words are handed over &mdash; nothing is posted for you.
+          <b class="ow-mq-pb">The app cannot see your Status</b>, so when you come back it asks whether it went out,
+          and counts it neither way until you answer.</span>
+      </div>
+    </div>
+  </div>`;
+}
 function msgLaneHTML(lane, nowMs){
   const wait = (m)=> typeof waFmtWait === 'function' ? waFmtWait(m) : Math.round(m) + ' min';
   const head = `<div class="ow-mq-h"><span class="ow-mq-hc"></span><span class="ow-mq-hc">__WHO__</span><span class="ow-mq-hc">Why now</span>
@@ -97224,13 +97276,16 @@ function msgLaneHTML(lane, nowMs){
       '') + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nothing is worth posting today.</b><br>Every product the signal put up is either out of cover or already posted.</div></div>`;
     const body = picks.map((p, i)=>{
       const worth = Math.round((Number(p.price)||0) * (Number(p.qty)||0));
+      const open = String(msgOpenPost) === String(i);
       return msgLaneRow({
+        act: `data-pick="${esc(String(i))}"`, cls: 'msg-post-pick', open,
+        x: open ? msgPostOpenHTML(p, i) : '',
         mark: MSG_PROD_MARK, name: p.name || 'a product',
         sub: `to everybody${p.unit ? ' · per ' + p.unit : ''}${p.qty ? ' · ' + p.qty + ' in the yard' : ''}`,
         chips: `<span class="ow-cp">${esc(p.whyChip || p.why || 'the signal put it up')}</span>`,
         v: worth ? fmtUGX(worth) : '—', b: worth ? 'on the shelf' : 'not valued',
         until: i < cap ? 'today' : 'rolls over', untilCls: i < cap ? 'ow-warn' : 'ow-q',
-        state: i < postedToday ? 'posted' : 'picked',
+        state: i < postedToday ? 'posted' : 'picked', stateCls: i < postedToday ? ' ow-good' : '',
       });
     }).join('');
     return pan('What to post', `${picks.length} nominated · ${Math.max(0, cap - postedToday)} slot${cap - postedToday === 1 ? '' : 's'} left today`,
@@ -98124,6 +98179,21 @@ function wireFollowUpsScreen(){
     /* A question is answered in the chat it arrived in, with the thread
        in front of you -- this screen ranks the asking, the inbox holds
        the conversation. */
+    /* Handing the words to WhatsApp is not the same act as opening the
+       row, so it is checked first -- the button sits inside the row. */
+    const postOpen = e.target.closest('.msg-post-open');
+    if(postOpen){
+      const pick = (msgPostLane().picks || [])[Number(postOpen.dataset.pick)];
+      if(pick && typeof openWaPost === 'function') openWaPost(pick);
+      return;
+    }
+    const postPick = e.target.closest('.msg-post-pick');
+    if(postPick){
+      const i = postPick.dataset.pick;
+      msgOpenPost = String(msgOpenPost) === String(i) ? null : i;
+      renderFollowUpsContact();
+      return;
+    }
     const promPick = e.target.closest('.msg-prom-pick');
     if(promPick){
       const id = promPick.dataset.cust;
@@ -98156,7 +98226,7 @@ function wireFollowUpsScreen(){
       fupTab = 'contact';
       /* A different lane is different work, so it opens its own first
          row rather than inheriting whatever the last one was left on. */
-      fupSelectedCustomerId = null; msgOpenConv = null; msgOpenProm = null;
+      fupSelectedCustomerId = null; msgOpenConv = null; msgOpenProm = null; msgOpenPost = null;
       renderFollowUps();
       return;
     }
