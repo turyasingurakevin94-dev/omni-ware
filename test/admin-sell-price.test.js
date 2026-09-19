@@ -273,14 +273,6 @@ const line = (over) => Object.assign({
          every case below still saves exactly what was typed. */
       extractFunction(src, 'quoteLinePack', 'index.html'),
       extractFunction(src, 'quoteLineCountPer', 'index.html'),
-      /* The box is a text field carrying thousands separators now, so the
-         handler reads it through qFigParse rather than Number -- "32,000"
-         through Number is NaN, and NaN falling back to 0 would save a
-         price of nothing. The parser is compiled into the scope with the
-         handler because the handler genuinely depends on it: a slice that
-         supplied its own Number() would be testing code that does not
-         ship. Two cases below type a separated figure for that reason. */
-      extractFunction(src, 'qFigParse', 'index.html'),
       handler,
       'function setItem(i){ box.item = i; item = i; }',
       'let item = null;',
@@ -305,19 +297,6 @@ const line = (over) => Object.assign({
       `the price is saved exactly as typed (got ${it.sellPrice}) -- the warning never overrules the person typing`);
     t.check(told.length === 1 && /Saved — but/.test(told[0]), `and is reported (${JSON.stringify(told)})`);
     t.check(/32,000 UGX is below the 34,000 UGX/.test(told[0]), 'naming both figures');
-
-    // And the same figure typed the way the box now shows it.
-    told.length = 0;
-    let sep = line({ price: 34000, qty: 50, unit: 'bag' });
-    run.setItem(sep);
-    run.onSellChange({ target: { value: '32,000' } });
-    t.check(sep.sellPrice === 32000,
-      `a price typed with separators is saved as the number it reads as (got ${sep.sellPrice}) — not as NaN, and not as 32`);
-    // A garbled entry must not become a plausible wrong price.
-    run.setItem(sep);
-    run.onSellChange({ target: { value: '3,2x0' } });
-    t.check(sep.sellPrice === 0,
-      `and an entry that is not a figure falls back to nothing (got ${sep.sellPrice}) rather than to its first digits`);
 
     // Above cost: saved, nothing said.
     told.length = 0;

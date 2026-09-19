@@ -142,7 +142,24 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        transparent` the lane used to declare, purely to transition out
        of, did NOT: that one was a distinct shadow spent on nothing
        being drawn, and it is gone for good. */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
+    /* 57, not 56, and this one goes UP -- the second time in this file,
+       so it is argued rather than nudged.
+
+       The owner asked for the New quote screen to be restored exactly as
+       it stood before the rebuild, and explicitly authorised breaking the
+       house rules to get it. The screen it brings back carries one shadow
+       the rebuild had removed: 0 -4px 16px rgba(20,30,40,.06) under the
+       sticky totals bar. That bar is fixed to the viewport with the
+       document scrolling underneath it, which is the one case --ow-lift
+       exists for ("things that genuinely float"), except that it lifts
+       UPWARD and --ow-lift only casts down. A hairline cannot do the job:
+       the bar's ground and the page's ground are both warm paper, so at
+       the moment a row passes under it there is nothing to separate them.
+
+       It is one shadow, on one element, on one screen, and it is the
+       original's. It may not spread: anything else that wants depth still
+       uses --ow-lift or a hairline. */
+    'shadows': [57, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -172,7 +189,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        says. The panel went when the list became a set of place cards;
        one of its two keylines was already spent elsewhere, the other
        was not. */
-    'distinct colours': [102, /#[0-9A-Fa-f]{6}\b/g],
+    /* 103, not 102, and for the same reason: the restored New quote
+       screen carries #F7F9FB, the cool tint behind an item thumbnail's
+       dashed placeholder in the picker and on a quote line. It is a
+       ground for a 34px box that stands for a photograph nobody has
+       taken yet, and the palette has no cool near-white -- --ow-paper-2
+       is warm, and on a warm ground a warm placeholder does not read as
+       an absence. One value, two rules, both the original's. */
+    'distinct colours': [103, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

@@ -81,16 +81,12 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      qty times it, grandSell is their sum -- which is the same sum. */
   t.check(/const sell = quoteItemSellPrice\(it\);/.test(items),
     'and the screen prices every line through the same function');
-  /* paysTotal is grandSell plus the charges and the credit, and it is
-     handed to the bar whole: the words "Client pays" must sit over the
-     WHOLE bill, or a rep goes to the door with a figure the invoice
-     will not match. The table has no foot of its own any more -- the
-     bar is the one place the arithmetic is stated. */
-  t.check(/const paysTotal = cashTotal \+ creditCharge;/.test(items)
-    && /renderQuoteFinbar\(grandBuy, grandSell, profit, chargesTotal, creditCharge\);/.test(items),
-    'so the bar is handed the whole bill, not what the shop paid and not the goods alone');
-  t.check(!/ow-tbl-f/.test(items),
-    'and the table has no foot — the arithmetic is stated once, on the bar');
+  /* paysTotal is grandSell plus the charges. The words "The client pays"
+     must sit over the WHOLE bill: a foot that stops at the goods sends a
+     rep to the door with a figure the invoice will not match. */
+  t.check(/The client pays<\/div>[\s\S]{0,120}?\$\{fmtUGX\(paysTotal\)\}/.test(items)
+    && /const paysTotal = cashTotal \+ creditCharge;/.test(items),
+    'so the table foots with the whole bill, not what the shop paid and not the goods alone');
   /* THE TWO PRICES ARE TWO NAMED FIGURES, not one and a subtraction. The
      rep says both out loud at the counter, and a cash price the screen
      never states is one the screen cannot be read for. */
@@ -106,77 +102,34 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * mistakable for the price.
  */
 {
-  t.check(/Costs you<\/div>\s*<div class="qp-cost-v">\$\{fmtUGX\(grandBuy\)\}/.test(bar),
-    'the cost is still on the page, on the bar, named as the shop’s');
+  t.check(/Costs you<\/div>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
+    'the cost is still on the page, named as the shop’s');
   /* The label gained a qualifier once charges existed -- "You keep on the
      items" -- because what a delivery costs the shop is not known until
      somebody records it, and counting an uncosted one as kept would read
      as pure profit. The figure is still profit and still there. */
-  t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\}<\/div>[\s\S]{0,200}?\$\{fmtUGX\(profit\)\}/.test(bar),
+  t.check(/You keep\$\{chargesTotal > 0 \|\| creditCharge > 0 \? ' on the items' : ''\}<\/div>[\s\S]{0,200}?\$\{fmtUGX\(profit\)\}/.test(items),
     'and so is what is left over, said to be about the items once it is only about them');
   /* A rule between the client's columns and the shop's, so no cost
-     figure sits in the run of client figures.
-
-     WAS: `border-left` on .q-shop-first, checked on the header cell,
-     every row and both document rows. The rule is still there and still
-     asserted -- but it is a GRID TRACK now, not a border on a cell, and
-     that is the point of the change rather than an incidental rewrite.
-     A border belongs to the cell that carries it, so the divider said
-     "the supplier column is different"; the document actually has two
-     SIDES -- five columns the client is buying against, three the shop
-     is buying on -- and a 1px track between them belongs to neither and
-     runs the full height of the row. The handoff draws it that way.
-
-     So: the track exists in the column definition, and every row that
-     spans the document emits a cell for it. A row that skipped it would
-     not merely lose a line, it would shift every cell after it one
-     column to the left, which is the failure this now catches and the
-     border version could not. */
-  /* THE TRACK IS 17px NOW, NOT 1px, AND THE RULE IS CENTRED IN IT.
-     What this assertion has always meant is that the divider is a TRACK
-     and not a border on a cell -- and that is still exactly true. What
-     stopped being true is the width. A 1px track gave the rule no
-     channel: with the table's 8px gap the shop's side began 9px after
-     the line and the client's figures ended 8px before it, half the
-     card's own 16px gutter, on the one boundary in this document that
-     exists to read as a division. The supplier names sat almost on the
-     line.
-
-     So the track is a channel and the 1px line is centred inside it,
-     which is the pair this now pins. Asserting the track alone would let
-     a later edit turn track 7 into a 17px grey BAR and still pass; the
-     justify-self is what keeps it a hairline with room either side. */
-  const ruleRule = (/\.q-doc \.q-tbl-rule\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(/--ow-tbl-cols:[^;]*\b17px\b/.test(src),
-    'the shop’s columns start behind a divider, and it is a track of its own — wide enough to be a channel');
-  t.check(/background:/.test(ruleRule) && /width:1px/.test(ruleRule) && /justify-self:center/.test(ruleRule),
-    'and what sits in that track is a 1px rule centred in it, not a bar filling it');
-  const ruleCells = (t2) => (t2.match(/class="q-tbl-rule"/g) || []).length;
-  /* FOUR, NOT TWO, AND FOR THE REASON THE ASSERTION WAS WRITTEN.
-     The document gained two rows: the one that NAMES the two sides the
-     rule divides, above the column names, and the goods subtotal. Both
-     span the document, so both emit the track's cell -- and a row that
-     skipped it would shift every cell after it one column left, which
-     is the failure this count exists to catch, unchanged. */
-  t.check(/<div class="ow-tbl-c q-shop-first">Buy from<\/div>/.test(items)
-    && ruleCells(items) === 4,
-    'and every row that spans the document honours it — the sides, the column names, a line, the goods subtotal (= ' + ruleCells(items) + ')');
-  /* The row that names the sides is the one place the two sides are said
-     in words rather than implied by which side of the rule a column is
-     on. It is a console reading: below 820 the row is a card and there
-     is no second side to name, so it is not drawn there. */
-  t.check(/<span class="q-side-l" style="grid-column:3\/7">The client pays<\/span>/.test(items)
-    && /<span class="q-side-l q-side-shop" style="grid-column:8\/11">The shop buys<\/span>/.test(items),
-    'and the rule has a name on each side of it, placed on the tracks it divides');
-  t.check(/\.q-doc \.ow-tbl-h\.q-sides\{display:none;\}/.test(src),
-    'which the phone does not draw, having no second side to divide off');
-  /* The divider runs the length of the document: the header, every
-     line, every charge, and the credit row. The foot that used to carry
-     it is gone, so the document ends at the add row and the rule ends
-     with it. */
-  t.check(ruleCells(extractFunction(src, 'chargeRowsHTML', 'index.html')) === 1
-    && ruleCells(extractFunction(src, 'creditRowHTML', 'index.html')) === 1,
-    'and a charge and the credit row carry the divider too, so the rule runs the length of the document');
+     figure sits in the run of client figures. */
+  /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
+     divider is the same rule on the same class, carried through the
+     header, every row and the foot. */
+  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
+    'the shop’s columns start behind a divider');
+  t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
+    'which is a real rule, not just a class name');
+  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
+    'and every row honours it');
+  /* Back to three. The foot briefly carried "Items" and "Charges" above
+     the client's figure, from when the charges lived in a block BELOW the
+     foot and the jump between the two had to be explained; each charge is
+     now a row directly above these, so those two restated the screen. What
+     is pinned is not the number but that EVERY foot row carries the
+     divider, so the rule runs the length of the document. */
+  const footRows = (items.match(/<div class="ow-tbl-f q-foot/g) || []).length;
+  t.check(footRows === 3 && (items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === footRows,
+    `every row of the foot carries the divider, so the rule runs the length of the document (${footRows})`);
 
   // The supplier copy is the shop's own document and must keep the cost.
   t.check(/it\.price/.test(supplierPrint) && !/quoteItemSellPrice/.test(supplierPrint),
@@ -185,11 +138,10 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
 
 /* ---------- 4. the client's figure leads ----------------------------- */
 {
-  /* The label carries the line count on the phone, in a span the console does not draw. */
-  t.check(/Client pays<span class="qp-says-n">/.test(bar), 'the summary opens with the client’s figure');
+  t.check(/Client pays<\/div>/.test(bar), 'the summary opens with the client’s figure');
   /* pays = grandSell + charges. The bar is read out mid-call, so it is
      the one place the figure must be the whole bill. */
-  t.check(/qp-says-value\$\{empty \? ' quiet' : ''\}">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
+  t.check(/qp-says-value">\$\{fmtUGX\(pays\)\}/.test(bar) && /const pays = grandSell \+ charges \+ credit;/.test(bar),
     'and that figure is the whole bill — goods, charges and the price of waiting');
   /* It used to be one of four equal cells labelled "Total sell" -- the
      jargon on a screen whose whole job is a sentence somebody speaks. */
@@ -197,14 +149,17 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   // old label, and should.
   t.check(!/qp-finbar-label">Total sell/.test(code) && !/qp-finbar-cell/.test(bar),
     'not one of four equal cells labelled in jargon');
-  /* THE BAR IS THE ACCOUNT. "Costs you" is back beside "You keep": the
-     table lost its foot, so the bar is the one place the three figures
-     are stated, ruled off from each other and the shop's two at a size
-     the client across the counter cannot read. */
-  t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\}<\/div>/.test(bar),
-    'with what the shop keeps beside it, quieter, and said to be about the items when a charge is uncosted beside it');
-  t.check(/<div class="qp-cost">[\s\S]{0,200}?Costs you<\/div>/.test(bar),
-    'and the cost, as its own figure — the bar is the account now, not a glance at half of one');
+  /* "You keep" stays on the bar; "Costs you" deliberately does not any
+     more. The bar is glanced at mid-call -- pays and keeps are the two
+     numbers that decision needs, the cost is derivable, and the full
+     three-line account still lives in the table footer above (section 2
+     pins it there). */
+  t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\} <b/.test(bar),
+    'with what the shop keeps under it, quieter, and said to be about the items when a charge is uncosted beside it');
+  /* Checked against the TEMPLATE, not the whole function -- the comment
+     explaining why "Costs you" left quotes the phrase, and should. */
+  t.check(!/Costs you <b>/.test(bar),
+    'and no third figure — the bar is a glance, the footer is the account');
   /* The finbar used to sit ABOVE the items so the total stayed on
      screen; the real fix is stronger — the whole summary now rides a
      bar fixed to the viewport bottom (#q_stickybar), fused with the
@@ -247,7 +202,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      figure. The figure now takes the pill's own class, so grey on an
      empty quote is the SAME decision as the grey pill rather than a
      second one that happens to match. */
-  t.check(/<div class="qp-keep-v"><b class="\$\{pillClass\}">\$\{fmtUGX\(profit\)\}<\/b>/.test(bar),
+  t.check(/You keep\$\{charges > 0 \|\| credit > 0 \? ' on the items' : ''\} <b class="\$\{pillClass\}">/.test(bar),
     'and the keep figure takes the pill’s reading rather than working out a second one');
   t.check(/\.qp-shopline b\.quiet\{color:var\(--ink-soft\);\}/.test(src),
     'so "You keep 0" goes grey with it rather than reporting zero in profit-green');
@@ -268,19 +223,9 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'there is no second template for the phone');
   t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
     'the one row carries the client’s line total under its column name, which is the phone’s label');
-  /* WAS: Qty, Price each, Supplier, Buy @, Margin. Two of those columns
-     were renamed to the words the handoff's document uses, and one was
-     added. "Supplier" became "Buy from" and "Margin" became "Keep"
-     because both of the old words named the shop's RECORD of the thing
-     rather than the act: the rep is choosing who to buy from and reading
-     what the shop keeps, and those are the words said on the call. Unit
-     came out of the quantity cell into a column, so it needs a label
-     like any other cell that becomes a line on the card. */
-  ['Qty', 'Unit', 'Price each', 'Buy from', 'Buy @', 'Keep'].forEach((l) => {
+  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
     t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
   });
-  t.check(!/data-l="Supplier"/.test(items) && !/data-l="Margin"/.test(items),
-    'and the two words the document does not use are gone from the row');
   t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');
 }
 
