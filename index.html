@@ -17300,7 +17300,7 @@
   .ow-pan-sp{flex:1 1 auto;}
   .ow-pan-note{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pan-h .ow-pan-t,.ow-pan-h .ow-pan-n{flex:none;white-space:nowrap;}
+  .ow-mq-hd .ow-pan-t,.ow-mq-hd .ow-pan-n{flex:none;white-space:nowrap;}
   .ow-mq-h .ow-mq-r{text-align:right;}
   /* The row's own two lines: the name, and one line of everything true
      about them today -- including the part this message will not carry. */
@@ -96665,6 +96665,16 @@ let fupTab = 'contact';
    so -- and the selection is what makes that unit visible: the detail,
    the wording and the send belong to whoever is picked, not to all
    fourteen at once. */
+/* Which row is open, and the difference between "nothing chosen yet"
+   and "the owner folded it".
+
+   null means nothing has been chosen, and the queue opens its first row
+   ready to work -- which is what the screen should do on arrival.
+   FUP_FOLDED means somebody pressed the open row shut. The two have to
+   be different values: while they were the same, the re-render that
+   follows a fold could not tell a deliberate close from a fresh arrival,
+   so it re-opened the first row and the caret looked broken. */
+const FUP_FOLDED = '';
 let fupSelectedCustomerId = null;
 let fupQueueQuery = '';
 let fupRegisterQuery = '';
@@ -97202,7 +97212,7 @@ function msgLaneHTML(lane, nowMs){
   const head = `<div class="ow-mq-h"><span class="ow-mq-hc"></span><span class="ow-mq-hc">__WHO__</span><span class="ow-mq-hc">Why now</span>
     <span class="ow-mq-hc ow-mq-r">At stake</span><span class="ow-mq-hc ow-mq-r">__UNTIL__</span><span class="ow-mq-hc ow-mq-r">State</span></div>`;
   const pan = (title, n, note, who, until, body)=> `<div class="ow-pan ow-mq">
-    <div class="ow-pan-h"><span class="ow-pan-t">${esc(title)}</span><span class="ow-pan-n">${esc(n)}</span>
+    <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">${esc(title)}</span><span class="ow-pan-n">${esc(n)}</span>
       <span class="ow-pan-sp"></span><span class="ow-pan-note">${note}</span></div>
     ${body ? head.replace('__WHO__', who).replace('__UNTIL__', until) + body : ''}
   </div>`;
@@ -97366,7 +97376,9 @@ function renderFollowUpsContact(){
   const tokens = searchTokens(fupQueueQuery);
   const under = fupWhy === 'all' ? rows : rows.filter(r=> fupRowLenses(r).has(fupWhy));
   const shown = !tokens.length ? under : under.filter(row=> matchesAllTokens(fupRowHay(row), tokens));
-  if(!shown.some(r=> String(r.customerId) === String(fupSelectedCustomerId)))
+  /* Open the first row on arrival, but never argue with a fold. */
+  if(fupSelectedCustomerId !== FUP_FOLDED
+     && !shown.some(r=> String(r.customerId) === String(fupSelectedCustomerId)))
     fupSelectedCustomerId = shown.length ? shown[0].customerId : null;
   const sel = shown.find(r=> String(r.customerId) === String(fupSelectedCustomerId)) || null;
   const narrowed = !!(tokens.length || fupWhy !== 'all');
@@ -97668,7 +97680,7 @@ function renderFollowUpsContact(){
     <button type="button" class="btn btn-ghost ow-sm fup-held-show">${fupHeldOpen ? 'Hide them' : 'Show them'}</button>
   </div>${fupHeldOpen ? fupHeldPanelHTML(now, rows) : ''}` : '';
   fupSetHTML(wrap, `<div class="ow-pan ow-mq">
-    <div class="ow-pan-h"><span class="ow-pan-t">${fupWhy === 'all' ? 'Who is up' : esc(whyLabel)}</span>
+    <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">${fupWhy === 'all' ? 'Who is up' : esc(whyLabel)}</span>
       <span class="ow-pan-n">${shown.length}${narrowed ? ' of ' + rows.length : ''} ${(narrowed ? rows.length : shown.length) === 1 ? 'person' : 'people'}</span>
       <span class="ow-pan-sp"></span>
       <span class="ow-pan-note">Money first, dearest first &mdash; then news, soonest to stop being true</span></div>
@@ -97869,7 +97881,7 @@ function renderFollowUpsAll(filter){
      the eye looks for work. Nothing on either side is an act, so there
      is no accent anywhere on this view. */
   fupSetHTML(wrap, `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Everything that went out</span>
+    <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">Everything that went out</span>
       <span class="ow-pan-n">${openTotal} open · ${all.length - openTotal} closed</span>
       <span class="ow-pan-sp"></span>
       <span class="ow-pan-note">Newest first &mdash; the register is the history, the score measures it</span></div>
@@ -98142,6 +98154,9 @@ function wireFollowUpsScreen(){
     if(why){
       fupWhy = why.dataset.fupwhy;
       fupTab = 'contact';
+      /* A different lane is different work, so it opens its own first
+         row rather than inheriting whatever the last one was left on. */
+      fupSelectedCustomerId = null; msgOpenConv = null; msgOpenProm = null;
       renderFollowUps();
       return;
     }
@@ -98152,7 +98167,11 @@ function wireFollowUpsScreen(){
     const pick = e.target.closest('.fup-pick');
     if(pick){ if(String(fupAwaiting||'') !== String(pick.dataset.cust)) fupAwaiting = null;
       fupEditing = null;
-      fupSelectedCustomerId = pick.dataset.cust; renderFollowUpsContact(); return; }
+      /* Pressing the row that is already open folds it. A queue row that
+         can only ever open is a caret pointing at nothing. */
+      fupSelectedCustomerId = String(fupSelectedCustomerId) === String(pick.dataset.cust)
+        ? FUP_FOLDED : pick.dataset.cust;
+      renderFollowUpsContact(); return; }
 
     /* The picture panel's own controls, on the same ids the account
        screen wires -- one vocabulary for one panel, drawn in two places. */
