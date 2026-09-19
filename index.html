@@ -5734,79 +5734,111 @@
      the day-level variance below only ever measures a day against its own
      opening figure, so a wrong opening reconciles perfectly. */
   /* ================= THE CASH BOOK =================================
-     Laid out in the order the day is worked: what you have, what moved,
-     what the drawer says at close. The old page led with the date and a
-     row of opening figures -- yesterday's news -- and kept today's
-     position in the sixth column of a table at the foot of the page. */
-  /* The day stepper, the position strip, the movements table and its
-     filter all moved to the console block below, where they are built
-     on the layer's page head, strip and panel rather than on .panel. */
+     Four stacked panels, in the order the day is worked: the position,
+     what moved, what the drawer says at close, and where it went. The
+     screen was rebuilt as a console -- a page head, a metric strip, an
+     always-open entry line and a right rail -- and the owner asked for
+     the page back as it was. What follows is the pre-console block,
+     restored: the day stepper and its five acts live in the position
+     panel, the movements are a full-width table, and money is logged
+     through the Cash In / Cash Out dialogs the acts open. */
 
-  .cb-close-state{font-size:12px;font-weight:600;color:var(--ink-soft);
-    background:var(--bg);border-radius:999px;padding:4px 12px;}
-  .cb-close-state.ok{background:var(--good-bg);color:var(--good);}
-  .cb-close-state.part{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .cb-close-state.bad{background:var(--ow-crimson-soft);color:var(--danger);}
+  .cb-position{padding:16px 20px 18px;}
+  .cb-day{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .cb-day-nav{display:flex;align-items:center;gap:6px;}
+  .cb-daybtn{
+    all:unset;box-sizing:border-box;cursor:pointer;width:30px;height:30px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);
+    border:1px solid var(--ow-rule);background:var(--ow-paper);flex:none;
+  }
+  .cb-daybtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .cb-daybtn:hover:not([disabled]){color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
+  .cb-daybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .cb-daybtn[disabled]{opacity:.35;cursor:not-allowed;}
+  .cb-day-label{display:flex;flex-direction:column;padding:0 6px;}
+  .cb-day-date{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  .cb-day-rel{font-size:11px;color:var(--ow-verdigris);font-weight:700;margin-top:1px;}
+  .cb-day-actions{display:flex;gap:8px;}
 
-  /* The gutter the old .panel gave these for free. The count is a
-     stacked .ow-pan again, and .ow-pan has no padding of its own, so
-     three bordered cards would otherwise sit on the panel's own border.
+  /* The five acts of the screen, as buttons rather than a rail. Money in
+     is the accent; money out is the soft red beside it, because the pair
+     is read as a pair. */
+  .lbtn{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    padding:9px 15px;border-radius:9px;font-size:13.5px;font-weight:700;
+    border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-900);white-space:nowrap;
+  }
+  .lbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .lbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .lbtn.acc{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;}
+  .lbtn.acc:hover{background:var(--ow-oxide-deep);border-color:var(--ow-oxide-deep);}
+  .lbtn.out{background:var(--ow-crimson-soft);border-color:#EAC7C1;color:var(--ow-crimson);}
+  .lbtn.gh{color:var(--ow-ink-600);}
+  .lbtn.gh:hover{color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
 
-     210 and not 260: the panel is in the work column now, not across the
-     whole page, and 260 fitted only two of the three accounts -- Bank
-     dropped to a row of its own with a card-width hole beside it. The
-     three accounts are read against each other, so they go across. */
-  .cb-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;
-    padding:14px 16px;}
-  .cb-count{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);}
+  /* WHAT YOU HAVE. Money on hand on a tinted ground and in the accent's
+     own ink, then the three accounts, which are not interchangeable --
+     money in the bank does not buy cement from a yard wanting cash. */
+  .cb-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--ow-rule);
+    border:1px solid var(--ow-rule);border-radius:12px;overflow:hidden;}
+  .cb-tile{background:var(--ow-paper);padding:14px 16px;}
+  .cb-tile-label{font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--ow-ink-600);}
+  .cb-tile-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.15;margin-top:5px;}
+  .cb-tile-sub{font-size:11px;color:var(--ow-ink-600);margin-top:5px;line-height:1.5;}
+  .cb-tile.is-total{background:var(--ow-oxide-soft);}
+  .cb-tile.is-total .cb-tile-label{color:var(--ow-oxide-deep);}
+  .cb-tile.is-total .cb-tile-value{font-size:26px;color:var(--ow-oxide-deep);}
+  .cb-up{color:var(--ow-verdigris);font-weight:700;}
+  .cb-down{color:var(--ow-crimson);font-weight:700;}
+  .cb-unc{color:var(--ow-amber-ink);font-weight:700;}
+
+  .cb-close-state{font-size:12px;font-weight:600;color:var(--ow-ink-600);}
+
+  .cb-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .cb-count{border:1px solid var(--ow-rule);border-radius:12px;padding:14px 16px;background:var(--ow-paper);}
   .cb-count.ok{border-color:#BFD9D1;}
   .cb-count.over{border-color:#EBD8AE;}
   .cb-count.short{border-color:#EAC7C1;}
-  /* The name, then its state UNDER it, on every card.
-
-     They were a row -- name left, chip right -- which fitted when these
-     three sat across the whole page. In the work column a card is 253px,
-     and "Mobile Money" beside COUNTED & AGREES needs 263. Left to wrap,
-     one card grew a line and the other two did not, so "Opened with" sat
-     on three different heights across three cards that exist to be read
-     against each other. Stacked, every card is the same shape whatever
-     its state says. */
-  .cb-count-head{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
-    margin-bottom:10px;}
+  .cb-count-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    margin-bottom:8px;}
   .cb-count-head h4{font-size:15px;font-weight:700;margin:0;}
   .cb-count-state{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
-    padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
+    padding:3px 7px;border-radius:5px;background:var(--ow-steel-050);color:var(--ow-ink-600);
+    white-space:nowrap;}
   .cb-count.ok .cb-count-state{background:var(--good-bg);color:var(--good);}
   .cb-count.over .cb-count-state{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .cb-count.short .cb-count-state{background:var(--ow-crimson-soft);color:var(--danger);}
+  .cb-count.short .cb-count-state{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .cb-count-maths{border-top:1px solid var(--ow-rule-soft);padding-top:8px;}
-  .cb-cm-row{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;
-    color:var(--ink-soft);padding:3px 0;}
-  .cb-cm-row b{font-family:'IBM Plex Mono',monospace;color:var(--ink);
+  .cb-cm-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;
+    color:var(--ow-ink-600);padding:3px 0;}
+  .cb-cm-row b{font-family:'IBM Plex Mono',monospace;color:var(--ow-ink-900);
     font-variant-numeric:tabular-nums;}
-  .cb-cm-total{border-top:1px solid var(--line);margin-top:5px;padding-top:7px;color:var(--ink);
-    font-weight:600;}
+  .cb-cm-total{border-top:1px solid var(--ow-rule-soft);margin-top:4px;padding-top:7px;
+    color:var(--ow-ink-900);font-weight:600;}
   .cb-cm-total b{font-size:15px;}
   .cb-count-input{display:flex;flex-direction:column;gap:4px;margin-top:12px;}
   .cb-count-input span{font-size:11px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
-    color:var(--ink-soft);}
+    color:var(--ow-ink-600);}
   .cb-count-input input{
-    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
-    font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;background:var(--panel);
+    width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--ow-rule);border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;background:#fff;
   }
   .cb-count-input input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
   .cb-count-verdict{margin-top:10px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;}
   .cb-count-diff{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;}
   .cb-count.over .cb-count-diff{color:var(--ow-amber-ink);}
-  .cb-count.short .cb-count-diff{color:var(--danger);}
-  .cb-count-why{color:var(--ink-soft);line-height:1.45;}
+  .cb-count.short .cb-count-diff{color:var(--ow-crimson);}
+  .cb-count-why{color:var(--ow-ink-600);line-height:1.45;}
   .cb-count-fix{display:flex;flex-direction:column;gap:6px;margin-top:11px;padding-top:11px;
     border-top:1px solid var(--ow-rule-soft);font-size:12.5px;}
   .cb-count-fix .cb-var-record{align-self:flex-start;}
-  @media (max-width:640px){
-    .cb-day{flex-direction:column;align-items:stretch;}
-    .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
-  }
+  .cb-count-note{margin:14px 0 0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;
+    max-width:76ch;}
   @media (max-width:820px){
     .assistant-panel{
       inset:0;width:auto;border-left:none;z-index:96;
@@ -5858,331 +5890,144 @@
   /* ===== Cash Book — income/expense category analytics (above Cash In / Cash Out cards) ===== */
   .cb-analytics-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin:0 0 10px 0;}
   .cb-donut-svg circle{transition:stroke-dasharray .25s ease;}
-  .cb-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
   .cb-analytics-empty{font-size:13px;color:var(--ink-soft);padding:10px 2px 2px;}
 
-  /* ================= THE CASH BOOK CONSOLE =========================
-     The screen's own rules, beside the code they couple to rather than
-     in the .ow- layer -- the layer carries the page head, the strip, the
-     panels, the grid and the rail, and everything below is what only
-     this screen has: a day stepper, an entry line, the movements table
-     and the two rings. */
-  .cb-dnav{display:flex;align-items:center;gap:6px;}
-  .cb-ph-acts{display:flex;align-items:center;gap:6px;}
-  .cb-dnav-mid{display:flex;flex-direction:column;padding:0 4px;min-width:112px;}
-  .cb-daybtn{
-    all:unset;box-sizing:border-box;cursor:pointer;width:28px;height:28px;border-radius:var(--ow-r);
-    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);
-    border:1px solid var(--ow-rule);background:var(--ow-paper);flex:none;
-  }
-  .cb-daybtn .icon{width:15px;height:15px;}
-  .cb-daybtn:hover:not([disabled]){color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
-  .cb-daybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .cb-daybtn[disabled]{opacity:.35;cursor:not-allowed;}
-  .cb-day-date{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;white-space:nowrap;}
-  .cb-day-rel{font-size:11px;color:var(--ow-ink-600);margin-top:1px;}
-  .cb-day-rel.is-today{color:var(--ow-verdigris);font-weight:600;}
-
-  /* The opening, said rather than gated. */
+  /* THE WARNING BAND. Named for the cash book's old opening bar, which
+     is gone with the console -- but Mobile Money's stuck prompts, the
+     shop's unset settings and the duplicate-supplier band are all drawn
+     on it, so it stays. The cash book's own .is-broken variant went with
+     the bar; the chain-break warning is .cb-chain-break again, at the
+     head of the closing panel. */
   .cb-openbar{display:flex;align-items:flex-start;gap:11px;background:var(--ow-amber-faint);
     border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);padding:12px 14px;margin-bottom:16px;}
-  .cb-openbar.is-broken{background:var(--ow-crimson-soft);border-color:#EAC7C1;}
   .cb-openbar > .icon{width:18px;height:18px;flex:none;margin-top:1px;color:var(--ow-amber-ink);}
-  .cb-openbar.is-broken > .icon{color:var(--ow-crimson);}
   .cb-openbar-b{min-width:0;flex:1;}
   .cb-openbar-t{font-size:13.5px;font-weight:600;color:var(--ow-amber-ink);margin:0 0 3px;}
-  .cb-openbar.is-broken .cb-openbar-t{color:var(--ow-crimson);}
   .cb-openbar-w{font-size:12px;color:var(--ow-amber-ink);line-height:1.5;margin:0;max-width:var(--ow-measure);}
-  .cb-openbar.is-broken .cb-openbar-w{color:var(--ow-crimson);}
   .cb-openbar-w b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     font-weight:600;letter-spacing:-0.02em;}
   .cb-openbar-a{display:flex;gap:7px;flex:none;align-self:center;flex-wrap:wrap;}
   .cb-openbar-a .btn-ghost{background:var(--ow-paper);border-color:#E0C994;color:var(--ow-amber-ink);}
-  .cb-openbar.is-broken .cb-openbar-a .btn-ghost{border-color:#E3B5AE;color:var(--ow-crimson);}
-  .cb-unc{color:var(--ow-amber-ink);font-weight:600;}
 
-  /* The position. Money on hand leads because "what have I got" is one
-     figure before it is three; the accounts follow because they are not
-     interchangeable. It is ink, not the accent: a figure is a size. */
-  .ow-strip.cb-strip{grid-template-columns:1.28fr 1fr 1fr 1fr 1.12fr;margin-bottom:16px;}
-  .cb-strip .ow-mt-v.is-lead{font-size:26px;}
-  .cb-mv{font-size:11px;color:var(--ow-ink-600);margin:4px 0 0;line-height:1.35;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cb-mv .up{color:var(--ow-verdigris);font-weight:600;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-mv .dn{color:var(--ow-crimson);font-weight:600;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-mv .qt{color:var(--ow-ink-400);}
-  .cb-sm{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-grid{align-items:start;}
+  /* ================= THE CASH BOOK, THE REST OF IT ==================
+     The movements table, the two rings and the phone. The console's day
+     stepper, entry line, rail, spine and phone cards are gone with the
+     console; what is here is the pre-console screen's own CSS. */
 
-  /* THE ENTRY LINE. It stays open, so four expenses is four presses and
-     each one lands in the table directly below where it can be seen to
-     have landed. */
-  .cb-el{display:flex;flex-direction:column;gap:9px;padding:11px 12px;}
-  .cb-el-row{display:flex;align-items:flex-end;gap:8px;}
-  .cb-el-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
-  .cb-el-l{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .cb-el input, .cb-el select{
-    height:34px;padding:0 10px;box-sizing:border-box;width:100%;
-    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
-    font-family:inherit;font-size:13px;color:var(--ow-ink-900);
-  }
-  .cb-el input:focus, .cb-el select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
-  .cb-el #cb_el_amount{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:14px;font-weight:600;letter-spacing:-0.02em;}
-  .cb-el #cb_el_time{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:13px;}
-  .cb-el-amt{width:118px;flex:none;}
-  .cb-el-ac{width:118px;flex:none;}
-  .cb-el-cat{flex:1;min-width:0;}
-  .cb-el-at{width:136px;flex:none;}
-  .cb-el-note{flex:1;min-width:0;}
-  .cb-el .btn{height:34px;padding:0 20px;font-size:13.5px;flex:none;}
-  .cb-el-seg{display:flex;height:34px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
-    overflow:hidden;background:var(--ow-paper);flex:none;}
-  .cb-el-seg > button{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
-    padding:0 11px;font-size:13px;font-weight:600;color:var(--ow-ink-600);
-    border-left:1px solid var(--ow-rule);white-space:nowrap;
-  }
-  .cb-el-seg > button:first-child{border-left:0;}
-  .cb-el-seg > button .icon{width:14px;height:14px;}
-  .cb-el-seg > button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .cb-el-seg > button.on{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .cb-el-seg > button#cb_money_out.on{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
-
-  /* THE DAY'S MOVEMENTS. The table as it was -- Time, Account, In, Out
-     and the running balance of that row's own account -- with the cell
-     rebuilt so it names WHO first. Scanning for the entry nobody made is
-     scanning a column of names; a column of the word "Sale" said nothing
-     and was the half that never truncated. */
-  .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
-  .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;
-    color:var(--ow-ink-600);text-align:left;padding:10px 8px 8px;
-    border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
-  .cb-ledger th.r, .cb-ledger td.price{text-align:right;}
-  .cb-ledger td{padding:9px 8px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
-  .cb-ledger tbody tr:hover td{background:var(--ow-paper-2);}
-  .cb-ledger td.price{white-space:nowrap;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-ledger .cb-led-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ow-ink-600);
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-ledger .cb-led-acct{font-size:12px;color:var(--ow-ink-600);}
-  .cb-led-who{font-size:13px;font-weight:500;line-height:1.3;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cb-led-sub{display:flex;align-items:center;gap:5px;min-width:0;
-    font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;line-height:1.35;}
-  .cb-led-sub .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cb-led-sub .sep{color:var(--ow-ink-400);flex:none;}
-  /* The way back to the invoice or the bill. Not the accent: that belongs
-     to the one act on the screen, and there can be one of these per row. */
-  .cb-led-doc{
-    all:unset;box-sizing:border-box;cursor:pointer;flex:none;display:inline-flex;align-items:center;gap:4px;
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11.5px;
-    font-weight:600;letter-spacing:-0.02em;color:var(--ow-ink-900);border-bottom:1px dotted var(--ow-rule);
-  }
-  .cb-led-doc:hover{border-bottom-color:var(--ow-ink-400);}
-  /* A number whose document is not on file. It is still worth printing --
-     it is what the note said -- but it must not look like a way in. */
-  .cb-led-doc.is-flat{cursor:default;border-bottom:0;color:var(--ow-ink-600);font-weight:400;}
-  .cb-led-doc:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  /* Written by another screen, not typed here -- so a row nobody can
-     account for is traced to where it came from rather than blamed on
-     whoever was sitting at the desk. */
-  .cb-led-doc .icon{width:12px;height:12px;color:var(--ow-ink-400);}
-  .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
-  .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
-  .cb-ledger .cb-bal{font-weight:700;}
-  .cb-ledger tr.cb-led-open td{background:var(--ow-paper-2);color:var(--ow-ink-600);font-size:12px;}
-  .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);border-bottom:0;font-weight:700;
-    font-size:12px;color:var(--ow-ink-600);}
-  /* Icon only. Nine rows carrying the words Edit and Delete is eighteen
-     labels for two acts nobody looks for until they need them. */
-  .cb-rowa{display:flex;gap:4px;justify-content:flex-end;}
-  .cb-rowa button{
-    all:unset;box-sizing:border-box;cursor:pointer;width:26px;height:26px;
-    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
-    display:inline-flex;align-items:center;justify-content:center;color:var(--ow-ink-400);
-  }
-  .cb-rowa button .icon{width:14px;height:14px;}
-  .cb-rowa button:hover{color:var(--ow-ink-900);border-color:var(--ow-rule);}
-  .cb-rowa button.danger:hover{color:var(--ow-crimson);border-color:#EAC7C1;}
-  .cb-rowa button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-  .cb-ledger-filters{display:flex;gap:2px;margin-left:auto;background:var(--ow-steel-050);
-    border:1px solid var(--ow-rule);border-radius:var(--ow-r);padding:2px;flex-wrap:wrap;}
+  .cb-ledger-filters{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+    border-radius:9px;padding:3px;flex-wrap:wrap;}
   .cb-ledger-filters button{
-    all:unset;box-sizing:border-box;cursor:pointer;padding:0 10px;height:22px;display:inline-flex;
-    align-items:center;border-radius:var(--ow-r-sm);font-size:12px;font-weight:600;
-    color:var(--ow-ink-600);white-space:nowrap;
+    all:unset;box-sizing:border-box;cursor:pointer;padding:5px 11px;border-radius:6px;
+    font-size:12.5px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;
   }
   .cb-ledger-filters button.on{background:var(--ow-paper);color:var(--ow-ink-900);
     box-shadow:0 1px 2px rgba(20,30,40,0.08);}
   .cb-ledger-filters button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  /* THE DAY'S MOVEMENTS. Time, account, type, what it was for, in, out,
+     and the running balance of that row's own account. */
+  .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;margin-top:14px;}
+  .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--ow-ink-600);text-align:left;padding:0 10px 8px;
+    border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
+  .cb-ledger th.r{text-align:right;}
+  .cb-ledger td{padding:9px 10px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .cb-ledger td.price{text-align:right;font-family:'IBM Plex Mono',monospace;
+    font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .cb-ledger .cb-led-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ow-ink-600);
+    font-variant-numeric:tabular-nums;}
+  .cb-ledger .cb-led-desc{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;}
+  .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
+  .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
+  .cb-ledger .cb-bal{font-family:'IBM Plex Mono',monospace;font-weight:700;}
+  .cb-ledger tr.cb-led-open td{color:var(--ow-ink-600);font-style:italic;}
+  .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);font-weight:700;border-bottom:0;}
+  /* The document the row came from, when another screen wrote it. */
+  .cb-led-doc{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11.5px;
+    font-weight:600;color:var(--ow-ink-900);border-bottom:1px dotted var(--ow-rule);
+  }
+  .cb-led-doc:hover{border-bottom-color:var(--ow-ink-400);}
+  .cb-led-doc.is-flat{cursor:default;border-bottom:0;color:var(--ow-ink-600);font-weight:400;}
+  .cb-led-doc:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .cb-led-doc .icon{width:12px;height:12px;color:var(--ow-ink-400);}
+
+  .rowa{display:flex;gap:6px;}
+  .rowa button{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    font-size:11.5px;font-weight:600;padding:4px 8px;border:1px solid var(--ow-rule);
+    border-radius:6px;background:var(--ow-paper);color:var(--ow-ink-600);white-space:nowrap;
+  }
+  .rowa button:hover{color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
+  .rowa button.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
+  .rowa button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .rowa svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
   .cb-led-empty{padding:26px 16px 22px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
   .cb-led-empty b{display:block;font-size:14px;color:var(--ow-ink-900);margin-bottom:6px;}
   .cb-led-empty span{display:block;max-width:56ch;margin:0 auto;line-height:1.55;}
 
-  /* The foot of the closing panel: what booking a difference MEANS,
-     under the three cards that offer it. */
-  .cb-count-foot{padding:12px 16px;
-    border-top:1px solid var(--ow-rule);background:var(--ow-paper-2);}
-  .cb-count-foot p{margin:0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;max-width:64ch;}
-  .ow-pan-n.cb-close-state{background:none;padding:0;border-radius:0;}
-  .ow-pan-n.cb-close-state.bad{color:var(--ow-crimson);}
-  .ow-pan-n.cb-close-state.part{color:var(--ow-amber-ink);}
-  .ow-pan-n.cb-close-state.ok{color:var(--ow-verdigris);}
-
-  /* The rail. */
-  .cb-ck{display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
-  .cb-ck:first-child{border-top:0;}
-  .cb-ck > .icon{width:14px;height:14px;flex:none;margin-top:1px;color:var(--ow-amber-ink);}
-  .cb-ck.is-bad > .icon{color:var(--ow-crimson);}
-  .cb-ck.is-good > .icon{color:var(--ow-verdigris);}
-  .cb-ck-b{min-width:0;}
-  .cb-ck-t{font-size:12px;font-weight:600;line-height:1.35;margin:0 0 2px;}
-  .cb-ck-w{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:0;}
-  .cb-ck-w b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-weight:600;letter-spacing:-0.02em;color:var(--ow-ink-900);}
-  .cb-ck .btn{margin-top:6px;}
-  .cb-spn{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:baseline;gap:8px;width:100%;
-    padding:7px 12px;border-top:1px solid var(--ow-rule-soft);
-  }
-  .cb-spn:first-child{border-top:0;}
-  .cb-spn:hover{background:var(--ow-paper-2);}
-  .cb-spn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .cb-spn.on{background:var(--ow-paper-2);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
-  .cb-spn-d{font-size:11.5px;color:var(--ow-ink-600);min-width:74px;flex:none;text-align:left;}
-  .cb-spn.on .cb-spn-d{color:var(--ow-ink-900);font-weight:600;}
-  .cb-spn-m{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ow-verdigris);}
-  .cb-spn-m.warn{background:var(--ow-amber);}
-  .cb-spn-m.bad{background:var(--ow-crimson);}
-  .cb-spn-m.none{background:var(--ow-steel-100);}
-  .cb-spn-v{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;}
-  .cb-spn-lg{display:flex;flex-wrap:wrap;gap:4px 12px;padding:8px 12px;
-    border-top:1px solid var(--ow-rule-soft);font-size:11px;color:var(--ow-ink-600);}
-  .cb-spn-lg span{display:inline-flex;align-items:center;gap:5px;}
-  .cb-spn-lg i{width:6px;height:6px;border-radius:50%;display:inline-block;}
-
-  /* THE TWO RINGS, in the house palette. One hue per side, dark to light
-     in size order, so the ring and the list read the same way round and
-     green still means in the way it does in every other figure here. A
-     transfer is neither earned nor spent, so it is steel on both sides. */
-  .cb-donut-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
-  .cb-donut-grid > *{border-left:1px solid var(--ow-rule-soft);}
-  .cb-donut-grid > *:first-child{border-left:0;}
-  .cb-flow-analytics{position:relative;padding:14px 16px 12px;}
-  .cb-analytics-body{display:flex;gap:16px;align-items:center;}
-  .cb-donut-wrap{position:relative;flex-shrink:0;width:128px;height:128px;}
-  .cb-donut-svg{width:128px;height:128px;display:block;}
-  .cb-donut-center-val{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;
-    letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
-  .cb-donut-center-val.in{color:var(--ow-verdigris);}
-  .cb-donut-center-val.out{color:var(--ow-crimson);}
-  .cb-donut-center-label{font-size:11px;color:var(--ow-ink-400);text-transform:none;letter-spacing:0;font-weight:400;}
-  .cb-legend-list{flex:1;min-width:0;display:flex;flex-direction:column;}
+  /* THE TWO RINGS. Ten hues that belong to nothing were the reason these
+     were re-drawn once; they are back because the page is back, and the
+     ring and its list read the same way round. */
+  .cb-analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .cb-analytics-total{display:flex;align-items:baseline;justify-content:space-between;margin:10px 0 14px;}
+  .cb-analytics-total-label{font-size:12.5px;color:var(--ow-ink-600);}
+  .cb-analytics-total-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  .cb-analytics-total-val.in{color:var(--ow-verdigris);}
+  .cb-analytics-total-val.out{color:var(--ow-crimson);}
+  .cb-flow{display:flex;gap:20px;align-items:center;position:relative;}
+  .cb-donut-wrap{position:relative;flex:none;width:140px;height:140px;}
+  .cb-donut-svg{width:140px;height:140px;display:block;}
+  /* The round button floats over the top-right of this list, and in the
+     screen as it stood it sat ON the first row's figure: "1,120,000"
+     read as "1,12" with a button over the rest. A covered figure is not
+     a shortened figure, it is a wrong one. The list keeps the button's
+     width clear, so every value lands left of it and they all still line
+     up with each other. */
+  .cb-legend-list{flex:1;min-width:0;padding-right:46px;}
   .cb-legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;min-width:0;}
-  .cb-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .cb-legend-name{flex:1;min-width:0;color:var(--ow-ink-900);font-weight:400;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cb-legend-val{font-family:'IBM Plex Mono',monospace;font-weight:600;font-variant-numeric:tabular-nums;
-    letter-spacing:-0.02em;font-size:12px;white-space:nowrap;}
-  .cb-legend-pct{font-family:'IBM Plex Mono',monospace;color:var(--ow-ink-400);font-size:11px;
-    width:32px;text-align:right;flex-shrink:0;letter-spacing:-0.02em;}
-  .cb-donut-note{font-size:11px;color:var(--ow-ink-600);line-height:1.45;margin:12px 0 0;
-    padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
-  .cb-donut-note b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-weight:600;letter-spacing:-0.02em;}
+  .cb-legend-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .cb-legend-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-legend-val{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    font-variant-numeric:tabular-nums;white-space:nowrap;}
+  /* The way money is logged from this panel: one round button per side,
+     opening the dialog that side is about. */
+  .cb-analytics-fab{
+    all:unset;box-sizing:border-box;cursor:pointer;position:absolute;right:0;top:-4px;
+    width:38px;height:38px;border-radius:50%;background:var(--ow-verdigris);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;
+    box-shadow:var(--ow-lift);
+  }
+  .cb-analytics-fab.out{background:var(--ow-crimson);}
+  .cb-analytics-fab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-  /* ---- THE PHONE. 820px is a switch, not a reflow: the table becomes
-     cards emitted from the same call, the grid unstacks, the strip goes
-     2x2, and the entry line becomes one field per row at 44px. ---- */
-  .cb-cards{display:none;}
+  /* ---- THE PHONE. The table scrolls sideways inside its panel rather
+     than becoming a second set of cards that could disagree with it; the
+     acts, the tiles, the counts and the rings all go to one column. ---- */
   @media (max-width:820px){
-    .cb-ledger{display:none;}
-    .cb-cards{display:block;padding:10px 12px 12px;}
-    .cb-grid{display:block;}
-    .cb-side{margin-top:16px;}
-    .ow-strip.cb-strip{grid-template-columns:1fr 1fr;}
-    /* Money on hand takes the full width: it is one figure before it is
-       three, and cutting it in half to sit beside Cash makes it neither. */
-    .cb-strip .ow-mt:first-child{grid-column:1 / -1;}
-    .cb-strip .ow-mt-v{font-size:19px;}
-    .cb-strip .ow-mt-v.is-lead{font-size:22px;}
-    /* The day stepper takes a row of its own and the two screen actions
-       share the next, at 44px, rather than becoming three full-width
-       buttons stacked above the work. */
-    .ow-ph{flex-wrap:wrap;}
-    .ow-ph .cb-dnav{order:3;width:100%;}
-    .ow-ph .cb-dnav-mid{flex:1;min-width:0;text-align:center;}
-    .ow-ph .cb-ph-acts{order:4;flex:1 1 100%;min-width:0;}
-    /* .btn.ow-sm floors at calc(50% - 3px) on the phone, which is right
-       for a row of acts that wraps -- but these two sit in their own
-       flex row with a 6px gap, so 50% + 50% + 6 pushed the whole screen
-       past 390. Scoped to this pair, and it has to name .ow-sm to
-       outrank the rule it is correcting. */
-    .cb-ph-acts .btn.ow-sm{flex:1;min-width:0;height:44px;font-size:14px;}
-    .cb-daybtn{width:44px;height:44px;}
-    .cb-day-date{font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-tiles{grid-template-columns:1fr 1fr;}
+    .cb-tile.is-total{grid-column:1 / -1;}
+    .cb-counts{grid-template-columns:1fr;}
     /* minmax(0,1fr), never 1fr: 1fr floors at the column's min-content,
-       and the ring beside its legend pushed the whole screen to 409px on a
-       390px phone. Measured, not assumed. */
-    .cb-donut-grid{grid-template-columns:minmax(0,1fr);}
-    .cb-analytics-body{flex-direction:column;align-items:stretch;gap:12px;}
-    .cb-donut-wrap{align-self:center;}
-    .cb-donut-grid > *{border-left:0;border-top:1px solid var(--ow-rule-soft);}
-    .cb-donut-grid > *:first-child{border-top:0;}
-    .cb-el-row{flex-wrap:wrap;}
-    .cb-el input, .cb-el select{height:44px;font-size:15px;}
-    .cb-el .btn{height:44px;font-size:15px;}
-    .cb-el-seg{height:44px;width:100%;}
-    .cb-el-seg > button{flex:1;justify-content:center;font-size:14px;}
-    .cb-el-amt, .cb-el-ac, .cb-el-at{width:auto;flex:1 1 30%;}
-    .cb-el-cat{flex:1 1 100%;}
-    /* The close is on the phone's own scroll now, not behind a press
-       that replaced the screen, so its two controls come up to the tap
-       floor: the box a figure is typed into, and the button that books a
-       difference. */
-    .cb-counts{padding:12px;}
+       and the 140px ring beside its legend put the page 8px past a 390px
+       phone. The ring goes above its list, and the round button stops
+       floating over the ring and becomes the last thing in the column,
+       at the thumb floor. */
+    .cb-analytics-grid{grid-template-columns:minmax(0,1fr);gap:20px;}
+    .cb-flow{flex-direction:column;align-items:center;gap:14px;}
+    .cb-legend-list{width:100%;padding-right:0;}
+    .cb-analytics-fab{position:static;align-self:flex-end;width:44px;height:44px;}
+    .cb-ledger-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .cb-ledger{min-width:760px;}
     .cb-count-input input{height:44px;}
     .cb-count-fix .btn{width:100%;height:44px;font-size:14px;}
-    /* The banner stops being a row: the mark sits with the heading, the
-       sentence runs the full width, and the two acts stack at thumb
-       height rather than being squeezed beside the text. */
-    /* Every target in the rail comes up to a thumb: the act on each
-       check, and each day in the spine. */
-    .cb-ck .btn{height:44px;font-size:14px;}
-    .cb-spn{padding:12px;min-height:44px;align-items:center;}
-    .cb-spn-d{font-size:13px;}
-    .cb-spn-v{font-size:13px;}
-    .cb-openbar{display:block;}
-    .cb-openbar > .icon{float:left;margin:2px 8px 0 0;}
-    .cb-openbar-a{display:flex;flex-direction:column;gap:8px;margin-top:12px;clear:both;}
-    .cb-openbar-a .btn{width:100%;box-sizing:border-box;height:44px;}
+    .cb-day{flex-direction:column;align-items:stretch;}
+    .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
+    .lbtn{justify-content:center;height:44px;}
   }
-  .cb-card{background:var(--ow-paper);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
-    padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;}
-  .cb-card-who{font-size:15px;font-weight:600;letter-spacing:-0.01em;min-width:0;line-height:1.3;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cb-card-m{grid-column:1;font-size:12px;color:var(--ow-ink-600);margin:2px 0 0;line-height:1.4;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cb-card-v{grid-column:2;grid-row:1;text-align:right;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;font-size:17px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;}
-  .cb-card-v.in{color:var(--ow-verdigris);}
-  .cb-card-v.out{color:var(--ow-crimson);}
-  .cb-card-b{grid-column:2;grid-row:2;text-align:right;font-size:11.5px;color:var(--ow-ink-400);
-    white-space:nowrap;margin-top:2px;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-card-a{grid-column:1 / -1;display:flex;gap:8px;margin-top:10px;}
-  .cb-card-a button{
-    all:unset;box-sizing:border-box;cursor:pointer;flex:1;height:44px;display:inline-flex;
-    align-items:center;justify-content:center;gap:6px;border:1px solid var(--ow-rule);
-    border-radius:var(--ow-r);font-size:14px;font-weight:600;color:var(--ow-ink-900);
-  }
-  .cb-card-a button .icon{width:16px;height:16px;}
-  .cb-card-a button.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
 
 
   /* ===== New quote =====
@@ -11520,8 +11365,7 @@
     /* Two taps sharing one row. It has to name .ow-sm to outrank the
        phone-wide floor of calc(50% - 3px), which is right for a row of
        acts that WRAPS but here would put 50% + 50% + a 6px gap past the
-       panel -- the same correction .cb-ph-acts makes, for the same
-       reason. border-box so the padding comes out of the half, not on
+       panel. border-box so the padding comes out of the half, not on
        top of it. */
     .wa-wd-a .btn.ow-sm{min-height:var(--ow-tap);flex:1;min-width:0;box-sizing:border-box;}
     .wa-al{grid-template-columns:minmax(0,1fr) 48px 62px 52px;}
@@ -20438,41 +20282,21 @@
 
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
-      <!-- THE CASH BOOK, AS A CONSOLE.
-           The work is on the left and the reading is on the right, and the
-           day is navigated from the header rather than from inside a panel.
-           The left column is the day in the order it is worked: log a
-           movement, the movements, the count they are closed against, and
-           what the day came to by category. -->
+      <!-- THE CASH BOOK.
 
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Cash book</h1>
-        <p class="ow-ph-sub" id="cbPhSub"></p>
-        <p class="ow-ph-help">Every shilling in and out, one day at a time. Open the day with what is really in each account, log what moves, and count the drawer against the book before you close. Money taken on an invoice or paid on a supplier bill lands here by itself.</p>
-        <span class="ow-ph-sp"></span>
-        <div class="cb-dnav">
-          <button type="button" class="cb-daybtn" id="cb_day_prev" title="The day before" aria-label="Previous day">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-          </button>
-          <div class="cb-dnav-mid">
-            <span class="cb-day-date" id="cbDayLabel"></span>
-            <span class="cb-day-rel" id="cbDayRel"></span>
-          </div>
-          <button type="button" class="cb-daybtn" id="cb_day_next" title="The day after" aria-label="Next day">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-          <button type="button" class="btn btn-ghost ow-sm" id="cb_day_today">Today</button>
-        </div>
-        <div class="cb-ph-acts">
-        <button type="button" class="btn btn-ghost ow-sm" id="cb_edit_opening" title="Change the day's starting balances">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>
-          Opening
-        </button>
-        <button type="button" class="btn btn-ghost ow-sm" id="cb_print" title="Print the day's report">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-          Print
-        </button>
-        </div>
+           Four stacked panels: the position, the day's movements, the
+           close, and where the day went. It was rebuilt as a console --
+           a page head with the day in it, a metric strip, an always-open
+           entry line, and a right rail carrying the close, a checks list
+           and a seven-day spine -- and the owner asked for the page back
+           as it was. This is that page.
+
+           Money is logged through the Cash In / Cash Out dialogs, which
+           the two acts in the position panel open and the two round
+           buttons on the rings open as well. -->
+      <div class="page-head">
+        <h1>Cash Book</h1>
+        <p>Track cash, mobile money, and bank for the day &mdash; open the books with your starting balances, log cash in and cash out, and reconcile at close.</p>
       </div>
 
       <!-- CHANGING THE OPENING FIGURES. Not a gate any more: on every
@@ -20514,120 +20338,51 @@
       </div>
 
       <div id="cbMain">
-        <!-- Said before anything is read off the figures, because an
-             unconfirmed opening is an opening nobody has stood behind. -->
-        <div id="cbOpenBanner"></div>
 
-        <!-- WHAT YOU HAVE, RIGHT NOW. The question the screen is opened
-             for. Same arithmetic as the count below, taken from one place
-             so the two can never disagree. -->
-        <div class="ow-strip cb-strip" id="cbTiles"></div>
-
-        <div class="ow-grid cb-grid">
-          <div class="ow-stack">
-
-            <!-- LOGGING MONEY IS A LINE, NOT A DIALOG.
-                 Four expenses used to be four modals opened and dismissed,
-                 each one hiding the ledger it was adding to. This stays
-                 open and the entry lands directly beneath it. Anything the
-                 line cannot hold -- items sold, an invoice to allocate
-                 against -- is one press away on the full form, which is
-                 the same one it always was. -->
-            <div class="ow-pan" id="cbEntryPan">
-              <div class="ow-pan-h">
-                <span class="ow-pan-t">Log a movement</span>
-                <span class="ow-pan-n" id="cbEntryCount"></span>
+        <!-- THE POSITION. Which day, the five things that can be done to
+             it, and what is in each account right now. -->
+        <div class="panel cb-position">
+          <div class="cb-day">
+            <div class="cb-day-nav">
+              <button type="button" class="cb-daybtn" id="cb_day_prev" title="The day before" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <div class="cb-day-label">
+                <span class="cb-day-date" id="cbDayLabel"></span>
+                <span class="cb-day-rel" id="cbDayRel"></span>
               </div>
-              <div class="cb-el">
-                <div class="cb-el-row">
-                  <div class="cb-el-seg" role="group" aria-label="What kind of movement">
-                    <button type="button" id="cb_money_in" class="on">
-                      <svg class="icon" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Money in</button>
-                    <button type="button" id="cb_money_out">
-                      <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Money out</button>
-                    <!-- Neither in nor out, and deliberately a third verb:
-                         withdrawing from the bank to pay cash is not money
-                         the shop earned or spent, and filing it under
-                         either would say it was. -->
-                    <button type="button" id="cb_transfer" title="Move money between the shop's own accounts">
-                      <svg class="icon" viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg>Transfer</button>
-                  </div>
-                  <div class="cb-el-f cb-el-amt">
-                    <span class="cb-el-l">Amount</span>
-                    <input type="text" id="cb_el_amount" inputmode="decimal" placeholder="0" autocomplete="off">
-                  </div>
-                  <div class="cb-el-f cb-el-ac">
-                    <span class="cb-el-l" id="cb_el_account_l">Into</span>
-                    <select id="cb_el_account"></select>
-                  </div>
-                  <div class="cb-el-f cb-el-cat">
-                    <span class="cb-el-l">What for</span>
-                    <input type="text" id="cb_el_category" list="dl_income_categories" placeholder="Pick or type one" autocomplete="off">
-                  </div>
-                </div>
-                <div class="cb-el-row">
-                  <div class="cb-el-f cb-el-note">
-                    <input type="text" id="cb_el_desc" placeholder="Who it was, or which document — so the entry can be found again" autocomplete="off">
-                  </div>
-                  <div class="cb-el-f cb-el-at">
-                    <input type="time" id="cb_el_time" title="The time it happened" aria-label="The time it happened">
-                  </div>
-                  <button type="button" class="btn btn-ghost" id="cb_el_more">More</button>
-                  <button type="button" class="btn btn-accent" id="cb_el_add">Add</button>
-                </div>
-              </div>
-              <p class="ow-mini" id="cbEntryNote"></p>
+              <button type="button" class="cb-daybtn" id="cb_day_next" title="The day after" aria-label="Next day"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+              <button type="button" class="lbtn gh" id="cb_day_today">Today</button>
             </div>
-
-            <div class="ow-pan" id="cbLedgerPan">
-              <div class="ow-pan-h">
-                <span class="ow-pan-t">The day&#39;s movements</span>
-                <span class="cb-ledger-filters" id="cbLedgerFilter"></span>
-              </div>
-              <div id="cbTxnTableWrap"></div>
-              <p class="ow-mini">Every row names <b>who</b> first &mdash; a client or supplier filled in from the invoice or bill the entry was posted against, so it is there even when the note was left blank. A document number opens that document, and one carrying the small mark was written by that screen rather than typed here.</p>
+            <div class="cb-day-actions">
+              <button type="button" class="lbtn acc" id="cb_money_in"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Money in</button>
+              <button type="button" class="lbtn out" id="cb_money_out"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Money out</button>
+              <button type="button" class="lbtn gh" id="cb_transfer" title="Move money between the shop&#39;s own accounts"><svg viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg>Transfer</button>
+              <button type="button" class="lbtn gh" id="cb_edit_opening" title="Change the day&#39;s starting balances"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>Opening</button>
+              <button type="button" class="lbtn gh" id="cb_print" title="Print the day&#39;s report"><svg viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>Print</button>
             </div>
-
-            <!-- CLOSING THE DAY, BELOW THE MOVEMENTS IT IS COUNTED
-                 AGAINST. It was made a mode -- pressing the rail replaced
-                 the entry line, the ledger and the rings with the three
-                 count cards -- and that put the two halves of one job on
-                 two screens. What the book says comes from the rows above,
-                 and the first thing anybody does with a count that is off
-                 is read those rows looking for the entry nobody made. So
-                 the count sits under them, on the same scroll, and the
-                 state it is in is in its own header. -->
-            <div class="ow-pan" id="cbCountPan">
-              <div class="ow-pan-h">
-                <span class="ow-pan-t">Closing the day</span>
-                <span class="ow-pan-n cb-close-state" id="cbCloseState"></span>
-              </div>
-              <div id="cbSummaryWrap"></div>
-              <div class="cb-count-foot">
-                <p>Booking a difference writes a real entry, so the book comes down to what you counted and the loss shows on the profit and loss. Do it only for money you cannot trace &mdash; if you can still name it, enter it as what it was, dated the day it happened.</p>
-              </div>
-            </div>
-
-            <div class="ow-pan" id="cbDonutPan">
-              <div class="ow-pan-h">
-                <span class="ow-pan-t">The day by category</span>
-                <span class="ow-pan-n" id="cbDonutCount"></span>
-              </div>
-              <div class="cb-donut-grid">
-                <div class="cb-flow-analytics" id="cbInAnalytics"></div>
-                <div class="cb-flow-analytics" id="cbOutAnalytics"></div>
-              </div>
-            </div>
-
           </div>
+          <div class="cb-tiles" id="cbTiles"></div>
+        </div>
 
-          <!-- The rail reads; it no longer carries the close. A second
-               "Closing the day" block up here, with its own progress bars
-               and its own button, said the same thing as the panel on the
-               left and sent you to it. -->
-          <div class="ow-side cb-side">
-            <div class="ow-pan" id="cbRailChecks"></div>
-            <div class="ow-pan" id="cbRailSpine"></div>
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">The day&#39;s movements</h2>
+            <div class="cb-ledger-filters" id="cbLedgerFilter"></div>
+          </div>
+          <div id="cbTxnTableWrap"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">Closing the day</h2>
+            <span class="cb-close-state" id="cbCloseState"></span>
+          </div>
+          <div id="cbSummaryWrap" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="panel">
+          <div class="cb-analytics-grid">
+            <div id="cbInAnalytics"></div>
+            <div id="cbOutAnalytics"></div>
           </div>
         </div>
 
@@ -75635,7 +75390,6 @@ function showCbMain(){
   document.getElementById('cbMain').style.display = 'block';
   renderCbDayHeader();
   resetCashTxnForms();
-  resetCbEntryLine();
   renderCbTransactions();
   renderCbSummary();
   renderCbTriggers();
@@ -75665,110 +75419,22 @@ document.getElementById('cb_day_next').addEventListener('click', ()=>{
 document.getElementById('cb_day_today').addEventListener('click', ()=> cbGoToDay(todayISO()));
 
 
-/* ================= THE ENTRY LINE =================================
-   Logging money used to be a modal: four expenses was four dialogs
-   opened and dismissed, each one hiding the ledger it was adding to.
-   This stays open and the entry lands directly beneath it.
-
-   It is a FAST PATH, not a replacement. The full form does things a
-   line cannot -- items sold off the shelf, a payment allocated across a
-   client's unpaid invoices -- and More opens it, carrying whatever has
-   been typed here. The line saves THROUGH that form's own fields, so
-   there is one set of guards and one write, not two. */
-let cbEntryKind = 'in';
-
-function cbEntryPrefix(){ return cbEntryKind === 'out' ? 'cb_out_' : 'cb_in_'; }
-
-function setCbEntryKind(kind){
-  cbEntryKind = kind === 'out' ? 'out' : 'in';
-  const inBtn = document.getElementById('cb_money_in');
-  const outBtn = document.getElementById('cb_money_out');
-  if(inBtn) inBtn.classList.toggle('on', cbEntryKind === 'in');
-  if(outBtn) outBtn.classList.toggle('on', cbEntryKind === 'out');
-  const cat = document.getElementById('cb_el_category');
-  if(cat) cat.setAttribute('list', cbEntryKind === 'in' ? 'dl_income_categories' : 'dl_expense_categories');
-  const lab = document.getElementById('cb_el_account_l');
-  if(lab) lab.textContent = cbEntryKind === 'in' ? 'Into' : 'Out of';
-  const note = document.getElementById('cbEntryNote');
-  if(note) note.innerHTML = cbEntryKind === 'in'
-    ? 'It stays open, so four entries is four presses and each one appears below where you can see it landed. <b>More</b> opens the full form &mdash; items sold off the shelf, or a payment put against a client&#39;s unpaid invoices.'
-    : 'It stays open, so four expenses is four presses. <b>More</b> opens the full form, which also says what the account will be left holding.';
-}
-
-function resetCbEntryLine(){
-  const sel = document.getElementById('cb_el_account');
-  if(sel && !sel.options.length){
-    sel.innerHTML = ACCOUNTS.map(a=> `<option value="${esc(a.key)}">${esc(a.label)}</option>`).join('');
-  }
-  const amt = document.getElementById('cb_el_amount');
-  const cat = document.getElementById('cb_el_category');
-  const desc = document.getElementById('cb_el_desc');
-  const time = document.getElementById('cb_el_time');
-  if(amt) amt.value = '';
-  if(cat) cat.value = '';
-  if(desc) desc.value = '';
-  if(time) time.value = new Date().toTimeString().slice(0,5);
-  setCbEntryKind(cbEntryKind);
-  const n = (data.cashTxns||[]).filter(t=> t.date === currentCbDate()).length;
-  const last = (data.cashTxns||[]).filter(t=> t.date === currentCbDate())
-    .map(t=> t.time||'').sort().pop();
-  const el = document.getElementById('cbEntryCount');
-  if(el) el.textContent = n ? `${n} logged today${last?` · last at ${last}`:''}` : 'nothing logged yet';
-}
-
-/* Carries the line into the full form rather than making somebody type
-   it twice. */
-function cbEntryToTill(){
+/* ================= THE FIVE ACTS OF THE SCREEN =====================
+   Money in, money out, transfer, opening and print, as buttons in the
+   position panel. The always-open entry line that replaced the first two
+   is gone with the console; logging money is the Cash In / Cash Out
+   dialog again, which is where the things a line cannot hold -- items
+   sold off the shelf, a payment allocated across a client's unpaid
+   invoices -- have always lived. */
+document.getElementById('cb_money_in').addEventListener('click', ()=>{
   resetCashTxnForms();
-  const p = cbEntryPrefix();
-  const amt = document.getElementById('cb_el_amount').value.trim();
-  if(amt) document.getElementById(p+'amount').value = amt;
-  document.getElementById(p+'account').value = document.getElementById('cb_el_account').value;
-  document.getElementById(p+'category').value = document.getElementById('cb_el_category').value.trim();
-  document.getElementById(p+'desc').value = document.getElementById('cb_el_desc').value.trim();
-  const t = document.getElementById('cb_el_time').value;
-  if(t) document.getElementById(p+'time').value = t;
-  openTill(cbEntryKind);
-}
-
-async function cbEntryAdd(){
-  const amount = Number(String(document.getElementById('cb_el_amount').value).replace(/[^0-9.]/g, ''));
-  if(!(amount > 0)){ toast('Enter an amount greater than 0'); return; }
-  const category = document.getElementById('cb_el_category').value.trim();
-  if(!category){ toast('Say what it was for — the category is what the rings and the reports read'); return; }
-  const desc = document.getElementById('cb_el_desc').value.trim();
-  if(!desc){ toast('Add a note — who it was, or which document, so the entry can be found again'); return; }
-
-  /* Written through the full form's own fields and its own save, so the
-     guards, the categories and the single write are shared. The customer
-     and item fields are left empty, which is what keeps this on the
-     plain path rather than the invoice-allocation one. */
-  resetCashTxnForms();
-  const p = cbEntryPrefix();
-  document.getElementById(p+'amount').value = String(Math.round(amount));
-  document.getElementById(p+'account').value = document.getElementById('cb_el_account').value;
-  document.getElementById(p+'category').value = category;
-  document.getElementById(p+'desc').value = desc;
-  document.getElementById(p+'time').value = document.getElementById('cb_el_time').value
-    || new Date().toTimeString().slice(0,5);
-  if(cbEntryKind === 'out') document.getElementById('cb_out_type').value = 'expense';
-  await saveCashTxn(cbEntryKind);
-  resetCbEntryLine();
-  renderCbDayHeader();
-  const amtEl = document.getElementById('cb_el_amount');
-  if(amtEl) amtEl.focus();
-}
-
-// The three verbs of the day, on the line rather than behind dialogs.
-document.getElementById('cb_money_in').addEventListener('click', ()=> setCbEntryKind('in'));
-document.getElementById('cb_money_out').addEventListener('click', ()=> setCbEntryKind('out'));
-document.getElementById('cb_el_more').addEventListener('click', cbEntryToTill);
-document.getElementById('cb_el_add').addEventListener('click', cbEntryAdd);
-['cb_el_amount','cb_el_category','cb_el_desc'].forEach(id=>{
-  document.getElementById(id).addEventListener('keydown', e=>{
-    if(e.key === 'Enter'){ e.preventDefault(); cbEntryAdd(); }
-  });
+  openTill('in');
 });
+document.getElementById('cb_money_out').addEventListener('click', ()=>{
+  resetCashTxnForms();
+  openTill('out');
+});
+
 /* ================= THE DAY, AS ONE SET OF FIGURES ====================
 
    Everything the cash book screen shows is derived here, once, so the
@@ -75905,119 +75571,40 @@ function renderCbDayHeader(){
   const date = currentCbDate();
   const pos = cbDayPosition(date);
   const rel = cbDayRelLabel(date);
-  document.getElementById('cbDayLabel').textContent = cbDayHeadLabel(date);
+  document.getElementById('cbDayLabel').textContent = date;
   const relEl = document.getElementById('cbDayRel');
   relEl.textContent = rel;
-  relEl.className = 'cb-day-rel' + (rel === 'Today' ? ' is-today' : '');
   // Forward is disabled on today: a cash book has no tomorrow to open,
   // and a control that does nothing should look like it.
   document.getElementById('cb_day_next').disabled = date >= todayISO();
   document.getElementById('cb_day_today').style.display = date === todayISO() ? 'none' : '';
 
   const rec = getDayRecord(date);
-  const sub = document.getElementById('cbPhSub');
-  if(sub) sub.textContent = rec.openingSet
-    ? `${cbMoney(pos.closing)} UGX on hand across three accounts.`
-    : 'Not opened yet — the figures below are carried from the last day on file.';
 
-  /* THE POSITION. Money on hand leads because "what have I got" is one
-     figure before it is three; the accounts follow because they are not
-     interchangeable -- money in the bank does not buy cement from a yard
-     that wants cash this morning. It is ink, not the accent: a figure is
-     a size, and the accent belongs to the one act on the screen. */
-  const unc = rec.openingSet ? '' : ' <span class="cb-unc">unconfirmed</span> ·';
-  const tile = (label, value, sub2, lead)=> `<div class="ow-mt">
-    <p class="ow-mt-l">${esc(label)}</p>
-    <span class="ow-mt-v${lead?' is-lead':''}">${cbMoney(value)}<span class="ow-u">UGX</span></span>
-    <p class="cb-mv">${sub2}</p>
+  /* THE POSITION. Money on hand on the tinted tile because "what have I
+     got" is one figure before it is three; the three accounts after it,
+     because they are not interchangeable -- money in the bank does not
+     buy cement from a yard that wants cash this morning.
+
+     Each account says its gross in and out for the day. A side that did
+     not move is left out rather than printed as a zero. */
+  const unc = rec.openingSet ? '' : '<span class="cb-unc">unconfirmed</span> &middot; ';
+  const tile = (label, value, sub, total)=> `<div class="cb-tile${total?' is-total':''}">
+    <div class="cb-tile-label">${esc(label)}</div>
+    <div class="cb-tile-value">${cbMoney(value)}</div>
+    <div class="cb-tile-sub">${sub}</div>
   </div>`;
-  /* A net move, not a gross pair. The gross pair is in the rings and in
-     the table's footer already, and printing it a third time made the
-     tiles wrap onto three lines. */
-  const net = (a)=>{
-    const n = Math.round(a.closing - a.opening);
-    if(!n) return '<span class="qt">nothing moved today</span>';
-    return n > 0
-      ? `<span class="up">+${cbMoney(n)}</span> on the day`
-      : `<span class="dn">&minus;${cbMoney(-n)}</span> on the day`;
+  const moved = (inn, out)=>{
+    const parts = [];
+    if(inn) parts.push(`<span class="cb-up">+${cbMoney(inn)}</span> in`);
+    if(out) parts.push(`<span class="cb-down">&minus;${cbMoney(out)}</span> out`);
+    return parts.length ? parts.join(' &middot; ') : 'nothing moved today';
   };
-  const traded = pos.in || pos.out
-    ? `<span class="dn">&minus;${cbMoney(pos.out)}</span> out`
-    : '<span class="qt">nothing yet</span>';
   document.getElementById('cbTiles').innerHTML =
     tile('Money on hand', pos.closing,
-      `${unc} opened at <span class="cb-sm">${cbMoney(pos.opening)}</span>`, true)
-    + pos.accounts.map(a=> tile(a.label, a.closing, net(a))).join('')
-    + `<div class="ow-mt"><p class="ow-mt-l">Moved today</p>
-        <span class="ow-mt-v"><span style="color:var(--ow-verdigris)">${pos.in?'+':''}${cbMoney(pos.in)}</span><span class="ow-u">UGX</span></span>
-        <p class="cb-mv">${traded}</p></div>`;
-
-  /* The broken-chain warning is made in one place and handed here, so
-     the banner cannot drift from the check the rest of the book reads. */
-  renderCbOpenBanner(date, rec, cbChainBreakHTML(date, getDayRecord(date)));
-  renderCbRail(date);
-}
-
-/* THE OPENING, SAID RATHER THAN GATED.
-   The whole book used to be REPLACED by a form until three figures were
-   confirmed -- figures the app had already carried forward itself on
-   every morning but the first. Now the book is drawn from them, marked
-   unconfirmed in plain words, and one press stands behind them. */
-function renderCbOpenBanner(date, rec, chainBreakHTML){
-  const el = document.getElementById('cbOpenBanner');
-  if(!el) return;
-  const carried = carriedOpening(date);
-
-  /* A broken chain is the one thing this screen must not let past
-     quietly: the count below only ever measures a day against its own
-     opening figure, so a wrong opening reconciles perfectly. */
-  if(rec.openingSet && chainBreakHTML){
-    el.innerHTML = chainBreakHTML;
-    const fix = document.getElementById('cb_chain_fix');
-    if(fix) fix.addEventListener('click', cbApplyCarriedOpening);
-    return;
-  }
-
-  if(rec.openingSet){ el.innerHTML = ''; return; }
-
-  if(!carried){
-    el.innerHTML = `<div class="cb-openbar">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8h14"/><circle cx="12" cy="14" r="4"/></svg>
-      <div class="cb-openbar-b">
-        <p class="cb-openbar-t">The book starts here</p>
-        <p class="cb-openbar-w">There is nothing on file before this day, so there is nothing to carry. Count what is in each account right now and enter it &mdash; everything this book ever says afterwards is measured from those three figures, so it is worth counting twice.</p>
-      </div>
-      <div class="cb-openbar-a">
-        <button type="button" class="btn btn-accent" id="cb_open_edit">Enter the three figures</button>
-      </div>
-    </div>`;
-  } else {
-    const total = ACCOUNTS.reduce((s,a)=> s + (Number(carried.values[a.key])||0), 0);
-    el.innerHTML = `<div class="cb-openbar">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div class="cb-openbar-b">
-        <p class="cb-openbar-t">Today has not been opened yet</p>
-        <p class="cb-openbar-w">It is carrying <b>${cbMoney(total)}</b> UGX from ${esc(cbShortDate(carried.from))} &mdash; ${
-          ACCOUNTS.map(a=> `${esc(a.label.toLowerCase())} <b>${cbMoney(carried.values[a.key]||0)}</b> ${carried.counted[a.key]?'counted':'calculated'}`).join(', ')
-        }. Check it against what is actually there. Everything below is drawn from those figures and is marked unconfirmed until you say they are right.</p>
-      </div>
-      <div class="cb-openbar-a">
-        <button type="button" class="btn btn-ghost" id="cb_open_edit">Change the figures</button>
-        <button type="button" class="btn btn-accent" id="cb_open_confirm">Confirm and open</button>
-      </div>
-    </div>`;
-    const ok = document.getElementById('cb_open_confirm');
-    if(ok) ok.addEventListener('click', ()=>{
-      const r = getDayRecord(currentCbDate());
-      ACCOUNTS.forEach(a=>{ r.opening[a.key] = Number(carried.values[a.key])||0; });
-      r.openingSet = true;
-      saveData();
-      showCbMain();
-      toast('Day opened — the book now stands behind those three figures');
-    });
-  }
-  const edit = document.getElementById('cb_open_edit');
-  if(edit) edit.addEventListener('click', ()=> showCbWizard(true));
+      `${unc}opened at ${cbMoney(pos.opening)}${(pos.in||pos.out) ? ' &middot; ' + moved(pos.in, pos.out) : ''}`,
+      true)
+    + pos.accounts.map(a=> tile(a.label, a.closing, moved(a.in, a.out))).join('');
 }
 
 // Pulled out of renderCbSummary so the chain-break warning can sit with
@@ -76036,81 +75623,6 @@ function cbApplyCarriedOpening(){
 }
 
 
-/* ================= THE RAIL =======================================
-   What the screen is FOR is on the left; what it has to say is here.
-   The close is NOT here: it is a panel under the movements it is counted
-   against, and a second copy of its state up here, with its own button
-   into it, was one screen saying the same thing twice. */
-function renderCbRail(date){
-  /* WHAT NEEDS YOUR EYE. Every one of these is worked out from what is
-     already on file, every time the screen draws -- nothing is stored
-     and nothing has to be dismissed. */
-  const checks = cbChecks(date);
-  document.getElementById('cbRailChecks').innerHTML = `
-    <div class="ow-pan-h"><span class="ow-pan-t">What needs your eye</span>
-      <span class="ow-pan-n">${checks.length || 'none'}</span></div>
-    ${checks.length ? checks.map(c=> `
-      <div class="cb-ck${c.bad?' is-bad':''}">
-        ${c.icon}
-        <div class="cb-ck-b">
-          <p class="cb-ck-t">${c.title}</p>
-          <p class="cb-ck-w">${c.why}</p>
-          ${c.act ? `<button type="button" class="btn btn-ghost ow-sm" data-cb-go="${esc(c.act)}">${esc(c.actLabel)}</button>` : ''}
-        </div>
-      </div>`).join('') : `
-      <div class="cb-ck is-good">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-        <div class="cb-ck-b">
-          <p class="cb-ck-t">Nothing to look at</p>
-          <p class="cb-ck-w">Every day behind this one was counted and agreed, and each opens where the last one ended.</p>
-        </div>
-      </div>`}
-    <p class="ow-mini">Worked out from what is already on file, every time this screen draws. Not checked here: money that was never written down anywhere &mdash; nothing in the shop can know about a sale nobody entered.</p>`;
-  document.getElementById('cbRailChecks').querySelectorAll('[data-cb-go]').forEach(b=>{
-    b.addEventListener('click', ()=> cbGoToDay(b.dataset.cbGo));
-  });
-
-  /* THE LAST SEVEN DAYS. Reading last Tuesday used to mean pressing the
-     back arrow six times, with no sign on the way which of those days
-     had ever been counted. */
-  const days = cbRecentDays(date, 7);
-  document.getElementById('cbRailSpine').innerHTML = `
-    <div class="ow-pan-h"><span class="ow-pan-t">The last seven days on file</span></div>
-    ${days.length ? days.map(d=> `
-      <button type="button" class="cb-spn${d.date===date?' on':''}" data-cb-day="${esc(d.date)}">
-        <span class="cb-spn-d">${esc(d.label)}</span>
-        <i class="cb-spn-m ${d.mark}"></i>
-        <span class="cb-spn-v">${cbMoney(d.closing)}</span>
-      </button>`).join('') + `
-      <div class="cb-spn-lg">
-        <span><i style="background:var(--ow-verdigris)"></i>counted, agreed</span>
-        <span><i style="background:var(--ow-amber)"></i>part counted</span>
-        <span><i style="background:var(--ow-crimson)"></i>did not match</span>
-        <span><i style="background:var(--ow-steel-100)"></i>not counted</span>
-      </div>` : '<p class="ow-mini">Nothing on file yet.</p>'}
-    <p class="ow-mini">Days the shop did not trade are absent rather than shown as zero &mdash; a day with no book does not break the chain, and the next one opens from the last one that has one.</p>`;
-  document.getElementById('cbRailSpine').querySelectorAll('[data-cb-day]').forEach(b=>{
-    b.addEventListener('click', ()=> cbGoToDay(b.dataset.cbDay));
-  });
-}
-
-/* The days that actually have a book behind them, newest first, ending
-   at the one on screen. Shops do not trade every day, so this walks the
-   record rather than counting backwards through the calendar. */
-function cbRecentDays(date, limit){
-  const set = new Set(Object.keys(data.cashDays||{}));
-  (data.cashTxns||[]).forEach(t=>{ if(t.date) set.add(t.date); });
-  set.add(date);
-  return [...set].filter(d=> d <= date).sort().reverse().slice(0, limit).map(d=>{
-    const p = cbDayPosition(d);
-    const counted = p.countedAccounts, total = p.accounts.length;
-    const off = p.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1).length;
-    return {
-      date: d, label: cbDayRelLabel(d) === 'Today' ? 'Today' : cbShortDate(d), closing: p.closing,
-      mark: counted === 0 ? 'none' : off ? 'bad' : counted < total ? 'warn' : 'ok',
-    };
-  });
-}
 function cbShortDate(date){
   const d = new Date(date + 'T00:00:00');
   if(isNaN(d)) return date;
@@ -76120,75 +75632,11 @@ function cbShortDate(date){
 /* THE CHECKS. Three faults the book can find in itself, all derivable
    from what is on file. A checking panel whose silence you cannot read
    is worse than none, so it says so when there is nothing. */
-const CB_CK_ICON_SHORT = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
-const CB_CK_ICON_CLOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
-const CB_CK_ICON_ACCT  = '<svg class="icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 11h20"/></svg>';
-function cbChecks(date){
-  const out = [];
-  const dates = [...new Set([
-    ...Object.keys(data.cashDays||{}),
-    ...(data.cashTxns||[]).map(t=> t.date).filter(Boolean),
-  ])].filter(d=> d < date).sort().reverse().slice(0, 30);
-
-  // A count that came up short or over and was never booked. Until the
-  // difference is entered, every day since is measured from a figure the
-  // drawer disagreed with.
-  for(const d of dates){
-    const p = cbDayPosition(d);
-    const off = p.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1);
-    if(off.length){
-      const a = off[0];
-      out.push({
-        bad: true, icon: CB_CK_ICON_SHORT,
-        title: `${esc(cbShortDate(d))} came up ${cbMoney(Math.abs(a.variance))} ${a.variance<0?'short':'over'} and was never booked`,
-        why: `${esc(a.label)} was counted at <b>${cbMoney(a.counted)}</b> against a book of <b>${cbMoney(a.closing)}</b>. Until the difference is entered, every day since is measured from a figure the drawer disagreed with.`,
-        act: d, actLabel: `Open ${cbShortDate(d)}`,
-      });
-      break;
-    }
-  }
-
-  // A day left uncounted behind you. Today opened from a figure nobody
-  // stood behind.
-  for(const d of dates){
-    const p = cbDayPosition(d);
-    if(p.countedAccounts === 0){
-      out.push({
-        bad: false, icon: CB_CK_ICON_CLOCK,
-        title: `${esc(cbShortDate(d))} was never counted`,
-        why: `It closed on the book at <b>${cbMoney(p.closing)}</b> and nobody stood behind that figure.`,
-        act: d, actLabel: `Open ${cbShortDate(d)}`,
-      });
-      break;
-    }
-  }
-
-  // An account nothing has passed through in a fortnight. If it has moved
-  // outside the shop, this book does not know it.
-  ACCOUNTS.forEach(a=>{
-    const last = (data.cashTxns||[])
-      .filter(t=> normaliseCashAccount(t.account) === a.key && t.date && t.date <= date)
-      .map(t=> t.date).sort().pop();
-    if(!last) return;
-    const gap = Math.round((Date.parse(date+'T00:00:00Z') - Date.parse(last+'T00:00:00Z')) / 86400000);
-    if(gap >= 14) out.push({
-      bad: false, icon: CB_CK_ICON_ACCT,
-      title: `Nothing has gone through ${esc(a.label.toLowerCase())} in ${gap} days`,
-      why: `Last entry <b>${esc(cbShortDate(last))}</b>. If the account has moved since, this book does not know it.`,
-      act: null, actLabel: '',
-    });
-  });
-
-  return out.slice(0, 4);
-}
-
-/* Counting is not a mode. It was one, and the price was that opening it
-   took away the entry line, the ledger and the rings -- the rows the
-   count is measured against, and the only place a difference can be
-   traced. The panel is always drawn; this only brings it into view for
-   somebody who arrived from another screen asking to count. */
+/* Going to the cash book to count, from the Today screen's one act.
+   Counting is a panel on this page, so this only brings it into view and
+   puts the cursor in the first box. */
 function cbShowCount(){
-  const el = document.getElementById('cbCountPan');
+  const el = document.getElementById('cbSummaryWrap');
   if(el && el.scrollIntoView) el.scrollIntoView({block:'nearest'});
   const first = document.querySelector('#cbSummaryWrap .cb-actual-input');
   if(first && first.focus) first.focus({preventScroll:true});
@@ -76220,35 +75668,25 @@ function cbCategoryBreakdown(date, types){
   const total = entries.reduce((s,[,v])=>s+v,0);
   return {entries, total};
 }
-/* THE RINGS, IN THE HOUSE PALETTE.
-   They used to carry ten colours that belonged to nothing -- #2F7D4F,
-   #3B82C4, #8E5FD1 and seven more. The green was not the app's verdigris
-   and the red was not its crimson, so "good" and "bad" said something
-   different inside this one panel than in every other figure on the
-   screen.
+/* THE RINGS.
 
-   One hue per side, dark to light in size order: the ring and the list
-   read the same way round, and the two rings survive a grayscale print.
-   A transfer is neither earned nor spent, so it is steel on both sides
-   and the note under each ring says what that slice is. */
-const CB_RING_IN  = ['#0F6B43','#3D8471','#649D8B','#8AB6A6','#B0CFC3'];
-const CB_RING_OUT = ['#8E2A22','#9D4340','#B76B68','#CE9591','#E2C0BD'];
-const CB_RING_OWN = '#767F91';
-function cbIsOwnMoney(cat){ return /transfer/i.test(String(cat||'')); }
-function cbRingColor(kind, rank){
-  const ramp = kind==='in' ? CB_RING_IN : CB_RING_OUT;
-  return ramp[Math.min(rank, ramp.length-1)];
-}
-function cbDonutSVG(entries, total, kind){
-  const size=128, cx=64, cy=64, r=49, sw=17;
+   They carried ten colours in the pre-console screen, then were redrawn
+   on one hue per side in the house palette. The page is back as it was,
+   so these are the ten again: a category keeps the same colour on both
+   sides, which is what lets Transfer be read as the same thing in the
+   in-ring and the out-ring. */
+const CB_RING = ['#2F7D4F','#F2A93C','#3B82C4','#C0392B','#8E5FD1',
+                 '#0E9594','#D06A1F','#5B6ABF','#8A9A3B','#B4418E'];
+function cbRingColor(rank){ return CB_RING[rank % CB_RING.length]; }
+function cbDonutSVG(entries, total){
+  const size=140, cx=70, cy=70, r=54, sw=18;
   const circ = 2*Math.PI*r;
   if(total<=0){
     return `<svg viewBox="0 0 ${size} ${size}" class="cb-donut-svg"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--ow-steel-100)" stroke-width="${sw}"/></svg>`;
   }
   let offset=0, arcs='', rank=0;
-  entries.forEach(([cat,val])=>{
-    const own = cbIsOwnMoney(cat);
-    const colour = own ? CB_RING_OWN : cbRingColor(kind, rank++);
+  entries.forEach(([,val])=>{
+    const colour = cbRingColor(rank++);
     const frac = val/total;
     const dash = Math.max(frac*circ, val>0?1.5:0);
     arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colour}" stroke-width="${sw}" stroke-dasharray="${dash} ${Math.max(circ-dash,0)}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
@@ -76260,57 +75698,46 @@ function cbAnalyticsHTML(title, types, emptyHint, kind){
   const date = currentCbDate();
   const {entries, total} = cbCategoryBreakdown(date, types);
   const isIn = kind==='in';
-  const head = `<div class="cb-analytics-head">${esc(title)}</div>`;
+  /* The round button is how money is logged from this panel, as it was.
+     It opens the same dialog the act at the top of the page opens. */
+  const fab = `<button type="button" class="cb-analytics-fab${isIn?'':' out'}" data-cb-till="${isIn?'in':'out'}"
+    title="${isIn?'Log money in':'Log money out'}" aria-label="${isIn?'Log money in':'Log money out'}">${isIn?'+':'&minus;'}</button>`;
+  const head = `<div class="cb-analytics-head">${esc(title)}</div>
+    <div class="cb-analytics-total">
+      <span class="cb-analytics-total-label">Total ${isIn?'Cash In':'Cash Out'}</span>
+      <span class="cb-analytics-total-val ${isIn?'in':'out'}">UGX ${cbMoney(total)}</span>
+    </div>`;
   if(!entries.length){
-    return `${head}<div class="cb-analytics-empty">${esc(emptyHint)}</div>`;
+    return `${head}<div class="cb-flow"><div class="cb-analytics-empty">${esc(emptyHint)}</div>${fab}</div>`;
   }
   let rank = 0;
   const legend = entries.map(([cat,val])=>{
-    const own = cbIsOwnMoney(cat);
-    const colour = own ? CB_RING_OWN : cbRingColor(kind, rank++);
-    const pct = total>0 ? Math.round((val/total)*100) : 0;
+    const colour = cbRingColor(rank++);
     return `<div class="cb-legend-row">
       <span class="cb-legend-dot" style="background:${colour}"></span>
       <span class="cb-legend-name" title="${esc(cat)}">${esc(cat)}</span>
       <span class="cb-legend-val">${cbMoney(val)}</span>
-      <span class="cb-legend-pct">${pct}%</span>
     </div>`;
   }).join('');
-  /* What the shop actually TRADED, said under the ring rather than left
-     to be inferred. The ring adds up to the ledger's own In and Out
-     columns, transfers included, because that is what passed through the
-     accounts -- and the shop neither earned nor spent that part. */
-  const own = entries.filter(([cat])=> cbIsOwnMoney(cat)).reduce((s,[,v])=> s+v, 0);
-  const note = own > 0
-    ? `The grey slice is <b>${cbMoney(own)}</b> moved between the shop&#39;s own accounts &mdash; not money ${isIn?'earned':'spent'}. Traded ${isIn?'in':'out'} today was <b>${cbMoney(total-own)}</b>.`
-    : `Darkest is biggest, so the ring and the list read the same way round.`;
   return `${head}
-    <div class="cb-analytics-body">
-      <div class="cb-donut-wrap">
-        ${cbDonutSVG(entries, total, kind)}
-        <div class="cb-donut-center">
-          <span class="cb-donut-center-val ${isIn?'in':'out'}">${fmtShort(total)}</span>
-          <span class="cb-donut-center-label">${isIn?'in':'out'}</span>
-        </div>
-      </div>
+    <div class="cb-flow">
+      <div class="cb-donut-wrap">${cbDonutSVG(entries, total)}</div>
       <div class="cb-legend-list">${legend}</div>
-    </div>
-    <p class="cb-donut-note">${note}</p>`;
+      ${fab}
+    </div>`;
 }
 function renderCbFlowAnalytics(){
   document.getElementById('cbInAnalytics').innerHTML = cbAnalyticsHTML(
-    'Cash in by category', ['receipt','in'],
+    'Cash In by Category', ['receipt','in'],
     'Nothing has come in today yet.', 'in'
   );
   document.getElementById('cbOutAnalytics').innerHTML = cbAnalyticsHTML(
-    'Cash out by category', ['payment','expense','out'],
+    'Cash Out by Category', ['payment','expense','out'],
     'Nothing has gone out today yet.', 'out'
   );
-  const n = (data.cashTxns||[]).filter(t=> t.date === currentCbDate()).length;
-  const cats = new Set((data.cashTxns||[]).filter(t=> t.date === currentCbDate())
-    .map(t=> (t.category||'Uncategorized').trim())).size;
-  const el = document.getElementById('cbDonutCount');
-  if(el) el.textContent = n ? `${n} movement${n===1?'':'s'} · ${cats} categor${cats===1?'y':'ies'}` : '';
+  document.querySelectorAll('[data-cb-till]').forEach(b=>{
+    b.addEventListener('click', ()=>{ resetCashTxnForms(); openTill(b.dataset.cbTill); });
+  });
 }
 
 function accountLabel(key){ const a = ACCOUNTS.find(x=>x.key===key); return a? a.label : key; }
@@ -76449,16 +75876,6 @@ function cbDocHTML(idn){
   return `<button type="button" class="cb-led-doc" title="${esc(title)}"
     data-doc-kind="${esc(idn.docKind)}" data-doc-id="${idn.docId}">${idn.posted ? CB_DOC_ICON : ''}${esc(idn.doc)}</button>`;
 }
-function cbCellHTML(t){
-  const idn = cbRowIdentity(t);
-  // An entry that pays for a stretch of days says so on its line, since
-  // it is the one kind of entry the profit and loss will not show whole.
-  const covers = (t.coversFrom && t.coversTo) ? `<span class="sep">&middot;</span><span class="t">pays for ${esc(t.coversFrom)} to ${esc(t.coversTo)}</span>` : '';
-  return `<div class="cb-led-who" title="${esc(idn.who)}">${esc(idn.who)}</div>
-    <div class="cb-led-sub"><span class="t">${esc(idn.detail)}</span>${
-      idn.doc ? `<span class="sep">&middot;</span>${cbDocHTML(idn)}` : ''}${covers}</div>`;
-}
-
 const CB_ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const CB_ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
 
@@ -76474,7 +75891,7 @@ function renderCbTransactions(){
       ? `<div class="cb-led-empty"><b>Nothing has moved through ${esc(accountLabel(cbLedgerAccount))} today</b>
           <span>The other accounts may still have movements &mdash; press All above to see them.</span></div>`
       : `<div class="cb-led-empty"><b>Nothing has moved today</b>
-          <span>The first sale, the first expense, the first payment in &mdash; log it on the line above and it
+          <span>The first sale, the first expense, the first payment in &mdash; press Money in or Money out above and it
           appears here with a running balance. Money taken on an invoice or paid on a supplier bill lands here by itself.</span></div>`;
     return;
   }
@@ -76485,23 +75902,44 @@ function renderCbTransactions(){
      lets somebody follow the day from the drawer count to now. */
   const openingRow = cbLedgerAccount
     ? `<tr class="cb-led-open">
-        <td>—</td><td colspan="2">Opening balance, ${esc(accountLabel(cbLedgerAccount))}</td>
+        <td>&mdash;</td><td colspan="3">Opening balance, ${esc(accountLabel(cbLedgerAccount))}</td>
         <td class="price"></td><td class="price"></td>
         <td class="price cb-bal">${cbMoney(Number(rec.opening[cbLedgerAccount])||0)}</td><td></td>
       </tr>`
     : '';
 
-  const acts = (id)=> `<div class="cb-rowa">
-      <button type="button" title="Edit this entry" aria-label="Edit this entry" onclick="editCashTxn(${id})">${CB_ICON_EDIT}</button>
-      <button type="button" class="danger" title="Delete this entry" aria-label="Delete this entry" onclick="deleteCashTxn(${id})">${CB_ICON_TRASH}</button>
+  const acts = (id)=> `<div class="rowa">
+      <button type="button" title="Edit this entry" onclick="editCashTxn(${id})">${CB_ICON_EDIT}Edit</button>
+      <button type="button" class="danger" title="Delete this entry" onclick="deleteCashTxn(${id})">${CB_ICON_TRASH}Delete</button>
     </div>`;
+
+  /* CATEGORY, then the note under it. The category is what the rings and
+     every report read, so it leads; the note says which walk-in, which
+     bill, which two men. cbTxnDisplayDesc is what puts the client's name
+     on a row whose note is only an invoice number. */
+  const cell = (t)=>{
+    const idn = cbRowIdentity(t);
+    const desc = cbTxnDisplayDesc(t);
+    const covers = (t.coversFrom && t.coversTo)
+      ? ` &middot; pays for ${esc(t.coversFrom)} to ${esc(t.coversTo)}` : '';
+    /* The number is printed once. "Payment — PINV-0231 — Katende Steel"
+       already names the bill, so appending the chip after it said PINV-0231
+       twice on one line; the chip is only added when the note does not
+       carry the number itself. */
+    const doc = (idn.doc && desc.indexOf(idn.doc) === -1) ? cbDocHTML(idn) : '';
+    return `<div>${esc(t.category || 'Uncategorized')}</div>`
+      + ((desc || doc || covers)
+          ? `<div class="cb-led-desc">${esc(desc)}${doc ? (desc ? ' &middot; ' : '') + doc : ''}${covers}</div>`
+          : '');
+  };
 
   const row = (r)=>{
     const t = r.txn;
     return `<tr>
       <td class="cb-led-time">${esc(t.time||'')}</td>
-      <td class="cb-led-acct">${esc(accountLabel(t.account))}</td>
-      <td>${cbCellHTML(t)}</td>
+      <td>${esc(accountLabel(t.account))}</td>
+      <td>${typeLabel(t.type)}</td>
+      <td>${cell(t)}</td>
       <td class="price cb-in-cell">${r.isIn ? cbMoney(r.amount) : ''}</td>
       <td class="price cb-out-cell">${r.isIn ? '' : cbMoney(r.amount)}</td>
       <td class="price cb-bal">${cbMoney(r.balanceAfter)}</td>
@@ -76512,30 +75950,9 @@ function renderCbTransactions(){
   const inTotal = rows.filter(r=> r.isIn).reduce((s,r)=> s + r.amount, 0);
   const outTotal = rows.filter(r=> !r.isIn).reduce((s,r)=> s + r.amount, 0);
 
-  /* The desk row and the phone card are emitted from ONE call, off the
-     same identity, so the two can never say different things about the
-     same movement. */
-  const cardsHtml = rows.map(r=>{
-    const t = r.txn;
-    const idn = cbRowIdentity(t);
-    const meta = [t.time||'', accountLabel(t.account), idn.detail, idn.doc||''].filter(Boolean).join(' · ');
-    return `<div class="cb-card">
-      <div class="cb-card-who" title="${esc(idn.who)}">${esc(idn.who)}</div>
-      <p class="cb-card-m">${esc(meta)}</p>
-      <span class="cb-card-v ${r.isIn?'in':'out'}">${r.isIn?'+':'&minus;'}${cbMoney(r.amount)}</span>
-      <span class="cb-card-b">${esc(accountLabel(t.account).toLowerCase())} ${cbMoney(r.balanceAfter)}</span>
-      <div class="cb-card-a">
-        <button type="button" onclick="editCashTxn(${t.id})">${CB_ICON_EDIT}Edit</button>
-        <button type="button" class="danger" onclick="deleteCashTxn(${t.id})">${CB_ICON_TRASH}Delete</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  wrap.innerHTML = `<div class="an-scroll"><table class="cb-ledger">
-  <colgroup><col style="width:56px"><col style="width:104px"><col>
-    <col style="width:96px"><col style="width:96px"><col style="width:118px"><col style="width:64px"></colgroup>
+  wrap.innerHTML = `<div class="cb-ledger-wrap"><table class="cb-ledger">
   <thead><tr>
-    <th>Time</th><th>Account</th><th>What it was</th>
+    <th>Time</th><th>Account</th><th>Type</th><th>Category</th>
     <th class="r">In</th><th class="r">Out</th>
     <!-- Named for what it is. Across all three accounts each row shows
          ITS OWN account's balance, and a column headed plainly "Balance"
@@ -76547,7 +75964,7 @@ function renderCbTransactions(){
     ${rows.map(row).join('')}
   </tbody>
   <tfoot><tr>
-    <td colspan="3">${rows.length} movement${rows.length===1?'':'s'}${cbLedgerAccount?` in ${esc(accountLabel(cbLedgerAccount))}`:''}</td>
+    <td colspan="4">${rows.length} movement${rows.length===1?'':'s'}${cbLedgerAccount?` in ${esc(accountLabel(cbLedgerAccount))}`:''}</td>
     <td class="price cb-in-cell">${cbMoney(inTotal)}</td>
     <td class="price cb-out-cell">${cbMoney(outTotal)}</td>
     <td class="price cb-bal">${cbLedgerAccount
@@ -76555,8 +75972,7 @@ function renderCbTransactions(){
       : ''}</td>
     <td></td>
   </tr></tfoot>
-  </table></div>
-  <div class="cb-cards">${cardsHtml}</div>`;
+  </table></div>`;
 
   /* Opens the DOCUMENT, not the screen it lives on. Landing somebody on
      the register with 34 other bills on it and leaving them to find the
@@ -76569,6 +75985,7 @@ function renderCbTransactions(){
     });
   });
 }
+
 /* ---- Cash In / Cash Out forms (inside popup modals) ---- */
 function resetCashTxnForms(){
   editingCashTxnId = null;
@@ -77478,15 +76895,15 @@ function cbChainBreakHTML(date, rec){
     const diff = g.actual - g.expected;
     return `${esc(g.a.label)}: ${esc(cbShortDate(carried.from))} left <b>${cbMoney(g.expected)}</b>, but this day opened with <b>${cbMoney(g.actual)}</b> — ${diff>0?'an extra':'a shortfall of'} <b>${cbMoney(Math.abs(diff))}</b>.`;
   }).join(' ');
-  return `<div class="cb-openbar is-broken">
-    <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-    <div class="cb-openbar-b">
-      <p class="cb-openbar-t">This day does not start where ${esc(cbShortDate(carried.from))} ended</p>
-      <p class="cb-openbar-w">${lines} A wrong opening figure reconciles perfectly against itself, so nothing else on this screen will catch it. Either log the movement that put it there, or set the opening back.</p>
-    </div>
-    <div class="cb-openbar-a">
-      <button type="button" class="btn btn-ghost" id="cb_chain_fix">Use what ${esc(cbShortDate(carried.from))} left</button>
-    </div>
+  /* Drawn on .cb-chain-break, which is where this warning lived before
+     the console turned it into a banner at the top of the page: at the
+     head of the closing panel, because the count below it only ever
+     measures a day against its OWN opening figure, so a wrong opening
+     reconciles perfectly and nothing else here would catch it. */
+  return `<div class="cb-chain-break">
+    <div><b>This day does not start where ${esc(cbShortDate(carried.from))} ended.</b></div>
+    <div>${lines} A wrong opening figure reconciles perfectly against itself, so nothing else on this screen will catch it. Either log the movement that put it there, or set the opening back.</div>
+    <button type="button" class="btn btn-ghost cb-chain-fix" id="cb_chain_fix">Use what ${esc(cbShortDate(carried.from))} left</button>
   </div>`;
 }
 
@@ -77547,7 +76964,13 @@ function renderCbSummary(){
     </article>`;
   };
 
-  wrap.innerHTML = `<div class="cb-counts">${pos.accounts.map(card).join('')}</div>`;
+  /* The broken-chain warning heads this panel: the count below measures
+     the day against its own opening, so a wrong opening passes it. */
+  wrap.innerHTML = cbChainBreakHTML(date, getDayRecord(date))
+    + `<div class="cb-counts">${pos.accounts.map(card).join('')}</div>`
+    + `<p class="cb-count-note">Booking a difference writes a real entry, so the book comes down to what you counted and the loss shows on the profit and loss. Do it only for money you cannot trace &mdash; if you can still name it, enter it as what it was, dated the day it happened.</p>`;
+  const fix = document.getElementById('cb_chain_fix');
+  if(fix) fix.addEventListener('click', cbApplyCarriedOpening);
 
   wrap.querySelectorAll('.cb-actual-input').forEach(input=>{
     input.addEventListener('change', ()=>{
@@ -77555,10 +76978,6 @@ function renderCbSummary(){
       rec.actual[input.dataset.account] = input.value==='' ? null : Number(input.value);
       saveData();
       renderCbSummary();
-      /* The spine marks each day by how far its count got, and today is
-         one of its rows, so it has to hear about a count the moment one
-         is typed -- otherwise this panel says "1 of 3, 1 not matching"
-         while the dot beside Today still says nothing was counted. */
       renderCbDayHeader();
     });
   });

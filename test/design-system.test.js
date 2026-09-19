@@ -187,7 +187,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        What did NOT change: this is still a ceiling, it still may only
        fall, and every pair added below is held to 4.5:1 in the contrast
        block. A colour is cheap to justify and expensive to add. */
-    'distinct colours': [108, /#[0-9A-Fa-f]{6}\b/g],
+    /* 107, not 108: the cash book went back to the four stacked panels
+       it had before the console, and the console's opening bar went with
+       it. #E3B5AE was that bar's broken-chain variant -- the keyline on
+       a ghost button inside a warning nothing else draws. The warning
+       itself is .cb-chain-break again, at the head of the closing panel,
+       which is where it sat before and which spends no literal of its
+       own. The bar survives for Mobile Money, the shop's unset settings
+       and the duplicate-supplier band; only the crimson variant went. */
+    'distinct colours': [107, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

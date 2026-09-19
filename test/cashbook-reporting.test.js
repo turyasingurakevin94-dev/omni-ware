@@ -166,13 +166,18 @@ const day = (opening, actual) => ({
   t.check(/if\(!carried\) return ''/.test(html),
     'the first day of the book is not accused of breaking a chain it starts');
 
-  /* The warning moved from the foot of the page to the day header, so it
-     sits with the opening figures it is about rather than under the
-     reconciliation table. What still has to hold is that something
-     renders it -- pinned on the call, not on which function makes it. */
-  const header = extractFunction(src, 'renderCbDayHeader', 'index.html');
-  t.check(/cbChainBreakHTML\(date, getDayRecord\(date\)\)/.test(header),
-    'the day header actually renders it, beside the opening balances it disputes');
+  /* The warning went to the day header when the screen was a console,
+     and came back to the head of the closing panel when the screen went
+     back to four stacked panels -- which is where it sat originally, and
+     where its own CSS comment says it belongs: the count below it only
+     ever measures a day against its OWN opening figure, so a wrong
+     opening reconciles perfectly and nothing else here would catch it.
+
+     What still has to hold is what always had to hold: something renders
+     it. Pinned on the call, not on which function makes it. */
+  const summary = extractFunction(src, 'renderCbSummary', 'index.html');
+  t.check(/cbChainBreakHTML\(date, getDayRecord\(date\)\)/.test(summary),
+    'the closing panel actually renders it, above the count it would otherwise pass');
 }
 {
   // The one-tap correction has to write the carried figures and mark the
