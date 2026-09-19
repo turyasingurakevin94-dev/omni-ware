@@ -58,6 +58,31 @@
     --ow-amber-ink:#7A4A02;
     --ow-crimson:#8E2A22;
     --ow-crimson-soft:#FBE5E2;
+
+    /* THE CATEGORY PALETTE. A fourth role, added deliberately.
+       ---------------------------------------------------------------
+       The three families above answer "how is this doing" -- good,
+       caution, bad. These answer "which part of the business is this",
+       which is a different question and was being asked in grey.
+
+       A hue used for identity is not a hue spent on status: the rail's
+       six doors wear these, and a red door means Sell, never danger.
+       That is why they are a named role and not more state colours --
+       the rule is which QUESTION a colour answers, not how many there
+       are.
+
+       Each is a tint ground plus the ink that sits on it, and every
+       pair clears 4.5:1 on its own ground AND on paper, asserted in
+       design-system.test.js. Three families are new; Sell, Catalogue
+       and Setup reuse oxide, verdigris and the neutrals, because a
+       hue that already exists is cheaper than a hue that does not. */
+    --ow-indigo:#3A3F9B;
+    --ow-indigo-soft:#E4E6FA;
+    --ow-sky:#1A5A8A;
+    --ow-sky-soft:#DCEAF8;
+    --ow-plum:#7A3268;
+    --ow-plum-soft:#F6E4F1;
+
     --ow-ink-900:#1C2233;
     --ow-ink-600:#5F6980;
     --ow-ink-400:#767F91;
@@ -408,7 +433,7 @@
     all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
     font-family:inherit;
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
-    color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
+    color:#8D99B5;padding:12px 12px 5px;white-space:nowrap;overflow:hidden;
     /* Sticky because the list is taller than the rail: scrolled into the
        middle of Money, the heading that says so has already gone past.
        The background is the sidebar's own, or the rows would show
@@ -416,6 +441,56 @@
     position:sticky;top:0;z-index:1;background:var(--navy);
   }
   .nav-section-label:hover{color:#C7CFD8;}
+  /* THE SIX DOORS.
+
+     A monogram in the section's own CATEGORY colour -- the palette's
+     fourth role. Hue answers "which part of the business is this",
+     which is a different question from "how is this doing", and that
+     separation is the whole reason a red door is allowed to sit on the
+     rail of all 41 screens: it means Sell, never danger. Trouble on a
+     Sell screen still says so in crimson, in the same place it does
+     everywhere else.
+
+     Three of the six reuse families the app already had -- Sell is
+     oxide, Catalogue verdigris, Setup the neutrals -- so the six doors
+     cost three new hue families rather than six.
+
+     DRAWN THROUGH ::before AND attr(), for the same reason the count
+     is: buildNavIndex takes the group's name from this heading's
+     textContent, and a real <span> holding "Se" would rename "Sell" to
+     "SeSell" for the search index, the breadcrumb and the phone's
+     sheet alike. Generated content is not textContent. */
+  .nav-section-label::before{
+    content:attr(data-mono);order:0;flex-shrink:0;
+    width:20px;height:20px;border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;letter-spacing:0;text-transform:none;
+  }
+  .nav-group[data-group="Sell"] > .nav-section-label::before{
+    background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .nav-group[data-group="Buy"] > .nav-section-label::before{
+    background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .nav-group[data-group="Catalogue"] > .nav-section-label::before{
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .nav-group[data-group="Money"] > .nav-section-label::before{
+    background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .nav-group[data-group="Insight"] > .nav-section-label::before{
+    background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .nav-group[data-group="Setup"] > .nav-section-label::before{
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  /* THE MONOGRAM CARRIES IDENTITY ONLY, and this reverses what was
+     built first. The door used to go solid when it opened -- value for
+     the state, hue for the identity -- and the harness showed it
+     backwards: on a navy rail a pale tint ADVANCES and a dark solid
+     RECEDES, so every shut door was louder than every open one.
+
+     The flip is gone rather than inverted, because open-or-shut is
+     already carried three ways that admin-nav.test.js pins: the caret
+     turns, the rows appear, and a shut door shows its count. A fourth
+     carrier fighting those three is worse than none, and dimming the
+     tint would have cost the hue the recognisability it exists for --
+     six pastels are told apart at a glance where six dark solids on
+     navy are not. One rule, and the phone's sheet draws the same. */
   .nav-section-label:focus-visible{outline:1px solid rgba(255,255,255,.45);outline-offset:-1px;border-radius:6px;}
   .nav-fold{width:11px;height:11px;flex-shrink:0;order:2;margin-left:6px;opacity:.55;
     fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;
@@ -485,8 +560,14 @@
   .sidebar.collapsed .nav-section-label{
     font-size:0;padding:9px 12px 8px;height:0;overflow:visible;position:relative;
   }
+  /* The monogram cannot come with it: at 44px wide there is no room for
+     a door mark beside nothing, and the heading itself is font-size:0
+     here. ::before goes back to being the divider it was, and every
+     property the door set is reset rather than left to interact with
+     an absolutely positioned 1px line. */
   .sidebar.collapsed .nav-section-label::before{
-    content:"";position:absolute;left:12px;right:12px;top:8px;height:1px;
+    content:"";position:absolute;left:12px;right:12px;top:8px;
+    width:auto;height:1px;padding:0;border-radius:0;display:block;
     background:rgba(255,255,255,0.14);
   }
   .sidebar.collapsed .nav-section-label:first-child{padding-top:0;}
@@ -6639,22 +6720,26 @@
   .q-band .ow-cb-kx.ow-good{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .q-band .ow-cb-kx.ow-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
   .q-band .ow-cb-kx.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
-  /* The usual-buys line under the search: one line, chips that do not
-     fit counted on the last one. Opened, it wraps. */
-  .q-client-usual{display:none;position:relative;align-items:center;gap:var(--ow-sp-6);
-    padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;}
+  /* "Usually buys" strip -- shown right under the history box once a known
+     client with prior orders is typed/selected. Horizontally scrollable
+     chips (not a dropdown/table) so it stays glanceable on a live call and
+     never fights the client-name autocomplete for vertical space. */
+  .q-client-usual{display:none;gap:8px;margin:-8px 0 16px;overflow-x:auto;padding-bottom:2px;}
   .q-client-usual.show{display:flex;}
-  .q-client-usual.open{flex-wrap:wrap;}
-  .q-usual-l{flex:none;margin-right:var(--ow-sp-4);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .q-client-usual .q-chg-sug{margin-left:0;flex:none;white-space:nowrap;}
-  /* A chip the count has cut is gone: the chip's own inline-flex would
-     otherwise outrank the hidden attribute. */
-  .q-chg-sug[hidden]{display:none;}
-  .q-usual-chip[disabled]{cursor:default;color:var(--ink-soft);}
-  .q-usual-chip[disabled]:hover{border-color:var(--ow-rule-soft);}
-  /* The empty document's usual rows are the phone's; the console has the chips. */
-  .q-usual-slot{display:none;}
+  .q-usual-chip{
+    flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:7px 8px 7px 7px;max-width:220px;
+  }
+  .q-usual-chip .q-stage-thumb, .q-usual-chip .q-stage-thumb-placeholder{width:32px;height:32px;border-radius:7px;}
+  .q-usual-chip-info{min-width:0;}
+  .q-usual-chip-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
+  .q-usual-chip-meta{font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .q-usual-chip-add{
+    all:unset;flex-shrink:0;cursor:pointer;width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;
+  }
+  .q-usual-chip-add:hover{background:var(--ow-oxide-deep);}
+  .q-usual-chip-add .icon{width:14px;height:14px;stroke-width:2.5;}
   /* The one add row: the words, then the taps, all on one line. */
   .q-add-ph{grid-column:2/-1;display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;min-width:0;}
   .q-add-ph .q-chg-sug{margin-left:0;}
@@ -9644,6 +9729,23 @@
     text-transform:uppercase;color:var(--ow-ink-600);
   }
   .mms-group-label::after{content:'';flex:1 1 auto;height:1px;background:var(--ow-rule-soft);}
+  /* The same six doors as the rail. Guarded on [data-mono] because the
+     Backup heading in the sheet's own markup wears this class and has
+     no door behind it -- an unguarded rule would give it an empty
+     20px box. The sheet never folds, so there is no open state here;
+     the tint is the whole of it. */
+  .mms-group-label[data-mono]::before{
+    content:attr(data-mono);flex:none;order:-1;
+    width:22px;height:22px;border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;
+    font-size:var(--ow-t-11);letter-spacing:0;text-transform:none;
+  }
+  .mms-group-label[data-group="Sell"]::before{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .mms-group-label[data-group="Buy"]::before{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .mms-group-label[data-group="Catalogue"]::before{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .mms-group-label[data-group="Money"]::before{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .mms-group-label[data-group="Insight"]::before{background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .mms-group-label[data-group="Setup"]::before{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   /* ROWS, NOT TILES — and this reverses a measured decision, so it is
      worth saying why.
 
@@ -9953,7 +10055,6 @@
     .q-item-search-wrap > .icon{width:18px;height:18px;}
     #q_item_search{font-size:16px;}
     .q-item-search-hint{display:none;}
-    .q-client-usual.show{display:none;}
     /* THE STRIP IS A COLUMN ON THE PHONE. Cells beside each other need
        a console's width: at 358px the head and one finding leave the
        finding about 190px, which wraps its first line before it has
@@ -9980,21 +10081,6 @@
     .q-empty-doc-title{font-size:16px;font-weight:var(--ow-fw-600);}
     .q-empty-doc-hint{font-size:14px;line-height:1.5;}
     .q-empty-kbd{display:none;}
-    .q-usual-slot{display:block;}
-    .q-usual-rows{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:0 16px 14px;}
-    .q-usual-rows-rest:not([hidden]){display:contents;}
-    .q-usual-row{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
-      min-height:48px;padding:var(--ow-sp-8) 14px;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
-      background:var(--ow-paper);}
-    .q-usual-row[disabled]{cursor:default;color:var(--ow-ink-600);}
-    .q-usual-row .q-stage-thumb,.q-usual-row .q-stage-thumb-placeholder{width:30px;height:30px;border-radius:var(--ow-r-sm);}
-    .q-ur-t{flex:1 1 auto;min-width:0;}
-    .q-ur-n{display:block;font-size:15px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .q-ur-s{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-    .q-usual-row .q-add-icon{width:36px;height:36px;}
-    .q-usual-row .q-add-icon .icon{width:16px;height:16px;}
-    .q-usual-rows-more{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;
-      min-height:var(--ow-tap);line-height:var(--ow-tap);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
 
     /* Chase debts' own phone block stood here. That screen is the
        Follow-ups Money lens now and the block under this one already
@@ -10189,7 +10275,6 @@
     /* A line the shelf cannot cover reads in crimson, with what to do. */
     .q-rail-in{display:inline;margin-left:3px;color:inherit;}
     .q-sr-short .ow-sr-v,.q-sr-short .ow-sr-v .ow-fig{color:var(--ow-crimson);}
-    .q-client-usual.show{display:none;}
     #q_itemsWrap{background:var(--ow-paper);border:0;border-radius:0;}
     /* The column header: 28px, the item and its total. */
     .q-doc .ow-tbl-h{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:0 var(--ow-sp-8);align-items:center;
@@ -10344,20 +10429,6 @@
     .q-empty-doc-title{font-size:16px;font-weight:var(--ow-fw-600);}
     .q-empty-doc-hint{font-size:14px;line-height:1.5;}
     .q-empty-kbd{display:none;}
-    .q-usual-slot{display:block;}
-    .q-usual-rows{display:flex;flex-direction:column;gap:0;padding:0;border-top:1px solid var(--ow-rule-soft);}
-    .q-usual-rows-rest:not([hidden]){display:contents;}
-    .q-usual-row{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
-      min-height:48px;padding:var(--ow-sp-6) 16px;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
-    .q-usual-row[disabled]{cursor:default;color:var(--ow-ink-600);}
-    .q-usual-row .q-stage-thumb,.q-usual-row .q-stage-thumb-placeholder{width:30px;height:30px;border-radius:var(--ow-r-sm);}
-    .q-ur-t{flex:1 1 auto;min-width:0;}
-    .q-ur-n{display:block;font-size:14px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .q-ur-s{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-    .q-usual-row .q-add-icon{width:32px;height:32px;}
-    .q-usual-row .q-add-icon .icon{width:14px;height:14px;}
-    .q-usual-rows-more{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;
-      min-height:var(--ow-tap);line-height:var(--ow-tap);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
     /* THE DOCK: the shop strip, then one 64px line -- the figure with
        its line count, WhatsApp, Save. The ⋯ is in the bar above. */
     .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
@@ -17776,7 +17847,7 @@
         <span class="nav-label">Dashboard</span>
       </button>
       <div class="nav-group" data-group="Sell">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Se" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
           <span class="nav-label">New quote</span>
@@ -17826,7 +17897,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Buy">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Bu" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- What to buy had a row here. It is the Stock lens of
              Forecasts under Insight now: what the shelf will need is a
              question about what has not happened yet, and it is answered
@@ -17860,7 +17931,7 @@
              four screens about CHOOSING what to buy and from whom. -->
       </div>
       <div class="nav-group" data-group="Catalogue">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Ca" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Products</span>
@@ -17902,7 +17973,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Money">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Mo" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
           <span class="nav-label">Cash book</span>
@@ -17948,7 +18019,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Insight">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="In" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- ONE ROW WHERE THREE WERE. The day, What to buy and What's
              coming were one question -- what is coming -- asked over the
              next few hours, the next fortnight and the next thirty days,
@@ -18000,7 +18071,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Setup">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Su" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="staff" title="Staff" data-keywords="employees team users workers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
           <span class="nav-label">Staff</span>
@@ -18245,6 +18316,10 @@
              date. renderClientHistoryBox writes them. -->
         <div class="ow-cb-k" id="q_client_history"></div>
       </div>
+      <!-- What they usually take, as chips that add straight to the
+           quote. Under the band rather than in it: the band is facts,
+           this is a door. Keeps its id and its render function. -->
+      <div class="q-client-usual" id="q_client_usual"></div>
 
       <div class="ow-grid">
         <!-- ============ THE DOCUMENT ============ -->
@@ -18264,12 +18339,6 @@
                  scope, and the rows rendered as an unstyled stack. -->
             <div class="q-item-search-dd searchable-select" id="q_item_search_dd" style="display:none;"></div>
           </div>
-          <!-- What they usually take, as chips on one line under the
-               search -- inside the document, because tapping one puts a
-               line on it. Chips that do not fit are counted, never
-               dropped: the last chip says how many. renderClientUsualBuys
-               keeps its id and its render. -->
-          <div class="q-client-usual" id="q_client_usual"></div>
           <!-- THE PHONE'S TWO TABS, under the search: the quote, and the
                details the console keeps in its rail. Each carries its
                count; Details carries a dot when a section is warning.
@@ -31367,7 +31436,6 @@ function goToTab(tab){
      only while this tab does -- gated by a body class the bar's CSS
      reads, set here where every tab switch already passes. */
   document.body.classList.toggle('on-quote-tab', tab==='quote');
-  if(tab==='quote') fitUsualChips();
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   // One screen, two registers: the lens decides which is drawn, and it
@@ -32876,12 +32944,25 @@ function mmsRenderDestinations(){
   });
   wrap.innerHTML = groups.map(g=>`
     <div class="mms-group">
-      ${g.name ? `<div class="mms-group-label"><span>${esc(g.name)}</span></div>` : ''}
+      ${g.name ? `<div class="mms-group-label" data-group="${esc(g.name)}" data-mono="${esc(mmsMono(g.name))}"><span>${esc(g.name)}</span></div>` : ''}
       ${g.items.map(it=>
         `<button type="button" class="mms-row" data-tab="${esc(it.tab)}">${it.icon}`
         + `<span class="mms-label">${esc(it.label)}</span>${mmsCountHTML(it)}${MMS_GO_ICON}</button>`
       ).join('')}
     </div>`).join('');
+}
+/* The door's monogram, read off the rail for the same reason every
+   other thing in this sheet is: the rail is the source of truth, and a
+   second copy here would be free to drift.
+
+   NOT derived from the name. "Sell".slice(0,2) and "Setup".slice(0,2)
+   are both "Se", so two of the six doors would have worn the same mark
+   -- which is the one thing a mark like this exists to stop. The rail
+   writes Su on Setup deliberately, and this reads what it wrote. */
+function mmsMono(group){
+  const head = document.querySelector(
+    `#sidebar .nav-group[data-group="${(window.CSS && CSS.escape) ? CSS.escape(group) : group}"] > .nav-section-label`);
+  return (head && head.dataset.mono) || '';
 }
 const MMS_GO_ICON = '<svg class="mms-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 /* Read straight off the rail's own badge rather than worked out again
@@ -37255,113 +37336,38 @@ function lastPriceToClient(nameLower, productId, variantIdx){
   return best;
 }
 
-/* WHAT THEY USUALLY TAKE, as chips on one line under the search.
-   Tapping one jumps straight into the item picker's supplier/price
-   stage for that product (not a raw re-add of the old line), so the
-   quote always picks up current pricing and stock rather than whatever
-   was true last time.
-
-   ONE LINE, AND THE CUT IS COUNTED. The row never wraps and never
-   scrolls: chips that do not fit are hidden and the last chip says how
-   many ("+3"), which opens the row. A strip that scrolled sideways hid
-   its own tail with nothing to say it had one. On the phone this row
-   is not drawn at all; the same rows sit in the empty document as
-   thumb-sized lines (usualBuysRowsHTML), because there the usuals are
-   the next act, not a garnish. */
-let quoteUsualRows = [];
-function usualBuysAdd(r){
-  if(!r || !r.productId) return;
-  openModal('itemPickerModal');
-  ipSelectProduct(r.productId, r.variantIdx);
-  const qtyEl = document.getElementById('ip_qty');
-  if(qtyEl && r.lastQty>0) qtyEl.value = r.lastQty;
-}
+// Horizontally-scrollable chip strip of what this client usually buys --
+// tapping the + jumps straight into the item picker's supplier/price stage
+// for that product (not a raw re-add of the old line), so the quote always
+// picks up current pricing/stock rather than whatever was true last time.
 function renderClientUsualBuys(nameLower){
   const wrap = document.getElementById('q_client_usual');
   if(!wrap) return;
   const rows = nameLower ? customerPurchaseHistory(nameLower).slice(0,8) : [];
-  quoteUsualRows = rows;
-  /* The empty document draws the same rows; if it is on screen, it is
-     told the client changed. */
-  const slot = document.querySelector('#q_itemsWrap .q-usual-slot');
-  if(slot){ slot.innerHTML = usualBuysRowsHTML(); wireUsualRows(slot); }
-  if(!rows.length){ wrap.classList.remove('show','open'); wrap.innerHTML=''; return; }
-  /* Whose usuals these are. "Usually buys" beside a row of chips is a
-     fact with no subject -- on a screen where the client is chosen at
-     the top, it reads as a claim about the shop. */
-  const firstName = String(data.quote.client.name || '').trim().split(/\s+/)[0];
-  wrap.innerHTML = `<span class="q-usual-l">${firstName ? esc(firstName) + ' usually buys' : 'Usually buys'}</span>` + rows.map((r,i)=>{
-    const when = savedAgoLabel(r.lastOrderedAt);
-    return `<button type="button" class="q-chg-sug q-usual-chip" data-idx="${i}"${r.productId ? '' : ' disabled'} title="${esc(r.productName)} — last ${esc(r.lastQty)} ${esc(r.unit)}, ${esc(when)}${r.productId ? '. Add it to this quote' : '. Not in the catalogue any more'}">${esc(r.productName)}<b>${esc(r.lastQty)} ${esc(r.unit)}</b></button>`;
-  }).join('') + `<button type="button" class="q-chg-sug q-chg-sug-more q-usual-more" hidden></button>`;
-  wrap.classList.add('show');
-  wrap.querySelectorAll('.q-usual-chip').forEach(btn=>{
-    btn.addEventListener('click', ()=> usualBuysAdd(rows[Number(btn.dataset.idx)]));
-  });
-  wrap.querySelector('.q-usual-more').addEventListener('click', ()=>{
-    wrap.classList.toggle('open');
-    fitUsualChips();
-  });
-  fitUsualChips();
-  /* Once more after layout: at boot the row is drawn before the screen
-     is shown and measures nothing. */
-  requestAnimationFrame(fitUsualChips);
-}
-/* Hides the chips that do not fit the line and counts them on the last
-   one. Measured, because the names are as long as somebody typed them. */
-function fitUsualChips(){
-  const wrap = document.getElementById('q_client_usual');
-  if(!wrap || !wrap.classList.contains('show')) return;
-  const chips = [...wrap.querySelectorAll('.q-usual-chip')];
-  const more = wrap.querySelector('.q-usual-more');
-  if(!chips.length || !more) return;
-  chips.forEach(c=>{ c.hidden = false; });
-  if(wrap.classList.contains('open')){ more.hidden = false; more.textContent = 'Fewer'; return; }
-  more.hidden = true;
-  const width = wrap.clientWidth;
-  if(!width) return;
-  const over = chips.some(c=> c.offsetLeft + c.offsetWidth > width);
-  if(!over) return;
-  more.hidden = false; more.textContent = `+${chips.length}`;
-  const limit = width - more.offsetWidth - 6;
-  let cut = 0;
-  chips.forEach(c=>{
-    if(cut || c.offsetLeft + c.offsetWidth > limit){ c.hidden = true; cut++; }
-  });
-  more.textContent = `+${cut}`;
-}
-window.addEventListener('resize', ()=>{
-  clearTimeout(fitUsualChips._t);
-  fitUsualChips._t = setTimeout(fitUsualChips, 120);
-});
-/* The phone's empty document: the first three usuals as lines a thumb
-   can take, and how many more there are. Named rather than dropped. */
-function usualBuysRowsHTML(){
-  const rows = quoteUsualRows || [];
-  if(!rows.length) return '';
-  const line = (r, i)=>{
+  if(!rows.length){ wrap.classList.remove('show'); wrap.innerHTML=''; return; }
+  wrap.innerHTML = rows.map((r,i)=>{
     const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
-    return `<button type="button" class="q-usual-row" data-usual="${i}"${product ? '' : ' disabled'} title="${product ? 'Add to this quote' : 'Not in the catalogue any more'}">
+    return `<div class="q-usual-chip" data-idx="${i}">
       ${ipStageThumbHTML(product||{}, r.variantIdx)}
-      <span class="q-ur-t"><span class="q-ur-n">${esc(r.productName)}</span><span class="q-ur-s">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</span></span>
-      <span class="q-add-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
-    </button>`;
-  };
-  const rest = rows.length - 3;
-  return `<div class="q-usual-rows">${rows.slice(0,3).map(line).join('')}${rest > 0
-    ? `<div class="q-usual-rows-rest" hidden>${rows.slice(3).map((r,i)=> line(r, i+3)).join('')}</div><button type="button" class="q-usual-rows-more">${rest} more usual${rest===1?'':'s'}</button>`
-    : ''}</div>`;
-}
-function wireUsualRows(slot){
-  slot.querySelectorAll('.q-usual-row').forEach(btn=>{
-    btn.addEventListener('click', ()=> usualBuysAdd(quoteUsualRows[Number(btn.dataset.usual)]));
-  });
-  const more = slot.querySelector('.q-usual-rows-more');
-  if(more) more.addEventListener('click', ()=>{
-    const rest = slot.querySelector('.q-usual-rows-rest');
-    rest.hidden = !rest.hidden;
-    const n = quoteUsualRows.length - 3;
-    more.textContent = rest.hidden ? `${n} more usual${n===1?'':'s'}` : 'Fewer';
+      <div class="q-usual-chip-info">
+        <div class="q-usual-chip-name" title="${esc(r.productName)}">${esc(r.productName)}</div>
+        <div class="q-usual-chip-meta">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</div>
+      </div>
+      ${product ? `<button type="button" class="q-usual-chip-add" title="Add to this quote" data-idx="${i}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>` : ''}
+    </div>`;
+  }).join('');
+  wrap.classList.add('show');
+  wrap.querySelectorAll('.q-usual-chip-add').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const r = rows[Number(btn.dataset.idx)];
+      if(!r || !r.productId) return;
+      openModal('itemPickerModal');
+      ipSelectProduct(r.productId, r.variantIdx);
+      const qtyEl = document.getElementById('ip_qty');
+      if(qtyEl && r.lastQty>0) qtyEl.value = r.lastQty;
+    });
   });
 }
 /* THE BAND'S KNOWN FACTS. What the books already hold on whoever was
@@ -39076,14 +39082,13 @@ function renderQuoteItems(){
     wrap.innerHTML = `<div class="q-empty-doc">
       <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <div class="q-empty-doc-title">Nothing on the quote yet</div>
-      <div class="q-empty-doc-hint">Search above to add the first one<span class="q-empty-kbd"> — or press <b>/</b> to jump to the search</span>${quoteUsualRows.length ? `, or take one of ${esc(String(data.quote.client.name||'').trim().split(/\s+/)[0])}'s usuals` : ''}.</div>
+      <div class="q-empty-doc-hint">Search above to add the first one<span class="q-empty-kbd"> — or press <b>/</b> to jump to the search</span>.</div>
       <button type="button" class="q-add-icon" id="q_add_row_btn" style="display:none;"></button>
       <div class="q-add-row-placeholder" style="display:none;"></div>
-    </div><div class="q-usual-slot">${usualBuysRowsHTML()}</div>`;
+    </div>`;
     renderQuoteFinbar(0, 0, 0);
     wrap.querySelector('#q_add_row_btn').addEventListener('click', openItemPicker);
     wrap.querySelector('.q-add-row-placeholder').addEventListener('click', openItemPicker);
-    wireUsualRows(wrap.querySelector('.q-usual-slot'));
     renderQuoteRail();
     return;
   }
