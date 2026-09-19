@@ -433,7 +433,7 @@
     all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
     font-family:inherit;
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
-    color:#8D99B5;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
+    color:#8D99B5;padding:12px 12px 5px;white-space:nowrap;overflow:hidden;
     /* Sticky because the list is taller than the rail: scrolled into the
        middle of Money, the heading that says so has already gone past.
        The background is the sidebar's own, or the rows would show
@@ -441,6 +441,56 @@
     position:sticky;top:0;z-index:1;background:var(--navy);
   }
   .nav-section-label:hover{color:#C7CFD8;}
+  /* THE SIX DOORS.
+
+     A monogram in the section's own CATEGORY colour -- the palette's
+     fourth role. Hue answers "which part of the business is this",
+     which is a different question from "how is this doing", and that
+     separation is the whole reason a red door is allowed to sit on the
+     rail of all 41 screens: it means Sell, never danger. Trouble on a
+     Sell screen still says so in crimson, in the same place it does
+     everywhere else.
+
+     Three of the six reuse families the app already had -- Sell is
+     oxide, Catalogue verdigris, Setup the neutrals -- so the six doors
+     cost three new hue families rather than six.
+
+     DRAWN THROUGH ::before AND attr(), for the same reason the count
+     is: buildNavIndex takes the group's name from this heading's
+     textContent, and a real <span> holding "Se" would rename "Sell" to
+     "SeSell" for the search index, the breadcrumb and the phone's
+     sheet alike. Generated content is not textContent. */
+  .nav-section-label::before{
+    content:attr(data-mono);order:0;flex-shrink:0;
+    width:20px;height:20px;border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;letter-spacing:0;text-transform:none;
+  }
+  .nav-group[data-group="Sell"] > .nav-section-label::before{
+    background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .nav-group[data-group="Buy"] > .nav-section-label::before{
+    background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .nav-group[data-group="Catalogue"] > .nav-section-label::before{
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .nav-group[data-group="Money"] > .nav-section-label::before{
+    background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .nav-group[data-group="Insight"] > .nav-section-label::before{
+    background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .nav-group[data-group="Setup"] > .nav-section-label::before{
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  /* THE MONOGRAM CARRIES IDENTITY ONLY, and this reverses what was
+     built first. The door used to go solid when it opened -- value for
+     the state, hue for the identity -- and the harness showed it
+     backwards: on a navy rail a pale tint ADVANCES and a dark solid
+     RECEDES, so every shut door was louder than every open one.
+
+     The flip is gone rather than inverted, because open-or-shut is
+     already carried three ways that admin-nav.test.js pins: the caret
+     turns, the rows appear, and a shut door shows its count. A fourth
+     carrier fighting those three is worse than none, and dimming the
+     tint would have cost the hue the recognisability it exists for --
+     six pastels are told apart at a glance where six dark solids on
+     navy are not. One rule, and the phone's sheet draws the same. */
   .nav-section-label:focus-visible{outline:1px solid rgba(255,255,255,.45);outline-offset:-1px;border-radius:6px;}
   .nav-fold{width:11px;height:11px;flex-shrink:0;order:2;margin-left:6px;opacity:.55;
     fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;
@@ -510,8 +560,14 @@
   .sidebar.collapsed .nav-section-label{
     font-size:0;padding:9px 12px 8px;height:0;overflow:visible;position:relative;
   }
+  /* The monogram cannot come with it: at 44px wide there is no room for
+     a door mark beside nothing, and the heading itself is font-size:0
+     here. ::before goes back to being the divider it was, and every
+     property the door set is reset rather than left to interact with
+     an absolutely positioned 1px line. */
   .sidebar.collapsed .nav-section-label::before{
-    content:"";position:absolute;left:12px;right:12px;top:8px;height:1px;
+    content:"";position:absolute;left:12px;right:12px;top:8px;
+    width:auto;height:1px;padding:0;border-radius:0;display:block;
     background:rgba(255,255,255,0.14);
   }
   .sidebar.collapsed .nav-section-label:first-child{padding-top:0;}
@@ -9658,6 +9714,23 @@
     text-transform:uppercase;color:var(--ow-ink-600);
   }
   .mms-group-label::after{content:'';flex:1 1 auto;height:1px;background:var(--ow-rule-soft);}
+  /* The same six doors as the rail. Guarded on [data-mono] because the
+     Backup heading in the sheet's own markup wears this class and has
+     no door behind it -- an unguarded rule would give it an empty
+     20px box. The sheet never folds, so there is no open state here;
+     the tint is the whole of it. */
+  .mms-group-label[data-mono]::before{
+    content:attr(data-mono);flex:none;order:-1;
+    width:22px;height:22px;border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;
+    font-size:var(--ow-t-11);letter-spacing:0;text-transform:none;
+  }
+  .mms-group-label[data-group="Sell"]::before{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .mms-group-label[data-group="Buy"]::before{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .mms-group-label[data-group="Catalogue"]::before{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .mms-group-label[data-group="Money"]::before{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .mms-group-label[data-group="Insight"]::before{background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .mms-group-label[data-group="Setup"]::before{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   /* ROWS, NOT TILES — and this reverses a measured decision, so it is
      worth saying why.
 
@@ -17790,7 +17863,7 @@
         <span class="nav-label">Dashboard</span>
       </button>
       <div class="nav-group" data-group="Sell">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Se" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
           <span class="nav-label">New quote</span>
@@ -17840,7 +17913,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Buy">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Bu" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- What to buy had a row here. It is the Stock lens of
              Forecasts under Insight now: what the shelf will need is a
              question about what has not happened yet, and it is answered
@@ -17874,7 +17947,7 @@
              four screens about CHOOSING what to buy and from whom. -->
       </div>
       <div class="nav-group" data-group="Catalogue">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Ca" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Products</span>
@@ -17916,7 +17989,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Money">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Mo" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
           <span class="nav-label">Cash book</span>
@@ -17962,7 +18035,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Insight">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="In" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- ONE ROW WHERE THREE WERE. The day, What to buy and What's
              coming were one question -- what is coming -- asked over the
              next few hours, the next fortnight and the next thirty days,
@@ -18014,7 +18087,7 @@
         </button>
       </div>
       <div class="nav-group" data-group="Setup">
-        <button type="button" class="nav-section-label" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="nav-section-label" data-mono="Su" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="staff" title="Staff" data-keywords="employees team users workers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
           <span class="nav-label">Staff</span>
@@ -32882,12 +32955,25 @@ function mmsRenderDestinations(){
   });
   wrap.innerHTML = groups.map(g=>`
     <div class="mms-group">
-      ${g.name ? `<div class="mms-group-label"><span>${esc(g.name)}</span></div>` : ''}
+      ${g.name ? `<div class="mms-group-label" data-group="${esc(g.name)}" data-mono="${esc(mmsMono(g.name))}"><span>${esc(g.name)}</span></div>` : ''}
       ${g.items.map(it=>
         `<button type="button" class="mms-row" data-tab="${esc(it.tab)}">${it.icon}`
         + `<span class="mms-label">${esc(it.label)}</span>${mmsCountHTML(it)}${MMS_GO_ICON}</button>`
       ).join('')}
     </div>`).join('');
+}
+/* The door's monogram, read off the rail for the same reason every
+   other thing in this sheet is: the rail is the source of truth, and a
+   second copy here would be free to drift.
+
+   NOT derived from the name. "Sell".slice(0,2) and "Setup".slice(0,2)
+   are both "Se", so two of the six doors would have worn the same mark
+   -- which is the one thing a mark like this exists to stop. The rail
+   writes Su on Setup deliberately, and this reads what it wrote. */
+function mmsMono(group){
+  const head = document.querySelector(
+    `#sidebar .nav-group[data-group="${(window.CSS && CSS.escape) ? CSS.escape(group) : group}"] > .nav-section-label`);
+  return (head && head.dataset.mono) || '';
 }
 const MMS_GO_ICON = '<svg class="mms-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 /* Read straight off the rail's own badge rather than worked out again

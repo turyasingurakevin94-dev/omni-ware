@@ -176,6 +176,16 @@ Sell is red, not because anything is wrong; if a Sell screen has a
 problem, it says so in crimson, in the same places every other screen
 does. A colour that means two things means neither.
 
+**And it carries identity ONLY — not state.** The rail's doors were
+built once with the tint going solid when a door opened, and the
+harness showed it backwards: on navy a pale tint advances and a dark
+solid recedes, so every shut door was louder than every open one.
+Open-or-shut is already said three ways — the caret turns, the rows
+appear, a shut door shows its count — and a fourth carrier fighting
+those three is worse than none. Six pastels are told apart at a
+glance; six dark solids on navy are not. Look at it in the harness
+before you make a colour do a second job.
+
 ### The meaning rules — the part a test cannot enforce
 
 - **Colour answers a question.** Ground, state, action, category —
