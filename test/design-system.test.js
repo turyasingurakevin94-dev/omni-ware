@@ -142,16 +142,38 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        transparent` the lane used to declare, purely to transition out
        of, did NOT: that one was a distinct shadow spent on nothing
        being drawn, and it is gone for good. */
-    /* 60. Order tracking was restored to the lane board it was on 2 Sep,
-       on the shop's instruction, and the board and its three run dialogs
-       came back with the four marks only they draw: the overdue flag's
-       lift, the carousel card's, the floating arrow on the carousel's
-       nav, and the lane's resting `inset 0 0 0 0 transparent` that the
-       flash transitions out of. Three of the four ARE elevation, which
-       the law above is about, and they are here because the screen they
-       belong to is here -- not because depth was reconsidered. Nothing
-       outside this board and its dialogs may spend one. */
-    'shadows': [60, /box-shadow:\s*([^;}]+)/g],
+
+    /* 57, not 56, and this one goes UP -- the second time in this file,
+       so it is argued rather than nudged.
+
+       The owner asked for the New quote screen to be restored exactly as
+       it stood before the rebuild, and explicitly authorised breaking the
+       house rules to get it. The screen it brings back carries one shadow
+       the rebuild had removed: 0 -4px 16px rgba(20,30,40,.06) under the
+       sticky totals bar. That bar is fixed to the viewport with the
+       document scrolling underneath it, which is the one case --ow-lift
+       exists for ("things that genuinely float"), except that it lifts
+       UPWARD and --ow-lift only casts down. A hairline cannot do the job:
+       the bar's ground and the page's ground are both warm paper, so at
+       the moment a row passes under it there is nothing to separate them.
+
+       It is one shadow, on one element, on one screen, and it is the
+       original's. It may not spread: anything else that wants depth still
+       uses --ow-lift or a hairline. */
+    /* And up again, for the board. Order tracking was restored to the
+       lane board it stood on on 2 September, on the shop's instruction,
+       and it came back with the four marks only it and its three run
+       dialogs draw: the overdue flag's lift, the carousel card's, the
+       floating arrow on the carousel's nav, and the lane's resting
+       `inset 0 0 0 0 transparent` that the flash transitions out of.
+       Three of the four ARE elevation, which the law above is about.
+       They are here because the screen they belong to is here, not
+       because depth was reconsidered, and nothing outside that board
+       and its dialogs may spend one.
+
+       Two rulings, two rises, both the owner's, both kept whole so the
+       next reader can weigh each on its own. */
+    'shadows': [61, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -181,14 +203,50 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        says. The panel went when the list became a set of place cards;
        one of its two keylines was already spent elsewhere, the other
        was not. */
-    /* 108, for the same restoration and no other reason. Six hexes come
-       back with the lane board: the pickups pill's four purples, the
-       invoice icon's own amber, and the buying list's verdict keyline.
-       The purple is outside the palette and always was -- it is the
-       clearest thing this ceiling is carrying, and it is carried because
-       the screen was asked for as it was, not because the palette grew.
-       No new screen may spend any of the six. */
-    'distinct colours': [108, /#[0-9A-Fa-f]{6}\b/g],
+
+    /* 109, not 102. TWO rises, from two unrelated decisions, and both
+       are kept whole because each is an argument the next reader has to
+       be able to weigh on its own.
+
+       +6, THE CATEGORY PALETTE (the owner's ruling). A palette held to
+       one accent forces every layout monochrome, and colour is a real
+       instrument of hierarchy -- six rail doors told apart by hue are
+       found faster than six told apart by position alone. So a fourth
+       ROLE was added and it cost six literals: indigo, sky and plum,
+       each a tint and its ink. Sell, Catalogue and Setup wear oxide,
+       verdigris and the neutrals, which is why this is +6 and not +12.
+
+       +1, THE RESTORED NEW QUOTE SCREEN (also the owner's, and also a
+       ruling: the page was to come back exactly as it stood before the
+       rebuild, house rules included). It carries #F7F9FB, the cool tint
+       behind an item thumbnail's dashed placeholder in the picker and
+       on a quote line -- the ground for a box standing in for a
+       photograph nobody has taken. The palette has no cool near-white:
+       --ow-paper-2 is warm, and on a warm ground a warm placeholder
+       does not read as an absence. One value, two rules.
+
+       What did NOT change: this is still a ceiling, it still may only
+       fall, and every pair added is held to 4.5:1 in the contrast
+       block. A colour is cheap to justify and expensive to add. */
+    /* 108, not 109: the cash book went back to the four stacked panels
+       it had before the console -- the same ruling that brought back New
+       Quote above -- and the console's opening bar went with it.
+       #E3B5AE was that bar's broken-chain variant: the keyline on a
+       ghost button inside a warning nothing else draws. The warning
+       itself is .cb-chain-break again, at the head of the closing panel,
+       which is where it sat before and which spends no literal of its
+       own. The bar survives for Mobile Money, the shop's unset settings
+       and the duplicate-supplier band; only the crimson variant went.
+
+       Worth noting against the +1 above: restoring a screen does not
+       have to cost a colour. This one paid one back. */
+    /* And up again, for the board: six hexes come back with the lane
+       board -- the pickups pill's four purples, the invoice icon's own
+       amber, and the buying list's verdict keyline. The purple is
+       outside the palette and always was. It is carried because the
+       screen was asked for as it was, not because the palette grew, and
+       no new screen may spend any of the six. */
+    'distinct colours': [114, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -258,6 +316,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-crimson', PAPER, 4.5, 'bad, as text'],
     ['--ow-amber-ink', hex('--ow-amber-soft'), 4.5, 'caution ink on its own ground'],
     ['--ow-oxide-deep', hex('--ow-oxide-soft'), 4.5, 'chip ink on chip ground'],
+
+    /* THE CATEGORY PALETTE, held to exactly what the state families are
+       held to. Widening the palette was the owner's call; letting a
+       widened palette ship an unreadable pairing was not. Each ink is
+       checked twice -- on its own tint, which is how the rail's
+       monograms draw it, and on paper, because a category colour that
+       cannot be set as text is half a colour. */
+    ['--ow-indigo', hex('--ow-indigo-soft'), 4.5, 'Buy — its ink on its own tint'],
+    ['--ow-indigo', PAPER, 4.5, 'Buy — its ink as text'],
+    ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money — its ink on its own tint'],
+    ['--ow-sky', PAPER, 4.5, 'Money — its ink as text'],
+    ['--ow-plum', hex('--ow-plum-soft'), 4.5, 'Insight — its ink on its own tint'],
+    ['--ow-plum', PAPER, 4.5, 'Insight — its ink as text'],
+    ['--ow-verdigris', hex('--ow-verdigris-soft'), 4.5, 'Catalogue — its ink on its own tint'],
+    ['--ow-ink-600', hex('--ow-rule-soft'), 4.5, 'Setup — the neutral door, ink on its tint'],
   ];
   PAIRS.forEach(([tok, ground, floor, why]) => {
     const c = hex(tok);
@@ -949,7 +1022,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'deb-card-prog'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
              'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
-      renders: 'renderInvoices',
+      /* FIVE NAMED FUNCTIONS NOW, not one. The screen grew a third lens
+         -- a sale beside the bills it raised -- and the chip, the
+         progress bar, the range-and-order and the row's acts were
+         lifted out of renderInvoices so the two lenses cannot disagree
+         about one pile of money. A spec still naming only renderInvoices
+         would have policed the register while the lens beside it, which
+         draws the same table from the same helpers, went unchecked: the
+         assertion's meaning ("this screen is built on the layer") is
+         unchanged, and what changed is how many functions that screen
+         is now spread across. */
+      renders: ['renderInvoices', 'renderInvoicesPaired', 'invPairRailHTML',
+                'invStatusChip', 'invProgressCell'],
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
                     'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],

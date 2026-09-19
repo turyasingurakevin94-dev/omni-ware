@@ -47,12 +47,18 @@ const t = createReporter('invoice undo');
 const src = read('index.html');
 const render = extractFunction(src, 'renderInvoices', 'index.html');
 const toggle = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
+const bind = extractFunction(src, 'invBindDocActions', 'index.html');
 
 /* ---------- 1. the act is on the row, and it is the same act ---------- */
 {
   t.check(/inv-doc-unbill/.test(render),
     'the register\'s row carries an undo-invoice control');
-  t.check(/\.inv-doc-unbill'\)[\s\S]{0,200}toggleQuoteInvoiced\(Number\(btn\.dataset\.id\)\)/.test(render),
+  /* The BINDING moved to invBindDocActions when the paired lens arrived
+     -- both lenses draw this row, and a second copy of the wiring is
+     exactly how one lens comes to reverse what the other only prints.
+     The button is still emitted by renderInvoices (checked above); this
+     asks the same question of the one place that now binds it. */
+  t.check(/\.inv-doc-unbill'\)[\s\S]{0,200}toggleQuoteInvoiced\(Number\(btn\.dataset\.id\)\)/.test(bind),
     'and it calls the same toggleQuoteInvoiced the Order tracking board calls');
   /* Not a private reversal beside the shared one. If this screen ever
      starts putting stock back or removing payments itself, these two

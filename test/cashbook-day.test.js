@@ -216,12 +216,24 @@ const reset = () => { data.cashDays = {}; data.cashTxns = []; };
   const go = (/function cbGoToDay[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/showCbMain\(\)/.test(go) && !/showCbWizard/.test(go),
     'stepping onto any day shows the book rather than a form');
-  const banner = (/function renderCbOpenBanner[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/has not been opened yet/.test(banner) && /unconfirmed/.test(banner),
-    'and an unopened day says so, in words, above the figures it is carrying');
+  /* WHERE THE MARK LIVES CHANGED; THAT THERE IS ONE DID NOT.
+
+     These two used to read renderCbOpenBanner -- the console's amber bar
+     above the metric strip -- for the words "has not been opened yet",
+     and then the strip for the literal that marked the lead tile. The
+     screen went back to the four stacked panels it had before the
+     console, and the bar went with it: there is no band above the
+     position any more to carry a sentence.
+
+     So both are now one assertion against the position itself, which is
+     where the console put the mark anyway and where it has to be: the
+     Money on hand tile says "unconfirmed" in words, in front of the
+     figure it is about, and it says it from rec.openingSet rather than
+     from anything a caller passed in. An unconfirmed opening passing as
+     a confirmed one is still the thing that cannot happen. */
   const head = (/function renderCbDayHeader[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/rec\.openingSet \? '' : ' <span class="cb-unc">unconfirmed<\/span> ·'/.test(head),
-    'and the position itself carries the mark, not just the banner above it');
+  t.check(/rec\.openingSet \? '' : '<span class="cb-unc">unconfirmed<\/span>/.test(head),
+    'an unopened day says so in words, on the position itself, drawn from openingSet');
 }
 
 /* ---------- 7. one arithmetic, and no invented zeroes ---------------- */
@@ -243,8 +255,14 @@ const reset = () => { data.cashDays = {}; data.cashTxns = []; };
      footer, and printing it a third time wrapped the strip onto three
      rows. The rule this assertion protects is unchanged and is what is
      checked: a side that did not move is never dressed as one. */
+  /* The tile carries its account's gross in and out again, as it did
+     before the console -- so this is no longer the net-move helper's
+     `if(!n)` but the same rule one level up: each side is PUSHED only
+     when it moved, and a tile with neither says so in words. A "+0 in"
+     beside a day's losses is still what must never appear. */
   const header = (/function renderCbDayHeader[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/if\(!n\) return '<span class="qt">nothing moved today<\/span>'/.test(header),
+  t.check(/if\(inn\) parts\.push/.test(header) && /if\(out\) parts\.push/.test(header)
+      && /parts\.length \? parts\.join\([^)]*\) : 'nothing moved today'/.test(header),
     'a day that did not move says so in words rather than showing a zero');
   t.check(!/\+0/.test(header) && !/-0/.test(header),
     'and no zero is ever dressed as a movement');

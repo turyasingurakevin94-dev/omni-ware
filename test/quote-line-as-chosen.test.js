@@ -174,12 +174,7 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   const rows = extractFunction(src, 'renderQuoteItems', 'index.html');
   t.check(/const asPack = !!\(packView && packView\.whole\);\s*const per = asPack \? packView\.packQty : 1;/.test(rows),
     'the row is drawn in packs exactly when the line is counted in packs');
-  /* WAS: value="${qtyShown}" raw. The four editable boxes carry
-     thousands separators now, so what goes IN is qFigShow(qtyShown) and
-     what comes out is read back through qFigParse. The assertion is
-     unchanged in substance -- the box shows the count in the unit the
-     line is counted in -- and qtyShown is still the value it shows. */
-  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qFigShow\(qtyShown\)\}"/.test(rows),
+  t.check(/class="ow-gi qty-input q-qty"[^>]*value="\$\{qtyShown\}"/.test(rows),
     'the quantity box shows the count in that unit — 1, not 100');
   t.check(/<span class="q-qty-unit"[^>]*>\$\{esc\(countUnit\)\}<\/span>/.test(rows),
     'with the unit beside it, so "1" reads as "1 Ctn"');
@@ -187,26 +182,18 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the unit under the product name is the one the line is counted in — "Ctn" under a carton line, not "Pair"');
   t.check(!/value="\$\{it\.qty\}"/.test(rows),
     'the base count is no longer what the box shows');
-  t.check(/q-sell[^>]*value="\$\{qFigShow\(Math\.round\(sell \* per\)\)\}"/.test(rows),
+  t.check(/q-sell[^>]*value="\$\{Math\.round\(sell \* per\)\}"/.test(rows),
     'Price each is per that unit — the carton price beside a carton count');
-  t.check(/q-price"[^>]*value="\$\{qFigShow\(Math\.round\(it\.price \* per\)\)\}"/.test(rows),
+  t.check(/q-price"[^>]*value="\$\{Math\.round\(it\.price \* per\)\}"/.test(rows),
     'and so is Buy @');
   t.check(/const per = quoteLineCountPer\(item\);/.test(rows),
     'the edit handlers read the same factor off the line');
-  /* Through qFigParse, not Number. This is the load-bearing half of the
-     separator change: Number("100,000") is NaN and `NaN || 0` is 0, so a
-     price typed exactly the way the box displays it would have been
-     saved as nothing. Every read of these four boxes goes through the
-     parser, and a slice that used Number would be testing code that does
-     not ship. */
-  t.check(/item\.price = \(qFigParse\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
-    && /item\.sellPrice = \(qFigParse\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
+  t.check(/item\.price = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows)
+    && /item\.sellPrice = \(Number\(e\.target\.value\) \|\| 0\) \/ quoteLineCountPer\(item\);/.test(rows),
     'a price typed per carton is kept per base unit');
-  t.check(!/Number\(e\.target\.value\)/.test(rows),
-    'and no box on the row is still read with a bare Number(), which a separated figure reads as NaN');
   t.check(/item\.qtyIn = per > 1 \? 'pack' : 'unit';/.test(rows),
     'an edited count makes the choice explicit on the line');
-  t.check(/const typed = qFigParse\(e\.target\.value\) \|\| 1;\s*const newQty = Math\.max\(1, Math\.round\(typed \* per \* 1e6\) \/ 1e6\);/.test(rows),
+  t.check(/const typed = Number\(e\.target\.value\) \|\| 1;\s*const newQty = Math\.max\(1, Math\.round\(typed \* per \* 1e6\) \/ 1e6\);/.test(rows),
     'and a count typed in cartons is multiplied back to the base unit before it is kept');
   /* No caption under a carton count. "2 Ctn" with "= 200 Pair" under
      it is the sum the rep did not ask for; the pack size lives in the
@@ -214,24 +201,8 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   t.check(/\(!asPack && packView\) \? `<span class="q-qty-pack"/.test(rows)
     && !/asPack \? `<span class="q-qty-pack"/.test(rows),
     'a carton count carries no "= 200 Pair" caption under it');
-  /* WAS: `30px minmax(0,1fr) 88px 116px` -- Qty at 88 because the unit
-     rode inside the quantity cell, and Price each at 116.
-
-     The unit is a COLUMN now (the document's own "Ctn" heading), so Qty
-     no longer has to be wide enough to hold a count AND a word: it is 74
-     for the count and its steppers, 58 for the unit beside it, and Price
-     each gained the difference at 118. What is being asserted is the
-     same thing -- that a six-digit carton price and its reset arrow fit
-     without the cell clipping -- measured against the tracks that exist. */
-  /* The item track's flex FACTOR is no longer 1: it and Buy from share
-     the surplus 1.3 to 1, because item alone taking every spare pixel
-     left a 721px cell holding a 200px name on a wide screen while the
-     supplier's name truncated. None of that touches what this assertion
-     is about, which is the three fixed tracks after it -- so it pins
-     those, and pins that item is still a flexible minmax rather than
-     being nailed to a width. */
-  t.check(/--ow-tbl-cols:26px minmax\(0,[\d.]+fr\) 74px 58px 118px/.test(src),
-    'and the Qty track holds the count, Unit the word beside it, Price each a six-digit carton price and its reset arrow');
+  t.check(/--ow-tbl-cols:30px minmax\(0,1fr\) 88px 116px/.test(src),
+    'and the Qty track is wide enough for a count and its unit, Price each for a six-digit carton price and its reset arrow');
 }
 
 /* ---- 4 & 5. the habit, and the list, say it the way it was bought ------ */
