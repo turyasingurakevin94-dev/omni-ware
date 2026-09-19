@@ -5667,12 +5667,30 @@
   .cb-close-state.part{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .cb-close-state.bad{background:var(--ow-crimson-soft);color:var(--danger);}
 
-  .cb-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+  /* The gutter the old .panel gave these for free. The count is a
+     stacked .ow-pan again, and .ow-pan has no padding of its own, so
+     three bordered cards would otherwise sit on the panel's own border.
+
+     210 and not 260: the panel is in the work column now, not across the
+     whole page, and 260 fitted only two of the three accounts -- Bank
+     dropped to a row of its own with a card-width hole beside it. The
+     three accounts are read against each other, so they go across. */
+  .cb-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;
+    padding:14px 16px;}
   .cb-count{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);}
   .cb-count.ok{border-color:#BFD9D1;}
   .cb-count.over{border-color:#EBD8AE;}
   .cb-count.short{border-color:#EAC7C1;}
-  .cb-count-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  /* The name, then its state UNDER it, on every card.
+
+     They were a row -- name left, chip right -- which fitted when these
+     three sat across the whole page. In the work column a card is 253px,
+     and "Mobile Money" beside COUNTED & AGREES needs 263. Left to wrap,
+     one card grew a line and the other two did not, so "Opened with" sat
+     on three different heights across three cards that exist to be read
+     against each other. Stacked, every card is the same shape whatever
+     its state says. */
+  .cb-count-head{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
     margin-bottom:10px;}
   .cb-count-head h4{font-size:15px;font-weight:700;margin:0;}
   .cb-count-state{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
@@ -5924,29 +5942,17 @@
   .cb-led-empty b{display:block;font-size:14px;color:var(--ow-ink-900);margin-bottom:6px;}
   .cb-led-empty span{display:block;max-width:56ch;margin:0 auto;line-height:1.55;}
 
-  /* Counting the till, reached from the rail. */
-  .cb-count-foot{display:flex;align-items:center;gap:14px;padding:12px 16px;
+  /* The foot of the closing panel: what booking a difference MEANS,
+     under the three cards that offer it. */
+  .cb-count-foot{padding:12px 16px;
     border-top:1px solid var(--ow-rule);background:var(--ow-paper-2);}
   .cb-count-foot p{margin:0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;max-width:64ch;}
-  .cb-count-sp{flex:1;}
   .ow-pan-n.cb-close-state{background:none;padding:0;border-radius:0;}
   .ow-pan-n.cb-close-state.bad{color:var(--ow-crimson);}
   .ow-pan-n.cb-close-state.part{color:var(--ow-amber-ink);}
   .ow-pan-n.cb-close-state.ok{color:var(--ow-verdigris);}
 
   /* The rail. */
-  .cb-rail-cl{padding:11px 12px;}
-  .cb-rail-bars{display:flex;gap:4px;margin-bottom:9px;}
-  .cb-rail-bars i{flex:1;height:4px;border-radius:var(--ow-r-sm);background:var(--ow-steel-100);}
-  .cb-rail-bars i.ok{background:var(--ow-verdigris);}
-  .cb-rail-bars i.off{background:var(--ow-crimson);}
-  .cb-rail-s{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
-  .cb-rail-v{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:19px;font-weight:500;letter-spacing:-0.02em;}
-  .cb-rail-t{font-size:12px;color:var(--ow-ink-600);line-height:1.45;margin:0 0 10px;}
-  .cb-rail-t b{color:var(--ow-ink-900);font-weight:600;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-  .cb-rail-cl .btn{width:100%;height:36px;padding:0;font-size:13px;}
   .cb-ck{display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
   .cb-ck:first-child{border-top:0;}
   .cb-ck > .icon{width:14px;height:14px;flex:none;margin-top:1px;color:var(--ow-amber-ink);}
@@ -6054,14 +6060,19 @@
     .cb-el-seg > button{flex:1;justify-content:center;font-size:14px;}
     .cb-el-amt, .cb-el-ac, .cb-el-at{width:auto;flex:1 1 30%;}
     .cb-el-cat{flex:1 1 100%;}
-    .cb-count-foot{flex-direction:column;align-items:stretch;gap:10px;}
-    .cb-count-foot .btn{width:100%;height:44px;}
+    /* The close is on the phone's own scroll now, not behind a press
+       that replaced the screen, so its two controls come up to the tap
+       floor: the box a figure is typed into, and the button that books a
+       difference. */
+    .cb-counts{padding:12px;}
+    .cb-count-input input{height:44px;}
+    .cb-count-fix .btn{width:100%;height:44px;font-size:14px;}
     /* The banner stops being a row: the mark sits with the heading, the
        sentence runs the full width, and the two acts stack at thumb
        height rather than being squeezed beside the text. */
-    /* Every target in the rail comes up to a thumb: the count, the act on
-       each check, and each day in the spine. */
-    .cb-rail-cl .btn, .cb-ck .btn{height:44px;font-size:14px;}
+    /* Every target in the rail comes up to a thumb: the act on each
+       check, and each day in the spine. */
+    .cb-ck .btn{height:44px;font-size:14px;}
     .cb-spn{padding:12px;min-height:44px;align-items:center;}
     .cb-spn-d{font-size:13px;}
     .cb-spn-v{font-size:13px;}
@@ -20359,11 +20370,12 @@
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
       <!-- THE CASH BOOK, AS A CONSOLE.
-           The page head, the position, the day's movements and the count
-           used to be four stacked .panel blocks with the act of the screen
-           -- counting the drawer -- last, below the fold, all day. The work
-           is on the left and the reading is on the right, and the day is
-           navigated from the header rather than from inside a panel. -->
+           The work is on the left and the reading is on the right, and the
+           day is navigated from the header rather than from inside a panel.
+           The left column is the day in the order it is worked: log a
+           movement, the movements, the count they are closed against, and
+           what the day came to by category. -->
+
       <div class="ow-ph">
         <h1 class="ow-ph-t">Cash book</h1>
         <p class="ow-ph-sub" id="cbPhSub"></p>
@@ -20507,19 +20519,23 @@
               <p class="ow-mini">Every row names <b>who</b> first &mdash; a client or supplier filled in from the invoice or bill the entry was posted against, so it is there even when the note was left blank. A document number opens that document, and one carrying the small mark was written by that screen rather than typed here.</p>
             </div>
 
-            <!-- CLOSING THE DAY. Reached from the rail, which carries the
-                 state all day, so the count is never half-done at the foot
-                 of the page and never out of sight either. -->
-            <div class="ow-pan" id="cbCountPan" style="display:none;">
+            <!-- CLOSING THE DAY, BELOW THE MOVEMENTS IT IS COUNTED
+                 AGAINST. It was made a mode -- pressing the rail replaced
+                 the entry line, the ledger and the rings with the three
+                 count cards -- and that put the two halves of one job on
+                 two screens. What the book says comes from the rows above,
+                 and the first thing anybody does with a count that is off
+                 is read those rows looking for the entry nobody made. So
+                 the count sits under them, on the same scroll, and the
+                 state it is in is in its own header. -->
+            <div class="ow-pan" id="cbCountPan">
               <div class="ow-pan-h">
-                <span class="ow-pan-t">Counting the till</span>
+                <span class="ow-pan-t">Closing the day</span>
                 <span class="ow-pan-n cb-close-state" id="cbCloseState"></span>
               </div>
               <div id="cbSummaryWrap"></div>
               <div class="cb-count-foot">
                 <p>Booking a difference writes a real entry, so the book comes down to what you counted and the loss shows on the profit and loss. Do it only for money you cannot trace &mdash; if you can still name it, enter it as what it was, dated the day it happened.</p>
-                <span class="cb-count-sp"></span>
-                <button type="button" class="btn btn-accent" id="cb_count_done">Back to the day</button>
               </div>
             </div>
 
@@ -20536,8 +20552,11 @@
 
           </div>
 
+          <!-- The rail reads; it no longer carries the close. A second
+               "Closing the day" block up here, with its own progress bars
+               and its own button, said the same thing as the panel on the
+               left and sent you to it. -->
           <div class="ow-side cb-side">
-            <div class="ow-pan" id="cbRailClosing"></div>
             <div class="ow-pan" id="cbRailChecks"></div>
             <div class="ow-pan" id="cbRailSpine"></div>
           </div>
@@ -75605,7 +75624,6 @@ function finishCbWizard(){
 }
 document.getElementById('cb_edit_opening').addEventListener('click', ()=> showCbWizard(true));
 document.getElementById('cb_wiz_back').addEventListener('click', ()=> showCbMain());
-document.getElementById('cb_count_done').addEventListener('click', ()=> cbSetMode('day'));
 
 function showCbMain(){
   document.getElementById('cbWizard').style.display = 'none';
@@ -75616,7 +75634,6 @@ function showCbMain(){
   renderCbTransactions();
   renderCbSummary();
   renderCbTriggers();
-  cbSetMode(cbMode);
 }
 
 /* Moving between days without going through the wizard.
@@ -75628,7 +75645,6 @@ function showCbMain(){
 function cbGoToDay(date){
   document.getElementById('cb_wiz_date').value = date;
   getDayRecord(date);
-  cbMode = 'day';
   fillCbWizardFromRecord();
   showCbMain();
 }
@@ -75934,7 +75950,7 @@ function renderCbDayHeader(){
   /* The broken-chain warning is made in one place and handed here, so
      the banner cannot drift from the check the rest of the book reads. */
   renderCbOpenBanner(date, rec, cbChainBreakHTML(date, getDayRecord(date)));
-  renderCbRail(date, pos);
+  renderCbRail(date);
 }
 
 /* THE OPENING, SAID RATHER THAN GATED.
@@ -76017,38 +76033,10 @@ function cbApplyCarriedOpening(){
 
 /* ================= THE RAIL =======================================
    What the screen is FOR is on the left; what it has to say is here.
-   Closing state first, because it is the act the whole book exists to
-   support and it used to sit half-done below the fold all day. */
-function renderCbRail(date, pos){
-  const total = pos.accounts.length;
-  const n = pos.countedAccounts;
-  const off = pos.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1);
-  const bars = pos.accounts.map(a=>
-    a.counted === null ? '<i></i>'
-      : (Math.abs(a.variance) >= 1 ? '<i class="off"></i>' : '<i class="ok"></i>')).join('');
-  const chip = n === 0 ? '<span class="ow-cp">accounts counted</span>'
-    : off.length ? `<span class="ow-cp ow-bad">${off.length} ${off.length===1?'does':'do'} not match</span>`
-    : n < total ? '<span class="ow-cp ow-warn">still counting</span>'
-    : '<span class="ow-cp ow-good">all agree</span>';
-  const line = n === 0
-    ? `The book says <b>${cbMoney(pos.closing)}</b> is there. Nothing has been counted against it, so nothing here has been checked against the real money yet.`
-    : off.length
-      ? pos.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1)
-          .map(a=> `${esc(a.label)} is <b>${cbMoney(Math.abs(a.variance))}</b> ${a.variance<0?'short':'over'}.`).join(' ')
-      : n < total
-        ? `${pos.accounts.filter(a=> a.counted === null).map(a=> esc(a.label)).join(' and ')} still to count.`
-        : `All three counted and every one agrees with the book.`;
-  document.getElementById('cbRailClosing').innerHTML = `
-    <div class="ow-pan-h"><span class="ow-pan-t">Closing the day</span></div>
-    <div class="cb-rail-cl">
-      <div class="cb-rail-bars">${bars}</div>
-      <div class="cb-rail-s"><span class="cb-rail-v">${n} of ${total}</span>${chip}</div>
-      <p class="cb-rail-t">${line}</p>
-      <button type="button" class="btn btn-ghost" id="cb_count_start">${n===0?'Count the till':'Back to the count'}</button>
-    </div>`;
-  const start = document.getElementById('cb_count_start');
-  if(start) start.addEventListener('click', ()=> cbSetMode('count'));
-
+   The close is NOT here: it is a panel under the movements it is counted
+   against, and a second copy of its state up here, with its own button
+   into it, was one screen saying the same thing twice. */
+function renderCbRail(date){
   /* WHAT NEEDS YOUR EYE. Every one of these is worked out from what is
      already on file, every time the screen draws -- nothing is stored
      and nothing has to be dismissed. */
@@ -76189,21 +76177,16 @@ function cbChecks(date){
   return out.slice(0, 4);
 }
 
-/* Counting is a mode, not a panel sitting half-done at the foot of the
-   page. The rail carries the state all day; pressing it turns the work
-   area into the count and the reading stays where it was. */
-let cbMode = 'day';
-function cbSetMode(mode){
-  cbMode = mode === 'count' ? 'count' : 'day';
-  const counting = cbMode === 'count';
-  const show = (id, on)=>{ const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
-  show('cbEntryPan', !counting);
-  show('cbLedgerPan', !counting);
-  show('cbDonutPan', !counting);
-  show('cbCountPan', counting);
-  if(counting) renderCbSummary();
+/* Counting is not a mode. It was one, and the price was that opening it
+   took away the entry line, the ledger and the rings -- the rows the
+   count is measured against, and the only place a difference can be
+   traced. The panel is always drawn; this only brings it into view for
+   somebody who arrived from another screen asking to count. */
+function cbShowCount(){
   const el = document.getElementById('cbCountPan');
-  if(counting && el && el.scrollIntoView) el.scrollIntoView({block:'nearest'});
+  if(el && el.scrollIntoView) el.scrollIntoView({block:'nearest'});
+  const first = document.querySelector('#cbSummaryWrap .cb-actual-input');
+  if(first && first.focus) first.focus({preventScroll:true});
 }
 
 /* ---- Trigger card totals (kept as the refresh hook for the category charts) ---- */
@@ -77567,10 +77550,10 @@ function renderCbSummary(){
       rec.actual[input.dataset.account] = input.value==='' ? null : Number(input.value);
       saveData();
       renderCbSummary();
-      /* The rail carries the closing state all day, so it has to hear
-         about a count the moment one is typed -- otherwise the panel
-         says "1 of 3, 1 not matching" while the rail beside it still
-         says nothing has been counted. */
+      /* The spine marks each day by how far its count got, and today is
+         one of its rows, so it has to hear about a count the moment one
+         is typed -- otherwise this panel says "1 of 3, 1 not matching"
+         while the dot beside Today still says nothing was counted. */
       renderCbDayHeader();
     });
   });
@@ -95147,7 +95130,7 @@ function dayDoAct(){
   goToTab(act.tab);
   if(act.tab === 'cashbook'){
     cbGoToDay(day);
-    if(act.mode === 'count') cbSetMode('count');
+    if(act.mode === 'count') cbShowCount();
   }
 }
 
