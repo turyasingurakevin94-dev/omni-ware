@@ -189,14 +189,31 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        says. The panel went when the list became a set of place cards;
        one of its two keylines was already spent elsewhere, the other
        was not. */
-    /* 103, not 102, and for the same reason: the restored New quote
-       screen carries #F7F9FB, the cool tint behind an item thumbnail's
-       dashed placeholder in the picker and on a quote line. It is a
-       ground for a 34px box that stands for a photograph nobody has
-       taken yet, and the palette has no cool near-white -- --ow-paper-2
-       is warm, and on a warm ground a warm placeholder does not read as
-       an absence. One value, two rules, both the original's. */
-    'distinct colours': [103, /#[0-9A-Fa-f]{6}\b/g],
+    /* 109, not 102. TWO rises, from two unrelated decisions, and both
+       are kept whole because each is an argument the next reader has to
+       be able to weigh on its own.
+
+       +6, THE CATEGORY PALETTE (the owner's ruling). A palette held to
+       one accent forces every layout monochrome, and colour is a real
+       instrument of hierarchy -- six rail doors told apart by hue are
+       found faster than six told apart by position alone. So a fourth
+       ROLE was added and it cost six literals: indigo, sky and plum,
+       each a tint and its ink. Sell, Catalogue and Setup wear oxide,
+       verdigris and the neutrals, which is why this is +6 and not +12.
+
+       +1, THE RESTORED NEW QUOTE SCREEN (also the owner's, and also a
+       ruling: the page was to come back exactly as it stood before the
+       rebuild, house rules included). It carries #F7F9FB, the cool tint
+       behind an item thumbnail's dashed placeholder in the picker and
+       on a quote line -- the ground for a box standing in for a
+       photograph nobody has taken. The palette has no cool near-white:
+       --ow-paper-2 is warm, and on a warm ground a warm placeholder
+       does not read as an absence. One value, two rules.
+
+       What did NOT change: this is still a ceiling, it still may only
+       fall, and every pair added is held to 4.5:1 in the contrast
+       block. A colour is cheap to justify and expensive to add. */
+    'distinct colours': [109, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -266,6 +283,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-crimson', PAPER, 4.5, 'bad, as text'],
     ['--ow-amber-ink', hex('--ow-amber-soft'), 4.5, 'caution ink on its own ground'],
     ['--ow-oxide-deep', hex('--ow-oxide-soft'), 4.5, 'chip ink on chip ground'],
+
+    /* THE CATEGORY PALETTE, held to exactly what the state families are
+       held to. Widening the palette was the owner's call; letting a
+       widened palette ship an unreadable pairing was not. Each ink is
+       checked twice -- on its own tint, which is how the rail's
+       monograms draw it, and on paper, because a category colour that
+       cannot be set as text is half a colour. */
+    ['--ow-indigo', hex('--ow-indigo-soft'), 4.5, 'Buy — its ink on its own tint'],
+    ['--ow-indigo', PAPER, 4.5, 'Buy — its ink as text'],
+    ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money — its ink on its own tint'],
+    ['--ow-sky', PAPER, 4.5, 'Money — its ink as text'],
+    ['--ow-plum', hex('--ow-plum-soft'), 4.5, 'Insight — its ink on its own tint'],
+    ['--ow-plum', PAPER, 4.5, 'Insight — its ink as text'],
+    ['--ow-verdigris', hex('--ow-verdigris-soft'), 4.5, 'Catalogue — its ink on its own tint'],
+    ['--ow-ink-600', hex('--ow-rule-soft'), 4.5, 'Setup — the neutral door, ink on its tint'],
   ];
   PAIRS.forEach(([tok, ground, floor, why]) => {
     const c = hex(tok);
