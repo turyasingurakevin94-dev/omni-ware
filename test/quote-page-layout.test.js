@@ -291,17 +291,20 @@ const src = read('index.html');
     'what the books know is the band’s own last cell, not an island under it');
   t.check(/<div class="q-client-cell">\s*<input[^>]*id="q_client_name"[^>]*>\s*<input[^>]*id="q_client_phone"/.test(src),
     'and the number sits in the client’s own cell beside the name');
-  /* The usual-buys chips are INSIDE the document now, under the search:
-     tapping one puts a line on it, so it belongs where the lines are.
-     The cut is counted on the last chip rather than scrolled off. */
+  /* THE USUAL-BUYS STRIP SITS UNDER THE BAND, not inside the document.
+     The band is facts about the client; this is a door you walk through,
+     and it is the client's strip rather than the document's -- it is
+     drawn off who was named above it, not off what is on the quote. It
+     was moved into the document for one release and moved back. */
+  t.check(/id="q_client_history"><\/div>\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-client-usual" id="q_client_usual"><\/div>\s*<div class="ow-grid">/.test(src),
+    'the usual-buys strip sits under the client band, between it and the grid');
   const doc = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
-  t.check(/id="q_item_search_dd"[\s\S]*?<div class="q-client-usual" id="q_client_usual"><\/div>[\s\S]*?<div id="q_itemsWrap"/.test(doc),
-    'the usual-buys chips sit inside the document, between the search and the lines');
-  /* THE PHONE'S TWO TABS sit between them: the quote, and the details the
-     console keeps in its rail. The chips are still above the lines; the
-     tab bar is not drawn at all on the console. */
-  t.check(/id="q_client_usual"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-tabbar" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
-    'with the phone’s Quote / Details tabs between the chips and the lines');
+  t.check(!/q_client_usual/.test(doc),
+    'and not inside the document');
+  /* THE PHONE'S TWO TABS: the quote, and the details the console keeps
+     in its rail. The tab bar is not drawn at all on the console. */
+  t.check(/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<div id="q_itemsWrap"/.test(doc),
+    'with the phone’s Quote / Details tabs above the lines');
   const tabs = (/<div class="q-tabbar" id="q_tabbar"[\s\S]*?<\/div>/.exec(src) || [''])[0];
   t.check((tabs.match(/class="q-tab[ "]/g) || []).length === 2 && /data-qtab="quote"/.test(tabs) && /data-qtab="details"/.test(tabs),
     'two cells, one per pane');
@@ -333,53 +336,58 @@ const src = read('index.html');
     'and neither of them ever wraps');
   t.check(/\$\{all\.length - max\} more · keep typing to narrow/.test(dd),
     'the results it does not show are counted, never dropped');
-  const fit = extractFunction(src, 'fitUsualChips', 'index.html');
-  t.check(/more\.textContent = `\+\$\{cut\}`;/.test(fit),
-    'and the chips that do not fit the line are counted, never silently cut');
 
-  /* ---------- a usual is a CARD, and the photograph is on it ----------
+  /* ---------- a usual is a CARD, with the photograph on it ------------
    *
    * A hardware name is a specification -- "Iron Sheets (28 gauge,
    * plain)", "PVC Pipe 1 inch" -- and a row of them reads as one grey
    * line that has to be parsed word by word. The photograph is how the
-   * thing is recognised across a counter, the books already hold it
-   * against the product, and it is drawn from the SAME emitter both
-   * other surfaces use rather than a second copy of the lookup.
+   * thing is recognised across a counter and the books already hold it
+   * against the product.
+   *
+   * This IS the original strip, restored to the byte after a release
+   * that replaced it with one line of text chips. It is pinned here so
+   * that a redesign has to argue with a test rather than quietly take
+   * the photographs out again. What it asks for is deliberate, and two
+   * of them are departures from the house design system, which the
+   * owner weighed and authorised:
+   *
+   *   - the card carries an oxide-filled + of its own, one per card,
+   *     against "the accent appears once per screen";
+   *   - the strip scrolls sideways rather than counting what it cut.
+   *
+   * The + is why both can stand: the CARD is not the tap target, the +
+   * is. That is also what keeps the photograph zoomable here -- tapping
+   * it opens the lightbox and nothing else, because no handler wraps
+   * it. A design where the whole card is the tap CANNOT leave the photo
+   * zoomable, since the document-level lightbox listener would fire
+   * alongside it.
    */
   const usual = extractFunction(src, 'renderClientUsualBuys', 'index.html');
-  t.check(/ipStageThumbHTML\(product\|\|\{\}, r\.variantIdx, \{zoom:false\}\)/.test(usual),
-    'each usual carries the product’s own photograph, from the one emitter that draws them');
-  t.check(/<span class="q-uc-n">/.test(usual) && /<span class="q-uc-s">Last: <b>/.test(usual),
-    'with the name over what they last took — the offer, not just the word');
-  /* ONE TAP, ONE ACT. The lightbox listener is on the document, so a
-   * zoomable photo inside a control fires alongside that control's own
-   * handler: the picker opens and the photograph lands on top of it.
-   * Both surfaces that draw a usual therefore ask for no zoom. */
-  const rowsFn = extractFunction(src, 'usualBuysRowsHTML', 'index.html');
-  t.check(/\{zoom:false\}/.test(rowsFn),
-    'and the phone’s rows ask for the same, so tapping a usual’s photo adds the line rather than opening a lightbox over the picker');
-  /* THE CATALOGUE DECIDES, on both surfaces and at the handler. A usual
-   * whose product has since been deleted cannot be added, so it is not
-   * offered as though it could -- the console used to judge this by the
-   * line's stored id alone and drew a live card for a deleted product. */
-  t.check(/const product = r\.productId \? data\.products\.find\(p=>p\.id===r\.productId\) : null;[\s\S]*?\$\{product \? '' : ' disabled'\}/.test(usual),
-    'a usual whose product is gone from the catalogue is drawn dead, judged by the catalogue and not by the old line');
-  const add = extractFunction(src, 'usualBuysAdd', 'index.html');
-  t.check(/if\(!data\.products\.some\(p=>p\.id===r\.productId\)\) return;/.test(add),
-    'and the handler says the same, so a stale row cannot open the picker on nothing');
-  /* The card leaves the pill radius for the console's surface radius,
-     and it must outrank .q-chg-sug -- which opens `all:unset` and is
-     declared further down the sheet, so a single-class rule here is
-     silently reset and the cards draw as pills. */
-  t.check(/\.q-client-usual \.q-usual-chip\{[^}]*border-radius:var\(--ow-r-sm\);max-width:236px;/.test(src),
-    'the card is scoped to the strip so .q-chg-sug’s all:unset cannot reset it, and it is capped so one long name cannot eat the line');
-  t.check(/\.q-uc-n\{display:block;[^}]*overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/.test(src),
-    'the name truncates properly — all three declarations');
-  /* .q-uc-n sets its own full ink, so the card's disabled colour never
-     reaches it: a dead card drew identically to a live one and said so
-     only in a title. */
-  t.check(/\.q-client-usual \.q-usual-chip\[disabled\] \.q-uc-n\{color:var\(--ink-soft\);\}/.test(src),
-    'and a dead card is dead on screen, not only in its title');
+  t.check(/\$\{ipStageThumbHTML\(product\|\|\{\}, r\.variantIdx\)\}/.test(usual),
+    'each usual carries the product’s own photograph');
+  t.check(/<div class="q-usual-chip-name" title="\$\{esc\(r\.productName\)\}">/.test(usual)
+    && /<div class="q-usual-chip-meta">Last: /.test(usual),
+    'with its name over what they last took and how long ago');
+  t.check(/<button type="button" class="q-usual-chip-add" title="Add to this quote"/.test(usual),
+    'and its own + — the card is the card, the + is the tap');
+  t.check(/\.q-usual-chip-add\{[\s\S]*?background:var\(--accent\);color:#fff;/.test(src),
+    'the + is filled with the accent, one per card — authorised over the once-per-screen rule');
+  t.check(/\.q-client-usual\{display:none;gap:8px;margin:-8px 0 16px;overflow-x:auto;padding-bottom:2px;\}/.test(src),
+    'the strip scrolls sideways — authorised over counting the cut');
+  t.check(/\.q-usual-chip \.q-stage-thumb, \.q-usual-chip \.q-stage-thumb-placeholder\{width:32px;height:32px;/.test(src),
+    'the photograph is 32px, and a product with none gets the placeholder at the same size');
+  t.check(/\.q-usual-chip-name\{[^}]*white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;\}/.test(src),
+    'and a long name ellipsises rather than stretching the card');
+  /* ONE STRIP, EVERY WIDTH. It was hidden on the phone for one release,
+     with a second copy of the same usuals drawn as rows inside the
+     empty document. There is one again, and it scrolls, which is what
+     a strip of cards is for on a 390px screen. */
+  t.check(!/\.q-client-usual\.show\{display:none;\}/.test(src),
+    'the strip is drawn at every width — no phone rule hides it');
+  t.check(!/q-usual-slot|usualBuysRowsHTML|q-usual-row/.test(src),
+    'and nothing draws the same usuals a second time');
+
   const hist = extractFunction(src, 'renderClientHistoryBox', 'index.html');
   t.check(/Orders<\/span>/.test(hist) && /Owed now/.test(hist) && /Last order<\/span>/.test(hist),
     'the facts are orders, what is owed now and the last order — the rail’s client panel folded into the band');
