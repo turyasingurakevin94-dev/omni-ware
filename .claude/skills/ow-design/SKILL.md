@@ -13,9 +13,15 @@ money that is really theirs. Nothing here is decoration.
 handoff's system** (navy rail, warm ground, white cards, one red
 action). What moved: §2 colour, §3 faces, §4 radius and elevation.
 What did NOT move, and is not up for grabs because a screenshot looks
-different: the two-designs law, the meaning rules, the component
-anatomy, the contrast floor, and the ratchet. A re-skin changes what the
-app is made of, not how densely it works.
+different: the two-designs law, the component anatomy, the contrast
+floor, and the ratchet. A re-skin changes what the app is made of, not
+how densely it works.
+
+**§2 was then reopened by the owner** and the hue quota removed. Colour
+is now governed by which of four questions a value answers, not by how
+many values there are — see §2. The contrast floor and the ratchet did
+not move with it: a wider palette is held to the same arithmetic, and
+the gate still makes a new hue argue for itself.
 
 **Read this whole file before you draw or build.** Then run
 `node test/design-system.test.js` — it enforces mechanically most of
@@ -48,9 +54,39 @@ Duplicate what each needs. Do not reach for a middle.
 
 ---
 
-## 2. Colour — the complete palette
+## 2. Colour — the palette and its four roles
 
-**These 23 values are the entire palette. Never introduce a 24th.**
+**Colour is an instrument of hierarchy, not a quota.** An earlier
+version of this section rationed hue: one accent per screen, four state
+colours, never a 24th value. That rule was wrong in a specific way, and
+the owner overruled it: *"even different colours can be used to
+emphasise something through visual hierarchy."* Held to one accent, a
+layout goes monochrome and then leans on position and weight alone to
+say what things are — which is slower to read, not more disciplined.
+
+What replaces it is not "any colour anywhere". It is a rule about
+**which question a colour answers**. There are four roles, and a value
+belongs to exactly one:
+
+| role | answers | and so |
+|---|---|---|
+| **ground / ink** | what is a surface, what is text | neutral, never coloured for effect |
+| **state** | how is this doing | verdigris / amber / crimson. Only these three. |
+| **action** | what do I do next | oxide. One PRIMARY action per screen. |
+| **category** | which part of the business is this | the six below. Identity, never status. |
+
+The discipline that survives: a colour must answer one of those four
+questions, and clear the contrast floor. The discipline that is gone:
+counting hues.
+
+**The accent marks the one primary action on a screen** — that part was
+never about scarcity of colour, it was about there being one obvious
+next move, and it still holds. A second oxide element that is *not* an
+action is now fine; a second oxide *button* competing for "do this" is
+still wrong. And a category hue beside the accent is not competition,
+because the two answer different questions.
+
+### The 29 values
 
 ```
 --ow-steel-950  #16203C   the rail / navy chrome
@@ -73,6 +109,12 @@ Duplicate what each needs. Do not reach for a middle.
 --ow-amber-ink  #7A4A02   dark ink FOR amber grounds — never on oxide
 --ow-crimson    #8E2A22   bad
 --ow-crimson-soft #FBE5E2
+--ow-indigo     #3A3F9B   CATEGORY: Buy
+--ow-indigo-soft #E4E6FA
+--ow-sky        #1A5A8A   CATEGORY: Money
+--ow-sky-soft   #DCEAF8
+--ow-plum       #7A3268   CATEGORY: Insight
+--ow-plum-soft  #F6E4F1
 --ow-ink-900    #1C2233   body text
 --ow-ink-600    #5F6980   secondary text
 --ow-ink-400    #767F91   captions, labels, meta
@@ -83,8 +125,14 @@ Duplicate what each needs. Do not reach for a middle.
 Rail-only, inside the navy: text `#B3BCD2`, group rows `#C5CDDF`,
 counts and section labels `#8D99B5`, hover `rgba(255,255,255,0.08)`.
 **The row you are on is INVERTED — white ground, navy ink — never an
-accent fill.** An accent fill on the rail is on screen on every page,
-which permanently spends the one accent on a row you are already on.
+accent fill.** Not because the accent is scarce, but because the row
+you are already standing on is not an action, and painting it like one
+makes the word "oxide" mean "here" on 32 screens.
+
+The rail's six group monograms DO wear their category tints — that is
+the role working as intended: a door tells you which part of the
+business it opens, on every screen, without competing with the screen's
+own next move.
 
 **The token names are historical.** `--ow-oxide` is read ~700 times
 across index.html, so when the palette moved to the design handoff's
@@ -105,18 +153,50 @@ Every ink you put on a ground must clear **4.5:1** (3:1 at ≥20px or
 an oxide fill — dark olive on red, the worst pairing on a phone in
 daylight — and nothing caught it. The test computes this now.
 
+### The category palette — the six doors
+
+Identity colour, for telling parts of the business apart at a glance.
+Each is a tint ground plus the ink that sits on it:
+
+```
+Sell       --ow-oxide-soft  / --ow-oxide-deep     5.82:1
+Buy        --ow-indigo-soft / --ow-indigo         7.19:1
+Catalogue  --ow-verdigris-soft / --ow-verdigris   5.75:1
+Money      --ow-sky-soft    / --ow-sky            5.97:1
+Insight    --ow-plum-soft   / --ow-plum           6.96:1
+Setup      --ow-rule-soft   / --ow-ink-600        4.66:1
+```
+
+Three reuse families that already existed. A hue you already have is
+cheaper than a hue you do not — reach for a new one only when no
+existing family fits the meaning.
+
+**A category hue never carries status.** Sell's door is red because
+Sell is red, not because anything is wrong; if a Sell screen has a
+problem, it says so in crimson, in the same places every other screen
+does. A colour that means two things means neither.
+
 ### The meaning rules — the part a test cannot enforce
 
-- **Colour only where it means something.** A device that marks
-  everything marks nothing. Six card classes here once carried the same
-  red left rail and it signalled precisely nothing; they were removed.
-- **The accent appears ONCE per screen.** It is the one thing to do
-  next. If you have two oxide elements, one of them is wrong.
+- **Colour answers a question.** Ground, state, action, category —
+  a value that answers none of the four is decoration, and decoration
+  is what "six card classes with the same red left rail" was. That
+  example still stands; what was wrong with it was that the red said
+  nothing, not that there were six of them.
+- **One primary action per screen.** The oxide button is the next move.
+  Two of them is still one too many.
 - **A figure is a size, not a warning.** Money on a row is ink. Crimson
   is for the genuinely bad — behind target, overdue, a loss. Verdigris
-  for the genuinely good. Everything else is ink.
-- **Never invent a state colour.** good = verdigris, caution = amber,
-  bad = crimson. There is no fourth.
+  for the genuinely good. A figure is not coloured to be seen.
+- **Three state colours, no more.** good = verdigris, caution = amber,
+  bad = crimson. Widening the palette widened CATEGORY, not this: a
+  fourth state colour is a fourth thing for the owner to learn, in the
+  one vocabulary where guessing costs money.
+- **Hue is the weakest channel on a bright phone.** Where a distinction
+  matters, carry it in position, weight or shape as well — the tab
+  bar's active icon is filled *and* darker. Colour that is the only
+  carrier of meaning fails in the yard at midday, and for the ~8% of
+  men who will not see your red and green as different.
 
 ---
 
@@ -288,7 +368,8 @@ liars.
    commit. Every selector in the layer starts `.ow-` and stays there —
    a rule that must reach outside the namespace lives beside the code it
    couples to, not in the layer.
-3. **No new colour**, per §2.
+3. **Every colour answers one of the four questions**, per §2. A new
+   value needs a role and the contrast arithmetic, not permission.
 
 ---
 
@@ -358,7 +439,9 @@ rubric:
 1. **What reads first**, and why is that right for this screen?
 2. **What does the owner do here, and in how many taps?** Compare with
    before.
-3. **Where is the accent, and is it used once?**
+3. **Where is the accent, and is there exactly one primary action?**
+   And does every other colour on the screen answer a different
+   question from the one beside it?
 4. **Empty, one row, two hundred rows** — screenshot the empty one.
 5. **At 390px in one hand** — is the primary action in the thumb zone?
 6. **What did you NOT convert, and why?**
